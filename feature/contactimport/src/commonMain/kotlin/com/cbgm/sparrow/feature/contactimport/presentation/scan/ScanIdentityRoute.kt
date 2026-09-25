@@ -38,10 +38,9 @@ fun ScanIdentityRoute(
         )
     }
 
-    if (cameraPermissionDenied) {
-        CameraPermissionDialog(
-            onGrantPermission = requestCameraPermission,
-            onBack = { onUiEvent(ScanIdentityUiEvent.BackClicked) }
-        )
-    }
+    CameraPermissionDialog(
+        isVisible = cameraPermissionDenied,
+        onGrantPermission = requestCameraPermission,
+        onBack = { onUiEvent(ScanIdentityUiEvent.BackClicked) }
+    )
 }

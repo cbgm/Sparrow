@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.media.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.data.datasource.FileBrowserDataSource
 import com.cbgm.sparrow.feature.media.data.mapper.toFileBrowserContent
 import com.cbgm.sparrow.feature.media.data.mapper.toFileBrowserDirectory
@@ -15,14 +16,16 @@ class FileBrowserRepositoryImpl(
     override fun hasFileAccess(): Boolean = dataSource.hasFileAccess()
 
     override suspend fun setRootDirectory(reference: String): Result<Unit> =
-        dataSource.setRootDirectory(reference)
+        safeSuspendCall { dataSource.setRootDirectory(reference) }
 
     override suspend fun getRootDirectory(): Result<FileBrowserDirectory> =
-        dataSource.getRootDirectory().map { directory -> directory.toFileBrowserDirectory() }
+        safeSuspendCall { dataSource.getRootDirectory().toFileBrowserDirectory() }
 
     override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntry>> =
-        dataSource.listDirectory(reference).map { entries -> entries.map { entry -> entry.toFileBrowserEntry() } }
+        safeSuspendCall {
+            dataSource.listDirectory(reference).map { entry -> entry.toFileBrowserEntry() }
+        }
 
     override suspend fun readFile(reference: String, maxByteSize: Long): Result<FileBrowserContent> =
-        dataSource.readFile(reference, maxByteSize).map { content -> content.toFileBrowserContent() }
+        safeSuspendCall { dataSource.readFile(reference, maxByteSize).toFileBrowserContent() }
 }

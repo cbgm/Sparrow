@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
-import PermissionsPage
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
-import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -35,6 +35,7 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiStat
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.PermissionsPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PhonePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PrivacyPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.WelcomePage
@@ -48,6 +49,9 @@ import org.jetbrains.compose.resources.stringResource
 fun OnboardingScreen(
     state: OnboardingUiState,
     identityState: IdentityUiState,
+    backupError: String? = null,
+    isRestoring: Boolean = false,
+    onRestoreIdentity: () -> Unit = {},
     onUiEvent: (OnboardingUiEvent) -> Unit
 ) {
     Box(
@@ -66,7 +70,7 @@ fun OnboardingScreen(
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             Text(
                 text = stringResource(Res.string.base_app_name),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
@@ -75,9 +79,17 @@ fun OnboardingScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 style = MaterialTheme.typography.bodyLarge
             )
-            Spacer(Modifier.height(MaterialTheme.spacing.medium))
+            Spacer(Modifier.height(MaterialTheme.spacing.large))
 
-            SparrowCard {
+            Surface(
+                modifier = Modifier.fillMaxWidth().border(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                    MaterialTheme.shapes.medium
+                ),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.medium
+            ) {
                 AnimatedContent(
                     targetState = state.page,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -103,6 +115,9 @@ fun OnboardingScreen(
                                     onUiEvent(OnboardingUiEvent.PhoneNumberChanged(value))
                                 },
                                 onApproveAndCreate = { onUiEvent(OnboardingUiEvent.ApproveAndCreateClicked) },
+                                onRestoreIdentity = onRestoreIdentity,
+                                isRestoring = isRestoring,
+                                restoreError = backupError,
                                 onNameChanged = { value ->
                                     onUiEvent(OnboardingUiEvent.NameChanged(value))
                                 }

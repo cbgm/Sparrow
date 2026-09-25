@@ -10,6 +10,7 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
+import com.cbgm.sparrow.data.database.model.MessageCursorDto
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
@@ -127,11 +128,95 @@ interface ChatDao {
         """
         SELECT * FROM messages
         WHERE conversationId = :conversationId
-        ORDER BY createdAtEpochMilliseconds DESC
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
         LIMIT :limit
         """
     )
     fun observeRecentMessages(conversationId: String, limit: Int): Flow<List<MessageEntity>>
+
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE conversationId = :conversationId
+          AND (
+              createdAtEpochMilliseconds > :fromTimestamp
+              OR (
+                  createdAtEpochMilliseconds = :fromTimestamp
+                  AND id >= :fromMessageId
+              )
+          )
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        """
+    )
+    fun observeMessagesFromCursor(
+        conversationId: String,
+        fromTimestamp: Long,
+        fromMessageId: String
+    ): Flow<List<MessageEntity>>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun findRecentMessageCursors(
+        conversationId: String,
+        limit: Int
+    ): List<MessageCursorDto>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+          AND (
+              createdAtEpochMilliseconds < :beforeTimestamp
+              OR (
+                  createdAtEpochMilliseconds = :beforeTimestamp
+                  AND id < :beforeMessageId
+              )
+          )
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun findMessageCursorsBefore(
+        conversationId: String,
+        beforeTimestamp: Long,
+        beforeMessageId: String,
+        limit: Int
+    ): List<MessageCursorDto>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+          AND id = :messageId
+        LIMIT 1
+        """
+    )
+    suspend fun findMessageCursor(
+        conversationId: String,
+        messageId: String
+    ): MessageCursorDto?
+
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE conversationId = :conversationId
+          AND transportMode IN (:transportModes)
+        ORDER BY createdAtEpochMilliseconds ASC, id ASC
+        """
+    )
+    fun observeMessagesByTransportModes(
+        conversationId: String,
+        transportModes: List<String>
+    ): Flow<List<MessageEntity>>
 
     @Query("SELECT * FROM conversation_participants WHERE conversationId = :conversationId")
     fun observeConversationParticipants(conversationId: String): Flow<List<ConversationParticipantEntity>>
@@ -300,6 +385,18 @@ interface ChatDao {
         timestamp: Long
     )
 
+    @Query(
+        """
+        UPDATE conversations
+        SET title = :title
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun updateConversationTitle(
+        conversationId: String,
+        title: String
+    ): Int
+
     @Transaction
     @Query(
         """
@@ -333,6 +430,20 @@ interface ChatDao {
             LIMIT 1
         ) AS lastMessageText,
         (
+            SELECT message_attachments.type
+            FROM message_attachments
+            WHERE message_attachments.messageId = (
+                SELECT messages.id
+                FROM messages
+                WHERE messages.conversationId = conversations.id
+                  AND messages.transportMode != :localMembershipStartedTransportMode
+                ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
+                LIMIT 1
+            )
+            ORDER BY message_attachments.position ASC
+            LIMIT 1
+        ) AS lastMessageAttachmentType,
+        (
             SELECT messages.createdAtEpochMilliseconds
             FROM messages
             WHERE messages.conversationId = conversations.id
@@ -341,12 +452,14 @@ interface ChatDao {
             LIMIT 1
         ) AS lastMessageTimestamp,
         (
-            SELECT COUNT(*)
-            FROM messages
-            WHERE messages.conversationId = conversations.id
-              AND messages.isMine = 0
-              AND messages.readReceiptSent = 0
-              AND messages.contentStatus = 'READABLE'
+            (
+                SELECT COUNT(*)
+                FROM messages
+                WHERE messages.conversationId = conversations.id
+                  AND messages.isMine = 0
+                  AND messages.readReceiptSent = 0
+                  AND messages.contentStatus = 'READABLE'
+            ) + conversations.unseenLocalMessageCount
         ) AS unreadCount,
         conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds
     FROM conversations
@@ -366,6 +479,7 @@ interface ChatDao {
         WHERE messages.conversationId = conversations.id
           AND messages.transportMode = :localDeletionTransportMode
     )
+      AND conversations.isVisible = 1
     ORDER BY conversations.updatedAtEpochMilliseconds DESC
     """
     )
@@ -373,6 +487,24 @@ interface ChatDao {
         localDeletionTransportMode: String,
         localMembershipStartedTransportMode: String
     ): Flow<List<ConversationSummaryDto>>
+
+    @Query(
+        """
+        UPDATE conversations
+        SET unseenLocalMessageCount = unseenLocalMessageCount + 1
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun incrementUnseenLocalMessageCount(conversationId: String): Int
+
+    @Query(
+        """
+        UPDATE conversations
+        SET unseenLocalMessageCount = 0
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun clearUnseenLocalMessageCount(conversationId: String): Int
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteConversationMessages(conversationId: String)
@@ -415,6 +547,7 @@ interface ChatDao {
         WHERE messages.conversationId = :conversationId
           AND conversations.type = 'GROUP'
           AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
           AND messages.packetId IS NULL
           AND messages.deliveryStatus = 'QUEUED'
           AND NOT EXISTS (
@@ -426,6 +559,25 @@ interface ChatDao {
         """
     )
     suspend fun findQueuedGroupMessages(conversationId: String): List<MessageEntity>
+
+    /** Recipient rows can be committed just before a process crash, with no
+     * corresponding outbox row yet. Reconcile that window after activation.
+     */
+    @Query(
+        """
+        SELECT DISTINCT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        INNER JOIN message_recipient_states AS recipients ON recipients.messageId = messages.id
+        WHERE messages.conversationId = :conversationId
+          AND conversations.type = 'GROUP'
+          AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
+          AND recipients.deliveryStatus = 'QUEUED'
+        ORDER BY messages.createdAtEpochMilliseconds, messages.id
+        """
+    )
+    suspend fun findGroupMessagesAwaitingOutbox(conversationId: String): List<MessageEntity>
 
     @Query(
         """

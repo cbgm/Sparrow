@@ -5,10 +5,10 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -44,6 +45,7 @@ import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_chats_group_leave
 import com.cbgm.sparrow.resources.feature_chats_group_leave_description
 import com.cbgm.sparrow.resources.feature_chats_group_promote_admin
+import com.cbgm.sparrow.resources.feature_chats_group_promote_admin_button
 import com.cbgm.sparrow.resources.feature_chats_group_promote_admin_description
 import com.cbgm.sparrow.resources.feature_chats_group_promote_before_leave
 import com.cbgm.sparrow.resources.feature_chats_group_promote_before_leave_description
@@ -127,7 +129,9 @@ fun GroupDetailsFlow(
                 GroupDetailsScreen(
                     uiState = GroupDetailsUiState.Content(
                         summary = uiState.summary,
-                        groupAvatar = uiState.groupAvatar
+                        groupAvatar = uiState.groupAvatar,
+                        groupTitle = uiState.groupTitle,
+                        groupDescription = uiState.groupDescription
                     ),
                     onUiEvent = { event ->
                         handleOverviewUiEvent(
@@ -182,15 +186,14 @@ fun GroupDetailsFlow(
             }
         }
     }
-    uiState.memberManagement.removalCandidate?.let { member ->
-        RemoveDialog(
-            member = member,
-            isRemoving = uiState.memberManagement.isUpdating,
-            errorMessage = uiState.memberManagement.errorMessage,
-            onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalConfirmed) },
-            onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalDismissed) }
-        )
-    }
+
+    RemoveDialog(
+        member = uiState.memberManagement.removalCandidate,
+        isRemoving = uiState.memberManagement.isUpdating,
+        errorMessage = uiState.memberManagement.errorMessage,
+        onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalConfirmed) },
+        onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalDismissed) }
+    )
 
     uiState.memberManagement.promotionCandidate?.let { member ->
         PromoteDialog(
@@ -202,34 +205,33 @@ fun GroupDetailsFlow(
         )
     }
 
-    if (uiState.leave.prompt == GroupLeavePrompt.PROMOTE_ADMIN) {
-        val promotableMembers =
-            uiState.summary.members.filter { member ->
-                member.contactId in uiState.summary.promotableContactIds
-            }
-        PromoteBeforeLeaveDialog(
-            members = promotableMembers,
-            isUpdating = uiState.memberManagement.isUpdating,
-            errorMessage = uiState.memberManagement.errorMessage,
-            onSelect = { contactId ->
-                verificationViewModel.onUiEvent(
-                    GroupDetailsUiEvent.PromoteMemberAndLeaveClicked(contactId)
-                )
-            },
-            onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed) }
-        )
-    }
+    val promotableMembers =
+        uiState.summary.members.filter { member ->
+            member.contactId in uiState.summary.promotableContactIds
+        }
 
-    if (uiState.leave.prompt == GroupLeavePrompt.CONFIRM) {
-        LeaveDialog(
-            isRemoving = uiState.leave.isLeaving,
-            errorMessage = uiState.leave.errorMessage,
-            onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupConfirmed) },
-            onDismiss = {
-                verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed)
-            }
-        )
-    }
+    PromoteBeforeLeaveDialog(
+        isVisible = uiState.leave.prompt == GroupLeavePrompt.PROMOTE_ADMIN,
+        members = promotableMembers,
+        isUpdating = uiState.memberManagement.isUpdating,
+        errorMessage = uiState.memberManagement.errorMessage,
+        onSelect = { contactId ->
+            verificationViewModel.onUiEvent(
+                GroupDetailsUiEvent.PromoteMemberAndLeaveClicked(contactId)
+            )
+        },
+        onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed) }
+    )
+
+    LeaveDialog(
+        isVisible = uiState.leave.prompt == GroupLeavePrompt.CONFIRM,
+        isRemoving = uiState.leave.isLeaving,
+        errorMessage = uiState.leave.errorMessage,
+        onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupConfirmed) },
+        onDismiss = {
+            verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed)
+        }
+    )
 }
 
 private fun handleOverviewUiEvent(
@@ -251,23 +253,26 @@ private fun handleOverviewUiEvent(
 }
 
 @Composable
+private fun DestructiveGroupActionDescription(description: String) {
+    Text(text = description, style = MaterialTheme.typography.bodyMedium)
+}
+
+@Composable
 private fun LeaveDialog(
+    isVisible: Boolean,
     isRemoving: Boolean,
     errorMessage: String?,
     onApprove: () -> Unit,
     onDismiss: () -> Unit
 ) {
     SparrowAlertDialog(
+        isVisible = isVisible,
         onDismissRequest = {},
         title = stringResource(Res.string.feature_chats_group_leave),
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(Res.string.feature_chats_group_leave_description)
-                )
-
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            }
+            DestructiveGroupActionDescription(
+                description = stringResource(Res.string.feature_chats_group_leave_description)
+            )
 
             errorMessage?.let { message ->
                 Text(
@@ -279,7 +284,7 @@ private fun LeaveDialog(
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDestructiveButton(
                 onClick = onApprove,
                 fillMaxWidth = false,
                 content = {
@@ -312,6 +317,7 @@ private fun LeaveDialog(
 private fun LeaveDialogPreview() {
     SparrowTheme {
         LeaveDialog(
+            isVisible = true,
             isRemoving = true,
             errorMessage = null,
             onApprove = {},
@@ -322,6 +328,7 @@ private fun LeaveDialogPreview() {
 
 @Composable
 private fun PromoteBeforeLeaveDialog(
+    isVisible: Boolean,
     members: List<GroupMemberVerificationUiState>,
     isUpdating: Boolean,
     errorMessage: String?,
@@ -329,6 +336,7 @@ private fun PromoteBeforeLeaveDialog(
     onDismiss: () -> Unit
 ) {
     SparrowAlertDialog(
+        isVisible = isVisible,
         onDismissRequest = {},
         title = stringResource(Res.string.feature_chats_group_promote_before_leave),
         text = {
@@ -343,7 +351,7 @@ private fun PromoteBeforeLeaveDialog(
                     )
                     if (index < members.lastIndex) {
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f),
+                            thickness = Dimens.Base.dividerThickness,
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
                         )
                     }
@@ -373,6 +381,7 @@ private fun PromoteBeforeLeaveDialog(
 private fun PromoteBeforeLeaveDialogPreview() {
     SparrowTheme {
         PromoteBeforeLeaveDialog(
+            isVisible = true,
             members = GroupDetailsPreviewData.summary.members,
             isUpdating = false,
             errorMessage = null,
@@ -391,6 +400,7 @@ private fun PromoteDialog(
     onDismiss: () -> Unit
 ) {
     SparrowAlertDialog(
+        isVisible = true,
         onDismissRequest = {},
         title = stringResource(Res.string.feature_chats_group_promote_admin),
         text = {
@@ -412,28 +422,29 @@ private fun PromoteDialog(
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
-                onClick = onApprove,
-                fillMaxWidth = false,
-                content = {
-                    if (isUpdating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
-                        )
-                    } else {
-                        Text(stringResource(Res.string.feature_chats_group_promote_admin))
+            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+                SparrowApprovalButton(
+                    onClick = onApprove,
+                    modifier = Modifier.weight(1f),
+                    content = {
+                        if (isUpdating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            )
+                        } else {
+                            Text(stringResource(Res.string.feature_chats_group_promote_admin_button))
+                        }
                     }
-                }
-            )
+                )
+                SparrowOutlinedButton(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         },
-        dismissButton = {
-            SparrowOutlinedButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
+        dismissButton = {}
     )
 }
 
@@ -453,64 +464,62 @@ private fun PromoteDialogPreview() {
 
 @Composable
 private fun RemoveDialog(
-    member: GroupMemberVerificationUiState,
+    member: GroupMemberVerificationUiState?,
     isRemoving: Boolean,
     errorMessage: String?,
     onApprove: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    SparrowAlertDialog(
-        onDismissRequest = {},
-        title = stringResource(Res.string.feature_chats_group_remove_member),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text =
-                        stringResource(
-                            Res.string.feature_chats_group_remove_member_description,
-                            member.displayName
-                        )
+    member?.let {
+        SparrowAlertDialog(
+            isVisible = true,
+            onDismissRequest = {},
+            title = stringResource(Res.string.feature_chats_group_remove_member),
+            text = {
+                DestructiveGroupActionDescription(
+                    description = stringResource(
+                        Res.string.feature_chats_group_remove_member_description,
+                        member.displayName
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            }
-
-            errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        },
-        confirmButton = {
-            SparrowApprovalButton(
-                onClick = onApprove,
-                fillMaxWidth = false,
-                content = {
-                    if (isRemoving) {
-                        CircularProgressIndicator(
-                            modifier =
-                                Modifier
-                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
-                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
-                        )
-                    } else {
-                        Text(text = stringResource(Res.string.feature_chats_group_remove_member))
-                    }
+                errorMessage?.let { message ->
+                    Text(
+                        text = message,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
-            )
-        },
-        dismissButton = {
-            SparrowOutlinedButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
-    )
+            },
+            confirmButton = {
+                SparrowDestructiveButton(
+                    onClick = onApprove,
+                    fillMaxWidth = false,
+                    content = {
+                        if (isRemoving) {
+                            CircularProgressIndicator(
+                                modifier =
+                                    Modifier
+                                        .size(Dimens.GroupDetailsScreen.verificationProgressSize)
+                                        .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
+                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            )
+                        } else {
+                            Text(text = stringResource(Res.string.feature_chats_group_remove_member))
+                        }
+                    }
+                )
+            },
+            dismissButton = {
+                SparrowOutlinedButton(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    fillMaxWidth = false
+                )
+            }
+        )
+    }
 }
 
 @Preview

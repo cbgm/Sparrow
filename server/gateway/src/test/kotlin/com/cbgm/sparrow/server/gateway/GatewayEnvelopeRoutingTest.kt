@@ -2,7 +2,7 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import kotlinx.coroutines.test.runTest
@@ -151,30 +151,56 @@ class GatewayEnvelopeRoutingTest {
         }
 
     @Test
-    fun queuedEnvelopeIsAcceptedBeforePushFallbackCompletes() =
+    fun queuedEnvelopeIsAcceptedOnlyAfterOfflineInboxStoresIt() =
         runTest {
             var pushCalls = 0
-            var scheduledEnvelope: TransportEnvelope? = null
-            var scheduledEnvelopeId: String? = null
+            var storedEnvelope: TransportEnvelope? = null
+            var markedStoredEnvelopeId: String? = null
             val accepted =
                 storeAndRouteFederatedEnvelope(
                     envelope = testEnvelope(),
-                    pushStorage = {
+                    pushStorage = { envelope ->
                         pushCalls += 1
-                        false
+                        storedEnvelope = envelope
+                        true
                     },
                     networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
-                    markFederationStored = { error("Queued envelope must stay in federation") },
-                    queuedPushFallback = { envelope, envelopeId ->
-                        scheduledEnvelope = envelope
-                        scheduledEnvelopeId = envelopeId
-                    }
+                    markFederationStored = { markedStoredEnvelopeId = it }
                 )
 
             assertTrue(accepted)
-            assertEquals(0, pushCalls)
-            assertEquals("envelope-1", scheduledEnvelopeId)
-            assertEquals("envelope-1", requireNotNull(scheduledEnvelope).envelopeId)
+            assertEquals(1, pushCalls)
+            assertEquals("envelope-1", requireNotNull(storedEnvelope).envelopeId)
+            assertEquals("envelope-1", markedStoredEnvelopeId)
+        }
+
+    @Test
+    fun queuedEnvelopeIsNotAcknowledgedWhenOfflineInboxCannotStoreIt() =
+        runTest {
+            var markedStored = false
+            val accepted =
+                storeAndRouteFederatedEnvelope(
+                    envelope = testEnvelope(),
+                    pushStorage = { false },
+                    networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
+                    markFederationStored = { markedStored = true }
+                )
+
+            assertEquals(false, accepted)
+            assertEquals(false, markedStored)
+        }
+
+    @Test
+    fun offlineInboxFailureAlsoRejectsWhenFederationCannotRoute() =
+        runTest {
+            val accepted =
+                storeAndRouteLegacyEnvelope(
+                    envelope = testTransportEnvelope(),
+                    pushStorage = { false },
+                    networkDelivery = { null },
+                    markFederationStored = { error("No envelope was stored") }
+                )
+            assertEquals(false, accepted)
         }
 
     @Test
@@ -200,17 +226,17 @@ class GatewayEnvelopeRoutingTest {
     }
 
     @Test
-    fun remoteTypingEventIsPassedToFederation() =
+    fun remoteIndicatorEventIsPassedToFederation() =
         runTest {
-            var routedEvent: FederatedTypingEvent? = null
-            val event = testTypingEvent()
+            var routedEvent: FederatedIndicatorEvent? = null
+            val event = testIndicatorEvent()
             val delivered =
-                routeFederatedTypingEvent(
+                routeFederatedIndicatorEvent(
                     event = event,
                     localDelivery = { false },
                     federation =
                         federationClient(
-                            typingDelegate = { candidate ->
+                            indicatorDelegate = { candidate ->
                                 routedEvent = candidate
                                 true
                             }
@@ -227,15 +253,15 @@ class GatewayEnvelopeRoutingTest {
         }
 
     private fun federationClient(
-        typingDelegate: suspend (FederatedTypingEvent) -> Boolean = { false },
+        indicatorDelegate: suspend (FederatedIndicatorEvent) -> Boolean = { false },
         delegate: suspend (FederatedEnvelope) -> FederationAcknowledgement
     ): FederationClient =
         object : FederationClient {
             override suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement =
                 delegate(envelope)
 
-            override suspend fun routeTyping(event: FederatedTypingEvent): Boolean =
-                typingDelegate(event)
+            override suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean =
+                indicatorDelegate(event)
         }
 
     private fun acknowledgement(
@@ -267,10 +293,10 @@ class GatewayEnvelopeRoutingTest {
             createdAtEpochMilliseconds = 1_000L
         )
 
-    private fun testTypingEvent(): FederatedTypingEvent =
-        FederatedTypingEvent(
+    private fun testIndicatorEvent(): FederatedIndicatorEvent =
+        FederatedIndicatorEvent(
             senderRoutingId = "sender",
             recipientRoutingId = "recipient",
-            isTyping = true
+            indicatorType = "TYPING"
         )
 }

@@ -318,6 +318,218 @@ class DefaultNodeEndpointResolverTest {
             assertEquals(2, source.fetchCount)
         }
 
+    @Test
+    fun legacyCachePinnedToOldPlaneDoesNotBlockAnotherValidControlPlane() =
+        runTest {
+            val oldDirectory = signedDirectory(authoritySeed = 1)
+            val newDirectory = signedDirectory(authoritySeed = 7)
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(oldDirectory),
+                        trustedRootNodeId = oldDirectory.authorityNodeId
+                    )
+                )
+            val source =
+                RecordingPerPlaneSource(
+                    mapOf(
+                        "http://192.168.178.21:8390" to
+                            Result.failure(IllegalStateException("Connection timed out")),
+                        "http://192.168.178.60:8390" to
+                            Result.success(json.encodeToString(newDirectory))
+                    )
+                )
+            val configuration =
+                FakeControlPlaneConfiguration(
+                    listOf("http://192.168.178.21:8390", "http://192.168.178.60:8390")
+                )
+            val resolver = perPlaneResolver(source, cache, configuration, now = { NOW + 11_000L })
+
+            assertTrue(resolver.resolve("routing-a").isSuccess)
+            assertEquals("http://192.168.178.60:8390", configuration.activeEndpoint.value?.baseUrl)
+            assertEquals(
+                listOf("http://192.168.178.21:8390", "http://192.168.178.60:8390"),
+                source.visited
+            )
+            assertEquals("http://192.168.178.60:8390", cache.value?.sourceControlPlaneBaseUrl)
+            assertEquals(
+                newDirectory.authorityNodeId,
+                cache.value?.trustedRootFor("http://192.168.178.60:8390")
+            )
+        }
+
+    @Test
+    fun pinnedRootForKnownPlaneIsNotSilentlyReplaced() =
+        runTest {
+            val trusted = signedDirectory(authoritySeed = 7)
+            val replacement = signedDirectory(authoritySeed = 8)
+            val url = "http://192.168.178.60:8390"
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(trusted),
+                        trustedRootNodeId = trusted.authorityNodeId,
+                        sourceControlPlaneBaseUrl = url,
+                        trustedRootsByControlPlane = mapOf(url to trusted.authorityNodeId)
+                    )
+                )
+            val source = RecordingPerPlaneSource(mapOf(url to Result.success(json.encodeToString(replacement))))
+            val resolver =
+                perPlaneResolver(source, cache, FakeControlPlaneConfiguration(listOf(url)))
+
+            resolver.resolve("routing-a", forceRefresh = true)
+            assertEquals(trusted.authorityNodeId, cache.value?.trustedRootFor(url))
+            assertEquals(listOf(url), source.visited)
+        }
+
+    @Test
+    fun replacedManuallyConfiguredHttpsServerReconnectsWithoutReplaceServerAction() =
+        runTest {
+            val oldDirectory = signedDirectory(authoritySeed = 7)
+            val newDirectory = signedDirectory(authoritySeed = 8)
+            val url = "https://control.example"
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(oldDirectory),
+                        trustedRootNodeId = oldDirectory.authorityNodeId,
+                        sourceControlPlaneBaseUrl = url,
+                        trustedRootsByControlPlane = mapOf(url to oldDirectory.authorityNodeId)
+                    )
+                )
+            val source = RecordingPerPlaneSource(
+                mapOf(url to Result.success(json.encodeToString(newDirectory)))
+            )
+            val configuration = FakeControlPlaneConfiguration(listOf(url))
+            val resolver = perPlaneResolver(source, cache, configuration)
+
+            val result = resolver.resolve("routing-a", forceRefresh = true)
+            assertTrue(result.isSuccess)
+            assertEquals(newDirectory.authorityNodeId, cache.value?.trustedRootFor(url))
+            assertEquals(url, cache.value?.sourceControlPlaneBaseUrl)
+            assertEquals(url, configuration.activeEndpoint.value?.baseUrl)
+        }
+
+    @Test
+    fun invalidReplacementDirectoryCannotReplaceStoredRegistryRoot() =
+        runTest {
+            val trusted = signedDirectory(authoritySeed = 7)
+
+            val invalid = signedDirectory(authoritySeed = 8, nodes = emptyList())
+            val url = "https://control.example"
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(trusted),
+                        trustedRootNodeId = trusted.authorityNodeId,
+                        sourceControlPlaneBaseUrl = url,
+                        trustedRootsByControlPlane = mapOf(url to trusted.authorityNodeId)
+                    )
+                )
+            val resolver =
+                perPlaneResolver(
+                    RecordingPerPlaneSource(mapOf(url to Result.success(json.encodeToString(invalid)))),
+                    cache,
+                    FakeControlPlaneConfiguration(listOf(url))
+                )
+            resolver.resolve("routing-a", forceRefresh = true)
+            assertEquals(trusted.authorityNodeId, cache.value?.trustedRootFor(url))
+        }
+
+    @Test
+    fun discoveredHttpsPlaneCannotSilentlyReplacePreviouslyPinnedRoot() =
+        runTest {
+            val trusted = signedDirectory(authoritySeed = 7)
+            val replacement = signedDirectory(authoritySeed = 8)
+            val url = "https://directory-discovered.example"
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(trusted),
+                        trustedRootNodeId = trusted.authorityNodeId,
+                        sourceControlPlaneBaseUrl = url,
+                        trustedRootsByControlPlane = mapOf(url to trusted.authorityNodeId)
+                    )
+                )
+            val configuration = FakeControlPlaneConfiguration(listOf(url))
+            configuration.manualBaseUrls.value = emptySet()
+            val resolver =
+                perPlaneResolver(
+                    RecordingPerPlaneSource(mapOf(url to Result.success(json.encodeToString(replacement)))),
+                    cache,
+                    configuration
+                )
+            resolver.resolve("routing-a", forceRefresh = true)
+            assertEquals(trusted.authorityNodeId, cache.value?.trustedRootFor(url))
+        }
+
+    @Test
+    fun previouslyVerifiedPlaneRootsSurviveFailoverInBothDirections() =
+        runTest {
+            val firstUrl = "https://cp-a.example"
+            val secondUrl = "https://cp-b.example"
+            val first = signedDirectory(authoritySeed = 1)
+            val second = signedDirectory(authoritySeed = 7)
+            val source =
+                RecordingPerPlaneSource(
+                    mapOf(
+                        firstUrl to Result.success(json.encodeToString(first)),
+                        secondUrl to Result.failure(IllegalStateException("offline"))
+                    )
+                )
+            val cache = RecordingNodeDirectoryCache()
+            val configuration = FakeControlPlaneConfiguration(listOf(firstUrl, secondUrl))
+            val resolver = perPlaneResolver(source, cache, configuration)
+
+            resolver.resolve("routing-a", forceRefresh = true).getOrThrow()
+            source.results =
+                mapOf(
+                    firstUrl to Result.failure(IllegalStateException("offline")),
+                    secondUrl to Result.success(json.encodeToString(second))
+                )
+            resolver.resolve("routing-a", forceRefresh = true).getOrThrow()
+            assertEquals(first.authorityNodeId, cache.value?.trustedRootFor(firstUrl))
+            assertEquals(second.authorityNodeId, cache.value?.trustedRootFor(secondUrl))
+
+            source.results = mapOf(firstUrl to Result.success(json.encodeToString(first)))
+            resolver.resolve("routing-a", forceRefresh = true).getOrThrow()
+            assertEquals(firstUrl, configuration.activeEndpoint.value?.baseUrl)
+        }
+
+    private fun perPlaneResolver(
+        source: NodeDirectorySource,
+        cache: NodeDirectoryCache,
+        configuration: FakeControlPlaneConfiguration,
+        now: () -> Long = { NOW }
+    ): DefaultNodeEndpointResolver =
+        DefaultNodeEndpointResolver(
+            source = source,
+            json = json,
+            cache = cache,
+            verifier =
+                NodeDirectoryVerifier(
+                    signatureCrypto = AcceptingSignatureCrypto,
+                    cryptoHash = cryptoHash,
+                    json = json
+                ),
+            config = TransportConfig(trustedRegistryRootNodeId = null),
+            controlPlaneConfiguration = configuration,
+            controlPlaneStatusStore = configuration,
+            endpointSelector = NodeEndpointSelector(config = TransportConfig()),
+            now = now
+        )
+
+    private class RecordingPerPlaneSource(
+        var results: Map<String, Result<String>>
+    ) : NodeDirectorySource {
+        val visited = mutableListOf<String>()
+
+        override suspend fun fetch(registryBaseUrl: String): Result<String> {
+            visited += registryBaseUrl
+            return results[registryBaseUrl] ?: Result.failure(IllegalStateException("No fixture"))
+        }
+    }
+
     private fun resolver(
         source: NodeDirectorySource,
         cache: NodeDirectoryCache,

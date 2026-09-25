@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentConstraints
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 
 object MessageAttachmentPolicy {
     const val MAX_ATTACHMENTS_PER_MESSAGE = MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE
@@ -20,6 +21,10 @@ object MessageAttachmentPolicy {
         }
         require(attachments.sumOf { it.bytes.size.toLong() } <= MAX_TOTAL_ATTACHMENT_BYTES) {
             "Selected attachments exceed the total attachment size limit"
+        }
+        val voiceCount = attachments.count { it.type == MessageAttachmentType.VOICE }
+        require(voiceCount == 0 || (voiceCount == 1 && attachments.size == 1)) {
+            "A voice message cannot contain other attachments"
         }
     }
 }

@@ -18,6 +18,7 @@ dependencies {
     implementation(projects.server.protocol)
     implementation(projects.server.security)
     implementation(projects.server.observability)
+    implementation(projects.server.linkPreview)
     implementation(libs.bundles.ktor.server)
     implementation(libs.bundles.ktor.client)
     implementation(libs.ktor.client.cio)

@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxEvent
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStateMachine
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.time.SystemClock
@@ -34,6 +35,9 @@ class DefaultProtocolOutbox(
             val existing = outboxDao.findByPacketId(packetId = packet.packetId)
 
             if (existing != null) {
+                check(existing.status != OutboxStatus.QUARANTINED.name) {
+                    "Packet is bound to a retired recipient identity; create a new packet after authorization"
+                }
                 return@runCatching existing.toProtocolOutboxItem()
             }
 
@@ -72,6 +76,31 @@ class DefaultProtocolOutbox(
                     entity.toProtocolOutboxItem()
                 }
             }
+
+    override fun observeTransportStates(): Flow<List<ProtocolOutboxItem>> =
+        outboxDao.observeTransportStates().map { entities ->
+            entities.map { entity -> entity.toProtocolOutboxItem() }
+        }
+
+    override fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>> =
+        outboxDao.observeUnacknowledgedFailures().map { events ->
+            events.map { event ->
+                ProtocolOutboxFailureEvent(
+                    eventId = event.eventId,
+                    packetId = event.packetId,
+                    encodedPacket = event.encodedPacket.copyOf(),
+                    attemptCount = event.attemptCount,
+                    errorMessage = event.errorMessage,
+                    occurredAtEpochMilliseconds = event.occurredAtEpochMilliseconds
+                )
+            }
+        }
+
+    override suspend fun acknowledgeFailure(eventId: String): Result<Unit> =
+        runCatching {
+            require(eventId.isNotBlank()) { "Failure event ID must not be blank" }
+            outboxDao.acknowledgeFailure(eventId)
+        }
 
     override fun observeNextSentExpiry(): Flow<Long?> =
         outboxDao.observeNextSentExpiry()
@@ -127,10 +156,12 @@ class DefaultProtocolOutbox(
                 event = OutboxEvent.PROCESSING_STARTED
             )
 
-            outboxDao.markProcessing(
-                itemId = itemId,
-                updatedAt = SystemClock.nowEpochMilliseconds()
-            )
+            check(
+                outboxDao.markProcessing(
+                    itemId = itemId,
+                    updatedAt = SystemClock.nowEpochMilliseconds()
+                ) == 1
+            ) { "Outbox packet changed state before processing; refusing stale send" }
         }
 
     override suspend fun requeueInterrupted(): Result<Unit> =
@@ -145,6 +176,13 @@ class DefaultProtocolOutbox(
             outboxDao.retryFailed(
                 updatedAt = SystemClock.nowEpochMilliseconds()
             )
+        }
+
+    override suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> =
+        runCatching {
+            require(nowEpochMilliseconds >= 0L)
+            outboxDao.retryTransientFailed(nowEpochMilliseconds)
+            Unit
         }
 
     override suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?> =
@@ -208,7 +246,7 @@ class DefaultProtocolOutbox(
                 event = OutboxEvent.SEND_FAILED
             )
 
-            outboxDao.markFailed(
+            outboxDao.markFailedWithEvent(
                 itemId = itemId,
                 errorMessage = errorMessage.take(MAX_ERROR_LENGTH),
                 updatedAt = SystemClock.nowEpochMilliseconds()
@@ -245,6 +283,9 @@ class DefaultProtocolOutbox(
             when (existing.status.toOutboxStatus()) {
                 OutboxStatus.PENDING,
                 OutboxStatus.PROCESSING -> Unit
+
+                OutboxStatus.QUARANTINED ->
+                    error("Packet belongs to a retired recipient identity and cannot be resent")
 
                 OutboxStatus.SENT,
                 OutboxStatus.FAILED,
@@ -293,6 +334,8 @@ class DefaultProtocolOutbox(
             OutboxStatus.FAILED.name -> OutboxStatus.FAILED
 
             OutboxStatus.EXPIRED.name -> OutboxStatus.EXPIRED
+
+            OutboxStatus.QUARANTINED.name -> OutboxStatus.QUARANTINED
 
             else -> error("Unknown outbox status: $this")
         }

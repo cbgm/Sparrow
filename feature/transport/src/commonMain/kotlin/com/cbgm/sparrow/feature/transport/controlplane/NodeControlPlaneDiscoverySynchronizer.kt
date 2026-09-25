@@ -13,6 +13,11 @@ class NodeControlPlaneDiscoverySynchronizer(
 
     suspend fun refreshFromNode(websocketUrl: String): Result<Int> =
         runCatching {
+            if (configuration.directoryUrl.value != null) {
+                // Signed-directory publication is the sole authority for dynamic
+                // endpoint enrollment/revocation. Node hints cannot bypass it.
+                return@runCatching 0
+            }
             val candidates = source.fetch(websocketUrl).getOrThrow().normalizedCandidates()
             val verified = verifyCandidates(candidates)
             check(verified.isNotEmpty()) {
@@ -37,10 +42,7 @@ class NodeControlPlaneDiscoverySynchronizer(
         candidate: String,
         error: Throwable
     ) {
-        logger.warn {
-            "Ignoring untrusted control plane $candidate: " +
-                (error.message ?: "verification failed")
-        }
+        logger.warn { "Ignoring untrusted control plane $candidate: ${error.message ?: error::class.simpleName}" }
     }
 
     private fun List<String>.normalizedCandidates(): List<String> =

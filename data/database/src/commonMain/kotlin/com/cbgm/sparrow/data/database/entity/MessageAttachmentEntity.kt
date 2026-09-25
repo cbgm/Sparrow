@@ -44,7 +44,11 @@ data class MessageAttachmentEntity(
     /** Only present for blobs uploaded by this device. Never sent to peers. */
     val deleteCapability: String?,
     /** File name inside Sparrow's private message-attachment cache. */
-    val localFileName: String?
+    val localFileName: String?,
+    /** Plain attachment payload kept in Room only for attachment types that must never be file-backed. */
+    val payloadBytes: ByteArray? = null,
+    /** Local-only transcript for voice attachments. Never sent to peers. */
+    val transcript: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -72,6 +76,9 @@ data class MessageAttachmentEntity(
         if (!ciphertextSha256.contentEquals(other.ciphertextSha256)) return false
         if (deleteCapability != other.deleteCapability) return false
         if (localFileName != other.localFileName) return false
+        if (payloadBytes == null && other.payloadBytes != null) return false
+        if (payloadBytes != null && (other.payloadBytes == null || !payloadBytes.contentEquals(other.payloadBytes))) return false
+        if (transcript != other.transcript) return false
 
         return true
     }
@@ -97,6 +104,8 @@ data class MessageAttachmentEntity(
         result = 31 * result + ciphertextSha256.contentHashCode()
         result = 31 * result + (deleteCapability?.hashCode() ?: 0)
         result = 31 * result + (localFileName?.hashCode() ?: 0)
+        result = 31 * result + (payloadBytes?.contentHashCode() ?: 0)
+        result = 31 * result + (transcript?.hashCode() ?: 0)
         return result
     }
 }

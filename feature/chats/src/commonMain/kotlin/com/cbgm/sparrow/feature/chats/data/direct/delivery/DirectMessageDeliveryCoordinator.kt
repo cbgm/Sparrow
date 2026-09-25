@@ -1,21 +1,21 @@
 package com.cbgm.sparrow.feature.chats.data.direct.delivery
 
-import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectDeliveryDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 
 class DirectMessageDeliveryCoordinator(
-    private val messageDeliveryStatusDao: MessageDeliveryStatusDao
+    private val deliveryDataSource: DirectDeliveryDataSource
 ) {
     suspend fun handlesPacket(packetId: String): Boolean =
-        messageDeliveryStatusDao.findOutgoingDeliveryStatusByPacketId(packetId) != null
+        deliveryDataSource.findByPacketId(packetId) != null
 
     suspend fun handlesReceipt(
         messageId: String,
         contactId: String
     ): Boolean =
-        messageDeliveryStatusDao.findOutgoingDeliveryStatus(messageId, contactId) != null
+        deliveryDataSource.findByMessageAndContact(messageId, contactId) != null
 
     suspend fun storePreparedTransport(
         packetId: String,
@@ -25,19 +25,19 @@ class DirectMessageDeliveryCoordinator(
         require(packetId.isNotBlank()) { "Packet ID must not be blank" }
         require(encodedTransportPayload.isNotBlank()) { "Transport payload must not be blank" }
         require(transportMode.isNotBlank()) { "Transport mode must not be blank" }
-        messageDeliveryStatusDao.updatePreparedTransport(packetId, encodedTransportPayload, transportMode)
+        deliveryDataSource.updatePreparedTransport(packetId, encodedTransportPayload, transportMode)
     }
 
     suspend fun applyPacketEvent(
         packetId: String,
         event: MessageDeliveryEvent,
-        errorMessage: String? = null
+        @Suppress("UNUSED_PARAMETER") errorMessage: String? = null
     ) {
         require(packetId.isNotBlank()) { "Packet ID must not be blank" }
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByPacketId(packetId)?.toMessageDeliveryStatus() ?: return
+        val current = deliveryDataSource.findByPacketId(packetId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, event)
         if (next != current) {
-            messageDeliveryStatusDao.updateDeliveryStatus(packetId, next.name)
+            deliveryDataSource.updateByPacketId(packetId, next.name)
         }
     }
 
@@ -47,19 +47,19 @@ class DirectMessageDeliveryCoordinator(
         event: MessageDeliveryEvent
     ) {
         requireReceiptEvent(messageId, contactId, event)
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatus(messageId, contactId)?.toMessageDeliveryStatus() ?: return
+        val current = deliveryDataSource.findByMessageAndContact(messageId, contactId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, event)
         if (next != current) {
-            messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, next.name)
+            deliveryDataSource.updateByMessageId(messageId, next.name)
         }
     }
 
     suspend fun applyRetryEvent(messageId: String) {
         require(messageId.isNotBlank()) { "Message ID must not be blank" }
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByMessageId(messageId)?.toMessageDeliveryStatus() ?: return
+        val current = deliveryDataSource.findByMessageId(messageId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, MessageDeliveryEvent.RETRY_REQUESTED)
         if (next != current) {
-            messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, next.name)
+            deliveryDataSource.updateByMessageId(messageId, next.name)
         }
     }
 

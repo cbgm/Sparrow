@@ -14,6 +14,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -62,12 +63,11 @@ fun DeveloperErrorLogScreen(
         )
     }
 
-    if (uiState.showClearConfirmation) {
-        ClearDeveloperErrorsDialog(
-            onConfirm = { onUiEvent(DeveloperErrorLogUiEvent.ClearErrorsConfirmed) },
-            onDismiss = { onUiEvent(DeveloperErrorLogUiEvent.ClearErrorsDismissed) }
-        )
-    }
+    ClearDeveloperErrorsDialog(
+        isVisible = uiState.showClearConfirmation,
+        onConfirm = { onUiEvent(DeveloperErrorLogUiEvent.ClearErrorsConfirmed) },
+        onDismiss = { onUiEvent(DeveloperErrorLogUiEvent.ClearErrorsDismissed) }
+    )
 }
 
 @Composable
@@ -105,15 +105,18 @@ private fun Content(
 
         if (uiState.errors.isEmpty()) {
             item(key = "empty-errors") {
-                Text(
-                    text = stringResource(Res.string.feature_settings_error_log_empty),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = MaterialTheme.spacing.medium),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.background,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = stringResource(Res.string.feature_settings_error_log_empty),
+                        modifier = Modifier.padding(MaterialTheme.spacing.large),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else {
             items(

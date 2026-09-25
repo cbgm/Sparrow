@@ -12,6 +12,8 @@ object GroupMessageDeliveryStateMachine {
             MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_STARTED,
             MessageDeliveryStatus.FAILED to MessageDeliveryEvent.SEND_STARTED -> MessageDeliveryStatus.SENDING
 
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.TRANSPORT_RETRY_PENDING -> MessageDeliveryStatus.QUEUED
+
             MessageDeliveryStatus.SENDING to MessageDeliveryEvent.SEND_SUCCEEDED -> MessageDeliveryStatus.SENT
 
             MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_FAILED,
@@ -43,8 +45,8 @@ object GroupMessageDeliveryStateMachine {
 
     fun aggregate(states: List<MessageDeliveryStatus>): MessageDeliveryStatus {
         if (states.isEmpty()) return MessageDeliveryStatus.NOT_APPLICABLE
-        if (states.all { it == MessageDeliveryStatus.READ }) return MessageDeliveryStatus.READ
-        if (states.all { it == MessageDeliveryStatus.DELIVERED || it == MessageDeliveryStatus.READ }) {
+        if (states.any { it == MessageDeliveryStatus.READ }) return MessageDeliveryStatus.READ
+        if (states.all { it == MessageDeliveryStatus.DELIVERED }) {
             return MessageDeliveryStatus.DELIVERED
         }
         if (states.any { it == MessageDeliveryStatus.SENDING }) return MessageDeliveryStatus.SENDING

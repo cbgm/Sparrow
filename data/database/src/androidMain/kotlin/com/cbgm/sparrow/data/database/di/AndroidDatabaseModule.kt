@@ -27,6 +27,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().autoReplyDao()
+        }
+
+        single {
             get<SparrowDatabase>().contactDao()
         }
 
@@ -43,11 +47,31 @@ val androidDatabaseModule =
         }
 
         single {
-            get<SparrowDatabase>().groupInvitationDao()
+            get<SparrowDatabase>().groupMembershipDao()
         }
 
         single {
-            get<SparrowDatabase>().identityInvitationDao()
+            get<SparrowDatabase>().invitationDao()
+        }
+
+        single {
+            get<SparrowDatabase>().groupPinDao()
+        }
+
+        single {
+            get<SparrowDatabase>().identityExchangeDao()
+        }
+
+        single {
+            get<SparrowDatabase>().remoteIdentityDao()
+        }
+
+        single {
+            get<SparrowDatabase>().pendingRemoteIdentityChangeDao()
+        }
+
+        single {
+            get<SparrowDatabase>().approvedIdentityReconnectionDao()
         }
 
         single {
@@ -71,6 +95,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().messageReactionDao()
+        }
+
+        single {
             get<SparrowDatabase>().messageSearchDao()
         }
 
@@ -80,6 +108,10 @@ val androidDatabaseModule =
 
         single {
             get<SparrowDatabase>().mailboxRouteDao()
+        }
+
+        single {
+            get<SparrowDatabase>().linkPreviewDao()
         }
 
         single<MailboxRouteRepository> {

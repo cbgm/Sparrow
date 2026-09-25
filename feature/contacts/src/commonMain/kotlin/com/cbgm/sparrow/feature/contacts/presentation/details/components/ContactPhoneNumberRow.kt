@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
@@ -8,7 +7,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,10 +15,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.contactDetailsScreen
-import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberTypeUi
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_custom
 import com.cbgm.sparrow.resources.base_home
@@ -34,7 +30,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ContactPhoneNumberRow(
-    phoneNumber: ContactPhoneNumber,
+    phoneNumber: ContactPhoneNumberUi,
     isPreferred: Boolean
 ) {
     ListItem(
@@ -57,20 +53,11 @@ internal fun ContactPhoneNumberRow(
         },
         trailingContent = {
             if (isPreferred) {
-                Surface(
-                    shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.base_preferred),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(
-                            horizontal = MaterialTheme.spacing.base,
-                            vertical = MaterialTheme.spacing.micro
-                        )
-                    )
-                }
+                Text(
+                    text = stringResource(Res.string.base_preferred),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         colors =
@@ -83,17 +70,17 @@ internal fun ContactPhoneNumberRow(
 }
 
 @Composable
-private fun ContactPhoneNumber.displayLabel(): String =
+private fun ContactPhoneNumberUi.displayLabel(): String =
     label?.takeIf(String::isNotBlank)
         ?: stringResource(
             when (type) {
-                ContactPhoneNumberType.MOBILE -> Res.string.base_mobile
-                ContactPhoneNumberType.WORK_MOBILE -> Res.string.base_work_mobile
-                ContactPhoneNumberType.HOME -> Res.string.base_home
-                ContactPhoneNumberType.WORK -> Res.string.base_work
-                ContactPhoneNumberType.MAIN -> Res.string.base_main
-                ContactPhoneNumberType.CUSTOM -> Res.string.base_custom
-                ContactPhoneNumberType.OTHER -> Res.string.base_other
+                ContactPhoneNumberTypeUi.MOBILE -> Res.string.base_mobile
+                ContactPhoneNumberTypeUi.WORK_MOBILE -> Res.string.base_work_mobile
+                ContactPhoneNumberTypeUi.HOME -> Res.string.base_home
+                ContactPhoneNumberTypeUi.WORK -> Res.string.base_work
+                ContactPhoneNumberTypeUi.MAIN -> Res.string.base_main
+                ContactPhoneNumberTypeUi.CUSTOM -> Res.string.base_custom
+                ContactPhoneNumberTypeUi.OTHER -> Res.string.base_other
             }
         )
 

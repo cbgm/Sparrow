@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.domain.usecase
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 
 class SetDirectIdentitySetupModeUseCase(
     private val repository: DirectIdentitySetupModeRepository

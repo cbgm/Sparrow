@@ -37,6 +37,7 @@ import androidx.core.graphics.scale
 import androidx.photopicker.compose.EmbeddedPhotoPicker
 import androidx.photopicker.compose.ExperimentalPhotoPickerComposeApi
 import androidx.photopicker.compose.rememberEmbeddedPhotoPickerState
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.rectangle
@@ -54,7 +55,7 @@ import kotlin.math.roundToInt
 @Composable
 actual fun rememberGalleryPickerLauncher(
     config: GalleryPickerConfig,
-    selectedMedia: List<GalleryMedia>,
+    selectedSourceReferences: List<String>,
     strings: GalleryPickerStrings,
     onMediaSelected: (List<GalleryMedia>) -> Unit,
     onDismissed: () -> Unit,
@@ -63,7 +64,6 @@ actual fun rememberGalleryPickerLauncher(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val currentConfig = rememberUpdatedState(config)
-    val currentSelectedMedia = rememberUpdatedState(selectedMedia)
     val currentOnMediaSelected = rememberUpdatedState(onMediaSelected)
     val currentOnDismissed = rememberUpdatedState(onDismissed)
     val currentOnError = rememberUpdatedState(onError)
@@ -85,21 +85,15 @@ actual fun rememberGalleryPickerLauncher(
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val existingBySource =
-                        currentSelectedMedia.value
-                            .mapNotNull { media -> media.sourceReference?.let { it to media } }
-                            .toMap()
-
                     uris
                         .distinctBy(Uri::toString)
                         .take(currentConfig.value.maxItems)
-                        .map { uri ->
-                            existingBySource[uri.toString()]
-                                ?: decodeGalleryMedia(context, uri, currentConfig.value)
-                        }
+                        .map { uri -> decodeGalleryMedia(context, uri, currentConfig.value) }
                 }
             }.onSuccess(currentOnMediaSelected.value)
                 .onFailure { error ->
+                    SparrowLog.error("GalleryPicker", "Media operation failed", error)
+
                     currentOnError.value(error.message ?: "Selected gallery media could not be read")
                 }
         }
@@ -122,7 +116,7 @@ actual fun rememberGalleryPickerLauncher(
     if (isEmbeddedPickerVisible && supportsEmbeddedPhotoPicker()) {
         EmbeddedGalleryPickerDialog(
             maxItems = config.maxItems,
-            selectedMedia = selectedMedia,
+            selectedSourceReferences = selectedSourceReferences,
             strings = strings,
             onSelectionComplete = { uris ->
                 isEmbeddedPickerVisible = false
@@ -165,16 +159,15 @@ actual fun rememberGalleryPickerLauncher(
 @Composable
 private fun EmbeddedGalleryPickerDialog(
     maxItems: Int,
-    selectedMedia: List<GalleryMedia>,
+    selectedSourceReferences: List<String>,
     strings: GalleryPickerStrings,
     onSelectionComplete: (List<Uri>) -> Unit,
     onDismissed: () -> Unit,
     onError: (String) -> Unit
 ) {
     val initialUris =
-        remember(selectedMedia) {
-            selectedMedia
-                .mapNotNull(GalleryMedia::sourceReference)
+        remember(selectedSourceReferences) {
+            selectedSourceReferences
                 .map(Uri::parse)
                 .toSet()
         }

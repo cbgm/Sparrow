@@ -54,8 +54,8 @@ fun LicensesScreen(
                 LibraryDefaults.m3VariantColors(
                     headerBackground = MaterialTheme.colorScheme.background,
                     headerOnBackground = MaterialTheme.colorScheme.onBackground,
-                    rowBackground = MaterialTheme.colorScheme.background,
-                    rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    rowBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainerHigh,
                     rowOnBackground = MaterialTheme.colorScheme.onBackground,
                     rowSubtleContent = MaterialTheme.colorScheme.onSurfaceVariant,
                     rowDivider = MaterialTheme.colorScheme.outlineVariant,
@@ -102,7 +102,7 @@ private fun licensesColors(): DefaultLibraryColors {
         )
 
     return DefaultLibraryColors(
-        libraryBackgroundColor = MaterialTheme.colorScheme.background,
+        libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
         libraryContentColor = MaterialTheme.colorScheme.onBackground,
         versionChipColors = chipColors,
         licenseChipColors = chipColors,

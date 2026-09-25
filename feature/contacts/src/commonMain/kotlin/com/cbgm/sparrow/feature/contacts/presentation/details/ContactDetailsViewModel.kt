@@ -2,16 +2,16 @@ package com.cbgm.sparrow.feature.contacts.presentation.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactDetailsContextUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toContactDetailsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
+import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 class ContactDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val observeContactDetailsContext: ObserveContactDetailsContextUseCase,
-    private val verifyContact: VerifyContactUseCase
+    private val verifyContact: VerifyRemoteIdentityUseCase
 ) : BaseViewModel() {
     private val contactId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::contactId.name)
@@ -73,12 +73,12 @@ class ContactDetailsViewModel(
             observeContactDetailsContext(contactId)
                 .map { context ->
                     context.contact?.toContactDetailsUiState(
-                        safetyNumber = context.safetyNumber,
-                        profilePictureBytes = context.profilePictureBytes
+                        safetyNumber = context.safetyNumber
                     ) ?: ContactDetailsUiState.NotFound
                 }.onStart {
                     emit(ContactDetailsUiState.Loading)
                 }.catch { error ->
+                    SparrowLog.error("ContactDetailsViewModel", "Could not load contact details", error)
                     emit(
                         ContactDetailsUiState.Error(
                             message = error.message ?: "Failed to load contact"
@@ -98,7 +98,7 @@ class ContactDetailsViewModel(
 
     private fun confirmVerification() {
         val current = uiState.value as? ContactDetailsUiState.Content ?: return
-        if (current.contact.sparrowIdentity?.verificationStatus == ContactVerificationStatus.VERIFIED) return
+        if (current.contact.sparrowIdentity?.verifiedByMe == true) return
         if (!current.canVerify || verificationState.value.isSaving) return
 
         verificationState.value = VerificationActionState(isSaving = true)
@@ -109,6 +109,7 @@ class ContactDetailsViewModel(
                     verificationState.value = VerificationActionState()
                     reloadRevision.update { revision -> revision + 1 }
                 }.onFailure { error ->
+                    SparrowLog.error("ContactDetailsViewModel", "Contact verification failed", error)
                     verificationState.value =
                         VerificationActionState(
                             errorMessage = error.message ?: "Failed to verify identity"

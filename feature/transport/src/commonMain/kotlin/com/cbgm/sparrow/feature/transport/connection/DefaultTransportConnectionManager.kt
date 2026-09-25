@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -59,30 +60,34 @@ class DefaultTransportConnectionManager(
     override val diagnostics: StateFlow<TransportDiagnostics> = diagnosticsState.diagnostics
 
     override val refreshDiagnostics: suspend () -> Unit = {
-        localRoutingIdProvider.getLocalRoutingId().getOrNull()?.let { routingId ->
-            nodeEndpointResolver
-                .resolve(
-                    localRoutingId = routingId,
-                    forceRefresh = true
-                ).fold(
-                    onSuccess = { endpoints ->
-                        resolvedEndpoints = endpoints
-                        diagnosticsState.resolved(
-                            endpoints = endpoints,
-                            cooldownUntilEpochMillisecondsByNodeId =
-                                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
-                            registryAuthorityVerified = true,
-                            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
-                        )
-                    },
-                    onFailure = { error ->
-                        logger.warn {
-                            "Live transport diagnostics refresh failed: " +
-                                (error.message ?: "unknown error")
+        localRoutingIdProvider.getLocalRoutingId()
+            .onFailure { failure -> logger.error(failure) { "Could not obtain local routing ID for diagnostics" } }
+            .getOrNull()?.let { routingId ->
+                nodeEndpointResolver
+                    .resolve(
+                        localRoutingId = routingId,
+                        forceRefresh = true
+                    ).fold(
+                        onSuccess = { endpoints ->
+                            resolvedEndpoints = endpoints
+                            diagnosticsState.resolved(
+                                endpoints = endpoints,
+                                cooldownUntilEpochMillisecondsByNodeId =
+                                    failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
+                                registryAuthorityVerified = true,
+                                registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
+                            )
+                        },
+                        onFailure = { error ->
+                            if (error is CancellationException) throw error
+                            if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                logger.debug { "Transport diagnostics unavailable while offline: ${error.message}" }
+                            } else {
+                                logger.error(error) { "Live transport diagnostics refresh failed" }
+                            }
                         }
-                    }
-                )
-        }
+                    )
+            }
     }
 
     private val mutableConnectionState =
@@ -165,15 +170,20 @@ class DefaultTransportConnectionManager(
 
                 else -> false
             }
-        } catch (error: CancellationException) {
-            throw error
         } catch (error: Throwable) {
+            // The connection-attempt timeout is an offline/retry condition, not
+            // cancellation of the foreground session. Preserve real job cancellation.
+            if (error is CancellationException && error !is TimeoutCancellationException) throw error
             val failure =
                 TransportConnectionState.Failed(
                     message = error.message ?: "Transport connection error"
                 )
             mutableConnectionState.value = failure
-            logger.error(error) { "Transport connection error" }
+            if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                logger.debug { "Transport unavailable; retrying: ${error.message ?: error::class.simpleName}" }
+            } else {
+                logger.error(error) { "Transport connection error" }
+            }
             selectedEndpoint?.let { endpoint ->
                 failedNodeTracker.recordFailure(endpoint.nodeId)
             }
@@ -257,8 +267,11 @@ class DefaultTransportConnectionManager(
             .onSuccess { count ->
                 logger.info { "Control-plane discovery synchronized $count trusted addresses" }
             }.onFailure { error ->
-                logger.warn {
-                    "Control-plane discovery failed: ${error.message ?: "unknown error"}"
+                if (error is CancellationException) throw error
+                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                    logger.debug { "Control-plane discovery unavailable: ${error.message}" }
+                } else {
+                    logger.error(error) { "Control-plane discovery failed" }
                 }
             }
     }
@@ -295,7 +308,10 @@ class DefaultTransportConnectionManager(
         message: String
     ) {
         failedNodeTracker.recordFailure(endpoint.nodeId)
-        logger.warn { "Transport connection failed: $message" }
+        // The WebSocket client already reports unexpected causes at their source.
+        // Connection refusal/timeout is represented by the existing offline hint;
+        // do not report this derived retry state as a new application error.
+        logger.debug { "Transport connection unavailable; retrying: $message" }
         diagnosticsState.failed(
             endpoint = endpoint,
             message = message,
@@ -326,9 +342,14 @@ class DefaultTransportConnectionManager(
                                 )
                             },
                             onFailure = { error ->
-                                logger.warn {
-                                    "Signed node directory refresh failed: " +
-                                        (error.message ?: "unknown error")
+                                if (error is CancellationException) throw error
+                                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                    logger.debug { "Signed node directory refresh unavailable: ${error.message}" }
+                                } else {
+                                    // Discovery is optional while the existing connection is active.
+                                    // Keep the verified cached route; never publish a transient
+                                    // directory refresh failure as an app-wide transport error.
+                                    logger.warn { "Signed node directory refresh rejected: ${error.message}" }
                                 }
                             }
                         )
@@ -341,9 +362,11 @@ class DefaultTransportConnectionManager(
                         controlPlaneDiscoverySynchronizer
                             .refreshFromNode(endpoint.websocketUrl)
                             .onFailure { error ->
-                                logger.warn {
-                                    "Control-plane discovery refresh failed: " +
-                                        (error.message ?: "unknown error")
+                                if (error is CancellationException) throw error
+                                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                    logger.debug { "Control-plane discovery refresh unavailable: ${error.message}" }
+                                } else {
+                                    logger.error(error) { "Control-plane discovery refresh failed" }
                                 }
                             }
                     }

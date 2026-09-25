@@ -8,6 +8,8 @@ data class GroupVerificationUiState(
     val isVerifying: Boolean = false,
     val errorMessage: String? = null,
     val groupAvatar: GroupAvatarUiState = GroupAvatarUiState(),
+    val groupTitle: GroupTitleUiState = GroupTitleUiState(),
+    val groupDescription: GroupDescriptionUiState = GroupDescriptionUiState(),
     val memberManagement: GroupMemberManagementUiState = GroupMemberManagementUiState(),
     val leave: GroupLeaveUiState = GroupLeaveUiState()
 )

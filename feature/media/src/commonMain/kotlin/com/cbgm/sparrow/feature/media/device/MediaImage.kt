@@ -7,6 +7,7 @@ import androidx.compose.ui.layout.ContentScale
 @Composable
 internal expect fun MediaImage(
     data: ByteArray?,
+    localFilePath: String?,
     cacheKey: String,
     contentDescription: String?,
     modifier: Modifier = Modifier,

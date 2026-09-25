@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactBlocklist
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import kotlinx.coroutines.flow.combine
 
 class ObserveContactBlocklistUseCase(

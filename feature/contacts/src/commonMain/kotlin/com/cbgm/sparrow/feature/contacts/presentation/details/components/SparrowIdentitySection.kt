@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
@@ -14,13 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.SparrowIdentityUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_not_verified
 import com.cbgm.sparrow.resources.feature_contacts_compare_before_trusting
@@ -38,21 +36,24 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun SparrowIdentitySection(
-    identity: SparrowIdentity,
-    safetyNumber: SafetyNumber?,
-    onVerifyIdentity: () -> Unit
+    identity: SparrowIdentityUi,
+    safetyNumber: String?,
+    onVerifyIdentity: () -> Unit,
+    showTitle: Boolean = true
 ) {
-    SectionTitle(
-        icon = Icons.Default.Security,
-        title = stringResource(Res.string.feature_contacts_sparrow_identity)
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    if (showTitle) {
+        SectionTitle(
+            icon = Icons.Default.Security,
+            title = stringResource(Res.string.feature_contacts_sparrow_identity)
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    }
 
     val verifiedByContact =
-        identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL && identity.verifiedByContact
+        identity.mutualKeyExchange && identity.verifiedByContact
 
     when {
-        identity.verificationStatus == ContactVerificationStatus.VERIFIED && verifiedByContact ->
+        identity.verifiedByMe && verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Link,
                 iconColor = MaterialTheme.colorScheme.tertiary,
@@ -61,30 +62,30 @@ internal fun SparrowIdentitySection(
                 description = stringResource(Res.string.feature_contacts_identity_verified_description)
             )
 
-        identity.verificationStatus == ContactVerificationStatus.VERIFIED ->
+        identity.verifiedByMe ->
             ContactStatusRow(
                 icon = Icons.Default.Schedule,
-                iconColor = MaterialTheme.colorScheme.primary,
+                iconColor = MaterialTheme.colorScheme.tertiary,
                 title = stringResource(Res.string.feature_contacts_verified_by_you),
-                titleColor = MaterialTheme.colorScheme.primary,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_you_description)
             )
 
         verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Security,
-                iconColor = MaterialTheme.colorScheme.secondary,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.feature_contacts_verified_by_contact),
-                titleColor = MaterialTheme.colorScheme.secondary,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_contact_description)
             )
 
         else ->
             ContactStatusRow(
                 icon = Icons.Default.LinkOff,
-                iconColor = MaterialTheme.colorScheme.error,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.base_not_verified),
-                titleColor = MaterialTheme.colorScheme.error,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_compare_before_trusting)
             )
     }
@@ -92,10 +93,10 @@ internal fun SparrowIdentitySection(
     Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
     if (safetyNumber != null) {
-        if (identity.verificationStatus == ContactVerificationStatus.UNVERIFIED) {
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        if (!identity.verifiedByMe) {
             SparrowApprovalButton(
                 onClick = onVerifyIdentity,
+                fillMaxWidth = false,
                 content = {
                     Icon(imageVector = Icons.Default.Security, contentDescription = null)
                     Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -109,12 +110,15 @@ internal fun SparrowIdentitySection(
 
     IdentityKeySection(
         title = stringResource(Res.string.feature_contacts_signing_fingerprint),
-        key = identity.signingPublicKey
+        fingerprint = identity.signingFingerprint
     )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(vertical = MaterialTheme.spacing.base),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
     IdentityKeySection(
         title = stringResource(Res.string.feature_contacts_encryption_fingerprint),
-        key = identity.encryptionPublicKey
+        fingerprint = identity.encryptionFingerprint
     )
 }
 

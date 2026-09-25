@@ -1,9 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.group.delivery
 
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
-import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupRecipientDeliveryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -12,19 +11,18 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class GroupMessageDeliveryCoordinator(
-    private val messageDeliveryStatusDao: MessageDeliveryStatusDao,
-    private val messageRecipientStateDao: MessageRecipientStateDao
+    private val dataSource: GroupRecipientDeliveryDataSource
 ) {
     private val mutex = Mutex()
 
     suspend fun handlesPacket(packetId: String): Boolean =
-        messageRecipientStateDao.findByPacketId(packetId) != null
+        dataSource.findByPacketId(packetId) != null
 
     suspend fun handlesReceipt(
         messageId: String,
         contactId: String
     ): Boolean =
-        messageRecipientStateDao.findByMessageId(messageId).any { it.contactId == contactId }
+        dataSource.findByMessageId(messageId).any { it.contactId == contactId }
 
     suspend fun applyPacketEvent(
         packetId: String,
@@ -33,7 +31,7 @@ class GroupMessageDeliveryCoordinator(
     ) {
         require(packetId.isNotBlank()) { "Packet ID must not be blank" }
         mutex.withLock {
-            val state = messageRecipientStateDao.findByPacketId(packetId) ?: return@withLock
+            val state = dataSource.findByPacketId(packetId) ?: return@withLock
             updateRecipientState(state, event, errorMessage)
             updateAggregatedStatus(state.messageId)
         }
@@ -50,7 +48,7 @@ class GroupMessageDeliveryCoordinator(
             "Only receipt events can be applied by message ID"
         }
         mutex.withLock {
-            val state = messageRecipientStateDao.findByMessageId(messageId).firstOrNull { it.contactId == contactId } ?: return@withLock
+            val state = dataSource.findByMessageId(messageId).firstOrNull { it.contactId == contactId } ?: return@withLock
             updateRecipientState(state, event)
             updateAggregatedStatus(messageId)
         }
@@ -63,7 +61,7 @@ class GroupMessageDeliveryCoordinator(
         require(messageId.isNotBlank()) { "Message ID must not be blank" }
         require(contactId.isNotBlank()) { "Contact ID must not be blank" }
         mutex.withLock {
-            val state = messageRecipientStateDao.findByMessageId(messageId).firstOrNull { it.contactId == contactId } ?: return@withLock
+            val state = dataSource.findByMessageId(messageId).firstOrNull { it.contactId == contactId } ?: return@withLock
             updateRecipientState(state, MessageDeliveryEvent.RETRY_REQUESTED)
             updateAggregatedStatus(messageId)
         }
@@ -77,7 +75,7 @@ class GroupMessageDeliveryCoordinator(
         val current = state.deliveryStatus.toMessageDeliveryStatus()
         val next = GroupMessageDeliveryStateMachine.transition(current, event)
         if (next == current) return
-        messageRecipientStateDao.updateDeliveryStatus(
+        dataSource.updateDeliveryStatus(
             messageId = state.messageId,
             contactId = state.contactId,
             deliveryStatus = next.name,
@@ -87,8 +85,8 @@ class GroupMessageDeliveryCoordinator(
     }
 
     private suspend fun updateAggregatedStatus(messageId: String) {
-        val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toMessageDeliveryStatus() }
+        val statuses = dataSource.findByMessageId(messageId).map { it.deliveryStatus.toMessageDeliveryStatus() }
         val aggregated = GroupMessageDeliveryStateMachine.aggregate(statuses)
-        messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, aggregated.name)
+        dataSource.updateAggregatedDeliveryStatus(messageId, aggregated.name)
     }
 }

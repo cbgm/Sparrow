@@ -308,7 +308,7 @@ function Resolve-FirebaseCredentials {
         return $matches[0].FullName
     }
 
-    throw "Firebase Admin credentials were not found. Keep sparrow.firebase.adminCredentials in local.properties or place firebase-admin.json in server/control-plane/secrets."
+    return $null
 }
 
 function New-RandomSecret {
@@ -423,7 +423,7 @@ try {
     ) | ForEach-Object { Ensure-SecretFile -Path $_ }
 
     $firebasePath = Resolve-FirebaseCredentials
-    $firebaseComposePath = $firebasePath.Replace("\", "/")
+    $firebaseComposePath = if ($null -ne $firebasePath) { $firebasePath.Replace("\", "/") } else { "" }
 
     $runtimeEnvironment = @(
         "CONTROL_PLANE_PROJECT_NAME=sparrow-control-plane",
@@ -450,6 +450,10 @@ try {
         "-f",
         $composePath
     )
+
+    if ($null -ne $firebasePath) {
+        $composeArguments += @("-f", (Join-Path $deploymentDirectory "docker-compose.firebase.yml"))
+    }
 
     Push-Location $deploymentDirectory
     try {

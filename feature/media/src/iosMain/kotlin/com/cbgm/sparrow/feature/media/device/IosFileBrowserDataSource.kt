@@ -19,86 +19,82 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
 
     override fun hasFileAccess(): Boolean = rootUrl != null
 
-    override suspend fun setRootDirectory(reference: String): Result<Unit> =
-        runCatching {
-            val selectedUrl = requireNotNull(NSURL(string = reference)) {
-                "Selected directory reference is invalid"
-            }
-            val path = requireNotNull(selectedUrl.path) { "Selected directory has no path" }
-            check(NSFileManager.defaultManager.fileExistsAtPath(path)) {
-                "Selected directory is not available"
-            }
-            check(selectedUrl.startAccessingSecurityScopedResource()) {
-                "Selected directory access was not granted"
-            }
-
-            rootUrl?.stopAccessingSecurityScopedResource()
-            rootUrl = selectedUrl
+    override suspend fun setRootDirectory(reference: String) {
+        val selectedUrl = requireNotNull(NSURL(string = reference)) {
+            "Selected directory reference is invalid"
+        }
+        val path = requireNotNull(selectedUrl.path) { "Selected directory has no path" }
+        check(NSFileManager.defaultManager.fileExistsAtPath(path)) {
+            "Selected directory is not available"
+        }
+        check(selectedUrl.startAccessingSecurityScopedResource()) {
+            "Selected directory access was not granted"
         }
 
-    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryDto> =
-        runCatching {
-            val root = requireRootUrl()
-            FileBrowserDirectoryDto(
-                reference = requireNotNull(root.path),
-                displayName = root.lastPathComponent?.takeIf(String::isNotBlank) ?: "Files"
+        rootUrl?.stopAccessingSecurityScopedResource()
+        rootUrl = selectedUrl
+    }
+
+    override suspend fun getRootDirectory(): FileBrowserDirectoryDto {
+        val root = requireRootUrl()
+        return FileBrowserDirectoryDto(
+            reference = requireNotNull(root.path),
+            displayName = root.lastPathComponent?.takeIf(String::isNotBlank) ?: "Files"
+        )
+    }
+
+    override suspend fun listDirectory(reference: String): List<FileBrowserEntryDto> {
+        val directoryPath = resolveInsideRoot(reference)
+        val manager = NSFileManager.defaultManager
+        val names =
+            manager.contentsOfDirectoryAtPath(directoryPath, error = null)
+                ?.filterIsInstance<String>()
+                .orEmpty()
+
+        return names.mapNotNull { name ->
+            val childPath = directoryPath.trimEnd('/') + "/" + name
+            val attributes = manager.attributesOfItemAtPath(childPath, error = null) ?: return@mapNotNull null
+            val isDirectory = attributes[NSFileType] == NSFileTypeDirectory
+            FileBrowserEntryDto(
+                reference = childPath,
+                sourceReference = childPath.takeUnless { isDirectory },
+                displayName = name,
+                isDirectory = isDirectory,
+                byteSize = (attributes[NSFileSize] as? NSNumber)?.longLongValue?.takeUnless { isDirectory },
+                mimeType = if (isDirectory) null else mimeType(name)
             )
-        }
-
-    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryDto>> =
-        runCatching {
-            val directoryPath = resolveInsideRoot(reference)
-            val manager = NSFileManager.defaultManager
-            val names =
-                manager.contentsOfDirectoryAtPath(directoryPath, error = null)
-                    ?.filterIsInstance<String>()
-                    .orEmpty()
-
-            names.mapNotNull { name ->
-                val childPath = directoryPath.trimEnd('/') + "/" + name
-                val attributes = manager.attributesOfItemAtPath(childPath, error = null) ?: return@mapNotNull null
-                val isDirectory = attributes[NSFileType] == NSFileTypeDirectory
-                FileBrowserEntryDto(
-                    reference = childPath,
-                    sourceReference = childPath.takeUnless { isDirectory },
-                    displayName = name,
-                    isDirectory = isDirectory,
-                    byteSize = (attributes[NSFileSize] as? NSNumber)?.longLongValue?.takeUnless { isDirectory },
-                    mimeType = if (isDirectory) null else mimeType(name)
-                )
-            }.sortedWith(
-                compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
-            )
-        }
+        }.sortedWith(
+            compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
+        )
+    }
 
     override suspend fun readFile(
         reference: String,
         maxByteSize: Long
-    ): Result<FileBrowserContentDto> =
-        runCatching {
-            require(maxByteSize > 0L) { "Invalid file size limit" }
-            val path = resolveInsideRoot(reference)
-            val manager = NSFileManager.defaultManager
-            val attributes = requireNotNull(manager.attributesOfItemAtPath(path, error = null)) {
-                "File is not readable"
-            }
-            require(attributes[NSFileType] != NSFileTypeDirectory) { "Directories cannot be selected" }
-            val byteSize = (attributes[NSFileSize] as? NSNumber)?.longLongValue ?: 0L
-            require(byteSize <= maxByteSize) {
-                "${path.substringAfterLast('/')} is too large " +
-                    "(${byteSize.toReadableByteSize()}, maximum ${maxByteSize.toReadableByteSize()})"
-            }
-            val bytes = requireNotNull(manager.contentsAtPath(path)) { "File is not readable" }.toByteArray()
-            require(bytes.size.toLong() <= maxByteSize) { "File exceeds the maximum size" }
-
-            FileBrowserContentDto(
-                sourceReference = path,
-                displayName = path.substringAfterLast('/').ifBlank { "file" },
-                mimeType = mimeType(path),
-                bytes = bytes
-            )
+    ): FileBrowserContentDto {
+        require(maxByteSize > 0L) { "Invalid file size limit" }
+        val path = resolveInsideRoot(reference)
+        val manager = NSFileManager.defaultManager
+        val attributes = requireNotNull(manager.attributesOfItemAtPath(path, error = null)) {
+            "File is not readable"
         }
+        require(attributes[NSFileType] != NSFileTypeDirectory) { "Directories cannot be selected" }
+        val byteSize = (attributes[NSFileSize] as? NSNumber)?.longLongValue ?: 0L
+        require(byteSize <= maxByteSize) {
+            "${path.substringAfterLast('/')} is too large " +
+                "(${byteSize.toReadableByteSize()}, maximum ${maxByteSize.toReadableByteSize()})"
+        }
+        val bytes = requireNotNull(manager.contentsAtPath(path)) { "File is not readable" }.toByteArray()
+        require(bytes.size.toLong() <= maxByteSize) { "File exceeds the maximum size" }
+
+        return FileBrowserContentDto(
+            sourceReference = path,
+            displayName = path.substringAfterLast('/').ifBlank { "file" },
+            mimeType = mimeType(path),
+            bytes = bytes
+        )
+    }
 
     private fun requireRootUrl(): NSURL =
         requireNotNull(rootUrl) { "File access is required" }

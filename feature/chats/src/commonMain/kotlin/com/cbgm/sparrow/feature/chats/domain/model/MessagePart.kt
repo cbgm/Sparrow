@@ -32,6 +32,13 @@ sealed interface MessagePart {
     data class Contact(
         val id: String
     ) : MessagePart
+
+    data class Voice(
+        val id: String,
+        val mimeType: String,
+        val byteSize: Long,
+        val durationMilliseconds: Long
+    ) : MessagePart
 }
 
 enum class ImageVideoType {

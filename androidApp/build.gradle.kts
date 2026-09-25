@@ -47,6 +47,16 @@ android {
                 .toInt()
         versionCode = appVersionCode
         versionName = appVersionName
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("../feature/voice/src/androidMain/cpp/CMakeLists.txt")
+        }
     }
 
     compileOptions {

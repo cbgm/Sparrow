@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.details
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -36,20 +33,12 @@ private fun Content(
     onUiEvent: (AddGroupMembersUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val title = stringResource(Res.string.feature_chats_group_add_members)
-
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     ContactsScreen(
         uiState =
             ContactsUiState.Content(
-                groups = uiState.availableContactGroups,
-                profilePictures = uiState.profilePictures
+                groups = uiState.availableContactGroups
             ),
         mode =
             ContactsScreenMode.MemberSelection(
@@ -65,8 +54,7 @@ private fun Content(
                 onUiEvent = onUiEvent
             )
         },
-        modifier = modifier,
-        snackbarHostState = snackbarHostState
+        modifier = modifier
     )
 }
 

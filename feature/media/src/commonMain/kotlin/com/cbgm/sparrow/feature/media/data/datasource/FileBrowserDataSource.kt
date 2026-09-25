@@ -7,11 +7,11 @@ import com.cbgm.sparrow.feature.media.data.model.FileBrowserEntryDto
 interface FileBrowserDataSource {
     fun hasFileAccess(): Boolean
 
-    suspend fun setRootDirectory(reference: String): Result<Unit>
+    suspend fun setRootDirectory(reference: String)
 
-    suspend fun getRootDirectory(): Result<FileBrowserDirectoryDto>
+    suspend fun getRootDirectory(): FileBrowserDirectoryDto
 
-    suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryDto>>
+    suspend fun listDirectory(reference: String): List<FileBrowserEntryDto>
 
-    suspend fun readFile(reference: String, maxByteSize: Long): Result<FileBrowserContentDto>
+    suspend fun readFile(reference: String, maxByteSize: Long): FileBrowserContentDto
 }

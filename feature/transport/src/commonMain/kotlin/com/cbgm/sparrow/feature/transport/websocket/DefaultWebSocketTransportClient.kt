@@ -4,12 +4,13 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.PresenceRouteConnection
@@ -25,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
@@ -64,10 +66,10 @@ class DefaultWebSocketTransportClient internal constructor(
         MutableSharedFlow<TransportEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
     override val incomingEnvelopes: Flow<TransportEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
 
-    private val mutableIncomingTypingEvents =
-        MutableSharedFlow<GatewayTypingEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
-    override val incomingTypingEvents: Flow<GatewayTypingEvent> =
-        mutableIncomingTypingEvents.asSharedFlow()
+    private val mutableIncomingIndicatorEvents =
+        MutableSharedFlow<GatewayIndicatorEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+    override val incomingIndicatorEvents: Flow<GatewayIndicatorEvent> =
+        mutableIncomingIndicatorEvents.asSharedFlow()
 
     private val sessionMutex = Mutex()
     private val sendMutex = Mutex()
@@ -181,9 +183,9 @@ class DefaultWebSocketTransportClient internal constructor(
             )
         }
 
-    override suspend fun sendTypingState(
+    override suspend fun sendIndicatorState(
         recipientId: String,
-        isTyping: Boolean
+        indicatorType: String
     ): Result<Unit> =
         runCatching {
             require(recipientId.isNotBlank()) {
@@ -193,9 +195,9 @@ class DefaultWebSocketTransportClient internal constructor(
                 "WebSocket transport is not connected"
             }
             sendClientMessage(
-                GatewayClientMessage.TypingState(
+                GatewayClientMessage.IndicatorState(
                     recipientId = recipientId,
-                    isTyping = isTyping
+                    indicatorType = indicatorType
                 )
             )
         }
@@ -307,10 +309,23 @@ class DefaultWebSocketTransportClient internal constructor(
                 mutableConnectionState.value = TransportConnectionState.Disconnected
             }
         } catch (error: CancellationException) {
-            mutableConnectionState.value = TransportConnectionState.Disconnected
-            throw error
+            if (error !is TimeoutCancellationException) {
+                mutableConnectionState.value = TransportConnectionState.Disconnected
+                throw error
+            }
+            logger.debug { "Gateway timed out; retrying: ${error.message}" }
+            mutableConnectionState.value =
+                TransportConnectionState.Failed(message = error.message ?: "Gateway timed out")
         } catch (error: Throwable) {
-            logger.error(error) { "WebSocket connection failed" }
+            if (error.isRecoverableConnectivityFailure()) {
+                // A node refusing a connection is an expected offline/retry event.
+                // SparrowLog.warn(throwable) also forwards to the red global snackbar,
+                // so use debug without the throwable here.
+                logger.debug { "Gateway unavailable: ${error.message ?: error::class.simpleName}" }
+            } else {
+                // Keep unexpected handshake, protocol, and implementation failures visible.
+                logger.error(error) { "WebSocket connection failed" }
+            }
             mutableConnectionState.value =
                 TransportConnectionState.Failed(
                     message = error.message ?: "WebSocket connection failed"
@@ -343,7 +358,7 @@ class DefaultWebSocketTransportClient internal constructor(
                         onRouteRegistered = onRouteRegistered,
                         onRouteRejected = onRouteRejected,
                         onIncomingEnvelope = mutableIncomingEnvelopes::emit,
-                        onTypingEvent = mutableIncomingTypingEvents::emit
+                        onIndicatorEvent = mutableIncomingIndicatorEvents::emit
                     )
 
                 is Frame.Close -> logCloseFrame()

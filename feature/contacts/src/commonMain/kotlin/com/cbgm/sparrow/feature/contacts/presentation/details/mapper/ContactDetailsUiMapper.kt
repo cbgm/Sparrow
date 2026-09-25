@@ -5,13 +5,11 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 
 internal fun Contact.toContactDetailsUiState(
-    safetyNumber: SafetyNumber?,
-    profilePictureBytes: ByteArray?
+    safetyNumber: SafetyNumber?
 ): ContactDetailsUiState.Content =
     ContactDetailsUiState.Content(
-        contact = this,
-        safetyNumber = safetyNumber,
-        profilePictureBytes = profilePictureBytes
+        contact = toContactDetailsUi(),
+        safetyNumber = safetyNumber?.singleLine
     )
 
 internal fun ContactDetailsUiState.withVerificationState(

@@ -7,23 +7,31 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.PlatformContext
 import coil3.request.ImageRequest
 import com.cbgm.sparrow.core.ui.component.SparrowImage
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSURL
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 internal actual fun MediaImage(
     data: ByteArray?,
+    localFilePath: String?,
     cacheKey: String,
     contentDescription: String?,
     modifier: Modifier,
     contentScale: ContentScale
 ) {
     val request =
-        remember(data, cacheKey) {
-            data?.let {
-                ImageRequest.Builder(PlatformContext.INSTANCE)
-                    .data(it)
-                    .memoryCacheKey(cacheKey)
-                    .build()
-            }
+        remember(data, localFilePath, cacheKey) {
+            val source =
+                localFilePath
+                    ?.let { path -> NSURL.fileURLWithPath(path).absoluteString }
+                    ?: data
+                    ?: return@remember null
+            ImageRequest.Builder(PlatformContext.INSTANCE)
+                .data(source)
+                .memoryCacheKey(cacheKey)
+                .diskCacheKey(cacheKey)
+                .build()
         }
 
     SparrowImage(

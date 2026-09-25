@@ -1,40 +1,46 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipProjector
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
-    invitations: List<GroupInvitationEntity>,
+    memberships: List<GroupMemberLifecycleSnapshot>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap()
+    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
+    reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap(),
+    localMembershipHistory: List<MessageEntity> = messages
 ): GroupConversation {
-    val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
+    val timeline =
+        buildGroupLocalMembershipTimeline(
+            messages = messages,
+            memberships = memberships,
+            localMembershipHistory = localMembershipHistory
+        )
     val visibleMessages = timeline.visibleMessages
     val statesByMessageId = recipientStates.groupBy(MessageRecipientStateEntity::messageId)
-    val groupState =
-        GroupMembershipStateMachine.conversationState(
-            invitations = timeline.currentInvitations,
-            isLocallyInactive = timeline.isLocallyInactive
-        )
+    val membershipProjection = GroupConversationMembershipProjector.project(
+        memberships = timeline.currentMemberships,
+        isLocallyInactive = timeline.isLocallyInactive
+    )
 
     return GroupConversation(
         id = conversation.id,
@@ -44,7 +50,8 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachmentParts = partsByMessageId[message.id].orEmpty()
+                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -60,18 +67,18 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                     row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS
                 }
             } else {
-                timeline.currentInvitations.count { it.status.isPendingMembershipStatus() }
+                membershipProjection.pendingMemberCount
             },
-        isReady = groupState == GroupConversationState.READY,
-        state = groupState,
-        isIncomingInvitation = GroupMembershipStateMachine.isIncoming(timeline.currentInvitations),
-        memberInvitationStates = GroupMembershipStateMachine.memberStates(timeline.currentInvitations)
+        isReady = membershipProjection.state == GroupConversationState.READY,
+        state = membershipProjection.state,
+        memberProgress = membershipProjection.memberProgress
     )
 }
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachmentParts: List<MessagePartDto>
+    attachmentParts: List<MessagePartDto>,
+    reactions: List<MessageReaction>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -89,6 +96,8 @@ private fun MessageEntity.toGroupMessage(
         security = transportMode.toMessageSecurity(),
         contentStatus = contentStatus.toMessageContentStatus(),
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
+        replyToMessageId = replyToMessageId,
+        reactions = reactions,
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),
@@ -123,10 +132,3 @@ private fun String.toMessageContentStatus(): MessageContentStatus =
 internal fun String.toMessageDeliveryStatus(): MessageDeliveryStatus =
     MessageDeliveryStatus.entries.firstOrNull { it.name == this }
         ?: MessageDeliveryStatus.NOT_APPLICABLE
-
-private fun String.isPendingMembershipStatus(): Boolean =
-    this == GroupInvitationStatus.INVITE_SENT.name ||
-        this == GroupInvitationStatus.INVITE_RECEIVED.name ||
-        this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
-        this == GroupInvitationStatus.IDENTITY_READY.name ||
-        this == GroupInvitationStatus.WELCOME_SENT.name

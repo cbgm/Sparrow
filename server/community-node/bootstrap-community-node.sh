@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Runtime env contains database passwords; never make new files world-readable.
+umask 077
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/sparrow.conf"
@@ -73,50 +75,45 @@ http_ready() {
   return 1
 }
 
-fetch_url() {
-  local url="$1"
-  if command -v curl >/dev/null 2>&1; then
-    curl --fail --silent --show-error --max-time 8 "$url" 2>/dev/null
-    return
-  fi
-  if command -v wget >/dev/null 2>&1; then
-    wget --quiet --timeout=8 --output-document=- "$url" 2>/dev/null
-    return
-  fi
-  return 1
-}
-
-parse_control_plane_directory() {
-  local document="$1"
-  local array
-  array="$(printf '%s' "$document" | tr '\r\n' ' ' | sed -n 's/.*"controlPlanes"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p')"
-  [[ -n "$array" ]] || return 1
-  printf '%s' "$array" |
-    tr ',' '\n' |
-    sed -E 's/^[[:space:]]*"([^"]+)"[[:space:]]*$/\1/' |
-    awk 'NF' |
-    paste -sd, -
-}
-
 resolve_configured_control_planes() {
-  if [[ -n "$CONTROL_PLANE_URLS" ]]; then
+  local local_urls="$CONTROL_PLANE_URLS"
+  if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
+    [[ -n "$local_urls" ]] || { echo "No local Control Plane is configured." >&2; exit 1; }
     return
   fi
-
-  if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
-    echo "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL." >&2
-    exit 1
+  # The combined installation has its own CP even if the external directory
+  # is offline, unsigned, expired or the optional Python crypto dependency is
+  # unavailable. Never parse unsigned remote JSON into candidate addresses.
+  if [[ -z "${CONTROL_PLANE_DIRECTORY_PUBLIC_KEY:-}" ]]; then
+    echo "No pinned directory public key; using local Control Plane only." >&2
+    [[ -n "$local_urls" ]] || exit 1
+    return
   fi
-
-  while [[ -z "$CONTROL_PLANE_URLS" ]]; do
-    local document
-    document="$(fetch_url "$CONTROL_PLANE_DIRECTORY_URL" || true)"
-    CONTROL_PLANE_URLS="$(parse_control_plane_directory "$document" || true)"
-    if [[ -z "$CONTROL_PLANE_URLS" ]]; then
-      echo "Control-plane directory unavailable; retrying in 5 seconds." >&2
-      sleep 5
-    fi
-  done
+  local client="${CONTROL_PLANE_DIRECTORY_CLIENT:-$SCRIPT_DIR/../control_plane_directory_client.py}"
+  if [[ ! -f "$client" ]]; then
+    echo "Signed directory client missing; continuing with local Control Plane." >&2
+    [[ -n "$local_urls" ]] || exit 1
+    return
+  fi
+  local verified
+  verified="$(python3 "$client" --url "$CONTROL_PLANE_DIRECTORY_URL" \
+    --public-key "$CONTROL_PLANE_DIRECTORY_PUBLIC_KEY" \
+    --cache "$SCRIPT_DIR/.control-plane-directory-verified.json" 2>/dev/null || true)"
+  local directory_urls=""
+  if [[ -n "$verified" ]]; then
+    directory_urls="$(python3 -c 'import json,sys
+try:
+ v=json.load(sys.stdin)["controlPlanes"]
+ if not isinstance(v,list) or any(not isinstance(x,str) for x in v): raise ValueError()
+ print(",".join(v))
+except (ValueError, KeyError, TypeError): sys.exit(1)' <<< "$verified" || true)"
+  fi
+  if [[ -n "$directory_urls" ]]; then
+    CONTROL_PLANE_URLS="$(printf '%s\n' "$local_urls,$directory_urls" | tr ',;' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+  else
+    echo "Verified directory unavailable; keeping the local Control Plane." >&2
+    [[ -n "$local_urls" ]] || exit 1
+  fi
 }
 
 resolve_configured_control_planes
@@ -176,6 +173,10 @@ container_control_plane_url() {
   local value="$1"
   local host
   host="$(printf '%s' "$value" | sed -E 's#^[a-zA-Z]+://([^/:]+).*#\1#')"
+  if [[ "$MODE" == "public" && -n "${LOCAL_CONTROL_PLANE_DOMAIN:-}" && "$host" == "$LOCAL_CONTROL_PLANE_DOMAIN" ]]; then
+    printf '%s' 'http://sparrow-control-edge:8080'
+    return
+  fi
   if [[ "$host" == "localhost" || "$host" == "127.0.0.1" ]]; then
     printf '%s' "$value" | sed -E 's#(https?://)(localhost|127\.0\.0\.1)#\1host.docker.internal#'
     return
@@ -246,6 +247,19 @@ if [[ -z "$HOST_ADDRESS" ]]; then
   exit 1
 fi
 
+# Host-side localhost is appropriate for probing a Combined LAN Control Plane,
+# but clients must see the reachable LAN address advertised by the node.
+advertised_control_plane_urls() {
+  local converted=() candidate
+  for candidate in "${NORMALIZED_CONTROL_PLANE_URLS[@]}"; do
+    if [[ "$MODE" == "lan" && "$candidate" =~ ^http://(localhost|127\.0\.0\.1):([0-9]+)$ ]]; then
+      candidate="http://$HOST_ADDRESS:${BASH_REMATCH[2]}"
+    fi
+    converted+=("$candidate")
+  done
+  printf '%s\n' "${converted[@]}" | awk 'NF && !seen[$0]++' | paste -sd, -
+}
+
 if [[ "$MODE" == "public" ]]; then
   if [[ -z "$PUBLIC_DOMAIN" ]]; then
     PUBLIC_IP="$(public_ipv4 || true)"
@@ -256,12 +270,13 @@ if [[ "$MODE" == "public" ]]; then
     PUBLIC_DOMAIN="${PUBLIC_IP//./-}.sslip.io"
   fi
   SITE_ADDRESS="$PUBLIC_DOMAIN"
+  if [[ "${SHARED_PROXY:-false}" == "true" ]]; then SITE_ADDRESS=":80"; fi
   CLIENT_ENDPOINT="wss://$PUBLIC_DOMAIN/v1/gateway"
   HTTP_ENDPOINT="https://$PUBLIC_DOMAIN"
 else
   SITE_ADDRESS=":80"
-  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:8490/v1/gateway"
-  HTTP_ENDPOINT="http://$HOST_ADDRESS:8490"
+  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:${COMMUNITY_NODE_HTTP_PORT:-8490}/v1/gateway"
+  HTTP_ENDPOINT="http://$HOST_ADDRESS:${COMMUNITY_NODE_HTTP_PORT:-8490}"
 fi
 
 mkdir -p "$SECRETS_DIR"
@@ -279,14 +294,22 @@ ensure_secret "$SECRETS_DIR/federation-internal-api-token.txt"
 ensure_secret "$SECRETS_DIR/gateway-internal-api-token.txt"
 
 cat > "$RUNTIME_ENV" <<EOF_RUNTIME
-COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node
-COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0
-COMMUNITY_NODE_HTTP_PORT=8490
+COMMUNITY_NODE_PROJECT_NAME=${COMMUNITY_NODE_PROJECT_NAME:-sparrow-community-node}
+COMMUNITY_NODE_BIND_ADDRESS=${COMMUNITY_NODE_BIND_ADDRESS:-0.0.0.0}
+COMMUNITY_NODE_HTTP_PORT=${COMMUNITY_NODE_HTTP_PORT:-8490}
+MAILBOX_DIAGNOSTIC_PORT=${MAILBOX_DIAGNOSTIC_PORT:-8492}
+MAILBOX_DATABASE_PORT=${MAILBOX_DATABASE_PORT:-5636}
+FEDERATION_DATABASE_PORT=${FEDERATION_DATABASE_PORT:-5638}
+FEDERATION_DIAGNOSTIC_PORT=${FEDERATION_DIAGNOSTIC_PORT:-8493}
+GATEWAY_DIAGNOSTIC_PORT=${GATEWAY_DIAGNOSTIC_PORT:-8494}
+COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=${COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME:-sparrow-node-directory-cache}
 COMMUNITY_NODE_SITE_ADDRESS=$SITE_ADDRESS
 COMMUNITY_NODE_DOMAIN=$PUBLIC_DOMAIN
 CONTROL_PLANE_URL=$(container_control_plane_url "$CONTROL_PLANE_URL")
 CONTROL_PLANE_URLS=$(container_control_plane_urls)
-ADVERTISED_CONTROL_PLANE_URLS=$(IFS=,; printf '%s' "${NORMALIZED_CONTROL_PLANE_URLS[*]}")
+ADVERTISED_CONTROL_PLANE_URLS=$(advertised_control_plane_urls)
+LOCAL_CONTROL_PLANE_DOMAIN=$(grep -E '^LOCAL_CONTROL_PLANE_DOMAIN=' "$CONFIG_FILE" | tail -n 1 | cut -d= -f2- || true)
+MANUAL_CONTROL_PLANE_URLS=$(grep -E '^CONTROL_PLANE_URLS=' "$CONFIG_FILE" | tail -n 1 | cut -d= -f2- || true)
 CLIENT_ENDPOINT=$CLIENT_ENDPOINT
 FEDERATION_ENDPOINT=$HTTP_ENDPOINT
 MAILBOX_ENDPOINT=$HTTP_ENDPOINT
@@ -307,6 +330,9 @@ COMPOSE=(
 )
 if [[ "$MODE" == "public" ]]; then
   COMPOSE+=( -f "$PRODUCTION_COMPOSE" )
+  if [[ "${SHARED_PROXY:-false}" == "true" ]]; then
+    COMPOSE+=( -f "$SCRIPT_DIR/docker-compose.shared-proxy.yml" )
+  fi
 fi
 
 cd "$SCRIPT_DIR"

@@ -21,16 +21,15 @@ fun ImportIdentityRoute(
         onUiEvent = viewModel::onUiEvent
     )
 
-    uiState.scannedIdentityPreview?.let { preview ->
-        ScannedIdentityConfirmationDialog(
-            preview = preview,
-            confirmButtonText = stringResource(Res.string.feature_contactimport_trust_and_import),
-            onConfirm = {
-                viewModel.onUiEvent(ImportIdentityUiEvent.ScannedIdentityConfirmed)
-            },
-            onDismiss = {
-                viewModel.onUiEvent(ImportIdentityUiEvent.ScannedIdentityDismissed)
-            }
-        )
-    }
+    ScannedIdentityConfirmationDialog(
+        isVisible = uiState.scannedIdentityPreview != null,
+        preview = uiState.scannedIdentityPreview,
+        confirmButtonText = stringResource(Res.string.feature_contactimport_trust_and_import),
+        onConfirm = {
+            viewModel.onUiEvent(ImportIdentityUiEvent.ScannedIdentityConfirmed)
+        },
+        onDismiss = {
+            viewModel.onUiEvent(ImportIdentityUiEvent.ScannedIdentityDismissed)
+        }
+    )
 }

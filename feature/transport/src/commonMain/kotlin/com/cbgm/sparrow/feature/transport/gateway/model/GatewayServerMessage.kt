@@ -26,10 +26,10 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     @Serializable
-    @SerialName("typing_state")
-    data class TypingState(
+    @SerialName("indicator_state")
+    data class IndicatorState(
         val senderId: String,
-        val isTyping: Boolean
+        val indicatorType: String
     ) : GatewayServerMessage
 
     /**

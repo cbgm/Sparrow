@@ -2,36 +2,45 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayloadCodec
+import com.cbgm.sparrow.core.protocol.message.MessageEditPayload
+import com.cbgm.sparrow.core.protocol.message.MessageEditPayloadCodec
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -42,16 +51,16 @@ import kotlinx.coroutines.sync.withLock
  * Group use case -> GroupMessageRepositoryImpl -> this processor -> ProtocolOutbox.
  */
 class GroupOutgoingMessageProcessor(
-    private val chatDao: ChatDao,
-    private val groupSecurityDao: GroupSecurityDao,
-    private val messageRecipientStateDao: MessageRecipientStateDao,
+    private val messageDataSource: GroupOutgoingMessageDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val groupSecurityManager: GroupSecurityRepository,
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
-    private val attachmentTransfer: MessageAttachmentDataSource
+    private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
+    private val messageEditPayloadCodec: MessageEditPayloadCodec,
+    private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) {
     private val sendMutex = Mutex()
     private val logger = SparrowLog.withTag("GroupOutgoingMessageProcessor")
@@ -60,21 +69,32 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         text: String,
         attachments: List<OutgoingMessageAttachment> = emptyList(),
-        invitations: List<GroupInvitationEntity>
+        replyToMessageId: String? = null,
+        access: GroupMessageMembershipAccess
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
-                requireActiveMembership(groupId, invitations)
-                val recipients = findCurrentEpochRecipients(groupId)
-                check(recipients.isNotEmpty()) { "Group has no active recipients" }
+                requireActiveMembership(groupId, access)
+                val recipients = findCurrentRecipients(groupId)
+                // A previously queued owner message must go out before newly sent
+                // messages once an active participant is available.
+                if (recipients.isNotEmpty()) {
+                    flushQueuedLocked(groupId, recipients)
+                }
 
-                val message = createQueuedMessage(groupId, normalizedText)
-                val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
+                val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
+                val prepared = attachmentTransfer.prepareAttachments(attachments)
                 try {
-                    encryptAndEnqueue(message, recipients, prepared)
+                    if (recipients.isEmpty()) {
+                        // No pending invitee may receive this message. Persist it and
+                        // its encrypted attachment blobs locally, with NO packet yet.
+                        persistMessage(message, emptyList(), prepared)
+                    } else {
+                        encryptAndEnqueue(message, recipients, prepared)
+                    }
                 } catch (error: Throwable) {
-                    val stored = chatDao.findMessageById(message.id) != null
+                    val stored = messageDataSource.findMessage(message.id) != null
                     if (!stored) {
                         attachmentTransfer.cleanupPrepared(prepared)
                     }
@@ -83,17 +103,251 @@ class GroupOutgoingMessageProcessor(
             }
         }
 
+    /** Release owner messages only after membership projection grants a recipient.
+     * The existing database queue survives process termination and is replayed
+     * on ACTIVE membership-result reconciliation after an app restart.
+     */
+    suspend fun flushQueued(groupId: String): Result<Unit> = safeSuspendCall {
+        sendMutex.withLock {
+            val recipients = findCurrentRecipients(groupId)
+            if (recipients.isNotEmpty()) flushQueuedLocked(groupId, recipients)
+        }
+    }
+
+    private suspend fun flushQueuedLocked(groupId: String, recipients: List<String>) {
+        val waiting = messageDataSource.findQueuedGroupMessages(groupId)
+        val interrupted = messageDataSource.findGroupMessagesAwaitingOutbox(groupId)
+        (waiting + interrupted).distinctBy { it.id }
+            .sortedWith(compareBy<MessageEntity> { it.createdAtEpochMilliseconds }.thenBy { it.id })
+            .forEach { message ->
+                try {
+                    val previousStates = messageDataSource.findRecipientStates(message.id)
+                    val missingRecipients = if (previousStates.isEmpty()) {
+                        recipients
+                    } else {
+                        // Reconcile ONLY original recipients; never backfill a
+                        // message to someone who joined at a later epoch.
+                        previousStates.filter { state ->
+                            val packetId = state.packetId
+
+                            state.contactId in recipients &&
+                                state.deliveryStatus == MessageDeliveryStatus.QUEUED.name &&
+                                packetId != null &&
+                                protocolOutbox.findByPacketId(packetId).getOrThrow() == null
+                        }.map { it.contactId }
+                    }
+                    if (missingRecipients.isEmpty()) return@forEach
+                    val packets = createPackets(
+                        message = message,
+                        recipients = missingRecipients,
+                        attachments = attachmentTransfer.protocolAttachments(message.id)
+                    )
+                    if (previousStates.isEmpty()) {
+                        val states = packets.map { (contactId, packet) ->
+                            packet.toMessageRecipientStateEntity(contactId)
+                        }
+                        // Persist recipient mapping before enqueuing. Restart
+                        // reconciliation handles a crash between these writes.
+                        messageDataSource.saveOutgoingMessage(
+                            message = message,
+                            recipientStates = states,
+                            timestamp = message.createdAtEpochMilliseconds
+                        )
+                    }
+                    enqueuePackets(packets)
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    // A damaged/temporarily undeliverable old message must not
+                    // prevent active members from sending subsequent messages.
+                    logger.warn(error) {
+                        "Group message remains queued for retry: messageId=${message.id}"
+                    }
+                }
+            }
+    }
+
+    suspend fun toggleReaction(
+        groupId: String,
+        messageId: String,
+        emoji: String,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
+            requireActiveMembership(groupId, access)
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val existing = messageDataSource.findReaction(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val removed = existing != null
+            if (removed) {
+                messageDataSource.deleteReaction(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            } else {
+                messageDataSource.saveReaction(
+                    MessageReactionEntity(messageId, groupId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                )
+            }
+
+            val eventId = IdGenerator.generate(prefix = "group-reaction")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            val plaintext = groupMessageContentCodec.encode(
+                GroupMessageContent(reaction = MessageReactionPayload(messageId, emoji, removed))
+            )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured = groupSecurityManager.encryptMessage(
+                groupId = groupId,
+                messageId = eventId,
+                sentAtEpochMilliseconds = timestamp,
+                plaintext = plaintext,
+                localSigningKeyPair = localSigningKeyPair,
+                profilePicture = profilePicture
+            ).getOrThrow()
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupChatMessagePacket(
+                        packetId = "group-reaction-$eventId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        messageId = eventId,
+                        sentAtEpochMilliseconds = timestamp,
+                        profilePicture = profilePicture,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+        }
+
+    suspend fun deleteMessage(
+        groupId: String,
+        messageId: String,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            requireActiveMembership(groupId, access)
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be deleted" }
+            check(target.isMine) { "Only your own messages can be deleted for everyone" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val eventId = IdGenerator.generate(prefix = "group-delete")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val plaintext =
+                messageDeletionPayloadCodec.encode(
+                    MessageDeletionPayload(messageId)
+                )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured =
+                groupSecurityManager.encryptMessageDeletion(
+                    groupId = groupId,
+                    deletionId = eventId,
+                    deletedAtEpochMilliseconds = timestamp,
+                    plaintext = plaintext,
+                    localSigningKeyPair = localSigningKeyPair
+                ).getOrThrow()
+
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupMessageDeletionPacket(
+                        packetId = "group-delete-$eventId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        deletionId = eventId,
+                        deletedAtEpochMilliseconds = timestamp,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+
+            attachmentTransfer.deleteForMessages(listOf(messageId))
+            messageDataSource.deleteMessages(listOf(target))
+        }
+
+    suspend fun editMessage(
+        groupId: String,
+        messageId: String,
+        text: String,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            val normalizedText = text.trim()
+            require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
+            requireActiveMembership(groupId, access)
+
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
+            check(target.isMine) { "Only your own messages can be edited" }
+            check(target.text.isNotBlank()) { "Only text messages can be edited" }
+            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+                "Messages with attachments cannot be edited"
+            }
+            check(
+                messageDataSource
+                    .findRecipientStates(messageId)
+                    .none { state -> state.deliveryStatus == MessageDeliveryStatus.READ.name }
+            ) { "Read messages cannot be edited" }
+
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val editId = IdGenerator.generate(prefix = "group-edit")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val plaintext = messageEditPayloadCodec.encode(MessageEditPayload(messageId, normalizedText))
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured =
+                groupSecurityManager
+                    .encryptMessageEdit(
+                        groupId = groupId,
+                        editId = editId,
+                        editedAtEpochMilliseconds = timestamp,
+                        plaintext = plaintext,
+                        localSigningKeyPair = localSigningKeyPair
+                    ).getOrThrow()
+
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupMessageEditPacket(
+                        packetId = "group-edit-$editId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        editId = editId,
+                        editedAtEpochMilliseconds = timestamp,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+
+            messageDataSource.saveMessage(target.copy(text = normalizedText))
+        }
+
     suspend fun retry(messageId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = messageDataSource.findMessage(messageId) ?: error("Message was not found")
             check(message.isMine) { "Only outgoing messages can be retried" }
             requireGroupConversation(message.conversationId)
 
             val failedRecipients =
-                messageRecipientStateDao
-                    .findByMessageId(messageId)
+                messageDataSource
+                    .findRecipientStates(messageId)
                     .filter { state -> state.deliveryStatus == MessageDeliveryStatus.FAILED.name }
             check(failedRecipients.isNotEmpty()) { "Only failed group messages can be retried" }
 
@@ -113,19 +367,19 @@ class GroupOutgoingMessageProcessor(
         }
 
     suspend fun sendReadReceipts(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             requireGroupConversation(groupId)
 
             val failures = mutableListOf<String>()
-            chatDao.findMessagesAwaitingReadReceipt(groupId).forEach { message ->
+            messageDataSource.findAwaitingReadReceipt(groupId).forEach { message ->
                 val enqueueError = enqueueReadReceipt(message.messageId, message.contactId).exceptionOrNull()
                 if (enqueueError != null) {
                     failures += message.contactId.toFailureDescription(enqueueError)
                     return@forEach
                 }
 
-                val markedRead = runCatching { chatDao.markReadReceiptSent(message.messageId) }
+                val markedRead = runCatching { messageDataSource.markReadReceiptSent(message.messageId) }
                 val markError = markedRead.exceptionOrNull()
                 when {
                     markError != null -> failures += message.contactId.toFailureDescription(markError)
@@ -142,41 +396,36 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun requireActiveMembership(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        access: GroupMessageMembershipAccess
     ) {
         requireGroupConversation(groupId)
-        check(invitations.none { invitation -> invitation.status.isIncomingPendingStatus() }) {
-            "Accept the group invitation before sending messages"
+        check(!access.isJoinPending) {
+            "Complete the group join before sending messages"
         }
-        check(invitations.none { invitation -> invitation.status == GroupInvitationStatus.LEAVE_SENT.name }) {
+        check(!access.isLeavePending) {
             "Messages are disabled while the group is being left"
         }
-        check(invitations.none { invitation -> invitation.status == GroupInvitationStatus.GROUP_DELETED.name }) {
+        check(!access.isDeleted) {
             "This group conversation was deleted"
         }
-        check(isStillMember(groupId, invitations)) {
+        check(isStillMember(groupId, access)) {
             "You are no longer a member of this group"
         }
     }
 
     private suspend fun isStillMember(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        access: GroupMessageMembershipAccess
     ): Boolean {
-        val hasCurrentInvitation =
-            invitations.any { invitation ->
-                invitation.status != GroupInvitationStatus.REMOVED.name &&
-                    invitation.status != GroupInvitationStatus.GROUP_DELETED.name
-            }
-        if (hasCurrentInvitation) return true
+        if (access.hasCurrentMembership) return true
 
         val wasRemoved =
-            chatDao.hasMessageWithTransportMode(
+            messageDataSource.hasMessageWithTransportMode(
                 conversationId = groupId,
                 transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE
             )
         val leftGroup =
-            chatDao.hasMessageWithTransportMode(
+            messageDataSource.hasMessageWithTransportMode(
                 conversationId = groupId,
                 transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE
             )
@@ -184,20 +433,22 @@ class GroupOutgoingMessageProcessor(
     }
 
     private suspend fun requireGroupConversation(groupId: String) {
-        val conversation = chatDao.findConversationById(groupId)
+        val conversation = messageDataSource.findConversation(groupId)
             ?: error("Group conversation was not found")
         check(conversation.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
     }
 
     private fun createQueuedMessage(
         groupId: String,
-        text: String
+        text: String,
+        replyToMessageId: String?
     ): MessageEntity =
         MessageEntity(
             id = IdGenerator.generate(prefix = "group-message"),
             conversationId = groupId,
             packetId = null,
             text = text,
+            replyToMessageId = replyToMessageId,
             transportPayload = null,
             transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
             contentStatus = MessageContentStatus.READABLE.name,
@@ -207,38 +458,59 @@ class GroupOutgoingMessageProcessor(
             createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
 
-    private suspend fun findCurrentEpochRecipients(groupId: String): List<GroupMemberKeyEntity> {
-        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
-        return groupSecurityDao.findMemberKeys(
-            groupId = groupId,
-            epoch = state.currentEpoch
-        )
-    }
+    private suspend fun findCurrentRecipients(groupId: String): List<String> =
+        messageDataSource
+            .findConversationParticipants(groupId)
+            .map { participant -> participant.contactId }
+            .distinct()
 
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>,
-        prepared: List<PreparedMessageAttachmentDto>
+        recipients: List<String>,
+        prepared: List<PreparedMessageAttachment>
     ) {
-        val packets = createPackets(message, recipients, prepared)
-        val recipientStates = packets.map { (recipient, packet) -> packet.toMessageRecipientStateEntity(recipient) }
+        val packets = createPackets(message, recipients, prepared.map { it.attachment })
+        val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
+        persistMessage(message, recipientStates, prepared)
+        enqueuePackets(packets)
+    }
 
-        chatDao.upsertOutgoingGroupMessage(
+    private suspend fun persistMessage(
+        message: MessageEntity,
+        recipientStates: List<MessageRecipientStateEntity>,
+        prepared: List<PreparedMessageAttachment>
+    ) {
+        messageDataSource.saveOutgoingMessage(
             message = message,
             recipientStates = recipientStates,
             timestamp = message.createdAtEpochMilliseconds
         )
         try {
-            attachmentTransfer.persistOutgoing(message.id, prepared)
+            val conversation = messageDataSource.findConversation(message.conversationId)
+                ?: error("Group conversation was not found")
+            attachmentTransfer.persistOutgoing(
+                messageId = message.id,
+                prepared = prepared,
+                context = AttachmentMessageContext(
+                    conversationId = message.conversationId,
+                    createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                    displayName = conversation.title?.takeIf(String::isNotBlank) ?: conversation.id,
+                    isGroup = true,
+                    isMine = true,
+                    senderContactId = null
+                )
+            )
         } catch (error: Throwable) {
-            chatDao.deleteMessagesAndRefreshConversations(listOf(message))
+            messageDataSource.deleteMessages(listOf(message))
             attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
+    }
 
+    private suspend fun enqueuePackets(packets: Map<String, GroupChatMessagePacket>) {
         val failures = mutableListOf<String>()
-        packets.forEach { (recipient, packet) ->
-            val error = protocolOutbox.enqueue(recipient.contactId, packet).exceptionOrNull()
+        packets.forEach { (contactId, packet) ->
+            val error = protocolOutbox.enqueue(contactId, packet).exceptionOrNull()
             if (error != null) {
                 runCatching {
                     deliveryCoordinator.applyPacketEvent(
@@ -247,11 +519,11 @@ class GroupOutgoingMessageProcessor(
                         errorMessage = error.message
                     )
                 }.onFailure { stateError ->
-                    logger.warn(stateError) {
+                    logger.error(stateError) {
                         "Could not persist failed group recipient state: packetId=${packet.packetId}"
                     }
                 }
-                failures += recipient.contactId.toFailureDescription(error)
+                failures += contactId.toFailureDescription(error)
             }
         }
         failures.throwIfNotEmpty("Group message enqueue")
@@ -259,9 +531,9 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun createPackets(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>,
-        prepared: List<PreparedMessageAttachmentDto>
-    ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
+        recipients: List<String>,
+        attachments: List<MessageAttachment>
+    ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
             localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
@@ -269,7 +541,8 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
+                    attachments = attachments,
+                    replyToMessageId = message.replyToMessageId
                 )
             )
         val securedMessage =
@@ -283,9 +556,9 @@ class GroupOutgoingMessageProcessor(
                     profilePicture = profilePicture
                 ).getOrThrow()
 
-        return recipients.associateWith { recipient ->
+        return recipients.associateWith { contactId ->
             GroupChatMessagePacket(
-                packetId = packetId(message.id, recipient.contactId),
+                packetId = packetId(message.id, contactId),
                 groupId = message.conversationId,
                 epoch = securedMessage.epoch,
                 messageId = message.id,
@@ -299,11 +572,11 @@ class GroupOutgoingMessageProcessor(
     }
 
     private fun GroupChatMessagePacket.toMessageRecipientStateEntity(
-        recipient: GroupMemberKeyEntity
+        contactId: String
     ): MessageRecipientStateEntity =
         MessageRecipientStateEntity(
             messageId = messageId,
-            contactId = recipient.contactId,
+            contactId = contactId,
             packetId = packetId,
             deliveryStatus = MessageDeliveryStatus.QUEUED.name,
             lastError = null,
@@ -315,7 +588,7 @@ class GroupOutgoingMessageProcessor(
         contactId: String,
         packetId: String
     ) {
-        val currentState = messageRecipientStateDao.findByPacketId(packetId)
+        val currentState = messageDataSource.findRecipientByPacketId(packetId)
             ?: error("Recipient delivery state was not found")
         val currentStatus = currentState.deliveryStatus.toMessageDeliveryStatus()
 
@@ -345,7 +618,7 @@ class GroupOutgoingMessageProcessor(
                         messageId = messageId,
                         readAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
-            ).map { Unit }
+            ).map { }
 
     private fun requireMessageContent(
         text: String,
@@ -355,6 +628,9 @@ class GroupOutgoingMessageProcessor(
         return text.trim().also { normalizedText ->
             require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
                 "Message must contain text or attachments"
+            }
+            require(attachments.none { it.type == MessageAttachmentType.VOICE } || normalizedText.isEmpty()) {
+                "A voice message cannot contain text"
             }
         }
     }
@@ -367,11 +643,6 @@ class GroupOutgoingMessageProcessor(
             "$operation failed for ${joinToString()}"
         }
     }
-
-    private fun String.isIncomingPendingStatus(): Boolean =
-        this == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-            this == GroupInvitationStatus.JOIN_SENT.name ||
-            this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name
 
     private fun packetId(
         messageId: String,

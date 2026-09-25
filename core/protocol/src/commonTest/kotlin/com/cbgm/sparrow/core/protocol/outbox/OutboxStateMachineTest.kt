@@ -7,6 +7,16 @@ import kotlin.test.assertNull
 
 class OutboxStateMachineTest {
     @Test
+    fun oldIdentityPacketQuarantineIsTerminal() {
+        OutboxEvent.entries.forEach { event ->
+            assertNull(
+                OutboxStateMachine.transition(OutboxStatus.QUARANTINED, event),
+                "Quarantined old-identity packet must reject $event"
+            )
+        }
+    }
+
+    @Test
     fun successfulSendFollowsExpectedTransitions() {
         val processing =
             OutboxStateMachine.requireTransition(

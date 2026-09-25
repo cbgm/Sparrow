@@ -30,31 +30,26 @@ fun MediaThumbnail(
     val thumbnailCacheKey = "media-thumbnail:${media.id}"
 
     when (media.type) {
-        MediaType.IMAGE ->
-            MediaImage(
-                data = media.thumbnailBytes ?: media.bytes,
-                cacheKey = thumbnailCacheKey,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                contentScale = contentScale
-            )
-
+        MediaType.IMAGE -> MediaImage(
+            data = null,
+            localFilePath = media.thumbnailFilePath ?: media.localFilePath,
+            cacheKey = thumbnailCacheKey,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale
+        )
         MediaType.VIDEO -> {
-            val explicitThumbnail = media.thumbnailBytes
-            if (explicitThumbnail != null) {
+            if (media.thumbnailFilePath != null) {
                 MediaImage(
-                    data = explicitThumbnail,
+                    data = null,
+                    localFilePath = media.thumbnailFilePath,
                     cacheKey = thumbnailCacheKey,
                     contentDescription = contentDescription,
                     modifier = modifier,
                     contentScale = contentScale
                 )
             } else {
-                VideoThumbnail(
-                    media = media,
-                    modifier = modifier,
-                    contentScale = contentScale
-                )
+                VideoThumbnail(media = media, modifier = modifier, contentScale = contentScale)
             }
         }
     }
@@ -74,7 +69,7 @@ private fun MediaThumbnailPreview() {
                         id = "preview-image",
                         type = MediaType.IMAGE,
                         mimeType = "image/jpeg",
-                        bytes = byteArrayOf()
+                        localFilePath = "/preview/image.png"
                     )
             )
         }

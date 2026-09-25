@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.datasource
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatarMetadata
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -11,6 +12,17 @@ internal class GroupAvatarDataSource(
     private val fileDataSource: GroupAvatarFileDataSource,
     private val cryptoHash: CryptoHash
 ) {
+    fun observeMetadata(groupId: String): Flow<GroupAvatarMetadata> {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        return dataStore.observeLong(changedAtKey(groupId)).map { changedAt ->
+            GroupAvatarMetadata(
+                groupId = groupId,
+                changedAtEpochMilliseconds = changedAt,
+                hasAvatar = fileDataSource.exists(fileName(groupId))
+            )
+        }
+    }
+
     fun observe(groupId: String): Flow<GroupAvatar> {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         return dataStore.observeLong(changedAtKey(groupId)).map { changedAt ->

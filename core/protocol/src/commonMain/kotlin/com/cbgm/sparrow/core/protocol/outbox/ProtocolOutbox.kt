@@ -16,6 +16,15 @@ interface ProtocolOutbox {
 
     fun observePending(): Flow<List<ProtocolOutboxItem>>
 
+    /** Persistent outbox snapshots for packets accepted by the relay, failed, or expired. */
+    fun observeTransportStates(): Flow<List<ProtocolOutboxItem>>
+
+    /** Journaled attempts survive retries and app restarts until an application observer acknowledges them. */
+    fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>>
+
+    /** Acknowledge only after orchestration has processed the immutable failure event. */
+    suspend fun acknowledgeFailure(eventId: String): Result<Unit>
+
     suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>>
 
     suspend fun markProcessing(itemId: String): Result<Unit>
@@ -48,7 +57,15 @@ interface ProtocolOutbox {
 
     suspend fun requeueInterrupted(): Result<Unit>
 
+    /** Requeue only retryable wire failures when the sender reconnects, not permanent errors. */
     suspend fun retryFailed(): Result<Unit>
+
+    /**
+     * Requeue only due wire-send failures; never requeue quarantined old-key
+     * packets or permanent preparation/authorization failures. Existing fake
+     * outboxes can retain their no-op behavior.
+     */
+    suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> = Result.success(Unit)
 
     suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?>
 }

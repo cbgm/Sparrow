@@ -2,8 +2,10 @@ package com.cbgm.sparrow.data.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
+import com.cbgm.sparrow.data.database.entity.ProtocolOutboxFailureEventEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -40,6 +42,42 @@ interface ProtocolOutboxDao {
         """
     )
     fun observePending(): Flow<List<ProtocolOutboxEntity>>
+
+    @Query("SELECT * FROM protocol_outbox_failure_events ORDER BY occurredAtEpochMilliseconds ASC, eventId ASC")
+    fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEventEntity>>
+
+    @Query("DELETE FROM protocol_outbox_failure_events WHERE eventId = :eventId")
+    suspend fun acknowledgeFailure(eventId: String)
+
+    @Upsert
+    suspend fun upsertFailureEvent(event: ProtocolOutboxFailureEventEntity)
+
+    /** Mark FAILED and append its immutable failure event as ONE transaction. */
+    @Transaction
+    suspend fun markFailedWithEvent(itemId: String, errorMessage: String, updatedAt: Long) {
+        val item = findById(itemId) ?: error("Outbox packet was not found")
+        require(item.status == "PROCESSING") { "Only a processing packet can fail" }
+        markFailed(itemId, errorMessage, updatedAt)
+        upsertFailureEvent(
+            ProtocolOutboxFailureEventEntity(
+                eventId = "${item.id}:${item.attemptCount}",
+                packetId = item.packetId,
+                encodedPacket = item.encodedPacket.copyOf(),
+                attemptCount = item.attemptCount,
+                errorMessage = errorMessage,
+                occurredAtEpochMilliseconds = updatedAt
+            )
+        )
+    }
+
+    @Query(
+        """
+        SELECT * FROM protocol_outbox
+        WHERE status IN ('SENT', 'FAILED', 'EXPIRED')
+        ORDER BY updatedAtEpochMilliseconds ASC, id ASC
+        """
+    )
+    fun observeTransportStates(): Flow<List<ProtocolOutboxEntity>>
 
     @Query(
         """
@@ -88,7 +126,7 @@ interface ProtocolOutboxDao {
     suspend fun markProcessing(
         itemId: String,
         updatedAt: Long
-    )
+    ): Int
 
     @Query(
         """
@@ -189,9 +227,36 @@ interface ProtocolOutboxDao {
             expiresAtEpochMilliseconds = NULL,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE status = 'FAILED'
+          AND lastError LIKE 'TRANSIENT_WIRE:%'
         """
     )
     suspend fun retryFailed(updatedAt: Long)
+
+    /**
+     * Periodic retry for a failure that occurred ONLY during wire delivery.
+     * Exponential, capped backoff prevents busy-looping while the network or
+     * recipient's relay is unavailable. Quarantined packets are never eligible.
+     * Updating the row to PENDING wakes the already-running outbox observer.
+     */
+    @Query(
+        """
+        UPDATE protocol_outbox
+        SET status = 'PENDING',
+            lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
+            updatedAtEpochMilliseconds = :now
+        WHERE status = 'FAILED'
+          AND lastError LIKE 'TRANSIENT_WIRE:%'
+          AND updatedAtEpochMilliseconds <= :now - CASE
+              WHEN attemptCount <= 1 THEN 15000
+              WHEN attemptCount = 2 THEN 30000
+              WHEN attemptCount = 3 THEN 60000
+              WHEN attemptCount = 4 THEN 120000
+              ELSE 300000
+          END
+        """
+    )
+    suspend fun retryTransientFailed(now: Long): Int
 
     @Query(
         """

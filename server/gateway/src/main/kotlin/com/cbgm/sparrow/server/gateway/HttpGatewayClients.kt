@@ -3,7 +3,7 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
@@ -40,9 +40,9 @@ class HttpFederationClient(
                 setBody(envelope)
             }.body()
 
-    override suspend fun routeTyping(event: FederatedTypingEvent): Boolean =
+    override suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean =
         httpClient
-            .post("${baseUrl.trimEnd('/')}/internal/v1/outgoing-typing-events") {
+            .post("${baseUrl.trimEnd('/')}/internal/v1/outgoing-indicator-events") {
                 internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(event)

@@ -1,12 +1,14 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupDetailsContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationState
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -17,14 +19,16 @@ class ObserveGroupDetailsContextUseCase(
     private val membershipRepository: GroupMembershipRepository,
     private val conversationRepository: GroupConversationRepository,
     private val avatarRepository: GroupAvatarRepository,
-    private val contactRepository: ContactRepository
+    private val descriptionRepository: GroupDescriptionRepository,
+    private val contactRepository: ContactRepository,
+    private val observeVerificationContext: ObserveGroupVerificationContextUseCase
 ) {
     operator fun invoke(groupId: String): Flow<GroupDetailsContext> {
         val verificationFlow =
             combine(
                 verificationRepository.observePairs(groupId),
                 contactRepository.observeContacts(),
-                verificationRepository.observeContext(groupId)
+                observeVerificationContext(groupId)
             ) { pairs, contacts, context ->
                 val ownerDisplayName =
                     context.ownerContactId
@@ -45,14 +49,19 @@ class ObserveGroupDetailsContextUseCase(
             conversationRepository
                 .observe(groupId)
                 .onStart { emit(null) }
-                .catch { emit(null) },
-            avatarRepository.observe(groupId)
-        ) { verification, administration, conversation, avatar ->
+                .catch { error ->
+                    SparrowLog.error("ObserveGroupDetailsContextUseCase", "Could not observe group details", error)
+                    emit(null)
+                },
+            avatarRepository.observeMetadata(groupId),
+            descriptionRepository.observe(groupId)
+        ) { verification, administration, conversation, avatarMetadata, description ->
             GroupDetailsContext(
                 verification = verification,
                 administration = administration,
                 conversation = conversation,
-                avatar = avatar
+                avatarMetadata = avatarMetadata,
+                description = description
             )
         }
     }

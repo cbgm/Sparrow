@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupDetailsFlow
@@ -13,6 +14,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsRout
 import com.cbgm.sparrow.feature.identity.device.rememberIdentityShareLauncher
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -23,6 +25,7 @@ fun DetailsRoute(
     requestGroupLeave: Boolean = false
 ) {
     val encodeContactForSharing = koinInject<EncodeContactForSharingUseCase>()
+    val scope = rememberCoroutineScope()
     var encodedContactToShare by remember { mutableStateOf("") }
     val launchContactShare =
         rememberIdentityShareLauncher(
@@ -44,13 +47,19 @@ fun DetailsRoute(
                 contactId = target.contactId,
                 openVerification = openVerification,
                 onShareContact = { contact ->
-                    encodeContactForSharing(contact)
-                        .onSuccess { encodedIdentity ->
-                            if (!encodedIdentity.isNullOrBlank()) {
-                                encodedContactToShare = encodedIdentity
-                                shouldLaunchShare = true
+                    scope.launch {
+                        encodeContactForSharing(
+                            contactId = contact.id,
+                            displayName = contact.displayName,
+                            phoneNumber = contact.preferredPhoneNumber
+                        )
+                            .onSuccess { encodedIdentity ->
+                                if (!encodedIdentity.isNullOrBlank()) {
+                                    encodedContactToShare = encodedIdentity
+                                    shouldLaunchShare = true
+                                }
                             }
-                        }
+                    }
                 }
             )
         }

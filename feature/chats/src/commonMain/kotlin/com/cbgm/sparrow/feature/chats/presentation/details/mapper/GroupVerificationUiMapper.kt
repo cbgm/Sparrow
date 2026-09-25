@@ -3,15 +3,17 @@ package com.cbgm.sparrow.feature.chats.presentation.details.mapper
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationMembershipStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationPair
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDescriptionUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeaveUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberManagementUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupTitleUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactGroups
 
 internal fun buildGroupVerificationSummary(
     isLocalAdmin: Boolean,
@@ -139,15 +141,17 @@ private fun GroupVerificationPair.toGroupMemberVerificationState(): GroupMemberV
     }
 
 internal fun toGroupAvatarUiState(
+    groupId: String,
     title: String,
-    avatarBytes: ByteArray?,
+    hasAvatar: Boolean,
     canEdit: Boolean,
     isSaving: Boolean,
     errorMessage: String?
 ): GroupAvatarUiState =
     GroupAvatarUiState(
+        groupId = groupId,
         title = title,
-        avatarBytes = avatarBytes,
+        hasAvatar = hasAvatar,
         canEdit = canEdit,
         isSaving = isSaving,
         errorMessage = errorMessage
@@ -156,8 +160,9 @@ internal fun toGroupAvatarUiState(
 internal fun toGroupVerificationUiState(
     summary: GroupVerificationSummaryUiState,
     groupAvatar: GroupAvatarUiState,
+    groupTitle: GroupTitleUiState,
+    groupDescription: GroupDescriptionUiState,
     contacts: List<Contact>,
-    profilePictures: Map<String, ByteArray?>,
     selectedContactId: String?,
     safetyNumber: String,
     isLoadingSafetyNumber: Boolean,
@@ -194,13 +199,14 @@ internal fun toGroupVerificationUiState(
         isVerifying = isVerifying,
         errorMessage = verificationError,
         groupAvatar = groupAvatar,
+        groupTitle = groupTitle,
+        groupDescription = groupDescription,
         memberManagement =
             GroupMemberManagementUiState(
                 availableContactGroups =
                     availableContacts
                         .filterContacts(searchQuery)
-                        .groupContactsByInitial(),
-                profilePictures = profilePictures,
+                        .toContactGroups(),
                 selectedContactIds =
                     selectedContactIds.filterTo(mutableSetOf()) { contactId ->
                         availableContacts.any { contact -> contact.id == contactId }

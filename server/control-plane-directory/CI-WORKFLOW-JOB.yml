@@ -1,0 +1,21 @@
+# Add this JOB under `jobs:` in the CURRENT existing .github/workflows/release.yml.
+# It intentionally does NOT upload to GitHub Releases or the public server bundle.
+# Requires the repo's existing checkout conventions; this job needs no signing secrets.
+build-private-directory-installers:
+  runs-on: ubuntu-latest
+  permissions:
+    contents: read
+  steps:
+    - uses: actions/checkout@v4
+    - name: Build private Directory installers (not release assets)
+      run: python3 server/control-plane-directory/Build-SparrowDirectoryInstaller.py --output-dir "${{ runner.temp }}/sparrow-directory-operator"
+    - name: Keep installers as workflow artifacts only
+      uses: actions/upload-artifact@v4
+      with:
+        name: sparrow-directory-operator-installers
+        path: ${{ runner.temp }}/sparrow-directory-operator/*.zip
+        retention-days: 7
+        if-no-files-found: error
+# IMPORTANT: Workflow artifacts are available to authorized run viewers but
+# are NOT GitHub Release assets. For strictly private access, use a PRIVATE
+# workflow/repository with restricted artifact readers rather than a public repo.

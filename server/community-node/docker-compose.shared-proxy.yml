@@ -1,0 +1,39 @@
+# Combined/standalone unified Public mode; keep the original node project and volumes.
+# The shared Caddy routes directly to these backends, preserving TLS proxy headers.
+services:
+  caddy:
+    # Shared front proxy owns public TLS. Keep the component Caddy HTTP-only.
+    environment:
+      COMMUNITY_NODE_SITE_ADDRESS: ":80"
+    ports: !override
+      - "127.0.0.1:${COMMUNITY_NODE_HTTP_PORT:-8490}:8080"
+    networks:
+      edge:
+      public-edge:
+        aliases:
+          - sparrow-node-edge
+  mailbox:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-node-mailbox
+  federation:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-node-federation
+  gateway:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-node-gateway
+networks:
+  public-edge:
+    external: true
+    name: sparrow-public-edge

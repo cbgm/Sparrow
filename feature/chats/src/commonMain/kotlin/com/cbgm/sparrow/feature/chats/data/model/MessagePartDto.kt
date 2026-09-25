@@ -32,6 +32,13 @@ sealed interface MessagePartDto {
     data class ContactDto(
         val id: String
     ) : MessagePartDto
+
+    data class VoiceDto(
+        val id: String,
+        val mimeType: String,
+        val byteSize: Long,
+        val durationMilliseconds: Long
+    ) : MessagePartDto
 }
 
 enum class ImageVideoTypeDto {

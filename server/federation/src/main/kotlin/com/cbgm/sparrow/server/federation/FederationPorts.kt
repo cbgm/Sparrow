@@ -2,7 +2,7 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 
@@ -22,8 +22,8 @@ fun interface LocalGatewayClient {
     suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement
 }
 
-fun interface LocalTypingGatewayClient {
-    suspend fun deliver(event: FederatedTypingEvent): Boolean
+fun interface LocalIndicatorGatewayClient {
+    suspend fun deliver(event: FederatedIndicatorEvent): Boolean
 }
 
 fun interface LocalRouteResolver {
@@ -37,10 +37,10 @@ fun interface RemoteFederationClient {
     ): FederationAcknowledgement
 }
 
-fun interface RemoteTypingFederationClient {
+fun interface RemoteIndicatorFederationClient {
     suspend fun deliver(
         descriptor: SparrowNodeDescriptor,
-        event: FederatedTypingEvent
+        event: FederatedIndicatorEvent
     ): Boolean
 }
 

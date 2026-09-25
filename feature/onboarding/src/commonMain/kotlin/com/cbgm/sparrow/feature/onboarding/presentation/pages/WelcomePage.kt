@@ -1,10 +1,11 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.pages
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,20 +23,22 @@ import com.cbgm.sparrow.resources.feature_onboarding_welcome_description
 import com.cbgm.sparrow.resources.feature_onboarding_welcome_to_sparrow
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WelcomePage(onNext: () -> Unit) {
     Column(
-        Modifier.padding(MaterialTheme.spacing.medium),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MaterialTheme.spacing.medium),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_to_sparrow),
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_description),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -53,7 +56,5 @@ fun WelcomePage(onNext: () -> Unit) {
 @Preview
 @Composable
 private fun WelcomePagePreview() {
-    SparrowTheme {
-        WelcomePage { }
-    }
+    SparrowTheme { WelcomePage { } }
 }

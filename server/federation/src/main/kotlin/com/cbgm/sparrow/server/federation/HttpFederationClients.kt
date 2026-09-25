@@ -4,7 +4,7 @@ import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
@@ -63,7 +63,7 @@ class HttpLocalGatewayClient(
     private val baseUrl: String,
     private val internalToken: String?
 ) : LocalGatewayClient,
-    LocalTypingGatewayClient,
+    LocalIndicatorGatewayClient,
     LocalRouteResolver {
     override suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement {
         val response =
@@ -82,9 +82,9 @@ class HttpLocalGatewayClient(
         }
     }
 
-    override suspend fun deliver(event: FederatedTypingEvent): Boolean =
+    override suspend fun deliver(event: FederatedIndicatorEvent): Boolean =
         httpClient
-            .post("$baseUrl/internal/v1/typing-events") {
+            .post("$baseUrl/internal/v1/indicator-events") {
                 internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(event)
@@ -109,7 +109,7 @@ class HttpRemoteFederationClient(
     private val httpClient: HttpClient,
     private val signer: NodeRequestSigner
 ) : RemoteFederationClient,
-    RemoteTypingFederationClient,
+    RemoteIndicatorFederationClient,
     RemoteRouteResolver {
     override suspend fun deliver(
         descriptor: SparrowNodeDescriptor,
@@ -139,9 +139,9 @@ class HttpRemoteFederationClient(
 
     override suspend fun deliver(
         descriptor: SparrowNodeDescriptor,
-        event: FederatedTypingEvent
+        event: FederatedIndicatorEvent
     ): Boolean {
-        val path = "/v1/federation/typing-events"
+        val path = "/v1/federation/indicator-events"
         val body = serverJson.encodeToString(event)
         val authentication = signer.sign("POST", path, body)
         return httpClient

@@ -24,13 +24,14 @@
     "group": "core",
     "directory": "core",
     "buildFile": "core/build.gradle.kts",
-    "kotlinSourceFileCount": 17,
-    "productionKotlinFileCount": 17,
+    "kotlinSourceFileCount": 18,
+    "productionKotlinFileCount": 18,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
       "commonMain",
+      "commonTest",
       "iosMain"
     ],
     "dependencies": [
@@ -117,9 +118,9 @@
     "group": "core",
     "directory": "core/protocol",
     "buildFile": "core/protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 75,
-    "productionKotlinFileCount": 64,
-    "testKotlinFileCount": 11,
+    "kotlinSourceFileCount": 89,
+    "productionKotlinFileCount": 73,
+    "testKotlinFileCount": 16,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -146,8 +147,8 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 39,
-    "productionKotlinFileCount": 38,
+    "kotlinSourceFileCount": 45,
+    "productionKotlinFileCount": 44,
     "testKotlinFileCount": 1,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -198,8 +199,8 @@
     "group": "data",
     "directory": "data/database",
     "buildFile": "data/database/build.gradle.kts",
-    "kotlinSourceFileCount": 52,
-    "productionKotlinFileCount": 52,
+    "kotlinSourceFileCount": 54,
+    "productionKotlinFileCount": 54,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -300,8 +301,8 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 277,
-    "productionKotlinFileCount": 259,
+    "kotlinSourceFileCount": 316,
+    "productionKotlinFileCount": 298,
     "testKotlinFileCount": 18,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -575,7 +576,8 @@
     "resourceFileCount": 2,
     "sourceSets": [
       "androidMain",
-      "commonMain"
+      "commonMain",
+      "commonTest"
     ],
     "dependencies": [
       ":core",

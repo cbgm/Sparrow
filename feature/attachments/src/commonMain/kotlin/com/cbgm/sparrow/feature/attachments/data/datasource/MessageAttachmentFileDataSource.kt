@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import okio.FileSystem
 import okio.Path
@@ -58,8 +59,12 @@ class MessageAttachmentFileDataSource(
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
         require(bytes.isNotEmpty()) { "Attachment bytes must not be empty" }
-        require(type != MessageAttachmentType.LOCATION && type != MessageAttachmentType.CONTACT) {
-            "Location and contact attachments are not saved as files"
+        require(
+            type != MessageAttachmentType.LOCATION &&
+                type != MessageAttachmentType.CONTACT &&
+                type != MessageAttachmentType.VOICE
+        ) {
+            "Location, contact and voice attachments are not saved as files"
         }
 
         val conversationDirectory = resolveConversationDirectory(conversationId, displayName)
@@ -78,11 +83,49 @@ class MessageAttachmentFileDataSource(
         val target = targetDirectory / fileName
 
         if (!fileSystem.exists(target)) {
-            val temporary = targetDirectory / "$fileName.tmp"
-            fileSystem.write(temporary) { write(bytes) }
-            fileSystem.atomicMove(temporary, target)
+            // The same attachment may be loaded by the thumbnail and viewer at once.
+            // A shared "$fileName.tmp" lets one writer move the other writer's file,
+            // leaving that writer with a missing temporary file on atomicMove.
+            val temporary = targetDirectory / "$fileName.${IdGenerator.generate()}.tmp"
+            try {
+                fileSystem.write(temporary) { write(bytes) }
+                // Another load might have completed the saved copy in the meantime.
+                if (!fileSystem.exists(target)) {
+                    fileSystem.atomicMove(temporary, target)
+                }
+            } finally {
+                fileSystem.delete(temporary, mustExist = false)
+            }
         }
         return target.toString()
+    }
+
+    /**
+     * Rename only the directory that is already marked as owned by this conversation.
+     * A user-created or another conversation's folder is never overwritten. The marker
+     * moves together with the media/files, so subsequent writes and deletion still locate
+     * the same saved copies after the owner changes its display name.
+     */
+    fun updateSavedConversationName(conversationId: String, displayName: String) {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        val existing = findExistingConversationDirectory(conversationId) ?: return
+        val preferredName = displayName.sanitizeDirectoryName().ifBlank { "Conversation" }
+        val preferred = savedDirectory / preferredName
+        if (existing == preferred) return
+
+        val target = if (!fileSystem.exists(preferred)) {
+            preferred
+        } else {
+            val owner = readUtf8OrNull(preferred / CONVERSATION_ID_MARKER)
+            // Never co-opt an unmarked directory or an existing directory owned by
+            // another conversation. Keep the current directory when no safe target exists.
+            if (owner == conversationId) return
+            val suffix = conversationId.filter(Char::isLetterOrDigit)
+                .takeLast(CONVERSATION_ID_SUFFIX_LENGTH).ifBlank { "conversation" }
+            savedDirectory / "$preferredName-$suffix"
+        }
+        if (target == existing || fileSystem.exists(target)) return
+        fileSystem.atomicMove(existing, target)
     }
 
     fun deleteSavedAttachment(
@@ -127,7 +170,7 @@ class MessageAttachmentFileDataSource(
         fileSystem.list(savedDirectory).firstOrNull { candidate ->
             val marker = candidate / LEGACY_CONTACT_ID_MARKER
             fileSystem.exists(marker) &&
-                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == contactId
+                readUtf8OrNull(marker) == contactId
         }
 
     private fun resolveConversationDirectory(
@@ -148,7 +191,7 @@ class MessageAttachmentFileDataSource(
 
         val existingId =
             if (fileSystem.exists(preferredMarker)) {
-                runCatching { fileSystem.read(preferredMarker) { readUtf8() } }.getOrNull()
+                readUtf8OrNull(preferredMarker)
             } else {
                 null
             }
@@ -174,7 +217,15 @@ class MessageAttachmentFileDataSource(
         fileSystem.list(savedDirectory).firstOrNull { candidate ->
             val marker = candidate / CONVERSATION_ID_MARKER
             fileSystem.exists(marker) &&
-                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == conversationId
+                readUtf8OrNull(marker) == conversationId
+        }
+
+    private fun readUtf8OrNull(path: Path): String? =
+        try {
+            fileSystem.read(path) { readUtf8() }
+        } catch (error: Exception) {
+            SparrowLog.error("MessageAttachmentFileDataSource", "Could not read conversation ownership marker", error)
+            null
         }
 
     private fun String.toSafeCachePath(): Path {

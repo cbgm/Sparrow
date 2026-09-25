@@ -12,6 +12,7 @@ import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 actual fun rememberMediaExporter(): MediaExporter {
@@ -53,8 +54,14 @@ private class AndroidMediaExporter(
             }
         val uri = resolver.insert(collection, values) ?: error("Could not create camera-roll item")
         try {
-            resolver.openOutputStream(uri, "w")?.use { output -> output.write(item.bytes) }
-                ?: error("Could not open camera-roll item")
+            resolver.openOutputStream(uri, "w")?.use { output ->
+                val localFilePath = item.localFilePath
+                if (localFilePath != null) {
+                    File(localFilePath).inputStream().use { input -> input.copyTo(output) }
+                } else {
+                    output.write(requireNotNull(item.bytes) { "Media export bytes were not available" })
+                }
+            } ?: error("Could not open camera-roll item")
             resolver.update(
                 uri,
                 ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },

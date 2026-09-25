@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.uikit.LocalUIViewController
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.CameraLens
@@ -124,7 +125,10 @@ private class CameraPickerDelegate(
         picker.dismissViewControllerAnimated(true, null)
         captured
             .onSuccess(onCaptured)
-            .onFailure { error -> onError(error.message ?: "Captured media could not be read") }
+            .onFailure { error ->
+                SparrowLog.error("CameraCapture", "Captured media could not be read", error)
+                onError(error.message ?: "Captured media could not be read")
+            }
     }
 
     override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {

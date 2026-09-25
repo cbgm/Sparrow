@@ -8,10 +8,10 @@ import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.ProfilePicturePayload
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFalse
@@ -125,6 +125,49 @@ class GroupProtocolPayloadEncoderTest {
                         deletion.copy(deletedAtEpochMilliseconds = 301L)
                     )
                 )
+        )
+    }
+
+    @Test
+    fun messageDeletionEncodingUsesSeparateDomainAndBindsMetadata() {
+        val associatedData =
+            encoder.encodeMessageDeletionAssociatedData(
+                version = 1,
+                groupId = "group-1",
+                epoch = 2,
+                deletionId = "delete-1",
+                deletedAtEpochMilliseconds = 300L
+            )
+
+        assertFalse(
+            associatedData.contentEquals(
+                encoder.encodeMessageDeletionAssociatedData(
+                    version = 1,
+                    groupId = "group-1",
+                    epoch = 2,
+                    deletionId = "delete-2",
+                    deletedAtEpochMilliseconds = 300L
+                )
+            )
+        )
+        assertFalse(
+            associatedData.contentEquals(
+                encoder.encodeMessageAssociatedData(
+                    version = 1,
+                    groupId = "group-1",
+                    epoch = 2,
+                    messageId = "delete-1",
+                    sentAtEpochMilliseconds = 300L
+                )
+            )
+        )
+
+        val nonce = byteArrayOf(1)
+        val ciphertext = byteArrayOf(2)
+        assertFalse(
+            encoder
+                .encodeMessageDeletionSignature(associatedData, nonce, ciphertext)
+                .contentEquals(encoder.encodeMessageSignature(associatedData, nonce, ciphertext))
         )
     }
 

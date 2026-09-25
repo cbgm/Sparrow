@@ -1,0 +1,100 @@
+package com.cbgm.sparrow.feature.chats.presentation.common.history.component
+
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageJumpState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageSearchTargetState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+@Composable
+internal fun rememberMessageSearchTargetState(
+    targetMessageId: String?,
+    messageIds: List<String>,
+    listState: LazyListState
+): MessageSearchTargetState {
+    var isHandled by remember(targetMessageId) { mutableStateOf(targetMessageId == null) }
+    var highlightedMessageId by remember(targetMessageId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(targetMessageId, messageIds) {
+        if (isHandled || targetMessageId == null) return@LaunchedEffect
+
+        val targetIndex = messageIds.indexOf(targetMessageId)
+        if (targetIndex >= 0) {
+            listState.scrollToItem(targetIndex)
+            highlightedMessageId = targetMessageId
+            isHandled = true
+        }
+    }
+
+    LaunchedEffect(highlightedMessageId) {
+        if (highlightedMessageId == null) return@LaunchedEffect
+        delay(HIGHLIGHT_DURATION_MILLIS.milliseconds)
+        highlightedMessageId = null
+    }
+
+    return MessageSearchTargetState(
+        highlightedMessageId = highlightedMessageId,
+        isHandled = isHandled
+    )
+}
+
+private const val HIGHLIGHT_DURATION_MILLIS = 2_000L
+
+@Composable
+internal fun rememberMessageJumpState(
+    messageIds: List<String>,
+    listState: LazyListState,
+    onTargetMissing: (String) -> Unit = {}
+): MessageJumpState {
+    val scope = rememberCoroutineScope()
+    val currentMessageIds by rememberUpdatedState(messageIds)
+    val currentOnTargetMissing by rememberUpdatedState(onTargetMissing)
+    var highlightedMessageId by remember { mutableStateOf<String?>(null) }
+    var pendingMessageId by remember { mutableStateOf<String?>(null) }
+    var requestVersion by remember { mutableIntStateOf(0) }
+
+    fun jumpToLoadedMessage(messageId: String, targetIndex: Int) {
+        requestVersion += 1
+        val version = requestVersion
+        scope.launch {
+            listState.animateScrollToItem(targetIndex)
+            highlightedMessageId = messageId
+            delay(HIGHLIGHT_DURATION_MILLIS.milliseconds)
+            if (requestVersion == version) {
+                highlightedMessageId = null
+            }
+        }
+    }
+
+    LaunchedEffect(messageIds, pendingMessageId) {
+        val messageId = pendingMessageId ?: return@LaunchedEffect
+        val targetIndex = messageIds.indexOf(messageId)
+        if (targetIndex >= 0) {
+            pendingMessageId = null
+            jumpToLoadedMessage(messageId, targetIndex)
+        }
+    }
+
+    return MessageJumpState(
+        highlightedMessageId = highlightedMessageId,
+        jumpTo = { messageId ->
+            val targetIndex = currentMessageIds.indexOf(messageId)
+            if (targetIndex >= 0) {
+                jumpToLoadedMessage(messageId, targetIndex)
+            } else {
+                pendingMessageId = messageId
+                currentOnTargetMissing(messageId)
+            }
+        }
+    )
+}

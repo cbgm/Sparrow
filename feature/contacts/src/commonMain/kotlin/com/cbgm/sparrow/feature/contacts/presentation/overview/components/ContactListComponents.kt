@@ -32,15 +32,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_missing
 import com.cbgm.sparrow.resources.base_secure
@@ -54,9 +54,8 @@ import org.jetbrains.compose.resources.stringResource
 
 fun LazyListScope.contactGroups(
     groups: List<ContactGroupEntity>,
-    profilePictures: Map<String, ByteArray?>,
-    onContactClick: (Contact) -> Unit,
-    trailingContent: @Composable (Contact) -> Unit
+    onContactClick: (ContactUi) -> Unit,
+    trailingContent: @Composable (ContactUi) -> Unit
 ) {
     items(
         items = groups,
@@ -64,7 +63,6 @@ fun LazyListScope.contactGroups(
     ) { group ->
         ContactGroup(
             group = group,
-            profilePictures = profilePictures,
             onContactClick = onContactClick,
             trailingContent = trailingContent
         )
@@ -72,9 +70,9 @@ fun LazyListScope.contactGroups(
 }
 
 @Composable
-fun ContactStatus(contact: Contact) {
+fun ContactStatus(contact: ContactUi) {
     when {
-        contact.deviceContactLinkStatus == DeviceContactLinkStatus.MISSING -> {
+        contact.deviceContactMissing -> {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_missing),
                 icon = Icons.Default.Warning,
@@ -82,11 +80,11 @@ fun ContactStatus(contact: Contact) {
             )
         }
 
-        contact.sparrowIdentity != null -> {
+        contact.hasSparrowIdentity -> {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_secure),
                 icon = Icons.Default.Verified,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.tertiary
             )
         }
     }
@@ -168,7 +166,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
             Text(
                 text = stringResource(Res.string.feature_contacts_no_contacts_yet),
                 modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -224,9 +222,8 @@ fun ContactsErrorContent(
 @Composable
 private fun ContactGroup(
     group: ContactGroupEntity,
-    profilePictures: Map<String, ByteArray?>,
-    onContactClick: (Contact) -> Unit,
-    trailingContent: @Composable (Contact) -> Unit
+    onContactClick: (ContactUi) -> Unit,
+    trailingContent: @Composable (ContactUi) -> Unit
 ) {
     Column {
         Text(
@@ -236,29 +233,29 @@ private fun ContactGroup(
                     start = MaterialTheme.spacing.small,
                     bottom = MaterialTheme.spacing.small
                 ),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactsScreen.tertiaryContent)
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            tonalElevation = Dimens.Card.tonalElevation,
-            shadowElevation = Dimens.Card.shadowElevation
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = Dimens.Base.zero,
+            shadowElevation = Dimens.Base.zero
         ) {
             Column {
-                group.contacts.forEach { contact ->
+                group.contacts.forEachIndexed { index, contact ->
                     ContactListItem(
                         contact = contact,
-                        profilePictureBytes = profilePictures[contact.id],
                         onClick = {
                             onContactClick(contact)
                         },
                         trailingContent = {
                             trailingContent(contact)
-                        }
+                        },
+                        showDivider = index < group.contacts.lastIndex
                     )
                 }
             }
@@ -268,10 +265,10 @@ private fun ContactGroup(
 
 @Composable
 private fun ContactListItem(
-    contact: Contact,
-    profilePictureBytes: ByteArray?,
+    contact: ContactUi,
     onClick: () -> Unit,
-    trailingContent: @Composable () -> Unit
+    trailingContent: @Composable () -> Unit,
+    showDivider: Boolean
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -284,7 +281,7 @@ private fun ContactListItem(
             leadingContent = {
                 SparrowAvatar(
                     name = contact.displayName ?: "?",
-                    pictureBytes = profilePictureBytes
+                    target = AvatarTarget.User(contact.id)
                 )
             },
             headlineContent = {
@@ -295,15 +292,15 @@ private fun ContactListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             },
             supportingContent = {
                 Text(
                     text =
-                        contact.preferredPhoneNumber?.value
-                            ?: if (contact.sparrowIdentity != null) {
+                        contact.preferredPhoneNumber
+                            ?: if (contact.hasSparrowIdentity) {
                                 stringResource(Res.string.feature_contacts_sparrow_contact)
                             } else {
                                 stringResource(Res.string.feature_contacts_no_phone_number)
@@ -318,12 +315,14 @@ private fun ContactListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
 
-        HorizontalDivider(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-        )
+        if (showDivider) {
+            HorizontalDivider(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = MaterialTheme.spacing.listDividerStart),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
+            )
+        }
     }
 }

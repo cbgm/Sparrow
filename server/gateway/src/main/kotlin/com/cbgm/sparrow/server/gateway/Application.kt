@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.gateway
 
+import com.cbgm.sparrow.server.linkpreview.installLinkPreviewRoutes
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.persistence.controlPlaneUrlsFromEnvironment
 import com.cbgm.sparrow.server.security.NodeIdentity
@@ -34,6 +35,7 @@ fun Application.gatewayModule(
     configureGatewayLifecycle(runtime)
     installGatewayPlugins(runtime, config)
     installGatewayRoutes(runtime, identity, config)
+    installLinkPreviewRoutes()
 }
 
 data class GatewayConfig(

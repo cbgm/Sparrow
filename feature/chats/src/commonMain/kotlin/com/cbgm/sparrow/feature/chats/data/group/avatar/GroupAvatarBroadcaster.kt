@@ -3,22 +3,20 @@ package com.cbgm.sparrow.feature.chats.data.group.avatar
 import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarMetadata
 import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarPayload
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
+import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 
 internal class GroupAvatarBroadcaster(
-    private val groupSecurityDao: GroupSecurityDao,
+    private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val packetProtocol: GroupAvatarPacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
     private val dataSource: GroupAvatarDataSource
 ) {
     suspend fun requireLocalAdmin(groupId: String): Result<Unit> =
-        runCatching { requireAdminContext(groupId) }
-            .map { Unit }
+        runCatching { requireAdminContext(groupId).let { } }
 
     suspend fun broadcast(groupId: String): Result<Unit> =
         runCatching {
@@ -50,21 +48,17 @@ internal class GroupAvatarBroadcaster(
         }
 
     private suspend fun requireAdminContext(groupId: String): AdminContextDto {
-        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
-        check(state.localRole.isGroupAdminRole()) { "Only a group admin may change the group avatar" }
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        check(state.localSigningPublicKey.contentEquals(signingKeyPair.publicKey)) {
-            "Local admin signing key does not match the group security state"
-        }
-        val members = groupSecurityDao.findMemberKeys(groupId, state.currentEpoch)
-        val recipients =
-            members
-                .asSequence()
-                .filterNot { member -> member.signingPublicKey.contentEquals(signingKeyPair.publicKey) }
-                .map { member -> member.contactId }
-                .filter(String::isNotBlank)
-                .toSet()
-        return AdminContextDto(state.currentEpoch, signingKeyPair, recipients)
+        val authorized = authorizeGroupMetadata.send(
+            groupId = groupId,
+            localSigningPublicKey = signingKeyPair.publicKey,
+            action = "group avatar"
+        ).getOrThrow()
+        return AdminContextDto(
+            epoch = authorized.epoch,
+            signingKeyPair = signingKeyPair,
+            recipientContactIds = authorized.recipientContactIds
+        )
     }
 
     private fun GroupAvatar.toGroupAvatarMetadata(): GroupAvatarMetadata =

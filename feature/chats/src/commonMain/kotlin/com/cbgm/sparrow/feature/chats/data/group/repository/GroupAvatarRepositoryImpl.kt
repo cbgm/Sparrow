@@ -1,21 +1,37 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarSnapshot
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatarMetadata
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal class GroupAvatarRepositoryImpl(
     private val dataSource: GroupAvatarDataSource,
     private val broadcaster: GroupAvatarBroadcaster
-) : GroupAvatarRepository {
+) : GroupAvatarRepository,
+    GroupAvatarProvider {
     private val updateMutex = Mutex()
 
     override fun observe(groupId: String): Flow<GroupAvatar> = dataSource.observe(groupId)
+
+    override fun observeMetadata(groupId: String): Flow<GroupAvatarMetadata> = dataSource.observeMetadata(groupId)
+
+    override fun observeSnapshot(groupId: String): Flow<GroupAvatarSnapshot> =
+        dataSource.observe(groupId).map { avatar ->
+            GroupAvatarSnapshot(
+                groupId = avatar.groupId,
+                changedAtEpochMilliseconds = avatar.changedAtEpochMilliseconds,
+                bytes = avatar.bytes
+            )
+        }
 
     override suspend fun set(
         groupId: String,

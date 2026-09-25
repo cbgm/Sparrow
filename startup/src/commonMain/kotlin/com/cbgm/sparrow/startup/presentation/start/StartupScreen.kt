@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -95,11 +97,25 @@ fun StartupScreen(
 
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
 
-            Text(
-                text = stringResource(Res.string.base_tagline),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-            )
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                border = BorderStroke(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                )
+            ) {
+                Text(
+                    text = stringResource(Res.string.base_tagline),
+                    modifier = Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.small
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(
                 modifier = Modifier.height(MaterialTheme.spacing.medium)
@@ -118,7 +134,7 @@ fun StartupScreen(
                     },
                     label = "startupState"
                 ) { state ->
-                    Box(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                    Box(modifier = Modifier.padding(MaterialTheme.spacing.large)) {
                         StartupStateContent(
                             uiState = state,
                             identityUiState = identityUiState,
@@ -230,7 +246,8 @@ private fun StartupIdentityContent(
 
                 OutlinedButton(
                     onClick = onRequestPhoneNumberHint,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
                         text =
@@ -302,12 +319,23 @@ private fun StartupErrorContent(
             modifier = Modifier.height(MaterialTheme.spacing.base)
         )
 
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center
-        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.error.copy(alpha = 0.09f),
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(
+                Dimens.Base.borderStrokeWidth,
+                MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
+            )
+        ) {
+            Text(
+                text = message,
+                modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
@@ -321,7 +349,7 @@ private fun StartupErrorContent(
 @Composable
 private fun StartupProgress(message: String) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(

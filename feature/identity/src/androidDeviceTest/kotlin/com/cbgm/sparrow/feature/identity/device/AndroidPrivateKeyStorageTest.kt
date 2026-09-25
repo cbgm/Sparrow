@@ -9,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class AndroidPrivateKeyStorageTest {
     /**
@@ -40,7 +39,7 @@ class AndroidPrivateKeyStorageTest {
              * This removes encrypted private-key blobs left by
              * an earlier test execution.
              */
-            storage.deleteIdentityPrivateKeys().getOrThrow()
+            storage.deleteIdentityPrivateKeys()
 
             try {
                 val identityKeyGenerator = SodiumIdentityKeyGenerator()
@@ -60,26 +59,20 @@ class AndroidPrivateKeyStorageTest {
                  * - use the Android Keystore wrapping key
                  * - persist ciphertext + IV
                  */
-                val saveResult =
-                    storage.saveIdentityPrivateKeys(
-                        encryptionPrivateKey = originalKeyPair.encryptionPrivateKey,
-                        signingPrivateKey = originalKeyPair.signingPrivateKey
-                    )
-
-                assertTrue(
-                    saveResult.isSuccess,
-                    "Saving private keys failed: " + saveResult.exceptionOrNull()?.message
+                storage.saveIdentityPrivateKeys(
+                    encryptionPrivateKey = originalKeyPair.encryptionPrivateKey,
+                    signingPrivateKey = originalKeyPair.signingPrivateKey
                 )
 
                 /**
                  * Load and decrypt the X25519-side private key.
                  */
-                val loadedEncryptionPrivateKey = storage.loadEncryptionPrivateKey().getOrThrow()
+                val loadedEncryptionPrivateKey = storage.loadEncryptionPrivateKey()
 
                 /**
                  * Load and decrypt the Ed25519 signing private key.
                  */
-                val loadedSigningPrivateKey = storage.loadSigningPrivateKey().getOrThrow()
+                val loadedSigningPrivateKey = storage.loadSigningPrivateKey()
 
                 assertNotNull(
                     loadedEncryptionPrivateKey,
@@ -112,7 +105,7 @@ class AndroidPrivateKeyStorageTest {
                  *
                  * finally runs even if an assertion fails.
                  */
-                storage.deleteIdentityPrivateKeys().getOrThrow()
+                storage.deleteIdentityPrivateKeys()
             }
         }
 }

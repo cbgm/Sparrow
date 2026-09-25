@@ -12,17 +12,30 @@ import kotlinx.serialization.json.Json
 data class GroupMessageContent(
     val text: String = "",
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val attachments: List<MessageAttachment> = emptyList()
+    val attachments: List<MessageAttachment> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val replyToMessageId: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val reaction: MessageReactionPayload? = null
 ) {
     init {
-        require(text.isNotBlank() || attachments.isNotEmpty()) {
-            "Group message must contain text or attachments"
+        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
+            "Group message must contain text, attachments, or a reaction"
+        }
+        require(
+            reaction == null ||
+                (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
+        ) {
+            "Group reaction content must not contain message content or a reply target"
         }
         require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
             "Group message can contain at most ${MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE} attachments"
         }
         require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
             "Group attachment IDs must be unique"
+        }
+        require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
+            "Reply message ID must not be blank"
         }
     }
 }

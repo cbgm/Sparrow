@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.contactimport.presentation.verify
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -57,6 +58,7 @@ class VerifyContactQrViewModel(
                     )
                 }
             }.onFailure { error ->
+                SparrowLog.error("VerifyContactQrViewModel", "QR verification failed", error)
                 _uiState.update {
                     it.copy(
                         scannedIdentityPreview = null,
@@ -91,6 +93,7 @@ class VerifyContactQrViewModel(
                 }
                 navigator.popBackStack()
             }.onFailure { error ->
+                SparrowLog.error("VerifyContactQrViewModel", "QR verification failed", error)
                 _uiState.update {
                     it.copy(
                         isVerifying = false,

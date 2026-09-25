@@ -1,14 +1,11 @@
 package com.cbgm.sparrow.feature.chats.presentation.create
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
-import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsScreen
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsScreenMode
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
@@ -16,7 +13,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiS
 
 @Composable
 fun CreateGroupScreen(
-    uiState: CreateGroupUiState,
+    uiState: CreateGroupConversationUiState,
     onUiEvent: (CreateGroupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -29,22 +26,13 @@ fun CreateGroupScreen(
 
 @Composable
 private fun Content(
-    uiState: CreateGroupUiState,
+    uiState: CreateGroupConversationUiState,
     onUiEvent: (CreateGroupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
-
     ContactsScreen(
         uiState = ContactsUiState.Content(
-            groups = uiState.contactGroups,
-            profilePictures = uiState.profilePictures
+            groups = uiState.contactGroups
         ),
         mode =
             ContactsScreenMode.GroupSelection(
@@ -67,8 +55,7 @@ private fun Content(
                 else -> Unit
             }
         },
-        modifier = modifier,
-        snackbarHostState = snackbarHostState
+        modifier = modifier
     )
 }
 
@@ -77,7 +64,7 @@ private fun Content(
 private fun CreateGroupScreenPreview() {
     SparrowTheme {
         CreateGroupScreen(
-            uiState = CreateGroupUiState(),
+            uiState = CreateGroupConversationUiState(),
             onUiEvent = {}
         )
     }

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversatio
 class GetOrCreateDirectConversationUseCase(
     private val repository: DirectConversationRepository
 ) {
-    suspend operator fun invoke(contactId: String): String = repository.getOrCreate(contactId)
+    suspend operator fun invoke(contactId: String): Result<String> = repository.getOrCreate(contactId)
 }

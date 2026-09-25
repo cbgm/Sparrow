@@ -8,6 +8,7 @@ enum class MessageAttachmentType {
     IMAGE,
     VIDEO,
     FILE,
+    VOICE,
     LOCATION,
     CONTACT
 }
@@ -53,6 +54,13 @@ data class MessageAttachment(
             }
 
             MessageAttachmentType.FILE -> Unit
+
+            MessageAttachmentType.VOICE -> {
+                require(mimeType.startsWith("audio/")) { "Voice attachment must use an audio MIME type" }
+                require(fileName == null) { "Voice attachment must not have a file name" }
+                require(width == null && height == null) { "Voice attachment must not contain media dimensions" }
+                require(durationMilliseconds != null) { "Voice attachment requires a duration" }
+            }
 
             MessageAttachmentType.LOCATION -> {
                 require(mimeType == LOCATION_MIME_TYPE) {

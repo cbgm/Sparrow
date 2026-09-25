@@ -5,4 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface ConversationOverviewRepository {
     fun observeAll(): Flow<List<ConversationOverview>>
+
+    suspend fun incrementUnseenLocalMessageCount(conversationId: String): Result<Unit>
+
+    suspend fun clearUnseenLocalMessageCount(conversationId: String): Result<Unit>
 }

@@ -2,7 +2,7 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -17,9 +17,9 @@ class FederationRouter(
     private val localGateway: LocalGatewayClient,
     private val remoteFederation: RemoteFederationClient,
     private val mailbox: MailboxClient,
-    private val localTypingGateway: LocalTypingGatewayClient = LocalTypingGatewayClient { false },
-    private val remoteTypingFederation: RemoteTypingFederationClient =
-        RemoteTypingFederationClient { _, _ -> false },
+    private val localIndicatorGateway: LocalIndicatorGatewayClient = LocalIndicatorGatewayClient { false },
+    private val remoteIndicatorFederation: RemoteIndicatorFederationClient =
+        RemoteIndicatorFederationClient { _, _ -> false },
     private val queue: OutboundEnvelopeStorage = OutboundEnvelopeQueue(),
     private val retryBaseDelayMilliseconds: Long = DEFAULT_RETRY_BASE_DELAY_MILLISECONDS,
     private val retryMaximumDelayMilliseconds: Long = DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS,
@@ -37,7 +37,7 @@ class FederationRouter(
             remoteRouteResolver =
                 remoteFederation as? RemoteRouteResolver ?: RemoteRouteResolver { _, _ -> null },
             remoteFederation = remoteFederation,
-            remoteTypingFederation = remoteTypingFederation
+            remoteIndicatorFederation = remoteIndicatorFederation
         )
 
     init {
@@ -129,18 +129,18 @@ class FederationRouter(
         queue.markStored(envelopeId)
     }
 
-    suspend fun routeTyping(event: FederatedTypingEvent): Boolean {
+    suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean {
         val localRoutingId =
             runCatching {
                 localRouteResolver.resolve(event.recipientRoutingId)
             }.getOrNull()
         if (localRoutingId != null) {
-            return localTypingGateway.deliver(
+            return localIndicatorGateway.deliver(
                 event.copy(recipientRoutingId = localRoutingId)
             )
         }
 
-        if (peerRouter.routeTyping(event)) {
+        if (peerRouter.routeIndicator(event)) {
             return true
         }
 
@@ -153,10 +153,10 @@ class FederationRouter(
                 runCatching {
                     val routedEvent = event.copy(recipientRoutingId = route.routingId)
                     if (route.nodeId == localNodeId) {
-                        localTypingGateway.deliver(routedEvent)
+                        localIndicatorGateway.deliver(routedEvent)
                     } else {
                         val descriptor = nodeRegistry.find(route.nodeId) ?: return@runCatching false
-                        remoteTypingFederation.deliver(descriptor, routedEvent)
+                        remoteIndicatorFederation.deliver(descriptor, routedEvent)
                     }
                 }.getOrDefault(false)
 

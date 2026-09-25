@@ -3,7 +3,7 @@ package com.cbgm.sparrow.server.federation
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.serverJson
@@ -26,7 +26,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 
 private const val FEDERATION_ENVELOPES_PATH = "/v1/federation/envelopes"
-private const val FEDERATION_TYPING_EVENTS_PATH = "/v1/federation/typing-events"
+private const val FEDERATION_INDICATOR_EVENTS_PATH = "/v1/federation/indicator-events"
 
 internal fun Application.installFederationRoutes(
     runtime: FederationRuntime,
@@ -65,12 +65,12 @@ private fun Routing.installInternalRoutes(
         call.respond(HttpStatusCode.Accepted, acknowledgement)
     }
 
-    post("/internal/v1/outgoing-typing-events") {
+    post("/internal/v1/outgoing-indicator-events") {
         if (!call.hasInternalAccess(config.federationInternalApiToken)) {
             call.respond(HttpStatusCode.Unauthorized)
             return@post
         }
-        val delivered = router.routeTyping(call.receive<FederatedTypingEvent>())
+        val delivered = router.routeIndicator(call.receive<FederatedIndicatorEvent>())
         call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)
     }
 
@@ -123,26 +123,26 @@ private fun Routing.installIncomingFederationRoutes(runtime: FederationRuntime) 
         call.respond(HttpStatusCode.Accepted, acknowledgement)
     }
 
-    post(FEDERATION_TYPING_EVENTS_PATH) {
+    post(FEDERATION_INDICATOR_EVENTS_PATH) {
         if (!call.enforceRateLimit(runtime.incomingRateLimiter)) {
             return@post
         }
         val body = call.receiveText()
         val event =
-            runCatching { serverJson.decodeFromString<FederatedTypingEvent>(body) }
+            runCatching { serverJson.decodeFromString<FederatedIndicatorEvent>(body) }
                 .getOrElse {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("INVALID_TYPING_EVENT", "Invalid typing event")
+                        ErrorResponse("INVALID_INDICATOR_EVENT", "Invalid indicator event")
                     )
                     return@post
                 }
-        if (!call.hasValidNodeAuthentication(FEDERATION_TYPING_EVENTS_PATH, body, runtime)) {
+        if (!call.hasValidNodeAuthentication(FEDERATION_INDICATOR_EVENTS_PATH, body, runtime)) {
             call.respondInvalidNodeAuthentication()
             return@post
         }
 
-        val delivered = runtime.router.routeTyping(event)
+        val delivered = runtime.router.routeIndicator(event)
         call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)
     }
 }

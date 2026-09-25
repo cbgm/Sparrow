@@ -1,27 +1,29 @@
 package com.cbgm.sparrow.feature.safety.presentation.details
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,10 +34,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
@@ -48,7 +52,6 @@ import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyD
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_safety_block_confirm
 import com.cbgm.sparrow.resources.feature_safety_block_confirm_description
@@ -99,7 +102,7 @@ fun MessageSafetyDetailsScreen(
 ) {
     val detectedReasons = uiState.reasons.distinct()
     val allReasons = MessageSafetyWarningReason.entries
-    val explanationStartIndex = detectedReasons.size + 3
+    val explanationStartIndex = if (detectedReasons.isEmpty()) 2 else 4
     var highlightedReason by remember(uiState.focusReason) { mutableStateOf(uiState.focusReason) }
     var showBlockConfirmation by remember { mutableStateOf(false) }
 
@@ -107,7 +110,7 @@ fun MessageSafetyDetailsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = stringResource(Res.string.feature_safety_details_title),
@@ -118,7 +121,7 @@ fun MessageSafetyDetailsScreen(
                     IconButton(onClick = { onUiEvent(MessageSafetyDetailsUiEvent.BackClicked) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.base_back)
+                            contentDescription = null
                         )
                     }
                 },
@@ -156,14 +159,18 @@ fun MessageSafetyDetailsScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacing.screenPadding),
+            modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = innerPadding
+            contentPadding = innerPadding,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             item(key = "summary") {
                 SafetySummary(
                     level = uiState.level,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
+                        .padding(top = MaterialTheme.spacing.base)
                 )
             }
 
@@ -175,14 +182,22 @@ fun MessageSafetyDetailsScreen(
                     )
                 }
 
-                items(
-                    items = detectedReasons,
-                    key = { reason -> "detected-${reason.id}" }
-                ) { reason ->
-                    ReasonLink(
-                        reason = reason,
-                        onClick = { highlightedReason = reason }
-                    )
+                item(key = "detected-reasons-card") {
+                    SparrowCardNoAnimation(
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    ) {
+                        Column {
+                            detectedReasons.forEachIndexed { index, reason ->
+                                ReasonLink(
+                                    reason = reason,
+                                    onClick = { highlightedReason = reason }
+                                )
+                                if (index < detectedReasons.lastIndex) {
+                                    SafetyRowDivider()
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -199,41 +214,47 @@ fun MessageSafetyDetailsScreen(
             ) { reason ->
                 ReasonExplanation(
                     reason = reason,
-                    isHighlighted = reason == highlightedReason
+                    isHighlighted = reason == highlightedReason,
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+                )
+            }
+
+            item(key = "bottom-spacing") {
+                Spacer(
+                    modifier = Modifier.size(MaterialTheme.spacing.base)
                 )
             }
         }
     }
 
-    if (showBlockConfirmation) {
-        SparrowAlertDialog(
-            onDismissRequest = { showBlockConfirmation = false },
-            title = stringResource(Res.string.feature_safety_block_confirm),
-            text = {
-                Text(
-                    text = stringResource(Res.string.feature_safety_block_confirm_description),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            },
-            confirmButton = {
-                SparrowDestructiveButton(
-                    onClick = {
-                        showBlockConfirmation = false
-                        onUiEvent(MessageSafetyDetailsUiEvent.BlockUserClicked)
-                    },
-                    text = stringResource(Res.string.feature_safety_block_this_user_button),
-                    fillMaxWidth = false
-                )
-            },
-            dismissButton = {
-                SparrowOutlinedButton(
-                    onClick = { showBlockConfirmation = false },
-                    text = stringResource(Res.string.base_cancel),
-                    fillMaxWidth = false
-                )
-            }
-        )
-    }
+    SparrowAlertDialog(
+        isVisible = showBlockConfirmation,
+        onDismissRequest = { showBlockConfirmation = false },
+        title = stringResource(Res.string.feature_safety_block_confirm),
+        text = {
+            Text(
+                text = stringResource(Res.string.feature_safety_block_confirm_description),
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        confirmButton = {
+            SparrowDestructiveButton(
+                onClick = {
+                    showBlockConfirmation = false
+                    onUiEvent(MessageSafetyDetailsUiEvent.BlockUserClicked)
+                },
+                text = stringResource(Res.string.feature_safety_block_this_user_button),
+                fillMaxWidth = false
+            )
+        },
+        dismissButton = {
+            SparrowOutlinedButton(
+                onClick = { showBlockConfirmation = false },
+                text = stringResource(Res.string.base_cancel),
+                fillMaxWidth = false
+            )
+        }
+    )
 }
 
 @Composable
@@ -258,41 +279,46 @@ private fun SafetySummary(
                 stringResource(Res.string.feature_safety_high_risk_summary)
         }
 
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer
-    ) {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-        ) {
+    // Match Settings and Group Details: one outlined card, a subtle colored
+    // header, and body text on the regular surface rather than a solid red panel.
+    SparrowCardNoAnimation(modifier = modifier) {
+        Column {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.09f))
+                    .padding(MaterialTheme.spacing.small),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.WarningAmber,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(Dimens.MessageSafetyWarning.iconSize)
+                    modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
                 )
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(Res.string.feature_safety_details_why_flagged),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = Alpha.OpaqueText)
-            )
+            Column(
+                modifier = Modifier.padding(MaterialTheme.spacing.small),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+            ) {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(Res.string.feature_safety_details_why_flagged),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -304,13 +330,16 @@ private fun SectionTitle(
 ) {
     Text(
         text = text,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(bottom = MaterialTheme.spacing.base),
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                start = MaterialTheme.spacing.screenPadding + MaterialTheme.spacing.base / 2,
+                end = MaterialTheme.spacing.screenPadding,
+                bottom = MaterialTheme.spacing.base
+            ),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
     )
 }
 
@@ -320,21 +349,43 @@ private fun ReasonLink(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Text(
-        text = stringResource(reasonTitle(reason)),
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(
-                    vertical = MaterialTheme.spacing.base
-                ),
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.secondary
-    )
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.small
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    ) {
+        Icon(
+            imageVector = Icons.Default.WarningAmber,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Text(
+            text = stringResource(reasonTitle(reason)),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon)
+        )
+    }
+}
+
+@Composable
+private fun SafetyRowDivider() {
     HorizontalDivider(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
     )
 }
@@ -348,32 +399,28 @@ private fun ReasonExplanation(
     val backgroundColor =
         rememberHighlightColor(
             isHighlighted = isHighlighted,
-            baseColor = Color.Transparent,
-            highlightColor = MaterialTheme.colorScheme.errorContainer // .copy(alpha = Alpha.Subtle)
+            baseColor = MaterialTheme.colorScheme.background,
+            highlightColor = MaterialTheme.colorScheme.errorContainer
         )
 
-    Surface(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(bottom = MaterialTheme.spacing.medium),
-        shape = MaterialTheme.shapes.small,
-        color = backgroundColor
-    ) {
+    SparrowCardNoAnimation(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.base),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(backgroundColor, MaterialTheme.shapes.medium)
+                .padding(MaterialTheme.spacing.small),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             Text(
                 text = stringResource(reasonTitle(reason)),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(reasonExplanation(reason)),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -388,45 +435,44 @@ private fun BlockUserBottomBar(
     containerColor: Color,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(
-        modifier = modifier.fillMaxWidth(),
-        containerColor = containerColor,
-        contentColor = MaterialTheme.colorScheme.onBackground
+    // A compact fixed action area, like the bottom actions in Group Details.
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(containerColor)
+            .navigationBarsPadding()
+            .padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.base
+            ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-        ) {
-            if (isBlocked) {
-                Text(
-                    text = stringResource(Res.string.feature_safety_user_blocked),
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-                )
-            } else {
-                SparrowDestructiveButton(
-                    onClick = onClick,
-                    text =
-                        if (isBlocking) {
-                            stringResource(Res.string.feature_safety_blocking_user)
-                        } else {
-                            stringResource(Res.string.feature_safety_block_this_user)
-                        },
-                    enabled = !isBlocking
-                )
-            }
+        if (isBlocked) {
+            Text(
+                text = stringResource(Res.string.feature_safety_user_blocked),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            SparrowDestructiveButton(
+                onClick = onClick,
+                text =
+                    if (isBlocking) {
+                        stringResource(Res.string.feature_safety_blocking_user)
+                    } else {
+                        stringResource(Res.string.feature_safety_block_this_user)
+                    },
+                enabled = !isBlocking
+            )
+        }
 
-            if (error != null) {
-                Text(
-                    text = stringResource(Res.string.feature_safety_block_error),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
+        if (error != null) {
+            Text(
+                text = stringResource(Res.string.feature_safety_block_error),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

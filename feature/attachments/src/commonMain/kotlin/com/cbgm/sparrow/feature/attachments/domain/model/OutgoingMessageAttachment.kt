@@ -42,6 +42,13 @@ data class OutgoingMessageAttachment(
                 }
             }
 
+            MessageAttachmentType.VOICE -> {
+                require(mimeType.startsWith("audio/")) { "Voice attachment must use an audio MIME type" }
+                require(fileName == null) { "Voice attachment must not have a file name" }
+                require(width == null && height == null) { "Voice attachment must not have media dimensions" }
+                require(durationMilliseconds != null) { "Voice attachment requires a duration" }
+            }
+
             MessageAttachmentType.FILE -> {
                 require(!fileName.isNullOrBlank()) { "File attachment requires a file name" }
                 require(width == null && height == null) { "File attachment must not have media dimensions" }

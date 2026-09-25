@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.search.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
@@ -23,16 +24,16 @@ class MessageSearchViewModel(
     observeSemanticSearchState: ObserveSemanticSearchStateUseCase,
     private val searchMessages: SearchMessagesUseCase
 ) : BaseViewModel() {
-    private val mutableUiState = MutableStateFlow(MessageSearchUiState())
-    val uiState: StateFlow<MessageSearchUiState> = mutableUiState.asStateFlow()
+    private val _uiState = MutableStateFlow(MessageSearchUiState())
+    val uiState: StateFlow<MessageSearchUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
 
     init {
         viewModelScope.launch {
             observeSemanticSearchState().collect { semanticState ->
-                mutableUiState.value =
-                    mutableUiState.value.copy(
+                _uiState.value =
+                    _uiState.value.copy(
                         mode = semanticState.toMessageSearchMode()
                     )
             }
@@ -49,7 +50,7 @@ class MessageSearchViewModel(
     }
 
     private fun openResult(messageId: String) {
-        val result = mutableUiState.value.results.firstOrNull { it.messageId == messageId } ?: return
+        val result = _uiState.value.results.firstOrNull { it.messageId == messageId } ?: return
 
         when (result.conversationType) {
             MessageSearchConversationType.DIRECT -> {
@@ -77,8 +78,8 @@ class MessageSearchViewModel(
 
     private fun updateQuery(query: String) {
         searchJob?.cancel()
-        mutableUiState.value =
-            mutableUiState.value.copy(
+        _uiState.value =
+            _uiState.value.copy(
                 query = query,
                 results = emptyList(),
                 isSearching = false,
@@ -90,23 +91,24 @@ class MessageSearchViewModel(
         searchJob =
             viewModelScope.launch {
                 delay(SEARCH_DEBOUNCE_MILLIS.milliseconds)
-                mutableUiState.value = mutableUiState.value.copy(isSearching = true)
+                _uiState.value = _uiState.value.copy(isSearching = true)
 
                 try {
                     val results = searchMessages(query)
-                    if (mutableUiState.value.query != query) return@launch
-                    mutableUiState.value =
-                        mutableUiState.value.copy(
+                    if (_uiState.value.query != query) return@launch
+                    _uiState.value =
+                        _uiState.value.copy(
                             results = results.map { it.toMessageSearchResultUi() },
                             isSearching = false,
                             searchFailed = false
                         )
                 } catch (cancellation: CancellationException) {
                     throw cancellation
-                } catch (_: Throwable) {
-                    if (mutableUiState.value.query != query) return@launch
-                    mutableUiState.value =
-                        mutableUiState.value.copy(
+                } catch (failure: Throwable) {
+                    SparrowLog.error("MessageSearchViewModel", "Message search failed", failure)
+                    if (_uiState.value.query != query) return@launch
+                    _uiState.value =
+                        _uiState.value.copy(
                             results = emptyList(),
                             isSearching = false,
                             searchFailed = true

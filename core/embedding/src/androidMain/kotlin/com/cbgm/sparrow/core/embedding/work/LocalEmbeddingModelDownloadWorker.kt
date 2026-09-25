@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.cbgm.sparrow.core.embedding.data.platform.AndroidLocalEmbeddingModelDownloader
 import com.cbgm.sparrow.core.embedding.data.platform.AndroidLocalEmbeddingModelFiles
+import com.cbgm.sparrow.core.logging.SparrowLog
 import kotlinx.coroutines.CancellationException
 
 class LocalEmbeddingModelDownloadWorker(
@@ -28,6 +29,7 @@ class LocalEmbeddingModelDownloadWorker(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {
+            SparrowLog.error("LocalEmbeddingModelDownloadWorker", "Model download attempt failed", throwable)
             if (runAttemptCount >= MAX_RETRY_COUNT) {
                 Result.failure(workDataOf(KEY_ERROR_MESSAGE to (throwable.message ?: "Model download failed")))
             } else {

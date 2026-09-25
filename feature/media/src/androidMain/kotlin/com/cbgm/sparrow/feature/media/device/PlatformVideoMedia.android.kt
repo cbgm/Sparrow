@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -22,36 +21,26 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.video.VideoFrameDecoder
 import coil3.video.videoFrameMillis
-import com.cbgm.sparrow.core.ui.component.SparrowImage
 import com.cbgm.sparrow.core.ui.component.rememberSparrowFallbackPainter
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
-internal actual fun VideoThumbnail(
-    media: MediaItem,
-    modifier: Modifier,
-    contentScale: ContentScale
-) {
-    val fallback = rememberSparrowFallbackPainter()
+internal actual fun VideoThumbnail(media: MediaItem, modifier: Modifier, contentScale: ContentScale) {
     val context = LocalContext.current
-    val bytes = media.bytes
-    val request =
-        remember(media.id, bytes, media.mimeType) {
-            bytes?.let {
-                ImageRequest.Builder(context)
-                    .data(it)
-                    .memoryCacheKey("media-thumbnail:${media.id}")
-                    .videoFrameMillis(0)
-                    .decoderFactory { result, options, _ ->
-                        VideoFrameDecoder(result.source, options)
-                    }
-                    .build()
-            }
+    val path = media.localFilePath
+    val fallback = rememberSparrowFallbackPainter()
+    val request = remember(path, media.id) {
+        path?.let {
+            ImageRequest.Builder(context)
+                .data(File(it))
+                .memoryCacheKey("media-thumbnail:${media.id}")
+                .diskCacheKey("media-thumbnail:${media.id}")
+                .videoFrameMillis(0)
+                .decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                .build()
         }
-
+    }
     AsyncImage(
         model = request,
         contentDescription = null,
@@ -64,65 +53,12 @@ internal actual fun VideoThumbnail(
 }
 
 @Composable
-internal actual fun VideoPlayer(
-    media: MediaItem,
-    isActive: Boolean,
-    modifier: Modifier
-) {
-    val context = LocalContext.current
-    val bytes = media.bytes
-    if (bytes == null) {
-        SparrowImage(
-            model = media.thumbnailBytes,
-            contentDescription = null,
-            modifier = modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
-        return
-    }
-
-    val videoFileState by
-        produceState<VideoFileState>(initialValue = VideoFileState.Loading, media.id, bytes) {
-            value =
-                runCatching {
-                    withContext(Dispatchers.IO) {
-                        val directory = File(context.cacheDir, "media-viewer").apply { mkdirs() }
-                        val file = File(directory, "${media.id}.${media.mimeType.defaultExtension()}")
-                        if (!file.exists() || file.length() != bytes.size.toLong()) {
-                            file.writeBytes(bytes)
-                        }
-                        file.absolutePath
-                    }
-                }.fold(
-                    onSuccess = VideoFileState::Ready,
-                    onFailure = { VideoFileState.Failed }
-                )
-        }
-
-    when (val state = videoFileState) {
-        VideoFileState.Loading -> {
-            Box(modifier = modifier.background(Color.Black))
-            return
-        }
-
-        VideoFileState.Failed -> {
-            SparrowImage(
-                model = media.thumbnailBytes,
-                contentDescription = null,
-                modifier = modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-            return
-        }
-
-        is VideoFileState.Ready -> {
-            VideoView(
-                media = media,
-                path = state.path,
-                isActive = isActive,
-                modifier = modifier
-            )
-        }
+internal actual fun VideoPlayer(media: MediaItem, isActive: Boolean, modifier: Modifier) {
+    val path = media.localFilePath
+    if (path != null) {
+        VideoView(media = media, path = path, isActive = isActive, modifier = modifier)
+    } else {
+        Box(modifier = modifier.background(Color.Black))
     }
 }
 
@@ -145,8 +81,10 @@ private fun VideoView(
     }
 
     if (playbackFailed) {
-        SparrowImage(
-            model = media.thumbnailBytes,
+        MediaImage(
+            data = null,
+            localFilePath = media.thumbnailFilePath,
+            cacheKey = "media-thumbnail:${media.id}",
             contentDescription = null,
             modifier = modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
@@ -185,22 +123,3 @@ private fun VideoView(
         }
     )
 }
-
-private sealed interface VideoFileState {
-    data object Loading : VideoFileState
-
-    data object Failed : VideoFileState
-
-    data class Ready(
-        val path: String
-    ) : VideoFileState
-}
-
-private fun String.defaultExtension(): String =
-    when (lowercase()) {
-        "video/mp4" -> "mp4"
-        "video/webm" -> "webm"
-        "video/3gpp" -> "3gp"
-        "video/quicktime" -> "mov"
-        else -> substringAfterLast('/', "bin").takeIf(String::isNotBlank) ?: "bin"
-    }

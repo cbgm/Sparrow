@@ -10,10 +10,10 @@ import androidx.compose.ui.unit.dp
 data class Spacing(
     val micro: Dp = 4.dp,
     val base: Dp = 8.dp,
-    val small: Dp = 16.dp,
-    val medium: Dp = 24.dp,
-    val large: Dp = 32.dp,
-    val screenPadding: Dp = 24.dp,
+    val small: Dp = 12.dp,
+    val medium: Dp = 16.dp,
+    val large: Dp = 24.dp,
+    val screenPadding: Dp = 16.dp,
     val zero: Dp = 0.dp,
     val listDividerStart: Dp = 80.dp,
     val button: ButtonSpacing = ButtonSpacing(),
@@ -22,18 +22,23 @@ data class Spacing(
     val importIdentityScreen: ImportIdentityScreenSpacing = ImportIdentityScreenSpacing(),
     val overviewScreen: OverviewScreenSpacing = OverviewScreenSpacing(),
     val messageList: MessageListSpacing = MessageListSpacing(),
-    val directScreen: DirectScreenSpacing = DirectScreenSpacing(),
-    val groupScreen: GroupScreenSpacing = GroupScreenSpacing(),
+    val directConversationScreen: DirectConversationScreenSpacing = DirectConversationScreenSpacing(),
+    val groupConversationScreen: GroupConversationScreenSpacing = GroupConversationScreenSpacing(),
     val groupDetailsScreen: GroupDetailsScreenSpacing = GroupDetailsScreenSpacing(),
     val messageBubble: MessageBubbleSpacing = MessageBubbleSpacing(),
     val identityScreen: IdentityScreenSpacing = IdentityScreenSpacing(),
     val contactsScreen: ContactsScreenSpacing = ContactsScreenSpacing(),
-    val textField: FieldSpacing = FieldSpacing()
+    val textField: FieldSpacing = FieldSpacing(),
+    val actionItem: ActionItem = ActionItem()
 ) {
     operator fun times(multiplier: Int): Dp = base * multiplier
 
     operator fun times(multiplier: Float): Dp = base * multiplier.toInt()
 }
+
+data class ActionItem(
+    val horizontalPadding: Dp = 12.dp
+)
 
 data class FieldSpacing(
     val horizontalPadding: Dp = 12.dp,
@@ -45,7 +50,7 @@ data class ButtonSpacing(
 )
 
 data class CardSpacing(
-    val bottomShadowPadding: Dp = 30.dp
+    val bottomShadowPadding: Dp = 12.dp
 )
 
 data class StartupScreenSpacing(
@@ -66,14 +71,14 @@ data class MessageListSpacing(
     val horizontalPadding: Dp = 12.dp
 )
 
-data class DirectScreenSpacing(
+data class DirectConversationScreenSpacing(
     val securityBannerVerticalPadding: Dp = 10.dp,
     val securityDescriptionTopPadding: Dp = 2.dp,
     val verifiedBannerVerticalPadding: Dp = 6.dp,
     val verifiedContentGap: Dp = 6.dp
 )
 
-data class GroupScreenSpacing(
+data class GroupConversationScreenSpacing(
     val senderGap: Dp = 6.dp
 )
 

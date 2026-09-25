@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource
@@ -37,6 +38,7 @@ class SemanticSearchRepositoryImpl(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {
+            SparrowLog.error("SemanticSearchRepository", "Semantic search setup failed", throwable)
             mutableState.value =
                 SemanticSearchState.Failed(
                     throwable.message ?: "Semantic search setup failed"

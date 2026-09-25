@@ -8,14 +8,18 @@ import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
+import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
+import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -32,6 +36,7 @@ class ContactRepositoryImplIntegrationTest {
     private lateinit var database: SparrowDatabase
 
     private lateinit var repository: ContactRepositoryImpl
+    private lateinit var remoteIdentities: RemoteIdentityImportRepositoryImpl
 
     @BeforeTest
     fun setUp() {
@@ -47,18 +52,61 @@ class ContactRepositoryImplIntegrationTest {
         val contactDao = database.contactDao()
         val phoneNumberNormalizer = DefaultPhoneNumberNormalizer()
 
+        remoteIdentities = RemoteIdentityImportRepositoryImpl(database.remoteIdentityDao())
+
         repository =
             ContactRepositoryImpl(
-                contactDao = contactDao,
-                contactKeyExchangeDataSource = ContactKeyExchangeDataSource(contactDao = contactDao),
+                contactDataSource = ContactLocalDataSource(contactDao),
                 phoneNumberNormalizer = phoneNumberNormalizer
             )
     }
+
+    /** The old repository tests exercise the complete import across the two owning modules. */
+    private suspend fun ContactRepositoryImpl.importContact(request: ImportContactRequest): Result<Contact> =
+        runCatching {
+            val resolvedRequest = request.copy(
+                matchedIdentityContactId =
+                    if (request.contactId == null) {
+                        database.remoteIdentityDao().findBySigningPublicKey(request.signingPublicKey)?.contactId
+                    } else {
+                        null
+                    }
+            )
+            val contact = upsertImportedContact(resolvedRequest).getOrThrow()
+            remoteIdentities.storeRemoteIdentity(
+                contactId = contact.id,
+                encryptionPublicKey = request.encryptionPublicKey,
+                signingPublicKey = request.signingPublicKey,
+                origin = if (request.identityImportTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
+                    RemoteIdentityOrigin.TRUSTED_QR_IMPORT
+                } else {
+                    RemoteIdentityOrigin.LOCAL_IMPORT
+                }
+            ).getOrThrow()
+            val loaded = getContact(contact.id).getOrThrow() ?: error("Imported contact was not found")
+            loaded.copy(sparrowIdentity = storedIdentity(loaded.id))
+        }
 
     @AfterTest
     fun tearDown() {
         database.close()
     }
+
+    @Test
+    fun staleIdentityMatchDoesNotCreateASecondContact() =
+        runBlocking {
+            val result = repository.upsertImportedContact(
+                ImportContactRequest(
+                    displayName = "Alice",
+                    phoneNumber = null,
+                    encryptionPublicKey = testKey(seed = 17),
+                    signingPublicKey = testKey(seed = 117),
+                    matchedIdentityContactId = "deleted-contact-id"
+                )
+            )
+            assertTrue(result.isFailure)
+            assertTrue(repository.observeContacts().first().isEmpty())
+        }
 
     @Test
     fun importKeysOnlyStoresValidContact() =
@@ -308,7 +356,7 @@ class ContactRepositoryImplIntegrationTest {
         }
 
     @Test
-    fun markVerifiedPersistsVerificationState() =
+    fun identityOwnerVerificationIsVisibleInContacts() =
         runBlocking {
             val importedContact =
                 repository
@@ -322,9 +370,15 @@ class ContactRepositoryImplIntegrationTest {
                             )
                     ).getOrThrow()
 
-            val verifiedContact = repository.markVerified(contactId = importedContact.id).getOrThrow()
+            remoteIdentities.storeRemoteIdentity(
+                contactId = importedContact.id,
+                encryptionPublicKey = testKey(seed = 8),
+                signingPublicKey = testKey(seed = 108),
+                origin = RemoteIdentityOrigin.TRUSTED_QR_IMPORT
+            ).getOrThrow()
+            val verifiedContact = repository.getContact(importedContact.id).getOrThrow()!!
 
-            val verifiedIdentity = requireSparrowIdentity(verifiedContact.sparrowIdentity)
+            val verifiedIdentity = storedIdentity(verifiedContact.id)
 
             assertEquals(
                 expected = ContactVerificationStatus.VERIFIED,
@@ -335,7 +389,7 @@ class ContactRepositoryImplIntegrationTest {
 
             assertNotNull(actual = loadedContact)
 
-            val loadedIdentity = requireSparrowIdentity(loadedContact.sparrowIdentity)
+            val loadedIdentity = storedIdentity(loadedContact.id)
 
             assertEquals(
                 expected = ContactVerificationStatus.VERIFIED,
@@ -747,10 +801,8 @@ class ContactRepositoryImplIntegrationTest {
                 actual = linkedContact.id
             )
 
-            assertNotNull(
-                actual =
-                    linkedContact.sparrowIdentity
-            )
+            assertNotNull(storedIdentity(linkedContact.id))
+            assertNull(linkedContact.sparrowIdentity)
 
             assertEquals(
                 expected = "device-contact-46",
@@ -920,9 +972,7 @@ class ContactRepositoryImplIntegrationTest {
             assertNotNull(actual = loadedContact)
 
             val sparrowIdentity =
-                requireSparrowIdentity(
-                    loadedContact.sparrowIdentity
-                )
+                storedIdentity(loadedContact.id)
 
             assertContentEquals(
                 expected = firstSigningKey,
@@ -983,6 +1033,71 @@ class ContactRepositoryImplIntegrationTest {
                 actual = updated.phoneNumbers.size
             )
         }
+
+    @Test
+    fun contactOnlyMetadataUpdatesPreserveVerifiedIdentityAndPreferredNumber() =
+        runBlocking {
+            val imported = repository.importContact(
+                ImportContactRequest(
+                    encryptionPublicKey = testKey(seed = 53),
+                    signingPublicKey = testKey(seed = 153),
+                    displayName = "Verified Person",
+                    phoneNumber = "+49151515151",
+                    identityImportTrust = IdentityImportTrust.VERIFIED_IN_PERSON
+                )
+            ).getOrThrow()
+            val initialIdentity = requireSparrowIdentity(imported.sparrowIdentity)
+            val preferredPhoneId = imported.preferredPhoneNumberId
+
+            val updated = repository.updateContactDetails(
+                contactId = imported.id,
+                displayName = "Renamed Person",
+                phoneNumber = null
+            ).getOrThrow()
+            assertEquals("Renamed Person", updated.displayName)
+            assertEquals(preferredPhoneId, updated.preferredPhoneNumberId)
+            assertEquals(
+                ContactVerificationStatus.VERIFIED,
+                storedIdentity(updated.id).verificationStatus
+            )
+            assertContentEquals(
+                initialIdentity.signingPublicKey,
+                storedIdentity(updated.id).signingPublicKey
+            )
+
+            // Selecting an existing phone number uses a Contacts-only lookup and then
+            // enriches the public result without altering the pinned Identity row.
+            val byNumber = repository.findOrCreateByPhoneNumber("+49151515151").getOrThrow()
+            assertEquals(imported.id, byNumber.id)
+            assertContentEquals(
+                initialIdentity.signingPublicKey,
+                storedIdentity(byNumber.id).signingPublicKey
+            )
+        }
+
+    @Test
+    fun deviceContactLookupWithoutIdentityPreservesLinkedRecord() = runBlocking {
+        val imported = repository.importDeviceContact(
+            ImportDeviceContactRequest(
+                deviceContactId = "device-contact-contact-only-lookup",
+                displayName = "Linked Person",
+                phoneNumbers = listOf(devicePhoneNumber(value = "+49161616161"))
+            )
+        ).getOrThrow()
+        val record = database.contactDao()
+            .findContactWithPhoneNumbersByDeviceContactId("device-contact-contact-only-lookup")
+        assertEquals(imported.id, assertNotNull(record).contact.id)
+        assertEquals(1, record.phoneNumbers.size)
+        assertEquals("+49161616161", record.phoneNumbers.single().value)
+
+        val missing = repository.updateDeviceContactLinkStatus(
+            deviceContactId = "device-contact-contact-only-lookup",
+            status = DeviceContactLinkStatus.MISSING
+        ).getOrThrow()
+        assertEquals(imported.id, assertNotNull(missing).id)
+        assertEquals(DeviceContactLinkStatus.MISSING, missing.deviceContactLinkStatus)
+        assertNull(missing.sparrowIdentity)
+    }
 
     @Test
     fun manuallyInsertedLinkedDeviceContactIsMappedCorrectly() =
@@ -1057,6 +1172,19 @@ class ContactRepositoryImplIntegrationTest {
             type = type,
             label = label
         )
+
+    private suspend fun storedIdentity(contactId: String): SparrowIdentity {
+        val row = assertNotNull(database.remoteIdentityDao().findByPeerId(contactId))
+        return SparrowIdentity(
+            encryptionPublicKey = row.encryptionPublicKey.copyOf(),
+            signingPublicKey = row.signingPublicKey.copyOf(),
+            verificationStatus = ContactVerificationStatus.valueOf(row.verificationStatus),
+            verifiedByContact = row.verifiedByContact,
+            locallyImported = row.locallyImported,
+            keyExchangeStatus = com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus.valueOf(row.keyExchangeStatus),
+            updatedAtEpochMilliseconds = row.updatedAtEpochMilliseconds
+        )
+    }
 
     private fun requireSparrowIdentity(sparrowIdentity: SparrowIdentity?): SparrowIdentity =
         assertNotNull(

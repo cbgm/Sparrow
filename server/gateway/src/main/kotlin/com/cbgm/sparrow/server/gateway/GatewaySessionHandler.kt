@@ -86,8 +86,8 @@ internal class GatewaySessionHandler(
                 handleSendEnvelope(session, state, message, workDispatcher)
             is GatewayClientMessage.SendFederatedEnvelope ->
                 handleSendFederatedEnvelope(session, state, message, workDispatcher)
-            is GatewayClientMessage.TypingState ->
-                handleTypingState(state, message, workDispatcher)
+            is GatewayClientMessage.IndicatorState ->
+                handleIndicatorState(state, message, workDispatcher)
             is GatewayClientMessage.AcknowledgeEnvelope -> handleAcknowledge(state, message)
             is GatewayClientMessage.RefreshRoute ->
                 refreshRoute(state.connection, message.registration)
@@ -120,14 +120,14 @@ internal class GatewaySessionHandler(
         }
     }
 
-    private fun handleTypingState(
+    private fun handleIndicatorState(
         state: GatewaySessionState,
-        message: GatewayClientMessage.TypingState,
+        message: GatewayClientMessage.IndicatorState,
         workDispatcher: GatewaySessionWorkDispatcher
     ) {
         val connection = state.connection ?: return
-        workDispatcher.dispatch(key = "typing:${message.recipientId}") {
-            actions.deliverTyping(connection, message)
+        workDispatcher.dispatch(key = "indicator:${message.recipientId}") {
+            actions.deliverIndicator(connection, message)
         }
     }
 
@@ -291,7 +291,7 @@ internal data class GatewayMessageActions(
     val sendEnvelope: suspend (GatewayConnection, GatewayClientMessage.SendEnvelope) -> Unit,
     val sendFederatedEnvelope:
         suspend (GatewayConnection, GatewayClientMessage.SendFederatedEnvelope) -> Unit,
-    val deliverTyping: suspend (GatewayConnection, GatewayClientMessage.TypingState) -> Unit,
+    val deliverIndicator: suspend (GatewayConnection, GatewayClientMessage.IndicatorState) -> Unit,
     val issueBlobUploadTicket:
         suspend (GatewayConnection, GatewayClientMessage.RequestBlobUploadTicket) -> Unit
 )

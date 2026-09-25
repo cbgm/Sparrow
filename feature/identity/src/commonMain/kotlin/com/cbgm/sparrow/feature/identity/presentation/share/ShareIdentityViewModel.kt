@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.identity.presentation.share
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
@@ -58,6 +59,7 @@ class ShareIdentityViewModel(
                         )
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("ShareIdentityViewModel", "Could not create shared identity", error)
                     _uiState.update { current ->
                         current.copy(
                             isGenerating = false,

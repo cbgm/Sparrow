@@ -1,21 +1,24 @@
 package com.cbgm.sparrow.feature.attachments.presentation.management
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -26,39 +29,46 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
+import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
@@ -66,12 +76,10 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_attachments_delete_confirm
 import com.cbgm.sparrow.resources.feature_attachments_delete_description
-import com.cbgm.sparrow.resources.feature_attachments_delete_selected
 import com.cbgm.sparrow.resources.feature_attachments_delete_title
 import com.cbgm.sparrow.resources.feature_attachments_files
 import com.cbgm.sparrow.resources.feature_attachments_media
 import com.cbgm.sparrow.resources.feature_attachments_media_and_files
-import com.cbgm.sparrow.resources.feature_attachments_select
 import com.cbgm.sparrow.resources.feature_attachments_selected_count
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -82,86 +90,133 @@ fun AttachmentManagementScreen(
     onUiEvent: (AttachmentManagementUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val mediaTabItems =
+    val mediaItems = remember(uiState.attachments) {
         uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>()
-    val fileTabItems =
+    }
+    val fileItems = remember(uiState.attachments) {
         uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachmentUi>()
+    }
+    val onAttachmentClick = remember(onUiEvent) {
+        { id: String -> onUiEvent(AttachmentManagementUiEvent.AttachmentClicked(id)) }
+    }
+
+    val currentSelectedIds = rememberUpdatedState(uiState.selectedIds)
+    val currentSelectionMode = rememberUpdatedState(uiState.isSelectionMode)
 
     SparrowStaticScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AttachmentManagementTopBar(
-                uiState = uiState,
+                isSelectionMode = uiState.isSelectionMode,
+                selectedCount = uiState.selectedIds.size,
+                isDeleting = uiState.isDeleting,
+                hasAttachments = uiState.hasAttachments,
                 onUiEvent = onUiEvent
             )
         }
     ) { innerPadding ->
         Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
+            modifier = Modifier.fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
-            AttachmentTabs(
+            AttachmentManagementBody(
+                mediaItems = mediaItems,
+                fileItems = fileItems,
                 selectedTab = uiState.selectedTab,
-                onTabSelected = { tab ->
-                    onUiEvent(AttachmentManagementUiEvent.TabSelected(tab))
-                }
+                selectedIds = currentSelectedIds,
+                isSelectionMode = currentSelectionMode,
+                bottomPadding = innerPadding.calculateBottomPadding(),
+                onUiEvent = onUiEvent,
+                onAttachmentClick = onAttachmentClick
             )
-
-            when (uiState.selectedTab) {
-                AttachmentManagementTab.MEDIA ->
-                    MediaGrid(
-                        attachments = mediaTabItems,
-                        selectedIds = uiState.selectedIds,
-                        isSelectionMode = uiState.isSelectionMode,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        onVisible = { onUiEvent(AttachmentManagementUiEvent.AttachmentVisible(it)) },
-                        onClick = { onUiEvent(AttachmentManagementUiEvent.AttachmentClicked(it)) }
-                    )
-
-                AttachmentManagementTab.FILES ->
-                    FileList(
-                        attachments = fileTabItems,
-                        selectedIds = uiState.selectedIds,
-                        isSelectionMode = uiState.isSelectionMode,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        onClick = { onUiEvent(AttachmentManagementUiEvent.AttachmentClicked(it)) }
-                    )
-            }
         }
     }
 
-    if (uiState.showDeleteConfirmation) {
-        SparrowAlertDialog(
-            onDismissRequest = { onUiEvent(AttachmentManagementUiEvent.DeleteDismissed) },
-            title = stringResource(Res.string.feature_attachments_delete_title),
-            text = { Text(stringResource(Res.string.feature_attachments_delete_description)) },
-            confirmButton = {
-                SparrowApprovalButton(
-                    fillMaxWidth = false,
-                    onClick = { onUiEvent(AttachmentManagementUiEvent.DeleteConfirmed) },
-                    text = stringResource(Res.string.feature_attachments_delete_confirm)
-                )
-            },
-            dismissButton = {
-                SparrowSecondaryButton(
-                    fillMaxWidth = false,
-                    onClick = { onUiEvent(AttachmentManagementUiEvent.DeleteDismissed) },
-                    text = stringResource(Res.string.base_cancel)
-                )
-            }
+    AttachmentDeleteConfirmation(
+        visible = uiState.showDeleteConfirmation,
+        onUiEvent = onUiEvent
+    )
+    AttachmentManagementViewer(
+        viewerId = uiState.viewerAttachmentId,
+        mediaItems = mediaItems,
+        onUiEvent = onUiEvent
+    )
+}
+
+@Composable
+private fun AttachmentManagementBody(
+    mediaItems: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    fileItems: List<MessageAttachmentUi.FileAttachmentUi>,
+    selectedTab: AttachmentManagementTab,
+    selectedIds: State<Set<String>>,
+    isSelectionMode: State<Boolean>,
+    bottomPadding: Dp,
+    onUiEvent: (AttachmentManagementUiEvent) -> Unit,
+    onAttachmentClick: (String) -> Unit
+) {
+    AttachmentTabs(
+        selectedTab = selectedTab,
+        onTabSelected = { selected -> onUiEvent(AttachmentManagementUiEvent.TabSelected(selected)) }
+    )
+    when (selectedTab) {
+        AttachmentManagementTab.MEDIA -> MediaGrid(
+            attachments = mediaItems,
+            selectedIds = selectedIds,
+            isSelectionMode = isSelectionMode,
+            bottomPadding = bottomPadding,
+            onClick = onAttachmentClick
+        )
+
+        AttachmentManagementTab.FILES -> FileList(
+            attachments = fileItems,
+            selectedIds = selectedIds,
+            isSelectionMode = isSelectionMode,
+            bottomPadding = bottomPadding,
+            onClick = onAttachmentClick
         )
     }
+}
 
-    uiState.viewerAttachmentId?.let { selectedId ->
+@Composable
+private fun AttachmentDeleteConfirmation(
+    visible: Boolean,
+    onUiEvent: (AttachmentManagementUiEvent) -> Unit
+) {
+    SparrowAlertDialog(
+        isVisible = visible,
+        onDismissRequest = { onUiEvent(AttachmentManagementUiEvent.DeleteDismissed) },
+        title = stringResource(Res.string.feature_attachments_delete_title),
+        text = { Text(stringResource(Res.string.feature_attachments_delete_description)) },
+        confirmButton = {
+            SparrowApprovalButton(
+                fillMaxWidth = false,
+                onClick = { onUiEvent(AttachmentManagementUiEvent.DeleteConfirmed) },
+                text = stringResource(Res.string.feature_attachments_delete_confirm)
+            )
+        },
+        dismissButton = {
+            SparrowSecondaryButton(
+                fillMaxWidth = false,
+                onClick = { onUiEvent(AttachmentManagementUiEvent.DeleteDismissed) },
+                text = stringResource(Res.string.base_cancel)
+            )
+        }
+    )
+}
+
+@Composable
+private fun AttachmentManagementViewer(
+    viewerId: String?,
+    mediaItems: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    onUiEvent: (AttachmentManagementUiEvent) -> Unit
+) {
+    viewerId?.let { selectedId ->
         MessageAttachmentViewer(
-            attachments = mediaTabItems,
+            attachments = mediaItems,
             selectedAttachmentId = selectedId,
             canSaveToCameraRoll = false,
             onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
-            onEnsureAttachmentLoaded = { onUiEvent(AttachmentManagementUiEvent.AttachmentVisible(it)) },
             onError = { onUiEvent(AttachmentManagementUiEvent.ViewerError(it)) }
         )
     }
@@ -170,76 +225,59 @@ fun AttachmentManagementScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AttachmentManagementTopBar(
-    uiState: AttachmentManagementUiState,
+    isSelectionMode: Boolean,
+    selectedCount: Int,
+    isDeleting: Boolean,
+    hasAttachments: Boolean,
     onUiEvent: (AttachmentManagementUiEvent) -> Unit
 ) {
     TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                scrolledContainerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            scrolledContainerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+            actionIconContentColor = MaterialTheme.colorScheme.onBackground
+        ),
         title = {
             Text(
-                text =
-                    if (uiState.isSelectionMode) {
-                        stringResource(
-                            Res.string.feature_attachments_selected_count,
-                            uiState.selectedIds.size
-                        )
-                    } else {
-                        stringResource(Res.string.feature_attachments_media_and_files)
-                    },
+                text = if (isSelectionMode) {
+                    stringResource(Res.string.feature_attachments_selected_count, selectedCount)
+                } else {
+                    stringResource(Res.string.feature_attachments_media_and_files)
+                },
                 style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {
             IconButton(onClick = { onUiEvent(AttachmentManagementUiEvent.BackClicked) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null
-                )
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
             }
         },
         actions = {
-            if (uiState.isSelectionMode) {
+            if (isSelectionMode) {
                 IconButton(
                     onClick = { onUiEvent(AttachmentManagementUiEvent.DeleteSelectedClicked) },
-                    enabled = uiState.selectedIds.isNotEmpty() && !uiState.isDeleting
+                    enabled = selectedCount > 0 && !isDeleting
                 ) {
-                    if (uiState.isDeleting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(MaterialTheme.spacing.medium)
-                        )
+                    if (isDeleting) {
+                        CircularProgressIndicator(modifier = Modifier.size(MaterialTheme.spacing.medium))
                     } else {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = stringResource(Res.string.feature_attachments_delete_selected)
-                        )
+                        Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
                     }
                 }
-
                 IconButton(
                     onClick = { onUiEvent(AttachmentManagementUiEvent.SelectionCleared) },
-                    enabled = !uiState.isDeleting
+                    enabled = !isDeleting
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Deselect,
-                        contentDescription = stringResource(Res.string.base_cancel)
-                    )
+                    Icon(imageVector = Icons.Default.Deselect, contentDescription = null)
                 }
             } else {
                 IconButton(
                     onClick = { onUiEvent(AttachmentManagementUiEvent.SelectionStarted) },
-                    enabled = uiState.hasAttachments
+                    enabled = hasAttachments
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.SelectAll,
-                        contentDescription = stringResource(Res.string.feature_attachments_select)
-                    )
+                    Icon(imageVector = Icons.Default.SelectAll, contentDescription = null)
                 }
             }
         }
@@ -252,18 +290,23 @@ private fun AttachmentTabs(
     selectedTab: AttachmentManagementTab,
     onTabSelected: (AttachmentManagementTab) -> Unit
 ) {
-    PrimaryTabRow(
-        selectedTabIndex = selectedTab.ordinal,
-        indicator = {
-            Box(
-                modifier =
-                    Modifier
-                        .tabIndicatorOffset(selectedTabIndex = selectedTab.ordinal)
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.base
             )
-        }
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.background)
+            .border(
+                BorderStroke(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.outlineVariant
+                ),
+                MaterialTheme.shapes.medium
+            ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
         AttachmentTab(
             title = stringResource(Res.string.feature_attachments_media),
@@ -279,19 +322,22 @@ private fun AttachmentTabs(
 }
 
 @Composable
-private fun AttachmentTab(
+private fun RowScope.AttachmentTab(
     title: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
     Tab(
+        modifier = Modifier
+            .weight(1f)
+            .background(if (selected) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.background),
         selected = selected,
         onClick = onClick,
         text = {
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     )
@@ -300,91 +346,128 @@ private fun AttachmentTab(
 @Composable
 private fun MediaGrid(
     attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
-    selectedIds: Set<String>,
-    isSelectionMode: Boolean,
+    selectedIds: State<Set<String>>,
+    isSelectionMode: State<Boolean>,
     bottomPadding: Dp,
-    onVisible: (String) -> Unit,
     onClick: (String) -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
-        contentPadding =
-            PaddingValues(
-                start = MaterialTheme.spacing.small,
-                top = MaterialTheme.spacing.small,
-                end = MaterialTheme.spacing.small,
-                bottom = bottomPadding + MaterialTheme.spacing.small
-            ),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(
+            start = MaterialTheme.spacing.screenPadding,
+            top = MaterialTheme.spacing.base,
+            end = MaterialTheme.spacing.screenPadding,
+            bottom = bottomPadding + MaterialTheme.spacing.small
+        ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         modifier = Modifier.fillMaxSize()
     ) {
         gridItems(attachments, key = { attachment -> attachment.id }) { attachment ->
-
-            GridItem(
-                onClick = { onClick(attachment.id) },
+            SelectableGridItem(
+                onClick = remember(onClick, attachment.id) { { onClick(attachment.id) } },
                 attachment = attachment,
-                onVisible = onVisible,
-                isSelected = isSelectionMode && attachment.id in selectedIds
+                selectionIds = selectedIds,
+                selectionMode = isSelectionMode
             )
         }
     }
 }
 
 @Composable
+private fun SelectableGridItem(
+    onClick: () -> Unit,
+    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
+    selectionIds: State<Set<String>>,
+    selectionMode: State<Boolean>
+) {
+    val selected by remember(attachment.id, selectionIds, selectionMode) {
+        derivedStateOf { selectionMode.value && attachment.id in selectionIds.value }
+    }
+    GridItem(onClick = onClick, attachment = attachment, selected = selected)
+}
+
+@Composable
 private fun GridItem(
     onClick: () -> Unit,
-    isSelected: Boolean,
     attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
-    onVisible: (String) -> Unit
+    selected: Boolean
 ) {
-    LaunchedEffect(attachment.id, attachment.bytes) {
-        if (attachment.bytes == null) onVisible(attachment.id)
-    }
-
     Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { onClick() },
-        shape = MaterialTheme.shapes.extraSmall
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.background
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
+            AttachmentGridThumbnail(attachment)
+            AttachmentSelectionIndicator(
+                selected = selected,
+                modifier = Modifier.matchParentSize()
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentGridThumbnail(
+    attachment: MessageAttachmentUi.ImageVideoAttachmentUi
+) {
+    val attachmentState = rememberAttachmentUiState(attachment.target)
+    val localFilePath =
+        (attachmentState as? AttachmentUiState.Ready)
+            ?.content
+            ?.let { content -> content as? AttachmentContent.LocalFile }
+            ?.localFilePath
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        if (localFilePath != null) {
             MediaThumbnail(
-                media = attachment.toMediaItem(),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f),
+                media = attachment.toMediaItem(localFilePath),
+                modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                 contentScale = ContentScale.Crop
             )
-
-            if (attachment.type == MessageAttachmentType.VIDEO) {
+        } else {
+            Box(
+                modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        if (attachment.type == MessageAttachmentType.VIDEO) {
+            Surface(
+                modifier = Modifier.align(Alignment.Center),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f)
+            ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.padding(MaterialTheme.spacing.base),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+    }
+}
 
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(FunctionalColors.MediaBackground.copy(alpha = Alpha.Disabled))
-                        .padding(MaterialTheme.spacing.micro)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(MaterialTheme.spacing.micro)
-                    )
-                }
-            }
+@Composable
+private fun AttachmentSelectionIndicator(
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (selected) {
+        Box(
+            modifier = modifier
+                .background(FunctionalColors.MediaBackground.copy(alpha = Alpha.Disabled))
+                .padding(MaterialTheme.spacing.micro)
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.TopEnd).padding(MaterialTheme.spacing.micro)
+            )
         }
     }
 }
@@ -392,56 +475,111 @@ private fun GridItem(
 @Composable
 private fun FileList(
     attachments: List<MessageAttachmentUi.FileAttachmentUi>,
-    selectedIds: Set<String>,
-    isSelectionMode: Boolean,
+    selectedIds: State<Set<String>>,
+    isSelectionMode: State<Boolean>,
     bottomPadding: Dp,
     onClick: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomPadding)
+        contentPadding = PaddingValues(
+            start = MaterialTheme.spacing.screenPadding,
+            top = MaterialTheme.spacing.base,
+            end = MaterialTheme.spacing.screenPadding,
+            bottom = bottomPadding + MaterialTheme.spacing.small
+        )
     ) {
-        items(attachments, key = { attachment -> attachment.id }) { attachment ->
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = attachment.fileName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text = attachment.byteSize.toReadableByteSize(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    if (isSelectionMode && attachment.id in selectedIds) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null
-                        )
+        if (attachments.isNotEmpty()) {
+            item(key = "attachment-files-group") {
+                SparrowCardNoAnimation {
+                    Column {
+                        attachments.forEachIndexed { index, attachment ->
+                            androidx.compose.runtime.key(attachment.id) {
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(
+                                            start = MaterialTheme.spacing.times(
+                                                5
+                                            )
+                                        ),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                                    )
+                                }
+                                SelectableAttachmentFileRow(
+                                    attachment = attachment,
+                                    selectionIds = selectedIds,
+                                    selectionMode = isSelectionMode,
+                                    onClick = remember(onClick, attachment.id) {
+                                        {
+                                            onClick(
+                                                attachment.id
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
-                },
-                colors =
-                    ListItemDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onClick(attachment.id) }
-            )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun SelectableAttachmentFileRow(
+    attachment: MessageAttachmentUi.FileAttachmentUi,
+    selectionIds: State<Set<String>>,
+    selectionMode: State<Boolean>,
+    onClick: () -> Unit
+) {
+    val selected by remember(attachment.id, selectionIds, selectionMode) {
+        derivedStateOf { selectionMode.value && attachment.id in selectionIds.value }
+    }
+    AttachmentFileRow(attachment = attachment, selected = selected, onClick = onClick)
+}
+
+@Composable
+private fun AttachmentFileRow(
+    attachment: MessageAttachmentUi.FileAttachmentUi,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(
+            horizontal = MaterialTheme.spacing.small,
+            vertical = MaterialTheme.spacing.small
+        ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Description,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.size(MaterialTheme.spacing.small))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = attachment.fileName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            Text(
+                text = attachment.byteSize.toReadableByteSize(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        AttachmentFileSelectionIndicator(selected)
+    }
+}
+
+@Composable
+private fun AttachmentFileSelectionIndicator(selected: Boolean) {
+    if (selected) Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
 }
 
 @Preview
@@ -460,11 +598,10 @@ private fun AttachmentManagementScreenPreview() {
 private fun AttachmentManagementSelectionPreview() {
     SparrowTheme {
         AttachmentManagementScreen(
-            uiState =
-                previewAttachmentManagementUiState().copy(
-                    isSelectionMode = true,
-                    selectedIds = setOf("preview-image")
-                ),
+            uiState = previewAttachmentManagementUiState().copy(
+                isSelectionMode = true,
+                selectedIds = setOf("preview-image")
+            ),
             onUiEvent = {}
         )
     }

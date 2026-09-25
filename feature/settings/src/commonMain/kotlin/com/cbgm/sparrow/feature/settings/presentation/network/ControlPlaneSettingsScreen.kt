@@ -1,51 +1,38 @@
 package com.cbgm.sparrow.feature.settings.presentation.network
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.settings.presentation.network.components.ControlPlaneListItem
-import com.cbgm.sparrow.feature.settings.presentation.network.components.ControlPlaneSummaryCard
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
+import com.cbgm.sparrow.feature.settings.presentation.network.component.AddControlPlaneDialog
+import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlPlaneSettingsDivider
+import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlPlaneSettingsEntry
+import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlPlaneSettingsGroup
+import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlPlaneSummaryCard
+import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlPlaneTopBar
+import com.cbgm.sparrow.feature.settings.presentation.network.component.DirectorySourceCard
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_settings_control_plane_add
-import com.cbgm.sparrow.resources.feature_settings_control_plane_address
-import com.cbgm.sparrow.resources.feature_settings_control_plane_error_duplicate
-import com.cbgm.sparrow.resources.feature_settings_control_plane_error_invalid_url
-import com.cbgm.sparrow.resources.feature_settings_control_plane_error_keep_one
-import com.cbgm.sparrow.resources.feature_settings_control_plane_error_save_failed
-import com.cbgm.sparrow.resources.feature_settings_control_planes
-import com.cbgm.sparrow.resources.feature_settings_control_planes_refresh
+import com.cbgm.sparrow.resources.feature_settings_control_planes_discovered
+import com.cbgm.sparrow.resources.feature_settings_control_planes_manually_added
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,43 +52,13 @@ fun ControlPlaneSettingsScreen(
                 onBack = { onUiEvent(ControlPlaneSettingsUiEvent.BackClicked) },
                 onRefresh = { onUiEvent(ControlPlaneSettingsUiEvent.Refresh) }
             )
-        }
-    ) { innerPadding, listState ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding =
-                    PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(
-                            10
-                        )
-                    )
-            ) {
-                item {
-                    ControlPlaneSummaryCard(uiState = uiState)
-                }
-
-                items(
-                    items = uiState.entries,
-                    key = { entry -> entry.url }
-                ) { entry ->
-                    ControlPlaneListItem(
-                        entry = entry,
-                        onRemove = { onUiEvent(ControlPlaneSettingsUiEvent.Remove(entry.url)) }
-                    )
-                }
-            }
-
+        },
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = { onUiEvent(ControlPlaneSettingsUiEvent.AddClicked) },
+                shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(MaterialTheme.spacing.screenPadding)
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -109,125 +66,114 @@ fun ControlPlaneSettingsScreen(
                 )
             }
         }
-    }
+    ) { innerPadding, listState ->
+        val discovered = uiState.entries.filter { it.source != ControlPlaneUiSource.MANUAL }
+        val manuallyAdded = uiState.entries.filter { it.source == ControlPlaneUiSource.MANUAL }
 
-    if (uiState.showAddDialog) {
-        AddControlPlaneDialog(
-            value = uiState.newUrl,
-            error = uiState.addError,
-            onValueChanged = { onUiEvent(ControlPlaneSettingsUiEvent.NewUrlChanged(it)) },
-            onConfirm = { onUiEvent(ControlPlaneSettingsUiEvent.AddConfirmed) },
-            onDismiss = { onUiEvent(ControlPlaneSettingsUiEvent.AddDismissed) }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ControlPlaneTopBar(
-    containerColor: Color,
-    isRefreshing: Boolean,
-    onBack: () -> Unit,
-    onRefresh: () -> Unit
-) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = stringResource(Res.string.feature_settings_control_planes),
-                style = MaterialTheme.typography.titleSmall
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.medium,
+                bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(10)
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+        ) {
+            item(key = "control-plane-summary") {
+                ControlPlaneSummaryCard(
+                    availableCount = uiState.availableCount,
+                    unavailableCount = uiState.unavailableCount
                 )
             }
-        },
-        actions = {
-            IconButton(onClick = onRefresh, enabled = !isRefreshing) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = stringResource(Res.string.feature_settings_control_planes_refresh)
+
+            item(key = "directory-source") {
+                DirectorySourceCard(
+                    directoryUrl = uiState.directoryUrl,
+                    jsonDirectoryUrl = uiState.jsonDirectoryUrl,
+                    directoryError = uiState.directoryError,
+                    directoryFailureDetail = uiState.directoryFailureDetail,
+                    onEditDirectory = { onUiEvent(ControlPlaneSettingsUiEvent.EditDirectoryClicked) },
+                    onRemoveDirectory = { onUiEvent(ControlPlaneSettingsUiEvent.RemoveDirectory) }
                 )
             }
-        },
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            )
-    )
-}
 
-@Composable
-private fun AddControlPlaneDialog(
-    value: String,
-    error: ControlPlaneSettingsError?,
-    onValueChanged: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    SparrowAlertDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(Res.string.feature_settings_control_plane_add),
-        text = {
-            SparrowInputField(
-                value = value,
-                onValueChange = onValueChanged,
-                modifier =
-                    Modifier.fillMaxWidth().padding(
-                        top = MaterialTheme.spacing.small,
-                        bottom = MaterialTheme.spacing.base
-                    ),
-                label = stringResource(Res.string.feature_settings_control_plane_address),
-                isError = error != null,
-                isSingleLine = true,
-                errorText = error?.let { addErrorText(it) } ?: ""
-            )
-        },
-        confirmButton = {
-            SparrowApprovalButton(
-                onClick = onConfirm,
-                fillMaxWidth = false,
-                text = stringResource(Res.string.feature_settings_control_plane_add)
-            )
-        },
-        dismissButton = {
-            SparrowOutlinedButton(
-                onClick = onDismiss,
-                fillMaxWidth = false,
-                text = stringResource(Res.string.base_cancel)
-            )
+            if (discovered.isNotEmpty()) {
+                item(key = "discovered-group") {
+                    ControlPlaneSettingsGroup(
+                        title = stringResource(Res.string.feature_settings_control_planes_discovered)
+                    ) {
+                        discovered.forEachIndexed { index, entry ->
+                            if (index > 0) ControlPlaneSettingsDivider()
+                            ControlPlaneSettingsEntry(entry = entry, onRemove = {})
+                        }
+                    }
+                }
+            }
+
+            if (manuallyAdded.isNotEmpty()) {
+                item(key = "manual-group") {
+                    ControlPlaneSettingsGroup(
+                        title = stringResource(Res.string.feature_settings_control_planes_manually_added)
+                    ) {
+                        manuallyAdded.forEachIndexed { index, entry ->
+                            if (index > 0) ControlPlaneSettingsDivider()
+                            ControlPlaneSettingsEntry(
+                                entry = entry,
+                                onRemove = { onUiEvent(ControlPlaneSettingsUiEvent.Remove(entry.url)) }
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    AddControlPlaneDialog(
+        isVisible = uiState.showAddDialog,
+        value = uiState.newUrl,
+        source = uiState.addSource,
+        editingDirectory = uiState.isEditingDirectory,
+        onSourceChanged = { onUiEvent(ControlPlaneSettingsUiEvent.AddSourceChanged(it)) },
+        error = uiState.addError,
+        onValueChanged = { onUiEvent(ControlPlaneSettingsUiEvent.NewUrlChanged(it)) },
+        onConfirm = { onUiEvent(ControlPlaneSettingsUiEvent.AddConfirmed) },
+        onDismiss = { onUiEvent(ControlPlaneSettingsUiEvent.AddDismissed) }
     )
 }
-
-@Composable
-private fun addErrorText(error: ControlPlaneSettingsError): String =
-    when (error) {
-        ControlPlaneSettingsError.INVALID_URL ->
-            stringResource(Res.string.feature_settings_control_plane_error_invalid_url)
-
-        ControlPlaneSettingsError.DUPLICATE ->
-            stringResource(Res.string.feature_settings_control_plane_error_duplicate)
-
-        ControlPlaneSettingsError.KEEP_ONE ->
-            stringResource(Res.string.feature_settings_control_plane_error_keep_one)
-
-        ControlPlaneSettingsError.SAVE_FAILED ->
-            stringResource(Res.string.feature_settings_control_plane_error_save_failed)
-    }
 
 @Preview
 @Composable
 fun ControlPaneSettingsScreenPreview() {
     SparrowTheme {
         ControlPlaneSettingsScreen(
-            uiState = ControlPlaneSettingsUiState(),
+            uiState = ControlPlaneSettingsUiState(
+                entries = listOf(
+                    ControlPlaneUiModel(
+                        url = "https://example.com",
+                        source = ControlPlaneUiSource.MANUAL,
+                        canRemove = true,
+                        status = ControlPlaneUiStatus.CHECKING
+                    ),
+                    ControlPlaneUiModel(
+                        url = "https://example4.com",
+                        source = ControlPlaneUiSource.MANUAL,
+                        canRemove = true,
+                        status = ControlPlaneUiStatus.AVAILABLE
+                    ),
+                    ControlPlaneUiModel(
+                        url = "https://example3.com",
+                        source = ControlPlaneUiSource.MANUAL,
+                        canRemove = true,
+                        status = ControlPlaneUiStatus.UNREACHABLE
+                    ),
+                    ControlPlaneUiModel(
+                        url = "https://example6.com",
+                        source = ControlPlaneUiSource.DIRECTORY,
+                        canRemove = true,
+                        status = ControlPlaneUiStatus.ACTIVE
+                    )
+                )
+            ),
             onUiEvent = {}
         )
     }

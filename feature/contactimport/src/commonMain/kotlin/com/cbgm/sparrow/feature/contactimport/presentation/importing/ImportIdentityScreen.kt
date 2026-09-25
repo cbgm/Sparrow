@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,16 +31,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.IdentityImportTrustUi
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contactimport_import_identity
 import com.cbgm.sparrow.resources.feature_contactimport_import_unverified_identity
@@ -93,80 +94,100 @@ fun ImportIdentityScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
-            Text(
-                text = stringResource(Res.string.feature_contactimport_in_person_qr_title),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            SparrowCardNoAnimation {
+                Column(
+                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.feature_contactimport_in_person_qr_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
 
-            Text(
-                text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-            )
+                    Text(
+                        text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                    )
 
-            OutlinedButton(
-                onClick = { onUiEvent(ImportIdentityUiEvent.ScanQrCodeClicked) },
-                enabled = !uiState.isImporting,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.ImportIdentityScreen.headerIconSize)
-                )
+                    OutlinedButton(
+                        onClick = { onUiEvent(ImportIdentityUiEvent.ScanQrCodeClicked) },
+                        enabled = !uiState.isImporting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.ImportIdentityScreen.headerIconSize)
+                        )
 
-                Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+                        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 
-                Text(text = stringResource(Res.string.feature_contactimport_scan_qr_code))
+                        Text(text = stringResource(Res.string.feature_contactimport_scan_qr_code))
+                    }
+                }
             }
 
-            ManualInputDivider()
-
             Text(
-                text = stringResource(Res.string.feature_contactimport_paste_identity_title),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                text = stringResource(Res.string.feature_contactimport_or_paste_manually),
+                modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
 
-            Text(
-                text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-            )
+            SparrowCardNoAnimation {
+                Column(
+                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.feature_contactimport_paste_identity_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
 
-            SparrowInputField(
-                value = uiState.encodedIdentity,
-                onValueChange = { value ->
-                    onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = stringResource(Res.string.feature_contactimport_shared_identity),
-                minLines = 4,
-                isEnabled = !uiState.isImporting
-            )
+                    Text(
+                        text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                    )
 
-            ImportButton(
-                isImporting = uiState.isImporting,
-                enabled = uiState.encodedIdentity.isNotBlank(),
-                onClick = {
-                    onUiEvent(ImportIdentityUiEvent.ImportClicked)
+                    SparrowInputField(
+                        value = uiState.encodedIdentity,
+                        onValueChange = { value ->
+                            onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = stringResource(Res.string.feature_contactimport_shared_identity),
+                        minLines = 4,
+                        isEnabled = !uiState.isImporting
+                    )
+
+                    ImportButton(
+                        isImporting = uiState.isImporting,
+                        enabled = uiState.encodedIdentity.isNotBlank(),
+                        onClick = {
+                            onUiEvent(ImportIdentityUiEvent.ImportClicked)
+                        }
+                    )
                 }
-            )
+            }
 
             uiState.importedContactName?.let { name ->
                 val statusText =
                     when (uiState.importedIdentityTrust) {
-                        IdentityImportTrust.VERIFIED_IN_PERSON -> {
+                        IdentityImportTrustUi.VERIFIED_IN_PERSON -> {
                             stringResource(
                                 Res.string.feature_contactimport_imported_verified_name,
                                 name
                             )
                         }
 
-                        IdentityImportTrust.UNVERIFIED -> {
+                        IdentityImportTrustUi.UNVERIFIED -> {
                             stringResource(
                                 Res.string.feature_contactimport_imported_unverified_name,
                                 name
@@ -182,7 +203,7 @@ fun ImportIdentityScreen(
                     icon = Icons.Default.CheckCircle,
                     text = statusText,
                     color =
-                        if (uiState.importedIdentityTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
+                        if (uiState.importedIdentityTrust == IdentityImportTrustUi.VERIFIED_IN_PERSON) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.secondary
@@ -233,33 +254,6 @@ private fun ImportIdentityTopBar(
 }
 
 @Composable
-private fun ManualInputDivider() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
-        )
-
-        Text(
-            text = stringResource(Res.string.feature_contactimport_or_paste_manually),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ImportIdentityScreen.secondaryLabel),
-            modifier =
-                Modifier.padding(
-                    horizontal = MaterialTheme.spacing.base
-                )
-        )
-
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
-        )
-    }
-}
-
-@Composable
 private fun ImportButton(
     isImporting: Boolean,
     enabled: Boolean,
@@ -269,7 +263,7 @@ private fun ImportButton(
         onClick = onClick,
         enabled = !isImporting && enabled,
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.medium,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -301,7 +295,7 @@ private fun StatusBanner(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.medium,
         color = color.copy(alpha = Alpha.ImportIdentityScreen.iconBackground)
     ) {
         Row(

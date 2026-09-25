@@ -57,6 +57,49 @@ interface MessageRecipientStateDao {
 
     @Query(
         """
+        SELECT message_recipient_states.*
+        FROM message_recipient_states
+        INNER JOIN messages ON messages.id = message_recipient_states.messageId
+        WHERE messages.conversationId = :conversationId
+          AND message_recipient_states.messageId IN (
+              SELECT id
+              FROM messages
+              WHERE conversationId = :conversationId
+              ORDER BY createdAtEpochMilliseconds DESC, id DESC
+              LIMIT :messageLimit
+          )
+        ORDER BY message_recipient_states.messageId, message_recipient_states.contactId
+        """
+    )
+    fun observeRecentByConversationId(
+        conversationId: String,
+        messageLimit: Int
+    ): Flow<List<MessageRecipientStateEntity>>
+
+    @Query(
+        """
+        SELECT message_recipient_states.*
+        FROM message_recipient_states
+        INNER JOIN messages ON messages.id = message_recipient_states.messageId
+        WHERE messages.conversationId = :conversationId
+          AND (
+              messages.createdAtEpochMilliseconds > :fromTimestamp
+              OR (
+                  messages.createdAtEpochMilliseconds = :fromTimestamp
+                  AND messages.id >= :fromMessageId
+              )
+          )
+        ORDER BY message_recipient_states.messageId, message_recipient_states.contactId
+        """
+    )
+    fun observeFromMessageCursor(
+        conversationId: String,
+        fromTimestamp: Long,
+        fromMessageId: String
+    ): Flow<List<MessageRecipientStateEntity>>
+
+    @Query(
+        """
         UPDATE message_recipient_states
         SET deliveryStatus = :deliveryStatus,
             lastError = :lastError,

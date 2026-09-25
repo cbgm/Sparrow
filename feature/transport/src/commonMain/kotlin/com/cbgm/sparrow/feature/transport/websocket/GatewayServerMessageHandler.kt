@@ -3,9 +3,10 @@ package com.cbgm.sparrow.feature.transport.websocket
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.sparrow.feature.transport.presence.PresenceRouteRefreshRejectedException
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 
@@ -23,7 +24,7 @@ internal class GatewayServerMessageHandler(
         onRouteRegistered: (Set<String>) -> Unit,
         onRouteRejected: (Throwable) -> Unit,
         onIncomingEnvelope: suspend (TransportEnvelope) -> Unit,
-        onTypingEvent: suspend (GatewayTypingEvent) -> Unit
+        onIndicatorEvent: suspend (GatewayIndicatorEvent) -> Unit
     ) {
         val message =
             runCatching {
@@ -50,11 +51,11 @@ internal class GatewayServerMessageHandler(
                 onIncomingEnvelope(message.envelope)
             }
 
-            is GatewayServerMessage.TypingState -> {
-                onTypingEvent(
-                    GatewayTypingEvent(
+            is GatewayServerMessage.IndicatorState -> {
+                onIndicatorEvent(
+                    GatewayIndicatorEvent(
                         senderId = message.senderId,
-                        isTyping = message.isTyping
+                        indicatorType = message.indicatorType
                     )
                 )
             }
@@ -87,7 +88,13 @@ internal class GatewayServerMessageHandler(
             }
 
             is GatewayServerMessage.Error -> {
-                logger.warn { "Gateway error ${message.code}: ${message.message}" }
+                if (message.code == "INVALID_ROUTE_REFRESH" || message.code == "ROUTE_REJECTED") {
+                    // Presence housekeeping can fail while message delivery still
+                    // works. Reconnect/retry internally; no global error snackbar.
+                    logger.debug { "Gateway presence response ${message.code}: ${message.message}" }
+                } else {
+                    logger.error { "Gateway error ${message.code}: ${message.message}" }
+                }
                 handleGatewayError(message, onRouteRejected)
             }
         }
@@ -101,8 +108,10 @@ internal class GatewayServerMessageHandler(
             "INVALID_ROUTE_REFRESH",
             "ROUTE_REJECTED" ->
                 onRouteRejected(
-                    IllegalStateException(
-                        "Presence route rejected by gateway: ${message.code}"
+                    PresenceRouteRefreshRejectedException(
+                        code = message.code,
+                        isExpiration = message.code == "INVALID_ROUTE_REFRESH" &&
+                            message.message == "Signed route is invalid: EXPIRATION"
                     )
                 )
 

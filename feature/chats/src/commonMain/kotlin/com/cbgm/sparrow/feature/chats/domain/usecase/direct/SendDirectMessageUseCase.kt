@@ -9,7 +9,8 @@ class SendDirectMessageUseCase(
     suspend operator fun invoke(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
-        repository.send(conversationId, text, attachments)
+        repository.send(conversationId, text, attachments, replyToMessageId)
 }

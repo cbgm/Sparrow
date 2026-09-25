@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -12,6 +13,9 @@ fun DeveloperMenuRoute(
     viewModel: DeveloperMenuViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Only refresh diagnostics while this destination is displayed.
+    LaunchedEffect(Unit) { viewModel.refreshTransportDiagnosticsWhileVisible() }
 
     DeveloperMenuScreen(
         uiState = uiState,

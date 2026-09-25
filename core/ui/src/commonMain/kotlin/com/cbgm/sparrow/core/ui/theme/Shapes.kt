@@ -11,10 +11,10 @@ import androidx.compose.ui.unit.dp
 
 val Shapes =
     Shapes(
-        extraSmall = RoundedCornerShape(12.dp),
-        small = RoundedCornerShape(16.dp),
-        medium = RoundedCornerShape(24.dp),
-        large = RoundedCornerShape(32.dp)
+        extraSmall = RoundedCornerShape(6.dp),
+        small = RoundedCornerShape(8.dp),
+        medium = RoundedCornerShape(12.dp),
+        large = RoundedCornerShape(16.dp)
     )
 
 @Immutable

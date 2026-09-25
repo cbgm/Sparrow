@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
@@ -193,7 +193,7 @@ class WebSocketOutgoingWireSenderTest {
         override val connectionState: StateFlow<TransportConnectionState> =
             MutableStateFlow(TransportConnectionState.Connected("local-routing-id"))
         override val incomingEnvelopes: Flow<TransportEnvelope> = MutableSharedFlow()
-        override val incomingTypingEvents: Flow<GatewayTypingEvent> = MutableSharedFlow()
+        override val incomingIndicatorEvents: Flow<GatewayIndicatorEvent> = MutableSharedFlow()
 
         override fun connect(
             serverUrl: String,
@@ -230,9 +230,9 @@ class WebSocketOutgoingWireSenderTest {
 
         override suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit> = Result.success(Unit)
 
-        override suspend fun sendTypingState(
+        override suspend fun sendIndicatorState(
             recipientId: String,
-            isTyping: Boolean
+            indicatorType: String
         ): Result<Unit> = Result.success(Unit)
 
         override suspend fun disconnect() = Unit

@@ -1,0 +1,37 @@
+package com.cbgm.sparrow.feature.identity.domain.repository
+
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityUpdate
+
+interface RemoteIdentityImportRepository {
+    suspend fun storeRemoteIdentity(
+        contactId: String,
+        encryptionPublicKey: ByteArray,
+        signingPublicKey: ByteArray,
+        origin: RemoteIdentityOrigin
+    ): Result<RemoteIdentityUpdate>
+
+    suspend fun acceptRemoteIdentity(
+        contactId: String,
+        expectedRemoteEncryptionPublicKey: ByteArray,
+        expectedRemoteSigningPublicKey: ByteArray
+    ): Result<Unit>
+
+    suspend fun acceptRemoteIdentityForHandshake(
+        contactId: String,
+        expectedRemoteEncryptionPublicKey: ByteArray,
+        expectedRemoteSigningPublicKey: ByteArray
+    ): Result<Unit>
+
+    suspend fun prepareRemoteIdentityForHandshake(
+        contactId: String,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ): Result<Unit>
+
+    suspend fun markMutual(
+        contactId: String,
+        expectedRemoteEncryptionPublicKey: ByteArray,
+        expectedRemoteSigningPublicKey: ByteArray
+    ): Result<Unit>
+}

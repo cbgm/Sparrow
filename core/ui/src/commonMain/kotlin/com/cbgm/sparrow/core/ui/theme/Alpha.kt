@@ -16,6 +16,10 @@ object Alpha {
         const val conversation = 0.04f
     }
 
+    object FloatingButton {
+        const val opaque = 0.6f
+    }
+
     object TextField {
         const val unfocusedBorder = 0.18f
         const val placeholder = 0.38f

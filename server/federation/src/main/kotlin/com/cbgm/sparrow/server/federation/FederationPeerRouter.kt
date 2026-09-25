@@ -2,7 +2,7 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 
@@ -11,7 +11,7 @@ internal class FederationPeerRouter(
     private val peerNodeDirectory: PeerNodeDirectory,
     private val remoteRouteResolver: RemoteRouteResolver,
     private val remoteFederation: RemoteFederationClient,
-    private val remoteTypingFederation: RemoteTypingFederationClient
+    private val remoteIndicatorFederation: RemoteIndicatorFederationClient
 ) {
     suspend fun routeEnvelope(envelope: FederatedEnvelope): FederationAcknowledgement? {
         for (descriptor in peerDescriptors()) {
@@ -42,7 +42,7 @@ internal class FederationPeerRouter(
         return null
     }
 
-    suspend fun routeTyping(event: FederatedTypingEvent): Boolean {
+    suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean {
         for (descriptor in peerDescriptors()) {
             val canonicalRoutingId =
                 runCatching {
@@ -55,7 +55,7 @@ internal class FederationPeerRouter(
 
             val delivered =
                 runCatching {
-                    remoteTypingFederation.deliver(
+                    remoteIndicatorFederation.deliver(
                         descriptor = descriptor,
                         event = event.copy(recipientRoutingId = canonicalRoutingId)
                     )

@@ -58,6 +58,9 @@ internal sealed interface ClientPresenceRouteEvent {
         val error: Throwable
     ) : ClientPresenceRouteEvent
 
+    /** A stale signed route can be replaced without tearing down the live socket. */
+    data object RouteExpired : ClientPresenceRouteEvent
+
     data object RefreshDue : ClientPresenceRouteEvent
 }
 
@@ -150,7 +153,15 @@ internal object ClientPresenceRouteStateMachine {
 
             current is ClientPresenceRouteState.Ready &&
                 event is ClientPresenceRouteEvent.RefreshDue ->
-                preparingRegistration(current.gatewayInformation)
+                reloadGatewayInformation()
+
+            current is ClientPresenceRouteState.PublishingRoute &&
+                event is ClientPresenceRouteEvent.RouteExpired ->
+                reloadGatewayInformation()
+
+            current is ClientPresenceRouteState.Ready &&
+                event is ClientPresenceRouteEvent.RouteExpired ->
+                reloadGatewayInformation()
 
             current is ClientPresenceRouteState.Ready &&
                 event is ClientPresenceRouteEvent.RouteRejected ->
@@ -161,6 +172,12 @@ internal object ClientPresenceRouteStateMachine {
 
             else -> invalidTransition(current, event)
         }
+
+    private fun reloadGatewayInformation(): ClientPresenceRouteTransition =
+        ClientPresenceRouteTransition(
+            state = ClientPresenceRouteState.LoadingGatewayInformation,
+            effects = listOf(ClientPresenceRouteEffect.LoadGatewayInformation)
+        )
 
     private fun preparingRegistration(
         gatewayInformation: GatewayNodeInformation

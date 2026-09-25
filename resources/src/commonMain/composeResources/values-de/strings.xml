@@ -59,7 +59,9 @@
     <string name="feature_chats_chat_key_exchange_incomplete_title">Schlüsselaustausch unvollständig</string>
     <string name="feature_chats_chat_no_keys_description">Dieser Kontakt besitzt keine öffentlichen Sparrow-Schlüssel. Nachrichten werden unverschlüsselt übertragen.</string>
     <string name="feature_chats_chat_one_way_keys_description">Du besitzt die öffentlichen Schlüssel dieses Kontakts, aber der Kontakt besitzt deine noch nicht. Nachrichten bleiben unverschlüsselt.</string>
+    <string name="feature_chats_composer_placeholder">Nachricht</string>
     <string name="feature_chats_chat_typing">%1$s schreibt…</string>
+    <string name="feature_chats_chat_recording_voice">%1$s nimmt eine Sprachnachricht auf…</string>
     <string name="feature_chats_chat_unencrypted_description">Du besitzt keine öffentlichen Sparrow-Schlüssel dieses Kontakts.</string>
     <string name="feature_chats_chat_unencrypted_title">Nachrichten sind nicht Ende-zu-Ende verschlüsselt</string>
     <string name="feature_chats_chat_unverified_description">Vergleiche die Sicherheitsnummer über einen anderen vertrauenswürdigen Kanal.</string>
@@ -111,7 +113,23 @@
     <string name="feature_chats_not_encrypted">Nicht verschlüsselt</string>
     <string name="feature_chats_numbers_match">Nummern stimmen überein</string>
     <string name="feature_chats_queued">In Warteschlange</string>
-    <string name="feature_chats_waiting_for_invitation_acceptance">Warte auf Annahme der Einladung</string>
+    <string name="feature_chats_waiting_for_authorization">Warte auf Autorisierung</string>
+    <string name="feature_chats_reply">Antworten</string>
+    <string name="feature_chats_forward">Weiterleiten</string>
+    <string name="feature_chats_forward_to">Weiterleiten an</string>
+    <string name="feature_chats_forward_search_placeholder">Chats und Kontakte durchsuchen</string>
+    <string name="feature_chats_forward_chats">Chats</string>
+    <string name="feature_chats_forward_contacts">Kontakte</string>
+    <string name="feature_chats_forward_no_targets">Keine Chats oder Kontakte gefunden</string>
+    <string name="feature_chats_edit_message">Bearbeiten</string>
+    <string name="feature_chats_editing_message">Nachricht bearbeiten</string>
+    <string name="feature_chats_copy">Kopieren</string>
+    <string name="common_copied">Kopiert</string>
+    <string name="feature_chats_you">Du</string>
+    <string name="feature_chats_attachment">Anhang</string>
+    <string name="feature_chats_contact_card">Kontaktkarte</string>
+    <string name="feature_chats_voice_message">Sprachnachricht</string>
+    <string name="feature_chats_original_message_unavailable">Ursprüngliche Nachricht nicht verfügbar</string>
     <string name="feature_chats_read">Gelesen</string>
     <string name="feature_chats_safety_number_unavailable">Sicherheitsnummer nicht verfügbar</string>
     <string name="feature_chats_sending">Wird gesendet</string>
@@ -120,6 +138,7 @@
     <string name="feature_chats_unable_decrypt_secure_message">Sichere Nachricht konnte nicht entschlüsselt werden</string>
     <string name="feature_chats_unable_read_plaintext">Klartextnachricht konnte nicht gelesen werden</string>
     <string name="feature_chats_no_messages_yet">Noch keine Nachrichten</string>">
+    <string name="feature_chats_reply_you">Du</string>
 
     <!-- Feature: contactimport -->
     <string name="feature_contactimport_camera_permission_required">Für das Scannen eines QR-Codes wird die Kameraberechtigung benötigt.</string>
@@ -151,7 +170,7 @@
     <string name="feature_contactimport_unnamed_sparrow_contact">Unbenannter Sparrow-Kontakt</string>
 
     <!-- Feature: contacts -->
-    <string name="feature_contacts_add_contact">Kontakt hinzufügen</string>
+    <string name="feature_contacts_add_contact">Hinzufügen</string>
     <string name="feature_contacts_add_contact_title">Kontakt hinzufügen</string>
     <string name="feature_contacts_both_devices_same_number">Auf beiden Geräten muss exakt dieselbe Nummer angezeigt werden.</string>
     <string name="feature_contacts_compare_before_trusting">Vergleiche die Sicherheitsnummer mit dem Kontakt, bevor du dieser Identität vertraust.</string>
@@ -201,23 +220,19 @@
 
     <string name="feature_contacts_contact_invitation_title">Kontaktanfrage</string>
     <string name="feature_contacts_contact_invitation_description">%1$s möchte Sparrow-Identitäten austauschen.</string>
-    <string name="feature_contacts_invitation_unverified_warning">Das Annehmen aktiviert verschlüsselte Nachrichten, beweist aber nicht, dass diese Identität zur erwarteten Person gehört. Vergleiche die Sicherheitsnummer separat.</string>
-    <string name="feature_contacts_accept_invitation">Annehmen</string>
-    <string name="feature_contacts_decline_invitation">Ablehnen</string>
-    <string name="feature_contacts_invitations_title">Einladungen</string>
-    <string name="feature_contacts_invitations_incoming">Eingehend</string>
-    <string name="feature_contacts_invitations_outgoing">Ausgehend</string>
-    <string name="feature_contacts_invitations_incoming_empty">Keine eingehenden Einladungen</string>
-    <string name="feature_contacts_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
-    <string name="feature_contacts_invitation_status_pending">Wartet auf Antwort</string>
-    <string name="feature_contacts_invitation_status_declined">Abgelehnt</string>
-    <string name="feature_contacts_invitation_status_expired">Abgelaufen</string>
-    <string name="feature_contacts_invitation_status_failed">Konnte nicht gesendet werden</string>
-    <string name="feature_contacts_delete_outgoing_invitation">Löschen</string>
-    <string name="feature_contacts_invitations_empty">Keine offenen Einladungen</string>
-    <string name="feature_contacts_open_invitations">Einladungen öffnen</string>
-    <string name="feature_contacts_close_invitations">Einladungen schließen</string>
-    <string name="feature_contacts_block_invitation">Ablehnen und blockieren</string>
+    <string name="feature_invite_accept_invitation">Annehmen</string>
+    <string name="feature_invite_decline_invitation">Ablehnen</string>
+    <string name="feature_invite_invitations_title">Posteingang</string>
+    <string name="feature_invite_invitations_incoming">Eingehend</string>
+    <string name="feature_invite_invitations_outgoing">Ausgehend</string>
+    <string name="feature_invite_invitations_incoming_empty">Keine eingehenden Einladungen</string>
+    <string name="feature_invite_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
+    <string name="feature_invite_invitation_status_pending">Wartet auf Antwort</string>
+    <string name="feature_invite_invitation_status_declined">Abgelehnt</string>
+    <string name="feature_invite_invitation_status_expired">Abgelaufen</string>
+    <string name="feature_invite_invitation_status_failed">Konnte nicht gesendet werden</string>
+    <string name="feature_invite_delete_outgoing_invitation">Löschen</string>
+    <string name="feature_invite_block_invitation">Ablehnen und blockieren</string>
 
     <!-- Feature: identity -->
     <string name="feature_identity_approve_number_create_identity">Nummer bestätigen und erstellen</string>
@@ -324,6 +339,8 @@
     <string name="feature_settings_last_failed_node">Letzter fehlgeschlagener Node</string>
     <string name="feature_settings_last_disconnect">Letzte Trennung</string>
     <string name="feature_settings_network_nodes">Gefundene Nodes</string>
+    <string name="feature_settings_network_show_all_nodes">Alle Nodes anzeigen (%1$d)</string>
+    <string name="feature_settings_network_no_active_node">Mit keinem Node verbunden</string>
     <string name="feature_settings_network_no_nodes">Noch keine Nodes gefunden</string>
     <string name="feature_settings_network_active_connections">Verbindungen: %1$d</string>
     <string name="feature_settings_node_current">AKTUELL</string>
@@ -335,6 +352,7 @@
     <string name="feature_settings_status_disconnected">Getrennt</string>
     <string name="feature_settings_status_failed">Nicht zugestellt</string>
     <string name="feature_settings_disable_developer_mode">Entwicklermodus deaktivieren</string>
+    <string name="feature_settings_messaging">Nachrichten</string>
     <string name="feature_settings_profile">Profil</string>
     <string name="feature_settings_profile_picture">Profilbild</string>
     <string name="feature_settings_profile_subtitle">Profilbild verwalten</string>
@@ -387,6 +405,7 @@
     <string name="feature_chats_manual_identity_setup_description">Teile deine Identität und importiere oder scanne anschließend die Identität des Kontakts auf beiden Geräten. Beim Öffnen des Chats wird keine automatische Einladung gesendet.</string>
     <string name="feature_chats_manual_identity_required_title">Manueller Identitätsaustausch erforderlich</string>
     <string name="feature_chats_manual_identity_required_description">Teile deine Identität und importiere die Identität des Kontakts, bevor Ende-zu-Ende-Verschlüsselung beginnen kann.</string>
+    <string name="feature_chats_identity_not_fully_mutual_title">Nicht vollständig gegenseitig</string>
     <string name="feature_chats_manual_identity_incomplete_title">Manueller Identitätsaustausch unvollständig</string>
     <string name="feature_chats_manual_identity_incomplete_description">Eine Identität ist bekannt. Auch das andere Gerät muss die passende Identität importieren.</string>
     <string name="feature_chats_manual_identity_setup_action">Einrichten</string>
@@ -415,6 +434,12 @@
     <string name="feature_chats_group_status_partial">%1$d bereit · %2$d ausstehend</string>
     <string name="feature_chats_group_details_title">Gruppendetails</string>
     <string name="feature_chats_group_details_description">Hier siehst du alle Mitglieder, angenommene und ausstehende Einladungen sowie den Verifizierungsstand.</string>
+    <string name="feature_chats_group_description">Gruppenbeschreibung</string>
+    <string name="feature_chats_group_description_add">Beschreibung hinzufügen</string>
+    <string name="feature_chats_group_description_edit">Beschreibung bearbeiten</string>
+    <string name="feature_chats_group_description_empty">Noch keine Beschreibung hinzugefügt.</string>
+    <string name="feature_chats_group_description_placeholder">Beschreibe diese Gruppe</string>
+    <string name="feature_chats_group_description_save">Speichern</string>
     <string name="feature_chats_group_details_members">Mitglieder</string>
     <string name="feature_chats_group_details_verified">Verifiziert</string>
     <string name="feature_chats_group_details_accepted">Angenommen</string>
@@ -439,6 +464,7 @@
     <string name="feature_chats_group_verify_admin_title">Gruppenadmin verifizieren</string>
     <string name="feature_chats_group_verify_admin_description">Vergleiche die Sicherheitsnummer oder scanne den QR-Code des Admins. Diese Verifizierung gilt nur für diese Gruppe.</string>
     <string name="feature_chats_group_qr_identity_mismatch">Der gescannte QR-Code gehört nicht zum ausgewählten Gruppenmitglied.</string>
+    <string name="feature_chats_delete_message">Löschen</string>
     <string name="feature_chats_delete_conversation">Unterhaltung löschen</string>
     <string name="feature_chats_group_deleted_title">Diese Gruppenunterhaltung wurde gelöscht</string>
     <string name="feature_chats_group_deleted_description">Der Gruppenadmin hat diese Unterhaltung gelöscht. Der bisherige Verlauf bleibt lesbar, aber es können keine neuen Nachrichten gesendet werden.</string>
@@ -459,7 +485,6 @@
     <string name="feature_contacts_phone_number">Telefonnummer</string>
     <string name="feature_contacts_block_phone_number">Nummer blockieren</string>
     <string name="feature_contacts_choose_existing_contact">Oder bestehenden Kontakt auswählen</string>
-    <string name="feature_contacts_invitation_phone_number">Telefonnummer: %1$s</string>
     <string name="feature_contacts_no_contacts_to_block">Es gibt keine weiteren Kontakte zum Blockieren.</string>
     <string name="feature_contacts_unblock_contact">Entsperren</string>
     <string name="feature_contacts_decline_and_block">Ablehnen &amp; blockieren</string>
@@ -484,7 +509,7 @@
     <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
     <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
     <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>
-    <string name="feature_settings_control_plane_directory_apply">Speichern und synchronisieren</string>
+    <string name="feature_settings_control_plane_directory_apply">Speichern</string>
     <string name="feature_settings_control_plane_directory_disabled">Kein Verzeichnis konfiguriert</string>
     <string name="feature_settings_control_plane_directory_synced_count">%1$d Adressen vom Verzeichnis empfangen</string>
     <string name="feature_settings_control_plane_directory_sync_failed">Verzeichnis nicht erreichbar. Die letzte erfolgreiche Liste wird weiter verwendet.</string>
@@ -494,8 +519,10 @@
     <string name="feature_settings_control_plane_source_directory">Verzeichnis</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manuell + Verzeichnis</string>
     <string name="feature_settings_control_planes_summary">%1$d verfügbar · %2$d nicht erreichbar</string>
+    <string name="feature_settings_control_planes_auto_health_brief">Die Verfügbarkeit wird automatisch geprüft.</string>
     <string name="feature_settings_control_planes_auto_health">Die Erreichbarkeit wird automatisch geprüft. Nicht erreichbare Adressen werden nachrangig verwendet und im Hintergrund erneut geprüft.</string>
     <string name="feature_chats_group_promote_admin">Zum Admin machen</string>
+    <string name="feature_chats_group_promote_admin_button">Hochstufen</string>
     <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>
     <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
     <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
@@ -589,4 +616,59 @@
     <string name="feature_media_file_picker_file_access">Dateizugriff erlauben</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow benötigt Dateizugriff, um die Ordner und Dateien auf diesem Gerät anzuzeigen.</string>
     <string name="feature_chats_add_shared_contact_description">Möchtest du diesen geteilten Kontakt zu deinen Kontakten hinzufügen?</string>
+    <string name="feature_voice_tap_to_record">Zum Aufnehmen tippen</string>
+    <string name="feature_voice_transcribe">Transkribieren</string>
+    <string name="feature_voice_transcribing">Wird transkribiert…</string>
+    <string name="feature_voice_transcription_downloading">Sprachnachricht wird heruntergeladen…</string>
+    <string name="feature_voice_transcription_preparing">Transkription wird vorbereitet…</string>
+    <string name="feature_settings_voice_transcription">Sprachnachrichten transkribieren</string>
+    <string name="feature_settings_voice_transcription_subtitle">Lokale Transkripte für Sprachnachrichten erstellen und anzeigen</string>
+    <string name="feature_chats_pin_message">Nachricht anheften</string>
+    <string name="feature_chats_unpin_message">Anheftung lösen</string>
+    <string name="feature_chats_pinned_message">Angeheftete Nachricht</string>
+    <string name="feature_chats_pinned_at">Angeheftet %1$s</string>
+
+    <!-- Auto reply -->
+    <string name="feature_auto_reply">Automatische Antwort</string>
+    <string name="feature_auto_reply_off">Aus</string>
+    <string name="feature_auto_reply_active">Automatische Antwort aktiv · %1$s</string>
+    <string name="feature_auto_reply_add">Automatische Antwort hinzufügen</string>
+    <string name="feature_auto_reply_edit">Automatische Antwort bearbeiten</string>
+    <string name="feature_auto_reply_name">Name</string>
+    <string name="feature_auto_reply_message">Nachricht</string>
+    <string name="feature_auto_reply_save">Speichern</string>
+
+
+    <!-- Identity backup and restore -->
+    <string name="feature_identity_backup_title">Identität sichern</string>
+    <string name="feature_identity_backup_warning">Diese Identität wurde noch nicht gesichert. Nach einer Neuinstallation oder einem Gerätewechsel kannst du deine ursprünglichen Schlüssel und das Vertrauen deiner Kontakte verlieren. Exportiere ein verschlüsseltes Backup. Chats und Nachrichten werden nicht gesichert.</string>
+    <string name="feature_identity_backup_exported">Backup exportiert. Bewahre Datei und Passwort sicher auf. Du kannst jederzeit erneut exportieren; Chats und Kontakte sind nicht enthalten.</string>
+    <string name="feature_identity_backup_imported">Deine ursprünglichen Identitätsschlüssel wurden wiederhergestellt. Chats, Kontakte und Berechtigungen sind nicht in diesem Backup enthalten. Öffne zum erneuten Verbinden Chats → Neuer Chat und lade den Kontakt erneut ein. Alternativ kann dein Kontakt euren alten Chat öffnen und „Kontakt erneut verbinden“ wählen. Da du die ursprünglichen Schlüssel wiederhergestellt hast, muss er deine Identität nicht ersetzen. Bewahre Backupdatei und Passwort sicher auf.</string>
+    <string name="feature_identity_backup_export_action">Sichern</string>
+    <string name="feature_identity_backup_restore_action">Wiederherstellen</string>
+    <string name="feature_identity_backup_password">Backup-Passwort (mindestens 12 Zeichen beim Export)</string>
+    <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
+
+
+    <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
+    <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt neue Schlüssel hat, erscheint eine Einladung zum Identitätswechsel im Postfach. Du kannst sie annehmen, ablehnen oder den Kontakt blockieren.</string>
+    <string name="feature_chats_reconnect_confirm">Einladung senden</string>
+    <string name="feature_chats_reconnect_cancel">Abbrechen</string>
+    <string name="feature_chats_reconnect_queued">Eine neue Einladung wurde vorgemerkt. Warte vor dem Senden von Nachrichten auf die Annahme.</string>
+    <string name="feature_identity_recovery_block_action">Blockieren</string>
+    <string name="feature_identity_recovery_inbox_title">Identitätswechsel angefragt</string>
+    <string name="feature_identity_recovery_inbox_warning">Diese Einladung enthält neue Schlüssel. Sie kann von einer anderen Person stammen: Eine übereinstimmende Telefonnummer beweist keine Identität. Durch das Akzeptieren vertraust du den unten gezeigten Schlüsseln und setzt die signierte Einladung mit der neuen Identität fort. Dein bestehender Chat auf diesem Gerät bleibt erhalten.</string>
+    <string name="feature_identity_recovery_inbox_signing">Neuer Signatur-Fingerabdruck</string>
+    <string name="feature_identity_recovery_inbox_encryption">Neuer Verschlüsselungs-Fingerabdruck</string>
+    <string name="feature_identity_own_fingerprint_title">Dein Signatur-Fingerabdruck</string>
+    <string name="feature_identity_own_fingerprint_description">Wenn ein Kontakt deine neue Identität prüfen muss, teile diesen Wert über einen anderen vertrauenswürdigen Kanal.</string>
+    <string name="feature_settings_control_plane_json_list">JSON-Liste</string>
+    <string name="feature_settings_control_plane_json_unverified">Unsignierte JSON-Liste: Adressen sind Vorschläge, keine signierten Verzeichnisidentitäten.</string>
+    <string name="feature_settings_control_plane_json_remove">JSON-Liste entfernen</string>
+
+    <string name="feature_settings_control_plane_directory_edit">Verzeichnis bearbeiten</string>
+    <string name="feature_settings_control_planes_discovered">Gefundene Control Planes</string>
+    <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
+    <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
+    <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
 </resources>

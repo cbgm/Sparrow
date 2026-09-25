@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface WebSocketTransportClient {
     val connectionState: StateFlow<TransportConnectionState>
     val incomingEnvelopes: Flow<TransportEnvelope>
-    val incomingTypingEvents: Flow<GatewayTypingEvent>
+    val incomingIndicatorEvents: Flow<GatewayIndicatorEvent>
 
     fun connect(
         serverUrl: String,
@@ -66,9 +66,9 @@ interface WebSocketTransportClient {
 
     suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit>
 
-    suspend fun sendTypingState(
+    suspend fun sendIndicatorState(
         recipientId: String,
-        isTyping: Boolean
+        indicatorType: String
     ): Result<Unit>
 
     suspend fun disconnect()

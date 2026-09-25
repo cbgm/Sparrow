@@ -9,23 +9,25 @@ import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.datasource.IncomingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.linkpreview.domain.usecase.PrefetchLinkPreviewsUseCase
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 
 class GroupChatMessagePacketHandler(
-    private val chatDao: ChatDao,
+    private val incomingMessageDataSource: IncomingMessageDataSource,
     private val protocolOutbox: ProtocolOutbox,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val groupSecurityManager: GroupSecurityRepository,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val groupMessageContentCodec: GroupMessageContentCodec,
-    private val attachmentTransfer: MessageAttachmentDataSource,
-    private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator
+    private val attachmentTransfer: MessageAttachmentOperationsRepository,
+    private val prefetchLinkPreviews: PrefetchLinkPreviewsUseCase
 ) : GroupPacketHandler {
     private val logger = SparrowLog.withTag("GroupChatMessagePacketHandler")
 
@@ -40,10 +42,10 @@ class GroupChatMessagePacketHandler(
                 packet as? GroupChatMessagePacket
                     ?: error("GroupChatMessagePacketHandler received an incompatible packet")
             val conversation =
-                chatDao.findConversationById(groupPacket.groupId)
+                incomingMessageDataSource.findConversation(groupPacket.groupId)
                     ?: error("Group conversation was not found")
             check(conversation.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
-            val existingMessage = chatDao.findMessageById(groupPacket.messageId)
+            val existingMessage = incomingMessageDataSource.findMessage(groupPacket.messageId)
             if (existingMessage != null) {
                 check(
                     existingMessage.conversationId == groupPacket.groupId &&
@@ -62,25 +64,51 @@ class GroupChatMessagePacketHandler(
                     ).getOrThrow()
             val content = groupMessageContentCodec.decode(plaintext)
 
+            content.reaction?.let { reaction ->
+                val target = incomingMessageDataSource.findMessage(reaction.messageId) ?: return@runCatching
+                check(target.conversationId == groupPacket.groupId) { "Reaction target belongs to another group" }
+                if (reaction.removed) {
+                    incomingMessageDataSource.deleteReaction(reaction.messageId, context.contactId, reaction.emoji)
+                } else {
+                    incomingMessageDataSource.saveReaction(
+                        MessageReactionEntity(reaction.messageId, groupPacket.groupId, context.contactId, reaction.emoji)
+                    )
+                }
+                return@runCatching
+            }
+
             if (existingMessage != null) {
-                attachmentTransfer.persistIncoming(groupPacket.messageId, content.attachments)
+                prefetchLinkPreviews(content.text)
+                attachmentTransfer.persistIncoming(
+                    messageId = groupPacket.messageId,
+                    attachments = content.attachments,
+                    context = AttachmentMessageContext(
+                        conversationId = conversation.id,
+                        createdAtEpochMilliseconds = existingMessage.createdAtEpochMilliseconds,
+                        displayName = conversation.title?.takeIf(String::isNotBlank) ?: conversation.id,
+                        isGroup = true,
+                        isMine = false,
+                        senderContactId = context.contactId
+                    )
+                )
                 queueDeliveryReceipt(groupPacket, context.contactId)
-                attachmentCacheCoordinator.cache(groupPacket.messageId)
+                attachmentTransfer.cacheIncoming(groupPacket.messageId)
                 return@runCatching
             }
 
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, groupPacket.profilePicture)
                 .onFailure { error ->
-                    logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                    logger.error(error) { "Could not store profile picture for ${context.contactId}" }
                 }
 
-            chatDao.upsertMessage(
+            incomingMessageDataSource.saveMessage(
                 MessageEntity(
                     id = groupPacket.messageId,
                     conversationId = groupPacket.groupId,
                     packetId = groupPacket.packetId,
                     text = content.text,
+                    replyToMessageId = content.replyToMessageId,
                     transportPayload = context.encodedTransportPayload,
                     transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
                     contentStatus = MessageContentStatus.READABLE.name,
@@ -90,11 +118,23 @@ class GroupChatMessagePacketHandler(
                     createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds
                 )
             )
-            attachmentTransfer.persistIncoming(groupPacket.messageId, content.attachments)
-            chatDao.updateConversationTimestamp(groupPacket.groupId, context.receivedAtEpochMilliseconds)
+            prefetchLinkPreviews(content.text)
+            attachmentTransfer.persistIncoming(
+                messageId = groupPacket.messageId,
+                attachments = content.attachments,
+                context = AttachmentMessageContext(
+                    conversationId = conversation.id,
+                    createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds,
+                    displayName = conversation.title?.takeIf(String::isNotBlank) ?: conversation.id,
+                    isGroup = true,
+                    isMine = false,
+                    senderContactId = context.contactId
+                )
+            )
+            incomingMessageDataSource.updateConversationTimestamp(groupPacket.groupId, context.receivedAtEpochMilliseconds)
 
             queueDeliveryReceipt(groupPacket, context.contactId)
-            attachmentCacheCoordinator.cache(groupPacket.messageId)
+            attachmentTransfer.cacheIncoming(groupPacket.messageId)
         }
 
     private suspend fun queueDeliveryReceipt(

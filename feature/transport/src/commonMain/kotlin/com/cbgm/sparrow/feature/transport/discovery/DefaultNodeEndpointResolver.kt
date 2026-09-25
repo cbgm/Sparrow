@@ -6,9 +6,13 @@ import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.milliseconds
 
 class DefaultNodeEndpointResolver(
     private val source: NodeDirectorySource,
@@ -49,10 +53,24 @@ class DefaultNodeEndpointResolver(
         val cachedDirectory = cached?.decode()
         val currentTime = now()
         val trustedRootNodeId =
-            config.trustedRegistryRootNodeId ?: cached?.trustedRootNodeId
+            config.trustedRegistryRootNodeId ?: cached?.trustedRootForSource()
 
+        // Never keep selecting nodes from an endpoint removed from configuration.
+        // Older cache entries do not record their source; preserve their short-lived
+        // fallback until we can associate a verified response with an endpoint.
+        val cachedSourceIsConfigured =
+            cached?.sourceControlPlaneBaseUrl?.let { source ->
+                controlPlaneConfiguration.endpoints.value.any { it.baseUrl == source } &&
+                    (
+                        source in controlPlaneConfiguration.manualBaseUrls.value ||
+                            controlPlaneConfiguration.verifiedDirectoryRootId(source) == cached.trustedRootForSource()
+                    )
+            } ?: (
+                controlPlaneConfiguration.manualBaseUrls.value.isNotEmpty() &&
+                    controlPlaneConfiguration.directoryUrl.value == null
+            )
         if (
-            !forceRefresh &&
+            !forceRefresh && cachedSourceIsConfigured &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
         ) {
             return endpointSelector.select(checkNotNull(cachedDirectory), localRoutingId)
@@ -63,6 +81,7 @@ class DefaultNodeEndpointResolver(
                 cached = cached,
                 currentTime = currentTime
             ).getOrElse { remoteError ->
+                if (!cachedSourceIsConfigured) throw remoteError
                 cachedFallback(
                     cachedDirectory = cachedDirectory,
                     trustedRootNodeId = trustedRootNodeId,
@@ -80,17 +99,34 @@ class DefaultNodeEndpointResolver(
         var lastError: Throwable? = null
 
         controlPlaneConfiguration.orderedEndpoints().forEach { endpoint ->
-            fetchAndCache(
-                endpoint = endpoint,
-                cached = cached,
-                currentTime = currentTime
-            ).onSuccess { directory ->
+            val result =
+                try {
+                    // A dead registry must not consume the entire connection attempt
+                    // when another Control Plane is reachable.
+                    withTimeout(CONTROL_PLANE_FETCH_TIMEOUT_MILLISECONDS.milliseconds) {
+                        fetchAndCache(
+                            endpoint = endpoint,
+                            cached = cached,
+                            currentTime = currentTime
+                        )
+                    }
+                } catch (error: TimeoutCancellationException) {
+                    Result.failure(error)
+                }
+            result.onSuccess { directory ->
                 controlPlaneStatusStore.markAvailable(endpoint)
                 controlPlaneConfiguration.markActive(endpoint)
                 return Result.success(directory)
             }.onFailure { error ->
+                if (error is CancellationException && error !is TimeoutCancellationException) {
+                    throw error
+                }
                 controlPlaneStatusStore.markUnreachable(endpoint)
                 lastError = error
+                logger.debug {
+                    "Control Plane ${endpoint.baseUrl} unavailable for node discovery: " +
+                        (error.message ?: error::class.simpleName)
+                }
             }
         }
 
@@ -125,7 +161,7 @@ class DefaultNodeEndpointResolver(
     ): Result<SignedNodeDirectory> =
         source.fetch(endpoint.baseUrl).mapCatching { encodedDirectory ->
             val remoteDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
-            val rootNodeId = trustedRoot(remoteDirectory, cached)
+            val rootNodeId = trustedRoot(endpoint, remoteDirectory, cached)
             verifier
                 .verify(
                     signedDirectory = remoteDirectory,
@@ -133,38 +169,110 @@ class DefaultNodeEndpointResolver(
                     supportedProtocolVersion = config.supportedProtocolVersion,
                     nowEpochMilliseconds = currentTime
                 ).getOrThrow()
-            cacheVerifiedDirectory(remoteDirectory, rootNodeId)
+            cacheVerifiedDirectory(endpoint, remoteDirectory, rootNodeId, cached)
             remoteDirectory
         }
 
     private fun trustedRoot(
+        endpoint: ControlPlaneEndpoint,
         remoteDirectory: SignedNodeDirectory,
         cached: CachedNodeDirectory?
-    ): String =
-        config.trustedRegistryRootNodeId
-            ?: cached?.trustedRootNodeId
-            ?: verifier.rootNodeId(remoteDirectory).getOrThrow().also { rootNodeId ->
-                logger.warn {
-                    "Trusting registry root $rootNodeId on first use; " +
-                        "configure its root node ID for production"
-                }
+    ): String {
+        // A root pinned for Control Plane A must not be applied to Control Plane B.
+        // The previous implementation used one cached root globally; switching to
+        // another independently signed plane then failed until the app was reinstalled.
+        val directoryRoot = controlPlaneConfiguration.verifiedDirectoryRootId(endpoint.baseUrl)
+        // An explicit/manual CP keeps its existing trust behavior. Dynamically
+        // discovered CPs MUST match the directory's signed root ID, not TOFU.
+        if (endpoint.baseUrl !in controlPlaneConfiguration.manualBaseUrls.value &&
+            endpoint.baseUrl in controlPlaneConfiguration.directoryBaseUrls.value &&
+            controlPlaneConfiguration.directoryUrl.value != null
+        ) {
+            require(directoryRoot != null) { "Discovered Control Plane has no verified identity" }
+            require(
+                config.trustedRegistryRootNodeId == null ||
+                    config.trustedRegistryRootNodeId == directoryRoot
+            ) { "Control Plane identity conflicts with explicitly pinned root" }
+            val remoteRoot = verifier.rootNodeId(remoteDirectory).getOrThrow()
+            require(remoteRoot == directoryRoot) { "Discovered Control Plane signing root does not match directory" }
+            val previousRoot = cached?.trustedRootFor(endpoint.baseUrl)
+            require(previousRoot == null || previousRoot == directoryRoot) {
+                "Previously pinned Control Plane identity differs from directory listing"
             }
+            return directoryRoot
+        }
+        config.trustedRegistryRootNodeId?.let { return it }
+        val previousRoot =
+            cached?.trustedRootFor(endpoint.baseUrl)
+                ?: cached?.takeIf { it.sourceControlPlaneBaseUrl == endpoint.baseUrl }
+                    ?.trustedRootNodeId
+        if (previousRoot != null) {
+            // A manually configured HTTPS address is already authenticated by TLS.
+            // In the default (TOFU) mode, a fresh installation at that same address
+            // may legitimately have a new registry signing root. The replacement is
+            // only persisted AFTER the complete new directory passes verification.
+            // A hard-pinned root is handled above and can never be replaced here.
+            val remoteRoot = verifier.rootNodeId(remoteDirectory).getOrThrow()
+            if (previousRoot == remoteRoot) return previousRoot
+            if (
+                endpoint.baseUrl.startsWith("https://") &&
+                endpoint.baseUrl in controlPlaneConfiguration.manualBaseUrls.value
+            ) {
+                logger.warn {
+                    "Registry signing root changed at configured HTTPS Control Plane " +
+                        "${endpoint.baseUrl}; verifying fresh directory and updating " +
+                        "endpoint-scoped trust after successful verification"
+                }
+                return remoteRoot
+            }
+            return previousRoot
+        }
+
+        val remoteRoot = verifier.rootNodeId(remoteDirectory).getOrThrow()
+        // Legacy caches lack source provenance. Keep their root when it matches,
+        // but do not incorrectly bind A's root to a different Control Plane B.
+        if (cached?.sourceControlPlaneBaseUrl == null &&
+            cached?.trustedRootNodeId == remoteRoot
+        ) {
+            return cached.trustedRootNodeId
+        }
+        logger.warn {
+            "Trusting registry root $remoteRoot for ${endpoint.baseUrl} on first use; " +
+                "configure a trusted root for production"
+        }
+        return remoteRoot
+    }
 
     private suspend fun cacheVerifiedDirectory(
+        endpoint: ControlPlaneEndpoint,
         remoteDirectory: SignedNodeDirectory,
-        rootNodeId: String
+        rootNodeId: String,
+        previous: CachedNodeDirectory?
     ) {
         runCatching {
+            // Persist the endpoint/root binding ONLY after signature verification.
+            // Carry forward the root of older source-aware cache records, too.
+            val trustedRoots = previous?.trustedRootsByControlPlane.orEmpty().toMutableMap()
+            previous?.sourceControlPlaneBaseUrl?.let { source ->
+                // An explicitly removed/replaced server is deliberately not a
+                // valid root source. Do not re-persist its former trust under
+                // the synthetic cache-invalidation marker.
+                if (!source.startsWith("removed:") && source !in trustedRoots) {
+                    trustedRoots[source] = previous.trustedRootNodeId
+                }
+            }
+            trustedRoots[endpoint.baseUrl] = rootNodeId
             cache.write(
                 CachedNodeDirectory(
                     encodedDirectory = json.encodeToString(remoteDirectory),
-                    trustedRootNodeId = rootNodeId
+                    trustedRootNodeId = rootNodeId,
+                    sourceControlPlaneBaseUrl = endpoint.baseUrl,
+                    trustedRootsByControlPlane = trustedRoots
                 )
             )
         }.onFailure { error ->
-            logger.warn {
-                "Signed node directory could not be cached: ${error.message ?: "unknown error"}"
-            }
+            if (error is CancellationException) throw error
+            logger.error(error) { "Signed node directory could not be cached" }
         }
     }
 
@@ -194,6 +302,10 @@ class DefaultNodeEndpointResolver(
             "All configured control planes are unavailable; using the last valid signed directory"
         }
         return fallbackDirectory
+    }
+
+    private companion object {
+        const val CONTROL_PLANE_FETCH_TIMEOUT_MILLISECONDS = 5_000L
     }
 
     private fun CachedNodeDirectory.decode(): SignedNodeDirectory? =

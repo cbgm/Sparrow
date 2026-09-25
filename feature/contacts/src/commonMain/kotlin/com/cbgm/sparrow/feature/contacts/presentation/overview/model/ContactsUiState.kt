@@ -13,7 +13,6 @@ sealed interface ContactsUiState {
 
     data class Content(
         val groups: List<ContactGroupEntity>,
-        val profilePictures: Map<String, ByteArray?> = emptyMap(),
         override val searchQuery: String = ""
     ) : ContactsUiState
 

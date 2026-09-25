@@ -5,7 +5,7 @@ import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.DeliveryRoute
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class FederationRouterTest {
     @Test
@@ -155,7 +156,7 @@ class FederationRouterTest {
             firstStarted.await()
 
             val second =
-                kotlinx.coroutines.withTimeout(1_000L) {
+                kotlinx.coroutines.withTimeout(1_000L.milliseconds) {
                     router.route(testEnvelope().copy(envelopeId = "envelope-2"))
                 }
 
@@ -209,14 +210,14 @@ class FederationRouterTest {
         }
 
     @Test
-    fun typingEventIsRoutedToRemoteNodePresence() =
+    fun indicatorEventIsRoutedToRemoteNodePresence() =
         kotlinx.coroutines.test.runTest {
-            var deliveredEvent: FederatedTypingEvent? = null
+            var deliveredEvent: FederatedIndicatorEvent? = null
             val event =
-                FederatedTypingEvent(
+                FederatedIndicatorEvent(
                     senderRoutingId = "sender",
                     recipientRoutingId = "recipient",
-                    isTyping = true
+                    indicatorType = "TYPING"
                 )
             val router =
                 FederationRouter(
@@ -242,14 +243,14 @@ class FederationRouterTest {
                     localGateway = { error("Envelope gateway must not be used") },
                     remoteFederation = { _, _ -> error("Envelope federation must not be used") },
                     mailbox = { error("Mailbox must not be used") },
-                    remoteTypingFederation =
+                    remoteIndicatorFederation =
                         { _, candidate ->
                             deliveredEvent = candidate
                             true
                         }
                 )
 
-            assertTrue(router.routeTyping(event))
+            assertTrue(router.routeIndicator(event))
             assertEquals(event, deliveredEvent)
         }
 
@@ -329,16 +330,16 @@ class FederationRouterTest {
         }
 
     @Test
-    fun typingUsesPeerRouteWhenControlPlaneIsUnavailable() =
+    fun indicatorUsesPeerRouteWhenControlPlaneIsUnavailable() =
         kotlinx.coroutines.test.runTest {
-            var deliveredEvent: FederatedTypingEvent? = null
+            var deliveredEvent: FederatedIndicatorEvent? = null
             val peer = testNodeDescriptor()
             val peerClient =
                 TestPeerFederationClient(
                     resolveRoute = { routingId ->
                         if (routingId == "recipient-alias") "recipient" else null
                     },
-                    deliverTyping = { event ->
+                    deliverIndicator = { event ->
                         deliveredEvent = event
                         true
                     }
@@ -351,15 +352,15 @@ class FederationRouterTest {
                     localGateway = { error("Envelope gateway must not be used") },
                     remoteFederation = peerClient,
                     mailbox = { error("Mailbox must not be used") },
-                    remoteTypingFederation = peerClient
+                    remoteIndicatorFederation = peerClient
                 )
 
             val delivered =
-                router.routeTyping(
-                    FederatedTypingEvent(
+                router.routeIndicator(
+                    FederatedIndicatorEvent(
                         senderRoutingId = "sender",
                         recipientRoutingId = "recipient-alias",
-                        isTyping = true
+                        indicatorType = "TYPING"
                     )
                 )
 
@@ -426,9 +427,9 @@ class FederationRouterTest {
                     state = EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
                 )
             },
-        private val deliverTyping: suspend (FederatedTypingEvent) -> Boolean = { false }
+        private val deliverIndicator: suspend (FederatedIndicatorEvent) -> Boolean = { false }
     ) : RemoteFederationClient,
-        RemoteTypingFederationClient,
+        RemoteIndicatorFederationClient,
         RemoteRouteResolver {
         override suspend fun deliver(
             descriptor: SparrowNodeDescriptor,
@@ -437,8 +438,8 @@ class FederationRouterTest {
 
         override suspend fun deliver(
             descriptor: SparrowNodeDescriptor,
-            event: FederatedTypingEvent
-        ): Boolean = deliverTyping(event)
+            event: FederatedIndicatorEvent
+        ): Boolean = deliverIndicator(event)
 
         override suspend fun resolve(
             descriptor: SparrowNodeDescriptor,

@@ -15,5 +15,11 @@ sealed interface IdentityUiEvent {
 
     data object RetryClicked : IdentityUiEvent
 
+    data object OpenKeys : IdentityUiEvent
+
+    data object OpenBackup : IdentityUiEvent
+
+    data object BackClicked : IdentityUiEvent
+
     data object ShareIdentityClicked : IdentityUiEvent
 }

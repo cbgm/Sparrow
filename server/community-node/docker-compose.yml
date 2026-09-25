@@ -68,6 +68,7 @@ services:
       MAILBOX_DATABASE_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
       CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
       PUSH_NODE_API_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      DIRECTORY_DISCOVERY_PATH: /directory-cache/advertised-control-planes.json
       MAILBOX_MAXIMUM_MAILBOXES: ${MAILBOX_MAXIMUM_MAILBOXES:-100000}
       MAILBOX_MAXIMUM_MAILBOXES_PER_CLIENT: ${MAILBOX_MAXIMUM_MAILBOXES_PER_CLIENT:-100}
       MAILBOX_CREATION_RATE_LIMIT_REQUESTS: ${MAILBOX_CREATION_RATE_LIMIT_REQUESTS:-30}
@@ -77,6 +78,7 @@ services:
       - "127.0.0.1:${MAILBOX_DIAGNOSTIC_PORT:-8492}:8092"
     volumes:
       - node-identity:/data
+      - node-directory-cache:/directory-cache:ro
     depends_on:
       mailbox-database:
         condition: service_healthy
@@ -110,6 +112,7 @@ services:
       PORT: 8093
       NODE_IDENTITY_PATH: /data/node.identity
       CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
+      DIRECTORY_DISCOVERY_PATH: /directory-cache/advertised-control-planes.json
       NODE_REGISTRY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
       PRESENCE_DIRECTORY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
       GATEWAY_INTERNAL_URL: http://gateway:8094
@@ -128,11 +131,26 @@ services:
       - "127.0.0.1:${FEDERATION_DIAGNOSTIC_PORT:-8493}:8093"
     volumes:
       - node-identity:/data
+      - node-directory-cache:/directory-cache:ro
     depends_on:
       mailbox:
         condition: service_healthy
       federation-database:
         condition: service_healthy
+
+  # Docker creates new named volumes as root. The gateway runs as 65532,
+  # so image-layer chown does not grant write permission to a mounted volume.
+  # Run once before the gateway, without deleting blobs or elevating gateway.
+  blob-storage-init:
+    image: alpine:3.21
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    # Pass the entire shell program as ONE argv element to /bin/sh -ec.
+    # Compose splits a scalar command, which leaves sh running bare `mkdir`.
+    command: ["mkdir -p /var/lib/sparrow/blobs && chown -R 65532:65532 /var/lib/sparrow/blobs"]
+    volumes:
+      - gateway-blob-data:/var/lib/sparrow/blobs
 
   gateway:
     <<: *community-service
@@ -151,6 +169,9 @@ services:
       FEDERATION_INTERNAL_URL: http://federation:8093
       CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
       ADVERTISED_CONTROL_PLANE_URLS: ${ADVERTISED_CONTROL_PLANE_URLS:-}
+      LOCAL_CONTROL_PLANE_DOMAIN: ${LOCAL_CONTROL_PLANE_DOMAIN:-}
+      MANUAL_CONTROL_PLANE_URLS: ${MANUAL_CONTROL_PLANE_URLS:-}
+      DIRECTORY_DISCOVERY_PATH: /directory-cache/advertised-control-planes.json
       PRESENCE_DIRECTORY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
       PUSH_NODE_API_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
       FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
@@ -162,9 +183,12 @@ services:
     volumes:
       - node-identity:/data
       - gateway-blob-data:/var/lib/sparrow/blobs
+      - node-directory-cache:/directory-cache:ro
     depends_on:
       federation:
         condition: service_healthy
+      blob-storage-init:
+        condition: service_completed_successfully
 
 volumes:
   caddy-data:
@@ -173,3 +197,5 @@ volumes:
   mailbox-database-data:
   federation-database-data:
   gateway-blob-data:
+  node-directory-cache:
+    name: ${COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME:-sparrow-node-directory-cache}

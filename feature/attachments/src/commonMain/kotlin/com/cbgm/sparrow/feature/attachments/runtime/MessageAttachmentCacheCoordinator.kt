@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class MessageAttachmentCacheCoordinator(
+internal class MessageAttachmentCacheCoordinator(
     private val attachmentDataSource: MessageAttachmentDataSource
 ) {
     private val logger = SparrowLog.withTag("MessageAttachmentCacheCoordinator")
@@ -30,7 +30,7 @@ class MessageAttachmentCacheCoordinator(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
-                logger.warn(error) { "Could not cache attachments for message $messageId" }
+                logger.error(error) { "Could not cache attachments for message $messageId" }
             } finally {
                 mutex.withLock { activeMessageIds.remove(messageId) }
             }

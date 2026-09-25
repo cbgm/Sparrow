@@ -37,6 +37,11 @@
         reverse_proxy gateway:8094
     }
 
+    @link_preview path /v1/link-preview /v1/link-preview/*
+    handle @link_preview {
+        reverse_proxy gateway:8094
+    }
+
     @gateway_health path /health/gateway
     handle @gateway_health {
         rewrite * /health/ready

@@ -25,6 +25,11 @@
         reverse_proxy gateway:8094
     }
 
+    @link_preview path /v1/link-preview /v1/link-preview/*
+    handle @link_preview {
+        reverse_proxy gateway:8094
+    }
+
     @push path /push /push/*
     handle @push {
         reverse_proxy push:8095

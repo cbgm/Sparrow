@@ -16,9 +16,10 @@ fun OverviewRoute(
     viewModel: OverviewViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     OverviewScreen(
         uiState = uiState,
-        onUiEvent = viewModel::onUiEvent,
+        onUiEvent = { event -> viewModel.onUiEvent(event) },
         listState = listState,
         innerPadding = innerPadding,
         modifier = modifier

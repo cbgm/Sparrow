@@ -8,6 +8,12 @@ interface FileOpener {
         fileName: String,
         mimeType: String
     ): Result<Unit>
+
+    suspend fun open(
+        bytes: ByteArray,
+        fileName: String,
+        mimeType: String
+    ): Result<Unit>
 }
 
 @Composable

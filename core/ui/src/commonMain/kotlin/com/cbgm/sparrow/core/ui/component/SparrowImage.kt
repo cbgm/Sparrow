@@ -26,8 +26,8 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
  */
 
 private const val FALLBACK_BITMAP_SIZE = 48
-private const val FALLBACK_INSET = 13f
-private const val FALLBACK_STROKE_WIDTH = 4f
+private const val FALLBACK_INSET = 11f
+private const val FALLBACK_STROKE_WIDTH = 3f
 
 @Composable
 fun SparrowImage(
@@ -36,14 +36,23 @@ fun SparrowImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
     alignment: Alignment = Alignment.Center,
-    error: Painter? = null
+    error: Painter? = null,
+    memoryCacheKey: String? = null,
+    showLoadingBackground: Boolean = true
 ) {
     val fallbackPainter = error ?: rememberSparrowFallbackPainter()
+    val imageModel = rememberSparrowImageModel(model, memoryCacheKey)
+    val imageModifier =
+        if (showLoadingBackground) {
+            modifier.background(FunctionalColors.MediaBackground)
+        } else {
+            modifier
+        }
 
     AsyncImage(
-        model = model,
+        model = imageModel,
         contentDescription = contentDescription,
-        modifier = modifier.background(FunctionalColors.MediaBackground),
+        modifier = imageModifier,
         contentScale = contentScale,
         alignment = alignment,
         placeholder = null,
@@ -52,9 +61,12 @@ fun SparrowImage(
     )
 }
 
-/**
- * Small deterministic bitmap fallback used whenever an image or media thumbnail cannot be loaded.
- */
+@Composable
+internal expect fun rememberSparrowImageModel(
+    model: Any?,
+    memoryCacheKey: String?
+): Any?
+
 @Composable
 fun rememberSparrowFallbackPainter(): Painter {
     val background = FunctionalColors.MediaBackground
@@ -77,16 +89,18 @@ fun rememberSparrowFallbackPainter(): Painter {
             bottom = FALLBACK_BITMAP_SIZE.toFloat(),
             paint = backgroundPaint
         )
-        canvas.drawLine(
-            p1 = Offset(FALLBACK_INSET, FALLBACK_INSET),
-            p2 = Offset(FALLBACK_BITMAP_SIZE - FALLBACK_INSET, FALLBACK_BITMAP_SIZE - FALLBACK_INSET),
-            paint = foregroundPaint
-        )
-        canvas.drawLine(
-            p1 = Offset(FALLBACK_BITMAP_SIZE - FALLBACK_INSET, FALLBACK_INSET),
-            p2 = Offset(FALLBACK_INSET, FALLBACK_BITMAP_SIZE - FALLBACK_INSET),
-            paint = foregroundPaint
-        )
+        // Small photo pictogram instead of the previous "X" missing-image mark.
+        // Reuse the existing media background and themed on-surface foreground.
+        val frameEnd = FALLBACK_BITMAP_SIZE - FALLBACK_INSET
+        val frameTop = FALLBACK_INSET
+        canvas.drawLine(Offset(FALLBACK_INSET, frameTop), Offset(frameEnd, frameTop), foregroundPaint)
+        canvas.drawLine(Offset(FALLBACK_INSET, frameTop), Offset(FALLBACK_INSET, frameEnd), foregroundPaint)
+        canvas.drawLine(Offset(frameEnd, frameTop), Offset(frameEnd, frameEnd), foregroundPaint)
+        canvas.drawLine(Offset(FALLBACK_INSET, frameEnd), Offset(frameEnd, frameEnd), foregroundPaint)
+        canvas.drawCircle(center = Offset(30f, 19f), radius = 3f, paint = foregroundPaint)
+        canvas.drawLine(Offset(15f, 34f), Offset(23f, 25f), foregroundPaint)
+        canvas.drawLine(Offset(23f, 25f), Offset(29f, 31f), foregroundPaint)
+        canvas.drawLine(Offset(29f, 31f), Offset(33f, 27f), foregroundPaint)
 
         BitmapPainter(bitmap)
     }
