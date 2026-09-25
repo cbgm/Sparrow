@@ -353,12 +353,95 @@ function Register-SmokePresenceRoute {
     return $route
 }
 
+function Send-SmokeWebSocketText {
+    param(
+        [Parameter(Mandatory = $true)][System.Net.WebSockets.ClientWebSocket]$Socket,
+        [Parameter(Mandatory = $true)][string]$Text
+    )
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
+    $segment = [System.ArraySegment[byte]]::new($bytes)
+    $Socket.SendAsync(
+        $segment,
+        [System.Net.WebSockets.WebSocketMessageType]::Text,
+        $true,
+        [System.Threading.CancellationToken]::None
+    ).GetAwaiter().GetResult()
+}
+
+function Receive-SmokeGatewayMessage {
+    param(
+        [Parameter(Mandatory = $true)][System.Net.WebSockets.ClientWebSocket]$Socket,
+        [int]$TimeoutSeconds = 20
+    )
+
+    $cancellation = New-Object System.Threading.CancellationTokenSource
+    $cancellation.CancelAfter([TimeSpan]::FromSeconds($TimeoutSeconds))
+    $stream = New-Object System.IO.MemoryStream
+    try {
+        do {
+            $buffer = New-Object byte[] 65536
+            $segment = [System.ArraySegment[byte]]::new($buffer)
+            $result = $Socket.ReceiveAsync($segment, $cancellation.Token).GetAwaiter().GetResult()
+            if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
+                throw "Gateway closed the smoke-test WebSocket before delivering its response."
+            }
+            $stream.Write($buffer, 0, $result.Count)
+        } while (-not $result.EndOfMessage)
+
+        $message = [System.Text.Encoding]::UTF8.GetString($stream.ToArray()) | ConvertFrom-Json
+        if ($message.type -eq "error") {
+            throw "Gateway rejected smoke-test request: $($message.code): $($message.message)"
+        }
+        return $message
+    } finally {
+        $stream.Dispose()
+        $cancellation.Dispose()
+    }
+}
+
+function Connect-SmokeGatewayClient {
+    param(
+        [Parameter(Mandatory = $true)][int]$GatewayPort,
+        [Parameter(Mandatory = $true)][hashtable]$Route
+    )
+
+    # The signed CLI route must belong to a LIVE WebSocket. Registering the
+    # route in the control plane alone does not create a gateway connection.
+    $registration = $Route["body"] | ConvertFrom-Json
+    $routePayload = $registration.route
+    $socket = New-Object System.Net.WebSockets.ClientWebSocket
+    try {
+        $uri = [Uri]"ws://127.0.0.1:$GatewayPort/v1/gateway"
+        $socket.ConnectAsync($uri, [System.Threading.CancellationToken]::None).GetAwaiter().GetResult()
+        $registerMessage = @{
+            type = "register"
+            routingId = $routePayload.routingId
+            connectionId = $routePayload.connectionId
+            generation = [long]$routePayload.generation
+            expiresAtEpochMilliseconds = [long]$routePayload.expiresAtEpochMilliseconds
+            clientSigningPublicKey = $registration.clientSigningPublicKey
+            clientSignature = $routePayload.clientSignature
+        } | ConvertTo-Json -Compress -Depth 8
+        Send-SmokeWebSocketText -Socket $socket -Text $registerMessage
+        $accepted = Receive-SmokeGatewayMessage -Socket $socket
+        if ($accepted.type -ne "registered" -or $accepted.routingId -ne $routePayload.routingId) {
+            throw "Unexpected gateway registration response: $($accepted | ConvertTo-Json -Compress)"
+        }
+        return $socket
+    } catch {
+        $socket.Dispose()
+        throw
+    }
+}
+
 function Send-SmokeFederatedEnvelope {
     param(
         [Parameter(Mandatory = $true)][string]$SourceName,
         [Parameter(Mandatory = $true)][int]$SourceFederationPort,
         [Parameter(Mandatory = $true)][string]$SourceFederationToken,
         [Parameter(Mandatory = $true)][string]$DestinationName,
+        [Parameter(Mandatory = $true)][int]$DestinationGatewayPort,
         [Parameter(Mandatory = $true)][string]$DestinationProject,
         [Parameter(Mandatory = $true)][string]$DestinationEnvironmentFile,
         [Parameter(Mandatory = $true)][string]$DestinationComposeFile,
@@ -371,80 +454,50 @@ function Send-SmokeFederatedEnvelope {
             -EnvironmentFile $DestinationEnvironmentFile `
             -ComposeFile $DestinationComposeFile `
             -NodeId $DestinationNodeId
-    $createdAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $envelopeId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
-    $envelopeBody =
-        @{
-            envelopeId = $envelopeId
-            senderRoutingId = "standalone-smoke-sender"
-            recipientDeviceRoutingId = $route["routingId"]
-            encryptedPayload = "standalone-smoke-encrypted-payload"
-            createdAtEpochMilliseconds = $createdAt
-            expiresAtEpochMilliseconds = $createdAt + 300000
-        } | ConvertTo-Json -Compress
-    $acknowledgement =
-        Invoke-RestMethod `
-            -Uri "http://localhost:$SourceFederationPort/internal/v1/outgoing-envelopes" `
-            -Method Post `
-            -Headers @{
-                "X-Sparrow-Internal-Token" = $SourceFederationToken
-            } `
-            -ContentType "application/json" `
-            -Body $envelopeBody `
-            -TimeoutSec 20
-    if ($acknowledgement.envelopeId -ne $envelopeId) {
-        throw (
-            "$SourceName to $DestinationName federation returned an acknowledgement for " +
-            "'$($acknowledgement.envelopeId)' instead of '$envelopeId'."
-        )
-    }
-    if (
-        $acknowledgement.state -ne "STORED_AT_DESTINATION" -and
-        $acknowledgement.state -ne "QUEUED_AT_GATEWAY"
-    ) {
-        throw (
-            "$SourceName to $DestinationName federation returned unexpected state " +
-            "'$($acknowledgement.state)'."
-        )
-    }
-
-    $pendingPath = "/v1/node-push/recipients/$($route['routingId'])/envelopes"
-    $deadline = [DateTime]::UtcNow.AddSeconds(30)
-    $storedEnvelope = @()
-
-    while ([DateTime]::UtcNow -lt $deadline -and $storedEnvelope.Count -eq 0) {
-        $pendingAuthentication =
-            Get-NodeAuthentication `
-                -Project $DestinationProject `
-                -EnvironmentFile $DestinationEnvironmentFile `
-                -ComposeFile $DestinationComposeFile `
-                -Method "GET" `
-                -Path $pendingPath
-        $pending =
+    $socket = $null
+    try {
+        $socket = Connect-SmokeGatewayClient -GatewayPort $DestinationGatewayPort -Route $route
+        $createdAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+        $envelopeId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
+        $envelopeBody =
+            @{
+                envelopeId = $envelopeId
+                senderRoutingId = "standalone-smoke-sender"
+                recipientDeviceRoutingId = $route["routingId"]
+                encryptedPayload = "standalone-smoke-encrypted-payload"
+                createdAtEpochMilliseconds = $createdAt
+                expiresAtEpochMilliseconds = $createdAt + 300000
+            } | ConvertTo-Json -Compress
+        $acknowledgement =
             Invoke-RestMethod `
-                -Uri "http://localhost:8390$pendingPath" `
-                -Method Get `
-                -Headers (
-                    Get-NodeAuthenticationHeaders `
-                        -Authentication $pendingAuthentication
-                ) `
-                -TimeoutSec 10
-        $storedEnvelope = @($pending.envelopes | Where-Object { $_.envelopeId -eq $envelopeId })
-        if ($storedEnvelope.Count -eq 0) {
-            Start-Sleep -Seconds 1
+                -Uri "http://127.0.0.1:$SourceFederationPort/internal/v1/outgoing-envelopes" `
+                -Method Post `
+                -Headers @{ "X-Sparrow-Internal-Token" = $SourceFederationToken } `
+                -ContentType "application/json" `
+                -Body $envelopeBody `
+                -TimeoutSec 20
+        if ($acknowledgement.envelopeId -ne $envelopeId) {
+            throw "$SourceName to $DestinationName returned the wrong envelope ID."
+        }
+        # The destination is connected now, so the envelope must be delivered
+        # LIVE. QUEUED_AT_GATEWAY is not proof of cross-node delivery.
+        if ($acknowledgement.state -ne "STORED_AT_DESTINATION") {
+            throw "$SourceName to $DestinationName did not deliver the envelope: $($acknowledgement.state)"
+        }
+        $received = Receive-SmokeGatewayMessage -Socket $socket -TimeoutSeconds 20
+        if (
+            $received.type -ne "incoming_envelope" -or
+            $received.envelope.envelopeId -ne $envelopeId -or
+            $received.envelope.recipientId -ne $route["routingId"]
+        ) {
+            throw "$DestinationName received an unexpected gateway message: $($received | ConvertTo-Json -Compress -Depth 6)"
+        }
+        Write-Host "PASS $SourceName delivered a test envelope to a live client on isolated $DestinationName."
+    } finally {
+        if ($null -ne $socket) {
+            $socket.Dispose()
         }
     }
-
-    if ($storedEnvelope.Count -ne 1) {
-        throw (
-            "$DestinationName did not store the federated envelope in the push service " +
-            "within 30 seconds. Initial state was '$($acknowledgement.state)'."
-        )
-    }
-    Write-Host (
-        "PASS $SourceName federated an envelope to isolated $DestinationName " +
-        "(initial state $($acknowledgement.state))."
-    )
 }
 
 function Stop-Project {
@@ -624,23 +677,33 @@ try {
             -ComposeFile $nodeCompose `
             -Method "POST" `
             -Path $nodePushPath
-    $nodePushResponse =
-        Invoke-WebRequest `
-            -Uri "http://localhost:8390$nodePushPath" `
-            -Method Post `
-            -Headers (Get-NodeAuthenticationHeaders -Authentication $nodePushAuthentication) `
-            -UseBasicParsing `
-            -TimeoutSec 10
-    if ($nodePushResponse.StatusCode -ne 202) {
-        throw "Signed node push request failed: HTTP $($nodePushResponse.StatusCode)"
+    # No device is registered for this dummy recipient. A correctly signed
+    # request returns 404 (not 202); an invalid signature returns 401.
+    $nodePushStatus = $null
+    try {
+        $nodePushResponse =
+            Invoke-WebRequest `
+                -Uri "http://localhost:8390$nodePushPath" `
+                -Method Post `
+                -Headers (Get-NodeAuthenticationHeaders -Authentication $nodePushAuthentication) `
+                -UseBasicParsing `
+                -TimeoutSec 10
+        $nodePushStatus = [int]$nodePushResponse.StatusCode
+    } catch {
+        if ($null -eq $_.Exception.Response) { throw }
+        $nodePushStatus = [int]$_.Exception.Response.StatusCode
     }
-    Write-Host "PASS node A authenticated to the public push API with its node identity."
+    if ($nodePushStatus -ne 404) {
+        throw "Signed push request for an unregistered recipient must return 404, got HTTP $nodePushStatus."
+    }
+    Write-Host "PASS node A authenticated to the public push API (unregistered recipient returned 404)."
 
     Send-SmokeFederatedEnvelope `
         -SourceName "node A" `
         -SourceFederationPort 8493 `
         -SourceFederationToken "standalone-smoke-federation-token-a" `
         -DestinationName "node B" `
+        -DestinationGatewayPort 8590 `
         -DestinationProject $nodeBProject `
         -DestinationEnvironmentFile $nodeBEnvironment `
         -DestinationComposeFile $nodeCompose `
@@ -650,6 +713,7 @@ try {
         -SourceFederationPort 8593 `
         -SourceFederationToken "standalone-smoke-federation-token-b" `
         -DestinationName "node A" `
+        -DestinationGatewayPort 8490 `
         -DestinationProject $nodeAProject `
         -DestinationEnvironmentFile $nodeAEnvironment `
         -DestinationComposeFile $nodeCompose `
@@ -690,11 +754,39 @@ try {
     Write-Host "PASS node identity persisted across a full node-service restart."
 
     Write-Host "Standalone community-node smoke test passed."
+} catch {
+    Write-Warning "Standalone community-node smoke test failed: $_"
+    foreach ($projectSpec in @(
+        @{ Name = $controlProject; Env = $controlEnvironment; Compose = $controlCompose },
+        @{ Name = $nodeAProject; Env = $nodeAEnvironment; Compose = $nodeCompose },
+        @{ Name = $nodeBProject; Env = $nodeBEnvironment; Compose = $nodeCompose }
+    )) {
+        $composeArgs = @(Get-ComposeArguments $projectSpec.Name $projectSpec.Env $projectSpec.Compose)
+        Write-Warning "Container status for $($projectSpec.Name):"
+        try {
+            $psArguments = $composeArgs + @("ps", "--all")
+            & docker @psArguments | Out-Host
+            Write-Warning "Recent container logs for $($projectSpec.Name):"
+            $logArguments = $composeArgs + @("logs", "--no-color", "--tail", "60")
+            & docker @logArguments 2>&1 | Out-Host
+        } catch {
+            Write-Warning "Could not retrieve diagnostics for $($projectSpec.Name): $_"
+        }
+    }
+    throw
 } finally {
     if (-not $KeepRunning) {
-        Stop-Project $nodeBProject $nodeBEnvironment $nodeCompose
-        Stop-Project $nodeAProject $nodeAEnvironment $nodeCompose
-        Stop-Project $controlProject $controlEnvironment $controlCompose
+        foreach ($projectSpec in @(
+            @{ Name = $nodeBProject; Env = $nodeBEnvironment; Compose = $nodeCompose },
+            @{ Name = $nodeAProject; Env = $nodeAEnvironment; Compose = $nodeCompose },
+            @{ Name = $controlProject; Env = $controlEnvironment; Compose = $controlCompose }
+        )) {
+            try {
+                Stop-Project $projectSpec.Name $projectSpec.Env $projectSpec.Compose
+            } catch {
+                Write-Warning "Cleanup failed for $($projectSpec.Name): $_"
+            }
+        }
     } else {
         Write-Host "Compose projects remain running because -KeepRunning was supplied."
     }
