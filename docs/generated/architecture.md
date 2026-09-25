@@ -1,394 +1,264 @@
-# Sparrow Architecture
+# Generated architecture
 
-Generated automatically by `./gradlew architectureReport`.
-
-## Overview
-
-| Metric | Count |
-|---|---:|
-| Modules | 48 |
-| Module groups | 11 |
-| Project dependencies | 209 |
-| Kotlin files | 1992 |
-| Test Kotlin files | 142 |
-| Resource files | 56 |
-
-## Module groups
-
-### androidApp
-
-- [**androidApp** (`:androidApp`)](modules/androidApp.md)
-
-### core
-
-- [**core** (`:core`)](modules/core.md)
-- [**crypto** (`:core:crypto`)](modules/core-crypto.md)
-- [**embedding** (`:core:embedding`)](modules/core-embedding.md)
-- [**protocol** (`:core:protocol`)](modules/core-protocol.md)
-- [**ui** (`:core:ui`)](modules/core-ui.md)
-
-### data
-
-- [**data** (`:data`)](modules/data.md)
-- [**database** (`:data:database`)](modules/data-database.md)
-- [**datastore** (`:data:datastore`)](modules/data-datastore.md)
-
-### feature
-
-- [**feature** (`:feature`)](modules/feature.md)
-- [**attachments** (`:feature:attachments`)](modules/feature-attachments.md)
-- [**autoreply** (`:feature:autoreply`)](modules/feature-autoreply.md)
-- [**avatar** (`:feature:avatar`)](modules/feature-avatar.md)
-- [**chats** (`:feature:chats`)](modules/feature-chats.md)
-- [**contactimport** (`:feature:contactimport`)](modules/feature-contactimport.md)
-- [**contacts** (`:feature:contacts`)](modules/feature-contacts.md)
-- [**conversationorchestration** (`:feature:conversationorchestration`)](modules/feature-conversationorchestration.md)
-- [**identity** (`:feature:identity`)](modules/feature-identity.md)
-- [**invite** (`:feature:invite`)](modules/feature-invite.md)
-- [**linkpreview** (`:feature:linkpreview`)](modules/feature-linkpreview.md)
-- [**media** (`:feature:media`)](modules/feature-media.md)
-- [**membership** (`:feature:membership`)](modules/feature-membership.md)
-- [**messaging** (`:feature:messaging`)](modules/feature-messaging.md)
-- [**onboarding** (`:feature:onboarding`)](modules/feature-onboarding.md)
-- [**safety** (`:feature:safety`)](modules/feature-safety.md)
-- [**search** (`:feature:search`)](modules/feature-search.md)
-- [**settings** (`:feature:settings`)](modules/feature-settings.md)
-- [**transport** (`:feature:transport`)](modules/feature-transport.md)
-- [**voice** (`:feature:voice`)](modules/feature-voice.md)
-
-### navigation
-
-- [**navigation** (`:navigation`)](modules/navigation.md)
-
-### notification
-
-- [**notification** (`:notification`)](modules/notification.md)
-
-### quality
-
-- [**quality** (`:quality`)](modules/quality.md)
-- [**detekt-rules** (`:quality:detekt-rules`)](modules/quality-detekt-rules.md)
-
-### resources
-
-- [**resources** (`:resources`)](modules/resources.md)
-
-### server
-
-- [**server** (`:server`)](modules/server.md)
-- [**federation** (`:server:federation`)](modules/server-federation.md)
-- [**gateway** (`:server:gateway`)](modules/server-gateway.md)
-- [**link-preview** (`:server:link-preview`)](modules/server-link-preview.md)
-- [**mailbox** (`:server:mailbox`)](modules/server-mailbox.md)
-- [**node-registry** (`:server:node-registry`)](modules/server-node-registry.md)
-- [**observability** (`:server:observability`)](modules/server-observability.md)
-- [**persistence** (`:server:persistence`)](modules/server-persistence.md)
-- [**presence-directory** (`:server:presence-directory`)](modules/server-presence-directory.md)
-- [**protocol** (`:server:protocol`)](modules/server-protocol.md)
-- [**push** (`:server:push`)](modules/server-push.md)
-- [**security** (`:server:security`)](modules/server-security.md)
-
-### shared
-
-- [**shared** (`:shared`)](modules/shared.md)
-
-### startup
-
-- [**startup** (`:startup`)](modules/startup.md)
-
-## Module graph
+This graph is derived from the current build files. Modules: **44**; direct project edges: **211**.
 
 ```mermaid
-graph TD
-
-    subgraph group_androidApp["androidApp"]
-        module_androidApp[":androidApp"]
-    end
-
-    subgraph group_core["core"]
-        module_core[":core"]
-        module_core_crypto[":core:crypto"]
-        module_core_embedding[":core:embedding"]
-        module_core_protocol[":core:protocol"]
-        module_core_ui[":core:ui"]
-    end
-
-    subgraph group_data["data"]
-        module_data[":data"]
-        module_data_database[":data:database"]
-        module_data_datastore[":data:datastore"]
-    end
-
-    subgraph group_feature["feature"]
-        module_feature[":feature"]
-        module_feature_attachments[":feature:attachments"]
-        module_feature_autoreply[":feature:autoreply"]
-        module_feature_avatar[":feature:avatar"]
-        module_feature_chats[":feature:chats"]
-        module_feature_contactimport[":feature:contactimport"]
-        module_feature_contacts[":feature:contacts"]
-        module_feature_conversationorchestration[":feature:conversationorchestration"]
-        module_feature_identity[":feature:identity"]
-        module_feature_invite[":feature:invite"]
-        module_feature_linkpreview[":feature:linkpreview"]
-        module_feature_media[":feature:media"]
-        module_feature_membership[":feature:membership"]
-        module_feature_messaging[":feature:messaging"]
-        module_feature_onboarding[":feature:onboarding"]
-        module_feature_safety[":feature:safety"]
-        module_feature_search[":feature:search"]
-        module_feature_settings[":feature:settings"]
-        module_feature_transport[":feature:transport"]
-        module_feature_voice[":feature:voice"]
-    end
-
-    subgraph group_navigation["navigation"]
-        module_navigation[":navigation"]
-    end
-
-    subgraph group_notification["notification"]
-        module_notification[":notification"]
-    end
-
-    subgraph group_quality["quality"]
-        module_quality[":quality"]
-        module_quality_detekt_rules[":quality:detekt-rules"]
-    end
-
-    subgraph group_resources["resources"]
-        module_resources[":resources"]
-    end
-
-    subgraph group_server["server"]
-        module_server[":server"]
-        module_server_federation[":server:federation"]
-        module_server_gateway[":server:gateway"]
-        module_server_link_preview[":server:link-preview"]
-        module_server_mailbox[":server:mailbox"]
-        module_server_node_registry[":server:node-registry"]
-        module_server_observability[":server:observability"]
-        module_server_persistence[":server:persistence"]
-        module_server_presence_directory[":server:presence-directory"]
-        module_server_protocol[":server:protocol"]
-        module_server_push[":server:push"]
-        module_server_security[":server:security"]
-    end
-
-    subgraph group_shared["shared"]
-        module_shared[":shared"]
-    end
-
-    subgraph group_startup["startup"]
-        module_startup[":startup"]
-    end
-
-    module_androidApp --> module_shared
-    module_core_embedding --> module_core
-    module_core_embedding --> module_data_datastore
-    module_core_protocol --> module_core
-    module_core_protocol --> module_core_crypto
-    module_core_ui --> module_core
-    module_core_ui --> module_resources
-    module_data_database --> module_core
-    module_data_database --> module_core_protocol
-    module_feature_attachments --> module_core
-    module_feature_attachments --> module_core_crypto
-    module_feature_attachments --> module_core_protocol
-    module_feature_attachments --> module_core_ui
-    module_feature_attachments --> module_data_database
-    module_feature_attachments --> module_feature_media
-    module_feature_attachments --> module_feature_transport
-    module_feature_autoreply --> module_core
-    module_feature_autoreply --> module_core_ui
-    module_feature_autoreply --> module_data_database
-    module_feature_avatar --> module_core
-    module_feature_avatar --> module_core_protocol
-    module_feature_avatar --> module_core_ui
-    module_feature_avatar --> module_feature_media
-    module_feature_chats --> module_core
-    module_feature_chats --> module_core_crypto
-    module_feature_chats --> module_core_protocol
-    module_feature_chats --> module_core_ui
-    module_feature_chats --> module_data_database
-    module_feature_chats --> module_data_datastore
-    module_feature_chats --> module_feature_attachments
-    module_feature_chats --> module_feature_autoreply
-    module_feature_chats --> module_feature_avatar
-    module_feature_chats --> module_feature_contactimport
-    module_feature_chats --> module_feature_contacts
-    module_feature_chats --> module_feature_conversationorchestration
-    module_feature_chats --> module_feature_identity
-    module_feature_chats --> module_feature_linkpreview
-    module_feature_chats --> module_feature_media
-    module_feature_chats --> module_feature_membership
-    module_feature_chats --> module_feature_safety
-    module_feature_chats --> module_feature_transport
-    module_feature_chats --> module_feature_voice
-    module_feature_contactimport --> module_core
-    module_feature_contactimport --> module_core_ui
-    module_feature_contactimport --> module_feature_contacts
-    module_feature_contactimport --> module_feature_identity
-    module_feature_contactimport --> module_feature_invite
-    module_feature_contacts --> module_core
-    module_feature_contacts --> module_core_crypto
-    module_feature_contacts --> module_core_protocol
-    module_feature_contacts --> module_core_ui
-    module_feature_contacts --> module_data_database
-    module_feature_contacts --> module_feature_avatar
-    module_feature_contacts --> module_feature_identity
-    module_feature_contacts --> module_feature_transport
-    module_feature_conversationorchestration --> module_core
-    module_feature_conversationorchestration --> module_core_crypto
-    module_feature_conversationorchestration --> module_core_protocol
-    module_feature_conversationorchestration --> module_feature_contacts
-    module_feature_conversationorchestration --> module_feature_identity
-    module_feature_conversationorchestration --> module_feature_invite
-    module_feature_conversationorchestration --> module_feature_membership
-    module_feature_conversationorchestration --> module_feature_messaging
-    module_feature_conversationorchestration --> module_feature_transport
-    module_feature_identity --> module_core
-    module_feature_identity --> module_core_crypto
-    module_feature_identity --> module_core_protocol
-    module_feature_identity --> module_core_ui
-    module_feature_identity --> module_data_database
-    module_feature_identity --> module_data_datastore
-    module_feature_identity --> module_feature_avatar
-    module_feature_invite --> module_core
-    module_feature_invite --> module_core_ui
-    module_feature_invite --> module_data_database
-    module_feature_invite --> module_feature_avatar
-    module_feature_linkpreview --> module_core
-    module_feature_linkpreview --> module_core_ui
-    module_feature_linkpreview --> module_data_database
-    module_feature_media --> module_core
-    module_feature_media --> module_core_ui
-    module_feature_membership --> module_core
-    module_feature_membership --> module_core_crypto
-    module_feature_membership --> module_core_protocol
-    module_feature_membership --> module_data_database
-    module_feature_membership --> module_data_datastore
-    module_feature_messaging --> module_core
-    module_feature_messaging --> module_core_protocol
-    module_feature_onboarding --> module_core_ui
-    module_feature_onboarding --> module_feature_identity
-    module_feature_onboarding --> module_feature_media
-    module_feature_safety --> module_core
-    module_feature_safety --> module_core_embedding
-    module_feature_safety --> module_core_ui
-    module_feature_safety --> module_data_database
-    module_feature_safety --> module_feature_contacts
-    module_feature_search --> module_core
-    module_feature_search --> module_core_embedding
-    module_feature_search --> module_core_ui
-    module_feature_search --> module_data_database
-    module_feature_settings --> module_core
-    module_feature_settings --> module_core_embedding
-    module_feature_settings --> module_core_ui
-    module_feature_settings --> module_data_datastore
-    module_feature_settings --> module_feature_autoreply
-    module_feature_settings --> module_feature_avatar
-    module_feature_settings --> module_feature_contacts
-    module_feature_settings --> module_feature_identity
-    module_feature_settings --> module_feature_safety
-    module_feature_settings --> module_feature_search
-    module_feature_settings --> module_feature_voice
-    module_feature_transport --> module_core
-    module_feature_transport --> module_core_crypto
-    module_feature_transport --> module_core_protocol
-    module_feature_transport --> module_data_datastore
-    module_feature_voice --> module_core
-    module_feature_voice --> module_core_protocol
-    module_feature_voice --> module_core_ui
-    module_feature_voice --> module_data_datastore
-    module_feature_voice --> module_feature_attachments
-    module_navigation --> module_core
-    module_navigation --> module_core_ui
-    module_navigation --> module_feature_attachments
-    module_navigation --> module_feature_autoreply
-    module_navigation --> module_feature_chats
-    module_navigation --> module_feature_contactimport
-    module_navigation --> module_feature_contacts
-    module_navigation --> module_feature_conversationorchestration
-    module_navigation --> module_feature_identity
-    module_navigation --> module_feature_invite
-    module_navigation --> module_feature_media
-    module_navigation --> module_feature_membership
-    module_navigation --> module_feature_onboarding
-    module_navigation --> module_feature_safety
-    module_navigation --> module_feature_search
-    module_navigation --> module_feature_settings
-    module_navigation --> module_notification
-    module_navigation --> module_startup
-    module_notification --> module_core
-    module_notification --> module_core_crypto
-    module_notification --> module_core_protocol
-    module_notification --> module_feature_chats
-    module_notification --> module_feature_messaging
-    module_notification --> module_feature_transport
-    module_notification --> module_resources
-    module_server_federation --> module_server_observability
-    module_server_federation --> module_server_persistence
-    module_server_federation --> module_server_protocol
-    module_server_federation --> module_server_security
-    module_server_gateway --> module_server_link_preview
-    module_server_gateway --> module_server_observability
-    module_server_gateway --> module_server_persistence
-    module_server_gateway --> module_server_protocol
-    module_server_gateway --> module_server_security
-    module_server_link_preview --> module_server_protocol
-    module_server_mailbox --> module_server_observability
-    module_server_mailbox --> module_server_persistence
-    module_server_mailbox --> module_server_protocol
-    module_server_mailbox --> module_server_security
-    module_server_node_registry --> module_server_observability
-    module_server_node_registry --> module_server_persistence
-    module_server_node_registry --> module_server_protocol
-    module_server_node_registry --> module_server_security
-    module_server_persistence --> module_server_protocol
-    module_server_presence_directory --> module_server_observability
-    module_server_presence_directory --> module_server_persistence
-    module_server_presence_directory --> module_server_protocol
-    module_server_presence_directory --> module_server_security
-    module_server_push --> module_server_observability
-    module_server_push --> module_server_persistence
-    module_server_push --> module_server_protocol
-    module_server_push --> module_server_security
-    module_server_security --> module_server_protocol
-    module_shared --> module_core
-    module_shared --> module_core_crypto
-    module_shared --> module_core_embedding
-    module_shared --> module_core_protocol
-    module_shared --> module_core_ui
-    module_shared --> module_data_database
-    module_shared --> module_data_datastore
-    module_shared --> module_feature_attachments
-    module_shared --> module_feature_autoreply
-    module_shared --> module_feature_avatar
-    module_shared --> module_feature_chats
-    module_shared --> module_feature_contactimport
-    module_shared --> module_feature_contacts
-    module_shared --> module_feature_conversationorchestration
-    module_shared --> module_feature_identity
-    module_shared --> module_feature_invite
-    module_shared --> module_feature_linkpreview
-    module_shared --> module_feature_media
-    module_shared --> module_feature_membership
-    module_shared --> module_feature_messaging
-    module_shared --> module_feature_onboarding
-    module_shared --> module_feature_safety
-    module_shared --> module_feature_search
-    module_shared --> module_feature_settings
-    module_shared --> module_feature_transport
-    module_shared --> module_feature_voice
-    module_shared --> module_navigation
-    module_shared --> module_notification
-    module_shared --> module_startup
-    module_startup --> module_core
-    module_startup --> module_core_embedding
-    module_startup --> module_core_ui
-    module_startup --> module_feature_identity
-    module_startup --> module_feature_onboarding
-    module_startup --> module_feature_safety
-    module_startup --> module_feature_search
-    module_startup --> module_feature_transport
+flowchart LR
+    M__androidApp[":androidApp"]
+    M__shared[":shared"]
+    M__core[":core"]
+    M__data_datastore[":data:datastore"]
+    M__core_embedding[":core:embedding"]
+    M__feature_identity[":feature:identity"]
+    M__feature_invite[":feature:invite"]
+    M__feature_contacts[":feature:contacts"]
+    M__data_database[":data:database"]
+    M__feature_contactimport[":feature:contactimport"]
+    M__feature_autoreply[":feature:autoreply"]
+    M__feature_avatar[":feature:avatar"]
+    M__feature_linkpreview[":feature:linkpreview"]
+    M__feature_chats[":feature:chats"]
+    M__feature_conversationorchestration[":feature:conversationorchestration"]
+    M__feature_membership[":feature:membership"]
+    M__feature_attachments[":feature:attachments"]
+    M__feature_media[":feature:media"]
+    M__feature_voice[":feature:voice"]
+    M__core_crypto[":core:crypto"]
+    M__core_protocol[":core:protocol"]
+    M__feature_messaging[":feature:messaging"]
+    M__feature_transport[":feature:transport"]
+    M__feature_onboarding[":feature:onboarding"]
+    M__startup[":startup"]
+    M__navigation[":navigation"]
+    M__notification[":notification"]
+    M__core_ui[":core:ui"]
+    M__feature_settings[":feature:settings"]
+    M__feature_search[":feature:search"]
+    M__feature_safety[":feature:safety"]
+    M__quality_detekt_rules[":quality:detekt-rules"]
+    M__resources[":resources"]
+    M__server_protocol[":server:protocol"]
+    M__server_security[":server:security"]
+    M__server_persistence[":server:persistence"]
+    M__server_observability[":server:observability"]
+    M__server_node_registry[":server:node-registry"]
+    M__server_presence_directory[":server:presence-directory"]
+    M__server_gateway[":server:gateway"]
+    M__server_federation[":server:federation"]
+    M__server_mailbox[":server:mailbox"]
+    M__server_push[":server:push"]
+    M__server_link_preview[":server:link-preview"]
+    M__androidApp --> M__shared
+    M__shared --> M__core
+    M__shared --> M__data_datastore
+    M__shared --> M__core_embedding
+    M__shared --> M__core_crypto
+    M__shared --> M__core_protocol
+    M__shared --> M__core_ui
+    M__shared --> M__navigation
+    M__shared --> M__feature_autoreply
+    M__shared --> M__feature_avatar
+    M__shared --> M__feature_chats
+    M__shared --> M__feature_attachments
+    M__shared --> M__feature_contactimport
+    M__shared --> M__feature_contacts
+    M__shared --> M__feature_conversationorchestration
+    M__shared --> M__feature_invite
+    M__shared --> M__feature_identity
+    M__shared --> M__feature_media
+    M__shared --> M__feature_membership
+    M__shared --> M__feature_voice
+    M__shared --> M__feature_linkpreview
+    M__shared --> M__feature_messaging
+    M__shared --> M__feature_onboarding
+    M__shared --> M__feature_settings
+    M__shared --> M__feature_search
+    M__shared --> M__feature_safety
+    M__shared --> M__feature_transport
+    M__shared --> M__notification
+    M__shared --> M__startup
+    M__shared --> M__data_database
+    M__core_embedding --> M__core
+    M__core_embedding --> M__data_datastore
+    M__feature_identity --> M__core
+    M__feature_identity --> M__data_datastore
+    M__feature_identity --> M__data_database
+    M__feature_identity --> M__core_crypto
+    M__feature_identity --> M__core_protocol
+    M__feature_identity --> M__core_ui
+    M__feature_identity --> M__feature_avatar
+    M__feature_invite --> M__core
+    M__feature_invite --> M__core_ui
+    M__feature_invite --> M__feature_avatar
+    M__feature_invite --> M__data_database
+    M__feature_contacts --> M__core
+    M__feature_contacts --> M__core_crypto
+    M__feature_contacts --> M__core_protocol
+    M__feature_contacts --> M__core_ui
+    M__feature_contacts --> M__feature_avatar
+    M__feature_contacts --> M__feature_identity
+    M__feature_contacts --> M__feature_transport
+    M__feature_contacts --> M__data_database
+    M__data_database --> M__core
+    M__data_database --> M__core_protocol
+    M__feature_contactimport --> M__core
+    M__feature_contactimport --> M__core_ui
+    M__feature_contactimport --> M__feature_contacts
+    M__feature_contactimport --> M__feature_identity
+    M__feature_contactimport --> M__feature_invite
+    M__feature_contactimport --> M__data_database
+    M__feature_contactimport --> M__core_protocol
+    M__feature_autoreply --> M__core
+    M__feature_autoreply --> M__core_ui
+    M__feature_autoreply --> M__data_database
+    M__feature_avatar --> M__core
+    M__feature_avatar --> M__core_protocol
+    M__feature_avatar --> M__core_ui
+    M__feature_avatar --> M__feature_media
+    M__feature_linkpreview --> M__core
+    M__feature_linkpreview --> M__core_ui
+    M__feature_linkpreview --> M__data_database
+    M__feature_chats --> M__core
+    M__feature_chats --> M__data_datastore
+    M__feature_chats --> M__core_crypto
+    M__feature_chats --> M__core_protocol
+    M__feature_chats --> M__core_ui
+    M__feature_chats --> M__feature_avatar
+    M__feature_chats --> M__data_database
+    M__feature_chats --> M__feature_autoreply
+    M__feature_chats --> M__feature_contactimport
+    M__feature_chats --> M__feature_contacts
+    M__feature_chats --> M__feature_conversationorchestration
+    M__feature_chats --> M__feature_attachments
+    M__feature_chats --> M__feature_identity
+    M__feature_chats --> M__feature_media
+    M__feature_chats --> M__feature_membership
+    M__feature_chats --> M__feature_voice
+    M__feature_chats --> M__feature_linkpreview
+    M__feature_chats --> M__feature_safety
+    M__feature_chats --> M__feature_transport
+    M__feature_conversationorchestration --> M__core
+    M__feature_conversationorchestration --> M__core_crypto
+    M__feature_conversationorchestration --> M__core_protocol
+    M__feature_conversationorchestration --> M__feature_contacts
+    M__feature_conversationorchestration --> M__feature_identity
+    M__feature_conversationorchestration --> M__feature_invite
+    M__feature_conversationorchestration --> M__feature_membership
+    M__feature_conversationorchestration --> M__feature_messaging
+    M__feature_conversationorchestration --> M__feature_transport
+    M__feature_membership --> M__core
+    M__feature_membership --> M__core_crypto
+    M__feature_membership --> M__core_protocol
+    M__feature_membership --> M__data_database
+    M__feature_membership --> M__data_datastore
+    M__feature_attachments --> M__core
+    M__feature_attachments --> M__core_crypto
+    M__feature_attachments --> M__core_protocol
+    M__feature_attachments --> M__core_ui
+    M__feature_attachments --> M__data_database
+    M__feature_attachments --> M__feature_media
+    M__feature_attachments --> M__feature_transport
+    M__feature_media --> M__core
+    M__feature_media --> M__core_ui
+    M__feature_voice --> M__core
+    M__feature_voice --> M__core_protocol
+    M__feature_voice --> M__core_ui
+    M__feature_voice --> M__data_datastore
+    M__feature_voice --> M__feature_attachments
+    M__core_protocol --> M__core
+    M__core_protocol --> M__core_crypto
+    M__feature_messaging --> M__core
+    M__feature_messaging --> M__core_protocol
+    M__feature_transport --> M__core
+    M__feature_transport --> M__data_datastore
+    M__feature_transport --> M__core_crypto
+    M__feature_transport --> M__core_protocol
+    M__feature_onboarding --> M__core_ui
+    M__feature_onboarding --> M__feature_identity
+    M__feature_onboarding --> M__feature_media
+    M__startup --> M__core
+    M__startup --> M__core_ui
+    M__startup --> M__core_embedding
+    M__startup --> M__feature_identity
+    M__startup --> M__feature_onboarding
+    M__startup --> M__feature_search
+    M__startup --> M__feature_safety
+    M__startup --> M__feature_transport
+    M__navigation --> M__core
+    M__navigation --> M__core_ui
+    M__navigation --> M__feature_attachments
+    M__navigation --> M__feature_autoreply
+    M__navigation --> M__feature_chats
+    M__navigation --> M__feature_contactimport
+    M__navigation --> M__feature_contacts
+    M__navigation --> M__feature_conversationorchestration
+    M__navigation --> M__feature_identity
+    M__navigation --> M__feature_invite
+    M__navigation --> M__feature_membership
+    M__navigation --> M__feature_media
+    M__navigation --> M__feature_onboarding
+    M__navigation --> M__feature_settings
+    M__navigation --> M__feature_search
+    M__navigation --> M__feature_safety
+    M__navigation --> M__notification
+    M__navigation --> M__startup
+    M__notification --> M__core
+    M__notification --> M__core_crypto
+    M__notification --> M__feature_chats
+    M__notification --> M__feature_messaging
+    M__notification --> M__feature_transport
+    M__notification --> M__core_protocol
+    M__notification --> M__resources
+    M__core_ui --> M__resources
+    M__core_ui --> M__core
+    M__feature_settings --> M__core
+    M__feature_settings --> M__data_datastore
+    M__feature_settings --> M__core_embedding
+    M__feature_settings --> M__core_ui
+    M__feature_settings --> M__feature_identity
+    M__feature_settings --> M__feature_contacts
+    M__feature_settings --> M__feature_avatar
+    M__feature_settings --> M__feature_autoreply
+    M__feature_settings --> M__feature_voice
+    M__feature_settings --> M__feature_search
+    M__feature_settings --> M__feature_safety
+    M__feature_search --> M__core
+    M__feature_search --> M__core_embedding
+    M__feature_search --> M__core_ui
+    M__feature_search --> M__data_database
+    M__feature_safety --> M__core
+    M__feature_safety --> M__core_embedding
+    M__feature_safety --> M__core_ui
+    M__feature_safety --> M__data_database
+    M__feature_safety --> M__feature_contacts
+    M__server_security --> M__server_protocol
+    M__server_persistence --> M__server_protocol
+    M__server_node_registry --> M__server_protocol
+    M__server_node_registry --> M__server_security
+    M__server_node_registry --> M__server_persistence
+    M__server_node_registry --> M__server_observability
+    M__server_presence_directory --> M__server_persistence
+    M__server_presence_directory --> M__server_protocol
+    M__server_presence_directory --> M__server_security
+    M__server_presence_directory --> M__server_observability
+    M__server_gateway --> M__server_persistence
+    M__server_gateway --> M__server_protocol
+    M__server_gateway --> M__server_security
+    M__server_gateway --> M__server_observability
+    M__server_gateway --> M__server_linkPreview
+    M__server_federation --> M__server_protocol
+    M__server_federation --> M__server_security
+    M__server_federation --> M__server_persistence
+    M__server_federation --> M__server_observability
+    M__server_mailbox --> M__server_protocol
+    M__server_mailbox --> M__server_security
+    M__server_mailbox --> M__server_persistence
+    M__server_mailbox --> M__server_observability
+    M__server_push --> M__server_protocol
+    M__server_push --> M__server_persistence
+    M__server_push --> M__server_security
+    M__server_push --> M__server_observability
+    M__server_link_preview --> M__server_protocol
 ```
+
+For the complete class/type listing, see [Current code inventory](current-code-inventory.md).

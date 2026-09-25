@@ -1,60 +1,47 @@
 # `:shared`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `shared`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `shared` |
-| Group | `shared` |
-| Directory | `shared` |
-| Build file | `shared/build.gradle.kts` |
-| Kotlin files | 13 |
-| Production Kotlin files | 13 |
-| Test Kotlin files | 0 |
-| Resource files | 0 |
-| Direct dependencies | 29 |
-| Direct dependents | 1 |
+- `:core`
+- `:data:datastore`
+- `:core:embedding`
+- `:core:crypto`
+- `:core:protocol`
+- `:core:ui`
+- `:navigation`
+- `:feature:autoreply`
+- `:feature:avatar`
+- `:feature:chats`
+- `:feature:attachments`
+- `:feature:contactimport`
+- `:feature:contacts`
+- `:feature:conversationorchestration`
+- `:feature:invite`
+- `:feature:identity`
+- `:feature:media`
+- `:feature:membership`
+- `:feature:voice`
+- `:feature:linkpreview`
+- `:feature:messaging`
+- `:feature:onboarding`
+- `:feature:settings`
+- `:feature:search`
+- `:feature:safety`
+- `:feature:transport`
+- `:notification`
+- `:startup`
+- `:data:database`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidMain`
-- `commonMain`
-- `iosMain`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:crypto`](../modules/core-crypto.md)
-- [`:core:embedding`](../modules/core-embedding.md)
-- [`:core:protocol`](../modules/core-protocol.md)
-- [`:core:ui`](../modules/core-ui.md)
-- [`:data:database`](../modules/data-database.md)
-- [`:data:datastore`](../modules/data-datastore.md)
-- [`:feature:attachments`](../modules/feature-attachments.md)
-- [`:feature:autoreply`](../modules/feature-autoreply.md)
-- [`:feature:avatar`](../modules/feature-avatar.md)
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:contactimport`](../modules/feature-contactimport.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
-- [`:feature:identity`](../modules/feature-identity.md)
-- [`:feature:invite`](../modules/feature-invite.md)
-- [`:feature:linkpreview`](../modules/feature-linkpreview.md)
-- [`:feature:media`](../modules/feature-media.md)
-- [`:feature:membership`](../modules/feature-membership.md)
-- [`:feature:messaging`](../modules/feature-messaging.md)
-- [`:feature:onboarding`](../modules/feature-onboarding.md)
-- [`:feature:safety`](../modules/feature-safety.md)
-- [`:feature:search`](../modules/feature-search.md)
-- [`:feature:settings`](../modules/feature-settings.md)
-- [`:feature:transport`](../modules/feature-transport.md)
-- [`:feature:voice`](../modules/feature-voice.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:notification`](../modules/notification.md)
-- [`:startup`](../modules/startup.md)
-
-## Dependents
-
-- [`:androidApp`](../modules/androidApp.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `AndroidPlatform` | `class` | `androidMain` | `shared/src/androidMain/kotlin/com/cbgm/sparrow/device/Platform.android.kt` |
+| `Platform` | `interface` | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/device/Platform.kt` |
+| `AppViewModel` | `class` | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/presentation/AppViewModel.kt` |
+| `AppInitializationDependencies` | `class` | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/presentation/model/AppInitializationDependencies.kt` |
+| `ForegroundRuntimeDependencies` | `class` | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/presentation/model/ForegroundRuntimeDependencies.kt` |
+| `AttachmentConversationNameObserver` | `class` | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/AttachmentConversationNameObserver.kt` |
+| `IOSPlatform` | `class` | `iosMain` | `shared/src/iosMain/kotlin/com/cbgm/sparrow/device/Platform.ios.kt` |

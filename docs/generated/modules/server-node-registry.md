@@ -1,34 +1,30 @@
 # `:server:node-registry`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/node-registry`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `node-registry` |
-| Group | `server` |
-| Directory | `server/node-registry` |
-| Build file | `server/node-registry/build.gradle.kts` |
-| Kotlin files | 12 |
-| Production Kotlin files | 8 |
-| Test Kotlin files | 4 |
-| Resource files | 0 |
-| Direct dependencies | 4 |
-| Direct dependents | 0 |
+- `:server:protocol`
+- `:server:security`
+- `:server:persistence`
+- `:server:observability`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:observability`](../modules/server-observability.md)
-- [`:server:persistence`](../modules/server-persistence.md)
-- [`:server:protocol`](../modules/server-protocol.md)
-- [`:server:security`](../modules/server-security.md)
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `CertifiedRegistrySigner` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryDirectorySigner.kt` |
+| `DirectRegistryDirectorySigner` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryDirectorySigner.kt` |
+| `NodeRegistryConfig` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/Application.kt` |
+| `NodeRegistryStorage` | `interface` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/NodeRegistryStore.kt` |
+| `NodeRegistryStore` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/NodeRegistryStore.kt` |
+| `PostgresNodeRegistryDatabase` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/PostgresNodeRegistryDatabase.kt` |
+| `PostgresNodeRegistryDatabaseConfig` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/PostgresNodeRegistryDatabase.kt` |
+| `PostgresNodeRegistryStore` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/PostgresNodeRegistryStore.kt` |
+| `RegistrationResult` | `interface` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/NodeRegistryStore.kt` |
+| `RegistryAuthorityCertificateStore` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryAuthorityCertificateStore.kt` |
+| `RegistryAuthorityProvisioningCli` | `object` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryAuthorityProvisioningCli.kt` |
+| `RegistryDirectorySigner` | `interface` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryDirectorySigner.kt` |
+| `RegistrySigningConfig` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryDirectorySigner.kt` |
+| `RegistrySigningRuntime` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistrySigningRuntime.kt` |
+| `RotatingRegistryDirectorySigner` | `class` | `main` | `server/node-registry/src/main/kotlin/com/cbgm/sparrow/server/registry/RegistryDirectorySigner.kt` |

@@ -1,36 +1,5 @@
 {
-  "moduleCount": 48,
-  "groupCount": 11,
-  "dependencyCount": 209,
-  "moduleWithoutDependenciesCount": 11,
-  "moduleWithoutDependentsCount": 12,
-  "maximumDirectDependencyCount": 29,
-  "maximumDirectDependentCount": 26,
-  "sourceSetCount": 7,
-  "kotlinSourceFileCount": 1992,
-  "productionKotlinFileCount": 1850,
-  "testKotlinFileCount": 142,
-  "resourceFileCount": 56,
-  "modulesByGroup": {
-    "androidApp": 1,
-    "core": 5,
-    "data": 3,
-    "feature": 20,
-    "navigation": 1,
-    "notification": 1,
-    "quality": 2,
-    "resources": 1,
-    "server": 12,
-    "shared": 1,
-    "startup": 1
-  },
-  "modulesBySourceSet": {
-    "androidDeviceTest": 9,
-    "androidMain": 24,
-    "commonMain": 31,
-    "commonTest": 22,
-    "iosMain": 12,
-    "main": 13,
-    "test": 11
-  }
+  "gradleModules": 44,
+  "productionTopLevelKotlinDeclarations": 1788,
+  "roomSchemaVersion": 53
 }

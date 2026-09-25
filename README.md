@@ -28,6 +28,10 @@ full downloadable package yet**. Until the first `v*` tag is published, build fr
 
 https://github.com/user-attachments/assets/cb4918f3-c53d-4353-aae0-15d689c7b85f
 
+## New design update
+
+https://github.com/user-attachments/assets/73a1d095-f11c-44ed-91a1-d02b783e4cd4
+
 ## What makes Sparrow different?
 
 Sparrow combines client-side end-to-end encryption with a **federated, independently hostable transport
@@ -49,26 +53,28 @@ boundaries, and the exact classes implementing discovery, failover, federation a
 
 ## What currently works on Android
 
-The current codebase implements:
+The current source tree includes:
 
-- onboarding, local identity creation, Android-protected private-key storage, identity sharing/import and QR/safety-number verification;
-- device-contact import/linking, contact invitations, accept/decline/block, identity exchange and contact verification;
-- Direct chats with encrypted messages, persistent outbox/retry, sent/delivered/read state, typing, unread state and two-day queued re-authorization handling;
-- Group chats with invitations, membership activation, add/remove/promote/leave/admin-transfer flows, epoch security, typing and per-recipient delivery/read aggregation;
-- typed message content across data/domain/presentation (`MessagePartDto` -> `MessagePart` -> `MessagePartUi`);
-- encrypted blob attachments for images, videos, files, current location and shared contacts; selectable media/files support up to 8 attachments per message, while location/contact are single-shot attachment messages;
-- gallery/camera/file selection, media thumbnails, non-autoplay video viewing, swipeable attachment viewing, file opening, current-location sharing and contact sharing;
-- received attachment storage/management, per-conversation media/files storage and media export; location/contact payloads remain attachment blobs but are excluded from saved media/file copies;
-- contact attachment selection through the existing Contacts UI; contact bubbles show name/number and can add the shared contact to device contacts after confirmation;
-- local message search with exact matching plus optional on-device semantic search backed by a verified local MediaPipe text-embedding model;
-- optional on-device message-safety analysis with structural checks plus the local embedding model, warning details and block action;
-- Settings controls for semantic search/message safety, attachment storage management and a timestamped developer error log with clear action;
-- signed Control Plane discovery, multiple Control Planes, health monitoring, node failover, cooldown diagnostics and automatic reconnect;
-- WebSocket foreground delivery, mailbox-backed offline delivery and Android FCM wake-ups;
-- Control Plane and Community Node launcher bundles, Docker deployment, health/readiness endpoints, metrics, request IDs and smoke tests;
-- incremental release-candidate packaging plus full tagged GitHub releases.
+- local identity creation plus encrypted identity backup/export and restore of the original signing/encryption keys;
+- explicit remote-identity replacement review, persistent approved reconnection state and retryable recovery after process/network interruption;
+- contacts/device-contact import, verification, blocking and identity-peer/routing resolution;
+- the generic `:feature:invite` lifecycle for Direct and Group invitations, separated from identity and membership state;
+- Direct conversations with encryption/authorization gates, durable queued-until-authorized messages, retry, edit/delete/reactions, typing and delivery/read state;
+- Group conversations with dedicated `:feature:membership` handshakes, welcome/activation, epoch security, admin promotion/removal/transfer/leave/delete and member routing;
+- `:feature:conversationorchestration` as the explicit cross-feature workflow boundary (`ConversationFlowHandler`, result observers, recovery workers);
+- `:feature:messaging` as generic durable protocol-outbox/incoming-envelope execution rather than business-feature orchestration;
+- encrypted attachments for images, video, files, location, contacts and voice; attachment management/viewers and media/file export;
+- voice recording/playback plus local Whisper-backed transcription and persisted attachment transcripts;
+- link previews with client DB caching/prefetch and the `:server:link-preview` fetch/parse/validation service;
+- one pinned Group message with admin-controlled pin/unpin and attachment-aware pinned-message rendering;
+- auto-reply rules with active-rule and recipient-claim persistence;
+- target-aware avatar observation plus reusable profile-picture selection/cropping in `:feature:avatar`;
+- exact/optional on-device semantic message search and local message-safety analysis;
+- signed Control Plane discovery, multiple Control Planes, node failover, WebSocket foreground delivery, mailbox-backed offline delivery and Android FCM wake-ups;
+- unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
+- Docker/Ktor server services, persistent registry/mailbox/federation/push state, observability and deployment tooling.
 
-See [Current feature status](docs/features/current-features.md), [Attachments](docs/features/attachments.md), [Chats](docs/features/chats.md), [Search](docs/features/search.md), [Message safety](docs/features/message-safety.md), and [Transport](docs/features/transport.md) for details and limitations.
+See [Current feature status](docs/features/current-features.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/generated/current-code-inventory.md).
 
 ## The system in one picture
 
@@ -158,58 +164,25 @@ macOS/Linux:
 
 Or open the project in Android Studio and run `androidApp`.
 
-### 4. Start a Control Plane
+### 4. Start the server runtime
 
-**Windows bundle:** generate or download the Control Plane bundle, extract it, then double-click:
-
-```text
-Start-SparrowControlPlane.cmd
-```
-
-The launcher starts Docker Desktop when necessary, creates runtime secrets, starts PostgreSQL/Redis/services,
-and waits for readiness. When it is running, open:
+The current public operator package is the **unified Sparrow server bundle**. From a Windows source checkout build it with:
 
 ```text
-http://<control-plane-host>:8390/index
+server\unified\Build-SparrowServer.cmd
 ```
 
-The `/index` page links to registry health, presence health, push health, and connected Community Nodes.
+This produces `dist/sparrow-server.zip`. Extract it into its own runtime directory and run `Start-SparrowServer.cmd`. The manager can install/start a **Control Plane**, **Community Node**, or **Combined** deployment. Node-only mode can manage multiple independent Community Node instances.
 
-**macOS:** there is currently no macOS Control Plane GUI launcher bundle. For development, run the Control Plane
-from source with Docker Compose; see [Local development](docs/development/local-development.md) and
-[Control Plane operations](docs/server/control-plane.md).
+On macOS/Linux use the bundled `Start-SparrowServer.sh` / `Start-SparrowServer.command`, or run `server/control-plane/docker-compose.yml` and `server/community-node/docker-compose.yml` directly for source-level development.
 
-### 5. Start a Community Node
+`server/control-plane-directory` is a separate operator-only signed directory service and is deliberately **not** included in `sparrow-server.zip`.
 
-Windows bundle:
+See [Local development](docs/development/local-development.md) and [Server runtime, build and deployment](docs/server/runtime-build-deployment.md).
 
-```text
-Start-SparrowNode.cmd
-```
+### 5. Verify the server
 
-macOS bundle:
-
-```text
-Start-SparrowNode.command
-```
-
-or:
-
-```bash
-./start-sparrow-node.sh
-```
-
-The node asks for LAN/Public mode and the Control Plane directory URL. It can start with cached Control Plane
-addresses while all planes are offline, and keeps retrying until a plane becomes reachable.
-
-When running, open:
-
-```text
-http://<node-host>:8490/index
-```
-
-The node `/index` links to gateway health/connection count, gateway info, advertised Control Planes, federation
-health/capabilities, and mailbox health.
+A LAN Control Plane normally exposes `/index` on port `8390`; a LAN Community Node normally exposes `/index` on port `8490`. These pages link to the relevant registry/presence/push and gateway/federation/mailbox diagnostics.
 
 ### 6. Run the app
 
@@ -220,34 +193,41 @@ current node becomes unavailable.
 ## Project structure
 
 ```text
-androidApp/                Thin Android application entry point and release build configuration
-shared/                    Shared Compose app shell, AppViewModel, common DI, BuildKonfig value
-startup/                   Startup UI/model
-navigation/                Navigation graphs and destinations
-core/                      Cross-cutting utilities
-core/crypto/               Libsodium crypto implementations
-core/embedding/            Shared local text-embedding runtime/model lifecycle
-core/protocol/             Transport-independent packets, codec, outbox contracts
-core/ui/                   Shared Compose components/theme/navigation primitives
-data/database/             Room database, DAOs, entities, durable outbox
-data/datastore/            Shared settings/key-value persistence
-feature/identity/          Local identity lifecycle and sharing
-feature/contacts/          Contacts, invitations, verification, identity exchange
-feature/contactimport/     Device/QR contact and identity import flows
-feature/chats/             Direct + Group conversation domain/data/UI paths
-feature/attachments/       Attachment blob transfer, cache, storage, management and attachment UI models
-feature/media/             Gallery/camera/file access, media rendering/viewing/export and file browser
-feature/messaging/         Incoming/outgoing orchestration between protocol, crypto and transport
-feature/search/            Exact + optional on-device semantic message search
-feature/safety/            On-device message-safety analysis and warning/details UI
-feature/transport/         Control Plane/node discovery, WebSocket, routing, mailbox/push gateways
-feature/onboarding/        Onboarding flows
-feature/settings/          User/developer/network settings and developer error log
-notification/              Android notification and background work integration
-server/                    Control Plane, Community Node and shared server modules
-build-logic/               Gradle convention/architecture/quality plugins
-quality/detekt-rules/      Project-specific Detekt rules
-docs/                      MkDocs engineering documentation
+androidApp/                       Android application entry point/release config
+shared/                           Compose app shell, AppViewModel and common DI
+startup/                          startup UI/model
+navigation/                       navigation graphs, inbox/recovery routing
+core/                             cross-cutting utilities
+core/crypto/                      libsodium crypto implementations
+core/embedding/                   local embedding runtime/model lifecycle
+core/protocol/                    packets, codec, protocol outbox contracts
+core/ui/                          reusable Compose UI/navigation primitives
+data/database/                    Room DB, DAOs/entities, protocol outbox, migrations
+data/datastore/                   settings/key-value persistence
+feature/identity/                 identity lifecycle/exchange, backup/restore, recovery state
+feature/invite/                   generic Direct/Group invitation lifecycle
+feature/contacts/                 contact records, peer/routing resolution, blocking
+feature/contactimport/            device/QR contact and identity import
+feature/autoreply/                auto-reply rules and recipient claims
+feature/avatar/                   avatar observation/cache and picture editing
+feature/linkpreview/              link extraction/cache/prefetch/UI
+feature/chats/                    Direct + Group conversation/message semantics/UI
+feature/conversationorchestration/ cross-feature invite/identity/membership/chat workflows
+feature/membership/               Group membership, welcome/activation, roles/security
+feature/attachments/              encrypted attachment transfer/cache/storage/UI models
+feature/media/                    gallery/camera/file access, media viewers/export
+feature/voice/                    recording/playback/transcription
+feature/messaging/                generic durable outbox + incoming envelope runners
+feature/transport/                discovery/WebSocket/routing/mailbox/push gateways
+feature/onboarding/               onboarding flows
+feature/settings/                 settings/network/diagnostics UI
+feature/search/                   exact + local semantic search
+feature/safety/                   local message-safety analysis/UI
+notification/                     Android notifications/background integration
+server/                           Ktor server modules + Compose/operator tooling
+server/control-plane-directory/   separate private operator directory service
+quality/detekt-rules/             project-specific Detekt rules
+docs/                             MkDocs engineering documentation
 ```
 
 Direct and Group chat behavior is intentionally separated. Start with
@@ -298,25 +278,11 @@ Do not manually edit `docs/generated/`.
 
 ## Releases
 
-Normal development uses feature branches and PRs into `develop`. `master` is the stable source for a release
-line. Create release branches as `release/0.1`, `release/0.2`, and so on.
+The documented Git branch flow is `develop -> master -> release/x.y -> tag`. The current source archive used for this documentation audit does not include `.github/workflows`, so exact current CI change-classification rules are not asserted here without those workflow files.
 
-Every push to `release/**` runs change detection:
+The current **verifiable server packaging path** is `server/unified/Build-SparrowServer.cmd`, which creates the single public `dist/sparrow-server.zip`. The private `server/control-plane-directory` installer/state must not be included in that public asset.
 
-- app changes -> debug APK + signed/minified release APK;
-- server-service changes -> only affected Docker images plus the corresponding launcher bundle;
-- launcher/Caddy/Compose-only changes -> bundle only;
-- docs-only changes -> no distributable package;
-- the first commit of a release line and `v*` tags -> full build.
-
-A tag such as `v0.1.0-alpha.1` on a commit belonging to a `release/**` branch creates the GitHub release. A full
-tagged build contains individual assets plus one combined `sparrow-<version>-full.zip`.
-
-There is **no official tagged release yet**, so this is the configured process rather than a currently published
-download.
-
-See [Release process](docs/development/release-process.md) for branch rules, repository variables, signing
-secrets, Docker image tags, R8 mapping files, checksums, and the full ZIP layout.
+See [Release process](docs/development/release-process.md) for the source-verified packaging rules and release checklist.
 
 ## Documentation map
 

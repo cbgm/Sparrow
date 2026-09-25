@@ -4,7 +4,7 @@ This is direction, not a release promise.
 
 ## Current usable baseline
 
-Android currently has the core Sparrow experience: identity/onboarding, contacts/invitations/verification, Direct and Group chats, typed text/attachment message parts, encrypted image/video/file/location/contact attachments, attachment storage management, delivery/read/typing, optional local semantic search, optional local message-safety analysis, Control Plane discovery/failover, Community Node federation/mailbox delivery, Android notifications, Docker launchers and release automation.
+Android currently has the core Sparrow experience plus the newer separated Invite/Membership/Conversation-Orchestration architecture, encrypted identity backup/restore and explicit identity-reconnection state, voice attachments with local transcription, link previews, auto-reply, Group pin state, avatar editing, encrypted attachment storage, local search/safety, signed discovery/failover, mailbox/federation delivery and unified server tooling.
 
 ## Near-term priorities
 
@@ -20,12 +20,11 @@ Android currently has the core Sparrow experience: identity/onboarding, contacts
 
 - iOS platform/runtime implementation and feature parity;
 - multi-device identity/synchronization;
-- message reactions/replies/editing/deletion if introduced;
 - desktop client packaging;
 - voice/video calling.
 
 ## Longer-term security work
 
-Potential work includes stronger post-compromise properties for group messaging, encrypted backup/recovery designs, additional automated dependency/security scanning and independent security review.
+Potential work includes stronger post-compromise properties for group messaging, broader backup beyond the already implemented encrypted identity-key backup/restore, secure recovery for a compromised independent-directory signing key, additional automated dependency/security scanning and independent security review.
 
 Any such change must preserve explicit protocol/versioning and the current separation between client message semantics and server routing infrastructure.

@@ -1,36 +1,21 @@
 # `:feature:onboarding`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `feature/onboarding`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `onboarding` |
-| Group | `feature` |
-| Directory | `feature/onboarding` |
-| Build file | `feature/onboarding/build.gradle.kts` |
-| Kotlin files | 14 |
-| Production Kotlin files | 14 |
-| Test Kotlin files | 0 |
-| Resource files | 1 |
-| Direct dependencies | 3 |
-| Direct dependents | 3 |
+- `:core:ui`
+- `:feature:identity`
+- `:feature:media`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidMain`
-- `commonMain`
-- `iosMain`
-
-## Dependencies
-
-- [`:core:ui`](../modules/core-ui.md)
-- [`:feature:identity`](../modules/feature-identity.md)
-- [`:feature:media`](../modules/feature-media.md)
-
-## Dependents
-
-- [`:navigation`](../modules/navigation.md)
-- [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `AutomaticPhoneNumberResult` | `interface` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/device/OnboardingPermissions.kt` |
+| `PermissionRequestResult` | `class` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/device/OnboardingPermissions.kt` |
+| `OnboardingViewModel` | `class` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/presentation/OnboardingViewModel.kt` |
+| `OnboardingPage` | `class` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/presentation/model/OnboardingUiState.kt` |
+| `OnboardingUiEvent` | `interface` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/presentation/model/OnboardingUiEvent.kt` |
+| `OnboardingUiState` | `class` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/presentation/model/OnboardingUiState.kt` |
+| `PageData` | `class` | `commonMain` | `feature/onboarding/src/commonMain/kotlin/com/cbgm/sparrow/feature/onboarding/presentation/pages/PermissionsPage.kt` |

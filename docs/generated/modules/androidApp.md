@@ -1,30 +1,14 @@
 # `:androidApp`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `androidApp`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `androidApp` |
-| Group | `androidApp` |
-| Directory | `androidApp` |
-| Build file | `androidApp/build.gradle.kts` |
-| Kotlin files | 2 |
-| Production Kotlin files | 2 |
-| Test Kotlin files | 0 |
-| Resource files | 11 |
-| Direct dependencies | 1 |
-| Direct dependents | 0 |
+- `:shared`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-
-## Dependencies
-
-- [`:shared`](../modules/shared.md)
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `MainActivity` | `class` | `main` | `androidApp/src/main/kotlin/com/cbgm/sparrow/MainActivity.kt` |
+| `SparrowApplication` | `class` | `main` | `androidApp/src/main/kotlin/com/cbgm/sparrow/SparrowApplication.kt` |

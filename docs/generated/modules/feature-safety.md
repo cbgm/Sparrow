@@ -1,40 +1,40 @@
 # `:feature:safety`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `feature/safety`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `safety` |
-| Group | `feature` |
-| Directory | `feature/safety` |
-| Build file | `feature/safety/build.gradle.kts` |
-| Kotlin files | 38 |
-| Production Kotlin files | 32 |
-| Test Kotlin files | 6 |
-| Resource files | 1 |
-| Direct dependencies | 5 |
-| Direct dependents | 5 |
+- `:core`
+- `:core:embedding`
+- `:core:ui`
+- `:data:database`
+- `:feature:contacts`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidDeviceTest`
-- `commonMain`
-- `commonTest`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:embedding`](../modules/core-embedding.md)
-- [`:core:ui`](../modules/core-ui.md)
-- [`:data:database`](../modules/data-database.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-
-## Dependents
-
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:settings`](../modules/feature-settings.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `MessageSafetyEmbeddingDataSource` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/data/datasource/MessageSafetyEmbeddingDataSource.kt` |
+| `MessageSafetyLocalDataSource` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/data/datasource/MessageSafetyLocalDataSource.kt` |
+| `GeneratedMessageSafetyMlpModel` | `object` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/data/model/GeneratedMessageSafetyMlpModel.kt` |
+| `MessageSafetyAnalysisRepositoryImpl` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/data/repository/MessageSafetyAnalysisRepositoryImpl.kt` |
+| `MessageSafetyRepositoryImpl` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/data/repository/MessageSafetyRepositoryImpl.kt` |
+| `MessageSafetyAssessment` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/model/MessageSafetyAssessment.kt` |
+| `MessageSafetyCandidate` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/model/MessageSafetyCandidate.kt` |
+| `MessageSafetyReason` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/model/MessageSafetyReason.kt` |
+| `MessageSafetyState` | `interface` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/model/MessageSafetyState.kt` |
+| `MessageSafetyAnalysisRepository` | `interface` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/repository/MessageSafetyAnalysisRepository.kt` |
+| `MessageSafetyRepository` | `interface` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/repository/MessageSafetyRepository.kt` |
+| `AnalyzeMessageSafetyUseCase` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/usecase/AnalyzeMessageSafetyUseCase.kt` |
+| `InitializeMessageSafetyUseCase` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/usecase/InitializeMessageSafetyUseCase.kt` |
+| `ObserveMessageSafetyAssessmentsUseCase` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/usecase/ObserveMessageSafetyAssessmentsUseCase.kt` |
+| `ObserveMessageSafetyStateUseCase` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/usecase/ObserveMessageSafetyStateUseCase.kt` |
+| `ProcessMessageSafetyBatchUseCase` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/domain/usecase/ProcessMessageSafetyBatchUseCase.kt` |
+| `MessageSafetyDetailsViewModel` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/MessageSafetyDetailsViewModel.kt` |
+| `MessageSafetyDetailsUiEvent` | `interface` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/model/MessageSafetyDetailsUiEvent.kt` |
+| `MessageSafetyDetailsUiState` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/model/MessageSafetyDetailsUiState.kt` |
+| `MessageSafetyWarningLevel` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/model/MessageSafetyWarningLevel.kt` |
+| `MessageSafetyWarningReason` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/model/MessageSafetyWarningReason.kt` |
+| `MessageSafetyWarningUi` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/presentation/details/model/MessageSafetyWarningUi.kt` |
+| `MessageSafetyClassifier` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/util/MessageSafetyClassifier.kt` |
+| `MessageSafetyStructuralAnalyzer` | `class` | `commonMain` | `feature/safety/src/commonMain/kotlin/com/cbgm/sparrow/feature/safety/util/MessageSafetyStructuralAnalyzer.kt` |

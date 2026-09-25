@@ -1,83 +1,66 @@
-# Contacts and invitations
+# Contacts
 
-`:feature:contacts` owns Sparrow contacts, invitation state, identity exchange, verification and blocklist behavior. `:feature:contactimport` owns manual/QR import presentation and scanning.
+`:feature:contacts` owns contact records, phone numbers, contact-to-routing mappings, blocking, device-contact integration and peer/contact identity projections. **Generic invitation lifecycle is no longer owned here**; it lives in `:feature:invite`. Identity exchange/trust lives in `:feature:identity`.
 
-## Current Android features
-
-- import/link device contacts;
-- normalize phone numbers and merge them with existing Sparrow contacts;
-- manually import/share identities;
-- send/receive contact invitations;
-- accept, decline, decline+block;
-- maintain a blocked-contact list;
-- exchange current public identities;
-- show identity/security state;
-- verify contacts using safety numbers or QR flows.
-
-## Important classes
-
-Repositories:
+## Main repositories and datasources
 
 - `ContactRepository` / `ContactRepositoryImpl`
-- `IdentityInvitationRepository` / `IdentityInvitationRepositoryImpl`
-- `IdentityExchangeRepository` / `IdentityExchangeRepositoryImpl`
-- `ContactKeyExchangeRepository` / `ContactKeyExchangeRepositoryImpl`
-- `ContactVerificationRepository` / `ContactVerificationRepositoryImpl`
+- `ContactTransportRepository` / `ContactTransportRepositoryImpl`
+- `IdentityPeerRepository` / `IdentityPeerRepositoryImpl`
+- `ContactBlocklistRepository`
+- `ContactLocalDataSource`
+- `ContactRoutingDataSource`
+- `ContactRoutingIdDataSource`
+- `ContactRoutingReconciliationDataSource`
+- `ContactByRoutingIdDataSource`
+- `MailboxContactDataSource`
 
-Incoming handlers:
+## Important models
 
-- `ContactInvitePacketHandler` / `ContactInviteAcceptedPacketHandler` / `ContactInviteDeclinedPacketHandler` / `ContactReadyPacketHandler`
-- `IdentityPacketHandler`
-- `IdentityAcknowledgementPacketHandler`
-- `ContactVerificationReceiptPacketHandler`
+- `Contact`
+- `ContactPhoneNumber`, `ContactPhoneNumberType`
+- `IncomingPeerContactCandidate`
+- `IdentityImportTrust`
+- `SparrowIdentity`
+- `IdentityPeerResolution`
+- `MailboxContactState`
+- `DeviceContact`, `DevicePhoneNumber`
 
-Use cases include:
+## Contact/peer resolution
 
-- `AcceptContactInvitationUseCase`
-- `DeclineContactInvitationUseCase`
-- `DeclineAndBlockContactInvitationUseCase`
-- `BlockContactUseCase` / `UnblockContactUseCase`
-- `EnsureIdentityExchangeStartedUseCase`
-- `GetContactSafetyNumberUseCase`
-- `VerifyContactUseCase`
-- `ImportDeviceContactsUseCase`
-- `ImportContactUseCase`
+Cross-feature orchestration uses contact domain use cases such as:
 
-## Contact import/merge
+- `ResolveIncomingPeerContactsUseCase`
+- `ResolveContactInvitationRoutingIdUseCase`
+- `ResolveContactTransportRoutingIdUseCase`
+- `ResolveContactIdByRoutingIdUseCase`
+- `ResolveContactBootstrapRoutingIdUseCase`
+- `ApplyIdentityPeerMergeUseCase`
+- `UpdateIncomingIdentityPeerMetadataUseCase`
+- `GetIdentityPeerDisplayNameUseCase`
 
-`ContactRepositoryImpl` owns the current device-contact normalization/merge path. `ImportDeviceContactsUseCase` reads usable device contact/phone data and forwards import requests; the repository normalizes phone numbers and reuses an existing Sparrow contact when matching data is found instead of intentionally creating a duplicate.
+This keeps contact merging/routing ownership inside Contacts while `ConversationFlowHandler` decides *when* those operations are part of an invite/identity/membership workflow.
 
-## Invitation and identity exchange
+## Device contacts
 
-```mermaid
-sequenceDiagram
-    participant A as Client A
-    participant O as ProtocolOutbox
-    participant B as Client B
-    participant IH as Contact invitation handler
-    participant ID as Identity handlers
+Device-contact reading/writing is exposed through repository/use-case boundaries including `ImportDeviceContactsUseCase`, `AddDeviceContactUseCase`, `DeviceContactsRepository`, `DeviceContactWriterRepository` and permission repositories/adapters.
 
-    A->>O: ContactInvitePacket
-    O-->>B: invitation
-    B->>IH: store pending invitation
-    B->>O: accept/decline packet
-    O-->>A: response
-    A->>O: IdentityPacket when exchange required
-    O-->>B: IdentityPacketHandler
-    B->>O: IdentityAcknowledgementPacket
-    O-->>A: IdentityAcknowledgementPacketHandler
-```
+`AppViewModel` performs device contact synchronization after local identity readiness when read-contact permission is available.
 
-The transport module carries these packets but does not decide invitation/verification state.
+## Blocking
 
-## Verification
+- `BlockContactUseCase`
+- `UnblockContactUseCase`
+- `ObserveContactBlocklistUseCase`
+- `ObserveBlockedContactsContextUseCase`
+- `BlockedContactsViewModel`
 
-`GetContactSafetyNumberUseCase` derives the current comparison value from local and remote public identity material. `VerifyContactUseCase` stores the explicit verification decision. If remote identity material changes, the old verification must not silently be treated as verification of the new identity.
+`ContactBlockObserver` in `:feature:conversationorchestration` reacts to persisted block state and asks `ConversationFlowHandler` to revoke the peer exchange as needed. Contacts does not call Identity repositories directly to perform the cross-feature revocation workflow.
 
-QR verification is implemented through `:feature:contactimport`, including `VerifyContactByQrUseCase` and `VerifyContactQrViewModel`.
+## Invitation relationship
 
-## Contact sharing as an attachment
+Contact selection can initiate an invitation, but the invitation row/result lifecycle is owned by `:feature:invite`. See [Invitations](invitations.md).
 
-The chat attachment action reuses the existing Contacts selection UI rather than introducing a separate contact picker. A selectable contact must have a phone number; one selected contact is encoded as a `CONTACT` attachment and sent immediately without requiring extra message text.
+## Identity relationship
 
-The received bubble shows the display name when available and the phone number. Tapping the loaded contact opens a confirmation flow before adding it to device contacts. Attachment blob transfer/storage ownership remains in `:feature:attachments`; the Contacts feature owns contact selection/contact-address-book behavior.
+Contacts stores contact-facing peer metadata/public identity linkage; the identity-exchange state machine and remote replacement/recovery lifecycle are owned by `:feature:identity`. See [Identity](identity.md) and [Identity recovery](identity-recovery.md).

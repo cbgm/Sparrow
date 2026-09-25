@@ -1,39 +1,43 @@
 # `:notification`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `notification`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `notification` |
-| Group | `notification` |
-| Directory | `notification` |
-| Build file | `notification/build.gradle.kts` |
-| Kotlin files | 28 |
-| Production Kotlin files | 27 |
-| Test Kotlin files | 1 |
-| Resource files | 1 |
-| Direct dependencies | 7 |
-| Direct dependents | 2 |
+- `:core`
+- `:core:crypto`
+- `:feature:chats`
+- `:feature:messaging`
+- `:feature:transport`
+- `:core:protocol`
+- `:resources`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidMain`
-- `commonMain`
-- `commonTest`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:crypto`](../modules/core-crypto.md)
-- [`:core:protocol`](../modules/core-protocol.md)
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:messaging`](../modules/feature-messaging.md)
-- [`:feature:transport`](../modules/feature-transport.md)
-- [`:resources`](../modules/resources.md)
-
-## Dependents
-
-- [`:navigation`](../modules/navigation.md)
-- [`:shared`](../modules/shared.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `AndroidNotificationRuntime` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/AndroidNotificationRuntime.kt` |
+| `BackgroundDeliveryReceiptSender` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/BackgroundDeliveryReceiptSender.kt` |
+| `PendingMessageSyncScheduler` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PendingMessageSyncScheduler.kt` |
+| `PendingMessageSyncWorker` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PendingMessageSyncWorker.kt` |
+| `PushTokenRegistrationScheduler` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PushTokenRegistrationScheduler.kt` |
+| `PushTokenRegistrationWorker` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PushTokenRegistrationWorker.kt` |
+| `SparrowDeepLink` | `object` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowDeepLink.kt` |
+| `SparrowFirebaseMessagingService` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowFirebaseMessagingService.kt` |
+| `SparrowNotificationIntentFactory` | `object` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationIntentFactory.kt` |
+| `SparrowNotificationIntentHandler` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationIntentHandler.kt` |
+| `SparrowNotificationManager` | `class` | `androidMain` | `notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationManager.kt` |
+| `PlatformNotificationRuntime` | `interface` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/device/PlatformNotificationRuntime.kt` |
+| `AppVisibilityState` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/AppVisibilityState.kt` |
+| `ConversationNotification` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/ConversationNotification.kt` |
+| `ConversationNotificationEvent` | `interface` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/ConversationNotificationEvent.kt` |
+| `NotificationConversationTarget` | `interface` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/NotificationConversationTarget.kt` |
+| `PendingMessageSyncResult` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/PendingMessageSyncResult.kt` |
+| `ObserveConversationNotificationEventsUseCase` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/ObserveConversationNotificationEventsUseCase.kt` |
+| `RegisterPushTokenUseCase` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/RegisterPushTokenUseCase.kt` |
+| `ResolveNotificationConversationUseCase` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/ResolveNotificationConversationUseCase.kt` |
+| `SynchronizePendingMessagesUseCase` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/SynchronizePendingMessagesUseCase.kt` |
+| `ConversationNotificationCoordinator` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/ConversationNotificationCoordinator.kt` |
+| `ConversationNotificationPresenter` | `interface` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/ConversationNotificationPresenter.kt` |
+| `NotificationNavigationController` | `class` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/navigation/NotificationNavigationController.kt` |
+| `NotificationNavigationTarget` | `interface` | `commonMain` | `notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/navigation/NotificationNavigationTarget.kt` |

@@ -144,7 +144,7 @@ See [Settings and diagnostics](settings.md).
 - PostgreSQL-backed push registrations/wake-ups;
 - Firebase Admin integration;
 - Caddy reverse proxy and `/index` operator page;
-- LAN/Public Windows launcher.
+- LAN/Public deployment through the unified server manager.
 
 ### Community Node
 
@@ -158,21 +158,14 @@ See [Settings and diagnostics](settings.md).
 - Control Plane directory parsing/caching/retry;
 - continuous registration/heartbeat;
 - Caddy edge and `/index` operator page;
-- Windows and macOS/Linux launchers.
+- Windows and macOS/Linux lifecycle through the unified server manager.
 
 ## Release/build automation
 
-- PR validation on the `develop` integration path;
-- change-aware release candidates on `release/**`;
-- separate development and release Control Plane directory variables;
-- signed/minified/resource-shrunk Android release APK;
-- debug APK;
-- affected-only Docker image rebuilds on release branch pushes;
-- matching launcher-bundle rebuilds when image/config changes require them;
-- full `v*` tag build of every image/package;
-- public checksums/release metadata;
-- one combined `sparrow-<version>-full.zip`;
-- private R8 `mapping.txt` retention in Actions.
+- Android debug/release builds and signing configuration are present in the source tree.
+- Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/unified`.
+- `server/control-plane-directory` is private operator infrastructure and is deliberately excluded from that public bundle.
+- This source snapshot does not include `.github/workflows`; exact current CI trigger/change-classification behavior therefore must be verified from the release checkout rather than inferred here.
 
 ## Not currently advertised as working
 
@@ -181,3 +174,42 @@ See [Settings and diagnostics](settings.md).
 - desktop client release;
 - voice/video calling;
 - a completed independent security audit.
+
+## Additional implemented modules present in the current source snapshot
+
+### Identity backup and recovery
+
+The current code includes encrypted identity export/restore (`PrepareIdentityBackupUseCase`, `RestoreIdentityBackupUseCase`, `AndroidIdentityBackupCodec`) plus durable remote-key replacement review and reconnection (`PendingRemoteIdentityChange`, `ApprovedIdentityReconnection`, `ApprovedIdentityReconnectionObserver`, `ApprovedReconnectionRetryWorker`, `StartRecoveryInvitationUseCase`). See [Identity backup, recovery and reconnection](identity-recovery.md).
+
+### Generic invitations and orchestration
+
+Invitation lifecycle is now a dedicated `:feature:invite` concern, while `:feature:conversationorchestration` contains `ConversationFlowHandler` and result observers that coordinate Invite, Identity, Membership and Chats. See [Invitations](invitations.md) and [Runtime orchestration](../architecture/runtime-flows.md).
+
+### Group membership module
+
+Group membership/security is implemented in `:feature:membership` rather than inside Chats. This includes `GroupMembershipStateMachine`, `GroupSecurityManager`, Group welcome/activation datasources, admin promotion/removal/leave, current epoch/member routing, and the membership result stream. See [Group membership and group security](group-membership.md).
+
+### Voice and transcription
+
+`:feature:voice` implements attachment-backed recording/playback plus optional local Whisper transcription using `AndroidVoiceTranscriptionRepository`, `AndroidWhisperModelStore` and `WhisperNative`. See [Voice messages and local transcription](voice.md).
+
+### Link previews
+
+`:feature:linkpreview` implements client cache/fetch/rendering and `:server:link-preview` implements URL validation, HTML parsing, metadata caching and proxied preview images. See [Link previews](link-previews.md).
+
+### Auto reply
+
+`:feature:autoreply` persists configured replies and recipient claims with `AutoReplyEntity`/`AutoReplyRecipientEntity`, and exposes create/update/activate/deactivate/claim/release use cases. See [Auto reply](auto-reply.md).
+
+### Group pinned messages
+
+Group admins can synchronize current pin state through `GroupPinRepositoryImpl`, `GroupPinBroadcaster`, `GroupPinUpdatedPacket`, `PinGroupMessageUseCase` and `UnpinGroupMessageUseCase`. See [Group pinned messages](pinned-messages.md).
+
+### Persistence
+
+The current Room database is schema **53** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
+
+
+## Avatars and profile-picture editing
+
+The active `:feature:avatar` module owns target-aware avatar observation and the reusable profile-picture editing pipeline. `AvatarRepositoryImpl`, `AvatarViewModel` and `SparrowAvatar` keep image loading out of broad chat UI state, while `AvatarEditorViewModel`, `ImagePicker` and `ProfilePictureCropper` implement selection and cropping. See [Avatars](avatar.md).

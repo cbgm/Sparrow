@@ -1,34 +1,28 @@
 # `:feature:linkpreview`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `feature/linkpreview`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `linkpreview` |
-| Group | `feature` |
-| Directory | `feature/linkpreview` |
-| Build file | `feature/linkpreview/build.gradle.kts` |
-| Kotlin files | 18 |
-| Production Kotlin files | 17 |
-| Test Kotlin files | 1 |
-| Resource files | 0 |
-| Direct dependencies | 3 |
-| Direct dependents | 2 |
+- `:core`
+- `:core:ui`
+- `:data:database`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `commonMain`
-- `commonTest`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:ui`](../modules/core-ui.md)
-- [`:data:database`](../modules/data-database.md)
-
-## Dependents
-
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:shared`](../modules/shared.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `LocalLinkPreviewDataSource` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/datasource/LocalLinkPreviewDataSource.kt` |
+| `RemoteLinkPreviewDataSource` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/datasource/RemoteLinkPreviewDataSource.kt` |
+| `LinkPreviewDto` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/model/LinkPreviewDto.kt` |
+| `LinkPreviewRequestDto` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/model/LinkPreviewDto.kt` |
+| `LinkPreviewUnavailableException` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/model/LinkPreviewException.kt` |
+| `LinkPreviewRepositoryImpl` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/data/repository/LinkPreviewRepositoryImpl.kt` |
+| `LinkPreview` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/domain/model/LinkPreview.kt` |
+| `LinkPreviewRepository` | `interface` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/domain/repository/LinkPreviewRepository.kt` |
+| `GetLinkPreviewUseCase` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/domain/usecase/GetLinkPreviewUseCase.kt` |
+| `PrefetchLinkPreviewsUseCase` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/domain/usecase/PrefetchLinkPreviewsUseCase.kt` |
+| `LinkPreviewViewModel` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/presentation/LinkPreviewViewModel.kt` |
+| `LinkPreviewUi` | `class` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/presentation/model/LinkPreviewUi.kt` |
+| `LinkPreviewUiState` | `interface` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/presentation/model/LinkPreviewUiState.kt` |
+| `TextContentPart` | `interface` | `commonMain` | `feature/linkpreview/src/commonMain/kotlin/com/cbgm/sparrow/feature/linkpreview/presentation/model/TextContentPart.kt` |

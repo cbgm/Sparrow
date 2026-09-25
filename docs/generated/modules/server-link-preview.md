@@ -1,31 +1,20 @@
 # `:server:link-preview`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/link-preview`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `link-preview` |
-| Group | `server` |
-| Directory | `server/link-preview` |
-| Build file | `server/link-preview/build.gradle.kts` |
-| Kotlin files | 7 |
-| Production Kotlin files | 6 |
-| Test Kotlin files | 1 |
-| Resource files | 0 |
-| Direct dependencies | 1 |
-| Direct dependents | 1 |
+- `:server:protocol`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:protocol`](../modules/server-protocol.md)
-
-## Dependents
-
-- [`:server:gateway`](../modules/server-gateway.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `FetchedLinkPreview` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewModels.kt` |
+| `LinkPreviewFetcher` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewFetcher.kt` |
+| `LinkPreviewImage` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewModels.kt` |
+| `LinkPreviewRequest` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewModels.kt` |
+| `LinkPreviewResponse` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewModels.kt` |
+| `LinkPreviewService` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewService.kt` |
+| `LinkPreviewUrlValidator` | `object` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewUrlValidator.kt` |
+| `YouTubeMetadata` | `class` | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewFetcher.kt` |

@@ -1,56 +1,50 @@
-# Modules
+# Module catalog
 
-Generated automatically by `./gradlew architectureReport`.
+The current build declares **44 Gradle modules**. This catalog was refreshed from `settings.gradle.kts` and each module build file.
 
-Select a module to open its generated detail page with source sets, file counts, dependencies and dependents.
-
-| Module | Group | Kotlin | Tests | Resources | Dependencies | Dependents |
-|---|---|---:|---:|---:|---:|---:|
-| [`:androidApp`](modules/androidApp.md) | `androidApp` | 2 | 0 | 11 | 1 | 0 |
-| [`:core`](modules/core.md) | `core` | 23 | 2 | 1 | 0 | 26 |
-| [`:core:crypto`](modules/core-crypto.md) | `core` | 42 | 5 | 1 | 0 | 10 |
-| [`:core:embedding`](modules/core-embedding.md) | `core` | 21 | 1 | 0 | 2 | 5 |
-| [`:core:protocol`](modules/core-protocol.md) | `core` | 110 | 22 | 1 | 2 | 13 |
-| [`:core:ui`](modules/core-ui.md) | `core` | 49 | 1 | 0 | 2 | 18 |
-| [`:data`](modules/data.md) | `data` | 0 | 0 | 0 | 0 | 0 |
-| [`:data:database`](modules/data-database.md) | `data` | 84 | 1 | 1 | 2 | 11 |
-| [`:data:datastore`](modules/data-datastore.md) | `data` | 4 | 0 | 1 | 0 | 8 |
-| [`:feature`](modules/feature.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
-| [`:feature:attachments`](modules/feature-attachments.md) | `feature` | 88 | 2 | 1 | 7 | 4 |
-| [`:feature:autoreply`](modules/feature-autoreply.md) | `feature` | 21 | 0 | 0 | 3 | 4 |
-| [`:feature:avatar`](modules/feature-avatar.md) | `feature` | 36 | 0 | 0 | 4 | 6 |
-| [`:feature:chats`](modules/feature-chats.md) | `feature` | 343 | 16 | 1 | 19 | 3 |
-| [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 29 | 1 | 1 | 5 | 3 |
-| [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 121 | 2 | 1 | 8 | 7 |
-| [`:feature:conversationorchestration`](modules/feature-conversationorchestration.md) | `feature` | 64 | 8 | 0 | 9 | 3 |
-| [`:feature:identity`](modules/feature-identity.md) | `feature` | 173 | 11 | 1 | 7 | 9 |
-| [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 4 |
-| [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 3 | 2 |
-| [`:feature:media`](modules/feature-media.md) | `feature` | 77 | 1 | 2 | 2 | 6 |
-| [`:feature:membership`](modules/feature-membership.md) | `feature` | 116 | 6 | 0 | 5 | 4 |
-| [`:feature:messaging`](modules/feature-messaging.md) | `feature` | 26 | 7 | 1 | 2 | 3 |
-| [`:feature:onboarding`](modules/feature-onboarding.md) | `feature` | 14 | 0 | 1 | 3 | 3 |
-| [`:feature:safety`](modules/feature-safety.md) | `feature` | 38 | 6 | 1 | 5 | 5 |
-| [`:feature:search`](modules/feature-search.md) | `feature` | 30 | 2 | 0 | 4 | 4 |
-| [`:feature:settings`](modules/feature-settings.md) | `feature` | 91 | 1 | 2 | 11 | 2 |
-| [`:feature:transport`](modules/feature-transport.md) | `feature` | 78 | 15 | 1 | 4 | 7 |
-| [`:feature:voice`](modules/feature-voice.md) | `feature` | 50 | 1 | 2 | 5 | 3 |
-| [`:navigation`](modules/navigation.md) | `navigation` | 18 | 0 | 0 | 18 | 1 |
-| [`:notification`](modules/notification.md) | `notification` | 28 | 1 | 1 | 7 | 2 |
-| [`:quality`](modules/quality.md) | `quality` | 0 | 0 | 0 | 0 | 0 |
-| [`:quality:detekt-rules`](modules/quality-detekt-rules.md) | `quality` | 11 | 0 | 0 | 0 | 0 |
-| [`:resources`](modules/resources.md) | `resources` | 0 | 0 | 22 | 0 | 2 |
-| [`:server`](modules/server.md) | `server` | 0 | 0 | 0 | 0 | 0 |
-| [`:server:federation`](modules/server-federation.md) | `server` | 16 | 3 | 0 | 4 | 0 |
-| [`:server:gateway`](modules/server-gateway.md) | `server` | 24 | 5 | 0 | 5 | 0 |
-| [`:server:link-preview`](modules/server-link-preview.md) | `server` | 7 | 1 | 0 | 1 | 1 |
-| [`:server:mailbox`](modules/server-mailbox.md) | `server` | 11 | 3 | 0 | 4 | 0 |
-| [`:server:node-registry`](modules/server-node-registry.md) | `server` | 12 | 4 | 0 | 4 | 0 |
-| [`:server:observability`](modules/server-observability.md) | `server` | 3 | 1 | 1 | 0 | 6 |
-| [`:server:persistence`](modules/server-persistence.md) | `server` | 3 | 1 | 0 | 1 | 6 |
-| [`:server:presence-directory`](modules/server-presence-directory.md) | `server` | 8 | 2 | 0 | 4 | 0 |
-| [`:server:protocol`](modules/server-protocol.md) | `server` | 7 | 1 | 0 | 0 | 9 |
-| [`:server:push`](modules/server-push.md) | `server` | 17 | 4 | 0 | 4 | 0 |
-| [`:server:security`](modules/server-security.md) | `server` | 19 | 4 | 0 | 1 | 6 |
-| [`:shared`](modules/shared.md) | `shared` | 13 | 0 | 0 | 29 | 1 |
-| [`:startup`](modules/startup.md) | `startup` | 12 | 0 | 1 | 8 | 2 |
+| Module | Path | Direct project dependencies | Production declarations |
+|---|---|---|---:|
+| `:androidApp` | `androidApp` | `:shared` | 2 |
+| `:shared` | `shared` | `:core`, `:data:datastore`, `:core:embedding`, `:core:crypto`, `:core:protocol`, `:core:ui`, `:navigation`, `:feature:autoreply`, `:feature:avatar`, `:feature:chats`, `:feature:attachments`, `:feature:contactimport`, `:feature:contacts`, `:feature:conversationorchestration`, `:feature:invite`, `:feature:identity`, `:feature:media`, `:feature:membership`, `:feature:voice`, `:feature:linkpreview`, `:feature:messaging`, `:feature:onboarding`, `:feature:settings`, `:feature:search`, `:feature:safety`, `:feature:transport`, `:notification`, `:startup`, `:data:database` | 7 |
+| `:core` | `core` | — | 20 |
+| `:data:datastore` | `data/datastore` | — | 2 |
+| `:core:embedding` | `core/embedding` | `:core`, `:data:datastore` | 18 |
+| `:feature:identity` | `feature/identity` | `:core`, `:data:datastore`, `:data:database`, `:core:crypto`, `:core:protocol`, `:core:ui`, `:feature:avatar` | 155 |
+| `:feature:invite` | `feature/invite` | `:core`, `:core:ui`, `:feature:avatar`, `:data:database` | 43 |
+| `:feature:contacts` | `feature/contacts` | `:core`, `:core:crypto`, `:core:protocol`, `:core:ui`, `:feature:avatar`, `:feature:identity`, `:feature:transport`, `:data:database` | 88 |
+| `:data:database` | `data/database` | `:core`, `:core:protocol` | 80 |
+| `:feature:contactimport` | `feature/contactimport` | `:core`, `:core:ui`, `:feature:contacts`, `:feature:identity`, `:feature:invite`, `:data:database`, `:core:protocol` | 13 |
+| `:feature:autoreply` | `feature/autoreply` | `:core`, `:core:ui`, `:data:database` | 19 |
+| `:feature:avatar` | `feature/avatar` | `:core`, `:core:protocol`, `:core:ui`, `:feature:media` | 28 |
+| `:feature:linkpreview` | `feature/linkpreview` | `:core`, `:core:ui`, `:data:database` | 14 |
+| `:feature:chats` | `feature/chats` | `:core`, `:data:datastore`, `:core:crypto`, `:core:protocol`, `:core:ui`, `:feature:avatar`, `:data:database`, `:feature:autoreply`, `:feature:contactimport`, `:feature:contacts`, `:feature:conversationorchestration`, `:feature:attachments`, `:feature:identity`, `:feature:media`, `:feature:membership`, `:feature:voice`, `:feature:linkpreview`, `:feature:safety`, `:feature:transport` | 283 |
+| `:feature:conversationorchestration` | `feature/conversationorchestration` | `:core`, `:core:crypto`, `:core:protocol`, `:feature:contacts`, `:feature:identity`, `:feature:invite`, `:feature:membership`, `:feature:messaging`, `:feature:transport` | 57 |
+| `:feature:membership` | `feature/membership` | `:core`, `:core:crypto`, `:core:protocol`, `:data:database`, `:data:datastore` | 125 |
+| `:feature:attachments` | `feature/attachments` | `:core`, `:core:crypto`, `:core:protocol`, `:core:ui`, `:data:database`, `:feature:media`, `:feature:transport` | 66 |
+| `:feature:media` | `feature/media` | `:core`, `:core:ui` | 66 |
+| `:feature:voice` | `feature/voice` | `:core`, `:core:protocol`, `:core:ui`, `:data:datastore`, `:feature:attachments` | 51 |
+| `:core:crypto` | `core/crypto` | — | 43 |
+| `:core:protocol` | `core/protocol` | `:core`, `:core:crypto` | 109 |
+| `:feature:messaging` | `feature/messaging` | `:core`, `:core:protocol` | 21 |
+| `:feature:transport` | `feature/transport` | `:core`, `:data:datastore`, `:core:crypto`, `:core:protocol` | 89 |
+| `:feature:onboarding` | `feature/onboarding` | `:core:ui`, `:feature:identity`, `:feature:media` | 7 |
+| `:startup` | `startup` | `:core`, `:core:ui`, `:core:embedding`, `:feature:identity`, `:feature:onboarding`, `:feature:search`, `:feature:safety`, `:feature:transport` | 9 |
+| `:navigation` | `navigation` | `:core`, `:core:ui`, `:feature:attachments`, `:feature:autoreply`, `:feature:chats`, `:feature:contactimport`, `:feature:contacts`, `:feature:conversationorchestration`, `:feature:identity`, `:feature:invite`, `:feature:membership`, `:feature:media`, `:feature:onboarding`, `:feature:settings`, `:feature:search`, `:feature:safety`, `:notification`, `:startup` | 5 |
+| `:notification` | `notification` | `:core`, `:core:crypto`, `:feature:chats`, `:feature:messaging`, `:feature:transport`, `:core:protocol`, `:resources` | 25 |
+| `:core:ui` | `core/ui` | `:resources`, `:core` | 44 |
+| `:feature:settings` | `feature/settings` | `:core`, `:data:datastore`, `:core:embedding`, `:core:ui`, `:feature:identity`, `:feature:contacts`, `:feature:avatar`, `:feature:autoreply`, `:feature:voice`, `:feature:search`, `:feature:safety` | 67 |
+| `:feature:search` | `feature/search` | `:core`, `:core:embedding`, `:core:ui`, `:data:database` | 22 |
+| `:feature:safety` | `feature/safety` | `:core`, `:core:embedding`, `:core:ui`, `:data:database`, `:feature:contacts` | 24 |
+| `:quality:detekt-rules` | `quality/detekt-rules` | — | 10 |
+| `:resources` | `resources` | — | 0 |
+| `:server:protocol` | `server/protocol` | — | 35 |
+| `:server:security` | `server/security` | `:server:protocol` | 22 |
+| `:server:persistence` | `server/persistence` | `:server:protocol` | 3 |
+| `:server:observability` | `server/observability` | — | 1 |
+| `:server:node-registry` | `server/node-registry` | `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability` | 15 |
+| `:server:presence-directory` | `server/presence-directory` | `:server:persistence`, `:server:protocol`, `:server:security`, `:server:observability` | 7 |
+| `:server:gateway` | `server/gateway` | `:server:persistence`, `:server:protocol`, `:server:security`, `:server:observability`, `:server:linkPreview` | 32 |
+| `:server:federation` | `server/federation` | `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability` | 21 |
+| `:server:mailbox` | `server/mailbox` | `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability` | 14 |
+| `:server:push` | `server/push` | `:server:protocol`, `:server:persistence`, `:server:security`, `:server:observability` | 18 |
+| `:server:link-preview` | `server/link-preview` | `:server:protocol` | 8 |

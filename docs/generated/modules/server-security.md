@@ -1,36 +1,34 @@
 # `:server:security`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/security`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `security` |
-| Group | `server` |
-| Directory | `server/security` |
-| Build file | `server/security/build.gradle.kts` |
-| Kotlin files | 19 |
-| Production Kotlin files | 15 |
-| Test Kotlin files | 4 |
-| Resource files | 0 |
-| Direct dependencies | 1 |
-| Direct dependents | 6 |
+- `:server:protocol`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:protocol`](../modules/server-protocol.md)
-
-## Dependents
-
-- [`:server:federation`](../modules/server-federation.md)
-- [`:server:gateway`](../modules/server-gateway.md)
-- [`:server:mailbox`](../modules/server-mailbox.md)
-- [`:server:node-registry`](../modules/server-node-registry.md)
-- [`:server:presence-directory`](../modules/server-presence-directory.md)
-- [`:server:push`](../modules/server-push.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `BoundedRateLimiter` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/RequestRateLimiting.kt` |
+| `ClientRateLimitKeys` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/RequestRateLimiting.kt` |
+| `ClientRoutingIds` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/ClientRoutingIds.kt` |
+| `CommandLineOutput` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/CommandLineOutput.kt` |
+| `InternalApiAuthentication` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/InternalApiAuthentication.kt` |
+| `NodeIdentity` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeIdentity.kt` |
+| `NodeIdentityStore` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeIdentityStore.kt` |
+| `NodeIds` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeIds.kt` |
+| `NodeRequestAuthentication` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthentication.kt` |
+| `NodeRequestAuthorizationRequirements` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthorizer.kt` |
+| `NodeRequestAuthorizer` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthorizer.kt` |
+| `NodeRequestHeaders` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthentication.kt` |
+| `NodeRequestSignatureCli` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestSignatureCli.kt` |
+| `NodeRequestSigner` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthentication.kt` |
+| `NodeRequestVerifier` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/NodeRequestAuthentication.kt` |
+| `PresenceRouteRegistrationCli` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/PresenceRouteRegistrationCli.kt` |
+| `ProtocolSignatures` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/ProtocolSignatures.kt` |
+| `RateLimitDecision` | `interface` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/RequestRateLimiting.kt` |
+| `RateLimitPolicy` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/RequestRateLimiting.kt` |
+| `RegistryCertificateSignatures` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/RegistryCertificateSignatures.kt` |
+| `ReplayProtection` | `class` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/ReplayProtection.kt` |
+| `Signatures` | `object` | `main` | `server/security/src/main/kotlin/com/cbgm/sparrow/server/security/Signatures.kt` |
