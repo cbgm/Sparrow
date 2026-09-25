@@ -680,25 +680,72 @@ jobs:
           # Both downloadable platform packages contain the SAME unified installer.
           # The Windows download is ZIP; the Linux/macOS download is TAR.GZ.
 
-      - name: Prepare unified Windows and macOS/Linux artifacts
+      - name: Validate and prepare public unified server artifacts
         shell: bash
         run: |
           set -euo pipefail
+
+          rm -rf dist/server/windows dist/server/macos-linux
           mkdir -p dist/server/windows dist/server/macos-linux
           unzip -q dist-server/sparrow-server.zip -d dist/server/windows
-          cp -a dist/server/windows/. dist/server/macos-linux/
-          for required in \
-            Start-SparrowServer.cmd \
-            Start-SparrowServer.sh \
-            Start-SparrowServer.command \
-            Invoke-SparrowServer.py \
-            control-plane/docker-compose.yml \
-            community-node/docker-compose.yml; do
-            test -f "dist/server/windows/${required}" || {
-              echo "::error::Unified installer is missing ${required}." >&2
+
+          required=(
+            Start-SparrowServer.cmd
+            Start-SparrowServer.sh
+            Start-SparrowServer.command
+            Invoke-SparrowServer.py
+            Manage-SparrowNodes.py
+            control_plane_directory_client.py
+            control_plane_directory_registration.py
+            control_plane_directory_sync.py
+            directory-registration/Dockerfile
+            directory-sync/Dockerfile
+            public-proxy/docker-compose.yml
+            control-plane/docker-compose.yml
+            control-plane/docker-compose.release.yml
+            control-plane/docker-compose.production.yml
+            control-plane/docker-compose.shared-proxy.yml
+            control-plane/docker-compose.firebase.yml
+            community-node/docker-compose.yml
+            community-node/docker-compose.release.yml
+            community-node/docker-compose.production.yml
+            community-node/docker-compose.shared-proxy.yml
+            community-node/docker-compose.directory-sync.yml
+          )
+
+          for required_file in "${required[@]}"; do
+            if [[ ! -f "dist/server/windows/${required_file}" ]]; then
+              echo "::error::Public unified installer is missing ${required_file}." >&2
               exit 1
-            }
+            fi
           done
+
+          # The release may contain Directory CLIENT/SYNC support, but never the
+          # independently operated Control Plane Directory server or its admin tooling.
+          forbidden_names=(
+            directory_service.py
+            directory_admin_cli.py
+            Build-SparrowDirectoryInstaller.py
+            Start-SparrowDirectory.cmd
+            Start-SparrowDirectory.ps1
+            Start-SparrowDirectory.sh
+          )
+
+          if find dist/server/windows -type d \
+              \( -path '*/control-plane-directory' -o -path '*/server/control-plane-directory' \) \
+              -print -quit | grep -q .; then
+            echo "::error::Internal Control Plane Directory directory leaked into the public release bundle." >&2
+            exit 1
+          fi
+
+          for forbidden_name in "${forbidden_names[@]}"; do
+            if find dist/server/windows -type f -name "${forbidden_name}" -print -quit | grep -q .; then
+              echo "::error::Internal Directory file ${forbidden_name} leaked into the public release bundle." >&2
+              exit 1
+            fi
+          done
+
+          cp -a dist/server/windows/. dist/server/macos-linux/
 
       - name: Upload unified Windows server installer
         uses: actions/upload-artifact@v4
@@ -739,7 +786,7 @@ jobs:
             echo
             echo "Immutable server image tag: \`${{ needs.metadata.outputs.image_tag }}\`"
             echo
-            echo "Unified server installer packaged for Windows and macOS/Linux (both include Control Plane and Community Node)."
+            echo "Unified public server installer packaged for Windows and macOS/Linux (Control Plane + Community Node; internal Directory server excluded)."
             echo "Only changed server images were rebuilt; unchanged images were reused or aliased to the immutable candidate tag."
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -829,8 +876,8 @@ jobs:
           Packages:
           - Debug Android APK
           - Signed release Android APK
-          - Unified Windows server installer (Control Plane + Community Node)
-          - Unified macOS/Linux server installer (Control Plane + Community Node)
+          - Unified Windows server installer (Control Plane + Community Node; no internal Directory server)
+          - Unified macOS/Linux server installer (Control Plane + Community Node; no internal Directory server)
           - sparrow-server.zip (stable updater asset)
           EOF_RELEASE
 

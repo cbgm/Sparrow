@@ -1,0 +1,330 @@
+name: Sparrow unified server bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional GHCR tag for this internal build
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: sparrow-unified-server-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_VERSION: "21"
+
+jobs:
+  build-internal-server-bundles:
+    name: Build internal server bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve internal image tag
+        id: images
+        shell: bash
+        env:
+          REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image_prefix="ghcr.io/${owner}/sparrow"
+          requested="${REQUESTED_IMAGE_TAG:-}"
+
+          if [[ -n "${requested}" ]]; then
+            if [[ ! "${requested}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+              echo "::error::Invalid Docker image tag: ${requested}" >&2
+              exit 1
+            fi
+            image_tag="${requested}"
+          else
+            image_tag="internal-sha-${GITHUB_SHA}"
+          fi
+
+          {
+            echo "image_prefix=${image_prefix}"
+            echo "image_tag=${image_tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Internal image prefix: ${image_prefix}"
+          echo "Internal image tag: ${image_tag}"
+
+      - name: Build all public server distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew \
+            :server:node-registry:installDist \
+            :server:presence-directory:installDist \
+            :server:push:installDist \
+            :server:mailbox:installDist \
+            :server:federation:installDist \
+            :server:gateway:installDist \
+            --no-daemon \
+            --no-configuration-cache \
+            --max-workers=2 \
+            --console=plain
+
+      - name: Publish complete internal server image set
+        shell: bash
+        env:
+          IMAGE_PREFIX: ${{ steps.images.outputs.image_prefix }}
+          IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          created_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          context_root="${RUNNER_TEMP}/sparrow-internal-images"
+          rm -rf "${context_root}"
+          mkdir -p "${context_root}"
+
+          services=(
+            node-registry
+            presence-directory
+            push
+            mailbox
+            federation
+            gateway
+          )
+
+          for service in "${services[@]}"; do
+            distribution="server/${service}/build/install/${service}"
+            if [[ ! -f "${distribution}/bin/${service}" ]]; then
+              echo "::error::Missing server distribution ${distribution}." >&2
+              exit 1
+            fi
+
+            context="${context_root}/${service}"
+            mkdir -p "${context}/app" "${context}/data"
+            cp -a "${distribution}/." "${context}/app/"
+            touch "${context}/data/.keep"
+            cp server/Dockerfile.runtime "${context}/Dockerfile"
+
+            image="${IMAGE_PREFIX}-${service}"
+            echo "Publishing ${image}:${IMAGE_TAG}"
+
+            docker buildx build \
+              --file "${context}/Dockerfile" \
+              --platform linux/amd64,linux/arm64 \
+              --build-arg "SERVICE=${service}" \
+              --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+              --label "org.opencontainers.image.created=${created_at}" \
+              --provenance=false \
+              --push \
+              --tag "${image}:${IMAGE_TAG}" \
+              "${context}"
+          done
+
+      - name: Build public unified Sparrow server installer
+        shell: pwsh
+        env:
+          IMAGE_PREFIX: ${{ steps.images.outputs.image_prefix }}
+          IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+          CONTROL_PLANE_DIRECTORY_PUBLIC_KEY: ${{ vars.CONTROL_PLANE_DIRECTORY_PUBLIC_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./server/unified/New-SparrowServerBundle.ps1 `
+              -OutputDirectory dist-internal-server `
+              -ImagePrefix $env:IMAGE_PREFIX `
+              -ImageTag $env:IMAGE_TAG
+
+          $bundle = 'dist-internal-server/sparrow-server.zip'
+          if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
+              throw 'Unified Sparrow server bundle was not created.'
+          }
+
+      - name: Verify public bundle contents and directory-server exclusion
+        shell: python
+        run: |
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          bundle = Path("dist-internal-server/sparrow-server.zip")
+          required = {
+              "Start-SparrowServer.cmd",
+              "Start-SparrowServer.sh",
+              "Start-SparrowServer.command",
+              "Invoke-SparrowServer.py",
+              "Manage-SparrowNodes.py",
+              "control_plane_directory_client.py",
+              "control_plane_directory_registration.py",
+              "control_plane_directory_sync.py",
+              "directory-registration/Dockerfile",
+              "directory-sync/Dockerfile",
+              "public-proxy/docker-compose.yml",
+              "community-node/docker-compose.yml",
+              "community-node/docker-compose.release.yml",
+              "community-node/docker-compose.production.yml",
+              "community-node/docker-compose.shared-proxy.yml",
+              "community-node/docker-compose.directory-sync.yml",
+              "control-plane/docker-compose.yml",
+              "control-plane/docker-compose.release.yml",
+              "control-plane/docker-compose.production.yml",
+              "control-plane/docker-compose.shared-proxy.yml",
+              "control-plane/docker-compose.firebase.yml",
+          }
+          forbidden_prefixes = (
+              "control-plane-directory/",
+              "server/control-plane-directory/",
+          )
+          forbidden_names = {
+              "directory_service.py",
+              "directory_admin_cli.py",
+              "Build-SparrowDirectoryInstaller.py",
+              "Start-SparrowDirectory.cmd",
+              "Start-SparrowDirectory.ps1",
+              "Start-SparrowDirectory.sh",
+          }
+
+          with zipfile.ZipFile(bundle) as archive:
+              entries = {entry.filename.rstrip("/") for entry in archive.infolist()}
+
+          missing = sorted(required - entries)
+          if missing:
+              print("Public unified server bundle is missing required files:", file=sys.stderr)
+              for name in missing:
+                  print(f"  - {name}", file=sys.stderr)
+              raise SystemExit(1)
+
+          leaked = sorted(
+              name
+              for name in entries
+              if any(name.startswith(prefix) for prefix in forbidden_prefixes)
+              or Path(name).name in forbidden_names
+          )
+          if leaked:
+              print("Internal Control Plane Directory files leaked into the public bundle:", file=sys.stderr)
+              for name in leaked:
+                  print(f"  - {name}", file=sys.stderr)
+              raise SystemExit(1)
+
+          print(f"Validated {len(entries)} public bundle entries; internal Directory server is excluded.")
+
+      - name: Prepare Windows and Linux unified server artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist-artifacts/server-windows dist-artifacts/server-linux
+          mkdir -p dist-artifacts/server-windows dist-artifacts/server-linux
+          unzip -q dist-internal-server/sparrow-server.zip -d dist-artifacts/server-windows
+          cp -a dist-artifacts/server-windows/. dist-artifacts/server-linux/
+
+      - name: Build internal Control Plane Directory installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 server/control-plane-directory/Build-SparrowDirectoryInstaller.py \
+            --output-dir dist-internal-directory
+
+          rm -rf dist-artifacts/directory-windows dist-artifacts/directory-linux
+          mkdir -p dist-artifacts/directory-windows dist-artifacts/directory-linux
+          unzip -q dist-internal-directory/sparrow-directory-windows.zip \
+            -d dist-artifacts/directory-windows
+          unzip -q dist-internal-directory/sparrow-directory-linux.zip \
+            -d dist-artifacts/directory-linux
+
+          test -f dist-artifacts/directory-windows/Start-SparrowDirectory.cmd
+          test -f dist-artifacts/directory-windows/Start-SparrowDirectory.ps1
+          test -f dist-artifacts/directory-windows/directory_service.py
+          test -f dist-artifacts/directory-windows/docker-compose.yml
+
+          test -f dist-artifacts/directory-linux/Start-SparrowDirectory.sh
+          test -f dist-artifacts/directory-linux/directory_service.py
+          test -f dist-artifacts/directory-linux/docker-compose.yml
+
+      - name: Upload unified Windows server bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-server-internal-windows
+          path: dist-artifacts/server-windows
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+      - name: Upload unified Linux server bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-server-internal-linux
+          path: dist-artifacts/server-linux
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+      - name: Upload internal Directory Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-control-plane-directory-internal-windows
+          path: dist-artifacts/directory-windows
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+      - name: Upload internal Directory Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-control-plane-directory-internal-linux
+          path: dist-artifacts/directory-linux
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+      - name: Summarize internal build
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
+        run: |
+          {
+            echo "## Sparrow internal server build"
+            echo
+            echo "Published public server images with tag: \`${IMAGE_TAG}\`"
+            echo
+            echo "Artifacts:"
+            echo "- Windows unified Sparrow server bundle"
+            echo "- Linux unified Sparrow server bundle"
+            echo "- Windows internal Control Plane Directory bundle"
+            echo "- Linux internal Control Plane Directory bundle"
+            echo
+            echo "The normal unified server bundle was verified to exclude the internal Directory server."
+          } >> "${GITHUB_STEP_SUMMARY}"
