@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/gateway` |
 | Build file | `server/gateway/build.gradle.kts` |
-| Kotlin files | 22 |
-| Production Kotlin files | 17 |
+| Kotlin files | 24 |
+| Production Kotlin files | 19 |
 | Test Kotlin files | 5 |
 | Resource files | 0 |
-| Direct dependencies | 4 |
+| Direct dependencies | 5 |
 | Direct dependents | 0 |
 
 ## Source sets
@@ -24,6 +24,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependencies
 
+- [`:server:link-preview`](../modules/server-link-preview.md)
 - [`:server:observability`](../modules/server-observability.md)
 - [`:server:persistence`](../modules/server-persistence.md)
 - [`:server:protocol`](../modules/server-protocol.md)

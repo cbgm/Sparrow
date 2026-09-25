@@ -1,4 +1,4 @@
-# `:feature:media`
+# `:feature:voice`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,16 +6,16 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `media` |
+| Name | `voice` |
 | Group | `feature` |
-| Directory | `feature/media` |
-| Build file | `feature/media/build.gradle.kts` |
-| Kotlin files | 77 |
-| Production Kotlin files | 76 |
+| Directory | `feature/voice` |
+| Build file | `feature/voice/build.gradle.kts` |
+| Kotlin files | 50 |
+| Production Kotlin files | 49 |
 | Test Kotlin files | 1 |
 | Resource files | 2 |
-| Direct dependencies | 2 |
-| Direct dependents | 6 |
+| Direct dependencies | 5 |
+| Direct dependents | 3 |
 
 ## Source sets
 
@@ -27,13 +27,13 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependencies
 
 - [`:core`](../modules/core.md)
+- [`:core:protocol`](../modules/core-protocol.md)
 - [`:core:ui`](../modules/core-ui.md)
+- [`:data:datastore`](../modules/data-datastore.md)
+- [`:feature:attachments`](../modules/feature-attachments.md)
 
 ## Dependents
 
-- [`:feature:attachments`](../modules/feature-attachments.md)
-- [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:onboarding`](../modules/feature-onboarding.md)
-- [`:navigation`](../modules/navigation.md)
+- [`:feature:settings`](../modules/feature-settings.md)
 - [`:shared`](../modules/shared.md)

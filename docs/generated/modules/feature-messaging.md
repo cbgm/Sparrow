@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/messaging` |
 | Build file | `feature/messaging/build.gradle.kts` |
-| Kotlin files | 33 |
-| Production Kotlin files | 30 |
-| Test Kotlin files | 3 |
+| Kotlin files | 26 |
+| Production Kotlin files | 19 |
+| Test Kotlin files | 7 |
 | Resource files | 1 |
-| Direct dependencies | 7 |
-| Direct dependents | 2 |
+| Direct dependencies | 2 |
+| Direct dependents | 3 |
 
 ## Source sets
 
@@ -26,14 +26,10 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependencies
 
 - [`:core`](../modules/core.md)
-- [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:protocol`](../modules/core-protocol.md)
-- [`:data:database`](../modules/data-database.md)
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:transport`](../modules/feature-transport.md)
 
 ## Dependents
 
+- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
 - [`:notification`](../modules/notification.md)
 - [`:shared`](../modules/shared.md)

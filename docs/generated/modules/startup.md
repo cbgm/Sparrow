@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `startup` |
 | Directory | `startup` |
 | Build file | `startup/build.gradle.kts` |
-| Kotlin files | 10 |
-| Production Kotlin files | 10 |
+| Kotlin files | 12 |
+| Production Kotlin files | 12 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
-| Direct dependencies | 7 |
+| Direct dependencies | 8 |
 | Direct dependents | 2 |
 
 ## Source sets
@@ -24,6 +24,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependencies
 
+- [`:core`](../modules/core.md)
 - [`:core:embedding`](../modules/core-embedding.md)
 - [`:core:ui`](../modules/core-ui.md)
 - [`:feature:identity`](../modules/feature-identity.md)

@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `navigation` |
 | Directory | `navigation` |
 | Build file | `navigation/build.gradle.kts` |
-| Kotlin files | 16 |
-| Production Kotlin files | 16 |
+| Kotlin files | 18 |
+| Production Kotlin files | 18 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 14 |
+| Direct dependencies | 18 |
 | Direct dependents | 1 |
 
 ## Source sets
@@ -26,11 +26,15 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:core`](../modules/core.md)
 - [`:core:ui`](../modules/core-ui.md)
 - [`:feature:attachments`](../modules/feature-attachments.md)
+- [`:feature:autoreply`](../modules/feature-autoreply.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
+- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:invite`](../modules/feature-invite.md)
 - [`:feature:media`](../modules/feature-media.md)
+- [`:feature:membership`](../modules/feature-membership.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:search`](../modules/feature-search.md)

@@ -1,4 +1,4 @@
-# `:feature:transport`
+# `:feature:membership`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,16 +6,16 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `transport` |
+| Name | `membership` |
 | Group | `feature` |
-| Directory | `feature/transport` |
-| Build file | `feature/transport/build.gradle.kts` |
-| Kotlin files | 78 |
-| Production Kotlin files | 63 |
-| Test Kotlin files | 15 |
-| Resource files | 1 |
-| Direct dependencies | 4 |
-| Direct dependents | 7 |
+| Directory | `feature/membership` |
+| Build file | `feature/membership/build.gradle.kts` |
+| Kotlin files | 116 |
+| Production Kotlin files | 110 |
+| Test Kotlin files | 6 |
+| Resource files | 0 |
+| Direct dependencies | 5 |
+| Direct dependents | 4 |
 
 ## Source sets
 
@@ -23,21 +23,18 @@ Generated automatically by `./gradlew architectureReport`.
 - `androidMain`
 - `commonMain`
 - `commonTest`
-- `iosMain`
 
 ## Dependencies
 
 - [`:core`](../modules/core.md)
 - [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:protocol`](../modules/core-protocol.md)
+- [`:data:database`](../modules/data-database.md)
 - [`:data:datastore`](../modules/data-datastore.md)
 
 ## Dependents
 
-- [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
-- [`:notification`](../modules/notification.md)
+- [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)

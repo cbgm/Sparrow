@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `notification` |
 | Directory | `notification` |
 | Build file | `notification/build.gradle.kts` |
-| Kotlin files | 27 |
-| Production Kotlin files | 26 |
+| Kotlin files | 28 |
+| Production Kotlin files | 27 |
 | Test Kotlin files | 1 |
 | Resource files | 1 |
-| Direct dependencies | 6 |
+| Direct dependencies | 7 |
 | Direct dependents | 2 |
 
 ## Source sets
@@ -27,6 +27,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [`:core`](../modules/core.md)
 - [`:core:crypto`](../modules/core-crypto.md)
+- [`:core:protocol`](../modules/core-protocol.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:feature:transport`](../modules/feature-transport.md)
