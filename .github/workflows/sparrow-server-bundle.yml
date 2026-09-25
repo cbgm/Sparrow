@@ -1,6 +1,16 @@
 name: Sparrow server bundle
 
 on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "server/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "gradle.properties"
+      - "settings.gradle.kts"
+      - ".github/workflows/sparrow-server-bundle.yml"
   workflow_dispatch:
     inputs:
       image_tag:
