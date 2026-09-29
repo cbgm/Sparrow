@@ -12,6 +12,7 @@ data class SettingsUiState(
     val activeAutoReplyName: String? = null,
     val directIdentitySetupMode: DirectIdentitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
     val blockUnknownContactInvites: Boolean = false,
+    val appLockEnabled: Boolean = false,
     val blockedContactCount: Int = 0,
     val localEmbeddingState: LocalEmbeddingState = LocalEmbeddingState(),
     val semanticSearchState: SemanticSearchState = SemanticSearchState.Disabled,

@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.di.cryptoModule
 import com.cbgm.sparrow.core.embedding.di.embeddingModule
 import com.cbgm.sparrow.core.protocol.di.protocolModule
 import com.cbgm.sparrow.core.ui.di.coreUiModule
+import com.cbgm.sparrow.feature.applock.di.appLockModule
 import com.cbgm.sparrow.feature.attachments.di.attachmentsModule
 import com.cbgm.sparrow.feature.autoreply.di.autoReplyModule
 import com.cbgm.sparrow.feature.avatar.di.avatarModule
@@ -34,6 +35,7 @@ internal val commonApplicationModules: List<Module> =
         embeddingModule,
         protocolModule,
         coreUiModule,
+        appLockModule,
         identityModule,
         onboardingModule,
         contactsModule,

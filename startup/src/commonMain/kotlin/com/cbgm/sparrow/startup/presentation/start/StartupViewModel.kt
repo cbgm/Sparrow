@@ -70,8 +70,8 @@ class StartupViewModel(
                 .onSuccess { result ->
                     StartupTrace.event("startup initializer result=$result")
                     initializationCompleted = result !is AppInitializationResult.IdentityRequired
-                    mutableUiState.value = result.toStartupUiState()
-                    StartupTrace.event("startup UI state published=$result")
+                    mutableUiState.value = resolveStartupState(result)
+                    StartupTrace.event("startup UI state published=${mutableUiState.value}")
                 }.onFailure { error ->
                     StartupTrace.event("startup initializer failure: ${error.message}")
                     SparrowLog.error("StartupViewModel", "Sparrow could not complete startup", error)
@@ -82,11 +82,13 @@ class StartupViewModel(
                 }
         }
     }
-}
 
-private fun AppInitializationResult.toStartupUiState(): StartupUiState =
-    when (this) {
-        AppInitializationResult.IdentityRequired -> StartupUiState.IdentityRequired
-        AppInitializationResult.ReadyOnline -> StartupUiState.Ready(StartupConnection.ONLINE)
-        AppInitializationResult.ReadyOffline -> StartupUiState.Ready(StartupConnection.OFFLINE)
-    }
+    private fun resolveStartupState(result: AppInitializationResult): StartupUiState =
+        when (result) {
+            AppInitializationResult.IdentityRequired -> StartupUiState.IdentityRequired
+            AppInitializationResult.ReadyOnline ->
+                StartupUiState.Ready(StartupConnection.ONLINE)
+            AppInitializationResult.ReadyOffline ->
+                StartupUiState.Ready(StartupConnection.OFFLINE)
+        }
+}

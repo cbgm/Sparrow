@@ -32,6 +32,8 @@ val startupModule =
         }
 
         viewModel {
-            StartupViewModel(appInitializer = get())
+            StartupViewModel(
+                appInitializer = get()
+            )
         }
     }
