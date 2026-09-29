@@ -8,6 +8,8 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -46,6 +48,8 @@ class SettingsViewModel(
     observeSettingsDomainContext: ObserveSettingsDomainContextUseCase,
     private val setDirectIdentitySetupMode: SetDirectIdentitySetupModeUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
+    observeAppLockEnabled: ObserveAppLockEnabledUseCase,
+    private val setAppLockEnabled: SetAppLockEnabledUseCase,
     private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase,
     private val setLocalEmbeddingFeatureEnabled: SetLocalEmbeddingFeatureEnabledUseCase,
     observeVoiceTranscriptionEnabled: ObserveVoiceTranscriptionEnabledUseCase,
@@ -80,13 +84,15 @@ class SettingsViewModel(
             domainContext,
             localState,
             observeVoiceTranscriptionEnabled(),
-            observeActiveAutoReply()
-        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply ->
+            observeActiveAutoReply(),
+            observeAppLockEnabled()
+        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply, appLockEnabled ->
             buildInfo.toSettingsUiState(
                 currentLanguage = local.currentLanguage,
                 activeAutoReplyName = activeAutoReply?.name,
                 identitySetupMode = domain.identitySetupMode,
                 blockUnknownContactInvites = domain.blockUnknownContactInvites,
+                appLockEnabled = appLockEnabled,
                 blockedContactCount = domain.blockedContactCount,
                 localEmbeddingState = domain.localEmbeddingState,
                 semanticSearchState = domain.semanticSearchState,
@@ -131,6 +137,7 @@ class SettingsViewModel(
             is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
+            is SettingsUiEvent.AppLockEnabledChanged -> changeAppLockEnabled(event.enabled)
             is SettingsUiEvent.SemanticSearchEnabledChanged -> changeSemanticSearchEnabled(event.enabled)
             is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             is SettingsUiEvent.VoiceTranscriptionEnabledChanged -> changeVoiceTranscriptionEnabled(event.enabled)
@@ -181,6 +188,19 @@ class SettingsViewModel(
     private fun changeBlockUnknownContactInvites(enabled: Boolean) {
         viewModelScope.launch {
             setBlockUnknownContactInvites(enabled)
+        }
+    }
+
+    private fun changeAppLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val result = setAppLockEnabled(enabled)
+            if (result.isFailure) {
+                SparrowLog.error(
+                    "SettingsViewModel",
+                    "App lock setting could not be changed",
+                    result.exceptionOrNull()
+                )
+            }
         }
     }
 

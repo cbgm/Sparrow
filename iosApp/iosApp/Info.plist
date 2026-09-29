@@ -14,5 +14,7 @@
     <string>Sparrow needs microphone access to record voice messages.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Sparrow uses on-device speech recognition when you choose to transcribe a voice message.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to unlock Sparrow.</string>
 </dict>
 </plist>

@@ -55,6 +55,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.navigation)
             implementation(projects.feature.autoreply)
+            implementation(projects.feature.applock)
             implementation(projects.feature.avatar)
             implementation(projects.feature.chats)
             implementation(projects.feature.attachments)

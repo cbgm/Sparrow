@@ -671,4 +671,14 @@
     <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
     <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
+
+    <string name="feature_applock_title">App-Sperre</string>
+    <string name="feature_applock_subtitle">Beim Öffnen von Sparrow Biometrie oder die Gerätesperre verlangen.</string>
+    <string name="feature_applock_prompt_title">Sparrow entsperren</string>
+    <string name="feature_applock_prompt_reason">Authentifiziere dich, um Sparrow zu öffnen.</string>
+    <string name="feature_applock_enable_reason">Authentifiziere dich, um die App-Sperre zu aktivieren.</string>
+    <string name="feature_applock_disable_reason">Authentifiziere dich, um die App-Sperre zu deaktivieren.</string>
+    <string name="feature_applock_unavailable">Geräteauthentifizierung ist nicht verfügbar. Richte Biometrie oder eine sichere Gerätesperre ein und versuche es erneut.</string>
+    <string name="feature_applock_authentication_failed">Authentifizierung fehlgeschlagen. Versuche es erneut.</string>
+    <string name="feature_applock_unlock_sparrow">Entsperre Sparrow</string>
 </resources>

@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.core.embedding)
             implementation(projects.feature.identity)
+            implementation(projects.feature.applock)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)

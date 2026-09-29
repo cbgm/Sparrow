@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
@@ -38,8 +39,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,12 +53,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationLauncher
+import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationResult
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -65,6 +73,13 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_developer
 import com.cbgm.sparrow.resources.base_language
 import com.cbgm.sparrow.resources.base_version
+import com.cbgm.sparrow.resources.feature_applock_authentication_failed
+import com.cbgm.sparrow.resources.feature_applock_disable_reason
+import com.cbgm.sparrow.resources.feature_applock_enable_reason
+import com.cbgm.sparrow.resources.feature_applock_prompt_title
+import com.cbgm.sparrow.resources.feature_applock_subtitle
+import com.cbgm.sparrow.resources.feature_applock_title
+import com.cbgm.sparrow.resources.feature_applock_unavailable
 import com.cbgm.sparrow.resources.feature_attachments_storage
 import com.cbgm.sparrow.resources.feature_attachments_storage_subtitle
 import com.cbgm.sparrow.resources.feature_auto_reply
@@ -125,6 +140,7 @@ fun SettingsScreen(
     val autoReplyName = remember(uiState) { derivedStateOf { uiState.value.activeAutoReplyName } }
     val identityMode = remember(uiState) { derivedStateOf { uiState.value.directIdentitySetupMode } }
     val blockUnknownInvites = remember(uiState) { derivedStateOf { uiState.value.blockUnknownContactInvites } }
+    val appLockEnabled = remember(uiState) { derivedStateOf { uiState.value.appLockEnabled } }
     val blockedCount = remember(uiState) { derivedStateOf { uiState.value.blockedContactCount } }
     val semanticEnabled = remember(uiState) { derivedStateOf { uiState.value.localEmbeddingState.semanticSearchEnabled } }
     val semanticState = remember(uiState) { derivedStateOf { uiState.value.semanticSearchState } }
@@ -166,6 +182,10 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_security)) {
+            AppLockSettingsRow(appLockEnabled, onUiEvent)
+
+            SettingsDivider()
+
             AutomaticSecureSetupRow(identityMode, onUiEvent)
 
             SettingsDivider()
@@ -255,6 +275,63 @@ private fun AutoReplySettingsRow(name: State<String?>, onUiEvent: (SettingsUiEve
         title = stringResource(Res.string.feature_auto_reply),
         subtitle = name.value ?: stringResource(Res.string.feature_auto_reply_off),
         onClick = { onUiEvent(SettingsUiEvent.AutoReplyClicked) }
+    )
+}
+
+@Composable
+private fun AppLockSettingsRow(
+    enabled: State<Boolean>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    var requestId by rememberSaveable { mutableIntStateOf(0) }
+    var pendingEnabled by rememberSaveable { mutableStateOf<Boolean?>(null) }
+
+    val promptTitle = stringResource(Res.string.feature_applock_prompt_title)
+    val enableReason = stringResource(Res.string.feature_applock_enable_reason)
+    val disableReason = stringResource(Res.string.feature_applock_disable_reason)
+    val unavailableMessage = stringResource(Res.string.feature_applock_unavailable)
+    val failedMessage = stringResource(Res.string.feature_applock_authentication_failed)
+
+    AppLockAuthenticationLauncher(
+        requestId = requestId,
+        enabled = pendingEnabled != null,
+        title = promptTitle,
+        reason = if (pendingEnabled == false) disableReason else enableReason,
+        onResult = { result ->
+            when (result) {
+                AppLockAuthenticationResult.Authenticated -> {
+                    pendingEnabled?.let { newValue ->
+                        onUiEvent(SettingsUiEvent.AppLockEnabledChanged(newValue))
+                    }
+                    pendingEnabled = null
+                }
+
+                AppLockAuthenticationResult.Cancelled -> {
+                    pendingEnabled = null
+                }
+
+                AppLockAuthenticationResult.Unavailable -> {
+                    pendingEnabled = null
+                    SparrowLog.hint(unavailableMessage)
+                }
+
+                is AppLockAuthenticationResult.Failed -> {
+                    pendingEnabled = null
+                    SparrowLog.hint(failedMessage)
+                }
+            }
+        }
+    )
+
+    SettingsSwitchRow(
+        icon = Icons.Default.Fingerprint,
+        title = stringResource(Res.string.feature_applock_title),
+        subtitle = stringResource(Res.string.feature_applock_subtitle),
+        checked = enabled.value,
+        onCheckedChange = { newValue ->
+            pendingEnabled = newValue
+            requestId += 1
+        }
     )
 }
 

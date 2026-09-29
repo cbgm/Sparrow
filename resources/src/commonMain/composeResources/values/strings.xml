@@ -667,4 +667,14 @@
     <string name="feature_settings_control_planes_manually_added">Manually added Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node discovery</string>
     <string name="feature_invite_group_identity_review_required">Review the inviting contact’s changed identity above before accepting this group invitation.</string>
+
+    <string name="feature_applock_title">App lock</string>
+    <string name="feature_applock_subtitle">Require biometrics or your device screen lock when opening Sparrow.</string>
+    <string name="feature_applock_prompt_title">Unlock Sparrow</string>
+    <string name="feature_applock_prompt_reason">Authenticate to open Sparrow.</string>
+    <string name="feature_applock_enable_reason">Authenticate to enable app lock.</string>
+    <string name="feature_applock_disable_reason">Authenticate to disable app lock.</string>
+    <string name="feature_applock_unavailable">Device authentication is unavailable. Set up biometrics or a secure screen lock and try again.</string>
+    <string name="feature_applock_authentication_failed">Authentication failed. Try again.</string>
+    <string name="feature_applock_unlock_sparrow">Unlock Sparrow</string>
 </resources>
