@@ -48,6 +48,26 @@ function Validate-Hostname([string]$Name) {
     }
     return $Name
 }
+function Get-AutomaticDirectoryIPv4([string]$Name) {
+    if ([string]::IsNullOrWhiteSpace($Name) -or
+        $Name.ToLowerInvariant() -notmatch '^directory-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io$') { return '' }
+    $candidate = $Matches[1].Replace('-', '.')
+    $address = $null
+    if (-not [Net.IPAddress]::TryParse($candidate, [ref]$address) -or
+        $address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) { return '' }
+    return $candidate
+}
+function Get-CurrentPublicIPv4 {
+    foreach ($uri in @('https://api.ipify.org','https://ipv4.icanhazip.com')) {
+        try {
+            $value = ([string](Invoke-RestMethod -Uri $uri -TimeoutSec 8)).Trim()
+            $address = $null
+            if ([Net.IPAddress]::TryParse($value, [ref]$address) -and
+                $address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork) { return $value }
+        } catch { }
+    }
+    return ''
+}
 function Directory-Route([string]$Name) {
     return @"
 $beginRoute
@@ -233,7 +253,18 @@ function Install-Directory([string]$CombinedRoot,[string]$Hostname) {
         if ($currentRoute -and $previousHost -and
             $currentRoute -ne (Directory-Route $previousHost) -and
             $currentRoute -ne (Directory-Route $previousHost).Replace(' /.well-known/sparrow-directory','')) {
-            throw 'Existing Directory proxy route differs from the last installer configuration; unchanged.'
+            # The unified server may already have reconciled a generated
+            # directory-<IP>.sslip.io route after a WAN-IP change. Accept that
+            # one exact automatic move when the requested hostname matches the
+            # live installer-owned route; custom host changes remain guarded.
+            $automaticRotation = (Get-AutomaticDirectoryIPv4 $previousHost) -and
+                (Get-AutomaticDirectoryIPv4 $Hostname) -and
+                ($currentRoute -eq (Directory-Route $Hostname) -or
+                 $currentRoute -eq (Directory-Route $Hostname).Replace(' /.well-known/sparrow-directory',''))
+            if (-not $automaticRotation) {
+                throw 'Existing Directory proxy route differs from the last installer configuration; unchanged.'
+            }
+            Write-Output "Detected automatic Directory hostname rotation: $previousHost -> $Hostname (signing identity unchanged)."
         }
         if ($currentRoute -and -not $previousHost -and $currentRoute -ne (Directory-Route $Hostname) -and
             $currentRoute -ne (Directory-Route $Hostname).Replace(' /.well-known/sparrow-directory','')) {
@@ -402,16 +433,16 @@ $domainInput = [Windows.Forms.TextBox]::new()
 $domainInput.Location = [Drawing.Point]::new(18,162)
 $domainInput.Size = [Drawing.Size]::new(707,24)
 $storedHost = Join-Path $privateFolder 'directory-host.txt'
+$currentPublicIp = Get-CurrentPublicIPv4
 if (Test-Path -LiteralPath $storedHost) {
-    $domainInput.Text = [IO.File]::ReadAllText($storedHost).Trim()
-} else {
-    try {
-        $ipv4 = [string](Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 8)
-        $address = [Net.IPAddress]::Parse($ipv4.Trim())
-        if ($address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork) {
-            $domainInput.Text = 'directory-' + $ipv4.Trim().Replace('.','-') + '.sslip.io'
-        }
-    } catch { }
+    $savedDirectoryHost = [IO.File]::ReadAllText($storedHost).Trim()
+    if ($currentPublicIp -and (Get-AutomaticDirectoryIPv4 $savedDirectoryHost)) {
+        $domainInput.Text = 'directory-' + $currentPublicIp.Replace('.','-') + '.sslip.io'
+    } else {
+        $domainInput.Text = $savedDirectoryHost
+    }
+} elseif ($currentPublicIp) {
+    $domainInput.Text = 'directory-' + $currentPublicIp.Replace('.','-') + '.sslip.io'
 }
 $form.Controls.Add($domainInput)
 $installButton = [Windows.Forms.Button]::new()

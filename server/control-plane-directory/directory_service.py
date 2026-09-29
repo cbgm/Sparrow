@@ -260,10 +260,25 @@ class DirectoryStore:
                 if prior:
                     if prior[2] == 'revoked':
                         raise ValueError("Revoked identity cannot register again")
-                    if prior[0] != record[1] or prior[1] != record[2]:
-                        raise ValueError("Identity/endpoint rotation requires a separate authenticated process")
-                    # Existing approved registration is idempotent: do not
-                    # create duplicate rows or increment the directory version.
+                    if prior[1] != record[2]:
+                        raise ValueError("Control-plane public-key rotation requires explicit operator recovery")
+                    if prior[0] != record[1]:
+                        # Endpoint rotation is allowed only for the SAME approved
+                        # identity after the fresh private-key + HTTPS ownership
+                        # proof above. Never let it take an endpoint already owned
+                        # by another approved identity.
+                        taken = self.db.execute(
+                            "SELECT 1 FROM registrations WHERE base_url=? AND status='approved' AND plane_id<>?",
+                            (record[1], record[0])).fetchone()
+                        if taken:
+                            raise ValueError("Endpoint already belongs to another Control Plane")
+                        self.db.execute(
+                            "UPDATE registrations SET base_url=?, proof=?, proof_expires=?, created=? "
+                            "WHERE plane_id=? AND status='approved'",
+                            (record[1], signature, record[3], self.clock(), record[0]))
+                        self.db.execute("UPDATE state SET value=value+1 WHERE name='version'")
+                    # Same identity + same endpoint is idempotent and does not
+                    # increment the signed directory version.
                 else:
                     taken = self.db.execute(
                         "SELECT 1 FROM registrations WHERE base_url=? AND status='approved'",

@@ -116,9 +116,14 @@ def register(directory_url: str, plane_url: str, public_key: str, identity_file:
         raise DirectoryError("This Control Plane identity was revoked; operator recovery required")
     for entry in contents['controlPlanes']:
         if entry['controlPlaneId'] == plane_id:
-            if entry['baseUrl'] != plane_url or entry['publicKey'] != encoded_pub:
-                raise DirectoryError("Existing directory identity has a different endpoint; operator review required")
-            return 'already-approved'
+            if entry['publicKey'] != encoded_pub:
+                raise DirectoryError("Existing directory identity has a different public key; operator review required")
+            if entry['baseUrl'] == plane_url:
+                return 'already-approved'
+            # Same cryptographic identity, new HTTPS endpoint. Continue through
+            # the normal challenge flow: the existing private key must sign the
+            # new origin and the new origin must publish that exact proof.
+            continue
         if entry['baseUrl'] == plane_url:
             raise DirectoryError("Endpoint is already registered to another Control Plane identity")
 

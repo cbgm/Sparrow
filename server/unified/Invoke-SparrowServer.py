@@ -56,23 +56,69 @@ def public_ipv4(explicit=""):
     return str(address)
 
 
+def generated_sslip_ipv4(hostname, prefix):
+    match = re.fullmatch(re.escape(prefix) + r"-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io",
+                         (hostname or "").lower())
+    if not match:
+        return ""
+    raw = match.group(1).replace("-", ".")
+    try:
+        address = ipaddress.IPv4Address(raw)
+    except ipaddress.AddressValueError:
+        return ""
+    return str(address) if address.is_global else ""
+
+
+def rewrite_generated_https_origin(value, prefix, public_ip):
+    value = (value or "").strip()
+    if not value:
+        return value
+    parsed = urlparse(value)
+    if (parsed.scheme != "https" or parsed.username or parsed.password or parsed.query or
+            parsed.fragment or parsed.port not in (None, 443) or parsed.path not in ("", "/")):
+        return value
+    if not generated_sslip_ipv4(parsed.hostname or "", prefix):
+        return value
+    return f"https://{prefix}-{public_ip.replace('.', '-')}.sslip.io"
+
+
+def rewrite_generated_https_origins(value, prefix, public_ip):
+    return ",".join(rewrite_generated_https_origin(item.strip(), prefix, public_ip)
+                    for item in (value or "").split(",") if item.strip())
+
+
+def automatic_hostname(settings, prefix):
+    return (settings.get("PUBLIC_HOSTNAME_MODE") == "CaddyAutomatic" or
+            bool(generated_sslip_ipv4(settings.get("PUBLIC_DOMAIN", ""), prefix)))
+
+
 def resolve_public_hosts(args):
     if args.mode != "public":
         require(not args.auto_dns and not args.public_ip, "Automatic DNS is only available in Public mode.")
         return
     existing_cp = config("control-plane") if runtime("control-plane").is_file() else {}
     existing_node = config("node") if runtime("node").is_file() else {}
+    public_ip = public_ipv4(args.public_ip) if args.auto_dns else ""
+    setattr(args, "automatic_public_ip", public_ip)
+    slug = public_ip.replace(".", "-") if public_ip else ""
+
     if not args.control_domain and "control-plane" in selected(args.component):
-        args.control_domain = existing_cp.get("PUBLIC_DOMAIN", "")
+        if args.auto_dns and (not existing_cp or automatic_hostname(existing_cp, "control")):
+            args.control_domain = f"control-{slug}.sslip.io"
+        else:
+            args.control_domain = existing_cp.get("PUBLIC_DOMAIN", "")
     if not args.node_domain and "node" in selected(args.component):
-        args.node_domain = existing_node.get("PUBLIC_DOMAIN", "")
+        if args.auto_dns and (not existing_node or automatic_hostname(existing_node, "node")):
+            args.node_domain = f"node-{slug}.sslip.io"
+        else:
+            args.node_domain = existing_node.get("PUBLIC_DOMAIN", "")
+
+    # Fresh automatic installs still need generated values when no prior config exists.
     if args.auto_dns:
-        if not args.node_domain or not args.control_domain:
-            slug = public_ipv4(args.public_ip).replace(".", "-")
-            if "control-plane" in selected(args.component) and not args.control_domain:
-                args.control_domain = f"control-{slug}.sslip.io"
-            if "node" in selected(args.component) and not args.node_domain:
-                args.node_domain = f"node-{slug}.sslip.io"
+        if "control-plane" in selected(args.component) and not args.control_domain:
+            args.control_domain = f"control-{slug}.sslip.io"
+        if "node" in selected(args.component) and not args.node_domain:
+            args.node_domain = f"node-{slug}.sslip.io"
     validate_hosts(args.node_domain, args.control_domain)
 
 
@@ -395,7 +441,44 @@ def routes(component):
     return prefix.replace("root * /srv", f"root * {root}").rstrip()
 
 
-def render_proxy(entries):
+DIRECTORY_ROUTE_BEGIN = "# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE"
+DIRECTORY_ROUTE_END = "# END SPARROW INDEPENDENT DIRECTORY ROUTE"
+
+
+def managed_directory_route(contents):
+    start = contents.find(DIRECTORY_ROUTE_BEGIN)
+    end = contents.find(DIRECTORY_ROUTE_END)
+    require((start >= 0) == (end >= 0), "Incomplete managed Directory route; existing proxy preserved.")
+    if start < 0:
+        return ""
+    require(end > start and contents.find(DIRECTORY_ROUTE_BEGIN, start + len(DIRECTORY_ROUTE_BEGIN)) < 0 and
+            contents.find(DIRECTORY_ROUTE_END, end + len(DIRECTORY_ROUTE_END)) < 0,
+            "Ambiguous managed Directory route; existing proxy preserved.")
+    return contents[start:end + len(DIRECTORY_ROUTE_END)]
+
+
+def directory_route_hostname(route):
+    if not route:
+        return ""
+    for line in route.splitlines():
+        line = line.strip()
+        if not line or line in (DIRECTORY_ROUTE_BEGIN, DIRECTORY_ROUTE_END):
+            continue
+        match = re.fullmatch(r"([A-Za-z0-9.-]+)\s*\{", line)
+        require(match is not None, "Could not identify managed Directory hostname; existing proxy preserved.")
+        return match.group(1).lower()
+    raise InstallerError("Managed Directory route contains no hostname.")
+
+
+def rewrite_directory_route(route, public_ip):
+    host = directory_route_hostname(route)
+    if not host or not generated_sslip_ipv4(host, "directory"):
+        return route
+    new_host = f"directory-{public_ip.replace('.', '-')}.sslip.io"
+    return re.sub(r"(?m)^" + re.escape(host) + r"\s*\{", new_host + " {", route, count=1)
+
+
+def render_proxy(entries, public_ip=""):
     require(entries, "No Public components configured.")
     validate_hosts(next((host for component, host in entries if component == "node"), ""),
                    next((host for component, host in entries if component == "control-plane"), ""))
@@ -409,6 +492,13 @@ def render_proxy(entries):
     managed = ROOT / "node-instances" / "routes"
     if managed.is_dir() and any(managed.glob("*.caddy")):
         output_text = output_text.rstrip() + "\n\nimport /etc/caddy/node-routes/*.caddy\n"
+    existing_proxy = ROOT / "public-proxy" / "Caddyfile"
+    if existing_proxy.is_file():
+        route = managed_directory_route(existing_proxy.read_text(encoding="utf-8"))
+        if route:
+            if public_ip:
+                route = rewrite_directory_route(route, public_ip)
+            output_text = output_text.rstrip() + "\n\n" + route.strip() + "\n"
     return output_text
 
 
@@ -451,6 +541,91 @@ def update_installed_properties(path, updates):
     tmp.chmod(path.stat().st_mode & 0o777)
     tmp.replace(path)
     return True
+
+
+def reconcile_automatic_public_address(args):
+    public_ip = getattr(args, "automatic_public_ip", "")
+    if args.mode != "public" or not args.auto_dns or not public_ip:
+        return False
+    changed = False
+    cp_settings = config("control-plane") if runtime("control-plane").is_file() else {}
+    node_settings = config("node") if runtime("node").is_file() else {}
+    old_cp = cp_settings.get("PUBLIC_DOMAIN", "")
+    old_node = node_settings.get("PUBLIC_DOMAIN", "")
+    cp_auto = bool(cp_settings) and automatic_hostname(cp_settings, "control")
+    node_auto = bool(node_settings) and automatic_hostname(node_settings, "node")
+
+    # Rewrite the configured Directory URL only when it is itself a generated
+    # Sparrow sslip.io endpoint. Custom/stable Directory domains remain untouched.
+    args.directory_url = rewrite_generated_https_origin(args.directory_url, "directory", public_ip)
+
+    if cp_auto and old_cp != args.control_domain:
+        update_installed_properties(ROOT / "control-plane" / "sparrow.conf", {
+            "PUBLIC_DOMAIN": args.control_domain,
+            "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic",
+            "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+        })
+        update_installed_properties(runtime("control-plane"), {
+            "CONTROL_PLANE_DOMAIN": args.control_domain,
+            "CONTROL_PLANE_SITE_ADDRESS": args.control_domain,
+        })
+        changed = True
+    elif cp_auto:
+        update_installed_properties(ROOT / "control-plane" / "sparrow.conf", {
+            "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic",
+            "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+        })
+
+    if node_auto and old_node != args.node_domain:
+        cp_urls = rewrite_generated_https_origins(node_settings.get("CONTROL_PLANE_URLS", ""), "control", public_ip)
+        local_cp = node_settings.get("LOCAL_CONTROL_PLANE_DOMAIN", "")
+        if generated_sslip_ipv4(local_cp, "control"):
+            local_cp = args.control_domain
+        update_installed_properties(ROOT / "community-node" / "sparrow.conf", {
+            "PUBLIC_DOMAIN": args.node_domain,
+            "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic",
+            "CONTROL_PLANE_URLS": cp_urls,
+            "LOCAL_CONTROL_PLANE_DOMAIN": local_cp,
+            "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+        })
+        values = {}
+        for line in runtime("node").read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                values[key] = value
+        update_installed_properties(runtime("node"), {
+            "COMMUNITY_NODE_SITE_ADDRESS": args.node_domain,
+            "COMMUNITY_NODE_DOMAIN": args.node_domain,
+            "CONTROL_PLANE_URL": rewrite_generated_https_origin(values.get("CONTROL_PLANE_URL", ""), "control", public_ip),
+            "CONTROL_PLANE_URLS": rewrite_generated_https_origins(values.get("CONTROL_PLANE_URLS", ""), "control", public_ip),
+            "ADVERTISED_CONTROL_PLANE_URLS": rewrite_generated_https_origins(values.get("ADVERTISED_CONTROL_PLANE_URLS", ""), "control", public_ip),
+            "MANUAL_CONTROL_PLANE_URLS": rewrite_generated_https_origins(values.get("MANUAL_CONTROL_PLANE_URLS", ""), "control", public_ip),
+            "LOCAL_CONTROL_PLANE_DOMAIN": local_cp,
+            "CLIENT_ENDPOINT": f"wss://{args.node_domain}/v1/gateway",
+            "FEDERATION_ENDPOINT": f"https://{args.node_domain}",
+            "MAILBOX_ENDPOINT": f"https://{args.node_domain}",
+        })
+        changed = True
+    elif node_auto:
+        update_installed_properties(ROOT / "community-node" / "sparrow.conf", {
+            "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic",
+            "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+        })
+
+    manager = ROOT / "Manage-SparrowNodes.py"
+    managed = ROOT / "node-instances"
+    if managed.is_dir() and any((item / "node-instance.json").is_file() for item in managed.iterdir() if item.is_dir()):
+        require(manager.is_file(), "Managed Community Nodes exist but Manage-SparrowNodes.py is missing.")
+        result = run([sys.executable, str(manager), "reconcile-public-ip", "--public-ip", public_ip],
+                     cwd=ROOT, capture=True, check=False)
+        require(result.returncode == 0, "Managed Community Node public-IP reconciliation failed: " +
+                ((result.stderr or result.stdout) or "unknown error")[:400])
+        if result.stdout.strip():
+            print(result.stdout.strip())
+        changed = True
+    if changed:
+        print(f"Reconciled generated sslip.io endpoints to WAN IPv4 {public_ip}; identities and volumes were preserved.")
+    return changed
 
 
 def sync_installed_node_discovery(directory_url):
@@ -674,6 +849,9 @@ def install(args):
     # unspecified on a normal update; a provided URL overrides it explicitly.
     args.directory_url = (args.directory_url or config("node").get("CONTROL_PLANE_DIRECTORY_URL", "")
                           or config("control-plane").get("CONTROL_PLANE_DIRECTORY_URL", ""))
+    if args.mode == "public" and args.auto_dns and getattr(args, "automatic_public_ip", ""):
+        args.directory_url = rewrite_generated_https_origin(
+            args.directory_url, "directory", args.automatic_public_ip)
     validate_hosts(args.node_domain, args.control_domain)
     node_only_proxy = "# Sparrow public edge (node-only)\nimport /etc/caddy/node-routes/*.caddy"
     if args.mode == "public" and (ROOT / "public-proxy" / "Caddyfile").is_file():
@@ -699,7 +877,12 @@ def install(args):
         for component, hostname in installed_public():
             expected = args.node_domain if component == "node" else args.control_domain
             if component in components:
-                require(hostname == expected, f"Cannot change installed {component} Public hostname implicitly.")
+                settings = config(component)
+                prefix = "node" if component == "node" else "control"
+                automatic_rotation = (args.auto_dns and automatic_hostname(settings, prefix) and
+                                      expected == f"{prefix}-{args.automatic_public_ip.replace('.', '-')}.sslip.io")
+                require(hostname == expected or automatic_rotation,
+                        f"Cannot change installed {component} Public hostname implicitly.")
             elif component == "node":
                 require(hostname != args.control_domain, "Cannot reuse the installed Node hostname.")
             else:
@@ -730,6 +913,9 @@ def install(args):
                 "Expected service account JSON. Authorization to Android Firebase project must be configured separately.")
     if args.mode == "public" and not (ROOT / "public-proxy" / "Caddyfile").is_file():
         reject_public_port_conflicts()
+    # Generated sslip.io hostnames follow WAN IPv4 changes. This only rewrites
+    # values proven to be Sparrow-generated; custom hostnames are immutable.
+    reconcile_automatic_public_address(args)
     # Refresh discovery even if an unrelated Control Plane image pull later
     # fails. Previously a changed JSON directory never reached the running
     # gateway, which kept advertising old LAN IPs to Android clients.
@@ -747,7 +933,7 @@ def install(args):
         ensure_public_network()
     if "control-plane" in components and not runtime("control-plane").exists():
         write_config("control-plane", {"CONFIGURED": "true", "MODE": args.mode,
-                      "PUBLIC_DOMAIN": args.control_domain, "SHARED_PROXY": "true" if args.mode == "public" else "false",
+                      "PUBLIC_DOMAIN": args.control_domain, "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic" if args.auto_dns else "Manual", "SHARED_PROXY": "true" if args.mode == "public" else "false",
                       "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
                       "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY": config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", ""),
                       "SPARROW_IMAGE_PREFIX": args.image_prefix, "SPARROW_IMAGE_TAG": args.image_tag})
@@ -761,6 +947,7 @@ def install(args):
     if "node" in components and not runtime("node").exists():
         cp_url = (f"https://{args.control_domain}" if args.mode == "public" else "http://localhost:8390") if args.component == "combined" else ""
         write_config("node", {"CONFIGURED": "true", "MODE": args.mode, "PUBLIC_DOMAIN": args.node_domain,
+                      "PUBLIC_HOSTNAME_MODE": "CaddyAutomatic" if args.auto_dns else "Manual",
                       "SHARED_PROXY": "true" if args.mode == "public" else "false",
                       "LOCAL_CONTROL_PLANE_DOMAIN": args.control_domain if args.component == "combined" and args.mode == "public" else "",
                       "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
@@ -771,7 +958,7 @@ def install(args):
         run(["bash", str(ROOT / "community-node" / "bootstrap-community-node.sh")])
     if args.mode == "public":
         entries = installed_public()
-        candidate = render_proxy(entries)
+        candidate = render_proxy(entries, getattr(args, "automatic_public_ip", "") if args.auto_dns else "")
         proxy = ROOT / "public-proxy" / "Caddyfile"
         if proxy.exists() and proxy.read_text(encoding="utf-8") != candidate:
             # Allow ONLY this revision's additive proof route on an already
