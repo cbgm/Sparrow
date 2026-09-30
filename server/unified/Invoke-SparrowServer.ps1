@@ -34,12 +34,6 @@ $attachmentFile = Join-Path $root '.sparrow-attached.json'
 $nodeSelected = $Component -in @('Node', 'Combined')
 $cpSelected = $Component -in @('ControlPlane', 'Combined')
 $shared = $Mode -eq 'public'
-$script:AutomaticPublicIpChanged = $false
-$script:AutomaticWanIPv4 = ''
-$script:PreviousNodeDomain = ''
-$script:PreviousControlPlaneDomain = ''
-$script:PreviousDirectoryUrl = ''
-$script:AutomaticDirectoryDomain = ''
 
 function Start-SparrowDirectoryBackgroundSync {
     $cpConfig = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
@@ -76,6 +70,32 @@ function Refresh-PublicControlPlaneDirectory {
     }
 }
 
+function New-RegistrationComposeCopy([string]$ComposeFile,[string]$IdentityFile) {
+    $composeDirectory = Split-Path -Parent $ComposeFile
+    $stageDirectory = Join-Path $composeDirectory '.sparrow-registration'
+    $stageIdentity = Join-Path $stageDirectory 'registry-root.identity'
+    $stageCompose = Join-Path $composeDirectory '.sparrow-directory-registration.compose.yml'
+    New-Item -ItemType Directory -Path $stageDirectory -Force | Out-Null
+    [IO.File]::WriteAllBytes($stageIdentity,[IO.File]::ReadAllBytes($IdentityFile))
+    $source = [IO.File]::ReadAllText($ComposeFile)
+    $pattern = '(?m)^(?<prefix>\s*-\s*)[^\r\n]+:/run/control-plane/registry-root\.identity:ro\s*$'
+    $matches = [regex]::Matches($source,$pattern)
+    if ($matches.Count -ne 1) {
+        Remove-Item -LiteralPath $stageIdentity -Force -ErrorAction SilentlyContinue
+        throw 'Cannot safely stage the Control Plane identity: registration mount was not found exactly once.'
+    }
+    $replacement = '${prefix}.sparrow-registration/registry-root.identity:/run/control-plane/registry-root.identity:ro'
+    $mountRegex = [regex]::new($pattern)
+    [IO.File]::WriteAllText($stageCompose,$mountRegex.Replace($source,$replacement,1),[Text.UTF8Encoding]::new($false))
+    return [pscustomobject]@{ ComposeFile = $stageCompose; StageDirectory = $stageDirectory; IdentityFile = $stageIdentity }
+}
+function Remove-RegistrationComposeCopy($Stage) {
+    if ($null -eq $Stage) { return }
+    Remove-Item -LiteralPath $Stage.ComposeFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Stage.IdentityFile -Force -ErrorAction SilentlyContinue
+    try { Remove-Item -LiteralPath $Stage.StageDirectory -Force -ErrorAction Stop } catch { }
+}
+
 function Register-PublicControlPlaneInDirectory {
     # This is an opt-in, best-effort registration attempt. Admin approval
     # remains central and directory failure never prevents chat delivery.
@@ -95,8 +115,11 @@ function Register-PublicControlPlaneInDirectory {
     # The registration job is one-shot, with no admin credential, Docker socket,
     # or access to any secret other than this existing single-file identity.
     $composeFile = Join-Path $proxyRoot 'docker-compose.yml'
+    $registrationStage = $null
     try {
-        $buildOutput = @(& docker compose -f $composeFile --profile registration build directory-register 2>&1)
+        $registrationStage = New-RegistrationComposeCopy -ComposeFile $composeFile -IdentityFile $identity
+        $registrationCompose = [string]$registrationStage.ComposeFile
+        $buildOutput = @(& docker compose -f $registrationCompose --profile registration build directory-register 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Host 'Directory registration deferred: client image could not be built. Local server remains online.'
             return
@@ -104,7 +127,7 @@ function Register-PublicControlPlaneInDirectory {
         $directoryArgument = 'CONTROL_PLANE_DIRECTORY_URL=' + [string]$settings['CONTROL_PLANE_DIRECTORY_URL']
         $pinArgument = 'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=' + [string]$settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']
         $planeArgument = 'SPARROW_REGISTRATION_PLANE_URL=https://' + [string]$settings['PUBLIC_DOMAIN']
-        $result = @(& docker compose -f $composeFile --profile registration run --rm --no-deps `
+        $result = @(& docker compose -f $registrationCompose --profile registration run --rm --no-deps `
             -e $directoryArgument -e $pinArgument -e $planeArgument directory-register 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Host 'Directory registration deferred; local Control Plane continues operating.'
@@ -114,6 +137,8 @@ function Register-PublicControlPlaneInDirectory {
         [System.IO.File]::WriteAllText($marker, (Get-Date).ToUniversalTime().ToString('o'))
     } catch {
         Write-Host "Directory registration deferred; local Control Plane remains available: $($_.Exception.Message)"
+    } finally {
+        Remove-RegistrationComposeCopy $registrationStage
     }
 }
 
@@ -173,260 +198,52 @@ function Get-WanIPv4 {
     }
     throw 'Cannot detect a public IPv4 address. Check internet/CGNAT or choose manual public hostnames; no installation state was changed.'
 }
-function Get-AutomaticSslipIPv4([string]$Hostname, [string]$Prefix) {
-    if ([string]::IsNullOrWhiteSpace($Hostname)) { return '' }
-    $escaped = [regex]::Escape($Prefix)
-    if ($Hostname.ToLowerInvariant() -notmatch "^$escaped-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io$") { return '' }
-    $candidate = $Matches[1].Replace('-', '.')
-    if (Test-PublicIPv4 $candidate) { return $candidate }
-    return ''
-}
-function Get-AutomaticDirectoryRoute([string]$Contents) {
-    $begin = '# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE'
-    $end = '# END SPARROW INDEPENDENT DIRECTORY ROUTE'
-    $startAt = $Contents.IndexOf($begin, [StringComparison]::Ordinal)
-    $endAt = $Contents.IndexOf($end, [StringComparison]::Ordinal)
-    if (($startAt -ge 0) -ne ($endAt -ge 0)) { throw 'Incomplete managed Directory route in Caddyfile. Existing proxy preserved.' }
-    if ($startAt -lt 0) { return '' }
-    if ($endAt -le $startAt -or
-        $Contents.IndexOf($begin, $startAt + $begin.Length, [StringComparison]::Ordinal) -ge 0 -or
-        $Contents.IndexOf($end, $endAt + $end.Length, [StringComparison]::Ordinal) -ge 0) {
-        throw 'Ambiguous managed Directory route in Caddyfile. Existing proxy preserved.'
-    }
-    return $Contents.Substring($startAt, $endAt + $end.Length - $startAt)
-}
-function Get-DirectoryRouteHostname([string]$Route) {
-    if ([string]::IsNullOrWhiteSpace($Route)) { return '' }
-    $lines = $Route -split "`r?`n"
-    foreach ($line in $lines) {
-        $trimmed = $line.Trim()
-        if ($trimmed -eq '# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE' -or
-            $trimmed -eq '# END SPARROW INDEPENDENT DIRECTORY ROUTE' -or
-            -not $trimmed) { continue }
-        if ($trimmed -match '^([a-zA-Z0-9.-]+)\s*\{$') { return $Matches[1].ToLowerInvariant() }
-        break
-    }
-    throw 'Could not identify the managed Directory hostname in Caddyfile. Existing proxy preserved.'
-}
-function Rewrite-AutomaticHttpsOrigin([string]$Value, [string]$Prefix, [string]$Wan) {
-    if ([string]::IsNullOrWhiteSpace($Value)) { return $Value }
-    $uri = $null
-    if (-not [uri]::TryCreate($Value.Trim(), [UriKind]::Absolute, [ref]$uri) -or
-        $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or
-        $uri.Port -ne 443 -or ($uri.AbsolutePath -ne '/' -and $uri.AbsolutePath -ne '')) { return $Value }
-    if (-not (Get-AutomaticSslipIPv4 $uri.Host $Prefix)) { return $Value }
-    return "https://$Prefix-$($Wan.Replace('.', '-')).sslip.io"
-}
-function Rewrite-AutomaticHttpsOriginList([string]$Value, [string]$Prefix, [string]$Wan) {
-    if ([string]::IsNullOrWhiteSpace($Value)) { return $Value }
-    $result = @()
-    foreach ($item in ($Value -split ',')) {
-        $trimmed = $item.Trim()
-        if ($trimmed) { $result += (Rewrite-AutomaticHttpsOrigin $trimmed $Prefix $Wan) }
-    }
-    return ($result -join ',')
-}
 function Set-CaddyAutomaticHostnames {
     if ($PublicHostnameMode -ne 'CaddyAutomatic' -or -not $shared) { return }
+    # Reuse installed hostnames exactly: WAN IP changes require a reviewed DNS,
+    # TLS and signed-directory cutover, NOT a silent in-place hostname change.
     $freshSelected = @()
     $generatedHostnames = @()
-    $needWan = $false
-    foreach ($selectedService in @(@{ Selected=$nodeSelected; Root=$nodeRoot; Role='Node'; Prefix='node' },
-                            @{ Selected=$cpSelected; Root=$cpRoot; Role='ControlPlane'; Prefix='control' })) {
+    foreach ($selectedService in @(@{ Selected=$nodeSelected; Root=$nodeRoot; Role='Node' },
+                            @{ Selected=$cpSelected; Root=$cpRoot; Role='ControlPlane' })) {
         if (-not $selectedService.Selected) { continue }
+        # Explicit fresh replacement ignores stale LAN/Public metadata: it will
+        # erase the selected TEST deployment, NOT try to migrate it.
         if ($ExistingDeployment -eq 'ReplaceTestData') {
             $freshSelected += $selectedService.Role
-            $needWan = $true
             continue
         }
         if (Test-Path -LiteralPath (Join-Path $selectedService.Root '.env.runtime') -PathType Leaf) {
             $config = Read-Properties (Join-Path $selectedService.Root 'sparrow.conf')
-            $runtime = Read-Properties (Join-Path $selectedService.Root '.env.runtime')
             $project = if ($selectedService.Role -eq 'Node') { 'sparrow-community-node' } else { 'sparrow-control-plane' }
             $effectiveMode = Get-SafeInstalledPublicMode $selectedService.Root $project
             if ($effectiveMode -eq 'public') {
-                $installedHost = [string]$config['PUBLIC_DOMAIN']
-                if ([string]::IsNullOrWhiteSpace($installedHost)) {
-                    $runtimeDomainKey = if ($selectedService.Role -eq 'Node') { 'COMMUNITY_NODE_DOMAIN' } else { 'CONTROL_PLANE_DOMAIN' }
-                    $installedHost = [string]$runtime[$runtimeDomainKey]
-                }
-                $markedAutomatic = ([string]$config['PUBLIC_HOSTNAME_MODE'] -eq 'CaddyAutomatic' -or
-                    [string]$runtime['PUBLIC_HOSTNAME_MODE'] -eq 'CaddyAutomatic')
-                $legacyAutomatic = [bool](Get-AutomaticSslipIPv4 $installedHost $selectedService.Prefix)
-                if ($markedAutomatic -or $legacyAutomatic) {
-                    $needWan = $true
-                    if ($selectedService.Role -eq 'Node') { $script:PreviousNodeDomain = $installedHost }
-                    else { $script:PreviousControlPlaneDomain = $installedHost }
-                } else {
-                    if ($selectedService.Role -eq 'Node') { $script:NodeDomain = $installedHost }
-                    else { $script:ControlPlaneDomain = $installedHost }
-                }
+                if ($selectedService.Role -eq 'Node') { $script:NodeDomain = $config['PUBLIC_DOMAIN'] }
+                else { $script:ControlPlaneDomain = $config['PUBLIC_DOMAIN'] }
             } elseif ($effectiveMode -eq 'lan' -and $Component -eq 'Combined' -and $nodeSelected -and $cpSelected) {
+                # A broken prior install may have left public metadata without
+                # actually converting the LAN Docker deployment. Its live
+                # Compose labels, not a missing hostname, determine eligibility.
+                # The full migration still performs all ownership/data checks.
                 $freshSelected += $selectedService.Role
-                $needWan = $true
             } else {
                 throw "Existing $($selectedService.Role) is a LAN deployment but selected component is '$Component'. Select Combined to convert both installed components together; no data was changed."
             }
-        } else {
-            $freshSelected += $selectedService.Role
-            $needWan = $true
-        }
+        } else { $freshSelected += $selectedService.Role }
     }
-    if (-not $needWan) { return }
+    if ($freshSelected.Count -eq 0) { return }
     $wan = Get-WanIPv4
-    $script:AutomaticWanIPv4 = $wan
     $dashed = $wan.Replace('.', '-')
-    if ($nodeSelected -and ($freshSelected -contains 'Node' -or $script:PreviousNodeDomain)) {
-        $newNode = "node-$dashed.sslip.io"
-        $script:NodeDomain = $newNode
-        $generatedHostnames += $newNode
-        if ($script:PreviousNodeDomain -and $script:PreviousNodeDomain -ne $newNode) { $script:AutomaticPublicIpChanged = $true }
-    }
-    if ($cpSelected -and ($freshSelected -contains 'ControlPlane' -or $script:PreviousControlPlaneDomain)) {
-        $newCp = "control-$dashed.sslip.io"
-        $script:ControlPlaneDomain = $newCp
-        $generatedHostnames += $newCp
-        if ($script:PreviousControlPlaneDomain -and $script:PreviousControlPlaneDomain -ne $newCp) { $script:AutomaticPublicIpChanged = $true }
-    }
-    # A Directory hosted on this same shared proxy is also an automatically
-    # generated sslip.io endpoint. Change only the installer-owned marked route;
-    # arbitrary custom Directory URLs are never rewritten.
-    $caddyfile = Join-Path $proxyRoot 'Caddyfile'
-    if (Test-Path -LiteralPath $caddyfile -PathType Leaf) {
-        $route = Get-AutomaticDirectoryRoute ([System.IO.File]::ReadAllText($caddyfile))
-        if ($route) {
-            $directoryHost = Get-DirectoryRouteHostname $route
-            if (Get-AutomaticSslipIPv4 $directoryHost 'directory') {
-                $newDirectoryHost = "directory-$dashed.sslip.io"
-                $script:AutomaticDirectoryDomain = $newDirectoryHost
-                $generatedHostnames += $newDirectoryHost
-                if ($directoryHost -ne $newDirectoryHost) {
-                    $script:AutomaticPublicIpChanged = $true
-                    $script:PreviousDirectoryUrl = "https://$directoryHost"
-                    if ([string]::IsNullOrWhiteSpace($DirectoryUrl) -or
-                        (Rewrite-AutomaticHttpsOrigin $DirectoryUrl 'directory' $wan) -ne $DirectoryUrl) {
-                        $script:DirectoryUrl = "https://$newDirectoryHost"
-                    }
-                }
-            }
-        }
-    }
-    foreach ($hostname in ($generatedHostnames | Select-Object -Unique)) {
+    if ('Node' -in $freshSelected) { $script:NodeDomain = "node-$dashed.sslip.io"; $generatedHostnames += $NodeDomain }
+    if ('ControlPlane' -in $freshSelected) { $script:ControlPlaneDomain = "control-$dashed.sslip.io"; $generatedHostnames += $ControlPlaneDomain }
+    foreach ($hostname in $generatedHostnames) {
         try {
             $addresses = @([System.Net.Dns]::GetHostAddresses($hostname) | ForEach-Object { $_.ToString() })
             if ($wan -notin $addresses) { throw "DNS resolved to $($addresses -join ', ') instead of $wan" }
         } catch { throw "Automatic hostname $hostname does not resolve to $wan yet. Check DNS before installing: $($_.Exception.Message)" }
     }
-    if ($script:AutomaticPublicIpChanged) {
-        Write-Host "Detected public IPv4 change. Reconciling generated sslip.io endpoints to $wan without replacing identities or volumes."
-    } else {
-        Write-Host "Caddy automatic DNS selected: WAN IPv4 $wan; sslip.io generates free DNS names (not owned by Caddy)."
-    }
+    Write-Host "Caddy automatic DNS selected: WAN IPv4 $wan; sslip.io generates free DNS names (not owned by Caddy)."
     Write-Host 'Caddy must still obtain publicly trusted TLS certificates; DNS/port forwarding/CGNAT/external reachability are not yet verified.'
-}
-function Apply-AutomaticPublicAddressReconciliation {
-    # Always verify managed automatic nodes whenever automatic Public mode has
-    # resolved a WAN IPv4. A previous interrupted reconciliation may already
-    # have updated Combined while leaving one independent node on the old IP.
-    # The managed-node helper is idempotent and becomes a no-op when current.
-    if (-not $script:AutomaticWanIPv4) { return }
-    $wan = $script:AutomaticWanIPv4
-    # Validate the managed-node helper before changing Combined configuration so
-    # a multi-node deployment is never left knowingly half-reconciled.
-    $managedNodes = Join-Path $root 'node-instances'
-    $instanceFiles = @()
-    if (Test-Path -LiteralPath $managedNodes -PathType Container) {
-        $instanceFiles = @(Get-ChildItem -LiteralPath $managedNodes -Directory -ErrorAction SilentlyContinue |
-            ForEach-Object { Join-Path $_.FullName 'node-instance.json' } |
-            Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
-    }
-    $python = $null
-    if ($instanceFiles.Count -gt 0) {
-        $python = Get-Command python3 -ErrorAction SilentlyContinue
-        if (-not $python) { $python = Get-Command python -ErrorAction SilentlyContinue }
-        if (-not $python) { throw 'Managed Community Nodes exist but Python 3 is unavailable. Public-IP reconciliation was not applied.' }
-        if (-not (Test-Path -LiteralPath (Join-Path $root 'Manage-SparrowNodes.py') -PathType Leaf)) {
-            throw 'Managed Community Nodes exist but Manage-SparrowNodes.py is missing. Public-IP reconciliation was not applied.'
-        }
-    }
-    if ($script:AutomaticPublicIpChanged) {
-        if ($cpSelected -and (Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf) -and $script:PreviousControlPlaneDomain) {
-            $cpConfig = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
-            $cpConfigUpdates = @{
-                PUBLIC_DOMAIN = $ControlPlaneDomain
-                PUBLIC_HOSTNAME_MODE = 'CaddyAutomatic'
-            }
-            if ($script:AutomaticDirectoryDomain) { $cpConfigUpdates['CONTROL_PLANE_DIRECTORY_URL'] = "https://$($script:AutomaticDirectoryDomain)" }
-            Write-Properties (Join-Path $cpRoot 'sparrow.conf') $cpConfigUpdates
-            Write-Properties (Join-Path $cpRoot '.env.runtime') @{
-                CONTROL_PLANE_SITE_ADDRESS = $ControlPlaneDomain
-                CONTROL_PLANE_DOMAIN = $ControlPlaneDomain
-                PUBLIC_HOSTNAME_MODE = 'CaddyAutomatic'
-            }
-        }
-        if ($nodeSelected -and (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) -and $script:PreviousNodeDomain) {
-            $nodeConfig = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
-            $newControlUrls = Rewrite-AutomaticHttpsOriginList ([string]$nodeConfig['CONTROL_PLANE_URLS']) 'control' $wan
-            $newLocalControl = [string]$nodeConfig['LOCAL_CONTROL_PLANE_DOMAIN']
-            if (Get-AutomaticSslipIPv4 $newLocalControl 'control') { $newLocalControl = $ControlPlaneDomain }
-            $nodeConfigUpdates = @{
-                PUBLIC_DOMAIN = $NodeDomain
-                PUBLIC_HOSTNAME_MODE = 'CaddyAutomatic'
-                CONTROL_PLANE_URLS = $newControlUrls
-                LOCAL_CONTROL_PLANE_DOMAIN = $newLocalControl
-            }
-            if ($script:AutomaticDirectoryDomain) { $nodeConfigUpdates['CONTROL_PLANE_DIRECTORY_URL'] = "https://$($script:AutomaticDirectoryDomain)" }
-            Write-Properties (Join-Path $nodeRoot 'sparrow.conf') $nodeConfigUpdates
-            $runtime = Read-Properties (Join-Path $nodeRoot '.env.runtime')
-            Write-Properties (Join-Path $nodeRoot '.env.runtime') @{
-                COMMUNITY_NODE_SITE_ADDRESS = $NodeDomain
-                COMMUNITY_NODE_DOMAIN = $NodeDomain
-                CONTROL_PLANE_URL = (Rewrite-AutomaticHttpsOrigin ([string]$runtime['CONTROL_PLANE_URL']) 'control' $wan)
-                CONTROL_PLANE_URLS = (Rewrite-AutomaticHttpsOriginList ([string]$runtime['CONTROL_PLANE_URLS']) 'control' $wan)
-                ADVERTISED_CONTROL_PLANE_URLS = (Rewrite-AutomaticHttpsOriginList ([string]$runtime['ADVERTISED_CONTROL_PLANE_URLS']) 'control' $wan)
-                LOCAL_CONTROL_PLANE_DOMAIN = $newLocalControl
-                MANUAL_CONTROL_PLANE_URLS = (Rewrite-AutomaticHttpsOriginList ([string]$runtime['MANUAL_CONTROL_PLANE_URLS']) 'control' $wan)
-                CLIENT_ENDPOINT = "wss://$NodeDomain/v1/gateway"
-                FEDERATION_ENDPOINT = "https://$NodeDomain"
-                MAILBOX_ENDPOINT = "https://$NodeDomain"
-                PUBLIC_HOSTNAME_MODE = 'CaddyAutomatic'
-            }
-        }
-    }
-    if ($instanceFiles.Count -gt 0) {
-        Write-Host 'Reconciling independently managed Community Node endpoints...'
-        # Python/Docker/Caddy legitimately write progress and INFO diagnostics to
-        # stderr even on success. Windows PowerShell 5.1 converts redirected
-        # native stderr into ErrorRecord objects; with our global Stop policy, a
-        # harmless Caddy INFO line would otherwise terminate the entire worker.
-        # Treat the native process exit code as authoritative, exactly as
-        # Invoke-Docker does, while still streaming copyable diagnostics.
-        $previousPreference = $ErrorActionPreference
-        $nodeManagerExitCode = -1
-        $nodeManagerOutput = [System.Collections.Generic.List[string]]::new()
-        try {
-            $ErrorActionPreference = 'Continue'
-            & $python.Source -u (Join-Path $root 'Manage-SparrowNodes.py') reconcile-public-ip --public-ip $wan 2>&1 |
-                ForEach-Object {
-                    $line = [string]$_
-                    Write-Host $line
-                    if ($nodeManagerOutput.Count -ge 20) { $nodeManagerOutput.RemoveAt(0) }
-                    $nodeManagerOutput.Add($line)
-                }
-            $nodeManagerExitCode = $LASTEXITCODE
-        } finally {
-            $ErrorActionPreference = $previousPreference
-        }
-        if ($nodeManagerExitCode -ne 0) {
-            $tail = ($nodeManagerOutput | Select-Object -Last 8) -join '; '
-            throw "Managed Community Node public-IP reconciliation failed (exit $nodeManagerExitCode). $tail"
-        }
-    }
-    if ($script:AutomaticPublicIpChanged) {
-        Write-Host 'Automatic public address configuration updated; server identities, secrets, databases and Docker volumes were preserved.'
-    } elseif ($instanceFiles.Count -gt 0) {
-        Write-Host 'Managed automatic Community Node endpoints checked against the current WAN IPv4; identities and persistent data were preserved.'
-    }
 }
 function Show-PublicEndpoints {
     $cp = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
@@ -1104,29 +921,8 @@ function Write-ProxyConfig {
         $entries += 'import /etc/caddy/node-routes/*.caddy'
     }
     $caddyfile = Join-Path $proxyRoot 'Caddyfile'
-    # The independent Directory is a separate service but may intentionally
-    # share this one public Caddy. Preserve its installer-owned marked route
-    # across ordinary server starts/updates; when automatic sslip.io addressing
-    # rotates, rewrite only that route's generated hostname.
-    $directoryRoute = ''
-    if (Test-Path -LiteralPath $caddyfile -PathType Leaf) {
-        $previousProxy = [System.IO.File]::ReadAllText($caddyfile)
-        $directoryRoute = Get-AutomaticDirectoryRoute $previousProxy
-        if ($directoryRoute -and $script:AutomaticDirectoryDomain) {
-            $oldDirectoryHost = Get-DirectoryRouteHostname $directoryRoute
-            if (Get-AutomaticSslipIPv4 $oldDirectoryHost 'directory') {
-                $directoryRoute = [regex]::Replace(
-                    $directoryRoute,
-                    '(?m)^' + [regex]::Escape($oldDirectoryHost) + '\s*\{',
-                    $script:AutomaticDirectoryDomain + ' {',
-                    1)
-            }
-        }
-    }
-    $normalRoutes = (($routes + $entries) -join "`n").TrimEnd()
-    $newProxyContent = if ($directoryRoute) { $normalRoutes + "`n`n" + $directoryRoute.Trim() + "`n" } else { $normalRoutes + "`n" }
     $temp = "$caddyfile.pending"
-    [System.IO.File]::WriteAllText($temp, $newProxyContent, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($temp, (($routes + $entries) -join "`n"), [System.Text.UTF8Encoding]::new($false))
     Move-Item -LiteralPath $temp -Destination $caddyfile -Force
 }
 function Check-PublicPortOwnership {
@@ -1238,31 +1034,6 @@ function Repair-InstalledPublicMetadataIfAlreadyPublic {
 # An existing LAN installation is published through the shared Caddy without
 # re-running either bootstrap, changing DB secrets or replacing server identities.
 # Public-only overrides keep the ORIGINAL Compose layering and named volumes.
-function Repair-StaleInstalledPublicMetadataBeforeHostnameResolution {
-    if (-not $shared -or $Component -ne 'Combined' -or $ExistingDeployment -eq 'ReplaceTestData') { return }
-    $installedCp = Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf
-    $installedNode = Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf
-    if (-not $installedCp -or -not $installedNode) { return }
-
-    $cpBefore = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
-    $nodeBefore = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
-    if ($cpBefore['MODE'] -ne 'lan' -and $nodeBefore['MODE'] -ne 'lan') { return }
-
-    # The runtime may still advertise valid Public endpoints while an older
-    # sparrow.conf incorrectly says LAN. Do not let automatic-hostname
-    # resolution reject that state before the ownership-checked repair runs.
-    # Only repair when Docker proves the existing Control Plane is already
-    # using the Public/shared-proxy Compose layers; genuine LAN deployments
-    # continue through the normal LAN safety path unchanged.
-    $cpCaddyIds = @(& docker ps -a --filter 'label=com.docker.compose.project=sparrow-control-plane' --filter 'label=com.docker.compose.service=caddy' --format '{{.ID}}' 2>$null)
-    if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing Control Plane; no data was changed.' }
-    if ($cpCaddyIds.Count -ne 1 -or -not $cpCaddyIds[0]) { return }
-    $cpFiles = [string](Get-SparrowDockerLabel -Resource container -Id ([string]$cpCaddyIds[0]) -Key 'com.docker.compose.project.config_files')
-    if ($cpFiles -match 'docker-compose\.production\.yml|docker-compose\.shared-proxy\.yml') {
-        Repair-InstalledPublicMetadataIfAlreadyPublic
-    }
-}
-
 function Get-InstalledLanComposeFlavor([string]$Directory, [string]$Project) {
     $ids = @(& docker ps -aq --filter "label=com.docker.compose.project=$Project" --filter 'label=com.docker.compose.service=caddy')
     if ($LASTEXITCODE -ne 0 -or $ids.Count -ne 1) {
@@ -1293,23 +1064,10 @@ function Get-InstalledLanComposeFlavor([string]$Directory, [string]$Project) {
 # exists. Anything ambiguous remains untouched and reports the actual state.
 function Get-SafeInstalledPublicMode([string]$Directory, [string]$Project) {
     $config = Read-Properties (Join-Path $Directory 'sparrow.conf')
-    $runtime = Read-Properties (Join-Path $Directory '.env.runtime')
     $mode = ([string]$config['MODE']).Trim().ToLowerInvariant()
-    $configuredHostname = ([string]$config['PUBLIC_DOMAIN']).Trim()
-    $runtimeDomainKey = if ($Project -eq 'sparrow-community-node') { 'COMMUNITY_NODE_DOMAIN' } else { 'CONTROL_PLANE_DOMAIN' }
-    $runtimeHostname = ([string]$runtime[$runtimeDomainKey]).Trim()
-    $hostname = $(if ($configuredHostname) { $configuredHostname } else { $runtimeHostname })
-    if ($mode -eq 'lan') {
-        if ($runtimeHostname) {
-            throw "Existing $Project says MODE=lan but its runtime still advertises $runtimeHostname. Refusing to infer LAN or overwrite Public state."
-        }
-        return 'lan'
-    }
+    $hostname = ([string]$config['PUBLIC_DOMAIN']).Trim()
+    if ($mode -eq 'lan') { return 'lan' }
     if ($mode -eq 'public' -and $hostname) { return 'public' }
-    if (-not $mode -and $runtimeHostname) {
-        Write-Host "Existing $Project has no persisted MODE but its runtime advertises $runtimeHostname; treating the installed deployment as Public."
-        return 'public'
-    }
     $safeMode = $(if ($mode) { $mode } else { '(missing)' })
     if ($mode -notin @('', 'public') -or $hostname -or $config['PUBLIC_TRANSITION']) {
         throw "Existing $Project has MODE=$safeMode, PUBLIC_DOMAIN=$hostname, PUBLIC_TRANSITION=$($config['PUBLIC_TRANSITION']). Cannot infer LAN from that state. No Docker data was changed."
@@ -1634,10 +1392,6 @@ try {
     if ($Action -eq 'Start') {
         if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') { throw 'Invalid image prefix.' }
         if ($ImageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') { throw 'Invalid image tag.' }
-        # Repair stale MODE=lan metadata before automatic sslip.io handling.
-        # Otherwise Get-SafeInstalledPublicMode sees the stale flag first and
-        # aborts even though Docker/runtime already prove a Public deployment.
-        Repair-StaleInstalledPublicMetadataBeforeHostnameResolution
         Set-CaddyAutomaticHostnames
         if ($shared) {
             if ($nodeSelected) { $NodeDomain = Check-Domain $NodeDomain }
@@ -1665,11 +1419,24 @@ try {
         }
         $installedCp = Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf
         $installedNode = Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf
-        # Any stale Public-vs-LAN metadata was repaired before automatic
-        # hostname resolution, when the installed runtime hostnames still
-        # matched the UI-selected existing endpoints. Re-read the configs here.
         $cpBefore = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
         $nodeBefore = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
+        if ($shared -and $Component -eq 'Combined' -and $installedCp -and $installedNode -and
+            $ExistingDeployment -ne 'ReplaceTestData' -and
+            ($cpBefore['MODE'] -eq 'lan' -or $nodeBefore['MODE'] -eq 'lan')) {
+            # Only attempt metadata repair if Docker is already running the
+            # Public CP layers. A genuine LAN install must NOT be converted.
+            $cpCaddyIds = @(& docker ps -a --filter 'label=com.docker.compose.project=sparrow-control-plane' --filter 'label=com.docker.compose.service=caddy' --format '{{.ID}}' 2>$null)
+            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing Control Plane; no data was changed.' }
+            if ($cpCaddyIds.Count -eq 1) {
+                $cpFiles = [string](Get-SparrowDockerLabel -Resource container -Id ([string]$cpCaddyIds[0]) -Key 'com.docker.compose.project.config_files')
+                if ($cpFiles -match 'docker-compose\.production\.yml|docker-compose\.shared-proxy\.yml') {
+                    Repair-InstalledPublicMetadataIfAlreadyPublic
+                    $cpBefore = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+                    $nodeBefore = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
+                }
+            }
+        }
         # Read-only inference: a failed earlier public attempt may leave mode
         # metadata inconsistent with the *actual* LAN Compose deployment.
         $cpEffectiveMode = if ($shared -and $Component -eq 'Combined' -and $installedCp) { Get-SafeInstalledPublicMode $cpRoot 'sparrow-control-plane' } else { [string]$cpBefore['MODE'] }
@@ -1694,7 +1461,7 @@ try {
             }
             if ($Mode -eq 'public') {
                 $desiredDomain = if ($directory -eq $nodeRoot) { $NodeDomain } else { $ControlPlaneDomain }
-                if ($installedConfig['PUBLIC_DOMAIN'] -ne $desiredDomain -and -not $script:AutomaticPublicIpChanged) {
+                if ($installedConfig['PUBLIC_DOMAIN'] -ne $desiredDomain) {
                     throw "Already-installed $directory uses a different public hostname; a reviewed proxy/TLS reconfiguration is required."
                 }
             }
@@ -1708,7 +1475,7 @@ try {
             if ($before['MODE'] -eq 'public' -and
                 (Test-Path -LiteralPath (Join-Path $directory '.env.runtime') -PathType Leaf)) {
                 $newHost = if ($directory -eq $nodeRoot) { $NodeDomain } else { $ControlPlaneDomain }
-                if ($Mode -ne 'public' -or ($before['PUBLIC_DOMAIN'] -and $before['PUBLIC_DOMAIN'] -ne $newHost -and -not $script:AutomaticPublicIpChanged)) {
+                if ($Mode -ne 'public' -or ($before['PUBLIC_DOMAIN'] -and $before['PUBLIC_DOMAIN'] -ne $newHost)) {
                     throw 'Changing or removing an installed public hostname requires an explicit proxy/TLS cutover. No existing deployment was changed.'
                 }
             }
@@ -1776,7 +1543,6 @@ try {
         foreach ($required in $requiredFiles) {
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Installer bundle missing $required" }
         }
-        Apply-AutomaticPublicAddressReconciliation
         if ($nodeSelected -and (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf)) {
             # Refresh FIRST, even when GHCR is unavailable for an unrelated CP
             # image pull. This also corrects legacy localhost advertisements.
@@ -1813,13 +1579,11 @@ try {
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
-                    PUBLIC_HOSTNAME_MODE = $(if ($PublicHostnameMode -eq 'CaddyAutomatic') { 'CaddyAutomatic' } else { [string]$previous['PUBLIC_HOSTNAME_MODE'] })
                 }
             } else {
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     CONFIGURED = 'true'; CONTROL_PLANE_ID = $cpId; MODE = $Mode
                     PUBLIC_DOMAIN = $ControlPlaneDomain
-                    PUBLIC_HOSTNAME_MODE = $(if ($PublicHostnameMode -eq 'CaddyAutomatic') { 'CaddyAutomatic' } else { 'Manual' })
                     SHARED_PROXY = $(if ($shared) { 'true' } else { 'false' })
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
@@ -1846,10 +1610,8 @@ try {
             if (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) {
                 # Never erase an existing local CP, manual directory or public
                 # routing when the operator selects Node-only for image updates.
-                $nodePrevious = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
                 Write-Properties (Join-Path $nodeRoot 'sparrow.conf') @{
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
-                    PUBLIC_HOSTNAME_MODE = $(if ($PublicHostnameMode -eq 'CaddyAutomatic') { 'CaddyAutomatic' } else { [string]$nodePrevious['PUBLIC_HOSTNAME_MODE'] })
                 }
             } else {
                 $cpUrls = $(if ($Component -eq 'Combined') {
@@ -1858,7 +1620,6 @@ try {
                 Write-Properties (Join-Path $nodeRoot 'sparrow.conf') @{
                     CONFIGURED = 'true'; MODE = $Mode
                     PUBLIC_DOMAIN = $NodeDomain
-                    PUBLIC_HOSTNAME_MODE = $(if ($PublicHostnameMode -eq 'CaddyAutomatic') { 'CaddyAutomatic' } else { 'Manual' })
                     SHARED_PROXY = $(if ($shared) { 'true' } else { 'false' })
                     LOCAL_CONTROL_PLANE_DOMAIN = $(if ($Component -eq 'Combined' -and $shared) { $ControlPlaneDomain } else { '' })
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
