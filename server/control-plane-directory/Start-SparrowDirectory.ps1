@@ -48,6 +48,26 @@ function Validate-Hostname([string]$Name) {
     }
     return $Name
 }
+function Get-AutomaticDirectoryIPv4([string]$Name) {
+    if ([string]::IsNullOrWhiteSpace($Name) -or
+        $Name.ToLowerInvariant() -notmatch '^directory-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io$') { return '' }
+    $candidate = $Matches[1].Replace('-', '.')
+    $address = $null
+    if (-not [Net.IPAddress]::TryParse($candidate, [ref]$address) -or
+        $address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) { return '' }
+    return $candidate
+}
+function Get-CurrentPublicIPv4 {
+    foreach ($uri in @('https://api.ipify.org','https://ipv4.icanhazip.com')) {
+        try {
+            $value = ([string](Invoke-RestMethod -Uri $uri -TimeoutSec 8)).Trim()
+            $address = $null
+            if ([Net.IPAddress]::TryParse($value, [ref]$address) -and
+                $address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork) { return $value }
+        } catch { }
+    }
+    return ''
+}
 function Directory-Route([string]$Name) {
     return @"
 $beginRoute
@@ -74,6 +94,32 @@ function Managed-Route([string]$Contents) {
         throw 'Existing Caddyfile has multiple/ambiguous Directory routes; unchanged.'
     }
     return $Contents.Substring($startAt, $endAt + $endRoute.Length - $startAt)
+}
+function Get-ManagedDirectoryRouteHostname([string]$Route) {
+    if ([string]::IsNullOrWhiteSpace($Route)) { return '' }
+    foreach ($line in ($Route -split "`r?`n")) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed -eq $beginRoute -or $trimmed -eq $endRoute) { continue }
+        if ($trimmed -match '^([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)\s*\{$') {
+            try { return (Validate-Hostname $Matches[1]) } catch { return '' }
+        }
+        return ''
+    }
+    return ''
+}
+function Test-SparrowManagedDirectoryRoute([string]$Route) {
+    # Ownership is represented by the dedicated BEGIN/END markers plus the
+    # exact Sparrow Directory upstream. Do not depend on directory-host.txt:
+    # the installer may legitimately be launched from a fresh source/bundle
+    # while the shared proxy and persistent Directory volume already exist.
+    if ([string]::IsNullOrWhiteSpace($Route)) { return $false }
+    $routeHost = Get-ManagedDirectoryRouteHostname $Route
+    if ([string]::IsNullOrWhiteSpace($routeHost)) { return $false }
+    $proxyMatches = @([regex]::Matches($Route, '(?m)^\s*reverse_proxy\s+([^\s#]+)\s*$'))
+    if ($proxyMatches.Count -ne 1 -or $proxyMatches[0].Groups[1].Value -ne 'sparrow-central-directory:9080') { return $false }
+    if ($Route -notmatch 'respond\s+"Not found"\s+404') { return $false }
+    if ($Route -notmatch '(?m)^\s*@directory_public\s+path\s+') { return $false }
+    return $true
 }
 function Preserve-InstalledProxyRoute([string]$CombinedRoot) {
     # The existing Windows GUI regenerates Caddyfile on Install / Start.
@@ -129,6 +175,100 @@ function Preserve-InstalledProxyRoute([string]$CombinedRoot) {
         [IO.File]::WriteAllText($backup,$source,[Text.UTF8Encoding]::new($false))
     }
     [IO.File]::WriteAllText($manager,$source.Replace($old,$new),[Text.UTF8Encoding]::new($false))
+}
+
+
+function New-RegistrationComposeCopy([string]$ComposeFile,[string]$IdentityFile) {
+    $composeDirectory = Split-Path -Parent $ComposeFile
+    $stageDirectory = Join-Path $composeDirectory '.sparrow-registration'
+    $stageIdentity = Join-Path $stageDirectory 'registry-root.identity'
+    $stageCompose = Join-Path $composeDirectory '.sparrow-directory-registration.compose.yml'
+    New-Item -ItemType Directory -Path $stageDirectory -Force | Out-Null
+    # Re-create the bytes under public-proxy so the temporary file inherits
+    # Docker-readable host ACLs. Never chmod or rewrite the real identity.
+    [IO.File]::WriteAllBytes($stageIdentity,[IO.File]::ReadAllBytes($IdentityFile))
+    $source = [IO.File]::ReadAllText($ComposeFile)
+    $pattern = '(?m)^(?<prefix>\s*-\s*)[^\r\n]+:/run/control-plane/registry-root\.identity:ro\s*$'
+    $matches = [regex]::Matches($source,$pattern)
+    if ($matches.Count -ne 1) {
+        Remove-Item -LiteralPath $stageIdentity -Force -ErrorAction SilentlyContinue
+        throw 'Cannot safely stage the Control Plane identity: registration mount was not found exactly once.'
+    }
+    $replacement = '${prefix}.sparrow-registration/registry-root.identity:/run/control-plane/registry-root.identity:ro'
+    $mountRegex = [regex]::new($pattern)
+    $stagedSource = $mountRegex.Replace($source,$replacement,1)
+    [IO.File]::WriteAllText($stageCompose,$stagedSource,[Text.UTF8Encoding]::new($false))
+    return [pscustomobject]@{ ComposeFile = $stageCompose; StageDirectory = $stageDirectory; IdentityFile = $stageIdentity }
+}
+function Remove-RegistrationComposeCopy($Stage) {
+    if ($null -eq $Stage) { return }
+    Remove-Item -LiteralPath $Stage.ComposeFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Stage.IdentityFile -Force -ErrorAction SilentlyContinue
+    try { Remove-Item -LiteralPath $Stage.StageDirectory -Force -ErrorAction Stop } catch { }
+}
+
+function Get-SimpleConfigValue([string]$Path,[string]$Name) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }
+    $pattern = '^' + [regex]::Escape($Name) + '=(.*)$'
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        if ($line -match $pattern) { return [string]$Matches[1] }
+    }
+    return ''
+}
+function Register-ExistingCombinedControlPlane([string]$CombinedRoot,[string]$DirectoryUrl,[string]$DirectoryPublicKey) {
+    if ([string]::IsNullOrWhiteSpace($CombinedRoot)) { return }
+    $cpConf = Join-Path $CombinedRoot 'control-plane/sparrow.conf'
+    $identity = Join-Path $CombinedRoot 'control-plane/secrets/registry-root.identity'
+    $composeFile = Join-Path $CombinedRoot 'public-proxy/docker-compose.yml'
+    $proofRoot = Join-Path $CombinedRoot 'control-plane/directory-registration-proofs'
+    if (-not (Test-Path -LiteralPath $cpConf -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $identity -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $composeFile -PathType Leaf)) {
+        throw 'Combined server is missing Control Plane registration files; Directory endpoint rotation was not finalized.'
+    }
+    $mode = (Get-SimpleConfigValue $cpConf 'MODE').Trim().ToLowerInvariant()
+    $publicDomain = (Get-SimpleConfigValue $cpConf 'PUBLIC_DOMAIN').Trim().ToLowerInvariant()
+    if ($mode -ne 'public' -or [string]::IsNullOrWhiteSpace($publicDomain)) {
+        throw 'Combined Control Plane is not configured with a public hostname; cannot publish it in the Directory.'
+    }
+    New-Item -ItemType Directory -Path $proofRoot -Force | Out-Null
+    Write-Output "Registering current Control Plane endpoint https://$publicDomain with the existing Directory identity..."
+    $registrationStage = $null
+    try {
+        $registrationStage = New-RegistrationComposeCopy -ComposeFile $composeFile -IdentityFile $identity
+        $registrationCompose = [string]$registrationStage.ComposeFile
+        $null = Invoke-DockerChecked @('compose','-f',$registrationCompose,'--profile','registration','build','directory-register')
+        $directoryArgument = 'CONTROL_PLANE_DIRECTORY_URL=' + $DirectoryUrl
+        $pinArgument = 'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=' + $DirectoryPublicKey
+        $planeArgument = 'SPARROW_REGISTRATION_PLANE_URL=https://' + $publicDomain
+        $registration = @(Invoke-DockerChecked @('compose','-f',$registrationCompose,'--profile','registration','run','--rm','--no-deps',
+            '-e',$directoryArgument,'-e',$pinArgument,'-e',$planeArgument,'directory-register'))
+        if ($registration.Count -gt 0) { Write-Output ('Directory registration: ' + ($registration -join ' ')) }
+    } finally {
+        Remove-RegistrationComposeCopy $registrationStage
+    }
+
+    # Verify the public signed snapshot actually contains the NEW endpoint. A
+    # successful local container run is not enough if an older Directory image
+    # silently retained the prior endpoint.
+    $expectedUrl = 'https://' + $publicDomain
+    $verified = $false
+    $lastError = ''
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            $response = Invoke-RestMethod -Uri ($DirectoryUrl.TrimEnd('/') + '/v1/control-planes') -TimeoutSec 10
+            $matches = @($response.payload.controlPlanes | Where-Object { [string]$_.baseUrl -eq $expectedUrl })
+            if ($matches.Count -eq 1) { $verified = $true; break }
+            $lastError = "signed snapshot does not contain $expectedUrl"
+        } catch {
+            $lastError = $_.Exception.Message
+        }
+        if ($attempt -lt 5) { Start-Sleep -Seconds 2 }
+    }
+    if (-not $verified) {
+        throw "Directory service did not publish the rotated Control Plane endpoint $expectedUrl. $lastError"
+    }
+    Write-Output "Verified Directory now publishes $expectedUrl."
 }
 
 function Test-StandalonePortsAvailable {
@@ -233,11 +373,34 @@ function Install-Directory([string]$CombinedRoot,[string]$Hostname) {
         if ($currentRoute -and $previousHost -and
             $currentRoute -ne (Directory-Route $previousHost) -and
             $currentRoute -ne (Directory-Route $previousHost).Replace(' /.well-known/sparrow-directory','')) {
-            throw 'Existing Directory proxy route differs from the last installer configuration; unchanged.'
+            # The unified server may already have reconciled a generated
+            # directory-<IP>.sslip.io route after a WAN-IP change. Accept that
+            # one exact automatic move when the requested hostname matches the
+            # live installer-owned route; custom host changes remain guarded.
+            $automaticRotation = (Get-AutomaticDirectoryIPv4 $previousHost) -and
+                (Get-AutomaticDirectoryIPv4 $Hostname) -and
+                ($currentRoute -eq (Directory-Route $Hostname) -or
+                 $currentRoute -eq (Directory-Route $Hostname).Replace(' /.well-known/sparrow-directory',''))
+            if (-not $automaticRotation) {
+                throw 'Existing Directory proxy route differs from the last installer configuration; unchanged.'
+            }
+            Write-Output "Detected automatic Directory hostname rotation: $previousHost -> $Hostname (signing identity unchanged)."
         }
-        if ($currentRoute -and -not $previousHost -and $currentRoute -ne (Directory-Route $Hostname) -and
-            $currentRoute -ne (Directory-Route $Hostname).Replace(' /.well-known/sparrow-directory','')) {
-            throw 'Existing Directory route is not owned by this installation; unchanged.'
+        if ($currentRoute -and -not $previousHost) {
+            if (-not (Test-SparrowManagedDirectoryRoute $currentRoute)) {
+                throw 'Existing marked Directory route does not match Sparrow Directory ownership; unchanged.'
+            }
+            $routeHost = Get-ManagedDirectoryRouteHostname $currentRoute
+            if ($routeHost -ne $Hostname) {
+                $automaticRotation = (Get-AutomaticDirectoryIPv4 $routeHost) -and
+                    (Get-AutomaticDirectoryIPv4 $Hostname)
+                if (-not $automaticRotation) {
+                    throw "Existing Sparrow Directory route belongs to $routeHost. Refusing an unverified custom hostname change to $Hostname."
+                }
+                Write-Output "Adopted existing managed Directory route and detected automatic hostname rotation: $routeHost -> $Hostname (signing identity unchanged)."
+            } else {
+                Write-Output "Adopted existing managed Directory route for $routeHost; local installer host metadata was missing."
+            }
         }
     }
     $adminEnv = Join-Path $privateFolder 'admin.env'
@@ -342,6 +505,9 @@ function Install-Directory([string]$CombinedRoot,[string]$Hostname) {
     }
     [IO.File]::WriteAllText((Join-Path $privateFolder 'directory-public.json'),
          ($info | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
+    if (-not $standalone) {
+        Register-ExistingCombinedControlPlane -CombinedRoot $CombinedRoot -DirectoryUrl $info.url -DirectoryPublicKey $info.publicKey
+    }
     Write-Output 'Independent Directory service is running (no dependency on the Control Plane or Community Node).'
     Write-Output "Directory URL: $($info.url)"
     Write-Output "Directory public verification key (informational): $($info.publicKey)"
@@ -402,16 +568,16 @@ $domainInput = [Windows.Forms.TextBox]::new()
 $domainInput.Location = [Drawing.Point]::new(18,162)
 $domainInput.Size = [Drawing.Size]::new(707,24)
 $storedHost = Join-Path $privateFolder 'directory-host.txt'
+$currentPublicIp = Get-CurrentPublicIPv4
 if (Test-Path -LiteralPath $storedHost) {
-    $domainInput.Text = [IO.File]::ReadAllText($storedHost).Trim()
-} else {
-    try {
-        $ipv4 = [string](Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 8)
-        $address = [Net.IPAddress]::Parse($ipv4.Trim())
-        if ($address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork) {
-            $domainInput.Text = 'directory-' + $ipv4.Trim().Replace('.','-') + '.sslip.io'
-        }
-    } catch { }
+    $savedDirectoryHost = [IO.File]::ReadAllText($storedHost).Trim()
+    if ($currentPublicIp -and (Get-AutomaticDirectoryIPv4 $savedDirectoryHost)) {
+        $domainInput.Text = 'directory-' + $currentPublicIp.Replace('.','-') + '.sslip.io'
+    } else {
+        $domainInput.Text = $savedDirectoryHost
+    }
+} elseif ($currentPublicIp) {
+    $domainInput.Text = 'directory-' + $currentPublicIp.Replace('.','-') + '.sslip.io'
 }
 $form.Controls.Add($domainInput)
 $installButton = [Windows.Forms.Button]::new()

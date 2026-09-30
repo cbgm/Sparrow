@@ -16,6 +16,7 @@ import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import com.cbgm.sparrow.startup.util.StartupRuntimeReadiness
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.milliseconds
 
 class AppViewModel(
@@ -127,27 +129,60 @@ class AppViewModel(
                 logger.warn { "Verified Control Plane cache could not be restored: ${error.message}" }
             }
 
-        // Persisted endpoints are sufficient to start transport. Do not block
-        // the foreground runtime on an HTTP directory refresh or health probes
-        // every time the app opens: startControlPlaneMaintenance() performs both.
-        // A first run without any cached endpoints still needs initial discovery.
         val cachedEndpointCount = initialization.controlPlaneConfiguration.endpoints.value.size
-        StartupTrace.event("saved control-plane endpoints=$cachedEndpointCount")
-        if (cachedEndpointCount == 0) {
-            initialization.controlPlaneDirectorySynchronizer
-                .refresh()
-                .onSuccess { count ->
-                    logger.info { "Initial control-plane directory synchronized; addresses=$count" }
-                }.onFailure { error ->
-                    if (error is CancellationException && !error.isRecoverableConnectivityFailure()) throw error
-                    if (error.isRecoverableConnectivityFailure()) {
-                        // Startup with the directory server down is already represented
-                        // by the existing global offline/reconnected hint.
-                        logger.debug { "Initial control-plane directory unreachable: ${error.message}" }
-                    } else {
-                        logger.warn { "Initial control-plane directory unavailable: ${error.message}" }
-                    }
+        val configuredDirectoryUrl = initialization.controlPlaneConfiguration.directoryUrl.value
+        StartupTrace.event(
+            "saved control-plane endpoints=$cachedEndpointCount; signed-directory-configured=${configuredDirectoryUrl != null}"
+        )
+
+        // A signed Directory is the authority for *discovered* Control Planes.
+        // Always give it one bounded startup refresh, even when an authenticated
+        // last-good snapshot exists. Otherwise an endpoint that disappeared from
+        // the latest signed snapshot can remain the only candidate until the
+        // background maintenance loop happens to run. The verified-directory
+        // state keeps disappeared discovered planes for its 24-hour stale grace,
+        // but fresh signed endpoints are ordered ahead of those stale fallbacks.
+        // Manual Control Planes are stored separately and are never affected by
+        // this refresh or by discovered-endpoint stale eviction.
+        if (configuredDirectoryUrl != null) {
+            refreshSignedDirectoryAtStartup()
+        } else if (cachedEndpointCount == 0) {
+            // No signed Directory and no persisted endpoint means there is
+            // nothing transport can use yet. Keep this branch for legacy/manual
+            // configurations without introducing a build-default fallback.
+            logger.debug { "No signed Control Plane directory is configured and no cached endpoint exists" }
+        }
+    }
+
+    private suspend fun refreshSignedDirectoryAtStartup() {
+        val result =
+            try {
+                withTimeout(STARTUP_SIGNED_DIRECTORY_REFRESH_TIMEOUT_MILLISECONDS.milliseconds) {
+                    initialization.controlPlaneDirectorySynchronizer.refresh()
                 }
+            } catch (error: TimeoutCancellationException) {
+                Result.failure(error)
+            }
+
+        result.onSuccess { count ->
+            logger.info { "Startup signed Control Plane directory synchronized; addresses=$count" }
+        }.onFailure { error ->
+            if (error is CancellationException && error !is TimeoutCancellationException &&
+                !error.isRecoverableConnectivityFailure()
+            ) {
+                throw error
+            }
+            // Connectivity failures are already represented by Sparrow's global
+            // offline/reconnected UI. Keep the authenticated cached endpoints.
+            if (error.isRecoverableConnectivityFailure() || error is TimeoutCancellationException) {
+                logger.debug {
+                    "Startup signed Control Plane directory refresh unavailable; using authenticated cache: ${error.message}"
+                }
+            } else {
+                logger.warn {
+                    "Startup signed Control Plane directory refresh rejected; using authenticated cache: ${error.message}"
+                }
+            }
         }
     }
 
@@ -384,6 +419,7 @@ class AppViewModel(
     }
 
     private companion object {
+        const val STARTUP_SIGNED_DIRECTORY_REFRESH_TIMEOUT_MILLISECONDS = 6_000L
         const val CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS = 300_000L
         const val CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS = 5_000L
         const val CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS = 60_000L

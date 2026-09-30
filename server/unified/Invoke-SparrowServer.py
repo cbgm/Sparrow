@@ -611,6 +611,38 @@ def start_directory_sync_best_effort():
         print("Directory background refresh deferred; paired server remains online: " + str(exc)[:200])
 
 
+def staged_registration_compose(identity: Path) -> tuple[Path, Path]:
+    """Use a short-lived Docker-readable copy; never change the real identity ACLs."""
+    proxy_root = ROOT / "public-proxy"
+    compose_file = proxy_root / "docker-compose.yml"
+    stage_dir = proxy_root / ".sparrow-registration"
+    stage_identity = stage_dir / "registry-root.identity"
+    stage_compose = proxy_root / ".sparrow-directory-registration.compose.yml"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    stage_identity.write_bytes(identity.read_bytes())
+    source = compose_file.read_text(encoding="utf-8")
+    pattern = re.compile(r"(?m)^(?P<prefix>\s*-\s*)[^\r\n]+:/run/control-plane/registry-root\.identity:ro\s*$")
+    matches = list(pattern.finditer(source))
+    if len(matches) != 1:
+        stage_identity.unlink(missing_ok=True)
+        raise InstallerError("Cannot safely stage the Control Plane identity: registration mount was not found exactly once.")
+    staged = pattern.sub(r"\g<prefix>.sparrow-registration/registry-root.identity:/run/control-plane/registry-root.identity:ro",
+                         source, count=1)
+    stage_compose.write_text(staged, encoding="utf-8")
+    return stage_compose, stage_dir
+
+
+def cleanup_staged_registration_compose(stage_compose: Path | None, stage_dir: Path | None):
+    if stage_compose is not None:
+        stage_compose.unlink(missing_ok=True)
+    if stage_dir is not None:
+        (stage_dir / "registry-root.identity").unlink(missing_ok=True)
+        try:
+            stage_dir.rmdir()
+        except OSError:
+            pass
+
+
 def register_installed_public_control_plane():
     """Best effort only: a central directory outage must never block messaging.
 
@@ -646,25 +678,30 @@ def register_installed_public_control_plane():
     # tightly scoped one-shot Docker client; no cryptography on the host.
     # DO NOT use --env-file control-plane/sparrow.conf: it may hold other data.
     # Only three explicit, non-admin configuration values cross this boundary.
-    cmd_base = [*compose("proxy"), "--profile", "registration"]
-    built = run([*cmd_base, "build", "directory-register"],
-                cwd=ROOT / "public-proxy", capture=True, check=False)
-    if built.returncode:
-        print("Directory registration deferred: one-shot client image unavailable; local server remains online: " +
-              ((built.stderr or built.stdout) or "Docker build failed")[:230])
-        return
-    result = run([*cmd_base, "run", "--rm", "--no-deps",
-                  "-e", "CONTROL_PLANE_DIRECTORY_URL=" + url,
-                  "-e", "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=" + pin,
-                  "-e", "SPARROW_REGISTRATION_PLANE_URL=https://" + hostname,
-                  "directory-register"], cwd=ROOT / "public-proxy",
-                 capture=True, check=False)
-    if result.returncode:
-        print("Directory registration deferred (local server remains online): " +
-              (result.stderr.strip() or "registration client failed")[:250])
-        return
-    print("Directory registration: " + result.stdout.strip()[:220])
-    marker.touch()
+    stage_compose = stage_dir = None
+    try:
+        stage_compose, stage_dir = staged_registration_compose(identity)
+        cmd_base = ["docker", "compose", "-f", str(stage_compose), "--profile", "registration"]
+        built = run([*cmd_base, "build", "directory-register"],
+                    cwd=ROOT / "public-proxy", capture=True, check=False)
+        if built.returncode:
+            print("Directory registration deferred: one-shot client image unavailable; local server remains online: " +
+                  ((built.stderr or built.stdout) or "Docker build failed")[:230])
+            return
+        result = run([*cmd_base, "run", "--rm", "--no-deps",
+                      "-e", "CONTROL_PLANE_DIRECTORY_URL=" + url,
+                      "-e", "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=" + pin,
+                      "-e", "SPARROW_REGISTRATION_PLANE_URL=https://" + hostname,
+                      "directory-register"], cwd=ROOT / "public-proxy",
+                     capture=True, check=False)
+        if result.returncode:
+            print("Directory registration deferred (local server remains online): " +
+                  (result.stderr.strip() or "registration client failed")[:250])
+            return
+        print("Directory registration: " + result.stdout.strip()[:220])
+        marker.touch()
+    finally:
+        cleanup_staged_registration_compose(stage_compose, stage_dir)
 
 
 def install(args):

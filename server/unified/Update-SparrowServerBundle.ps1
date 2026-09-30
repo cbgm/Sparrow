@@ -28,6 +28,9 @@ $manifest = @{
         'Get-SparrowDockerLabel.ps1', 'Attached-SparrowDeployment.ps1', 'README.md',
         'Backup-SparrowDeployment.ps1', 'Stage-SparrowPublicTls.ps1',
         'Invoke-SparrowPublicCutover.ps1', 'Invoke-SparrowServer.py',
+        'Manage-SparrowNodes.ps1', 'Manage-SparrowNodes.py',
+        'Get-SparrowVerifiedDirectory.ps1', 'control_plane_directory_client.py',
+        'control_plane_directory_registration.py', 'control_plane_directory_sync.py',
         'Start-SparrowServer.sh', 'Start-SparrowServer.command',
         'Update-SparrowServerBundle.ps1', 'Update-SparrowFromGitHub.ps1',
         'Reset-SparrowDeployment.ps1', 'bundle-source.json')

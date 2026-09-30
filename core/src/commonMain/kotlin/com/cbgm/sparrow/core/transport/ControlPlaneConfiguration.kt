@@ -82,6 +82,17 @@ interface ControlPlaneConfiguration {
     suspend fun replaceVerifiedDirectory(rootsByBaseUrl: Map<String, String>): Result<Unit> =
         replaceDirectory(rootsByBaseUrl.keys.toList())
 
+    /**
+     * Apply an authenticated snapshot while retaining previously discovered
+     * entries that are still inside the directory's stale grace period.
+     * Manual Control Planes are managed independently and are never part of
+     * this stale set.
+     */
+    suspend fun replaceVerifiedDirectory(
+        rootsByBaseUrl: Map<String, String>,
+        staleBaseUrls: Set<String>
+    ): Result<Unit> = replaceVerifiedDirectory(rootsByBaseUrl)
+
     suspend fun mergeDirectory(baseUrls: List<String>): Result<Unit> =
         replaceDirectory((directoryBaseUrls.value + baseUrls).toList())
 }

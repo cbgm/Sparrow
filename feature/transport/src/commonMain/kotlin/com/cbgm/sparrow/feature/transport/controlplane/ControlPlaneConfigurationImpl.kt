@@ -28,6 +28,7 @@ class ControlPlaneConfigurationImpl(
     // Node-advertised URL hints are NOT equivalent to signed-directory identities.
     private val nodeHintBaseUrls = MutableStateFlow(emptySet<String>())
     private val verifiedDirectoryRoots = MutableStateFlow(emptyMap<String, String>())
+    private val staleDirectoryBaseUrls = MutableStateFlow(emptySet<String>())
     private val _endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
     private val _activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
     private val _statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())
@@ -103,12 +104,26 @@ class ControlPlaneConfigurationImpl(
     override fun orderedEndpoints(): List<ControlPlaneEndpoint> {
         val configured = _endpoints.value
         val statusByEndpoint = _statuses.value.associateBy(ControlPlaneEndpointStatus::endpoint)
+        val activeEndpoint = _activeEndpoint.value
+
+        // A stale directory entry remains available for the grace period, but
+        // it must never stay ahead of a freshly signed replacement endpoint.
+        // A URL that is also manually configured is manual and therefore never stale.
+        val fresh = configured.filterNot(::isStaleDirectoryEndpoint)
+        val stale = configured.filter(::isStaleDirectoryEndpoint)
+        return fresh.order(statusByEndpoint, activeEndpoint) + stale.order(statusByEndpoint, activeEndpoint)
+    }
+
+    private fun List<ControlPlaneEndpoint>.order(
+        statusByEndpoint: Map<ControlPlaneEndpoint, ControlPlaneEndpointStatus>,
+        activeEndpoint: ControlPlaneEndpoint?
+    ): List<ControlPlaneEndpoint> {
         val reachable =
-            configured.filter { endpoint ->
+            filter { endpoint ->
                 statusByEndpoint[endpoint]?.reachability != ControlPlaneReachability.UNREACHABLE
             }
-        val unreachable = configured.filterNot(reachable::contains)
-        val active = _activeEndpoint.value?.takeIf(reachable::contains)
+        val unreachable = filterNot(reachable::contains)
+        val active = activeEndpoint?.takeIf(reachable::contains)
         return listOfNotNull(active) + reachable.filterNot { it == active } + unreachable
     }
 
@@ -337,16 +352,29 @@ class ControlPlaneConfigurationImpl(
         verifiedDirectoryRoots.value[baseUrl]
 
     override suspend fun replaceVerifiedDirectory(rootsByBaseUrl: Map<String, String>): Result<Unit> =
+        replaceVerifiedDirectory(rootsByBaseUrl, emptySet())
+
+    override suspend fun replaceVerifiedDirectory(
+        rootsByBaseUrl: Map<String, String>,
+        staleBaseUrls: Set<String>
+    ): Result<Unit> =
         runCatching {
             configurationMutex.withLock {
                 initializeLocked()
-                val normalized = rootsByBaseUrl.keys.toList().normalizeUrls()
-                require(normalized.size == rootsByBaseUrl.size) { "Duplicate verified directory URL" }
-                require(normalized.all { it.startsWith("https://") }) { "Signed directory requires HTTPS" }
-                persistUrls(KEY_DIRECTORY_CONTROL_PLANES, normalized)
-                verifiedDirectoryRoots.value = rootsByBaseUrl
+                val normalizedRoots = rootsByBaseUrl.mapKeys { (baseUrl, _) -> normalizeHttpUrl(baseUrl) }
+                require(normalizedRoots.size == rootsByBaseUrl.size) { "Duplicate verified directory URL" }
+                require(normalizedRoots.keys.all { it.startsWith("https://") }) {
+                    "Signed directory requires HTTPS"
+                }
+                val normalizedStale = staleBaseUrls.mapTo(mutableSetOf(), ::normalizeHttpUrl)
+                require(normalizedStale.all(normalizedRoots::containsKey)) {
+                    "Stale Control Plane must still have a verified directory identity"
+                }
+                persistUrls(KEY_DIRECTORY_CONTROL_PLANES, normalizedRoots.keys.toList())
+                verifiedDirectoryRoots.value = normalizedRoots
+                staleDirectoryBaseUrls.value = normalizedStale
                 nodeHintBaseUrls.value = emptySet()
-                _directoryBaseUrls.value = normalized.toSet()
+                _directoryBaseUrls.value = normalizedRoots.keys.toSet()
                 updateCombinedEndpoints()
             }
         }
@@ -381,7 +409,11 @@ class ControlPlaneConfigurationImpl(
             _manualBaseUrls.value,
             _directoryBaseUrls.value + _jsonDirectoryBaseUrls.value + nodeHintBaseUrls.value
         )
-        val active = _activeEndpoint.value?.takeIf(updated::contains) ?: updated.firstOrNull()
+        val previousActive = _activeEndpoint.value?.takeIf(updated::contains)
+        val active =
+            previousActive?.takeUnless { endpoint ->
+                isStaleDirectoryEndpoint(endpoint) && updated.any { !isStaleDirectoryEndpoint(it) }
+            } ?: updated.firstOrNull { !isStaleDirectoryEndpoint(it) } ?: updated.firstOrNull()
         _endpoints.value = updated
         _activeEndpoint.value = active
         _statuses.value =
@@ -393,6 +425,10 @@ class ControlPlaneConfigurationImpl(
                 )
             }
     }
+
+    private fun isStaleDirectoryEndpoint(endpoint: ControlPlaneEndpoint): Boolean =
+        endpoint.baseUrl in staleDirectoryBaseUrls.value &&
+            endpoint.baseUrl !in _manualBaseUrls.value
 
     private fun updateReachability(
         endpoint: ControlPlaneEndpoint,

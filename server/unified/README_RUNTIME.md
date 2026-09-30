@@ -23,6 +23,12 @@ Management:
 
 The installed public addresses are printed by `status` and `install`. Operation logs are stored under ./logs in the installation folder. Public HTTPS and message delivery require external validation on the actual server.
 
+### Dynamic public IPv4 and automatic sslip.io names
+
+When an installation was created with **automatic sslip.io hostnames**, a later `Install / Start` (Windows) or `install --auto-dns` (Linux/macOS) detects the current WAN IPv4. If it changed, Sparrow rotates only its generated `node-<ip>.sslip.io`, `control-<ip>.sslip.io`, managed `node-<id>-<ip>.sslip.io`, and marked `directory-<ip>.sslip.io` endpoints. Existing signing identities, secrets, databases, FCM credentials and Docker volumes are retained. Custom/manual DNS names are never rewritten. The Control Plane then re-registers the same identity at its new endpoint and Community Nodes re-advertise their new endpoints.
+
+If the **independent Directory itself** is hosted on the same dynamic residential IP and Android knows it only through an old `directory-<old-ip>.sslip.io` bootstrap URL, the client has no stable address from which it can discover the new Directory URL. For unattended recovery, host the Directory under a stable DNS/DDNS name (or on stable external infrastructure). Endpoint rotation preserves the Directory signing identity; this limitation is only about finding the new network address.
+
 Only the explicit `reinstall-public --component combined --mode public --confirm-delete-data` action deletes data and generates fresh server identities. Never use this for a server whose stored state must be retained. Never extract a new distribution ZIP over a configured deployment; update the manager scripts in its original folder and keep runtime files, secrets, and volumes.
 
 Combined Public installation always installs both services. The Community Node-only manager installs no Control Plane. In Combined Public mode, set the

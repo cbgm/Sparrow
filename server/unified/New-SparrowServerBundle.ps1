@@ -113,7 +113,7 @@ foreach ($component in $componentFiles.Keys) {
     [System.IO.File]::WriteAllText((Join-Path $secretRoot '.gitignore'), "*`n!.gitignore`n", [System.Text.UTF8Encoding]::new($false))
     $configPath = Join-Path $target 'sparrow.conf'
     [System.IO.File]::WriteAllLines($configPath, @(
-        'CONFIGURED=false', 'MODE=lan', 'PUBLIC_DOMAIN=', 'SHARED_PROXY=false',
+        'CONFIGURED=false', 'MODE=lan', 'PUBLIC_DOMAIN=', 'PUBLIC_HOSTNAME_MODE=Manual', 'SHARED_PROXY=false',
         "SPARROW_IMAGE_PREFIX=$ImagePrefix", "SPARROW_IMAGE_TAG=$ImageTag",
         $(if ($component -eq 'control-plane') { 'CONTROL_PLANE_ID=' } else { 'CONTROL_PLANE_URLS=' }),
         "CONTROL_PLANE_DIRECTORY_URL=$defaultDirectoryUrl",

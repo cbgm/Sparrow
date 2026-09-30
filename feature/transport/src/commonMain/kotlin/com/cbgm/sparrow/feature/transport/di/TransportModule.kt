@@ -188,7 +188,8 @@ val transportModule =
                 config = get<TransportConfig>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneStatusStore = get<ControlPlaneStatusStore>(),
-                endpointSelector = get<NodeEndpointSelector>()
+                endpointSelector = get<NodeEndpointSelector>(),
+                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>()
             )
         }
 

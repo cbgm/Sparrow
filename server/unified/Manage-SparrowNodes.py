@@ -116,6 +116,57 @@ def compose(directory, *action):
     return cmd(*args, *action, cwd=directory)
 
 
+RECONCILED_RUNTIME_KEYS = (
+    'COMMUNITY_NODE_SITE_ADDRESS',
+    'COMMUNITY_NODE_DOMAIN',
+    'CLIENT_ENDPOINT',
+    'FEDERATION_ENDPOINT',
+    'MAILBOX_ENDPOINT',
+    'CONTROL_PLANE_URL',
+    'CONTROL_PLANE_URLS',
+    'ADVERTISED_CONTROL_PLANE_URLS',
+    'MANUAL_CONTROL_PLANE_URLS',
+    'LOCAL_CONTROL_PLANE_DOMAIN',
+)
+
+
+def container_environment(container_id):
+    result = docker('inspect', '--format', '{{range .Config.Env}}{{println .}}{{end}}',
+                    container_id, capture=True)
+    values = {}
+    for line in result.stdout.splitlines():
+        if '=' in line:
+            key, value = line.split('=', 1)
+            values[key] = value
+    return values
+
+
+def backend_runtime_mismatch(directory, meta, desired_runtime):
+    """Return True when Docker still runs with pre-reconciliation env values.
+
+    Rewriting .env.runtime does not mutate an already-created container.  This
+    check makes public-IP reconciliation resumable after a partial run: if the
+    files already contain the new endpoint but any running backend still holds
+    the old environment, Compose must recreate the backend containers once.
+    Only keys that the service actually has are compared.
+    """
+    project = meta.get('project') or ('sparrow-community-' + meta['id'])
+    for service in BACKENDS:
+        result = docker('ps', '--all',
+                        '--filter', f'label=com.docker.compose.project={project}',
+                        '--filter', f'label=com.docker.compose.service={service}',
+                        '--format', '{{.ID}}', capture=True)
+        for container_id in result.stdout.splitlines():
+            container_id = container_id.strip()
+            if not container_id:
+                continue
+            actual = container_environment(container_id)
+            for key in RECONCILED_RUNTIME_KEYS:
+                if key in actual and key in desired_runtime and actual[key] != desired_runtime[key]:
+                    return True
+    return False
+
+
 def ownership(directory, meta):
     project = 'sparrow-community-' + meta['id']
     rows = docker('ps', '--all', '--filter', f'label=com.docker.compose.project={project}',
@@ -444,6 +495,168 @@ def auto_hostname(instance_id, ip):
     return f'{instance_id}-{str(address).replace(".", "-")}.sslip.io'
 
 
+def automatic_sslip_host(hostname, prefix):
+    """Return the encoded IPv4 only for Sparrow-generated sslip.io names.
+
+    A manually configured hostname is never rewritten merely because it happens
+    to be public. Legacy instances predate the metadata flag, so their exact
+    role/id prefix is the safe compatibility signal.
+    """
+    match = re.fullmatch(re.escape(prefix) + r'-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io',
+                         (hostname or '').lower())
+    if not match:
+        return ''
+    raw = match.group(1).replace('-', '.')
+    try:
+        address = ipaddress.IPv4Address(raw)
+    except ipaddress.AddressValueError:
+        return ''
+    return str(address) if address.is_global else ''
+
+
+def rewrite_automatic_origin(value, prefix, public_ip):
+    """Rewrite only an exact generated https://<prefix>-IP.sslip.io origin."""
+    value = (value or '').strip()
+    if not value:
+        return value
+    parsed = urlsplit(value)
+    if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        return value
+    if parsed.port not in (None, 443) or parsed.path not in ('', '/'):
+        return value
+    if not automatic_sslip_host(parsed.hostname or '', prefix):
+        return value
+    return f'https://{prefix}-{public_ip.replace(".", "-")}.sslip.io'
+
+
+def rewrite_automatic_origins(values, prefix, public_ip):
+    return ','.join(rewrite_automatic_origin(value.strip(), prefix, public_ip)
+                    for value in (values or '').split(',') if value.strip())
+
+
+def is_automatic_instance(meta):
+    explicit = meta.get('automaticHostname')
+    if explicit is not None:
+        return bool(explicit)
+    return bool(automatic_sslip_host(meta.get('hostname', ''), meta.get('id', '')))
+
+
+def current_public_ip(explicit=''):
+    raw = explicit or urlopen('https://api.ipify.org', timeout=8).read(64).decode().strip()
+    try:
+        address = ipaddress.IPv4Address(raw)
+    except ipaddress.AddressValueError as exc:
+        raise NodeError('Public-address reconciliation requires a valid WAN IPv4 address.') from exc
+    require(address.is_global, 'Public-address reconciliation requires a globally routable IPv4 address.')
+    return str(address)
+
+
+def reconcile_managed_public_ip(args):
+    """Move generated sslip.io endpoints without replacing any node identity/data.
+
+    Only instances explicitly marked automatic (or exact legacy generated names)
+    are changed. Custom hostnames and arbitrary manual Control Plane/Directory
+    URLs are deliberately left untouched.
+    """
+    public_ip = current_public_ip(args.public_ip)
+    changed = []
+    originals = {}
+    for directory in instance_dirs():
+        meta = metadata(directory)
+        if meta.get('mode') != 'public' or not is_automatic_instance(meta):
+            continue
+        old_host = meta.get('hostname', '')
+        new_host = auto_hostname(meta['id'], public_ip)
+        settings = properties(directory / 'sparrow.conf')
+        new_settings = dict(settings)
+        new_settings['PUBLIC_DOMAIN'] = new_host
+        new_settings['CONTROL_PLANE_URLS'] = rewrite_automatic_origins(
+            settings.get('CONTROL_PLANE_URLS', ''), 'control', public_ip)
+        new_settings['LOCAL_CONTROL_PLANE_DOMAIN'] = (
+            f'control-{public_ip.replace(".", "-")}.sslip.io'
+            if automatic_sslip_host(settings.get('LOCAL_CONTROL_PLANE_DOMAIN', ''), 'control')
+            else settings.get('LOCAL_CONTROL_PLANE_DOMAIN', ''))
+        new_settings['CONTROL_PLANE_DIRECTORY_URL'] = rewrite_automatic_origin(
+            settings.get('CONTROL_PLANE_DIRECTORY_URL', ''), 'directory', public_ip)
+
+        runtime_path = directory / '.env.runtime'
+        runtime_values = properties(runtime_path)
+        desired_runtime = dict(runtime_values)
+        if runtime_path.is_file():
+            desired_runtime.update({
+                'COMMUNITY_NODE_SITE_ADDRESS': new_host,
+                'COMMUNITY_NODE_DOMAIN': new_host,
+                'CLIENT_ENDPOINT': f'wss://{new_host}/v1/gateway',
+                'FEDERATION_ENDPOINT': f'https://{new_host}',
+                'MAILBOX_ENDPOINT': f'https://{new_host}',
+                'CONTROL_PLANE_URL': rewrite_automatic_origin(runtime_values.get('CONTROL_PLANE_URL', ''), 'control', public_ip),
+                'CONTROL_PLANE_URLS': rewrite_automatic_origins(runtime_values.get('CONTROL_PLANE_URLS', ''), 'control', public_ip),
+                'ADVERTISED_CONTROL_PLANE_URLS': rewrite_automatic_origins(runtime_values.get('ADVERTISED_CONTROL_PLANE_URLS', ''), 'control', public_ip),
+                'MANUAL_CONTROL_PLANE_URLS': rewrite_automatic_origins(runtime_values.get('MANUAL_CONTROL_PLANE_URLS', ''), 'control', public_ip),
+                'LOCAL_CONTROL_PLANE_DOMAIN': new_settings.get('LOCAL_CONTROL_PLANE_DOMAIN', ''),
+            })
+
+        ownership(directory, meta)
+        config_changed = (old_host != new_host or new_settings != settings or
+                          meta.get('automaticHostname') is not True or
+                          (runtime_path.is_file() and desired_runtime != runtime_values))
+        container_stale = (runtime_path.is_file() and installed(directory) and
+                           backend_runtime_mismatch(directory, meta, desired_runtime))
+        if not config_changed and not container_stale:
+            continue
+
+        paths = [directory / 'node-instance.json', directory / 'sparrow.conf']
+        route_path = ROUTES / (meta['id'] + '.caddy')
+        if runtime_path.is_file():
+            paths.append(runtime_path)
+        if route_path.is_file():
+            paths.append(route_path)
+        for path in paths:
+            if path not in originals and path.exists():
+                originals[path] = path.read_text(encoding='utf-8')
+        if config_changed:
+            meta['hostname'] = new_host
+            meta['automaticHostname'] = True
+            atomic(directory / 'node-instance.json', json.dumps(meta, indent=2) + '\n')
+            atomic(directory / 'sparrow.conf', ''.join(f'{k}={v}\n' for k, v in new_settings.items()))
+            if runtime_path.is_file():
+                atomic(runtime_path, ''.join(f'{k}={v}\n' for k, v in desired_runtime.items()))
+            ROUTES.mkdir(parents=True, exist_ok=True)
+            atomic(route_path, route_for(directory, meta))
+        changed.append((directory, meta, old_host, new_host, config_changed, container_stale))
+    if not changed:
+        print(f'Managed Community Nodes already match WAN IPv4 {public_ip}; no changes required.')
+        return
+    try:
+        ensure_proxy()
+        proxy_compose('exec', '-T', 'caddy', 'caddy', 'validate', '--config', '/etc/caddy/Caddyfile', capture=True)
+        proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', capture=True)
+        for directory, meta, _, _, _, _ in changed:
+            if installed(directory):
+                compose(directory, 'up', '-d', '--no-deps', '--force-recreate', *BACKENDS)
+                start_directory_worker(directory)
+    except Exception:
+        for path, content in originals.items():
+            atomic(path, content)
+        try:
+            if own_proxy_is_running():
+                proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', capture=True)
+            for directory, meta, _, _, _, _ in changed:
+                if installed(directory):
+                    compose(directory, 'up', '-d', '--no-deps', '--force-recreate', *BACKENDS)
+        except Exception:
+            pass
+        raise
+    for _, meta, old_host, new_host, config_changed, container_stale in changed:
+        if old_host != new_host:
+            print(f'{meta["name"]} [{meta["id"]}] public endpoint: {old_host} -> {new_host}')
+        elif container_stale and not config_changed:
+            print(f'{meta["name"]} [{meta["id"]}] Docker runtime was stale; backend containers recreated from current .env.runtime.')
+        else:
+            print(f'{meta["name"]} [{meta["id"]}] public endpoint/runtime reconciled: {new_host}')
+    print('Managed node identities, credentials, databases and Docker volumes were preserved.')
+
+
 def all_public_hosts():
     hosts = set()
     for part in ('community-node', 'control-plane'):
@@ -559,7 +772,8 @@ def add(args):
             re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}', image_tag), 'Invalid image reference.')
     port = port_for_new_node()
     data = {'id': instance_id, 'name': args.name.strip(), 'mode': args.mode,
-            'hostname': host, 'port': port, 'project': 'sparrow-community-' + instance_id}
+            'hostname': host, 'automaticHostname': bool(args.mode == 'public' and args.auto_dns and not args.node_domain),
+            'port': port, 'project': 'sparrow-community-' + instance_id}
     directory.mkdir(parents=True, exist_ok=False)
     (directory / 'secrets').mkdir()
     try:
@@ -652,7 +866,7 @@ def own_proxy_is_running():
     return bool(result.stdout.strip())
 
 
-def proxy_compose(*action):
+def proxy_compose(*action, capture=False):
     """Mount independent route snippets even with a pre-multi-node proxy.
 
     An additive Compose override preserves the original file, certificate
@@ -672,7 +886,7 @@ def proxy_compose(*action):
         else:
             atomic(overlay, expected)
         args += ['-f', str(overlay)]
-    return cmd(*args, *action, cwd=PROXY)
+    return cmd(*args, *action, cwd=PROXY, capture=capture)
 
 
 def shared_route_mount_is_live():
@@ -754,8 +968,8 @@ def publish_route(directory, meta):
         if IMPORT not in before:
             atomic(main, before.rstrip() + '\n\n' + IMPORT + '\n')
         ensure_proxy()
-        proxy_compose('exec', '-T', 'caddy', 'caddy', 'validate', '--config', '/etc/caddy/Caddyfile')
-        proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile')
+        proxy_compose('exec', '-T', 'caddy', 'caddy', 'validate', '--config', '/etc/caddy/Caddyfile', capture=True)
+        proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', capture=True)
     except Exception:
         if previous is None:
             path.unlink(missing_ok=True)
@@ -1005,7 +1219,7 @@ def remove(args):
         route.unlink()
         try:
             if own_proxy_is_running():
-                proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile')
+                proxy_compose('exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', capture=True)
         except Exception:
             atomic(route, old)
             raise
@@ -1029,6 +1243,8 @@ def main():
     sub.add_parser('list')
     sub.add_parser('info', help='Read-only detection of the existing Combined installation (JSON)')
     sub.add_parser('diagnose', help='Copyable read-only Docker and local-path detection report')
+    reconcile_cmd = sub.add_parser('reconcile-public-ip', help='Safely update generated sslip.io endpoints for managed nodes')
+    reconcile_cmd.add_argument('--public-ip', default='', help='Optional already-detected WAN IPv4; otherwise detected automatically')
     move_cmd = sub.add_parser('relink', help='Explicitly create an original-path junction for a MOVED Windows installation')
     move_cmd.add_argument('--moved-to', required=True, help='Actual moved original installation root, NOT an extracted new installer bundle')
     add_cmd = sub.add_parser('add')
@@ -1063,6 +1279,11 @@ def main():
             relink_moved_deployment(args.moved_to)
             return 0
         select_existing_deployment()
+        if args.action == 'reconcile-public-ip':
+            with manager_lock():
+                require(shutil.which('docker'), 'Docker CLI is required.')
+                reconcile_managed_public_ip(args)
+            return 0
         if args.action == 'info':
             conf = properties(ROOT / 'control-plane' / 'sparrow.conf')
             mode = conf.get('MODE', '') if EXISTING_COMBINED else ''
