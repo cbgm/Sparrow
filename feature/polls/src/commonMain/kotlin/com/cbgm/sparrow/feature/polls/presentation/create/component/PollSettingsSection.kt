@@ -20,6 +20,8 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_allow_multiple
 import com.cbgm.sparrow.resources.feature_polls_allow_vote_change
+import com.cbgm.sparrow.resources.feature_polls_anonymous
+import com.cbgm.sparrow.resources.feature_polls_anonymous_hint
 import com.cbgm.sparrow.resources.feature_polls_expiry_date
 import com.cbgm.sparrow.resources.feature_polls_expiry_date_placeholder
 import com.cbgm.sparrow.resources.feature_polls_expiry_hint
@@ -38,11 +40,13 @@ fun PollSettingsSection(
     expiryInvalid: Boolean,
     allowMultipleSelection: Boolean,
     allowVoteChange: Boolean,
+    isAnonymous: Boolean,
     onExpiryEnabledChanged: (Boolean) -> Unit,
     onExpiryDateChanged: (String) -> Unit,
     onExpiryTimeChanged: (String) -> Unit,
     onMultipleSelectionChanged: (Boolean) -> Unit,
     onVoteChangeChanged: (Boolean) -> Unit,
+    onAnonymousChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -104,6 +108,12 @@ fun PollSettingsSection(
                     checked = allowVoteChange,
                     onCheckedChange = onVoteChangeChanged
                 )
+                PollSettingSwitchRow(
+                    title = stringResource(Res.string.feature_polls_anonymous),
+                    description = stringResource(Res.string.feature_polls_anonymous_hint),
+                    checked = isAnonymous,
+                    onCheckedChange = onAnonymousChanged
+                )
             }
         }
     }
@@ -113,18 +123,30 @@ fun PollSettingsSection(
 private fun PollSettingSwitchRow(
     title: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    description: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        Text(
-            text = title,
+        Column(
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
-        )
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -141,11 +163,13 @@ private fun PollSettingsSectionPreview() {
                 expiryInvalid = false,
                 allowMultipleSelection = true,
                 allowVoteChange = true,
+                isAnonymous = false,
                 onExpiryEnabledChanged = {},
                 onExpiryDateChanged = {},
                 onExpiryTimeChanged = {},
                 onMultipleSelectionChanged = {},
-                onVoteChangeChanged = {}
+                onVoteChangeChanged = {},
+                onAnonymousChanged = {}
             )
         }
     }
@@ -157,7 +181,8 @@ private fun PollSettingSwitchRowPreview() {
     SparrowTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             PollSettingSwitchRow(
-                title = "Allow multiple answers",
+                title = "Anonymous voting",
+                description = "Voter identities are hidden from participants.",
                 checked = true,
                 onCheckedChange = {}
             )

@@ -29,14 +29,14 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PollMessageMedia(
     media: List<MediaItemUi>,
+    remainingCount: Int,
     onMediaClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (media.isEmpty()) return
-    val visible = media.take(3)
 
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
-        visible.forEachIndexed { index, item ->
+        media.forEachIndexed { index, item ->
             Surface(
                 modifier = Modifier.weight(1f).aspectRatio(1.25f).clickable { onMediaClick(index) },
                 shape = MaterialTheme.shapes.small,
@@ -45,13 +45,13 @@ fun PollMessageMedia(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     MediaThumbnail(media = item, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
-                    if (index == 2 && media.size > 3) {
+                    if (remainingCount > 0 && index == media.lastIndex) {
                         Surface(
                             color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
                             shape = MaterialTheme.shapes.small
                         ) {
                             Text(
-                                text = stringResource(Res.string.feature_polls_more_media, media.size - 3),
+                                text = stringResource(Res.string.feature_polls_more_media, remainingCount),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -70,9 +70,10 @@ private fun PollMessageMediaPreview() {
     SparrowTheme {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             PollMessageMedia(
-                media = List(5) { index ->
+                media = List(3) { index ->
                     MediaItemUi("$index", MediaTypeUi.IMAGE, "image/jpeg", localFilePath = "/preview/$index.jpg")
                 },
+                remainingCount = 2,
                 onMediaClick = {}
             )
         }

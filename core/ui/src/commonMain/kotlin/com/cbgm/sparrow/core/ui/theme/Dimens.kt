@@ -10,6 +10,10 @@ object Dimens {
         val borderStrokeWidth = 1.dp
     }
 
+    object Poll {
+        val previewMediaSelectionSize = 80.dp
+    }
+
     object ActionMenu {
         val shadowElevation = 8.dp
         val actionItemHeight = 36.dp

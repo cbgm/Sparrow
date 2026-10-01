@@ -23,11 +23,10 @@ import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
-import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.polls.presentation.create.component.PollMediaEditor
 import com.cbgm.sparrow.feature.polls.presentation.create.component.PollOptionsEditor
 import com.cbgm.sparrow.feature.polls.presentation.create.component.PollSettingsSection
+import com.cbgm.sparrow.feature.polls.presentation.create.component.previewPollMediaSelections
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiEvent
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiState
 import com.cbgm.sparrow.feature.polls.presentation.create.model.PollOptionEditorUi
@@ -74,7 +73,8 @@ fun CreatePollScreen(
                     placeholderText = stringResource(Res.string.feature_polls_question_placeholder),
                     minLines = 2,
                     maxLines = 4,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
                 )
             }
             item(key = "description") {
@@ -85,7 +85,8 @@ fun CreatePollScreen(
                     placeholderText = stringResource(Res.string.feature_polls_description_placeholder),
                     minLines = 2,
                     maxLines = 5,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
                 )
             }
             item(key = "options") {
@@ -115,6 +116,7 @@ fun CreatePollScreen(
                     expiryInvalid = uiState.expiryInvalid,
                     allowMultipleSelection = uiState.allowMultipleSelection,
                     allowVoteChange = uiState.allowVoteChange,
+                    isAnonymous = uiState.isAnonymous,
                     onExpiryEnabledChanged = {
                         onUiEvent(CreatePollUiEvent.ExpiryEnabledChanged(it))
                     },
@@ -124,6 +126,7 @@ fun CreatePollScreen(
                         onUiEvent(CreatePollUiEvent.MultipleSelectionChanged(it))
                     },
                     onVoteChangeChanged = { onUiEvent(CreatePollUiEvent.VoteChangeChanged(it)) },
+                    onAnonymousChanged = { onUiEvent(CreatePollUiEvent.AnonymousChanged(it)) },
                     modifier = Modifier.padding(
                         start = MaterialTheme.spacing.screenPadding,
                         end = MaterialTheme.spacing.screenPadding,
@@ -188,7 +191,7 @@ private fun CreatePollTopBarPreview() {
     }
 }
 
-@Preview(heightDp = 900)
+@Preview
 @Composable
 private fun CreatePollScreenDefaultPreview() {
     SparrowTheme {
@@ -205,7 +208,7 @@ private fun CreatePollScreenDefaultPreview() {
     }
 }
 
-@Preview(heightDp = 900)
+@Preview
 @Composable
 private fun CreatePollScreenPreview() {
     SparrowTheme {
@@ -220,13 +223,14 @@ private fun CreatePollScreenPreview() {
                             PollOptionEditorUi("2", "Visit a city"),
                             PollOptionEditorUi("3", "Stay at home")
                         ),
-                    media = previewMediaSelections().filterIsInstance<VisualMediaSelectionUi>().take(2),
+                    media = previewPollMediaSelections(),
                     expiryEnabled = true,
                     expiryDate = "2026-10-01",
                     expiryTime = "18:00",
                     expiresAtEpochMilliseconds = 1L,
                     allowMultipleSelection = true,
                     allowVoteChange = true,
+                    isAnonymous = true,
                     canCreate = true
                 ),
             onUiEvent = {},

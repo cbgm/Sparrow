@@ -14,10 +14,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
-import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.polls.util.PollConstants
 import com.cbgm.sparrow.resources.Res
@@ -47,7 +49,8 @@ fun PollMediaEditor(
         MediaSelectionPreview(
             media = media,
             onClick = { onAddMedia() },
-            onRemove = onRemoveMedia
+            onRemove = onRemoveMedia,
+            previewSize = Dimens.Poll.previewMediaSelectionSize
         )
 
         if (media.size < PollConstants.MAX_MEDIA_ITEMS) {
@@ -67,10 +70,36 @@ private fun PollMediaEditorPreview() {
     SparrowTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             PollMediaEditor(
-                media = previewMediaSelections().filterIsInstance<VisualMediaSelectionUi>().take(2),
+                media = previewPollMediaSelections(),
                 onAddMedia = {},
                 onRemoveMedia = {}
             )
         }
     }
 }
+
+internal fun previewPollMediaSelections(): List<VisualMediaSelectionUi> =
+    listOf(
+        VisualMediaSelectionUi(
+            id = "poll-preview-image",
+            localFilePath = "/preview/poll-image.jpg",
+            byteSize = 1024,
+            mimeType = "image/jpeg",
+            source = MediaSourceUi.GALLERY,
+            type = MediaTypeUi.IMAGE,
+            width = 1200,
+            height = 900
+        ),
+        VisualMediaSelectionUi(
+            id = "poll-preview-video",
+            localFilePath = "/preview/poll-video.mp4",
+            byteSize = 4096,
+            mimeType = "video/mp4",
+            source = MediaSourceUi.GALLERY,
+            type = MediaTypeUi.VIDEO,
+            thumbnailFilePath = "/preview/poll-video-thumb.jpg",
+            width = 1920,
+            height = 1080,
+            durationMilliseconds = 12_000
+        )
+    )

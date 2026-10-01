@@ -55,6 +55,7 @@ class CreatePollViewModel(
             is CreatePollUiEvent.ExpiryTimeChanged -> updateExpiryTime(event.value)
             is CreatePollUiEvent.MultipleSelectionChanged -> updateMultipleSelection(event.enabled)
             is CreatePollUiEvent.VoteChangeChanged -> updateVoteChange(event.enabled)
+            is CreatePollUiEvent.AnonymousChanged -> updateAnonymous(event.enabled)
         }
     }
 
@@ -189,6 +190,10 @@ class CreatePollViewModel(
 
     private fun updateVoteChange(enabled: Boolean) {
         _uiState.update { it.copy(allowVoteChange = enabled).validated() }
+    }
+
+    private fun updateAnonymous(enabled: Boolean) {
+        _uiState.update { it.copy(isAnonymous = enabled).validated() }
     }
 
     private fun validateForCreate() {

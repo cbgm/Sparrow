@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.polls.presentation.message
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -10,10 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
@@ -22,12 +25,17 @@ import com.cbgm.sparrow.feature.polls.presentation.message.component.PollMessage
 import com.cbgm.sparrow.feature.polls.presentation.message.component.PollOptionResult
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi
+import com.cbgm.sparrow.feature.polls.presentation.model.PollVoterUi
+import com.cbgm.sparrow.feature.polls.presentation.voters.PollVotersScreen
+import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVotersUiState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_polls_anonymous
 import com.cbgm.sparrow.resources.feature_polls_change_vote
 import com.cbgm.sparrow.resources.feature_polls_close_poll
 import com.cbgm.sparrow.resources.feature_polls_closed
 import com.cbgm.sparrow.resources.feature_polls_expired
 import com.cbgm.sparrow.resources.feature_polls_multiple_answers
+import com.cbgm.sparrow.resources.feature_polls_show_votes
 import com.cbgm.sparrow.resources.feature_polls_vote
 import com.cbgm.sparrow.resources.feature_polls_voters
 import org.jetbrains.compose.resources.pluralStringResource
@@ -55,8 +63,35 @@ fun PollMessageContent(
         onVoteSubmit = { viewModel.submitVote(onVoteSubmit) },
         onClosePoll = onClosePoll,
         onMediaClick = onMediaClick,
+        onShowVotes = viewModel::openVoters,
         modifier = modifier
     )
+
+    PollVotersOverlay(
+        state = uiState.votersOverlay,
+        onDismissRequest = viewModel::dismissVoters
+    )
+}
+
+@Composable
+private fun PollVotersOverlay(
+    state: PollVotersUiState?,
+    onDismissRequest: () -> Unit
+) {
+    SparrowOverlayHost(
+        visible = state != null,
+        onDismissRequest = onDismissRequest,
+        horizontalPadding = MaterialTheme.spacing.zero,
+        topPadding = MaterialTheme.spacing.times(6)
+    ) { dismissOverlay ->
+        state?.let { voters ->
+            PollVotersScreen(
+                uiState = voters,
+                onClose = dismissOverlay,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
 }
 
 @Composable
@@ -66,6 +101,7 @@ private fun PollMessageContentBody(
     onVoteSubmit: () -> Unit,
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
+    onShowVotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
@@ -82,13 +118,18 @@ private fun PollMessageContentBody(
             )
         }
 
-        PollMessageMedia(media = uiState.media, onMediaClick = onMediaClick)
+        PollMessageMedia(
+            media = uiState.mediaPreview,
+            remainingCount = uiState.remainingMediaCount,
+            onMediaClick = onMediaClick
+        )
 
         uiState.options.forEach { option ->
             PollOptionResult(
                 text = option.text,
                 voteCount = option.voteCount,
                 percentage = option.percentage,
+                voters = option.voterPreview,
                 selected = option.isSelected,
                 enabled = uiState.canInteract,
                 onClick = { onOptionClick(option.id) }
@@ -97,18 +138,35 @@ private fun PollMessageContentBody(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
-                Text(
-                    text = pluralStringResource(
-                        Res.plurals.feature_polls_voters,
-                        uiState.totalVoters,
-                        uiState.totalVoters
-                    ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+                ) {
+                    Text(
+                        text = pluralStringResource(
+                            Res.plurals.feature_polls_voters,
+                            uiState.totalVoters,
+                            uiState.totalVoters
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (uiState.canShowVotes) {
+                        TextButton(onClick = onShowVotes) {
+                            Text(text = stringResource(Res.string.feature_polls_show_votes))
+                        }
+                    }
+                }
                 if (uiState.allowMultipleSelection) {
                     Text(
                         text = stringResource(Res.string.feature_polls_multiple_answers),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (uiState.isAnonymous) {
+                    Text(
+                        text = stringResource(Res.string.feature_polls_anonymous),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -161,70 +219,126 @@ private fun previewState(
     submitted: Set<String> = emptySet(),
     draft: Set<String> = submitted,
     expired: Boolean = false,
-    closed: Boolean = false
-) = PollMessageUiState(
-    pollId = "preview",
-    question = "What should we do this weekend?",
-    description = "Let's decide together!",
-    media = List(mediaCount) { index ->
+    closed: Boolean = false,
+    anonymous: Boolean = false
+): PollMessageUiState {
+    val media = List(mediaCount) { index ->
         MediaItemUi(
             id = "media-$index",
             type = MediaTypeUi.IMAGE,
             mimeType = "image/jpeg",
             localFilePath = "/preview/$index.jpg"
         )
-    },
-    options = listOf(
-        PollOptionUi("1", "Go hiking", 12, 50),
-        PollOptionUi("2", "Visit a city", 6, 25),
-        PollOptionUi("3", "Stay at home", 4, 17)
-    ),
-    totalVoters = 24,
-    submittedOptionIds = submitted,
-    draftOptionIds = draft,
-    allowMultipleSelection = allowMultiple,
-    allowVoteChange = true,
-    isExpired = expired,
-    isClosed = closed,
-    canInteract = !expired && !closed,
-    canSubmitVote = !expired && !closed && draft.isNotEmpty() && draft != submitted,
-    isChangingVote = submitted.isNotEmpty(),
-    expiryLabel = if (expired) "Poll ended 25 May 2026 at 18:00" else "Poll ends 1 Oct 2026 at 18:00",
-    canClose = !closed
-)
+    }
+    val firstOptionVoters =
+        listOf(
+            PollVoterUi("alice", "Alice"),
+            PollVoterUi("bob", "Bob"),
+            PollVoterUi("chris", "Chris"),
+            PollVoterUi("dana", "Dana")
+        )
+    val secondOptionVoters = listOf(PollVoterUi("erin", "Erin"), PollVoterUi("frank", "Frank"))
+    val thirdOptionVoters = listOf(PollVoterUi("grace", "Grace"))
+
+    return PollMessageUiState(
+        pollId = "preview",
+        question = "What should we do this weekend?",
+        description = "Let's decide together!",
+        media = media,
+        mediaPreview = media.take(3),
+        remainingMediaCount = (media.size - 3).coerceAtLeast(0),
+        options = listOf(
+            PollOptionUi(
+                id = "1",
+                text = "Go hiking",
+                voteCount = 12,
+                voters = if (anonymous) emptyList() else firstOptionVoters,
+                voterPreview = if (anonymous) emptyList() else firstOptionVoters.take(3),
+                percentage = 50
+            ),
+            PollOptionUi(
+                id = "2",
+                text = "Visit a city",
+                voteCount = 6,
+                voters = if (anonymous) emptyList() else secondOptionVoters,
+                voterPreview = if (anonymous) emptyList() else secondOptionVoters,
+                percentage = 25
+            ),
+            PollOptionUi(
+                id = "3",
+                text = "Stay at home",
+                voteCount = 4,
+                voters = if (anonymous) emptyList() else thirdOptionVoters,
+                voterPreview = if (anonymous) emptyList() else thirdOptionVoters,
+                percentage = 17
+            )
+        ),
+        totalVoters = 24,
+        submittedOptionIds = submitted,
+        draftOptionIds = draft,
+        allowMultipleSelection = allowMultiple,
+        allowVoteChange = true,
+        isAnonymous = anonymous,
+        isExpired = expired,
+        isClosed = closed,
+        canInteract = !expired && !closed,
+        canSubmitVote = !expired && !closed && draft.isNotEmpty() && draft != submitted,
+        isChangingVote = submitted.isNotEmpty(),
+        canShowVotes = !anonymous,
+        expiryLabel = if (expired) "Poll ended 25 May 2026 at 18:00" else "Poll ends 1 Oct 2026 at 18:00",
+        canClose = !closed
+    )
+}
 
 @Preview
 @Composable
 private fun PollMessageNotVotedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(), {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(), {}, {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageVotedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(submitted = setOf("1")), {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(submitted = setOf("1")), {}, {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageMultipleDraftPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(allowMultiple = true, draft = setOf("1", "2")), {}, {}, {}, {}) } }
+    SparrowTheme {
+        Surface {
+            PollMessageContentBody(
+                previewState(allowMultiple = true, draft = setOf("1", "2")),
+                {},
+                {},
+                {},
+                {},
+                {}
+            )
+        }
+    }
 }
 
 @Preview
 @Composable
 private fun PollMessageMediaOverflowPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(mediaCount = 5), {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(mediaCount = 5), {}, {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageExpiredPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(expired = true), {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(expired = true), {}, {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageClosedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(closed = true), {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(closed = true), {}, {}, {}, {}, {}) } }
+}
+
+@Preview
+@Composable
+private fun PollMessageAnonymousPreview() {
+    SparrowTheme { Surface { PollMessageContentBody(previewState(anonymous = true), {}, {}, {}, {}, {}) } }
 }

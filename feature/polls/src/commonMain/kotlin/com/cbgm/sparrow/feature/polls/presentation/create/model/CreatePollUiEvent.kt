@@ -55,4 +55,8 @@ sealed interface CreatePollUiEvent {
     data class VoteChangeChanged(
         val enabled: Boolean
     ) : CreatePollUiEvent
+
+    data class AnonymousChanged(
+        val enabled: Boolean
+    ) : CreatePollUiEvent
 }

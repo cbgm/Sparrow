@@ -14,6 +14,7 @@ data class CreatePollUiState(
     val expiryInvalid: Boolean = false,
     val allowMultipleSelection: Boolean = false,
     val allowVoteChange: Boolean = true,
+    val isAnonymous: Boolean = false,
     val canCreate: Boolean = false
 )
 

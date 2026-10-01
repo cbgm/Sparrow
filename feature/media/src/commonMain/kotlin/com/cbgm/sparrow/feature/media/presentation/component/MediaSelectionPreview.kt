@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -45,7 +46,8 @@ fun MediaSelectionPreview(
     onClick: (MediaSourceUi) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    previewSize: Dp = Dimens.MediaSelection.previewSize
 ) {
     if (media.isEmpty()) return
 
@@ -58,6 +60,7 @@ fun MediaSelectionPreview(
                 is VisualMediaSelectionUi ->
                     MediaSelectionItem(
                         selection = selection,
+                        previewSize = previewSize,
                         enabled = enabled,
                         onClick = { onClick(selection.source) },
                         onRemove = { onRemove(selection.id) }
@@ -78,6 +81,7 @@ fun MediaSelectionPreview(
 @Composable
 private fun MediaSelectionItem(
     selection: VisualMediaSelectionUi,
+    previewSize: Dp,
     enabled: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -85,7 +89,7 @@ private fun MediaSelectionItem(
     Box(
         modifier =
             Modifier
-                .size(Dimens.MediaSelection.previewSize)
+                .size(previewSize)
                 .clickable(enabled = enabled, onClick = onClick)
     ) {
         Surface(

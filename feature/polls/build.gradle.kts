@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.feature.attachments)
+            implementation(projects.feature.avatar)
             implementation(projects.feature.media)
 
             implementation(libs.bundles.compose)
