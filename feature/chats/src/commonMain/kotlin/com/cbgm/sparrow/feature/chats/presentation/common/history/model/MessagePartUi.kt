@@ -3,17 +3,14 @@ package com.cbgm.sparrow.feature.chats.presentation.common.history.model
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.TextContentPart
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.toTextContentParts
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 
 sealed interface MessagePartUi {
     data class ImageVideo(
         val id: String,
-        val type: ImageVideoTypeUi,
-        val mimeType: String,
+        val media: MediaItemUi,
         val byteSize: Long,
         val fileName: String? = null,
-        val width: Int? = null,
-        val height: Int? = null,
-        val durationMilliseconds: Long? = null,
         val attachmentSource: AttachmentSource = AttachmentSource.Message
     ) : MessagePartUi
 
@@ -48,9 +45,4 @@ sealed interface MessagePartUi {
         val durationMilliseconds: Long,
         val attachmentSource: AttachmentSource = AttachmentSource.Message
     ) : MessagePartUi
-}
-
-enum class ImageVideoTypeUi {
-    IMAGE,
-    VIDEO
 }

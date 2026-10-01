@@ -16,12 +16,15 @@ import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.GalleryPickerConfig
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
+import com.cbgm.sparrow.feature.media.domain.usecase.PrepareMediaSelectionUseCase
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
-import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResultUi
+import com.cbgm.sparrow.feature.media.presentation.mapper.toDomain
+import com.cbgm.sparrow.feature.media.presentation.mapper.toUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
 import com.cbgm.sparrow.resources.feature_media_choose_gallery
@@ -32,7 +35,7 @@ import org.koin.compose.koinInject
 private const val ERROR_LIMIT_REACHED = "No more items can be selected"
 
 interface MediaSelectionLauncher {
-    fun launch(source: MediaSelectionSource)
+    fun launch(source: MediaSourceUi)
 }
 
 @Composable
@@ -42,13 +45,14 @@ fun rememberMediaSelectionLauncher(
     maxImageBytes: Int,
     maxVideoBytes: Long,
     maxFileBytes: Long,
-    selectedMedia: List<MediaSelection>,
-    onResult: (MediaSelectionResult) -> Unit,
+    selectedMedia: List<MediaSelectionUi>,
+    onResult: (MediaSelectionResultUi) -> Unit,
     onFilePickerSessionStarted: (String) -> Unit,
     galleryTitle: String? = null,
     closeContentDescription: String? = null,
     filePickerLauncher: FilePickerLauncher = koinInject(),
-    mediaFiles: MediaSelectionFileRepository = koinInject()
+    mediaFiles: MediaSelectionFileRepository = koinInject(),
+    prepareMediaSelection: PrepareMediaSelectionUseCase = koinInject()
 ): MediaSelectionLauncher {
     val scope = rememberCoroutineScope()
     val currentMedia by rememberUpdatedState(selectedMedia)
@@ -60,11 +64,11 @@ fun rememberMediaSelectionLauncher(
         currentMedia.mapNotNullTo(mutableSetOf()) { it.sourceReference }
     }
 
-    val tryAdd: (List<MediaSelection>) -> Unit = { additions ->
+    val tryAdd: (List<MediaSelectionUi>) -> Unit = { additions ->
         if (remainingCapacity <= 0) {
-            currentResult.value(MediaSelectionResult.Error(ERROR_LIMIT_REACHED))
+            currentResult.value(MediaSelectionResultUi.Error(ERROR_LIMIT_REACHED))
         } else {
-            currentResult.value(MediaSelectionResult.Selected(currentMedia + additions.take(remainingCapacity)))
+            currentResult.value(MediaSelectionResultUi.Selected(currentMedia + additions.take(remainingCapacity)))
         }
     }
 
@@ -79,6 +83,7 @@ fun rememberMediaSelectionLauncher(
         currentMedia = currentMedia,
         currentResult = currentResult,
         mediaFiles = mediaFiles,
+        prepareMediaSelection = prepareMediaSelection,
         scope = scope
     )
 
@@ -88,7 +93,7 @@ fun rememberMediaSelectionLauncher(
         maxVideoBytes = maxVideoBytes,
         tryAdd = tryAdd,
         currentResult = currentResult,
-        mediaFiles = mediaFiles,
+        prepareMediaSelection = prepareMediaSelection,
         scope = scope
     )
 
@@ -101,16 +106,16 @@ fun rememberMediaSelectionLauncher(
 
     return remember(galleryLauncher, cameraLauncher, filePickerLauncher, remainingCapacity, maxFileBytes, existingReferences) {
         object : MediaSelectionLauncher {
-            override fun launch(source: MediaSelectionSource) {
+            override fun launch(source: MediaSourceUi) {
                 if (remainingCapacity <= 0) {
-                    currentResult.value(MediaSelectionResult.Error(ERROR_LIMIT_REACHED))
+                    currentResult.value(MediaSelectionResultUi.Error(ERROR_LIMIT_REACHED))
                     return
                 }
 
                 when (source) {
-                    MediaSelectionSource.GALLERY -> galleryLauncher.launch()
-                    MediaSelectionSource.CAMERA -> cameraLauncher.launch()
-                    MediaSelectionSource.FILE_PICKER -> {
+                    MediaSourceUi.GALLERY -> galleryLauncher.launch()
+                    MediaSourceUi.CAMERA -> cameraLauncher.launch()
+                    MediaSourceUi.FILE_PICKER -> {
                         val sessionId = filePickerLauncher.launch(
                             maxItems = remainingCapacity,
                             maxFileBytes = maxFileBytes,
@@ -133,22 +138,23 @@ private fun rememberSubGalleryLauncher(
     maxVideoBytes: Long,
     galleryTitle: String?,
     closeContentDescription: String?,
-    currentMedia: List<MediaSelection>,
-    currentResult: State<(MediaSelectionResult) -> Unit>,
+    currentMedia: List<MediaSelectionUi>,
+    currentResult: State<(MediaSelectionResultUi) -> Unit>,
     mediaFiles: MediaSelectionFileRepository,
+    prepareMediaSelection: PrepareMediaSelectionUseCase,
     scope: kotlinx.coroutines.CoroutineScope
 ) = rememberGalleryPickerLauncher(
     config = GalleryPickerConfig(
         maxItems = remember(currentMedia, remainingCapacity) {
-            (currentMedia.filter { it.source == MediaSelectionSource.GALLERY }.size + remainingCapacity).coerceAtLeast(1)
+            (currentMedia.filter { it.source == MediaSourceUi.GALLERY }.size + remainingCapacity).coerceAtLeast(1)
         },
         maxImageDimension = maxImageDimension,
         maxImageBytes = maxImageBytes,
         maxVideoBytes = maxVideoBytes
     ),
     selectedSourceReferences = currentMedia
-        .filter { it.source == MediaSelectionSource.GALLERY }
-        .mapNotNull(MediaSelection::sourceReference),
+        .filter { it.source == MediaSourceUi.GALLERY }
+        .mapNotNull(MediaSelectionUi::sourceReference),
     strings = GalleryPickerStrings(
         title = galleryTitle ?: stringResource(Res.string.feature_media_choose_gallery),
         closeContentDescription = closeContentDescription ?: stringResource(Res.string.base_close)
@@ -157,32 +163,39 @@ private fun rememberSubGalleryLauncher(
         scope.launch {
             runCatching {
                 val latest = currentMedia
-                val nonGallery = latest.filter { it.source != MediaSelectionSource.GALLERY }
-                val previousByReference = latest.filter { it.source == MediaSelectionSource.GALLERY }
+                val nonGallery = latest.filter { it.source != MediaSourceUi.GALLERY }
+                val previousByReference = latest.filter { it.source == MediaSourceUi.GALLERY }
                     .mapNotNull { selection -> selection.sourceReference?.let { it to selection } }.toMap()
-                val mapped = mutableListOf<MediaSelection>()
+                val mapped = mutableListOf<MediaSelectionUi>()
                 try {
                     picked.forEach { item ->
-                        mapped += item.toMediaSelection(mediaFiles, item.sourceReference?.let(previousByReference::get))
+                        mapped +=
+                            prepareMediaSelection
+                                .fromGalleryMedia(
+                                    media = item,
+                                    existing = item.sourceReference?.let(previousByReference::get)?.toDomain()
+                                )
+                                .toUi()
                     }
                 } catch (error: Exception) {
                     // Reused selections are still owned by the composer and must not be deleted.
-                    val previousIds = latest.mapTo(mutableSetOf(), MediaSelection::id)
+                    val previousIds = latest.mapTo(mutableSetOf(), MediaSelectionUi::id)
                     mapped.filterNot { it.id in previousIds }.forEach { selection ->
-                        runCatching { mediaFiles.delete(selection.localFilePath) }
-                        selection.thumbnailFilePath?.let { path -> runCatching { mediaFiles.delete(path) } }
+                        selection.localFilePaths.forEach { path ->
+                            runCatching { mediaFiles.delete(path) }
+                        }
                     }
                     throw error
                 }
-                currentResult.value(MediaSelectionResult.Selected((nonGallery + mapped).take(maxItems)))
+                currentResult.value(MediaSelectionResultUi.Selected((nonGallery + mapped).take(maxItems)))
             }.onFailure { error ->
                 SparrowLog.error("MediaSelectionLauncher", "Selected media could not be stored", error)
-                currentResult.value(MediaSelectionResult.Error(error.message ?: "Selected media could not be stored"))
+                currentResult.value(MediaSelectionResultUi.Error(error.message ?: "Selected media could not be stored"))
             }
         }
     },
-    onDismissed = { currentResult.value(MediaSelectionResult.Dismissed) },
-    onError = { msg -> currentResult.value(MediaSelectionResult.Error(msg)) }
+    onDismissed = { currentResult.value(MediaSelectionResultUi.Dismissed) },
+    onError = { msg -> currentResult.value(MediaSelectionResultUi.Error(msg)) }
 )
 
 @Composable
@@ -190,9 +203,9 @@ private fun rememberSubCameraLauncher(
     maxImageDimension: Int,
     maxImageBytes: Int,
     maxVideoBytes: Long,
-    tryAdd: (List<MediaSelection>) -> Unit,
-    currentResult: State<(MediaSelectionResult) -> Unit>,
-    mediaFiles: MediaSelectionFileRepository,
+    tryAdd: (List<MediaSelectionUi>) -> Unit,
+    currentResult: State<(MediaSelectionResultUi) -> Unit>,
+    prepareMediaSelection: PrepareMediaSelectionUseCase,
     scope: kotlinx.coroutines.CoroutineScope
 ) = rememberCameraCaptureLauncher(
     config = CameraCaptureConfig(
@@ -203,24 +216,24 @@ private fun rememberSubCameraLauncher(
     ),
     onCaptured = { captured ->
         scope.launch {
-            runCatching { captured.toMediaSelection(mediaFiles) }
+            runCatching { prepareMediaSelection.fromCapturedMedia(captured).toUi() }
                 .onSuccess { tryAdd(listOf(it)) }
                 .onFailure { error ->
                     SparrowLog.error("MediaSelectionLauncher", "Camera media could not be stored", error)
-                    currentResult.value(MediaSelectionResult.Error(error.message ?: "Camera media could not be stored"))
+                    currentResult.value(MediaSelectionResultUi.Error(error.message ?: "Camera media could not be stored"))
                 }
         }
     },
-    onDismissed = { currentResult.value(MediaSelectionResult.Dismissed) },
-    onError = { msg -> currentResult.value(MediaSelectionResult.Error(msg)) }
+    onDismissed = { currentResult.value(MediaSelectionResultUi.Dismissed) },
+    onError = { msg -> currentResult.value(MediaSelectionResultUi.Error(msg)) }
 )
 
 @Composable
 private fun ObserveStateFilePickerResults(
     filePickerLauncher: FilePickerLauncher,
     existingReferences: Set<String?>,
-    tryAdd: (List<MediaSelection>) -> Unit,
-    currentResult: State<(MediaSelectionResult) -> Unit>
+    tryAdd: (List<MediaSelectionUi>) -> Unit,
+    currentResult: State<(MediaSelectionResultUi) -> Unit>
 ) {
     val filePickerResults by filePickerLauncher.results.collectAsState()
 
@@ -228,15 +241,15 @@ private fun ObserveStateFilePickerResults(
         val pickerResult = filePickerLauncher.consumeResult() ?: return@LaunchedEffect
 
         when (pickerResult) {
-            is FilePickerSessionResult.Completed -> {
+            is FilePickerSessionResultUi.Completed -> {
                 val uniqueFiles = pickerResult.media.filterNot { it.sourceReference in existingReferences }
                 tryAdd(uniqueFiles)
             }
-            is FilePickerSessionResult.Dismissed -> {
-                currentResult.value(MediaSelectionResult.Dismissed)
+            is FilePickerSessionResultUi.Dismissed -> {
+                currentResult.value(MediaSelectionResultUi.Dismissed)
             }
-            is FilePickerSessionResult.Failed -> {
-                currentResult.value(MediaSelectionResult.Error(pickerResult.message))
+            is FilePickerSessionResultUi.Failed -> {
+                currentResult.value(MediaSelectionResultUi.Error(pickerResult.message))
             }
         }
     }

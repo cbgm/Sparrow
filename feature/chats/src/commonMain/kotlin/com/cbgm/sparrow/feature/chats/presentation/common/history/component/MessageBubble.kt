@@ -55,12 +55,13 @@ import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
@@ -847,14 +848,12 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     imageVideoParts = listOf(
                         MessagePartUi.ImageVideo(
                             id = "preview-image-1",
-                            type = ImageVideoTypeUi.IMAGE,
-                            mimeType = "image/jpeg",
+                            media = MediaItemUi("preview-image-1", MediaTypeUi.IMAGE, "image/jpeg"),
                             byteSize = 0
                         ),
                         MessagePartUi.ImageVideo(
                             id = "preview-video",
-                            type = ImageVideoTypeUi.VIDEO,
-                            mimeType = "video/mp4",
+                            media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
                             byteSize = 0
                         )
                     ),

@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 
 internal fun List<MessagePart>.toMessagePartsUi(
     attachmentSource: AttachmentSource = AttachmentSource.Message
@@ -27,17 +27,21 @@ private fun MessagePart.toMessagePartUi(
         is MessagePart.ImageVideo ->
             MessagePartUi.ImageVideo(
                 id = id,
-                type =
-                    when (type) {
-                        ImageVideoType.IMAGE -> ImageVideoTypeUi.IMAGE
-                        ImageVideoType.VIDEO -> ImageVideoTypeUi.VIDEO
-                    },
-                mimeType = mimeType,
+                media =
+                    MediaItemUi(
+                        id = id,
+                        type =
+                            when (type) {
+                                ImageVideoType.IMAGE -> MediaTypeUi.IMAGE
+                                ImageVideoType.VIDEO -> MediaTypeUi.VIDEO
+                            },
+                        mimeType = mimeType,
+                        width = width,
+                        height = height,
+                        durationMilliseconds = durationMilliseconds
+                    ),
                 byteSize = byteSize,
                 fileName = fileName,
-                width = width,
-                height = height,
-                durationMilliseconds = durationMilliseconds,
                 attachmentSource = attachmentSource
             )
 
@@ -78,17 +82,9 @@ internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessageAttachmentUi>
             add(
                 MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = part.id,
-                    type =
-                        when (part.type) {
-                            ImageVideoTypeUi.IMAGE -> MessageAttachmentType.IMAGE
-                            ImageVideoTypeUi.VIDEO -> MessageAttachmentType.VIDEO
-                        },
-                    mimeType = part.mimeType,
+                    media = part.media,
                     byteSize = part.byteSize,
                     fileName = part.fileName,
-                    width = part.width,
-                    height = part.height,
-                    durationMilliseconds = part.durationMilliseconds,
                     source = part.attachmentSource
                 )
             )

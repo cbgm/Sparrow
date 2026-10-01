@@ -30,11 +30,10 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toAttachmentTarget
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
-import com.cbgm.sparrow.feature.media.presentation.model.MediaType
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 
 @Composable
 internal fun PhotoVideoMessageBubbleBody(
@@ -118,7 +117,8 @@ private fun MessageMediaPreview(
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
                 MediaThumbnail(
-                    media = imageVideoPart.toMediaItem(localFilePath),
+                    media = imageVideoPart.media,
+                    localFilePath = localFilePath,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -136,7 +136,7 @@ private fun MessageMediaPreview(
                 }
             }
 
-            if (imageVideoPart.type == ImageVideoTypeUi.VIDEO) {
+            if (imageVideoPart.media.type == MediaTypeUi.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -150,21 +150,6 @@ private fun MessageMediaPreview(
         }
     }
 }
-
-private fun MessagePartUi.ImageVideo.toMediaItem(localFilePath: String): MediaItem =
-    MediaItem(
-        id = id,
-        type =
-            when (type) {
-                ImageVideoTypeUi.IMAGE -> MediaType.IMAGE
-                ImageVideoTypeUi.VIDEO -> MediaType.VIDEO
-            },
-        mimeType = mimeType,
-        localFilePath = localFilePath,
-        width = width,
-        height = height,
-        durationMilliseconds = durationMilliseconds
-    )
 
 @Composable
 private fun MoreAttachment(
@@ -206,26 +191,22 @@ private fun MediaMessageBubbleBodyPreview() {
                 listOf(
                     MessagePartUi.ImageVideo(
                         id = "preview-image",
-                        type = ImageVideoTypeUi.IMAGE,
-                        mimeType = "image/jpeg",
+                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
                         byteSize = 0
                     ),
                     MessagePartUi.ImageVideo(
                         id = "preview-video",
-                        type = ImageVideoTypeUi.VIDEO,
-                        mimeType = "video/mp4",
+                        media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
                         byteSize = 0
                     ),
                     MessagePartUi.ImageVideo(
                         id = "preview-image-2",
-                        type = ImageVideoTypeUi.IMAGE,
-                        mimeType = "image/jpeg",
+                        media = MediaItemUi("preview-image-2", MediaTypeUi.IMAGE, "image/jpeg"),
                         byteSize = 0
                     ),
                     MessagePartUi.ImageVideo(
                         id = "preview-image-3",
-                        type = ImageVideoTypeUi.IMAGE,
-                        mimeType = "image/jpeg",
+                        media = MediaItemUi("preview-image-3", MediaTypeUi.IMAGE, "image/jpeg"),
                         byteSize = 0
                     )
                 ),

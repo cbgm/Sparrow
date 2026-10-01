@@ -49,8 +49,11 @@ import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
@@ -117,7 +120,7 @@ class DirectConversationViewModel(
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
-    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
+    private val selectedMedia = MutableStateFlow<List<MediaSelectionUi>>(emptyList())
     private var preparingMediaSend = false
 
     // Draft cleanup must survive ViewModel clearing (viewModelScope is cancelled).
@@ -621,33 +624,39 @@ class DirectConversationViewModel(
         }
     }
 
-    private fun updateMediaSelection(media: List<MediaSelection>) {
+    private fun updateMediaSelection(media: List<MediaSelectionUi>) {
         runCatching {
             require(media.size <= MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE) {
                 "Too many attachments selected"
             }
-            require(media.map(MediaSelection::id).distinct().size == media.size) {
+            require(media.map(MediaSelectionUi::id).distinct().size == media.size) {
                 "Attachment IDs must be unique"
             }
-            require(media.sumOf(MediaSelection::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
+            require(media.sumOf(MediaSelectionUi::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
                 "Selected attachments exceed the total attachment size limit"
             }
             media.forEach { item ->
                 require(item.byteSize > 0L) { "Selected attachment is empty" }
-                when (item.type) {
-                    MediaSelectionType.IMAGE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
-                        require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
-                            "Invalid image attachment"
+                when (item) {
+                    is VisualMediaSelectionUi ->
+                        when (item.type) {
+                            MediaTypeUi.IMAGE -> {
+                                require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
+                                require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
+                                    "Invalid image attachment"
+                                }
+                            }
+
+                            MediaTypeUi.VIDEO -> {
+                                require(
+                                    item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES &&
+                                        item.mimeType.startsWith("video/")
+                                ) { "Invalid video attachment" }
+                            }
                         }
-                    }
-                    MediaSelectionType.VIDEO -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES && item.mimeType.startsWith("video/")) {
-                            "Invalid video attachment"
-                        }
-                    }
-                    MediaSelectionType.FILE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && !item.fileName.isNullOrBlank()) {
+
+                    is FileMediaSelectionUi -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && item.fileName.isNotBlank()) {
                             "Invalid file attachment"
                         }
                     }
@@ -661,7 +670,7 @@ class DirectConversationViewModel(
         }.onFailure { error ->
             // A rejected selection may already have been copied to private storage.
             // Do not remove any file still referenced by the accepted composer state.
-            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelection::id)
+            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelectionUi::id)
             deletePendingSelections(media.filterNot { it.id in acceptedIds })
             setError(error.message ?: "Selected attachments could not be attached")
         }
@@ -677,12 +686,12 @@ class DirectConversationViewModel(
         deletePendingSelections(consumed)
     }
 
-    private fun deletePendingSelections(media: List<MediaSelection>) {
+    private fun deletePendingSelections(media: List<MediaSelectionUi>) {
         if (media.isEmpty()) return
         mediaCleanupScope.launch {
             media.forEach { item ->
                 // Delete each path independently: a missing original must not leak the thumbnail.
-                for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
+                for (path in item.localFilePaths) {
                     runCatching { mediaFiles.delete(path) }
                         .onFailure { error -> logger.error(error) { "Could not clean up pending media" } }
                 }
@@ -796,7 +805,7 @@ class DirectConversationViewModel(
     )
 
     private data class ComposerRuntime(
-        val media: List<MediaSelection>,
+        val media: List<MediaSelectionUi>,
         val isSending: Boolean,
         val locationShareState: LocationShareState
     )

@@ -1,21 +1,21 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker.model
 
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 
-sealed interface FilePickerSessionResult {
+sealed interface FilePickerSessionResultUi {
     val sessionId: String
 
     data class Completed(
         override val sessionId: String,
-        val media: List<MediaSelection>
-    ) : FilePickerSessionResult
+        val media: List<MediaSelectionUi>
+    ) : FilePickerSessionResultUi
 
     data class Dismissed(
         override val sessionId: String
-    ) : FilePickerSessionResult
+    ) : FilePickerSessionResultUi
 
     data class Failed(
         override val sessionId: String,
         val message: String
-    ) : FilePickerSessionResult
+    ) : FilePickerSessionResultUi
 }

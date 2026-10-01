@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
@@ -67,10 +66,11 @@ import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttac
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -422,7 +422,8 @@ private fun AttachmentGridThumbnail(
     Box(modifier = Modifier.fillMaxWidth()) {
         if (localFilePath != null) {
             MediaThumbnail(
-                media = attachment.toMediaItem(localFilePath),
+                media = attachment.media,
+                localFilePath = localFilePath,
                 modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                 contentScale = ContentScale.Crop
             )
@@ -434,7 +435,7 @@ private fun AttachmentGridThumbnail(
                 CircularProgressIndicator()
             }
         }
-        if (attachment.type == MessageAttachmentType.VIDEO) {
+        if (attachment.media.type == MediaTypeUi.VIDEO) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = MaterialTheme.shapes.extraLarge,
@@ -624,16 +625,18 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
             listOf(
                 MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = "preview-image",
-                    type = MessageAttachmentType.IMAGE,
-                    mimeType = "image/jpeg",
+                    media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
                     byteSize = 0
                 ),
                 MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = "preview-video",
-                    type = MessageAttachmentType.VIDEO,
-                    mimeType = "video/mp4",
-                    byteSize = 0,
-                    durationMilliseconds = 42_000
+                    media = MediaItemUi(
+                        id = "preview-video",
+                        type = MediaTypeUi.VIDEO,
+                        mimeType = "video/mp4",
+                        durationMilliseconds = 42_000
+                    ),
+                    byteSize = 0
                 ),
                 MessageAttachmentUi.FileAttachmentUi(
                     id = "preview-file",

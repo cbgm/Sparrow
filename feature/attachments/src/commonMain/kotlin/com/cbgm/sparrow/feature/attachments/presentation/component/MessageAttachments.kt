@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -42,11 +41,12 @@ import com.cbgm.sparrow.core.ui.theme.attachmentColors
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import kotlin.math.roundToLong
 
@@ -230,7 +230,8 @@ private fun MessageVisualAttachment(
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
                 MediaThumbnail(
-                    media = attachment.toMediaItem(localFilePath),
+                    media = attachment.media,
+                    localFilePath = localFilePath,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -248,7 +249,7 @@ private fun MessageVisualAttachment(
                 }
             }
 
-            if (attachment.type == MessageAttachmentType.VIDEO) {
+            if (attachment.media.type == MediaTypeUi.VIDEO) {
                 Surface(
                     modifier = Modifier.align(Alignment.Center),
                     shape = MaterialTheme.shapes.circle,
@@ -402,8 +403,7 @@ private fun MessageAttachmentsPreview() {
                 listOf(
                     MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-image",
-                        type = MessageAttachmentType.IMAGE,
-                        mimeType = "image/jpeg",
+                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
                         byteSize = 0
                     )
                 ),

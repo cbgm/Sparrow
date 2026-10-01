@@ -16,18 +16,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
 import org.jetbrains.compose.resources.stringResource
@@ -113,11 +113,11 @@ private fun MessageMediaViewer(
         savePending = false
     }
 
+    val localFilePaths = loadedMedia.associate { (attachment, localFilePath) -> attachment.id to localFilePath }
+
     MediaViewer(
-        media =
-            loadedMedia.map { (attachment, localFilePath) ->
-                attachment.toMediaItem(localFilePath)
-            },
+        media = attachments.map(MessageAttachmentUi.ImageVideoAttachmentUi::media),
+        localFilePathProvider = { media -> localFilePaths[media.id] },
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         title = { currentIndex, total ->
@@ -188,14 +188,12 @@ private fun MessageAttachmentViewerPreview() {
                 listOf(
                     MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-image",
-                        type = MessageAttachmentType.IMAGE,
-                        mimeType = "image/jpeg",
+                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
                         byteSize = 0
                     ),
                     MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-video",
-                        type = MessageAttachmentType.VIDEO,
-                        mimeType = "video/mp4",
+                        media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
                         byteSize = 0
                     )
                 ),

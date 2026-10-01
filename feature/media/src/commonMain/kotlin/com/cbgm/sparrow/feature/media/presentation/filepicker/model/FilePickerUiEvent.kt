@@ -30,7 +30,7 @@ sealed interface FilePickerUiEvent {
     data object SearchCleared : FilePickerUiEvent
 
     data class SortSelected(
-        val mode: FilePickerSortMode
+        val mode: FilePickerSortModeUi
     ) : FilePickerUiEvent
 
     data object SortDirectionToggled : FilePickerUiEvent

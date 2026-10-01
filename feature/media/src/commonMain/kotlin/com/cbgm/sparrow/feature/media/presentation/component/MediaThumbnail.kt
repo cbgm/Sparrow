@@ -11,45 +11,49 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.media.device.MediaImage
 import com.cbgm.sparrow.feature.media.device.VideoThumbnail
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
-import com.cbgm.sparrow.feature.media.presentation.model.MediaType
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaUi
 
-/**
- * Loads media thumbnail content only.
- *
- * Shape, clipping, tile size, badges and overlays belong to the caller so message attachments,
- * gallery selection and future camera UI can keep their own visual language.
- */
 @Composable
 fun MediaThumbnail(
-    media: MediaItem,
+    media: VisualMediaUi,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    localFilePath: String? = media.localFilePath,
+    thumbnailFilePath: String? = media.thumbnailFilePath
 ) {
     val thumbnailCacheKey = "media-thumbnail:${media.id}"
 
     when (media.type) {
-        MediaType.IMAGE -> MediaImage(
-            data = null,
-            localFilePath = media.thumbnailFilePath ?: media.localFilePath,
-            cacheKey = thumbnailCacheKey,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale
-        )
-        MediaType.VIDEO -> {
-            if (media.thumbnailFilePath != null) {
+        MediaTypeUi.IMAGE ->
+            MediaImage(
+                data = null,
+                localFilePath = thumbnailFilePath ?: localFilePath,
+                cacheKey = thumbnailCacheKey,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                contentScale = contentScale
+            )
+
+        MediaTypeUi.VIDEO -> {
+            if (thumbnailFilePath != null) {
                 MediaImage(
                     data = null,
-                    localFilePath = media.thumbnailFilePath,
+                    localFilePath = thumbnailFilePath,
                     cacheKey = thumbnailCacheKey,
                     contentDescription = contentDescription,
                     modifier = modifier,
                     contentScale = contentScale
                 )
             } else {
-                VideoThumbnail(media = media, modifier = modifier, contentScale = contentScale)
+                VideoThumbnail(
+                    media = media,
+                    localFilePath = localFilePath,
+                    modifier = modifier,
+                    contentScale = contentScale
+                )
             }
         }
     }
@@ -65,9 +69,9 @@ private fun MediaThumbnailPreview() {
         ) {
             MediaThumbnail(
                 media =
-                    MediaItem(
+                    MediaItemUi(
                         id = "preview-image",
-                        type = MediaType.IMAGE,
+                        type = MediaTypeUi.IMAGE,
                         mimeType = "image/jpeg",
                         localFilePath = "/preview/image.png"
                     )

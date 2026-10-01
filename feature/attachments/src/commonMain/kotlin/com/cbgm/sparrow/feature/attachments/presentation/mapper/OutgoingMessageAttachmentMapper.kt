@@ -3,21 +3,36 @@ package com.cbgm.sparrow.feature.attachments.presentation.mapper
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 
-suspend fun MediaSelection.toOutgoingMessageAttachment(files: MediaSelectionFileRepository): OutgoingMessageAttachment =
-    OutgoingMessageAttachment(
-        id = id,
-        type = when (type) {
-            MediaSelectionType.IMAGE -> MessageAttachmentType.IMAGE
-            MediaSelectionType.VIDEO -> MessageAttachmentType.VIDEO
-            MediaSelectionType.FILE -> MessageAttachmentType.FILE
-        },
-        bytes = files.read(localFilePath),
-        mimeType = mimeType,
-        fileName = if (type == MediaSelectionType.FILE) requireNotNull(fileName) else null,
-        width = if (type == MediaSelectionType.FILE) null else width,
-        height = if (type == MediaSelectionType.FILE) null else height,
-        durationMilliseconds = if (type == MediaSelectionType.FILE) null else durationMilliseconds
-    )
+suspend fun MediaSelectionUi.toOutgoingMessageAttachment(
+    files: MediaSelectionFileRepository
+): OutgoingMessageAttachment =
+    when (this) {
+        is VisualMediaSelectionUi ->
+            OutgoingMessageAttachment(
+                id = id,
+                type =
+                    when (type) {
+                        MediaTypeUi.IMAGE -> MessageAttachmentType.IMAGE
+                        MediaTypeUi.VIDEO -> MessageAttachmentType.VIDEO
+                    },
+                bytes = files.read(localFilePath),
+                mimeType = mimeType,
+                width = width,
+                height = height,
+                durationMilliseconds = durationMilliseconds
+            )
+
+        is FileMediaSelectionUi ->
+            OutgoingMessageAttachment(
+                id = id,
+                type = MessageAttachmentType.FILE,
+                bytes = files.read(localFilePath),
+                mimeType = mimeType,
+                fileName = fileName
+            )
+    }

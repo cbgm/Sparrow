@@ -32,16 +32,17 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 @Composable
 fun MediaSelectionPreview(
-    media: List<MediaSelection>,
-    onClick: (MediaSelectionSource) -> Unit,
+    media: List<MediaSelectionUi>,
+    onClick: (MediaSourceUi) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
@@ -52,22 +53,21 @@ fun MediaSelectionPreview(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        items(media, key = MediaSelection::id) { selection ->
-            when (selection.type) {
-                MediaSelectionType.IMAGE,
-                MediaSelectionType.VIDEO ->
+        items(media, key = MediaSelectionUi::id) { selection ->
+            when (selection) {
+                is VisualMediaSelectionUi ->
                     MediaSelectionItem(
                         selection = selection,
                         enabled = enabled,
-                        onClick = { onClick(MediaSelectionSource.GALLERY) },
+                        onClick = { onClick(selection.source) },
                         onRemove = { onRemove(selection.id) }
                     )
 
-                MediaSelectionType.FILE ->
+                is FileMediaSelectionUi ->
                     FileSelectionItem(
                         selection = selection,
                         enabled = enabled,
-                        onClick = { onClick(MediaSelectionSource.FILE_PICKER) },
+                        onClick = { onClick(selection.source) },
                         onRemove = { onRemove(selection.id) }
                     )
             }
@@ -77,7 +77,7 @@ fun MediaSelectionPreview(
 
 @Composable
 private fun MediaSelectionItem(
-    selection: MediaSelection,
+    selection: VisualMediaSelectionUi,
     enabled: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -94,13 +94,13 @@ private fun MediaSelectionItem(
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             MediaThumbnail(
-                media = selection.toMediaItem(),
+                media = selection,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         }
 
-        if (selection.type == MediaSelectionType.VIDEO) {
+        if (selection.type == MediaTypeUi.VIDEO) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = MaterialTheme.shapes.extraLarge,
@@ -124,7 +124,7 @@ private fun MediaSelectionItem(
 
 @Composable
 private fun FileSelectionItem(
-    selection: MediaSelection,
+    selection: FileMediaSelectionUi,
     enabled: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -149,7 +149,7 @@ private fun FileSelectionItem(
                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = selection.fileName ?: selection.id,
+                        text = selection.fileName,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -206,35 +206,35 @@ private fun MediaSelectionPreviewPreview() {
     }
 }
 
-fun previewMediaSelections(): List<MediaSelection> = listOf(
-    MediaSelection(
-        id = "preview-image",
-        type = MediaSelectionType.IMAGE,
-        localFilePath = "/preview/image.png",
-        byteSize = 1024,
-        mimeType = "image/png",
-        source = MediaSelectionSource.GALLERY,
-        width = 48,
-        height = 48
-    ),
-    MediaSelection(
-        id = "preview-video",
-        type = MediaSelectionType.VIDEO,
-        localFilePath = "/preview/video.mp4",
-        byteSize = 1024,
-        mimeType = "video/mp4",
-        source = MediaSelectionSource.GALLERY,
-        width = 48,
-        height = 48,
-        durationMilliseconds = 12_000L
-    ),
-    MediaSelection(
-        id = "preview-file",
-        type = MediaSelectionType.FILE,
-        localFilePath = "/preview/document.pdf",
-        byteSize = 1024,
-        mimeType = "application/pdf",
-        source = MediaSelectionSource.FILE_PICKER,
-        fileName = "document.pdf"
+fun previewMediaSelections(): List<MediaSelectionUi> =
+    listOf(
+        VisualMediaSelectionUi(
+            id = "preview-image",
+            localFilePath = "/preview/image.png",
+            byteSize = 1024,
+            mimeType = "image/png",
+            source = MediaSourceUi.GALLERY,
+            type = MediaTypeUi.IMAGE,
+            width = 48,
+            height = 48
+        ),
+        VisualMediaSelectionUi(
+            id = "preview-video",
+            localFilePath = "/preview/video.mp4",
+            byteSize = 4096,
+            mimeType = "video/mp4",
+            source = MediaSourceUi.GALLERY,
+            type = MediaTypeUi.VIDEO,
+            width = 48,
+            height = 48,
+            durationMilliseconds = 1_000
+        ),
+        FileMediaSelectionUi(
+            id = "preview-file",
+            localFilePath = "/preview/file.pdf",
+            byteSize = 2048,
+            mimeType = "application/pdf",
+            source = MediaSourceUi.FILE_PICKER,
+            fileName = "document.pdf"
+        )
     )
-)
