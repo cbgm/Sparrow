@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
@@ -13,24 +12,30 @@ suspend fun MediaSelectionUi.toOutgoingMessageAttachment(
 ): OutgoingMessageAttachment =
     when (this) {
         is VisualMediaSelectionUi ->
-            OutgoingMessageAttachment(
-                id = id,
-                type =
-                    when (type) {
-                        MediaTypeUi.IMAGE -> MessageAttachmentType.IMAGE
-                        MediaTypeUi.VIDEO -> MessageAttachmentType.VIDEO
-                    },
-                bytes = files.read(localFilePath),
-                mimeType = mimeType,
-                width = width,
-                height = height,
-                durationMilliseconds = durationMilliseconds
-            )
+            when (type) {
+                MediaTypeUi.IMAGE ->
+                    OutgoingMessageAttachment.Image(
+                        id = id,
+                        bytes = files.read(localFilePath),
+                        mimeType = mimeType,
+                        width = requireNotNull(width),
+                        height = requireNotNull(height)
+                    )
+
+                MediaTypeUi.VIDEO ->
+                    OutgoingMessageAttachment.Video(
+                        id = id,
+                        bytes = files.read(localFilePath),
+                        mimeType = mimeType,
+                        width = width,
+                        height = height,
+                        durationMilliseconds = durationMilliseconds
+                    )
+            }
 
         is FileMediaSelectionUi ->
-            OutgoingMessageAttachment(
+            OutgoingMessageAttachment.File(
                 id = id,
-                type = MessageAttachmentType.FILE,
                 bytes = files.read(localFilePath),
                 mimeType = mimeType,
                 fileName = fileName

@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.model.ImageVideoTypeDto
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
@@ -8,66 +7,66 @@ import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 
 internal fun List<MessageAttachment>.toMessagePartDtos(): List<MessagePartDto> =
-    map { attachment -> attachment.toMessagePartDto() }
+    map(MessageAttachment::toMessagePartDto)
 
 private fun MessageAttachment.toMessagePartDto(): MessagePartDto =
-    when (type) {
-        MessageAttachmentType.IMAGE,
-        MessageAttachmentType.VIDEO ->
+    when (this) {
+        is MessageAttachment.Image ->
             MessagePartDto.ImageVideoDto(
                 id = id,
-                type =
-                    when (type) {
-                        MessageAttachmentType.IMAGE -> ImageVideoTypeDto.IMAGE
-                        MessageAttachmentType.VIDEO -> ImageVideoTypeDto.VIDEO
-                        else -> error("Unsupported image/video attachment type: $type")
-                    },
+                type = ImageVideoTypeDto.IMAGE,
                 mimeType = mimeType,
                 byteSize = byteSize,
-                fileName = fileName,
+                fileName = null,
+                width = width,
+                height = height,
+                durationMilliseconds = null,
+                localFilePath = localFilePath
+            )
+
+        is MessageAttachment.Video ->
+            MessagePartDto.ImageVideoDto(
+                id = id,
+                type = ImageVideoTypeDto.VIDEO,
+                mimeType = mimeType,
+                byteSize = byteSize,
+                fileName = null,
                 width = width,
                 height = height,
                 durationMilliseconds = durationMilliseconds,
                 localFilePath = localFilePath
             )
 
-        MessageAttachmentType.FILE ->
+        is MessageAttachment.File ->
             MessagePartDto.FileDto(
                 id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
-                fileName = fileName ?: id,
+                fileName = fileName,
                 localFilePath = localFilePath
             )
 
-        MessageAttachmentType.LOCATION ->
-            MessagePartDto.LocationDto(id = id)
-
-        MessageAttachmentType.CONTACT ->
-            MessagePartDto.ContactDto(id = id)
-
-        MessageAttachmentType.VOICE ->
+        is MessageAttachment.Location -> MessagePartDto.LocationDto(id = id)
+        is MessageAttachment.Contact -> MessagePartDto.ContactDto(id = id)
+        is MessageAttachment.Voice ->
             MessagePartDto.VoiceDto(
                 id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
-                durationMilliseconds = requireNotNull(durationMilliseconds)
+                durationMilliseconds = durationMilliseconds
             )
     }
 
 internal fun MessagePartDto.toMessagePart(): MessagePart =
     when (this) {
-        is MessagePartDto.TextDto ->
-            MessagePart.Text(text = text)
-
+        is MessagePartDto.TextDto -> MessagePart.Text(text = text)
         is MessagePartDto.ImageVideoDto ->
             MessagePart.ImageVideo(
                 id = id,
-                type =
-                    when (type) {
-                        ImageVideoTypeDto.IMAGE -> ImageVideoType.IMAGE
-                        ImageVideoTypeDto.VIDEO -> ImageVideoType.VIDEO
-                    },
+                type = when (type) {
+                    ImageVideoTypeDto.IMAGE -> ImageVideoType.IMAGE
+                    ImageVideoTypeDto.VIDEO -> ImageVideoType.VIDEO
+                },
                 mimeType = mimeType,
                 byteSize = byteSize,
                 fileName = fileName,
@@ -76,7 +75,6 @@ internal fun MessagePartDto.toMessagePart(): MessagePart =
                 durationMilliseconds = durationMilliseconds,
                 localFilePath = localFilePath
             )
-
         is MessagePartDto.FileDto ->
             MessagePart.File(
                 id = id,
@@ -85,13 +83,8 @@ internal fun MessagePartDto.toMessagePart(): MessagePart =
                 fileName = fileName,
                 localFilePath = localFilePath
             )
-
-        is MessagePartDto.LocationDto ->
-            MessagePart.Location(id = id)
-
-        is MessagePartDto.ContactDto ->
-            MessagePart.Contact(id = id)
-
+        is MessagePartDto.LocationDto -> MessagePart.Location(id = id)
+        is MessagePartDto.ContactDto -> MessagePart.Contact(id = id)
         is MessagePartDto.VoiceDto ->
             MessagePart.Voice(
                 id = id,

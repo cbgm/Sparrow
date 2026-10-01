@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.forward
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.attachment.CONTACT_MIME_TYPE
-import com.cbgm.sparrow.core.protocol.attachment.LOCATION_MIME_TYPE
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
@@ -44,57 +41,57 @@ class PrepareForwardMessageUseCase(
     private suspend fun MessagePart.toOutgoingAttachment(): OutgoingMessageAttachment =
         when (this) {
             is MessagePart.ImageVideo -> {
-                val attachmentType =
-                    when (type) {
-                        ImageVideoType.IMAGE -> MessageAttachmentType.IMAGE
-                        ImageVideoType.VIDEO -> MessageAttachmentType.VIDEO
-                    }
-                OutgoingMessageAttachment(
-                    id = IdGenerator.generate(prefix = attachmentType.name.lowercase()),
-                    type = attachmentType,
-                    bytes = messageAttachmentRepository.loadBytes(id).getOrThrow(),
-                    mimeType = mimeType,
-                    width = width,
-                    height = height,
-                    durationMilliseconds = durationMilliseconds
-                )
+                val bytes = messageAttachmentRepository.loadBytes(id).getOrThrow()
+                when (type) {
+                    ImageVideoType.IMAGE ->
+                        OutgoingMessageAttachment.Image(
+                            id = IdGenerator.generate(prefix = "image"),
+                            bytes = bytes,
+                            mimeType = mimeType,
+                            width = requireNotNull(width),
+                            height = requireNotNull(height)
+                        )
+
+                    ImageVideoType.VIDEO ->
+                        OutgoingMessageAttachment.Video(
+                            id = IdGenerator.generate(prefix = "video"),
+                            bytes = bytes,
+                            mimeType = mimeType,
+                            width = width,
+                            height = height,
+                            durationMilliseconds = durationMilliseconds
+                        )
+                }
             }
 
             is MessagePart.File ->
-                OutgoingMessageAttachment(
+                OutgoingMessageAttachment.File(
                     id = IdGenerator.generate(prefix = "file"),
-                    type = MessageAttachmentType.FILE,
                     bytes = messageAttachmentRepository.loadBytes(id).getOrThrow(),
                     mimeType = mimeType,
                     fileName = fileName
                 )
 
             is MessagePart.Location ->
-                OutgoingMessageAttachment(
+                OutgoingMessageAttachment.Location(
                     id = IdGenerator.generate(prefix = "location"),
-                    type = MessageAttachmentType.LOCATION,
-                    bytes = messageAttachmentRepository.loadBytes(id).getOrThrow(),
-                    mimeType = LOCATION_MIME_TYPE
+                    bytes = messageAttachmentRepository.loadBytes(id).getOrThrow()
                 )
 
             is MessagePart.Contact ->
-                OutgoingMessageAttachment(
+                OutgoingMessageAttachment.Contact(
                     id = IdGenerator.generate(prefix = "contact"),
-                    type = MessageAttachmentType.CONTACT,
-                    bytes = messageAttachmentRepository.loadBytes(id).getOrThrow(),
-                    mimeType = CONTACT_MIME_TYPE
+                    bytes = messageAttachmentRepository.loadBytes(id).getOrThrow()
                 )
 
             is MessagePart.Voice ->
-                OutgoingMessageAttachment(
+                OutgoingMessageAttachment.Voice(
                     id = IdGenerator.generate(prefix = "voice"),
-                    type = MessageAttachmentType.VOICE,
                     bytes = messageAttachmentRepository.loadBytes(id).getOrThrow(),
                     mimeType = mimeType,
                     durationMilliseconds = durationMilliseconds
                 )
 
-            is MessagePart.Text ->
-                error("Text parts are forwarded as message text")
+            is MessagePart.Text -> error("Text parts are forwarded as message text")
         }
 }

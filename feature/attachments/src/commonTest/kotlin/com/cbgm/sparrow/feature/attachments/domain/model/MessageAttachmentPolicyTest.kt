@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
@@ -33,9 +32,8 @@ class MessageAttachmentPolicyTest {
     @Test
     fun `video requires video mime type`() {
         assertFailsWith<IllegalArgumentException> {
-            OutgoingMessageAttachment(
+            OutgoingMessageAttachment.Video(
                 id = "video-1",
-                type = MessageAttachmentType.VIDEO,
                 bytes = byteArrayOf(1),
                 mimeType = "image/jpeg"
             )
@@ -43,9 +41,8 @@ class MessageAttachmentPolicyTest {
     }
 
     private fun image(index: Int, id: String = "image-$index") =
-        OutgoingMessageAttachment(
+        OutgoingMessageAttachment.Image(
             id = id,
-            type = MessageAttachmentType.IMAGE,
             bytes = byteArrayOf(index.toByte()),
             mimeType = "image/jpeg",
             width = 100,
@@ -53,9 +50,8 @@ class MessageAttachmentPolicyTest {
         )
 
     private fun video(index: Int) =
-        OutgoingMessageAttachment(
+        OutgoingMessageAttachment.Video(
             id = "video-$index",
-            type = MessageAttachmentType.VIDEO,
             bytes = byteArrayOf(index.toByte()),
             mimeType = "video/mp4",
             width = 1920,
@@ -64,9 +60,8 @@ class MessageAttachmentPolicyTest {
         )
 
     private fun file(index: Int, id: String = "file-$index") =
-        OutgoingMessageAttachment(
+        OutgoingMessageAttachment.File(
             id = id,
-            type = MessageAttachmentType.FILE,
             bytes = byteArrayOf(index.toByte()),
             mimeType = "application/pdf",
             fileName = "file-$index.pdf"

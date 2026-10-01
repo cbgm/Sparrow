@@ -16,27 +16,46 @@ fun List<MessageAttachmentEntity>.toMessageAttachmentsByMessageId(
 
 private fun MessageAttachmentEntity.toMessageAttachment(
     resolveLocalFilePath: (String) -> String?
-): MessageAttachment {
-    val attachmentType = MessageAttachmentType.valueOf(type)
+): MessageAttachment =
+    when (MessageAttachmentType.valueOf(type)) {
+        MessageAttachmentType.IMAGE ->
+            MessageAttachment.Image(
+                id = id,
+                mimeType = mimeType,
+                byteSize = byteSize,
+                width = requireNotNull(width),
+                height = requireNotNull(height),
+                localFilePath = localFileName?.let(resolveLocalFilePath)
+            )
 
-    return MessageAttachment(
-        id = id,
-        type = attachmentType,
-        mimeType = mimeType,
-        byteSize = byteSize,
-        fileName = fileName,
-        width = width,
-        height = height,
-        durationMilliseconds = durationMilliseconds,
-        localFilePath =
-            when (attachmentType) {
-                MessageAttachmentType.IMAGE,
-                MessageAttachmentType.VIDEO,
-                MessageAttachmentType.FILE -> localFileName?.let(resolveLocalFilePath)
+        MessageAttachmentType.VIDEO ->
+            MessageAttachment.Video(
+                id = id,
+                mimeType = mimeType,
+                byteSize = byteSize,
+                width = width,
+                height = height,
+                durationMilliseconds = durationMilliseconds,
+                localFilePath = localFileName?.let(resolveLocalFilePath)
+            )
 
-                MessageAttachmentType.LOCATION,
-                MessageAttachmentType.CONTACT,
-                MessageAttachmentType.VOICE -> null
-            }
-    )
-}
+        MessageAttachmentType.FILE ->
+            MessageAttachment.File(
+                id = id,
+                mimeType = mimeType,
+                byteSize = byteSize,
+                fileName = fileName ?: id,
+                localFilePath = localFileName?.let(resolveLocalFilePath)
+            )
+
+        MessageAttachmentType.VOICE ->
+            MessageAttachment.Voice(
+                id = id,
+                mimeType = mimeType,
+                byteSize = byteSize,
+                durationMilliseconds = requireNotNull(durationMilliseconds)
+            )
+
+        MessageAttachmentType.LOCATION -> MessageAttachment.Location(id)
+        MessageAttachmentType.CONTACT -> MessageAttachment.Contact(id)
+    }

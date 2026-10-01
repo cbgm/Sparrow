@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.voice.domain.usecase
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.voice.domain.repository.VoiceRepository
 
@@ -20,9 +19,8 @@ class GetRecordedVoiceAttachmentUseCase(
         }
 
         return Result.success(
-            OutgoingMessageAttachment(
+            OutgoingMessageAttachment.Voice(
                 id = IdGenerator.generate(prefix = "voice"),
-                type = MessageAttachmentType.VOICE,
                 bytes = recording.bytes,
                 mimeType = recording.mimeType,
                 durationMilliseconds = recording.durationMilliseconds
