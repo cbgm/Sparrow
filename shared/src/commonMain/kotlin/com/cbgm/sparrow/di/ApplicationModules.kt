@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.media.di.mediaModule
 import com.cbgm.sparrow.feature.membership.di.membershipModule
 import com.cbgm.sparrow.feature.messaging.di.messagingModule
 import com.cbgm.sparrow.feature.onboarding.di.onboardingModule
+import com.cbgm.sparrow.feature.polls.di.pollsModule
 import com.cbgm.sparrow.feature.safety.di.safetyModule
 import com.cbgm.sparrow.feature.search.di.searchModule
 import com.cbgm.sparrow.feature.settings.di.settingsModule
@@ -38,6 +39,7 @@ internal val commonApplicationModules: List<Module> =
         appLockModule,
         identityModule,
         onboardingModule,
+        pollsModule,
         contactsModule,
         inviteModule,
         conversationOrchestrationModule,

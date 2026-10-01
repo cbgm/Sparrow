@@ -677,4 +677,43 @@
     <string name="feature_applock_unavailable">Device authentication is unavailable. Set up biometrics or a secure screen lock and try again.</string>
     <string name="feature_applock_authentication_failed">Authentication failed. Try again.</string>
     <string name="feature_applock_unlock_sparrow">Unlock Sparrow</string>
+
+    <!-- Feature: polls -->
+    <string name="feature_polls_create_title">Create poll</string>
+    <string name="feature_polls_create">Create</string>
+    <string name="feature_polls_question">Question</string>
+    <string name="feature_polls_question_placeholder">Ask a question…</string>
+    <string name="feature_polls_description">Description (optional)</string>
+    <string name="feature_polls_description_placeholder">Add more context…</string>
+    <string name="feature_polls_options">Options</string>
+    <string name="feature_polls_option">Option %1$d</string>
+    <string name="feature_polls_add_option">Add option</string>
+    <string name="feature_polls_remove_option">Remove option</string>
+    <string name="feature_polls_media">Media (optional)</string>
+    <string name="feature_polls_media_limit">Add up to %1$d photos or videos</string>
+    <string name="feature_polls_add_media">Add media</string>
+    <string name="feature_polls_add_from_camera">Camera</string>
+    <string name="feature_polls_settings">Poll settings</string>
+    <string name="feature_polls_poll_ends">Poll ends</string>
+    <string name="feature_polls_expiry_hint">Enter the local date and time.</string>
+    <string name="feature_polls_expiry_date">Date</string>
+    <string name="feature_polls_expiry_time">Time</string>
+    <string name="feature_polls_expiry_date_placeholder">YYYY-MM-DD</string>
+    <string name="feature_polls_expiry_time_placeholder">HH:MM</string>
+    <string name="feature_polls_expiry_invalid">Choose a valid future date and time.</string>
+    <string name="feature_polls_allow_multiple">Allow multiple answers</string>
+    <string name="feature_polls_allow_vote_change">Allow changing vote</string>
+    <string name="feature_polls_multiple_answers">Multiple answers</string>
+    <string name="feature_polls_percentage">%1$d%%</string>
+    <string name="feature_polls_more_media">+%1$d</string>
+    <string name="feature_polls_vote">Vote</string>
+    <string name="feature_polls_change_vote">Change vote</string>
+    <string name="feature_polls_close_poll">Close poll</string>
+    <string name="feature_polls_closed">Poll closed</string>
+    <string name="feature_polls_expired">Poll expired</string>
+    <plurals name="feature_polls_voters">
+        <item quantity="one">%1$d voter</item>
+        <item quantity="other">%1$d voters</item>
+    </plurals>
+
 </resources>

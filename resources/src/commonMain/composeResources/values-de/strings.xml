@@ -681,4 +681,43 @@
     <string name="feature_applock_unavailable">Geräteauthentifizierung ist nicht verfügbar. Richte Biometrie oder eine sichere Gerätesperre ein und versuche es erneut.</string>
     <string name="feature_applock_authentication_failed">Authentifizierung fehlgeschlagen. Versuche es erneut.</string>
     <string name="feature_applock_unlock_sparrow">Entsperre Sparrow</string>
+
+    <!-- Feature: polls -->
+    <string name="feature_polls_create_title">Umfrage erstellen</string>
+    <string name="feature_polls_create">Erstellen</string>
+    <string name="feature_polls_question">Frage</string>
+    <string name="feature_polls_question_placeholder">Stelle eine Frage…</string>
+    <string name="feature_polls_description">Beschreibung (optional)</string>
+    <string name="feature_polls_description_placeholder">Weitere Informationen hinzufügen…</string>
+    <string name="feature_polls_options">Antwortmöglichkeiten</string>
+    <string name="feature_polls_option">Option %1$d</string>
+    <string name="feature_polls_add_option">Option hinzufügen</string>
+    <string name="feature_polls_remove_option">Option entfernen</string>
+    <string name="feature_polls_media">Medien (optional)</string>
+    <string name="feature_polls_media_limit">Bis zu %1$d Fotos oder Videos hinzufügen</string>
+    <string name="feature_polls_add_media">Medien hinzufügen</string>
+    <string name="feature_polls_add_from_camera">Kamera</string>
+    <string name="feature_polls_settings">Umfrageeinstellungen</string>
+    <string name="feature_polls_poll_ends">Umfrage endet</string>
+    <string name="feature_polls_expiry_hint">Lokales Datum und lokale Uhrzeit eingeben.</string>
+    <string name="feature_polls_expiry_date">Datum</string>
+    <string name="feature_polls_expiry_time">Uhrzeit</string>
+    <string name="feature_polls_expiry_date_placeholder">JJJJ-MM-TT</string>
+    <string name="feature_polls_expiry_time_placeholder">HH:MM</string>
+    <string name="feature_polls_expiry_invalid">Wähle ein gültiges Datum und eine gültige Uhrzeit in der Zukunft.</string>
+    <string name="feature_polls_allow_multiple">Mehrere Antworten erlauben</string>
+    <string name="feature_polls_allow_vote_change">Ändern der Stimme erlauben</string>
+    <string name="feature_polls_multiple_answers">Mehrfachauswahl</string>
+    <string name="feature_polls_percentage">%1$d%%</string>
+    <string name="feature_polls_more_media">+%1$d</string>
+    <string name="feature_polls_vote">Abstimmen</string>
+    <string name="feature_polls_change_vote">Stimme ändern</string>
+    <string name="feature_polls_close_poll">Umfrage schließen</string>
+    <string name="feature_polls_closed">Umfrage geschlossen</string>
+    <string name="feature_polls_expired">Umfrage abgelaufen</string>
+    <plurals name="feature_polls_voters">
+        <item quantity="one">%1$d Teilnehmer</item>
+        <item quantity="other">%1$d Teilnehmer</item>
+    </plurals>
+
 </resources>
