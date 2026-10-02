@@ -5,6 +5,8 @@ interface GroupVerificationActionRepository {
 
     suspend fun synchronize(groupId: String): Result<Unit>
 
+    suspend fun refreshOwnedGroup(groupId: String): Result<Unit>
+
     suspend fun verify(
         groupId: String,
         contactId: String

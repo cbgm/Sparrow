@@ -137,6 +137,9 @@ internal class GroupPinRepositoryImpl(
             ?: error("Pinned message attachment was not found")
     }
 
+    override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
+        broadcaster.sendCurrentTo(groupId, peerId)
+
     override suspend fun unpin(groupId: String): Result<Unit> =
         safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }

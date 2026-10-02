@@ -60,7 +60,7 @@ fun CreatePollScreen(
     ) { innerPadding, listState ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacing.screenPadding),
             contentPadding = innerPadding,
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
         ) {
@@ -70,10 +70,9 @@ fun CreatePollScreen(
                     onValueChange = { onUiEvent(CreatePollUiEvent.QuestionChanged(it)) },
                     label = stringResource(Res.string.feature_polls_question),
                     placeholderText = stringResource(Res.string.feature_polls_question_placeholder),
-                    minLines = 2,
+                    minLines = 1,
                     maxLines = 4,
                     modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
                 )
             }
             item(key = "description") {
@@ -82,10 +81,9 @@ fun CreatePollScreen(
                     onValueChange = { onUiEvent(CreatePollUiEvent.DescriptionChanged(it)) },
                     label = stringResource(Res.string.feature_polls_description),
                     placeholderText = stringResource(Res.string.feature_polls_description_placeholder),
-                    minLines = 2,
+                    minLines = 1,
                     maxLines = 5,
                     modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
                 )
             }
             item(key = "options") {
@@ -95,16 +93,14 @@ fun CreatePollScreen(
                         onUiEvent(CreatePollUiEvent.OptionChanged(id, value))
                     },
                     onRemoveOption = { onUiEvent(CreatePollUiEvent.RemoveOptionClicked(it)) },
-                    onAddOption = { onUiEvent(CreatePollUiEvent.AddOptionClicked) },
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    onAddOption = { onUiEvent(CreatePollUiEvent.AddOptionClicked) }
                 )
             }
             item(key = "media") {
                 PollMediaEditor(
                     media = uiState.media,
                     onAddMedia = onAddMedia,
-                    onRemoveMedia = { onUiEvent(CreatePollUiEvent.RemoveMediaClicked(it)) },
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    onRemoveMedia = { onUiEvent(CreatePollUiEvent.RemoveMediaClicked(it)) }
                 )
             }
             item(key = "settings") {
@@ -125,12 +121,7 @@ fun CreatePollScreen(
                         onUiEvent(CreatePollUiEvent.MultipleSelectionChanged(it))
                     },
                     onVoteChangeChanged = { onUiEvent(CreatePollUiEvent.VoteChangeChanged(it)) },
-                    onAnonymousChanged = { onUiEvent(CreatePollUiEvent.AnonymousChanged(it)) },
-                    modifier = Modifier.padding(
-                        start = MaterialTheme.spacing.screenPadding,
-                        end = MaterialTheme.spacing.screenPadding,
-                        bottom = MaterialTheme.spacing.large
-                    )
+                    onAnonymousChanged = { onUiEvent(CreatePollUiEvent.AnonymousChanged(it)) }
                 )
             }
         }

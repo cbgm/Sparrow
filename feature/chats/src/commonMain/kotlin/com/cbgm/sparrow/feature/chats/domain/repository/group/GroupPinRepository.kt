@@ -22,4 +22,6 @@ interface GroupPinRepository {
         groupId: String,
         attachmentId: String
     ): Result<ByteArray>
+
+    suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit>
 }

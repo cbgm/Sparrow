@@ -113,6 +113,13 @@ class GroupOutgoingMessageProcessor(
         }
     }
 
+    suspend fun findGroupIdForMessage(messageId: String): Result<String?> = safeSuspendCall {
+        val message = messageDataSource.findMessage(messageId) ?: return@safeSuspendCall null
+        val conversation = messageDataSource.findConversation(message.conversationId)
+            ?: return@safeSuspendCall null
+        conversation.id.takeIf { conversation.type == GROUP_CONVERSATION_TYPE }
+    }
+
     private suspend fun flushQueuedLocked(groupId: String, recipients: List<String>) {
         val waiting = messageDataSource.findQueuedGroupMessages(groupId)
         val interrupted = messageDataSource.findGroupMessagesAwaitingOutbox(groupId)

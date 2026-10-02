@@ -15,4 +15,6 @@ interface GroupAvatarRepository {
     ): Result<Unit>
 
     suspend fun remove(groupId: String): Result<Unit>
+
+    suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit>
 }

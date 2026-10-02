@@ -39,7 +39,10 @@ import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryption
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Owns every outgoing direct-message operation.
@@ -251,6 +254,46 @@ class DirectOutgoingMessageProcessor(
         safeSuspendCall {
             discardMessages(findWaitingMessages(contactId))
         }
+
+    suspend fun runPendingAuthorizationCleanup() {
+        conversationDataSource
+            .observeDirectMessagesByDeliveryStatus(MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name)
+            .collectLatest { messages ->
+                if (messages.isEmpty()) return@collectLatest
+
+                deleteExpiredPendingAuthorizationMessages(messages)
+
+                val remaining = messages.filterNot { message ->
+                    DirectPendingAuthorizationMessagePolicy.isExpired(
+                        createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                        nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    )
+                }
+                val nextMessage = remaining.minByOrNull { message -> message.createdAtEpochMilliseconds }
+                    ?: return@collectLatest
+                val delayMilliseconds =
+                    DirectPendingAuthorizationMessagePolicy
+                        .expiresAtEpochMilliseconds(nextMessage.createdAtEpochMilliseconds)
+                        .minus(SystemClock.nowEpochMilliseconds())
+                        .coerceAtLeast(0L)
+
+                delay(delayMilliseconds.milliseconds)
+                deleteExpiredPendingAuthorizationMessages(remaining)
+            }
+    }
+
+    private suspend fun deleteExpiredPendingAuthorizationMessages(messages: List<MessageEntity>) {
+        val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+        val expired = messages.filter { message ->
+            DirectPendingAuthorizationMessagePolicy.isExpired(
+                createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                nowEpochMilliseconds = nowEpochMilliseconds
+            )
+        }
+        if (expired.isEmpty()) return
+        attachmentTransfer.deleteForMessages(expired.map(MessageEntity::id))
+        conversationDataSource.deleteMessages(expired)
+    }
 
     suspend fun retry(messageId: String): Result<Unit> =
         safeSuspendCall {

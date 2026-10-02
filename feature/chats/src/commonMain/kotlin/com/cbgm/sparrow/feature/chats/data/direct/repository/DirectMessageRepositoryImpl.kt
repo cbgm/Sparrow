@@ -64,6 +64,10 @@ class DirectMessageRepositoryImpl(
             outgoingMessageProcessor.discardWaitingForAuthorization(contactId)
         }
 
+    override suspend fun runPendingAuthorizationCleanup() {
+        outgoingMessageProcessor.runPendingAuthorizationCleanup()
+    }
+
     override suspend fun markConversationRead(conversationId: String): Result<Unit> =
         safeSuspendCall {
             outgoingMessageProcessor.sendReadReceipts(conversationId)

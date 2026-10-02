@@ -66,6 +66,12 @@ class GroupMessageRepositoryImpl(
         outgoingMessageProcessor.retry(messageId)
     }
 
+    override suspend fun flushQueued(groupId: String): Result<Unit> =
+        outgoingMessageProcessor.flushQueued(groupId)
+
+    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> =
+        outgoingMessageProcessor.findGroupIdForMessage(messageId)
+
     override suspend fun markConversationRead(groupId: String): Result<Unit> = safeSuspendCall {
         outgoingMessageProcessor.sendReadReceipts(groupId)
     }

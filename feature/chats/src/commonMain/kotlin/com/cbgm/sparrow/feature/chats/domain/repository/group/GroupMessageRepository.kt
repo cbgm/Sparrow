@@ -20,5 +20,9 @@ interface GroupMessageRepository {
 
     suspend fun retry(messageId: String): Result<Unit>
 
+    suspend fun flushQueued(groupId: String): Result<Unit>
+
+    suspend fun findGroupIdForMessage(messageId: String): Result<String?>
+
     suspend fun markConversationRead(groupId: String): Result<Unit>
 }

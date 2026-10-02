@@ -29,5 +29,7 @@ interface DirectMessageRepository {
 
     suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit>
 
+    suspend fun runPendingAuthorizationCleanup()
+
     suspend fun markConversationRead(conversationId: String): Result<Unit>
 }

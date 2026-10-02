@@ -42,6 +42,9 @@ internal class GroupAvatarRepositoryImpl(
     override suspend fun remove(groupId: String): Result<Unit> =
         update(groupId, null)
 
+    override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
+        broadcaster.sendCurrentTo(groupId, peerId)
+
     private suspend fun update(
         groupId: String,
         bytes: ByteArray?

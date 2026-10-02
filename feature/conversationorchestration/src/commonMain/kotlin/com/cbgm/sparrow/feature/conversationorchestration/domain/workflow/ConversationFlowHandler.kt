@@ -1095,6 +1095,7 @@ internal class ConversationFlowHandler(
                         ownerContactId = context.contactId,
                         ownerSigningPublicKey = ownerSigningPublicKey
                     ).getOrThrow()
+                    conversationPort.deleteGroupAttachments(packet.groupId).getOrThrow()
                     conversationPort.prepareIncomingGroupDeletion(packet.groupId).getOrThrow()
                     completeIncomingGroupDeletion(packet, context.contactId).getOrThrow()
                     conversationPort.finishIncomingGroupDeletion(
