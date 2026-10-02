@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.MyLocation
@@ -37,6 +38,7 @@ fun AttachmentBar(
     onClickContact: () -> Unit,
     onClickLocation: () -> Unit,
     modifier: Modifier = Modifier,
+    onClickPoll: (() -> Unit)? = null,
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     isFileEnabled: Boolean = true,
@@ -87,6 +89,13 @@ fun AttachmentBar(
                 enabled = !isLocationInProgress,
                 isLoading = isLocationInProgress
             )
+            if (onClickPoll != null) {
+                FilledButton(
+                    onClick = onClickPoll,
+                    imageVector = Icons.Filled.BarChart,
+                    tint = Color(0xFFF2A65A)
+                )
+            }
         }
     }
 }
@@ -142,6 +151,7 @@ private fun AttachmentBarPreview() {
             onClickFile = {},
             onClickLocation = {},
             onClickCamera = {},
+            onClickPoll = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,
             isFileEnabled = true,

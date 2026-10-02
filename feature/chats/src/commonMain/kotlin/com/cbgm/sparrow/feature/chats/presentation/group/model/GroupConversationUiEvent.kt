@@ -91,6 +91,8 @@ sealed interface GroupConversationUiEvent {
 
     data object HeaderClicked : GroupConversationUiEvent
 
+    data object CreatePollClicked : GroupConversationUiEvent
+
     data class RetryMessage(
         val messageId: String
     ) : GroupConversationUiEvent

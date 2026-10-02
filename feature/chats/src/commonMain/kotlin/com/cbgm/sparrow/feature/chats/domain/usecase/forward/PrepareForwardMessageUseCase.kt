@@ -92,6 +92,8 @@ class PrepareForwardMessageUseCase(
                     durationMilliseconds = durationMilliseconds
                 )
 
+            is MessagePart.Poll -> error("Polls cannot be forwarded")
+
             is MessagePart.Text -> error("Text parts are forwarded as message text")
         }
 }

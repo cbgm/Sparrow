@@ -32,6 +32,7 @@ fun ComposerContent(
     onLocationCaptureStarted: () -> Unit,
     onLocationCaptured: (CurrentLocation) -> Unit,
     onLocationCaptureFailed: (String) -> Unit,
+    onPollAttachmentClick: (() -> Unit)? = null,
     onAttachmentError: (String) -> Unit,
     onVoiceSendClick: () -> Unit
 ) {
@@ -87,6 +88,7 @@ fun ComposerContent(
                     onLocationCaptureStarted()
                     currentLocationLauncher.launch()
                 },
+                onClickPoll = onPollAttachmentClick,
                 onVoiceSendClick = onVoiceSendClick
             )
     )

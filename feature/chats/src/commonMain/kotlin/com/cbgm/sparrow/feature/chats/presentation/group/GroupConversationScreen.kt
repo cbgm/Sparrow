@@ -410,6 +410,7 @@ private fun BottomBar(
         onLocationCaptureStarted = { onUiEvent(GroupConversationUiEvent.LocationCaptureStarted) },
         onLocationCaptured = { onUiEvent(GroupConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(GroupConversationUiEvent.LocationCaptureFailed(it)) },
+        onPollAttachmentClick = { onUiEvent(GroupConversationUiEvent.CreatePollClicked) },
         onAttachmentError = { onUiEvent(GroupConversationUiEvent.AttachmentError(it)) },
         onVoiceSendClick = { onUiEvent(GroupConversationUiEvent.VoiceSendClicked) }
     )

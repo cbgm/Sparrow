@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.polls.presentation.create
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -146,7 +145,6 @@ private fun CreatePollTopBar(
     onCreate: () -> Unit
 ) {
     CenterAlignedTopAppBar(
-        windowInsets = WindowInsets(MaterialTheme.spacing.zero),
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
             scrolledContainerColor = containerColor,

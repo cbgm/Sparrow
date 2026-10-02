@@ -376,6 +376,7 @@ class GroupConversationViewModel(
             is GroupConversationUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is GroupConversationUiEvent.AttachmentError -> setError(event.message)
             GroupConversationUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
+            GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             is GroupConversationUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is GroupConversationUiEvent.SafetyWarningClicked ->
                 navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, event.contactId))

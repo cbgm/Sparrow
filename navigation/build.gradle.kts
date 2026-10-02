@@ -27,6 +27,7 @@ kotlin {
             implementation(projects.feature.membership)
             implementation(projects.feature.media)
             implementation(projects.feature.onboarding)
+            implementation(projects.feature.polls)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)

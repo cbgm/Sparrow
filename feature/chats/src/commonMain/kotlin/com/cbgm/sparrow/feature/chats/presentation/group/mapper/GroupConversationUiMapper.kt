@@ -137,6 +137,7 @@ internal fun GroupMessage.toMessageBubbleUi(
         contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
         voicePart = partsUi.filterIsInstance<MessagePartUi.Voice>().firstOrNull(),
         textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull(),
+        pollPart = partsUi.filterIsInstance<MessagePartUi.Poll>().firstOrNull(),
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId

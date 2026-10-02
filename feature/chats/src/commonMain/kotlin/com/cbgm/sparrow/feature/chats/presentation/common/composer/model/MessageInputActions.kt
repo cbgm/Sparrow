@@ -13,5 +13,6 @@ data class MessageInputActions(
     val onClickGallery: () -> Unit = {},
     val onClickContact: () -> Unit = {},
     val onClickLocation: () -> Unit = {},
+    val onClickPoll: (() -> Unit)? = null,
     val onVoiceSendClick: () -> Unit = {}
 )

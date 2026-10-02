@@ -182,6 +182,12 @@ fun MessageControl(
                     onClickLocation = {
                         actions.onClickLocation()
                     },
+                    onClickPoll = actions.onClickPoll?.let { onClick ->
+                        {
+                            isAttachmentBarVisible = false
+                            onClick()
+                        }
+                    },
                     isGalleryEnabled = state.isGalleryEnabled,
                     isCameraEnabled = state.isCameraEnabled,
                     isFileEnabled = state.isFileEnabled,
@@ -283,7 +289,8 @@ private fun MessageControlPreview() {
                 onClickFile = {},
                 onClickGallery = {},
                 onClickContact = {},
-                onClickLocation = {}
+                onClickLocation = {},
+                onClickPoll = {}
             )
         )
     }

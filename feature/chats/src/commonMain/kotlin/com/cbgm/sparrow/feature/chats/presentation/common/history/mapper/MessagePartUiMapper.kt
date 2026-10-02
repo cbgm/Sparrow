@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageB
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi
 
 internal fun List<MessagePart>.toMessagePartsUi(
     attachmentSource: AttachmentSource = AttachmentSource.Message
@@ -72,6 +73,24 @@ private fun MessagePart.toMessagePartUi(
                 mimeType = mimeType,
                 byteSize = byteSize,
                 durationMilliseconds = durationMilliseconds,
+                attachmentSource = attachmentSource
+            )
+
+        is MessagePart.Poll ->
+            MessagePartUi.Poll(
+                id = id,
+                question = question,
+                description = description,
+                options = options.map {
+                    PollOptionUi(
+                        id = it.id,
+                        text = it.text,
+                        voteCount = 0
+                    )
+                },
+                allowMultipleSelection = allowMultipleSelection,
+                allowVoteChange = allowVoteChange,
+                isAnonymous = isAnonymous,
                 attachmentSource = attachmentSource
             )
     }

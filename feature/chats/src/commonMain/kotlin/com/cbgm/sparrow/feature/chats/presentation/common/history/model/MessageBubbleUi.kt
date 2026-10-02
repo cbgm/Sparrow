@@ -25,7 +25,8 @@ data class MessageBubbleUi(
     val locationPart: MessagePartUi.Location? = null,
     val contactPart: MessagePartUi.Contact? = null,
     val voicePart: MessagePartUi.Voice? = null,
-    val textPart: MessagePartUi.Text? = null
+    val textPart: MessagePartUi.Text? = null,
+    val pollPart: MessagePartUi.Poll? = null
 )
 
 data class DeliveryProgressUi(

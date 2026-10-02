@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.chats.data.model.ImageVideoTypeDto
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
+import com.cbgm.sparrow.feature.chats.domain.model.PollOption
 
 internal fun List<MessageAttachment>.toMessagePartDtos(): List<MessagePartDto> =
     map(MessageAttachment::toMessagePartDto)
@@ -91,5 +92,16 @@ internal fun MessagePartDto.toMessagePart(): MessagePart =
                 mimeType = mimeType,
                 byteSize = byteSize,
                 durationMilliseconds = durationMilliseconds
+            )
+        is MessagePartDto.PollDto ->
+            MessagePart.Poll(
+                id = id,
+                question = question,
+                description = description,
+                options = options.map { PollOption(it.id, it.text) },
+                allowMultipleSelection = allowMultipleSelection,
+                allowVoteChange = allowVoteChange,
+                isAnonymous = isAnonymous,
+                expiresAtEpochMilliseconds = expiresAtEpochMilliseconds
             )
     }

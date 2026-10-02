@@ -108,6 +108,9 @@ sealed interface AppRoute {
     data object AttachmentStorage : AppRoute
 
     @Serializable
+    data object CreatePoll : AppRoute
+
+    @Serializable
     data class AttachmentManagement(
         val conversationId: String
     ) : AppRoute

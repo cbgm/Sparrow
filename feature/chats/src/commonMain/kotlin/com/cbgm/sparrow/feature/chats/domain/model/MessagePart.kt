@@ -39,7 +39,24 @@ sealed interface MessagePart {
         val byteSize: Long,
         val durationMilliseconds: Long
     ) : MessagePart
+
+    data class Poll(
+        val id: String,
+        val question: String,
+        val description: String? = null,
+        val options: List<PollOption> = emptyList(),
+        val media: List<ImageVideo> = emptyList(),
+        val allowMultipleSelection: Boolean = false,
+        val allowVoteChange: Boolean = true,
+        val isAnonymous: Boolean = false,
+        val expiresAtEpochMilliseconds: Long? = null
+    ) : MessagePart
 }
+
+data class PollOption(
+    val id: String,
+    val text: String
+)
 
 enum class ImageVideoType {
     IMAGE,

@@ -62,6 +62,8 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageR
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
+import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
@@ -250,9 +252,10 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-private enum class PrimaryContent { VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+private enum class PrimaryContent { POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
+    pollPart != null -> PrimaryContent.POLL
     voicePart != null -> PrimaryContent.VOICE
     contactPart != null -> PrimaryContent.CONTACT
     locationPart != null -> PrimaryContent.LOCATION
@@ -275,7 +278,8 @@ private fun BubbleBody(
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
-        message.voicePart == null &&
+        message.pollPart == null &&
+            message.voicePart == null &&
             message.locationPart == null &&
             message.contactPart == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
@@ -289,6 +293,42 @@ private fun BubbleBody(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
+        message.pollPart?.let { pollPart ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.POLL),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
+            ) {
+                PollMessageContent(
+                    initialState = PollMessageUiState(
+                        pollId = pollPart.id,
+                        question = pollPart.question,
+                        description = pollPart.description,
+                        options = pollPart.options,
+                        totalVoters = pollPart.totalVoters,
+                        submittedOptionIds = pollPart.submittedOptionIds,
+                        allowMultipleSelection = pollPart.allowMultipleSelection,
+                        allowVoteChange = pollPart.allowVoteChange,
+                        isAnonymous = pollPart.isAnonymous,
+                        isClosed = pollPart.isClosed,
+                        isExpired = pollPart.isExpired,
+                        expiryLabel = pollPart.expiryLabel
+                    ),
+                    onVoteSubmit = { selectedOptionIds ->
+                        // vote submit
+                    },
+                    onClosePoll = {
+                        // close poll
+                    },
+                    onMediaClick = { index ->
+                        // media click
+                    }
+                )
+            }
+        }
         message.voicePart?.let { voicePart ->
             MessageBubbleSurface(
                 message = message,

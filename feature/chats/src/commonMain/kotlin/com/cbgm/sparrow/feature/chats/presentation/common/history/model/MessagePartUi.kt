@@ -4,6 +4,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.TextContentPart
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.toTextContentParts
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi
 
 sealed interface MessagePartUi {
     data class ImageVideo(
@@ -43,6 +44,22 @@ sealed interface MessagePartUi {
         val mimeType: String = "audio/wav",
         val byteSize: Long = 0L,
         val durationMilliseconds: Long,
+        val attachmentSource: AttachmentSource = AttachmentSource.Message
+    ) : MessagePartUi
+
+    data class Poll(
+        val id: String,
+        val question: String,
+        val description: String? = null,
+        val options: List<PollOptionUi> = emptyList(),
+        val totalVoters: Int = 0,
+        val submittedOptionIds: Set<String> = emptySet(),
+        val allowMultipleSelection: Boolean = false,
+        val allowVoteChange: Boolean = true,
+        val isAnonymous: Boolean = false,
+        val isClosed: Boolean = false,
+        val isExpired: Boolean = false,
+        val expiryLabel: String? = null,
         val attachmentSource: AttachmentSource = AttachmentSource.Message
     ) : MessagePartUi
 }
