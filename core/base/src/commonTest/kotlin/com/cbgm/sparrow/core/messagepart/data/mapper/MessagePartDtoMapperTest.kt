@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.core.asset.data.mapper
+package com.cbgm.sparrow.core.messagepart.data.mapper
 
-import com.cbgm.sparrow.core.asset.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.asset.data.model.ImageDto
-import com.cbgm.sparrow.core.asset.data.model.PollDto
-import com.cbgm.sparrow.core.asset.data.model.PollOptionDto
-import com.cbgm.sparrow.core.asset.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollOptionDto
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-class AssetDtoMapperTest {
+class MessagePartDtoMapperTest {
     @Test
     fun pollMapsImagesAndOptionsToDomain() {
         val dto =
@@ -30,7 +30,7 @@ class AssetDtoMapperTest {
                     )
             )
 
-        val poll = assertIs<Poll>(dto.toAsset())
+        val poll = assertIs<Poll>(dto.toMessagePart())
 
         assertEquals("Option", poll.options.single().text)
         assertEquals("image-1", poll.images.single().id)

@@ -1,13 +1,13 @@
-package com.cbgm.sparrow.core.asset.domain.model
+package com.cbgm.sparrow.core.messagepart.domain.model
 
-sealed interface Asset {
+sealed interface MessagePart {
     val id: String
 }
 
 data class Text(
     override val id: String,
     val text: String
-) : Asset
+) : MessagePart
 
 data class Image(
     override val id: String,
@@ -18,7 +18,7 @@ data class Image(
     val fileName: String? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null
-) : Asset
+) : MessagePart
 
 data class Video(
     override val id: String,
@@ -30,7 +30,7 @@ data class Video(
     val durationMilliseconds: Long? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null
-) : Asset
+) : MessagePart
 
 data class File(
     override val id: String,
@@ -38,22 +38,22 @@ data class File(
     val byteSize: Long,
     val fileName: String,
     val localFilePath: String? = null
-) : Asset
+) : MessagePart
 
 data class Voice(
     override val id: String,
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long
-) : Asset
+) : MessagePart
 
 data class Location(
     override val id: String
-) : Asset
+) : MessagePart
 
 data class Contact(
     override val id: String
-) : Asset
+) : MessagePart
 
 data class Poll(
     override val id: String,
@@ -66,7 +66,7 @@ data class Poll(
     val isAnonymous: Boolean = false,
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null
-) : Asset
+) : MessagePart
 
 data class PollOption(
     val id: String,

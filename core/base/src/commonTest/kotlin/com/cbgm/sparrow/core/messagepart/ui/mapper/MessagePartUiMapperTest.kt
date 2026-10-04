@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.core.asset.ui.mapper
+package com.cbgm.sparrow.core.messagepart.ui.mapper
 
-import com.cbgm.sparrow.core.asset.domain.model.Image
-import com.cbgm.sparrow.core.asset.domain.model.Poll
-import com.cbgm.sparrow.core.asset.domain.model.PollOption
-import com.cbgm.sparrow.core.asset.ui.model.AssetSourceUi
-import com.cbgm.sparrow.core.asset.ui.model.PollUi
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.PollOption
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-class AssetUiMapperTest {
+class MessagePartUiMapperTest {
     @Test
     fun pollMapsImagesOptionsAndSourceToUi() {
         val poll =
@@ -28,9 +28,9 @@ class AssetUiMapperTest {
                         )
                     )
             )
-        val source = AssetSourceUi.GroupPin(groupId = "group-1")
+        val source = MessagePartSourceUi.GroupPin(groupId = "group-1")
 
-        val ui = assertIs<PollUi>(poll.toAssetUi(source))
+        val ui = assertIs<PollUi>(poll.toMessagePartUi(source))
 
         assertEquals(source, ui.source)
         assertEquals("Option", ui.options.single().text)

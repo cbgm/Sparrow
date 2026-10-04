@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.core.asset.ui.model
+package com.cbgm.sparrow.core.messagepart.ui.model
 
-sealed interface AssetUi {
+sealed interface MessagePartUi {
     val id: String
 }
 
 data class TextUi(
     override val id: String,
     val text: String,
-    val source: AssetSourceUi = AssetSourceUi.Message,
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message,
     val isContentFailed: Boolean = false
-) : AssetUi
+) : MessagePartUi
 
 data class ImageUi(
     override val id: String,
@@ -20,8 +20,8 @@ data class ImageUi(
     val fileName: String? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class VideoUi(
     override val id: String,
@@ -33,8 +33,8 @@ data class VideoUi(
     val durationMilliseconds: Long? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class FileUi(
     override val id: String,
@@ -42,26 +42,26 @@ data class FileUi(
     val byteSize: Long,
     val fileName: String,
     val localFilePath: String? = null,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class VoiceUi(
     override val id: String,
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class LocationUi(
     override val id: String,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class ContactUi(
     override val id: String,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class PollUi(
     override val id: String,
@@ -74,20 +74,20 @@ data class PollUi(
     val isAnonymous: Boolean = false,
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null,
-    val source: AssetSourceUi = AssetSourceUi.Message
-) : AssetUi
+    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
 
 data class PollOptionUi(
     val id: String,
     val text: String
 )
 
-sealed interface AssetSourceUi {
-    data object Message : AssetSourceUi
+sealed interface MessagePartSourceUi {
+    data object Message : MessagePartSourceUi
 
     data class GroupPin(
         val groupId: String
-    ) : AssetSourceUi {
+    ) : MessagePartSourceUi {
         init {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
         }

@@ -1,13 +1,13 @@
-package com.cbgm.sparrow.core.asset.data.model
+package com.cbgm.sparrow.core.messagepart.data.model
 
-sealed interface AssetDto {
+sealed interface MessagePartDto {
     val id: String
 }
 
 data class TextDto(
     override val id: String,
     val text: String
-) : AssetDto
+) : MessagePartDto
 
 data class ImageDto(
     override val id: String,
@@ -19,7 +19,7 @@ data class ImageDto(
     val fileName: String? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null
-) : AssetDto
+) : MessagePartDto
 
 data class VideoDto(
     override val id: String,
@@ -32,7 +32,7 @@ data class VideoDto(
     val durationMilliseconds: Long? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null
-) : AssetDto
+) : MessagePartDto
 
 data class FileDto(
     override val id: String,
@@ -41,7 +41,7 @@ data class FileDto(
     val byteSize: Long,
     val fileName: String,
     val localFilePath: String? = null
-) : AssetDto
+) : MessagePartDto
 
 data class VoiceDto(
     override val id: String,
@@ -49,21 +49,21 @@ data class VoiceDto(
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long
-) : AssetDto
+) : MessagePartDto
 
 data class LocationDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto,
     val mimeType: String,
     val byteSize: Long
-) : AssetDto
+) : MessagePartDto
 
 data class ContactDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto,
     val mimeType: String,
     val byteSize: Long
-) : AssetDto
+) : MessagePartDto
 
 data class PollDto(
     override val id: String,
@@ -76,7 +76,7 @@ data class PollDto(
     val isAnonymous: Boolean = false,
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null
-) : AssetDto
+) : MessagePartDto
 
 data class PollOptionDto(
     val id: String,
