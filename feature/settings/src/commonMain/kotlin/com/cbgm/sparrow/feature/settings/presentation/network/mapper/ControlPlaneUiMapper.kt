@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.mapper
 
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneAddSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
@@ -43,7 +44,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
     showAddDialog: Boolean,
     isEditingDirectory: Boolean,
     newUrl: String,
-    addSource: com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneAddSource,
+    addSource: ControlPlaneAddSource,
     jsonDirectoryUrl: String,
     addError: ControlPlaneSettingsError?,
     directoryUrl: String,

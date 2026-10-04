@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.identity.data.repository
 import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
+import com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.feature.identity.data.datasource.PendingRemoteIdentityChangeDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
@@ -129,7 +130,7 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     private class FakeDao : PendingRemoteIdentityChangeDao {
         var approvedInvitationId: String? = null
 
-        override suspend fun saveApprovedReconnection(intent: com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity) {
+        override suspend fun saveApprovedReconnection(intent: ApprovedIdentityReconnectionEntity) {
             approvedInvitationId = intent.approvalId
         }
 

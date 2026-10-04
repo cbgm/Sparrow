@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import com.cbgm.sparrow.protocol.avatar.GroupAvatarMetadata
 import com.cbgm.sparrow.protocol.avatar.GroupAvatarPayload
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 
 internal class GroupAvatarBroadcaster(
@@ -70,7 +71,7 @@ internal class GroupAvatarBroadcaster(
 
     private data class AdminContextDto(
         val epoch: Int,
-        val signingKeyPair: com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair,
+        val signingKeyPair: LocalSigningKeyPair,
         val recipientContactIds: Set<String>
     )
 }

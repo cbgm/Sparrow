@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.IncomingMembershipOffer
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipDeclineResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
@@ -63,7 +64,7 @@ interface MembershipRepository {
     suspend fun confirmJoinIdentity(
         sourceId: String,
         updatedAtEpochMilliseconds: Long,
-        context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
+        context: GroupMembershipContext,
         memberEncryptionPublicKey: ByteArray,
         memberSigningPublicKey: ByteArray,
         memberPhoneNumber: String

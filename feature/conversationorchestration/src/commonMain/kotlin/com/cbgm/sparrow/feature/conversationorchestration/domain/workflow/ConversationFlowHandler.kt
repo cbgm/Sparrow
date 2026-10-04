@@ -134,6 +134,7 @@ import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 /**
  * The only place in conversation orchestration that sequences public feature use cases.
@@ -1671,7 +1672,7 @@ internal class ConversationFlowHandler(
 
     private suspend fun applyPeerProfilePicture(
         contactId: String,
-        metadata: com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+        metadata: ProfilePictureMetadata
     ) {
         applyRemoteProfilePictureMetadata(contactId, metadata)
             .onFailure { error ->

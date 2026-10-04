@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMutualContactSigningP
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
@@ -38,7 +39,7 @@ class MailboxRoutePacketHandler(
         }
 
     private fun validateRoute(
-        route: com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
+        route: MailboxDeliveryRoute
     ) {
         require(route.routeId.isNotBlank() && route.nodeId.isNotBlank()) {
             "Mailbox route identity is invalid"

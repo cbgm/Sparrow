@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
+import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
@@ -347,7 +348,7 @@ internal class GroupMembershipRepositoryImpl(
     private suspend fun recoverPendingOwnerEpoch(
         groupId: String,
         localSigningPublicKey: ByteArray
-    ): com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity =
+    ): GroupSecurityStateEntity =
         membershipLock.withLock {
             securityStore.findState(groupId)?.let { return@withLock it }
             val rows = membershipStore.findByGroupId(groupId)

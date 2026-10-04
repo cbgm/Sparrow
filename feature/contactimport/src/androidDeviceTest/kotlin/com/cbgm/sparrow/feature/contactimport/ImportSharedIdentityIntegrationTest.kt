@@ -19,6 +19,15 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosure
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
@@ -29,9 +38,14 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerId
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ImportRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -75,7 +89,7 @@ class ImportSharedIdentityIntegrationTest {
                         encryptionPublicKey = row.encryptionPublicKey.copyOf(),
                         signingPublicKey = row.signingPublicKey.copyOf(),
                         verificationStatus = ContactVerificationStatus.valueOf(row.verificationStatus),
-                        keyExchangeStatus = com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus.valueOf(row.keyExchangeStatus),
+                        keyExchangeStatus = KeyExchangeStatus.valueOf(row.keyExchangeStatus),
                         verifiedByContact = row.verifiedByContact,
                         locallyImported = row.locallyImported,
                         updatedAtEpochMilliseconds = row.updatedAtEpochMilliseconds
@@ -86,7 +100,7 @@ class ImportSharedIdentityIntegrationTest {
             override suspend fun findPeerIdBySigningPublicKey(signingPublicKey: ByteArray): Result<String?> =
                 Result.success(database.remoteIdentityDao().findBySigningPublicKey(signingPublicKey)?.contactId)
 
-            override fun observeAll(): Flow<List<RemotePeerIdentity>> = kotlinx.coroutines.flow.flowOf(emptyList())
+            override fun observeAll(): Flow<List<RemotePeerIdentity>> = flowOf(emptyList())
         }
 
         importSharedIdentity =
@@ -273,25 +287,25 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
 
     override suspend fun decline(exchangeId: String): Result<Unit> = error("Not used")
 
-    override fun observeState(peerId: String): Flow<com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState?> =
-        kotlinx.coroutines.flow.emptyFlow()
+    override fun observeState(peerId: String): Flow<IdentityHandshakeState?> =
+        emptyFlow()
 
-    override fun observeResults(): Flow<List<com.cbgm.sparrow.feature.identity.domain.model.IdentityResult>> =
-        kotlinx.coroutines.flow.emptyFlow()
+    override fun observeResults(): Flow<List<IdentityResult>> =
+        emptyFlow()
 
     override suspend fun cancel(peerId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun getPeerState(
         peerId: String
-    ): Result<com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState> =
-        Result.success(com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState(false, false))
+    ): Result<IdentityPeerState> =
+        Result.success(IdentityPeerState(false, false))
 
-    override suspend fun getExchangeClosure(peerId: String): Result<com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosure?> =
+    override suspend fun getExchangeClosure(peerId: String): Result<IdentityExchangeClosure?> =
         error("Not used")
 
     override suspend fun closeExchange(exchangeId: String, peerId: String): Result<Unit> = error("Not used")
 
-    override suspend fun getExchangeBinding(exchangeId: String): Result<com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding?> =
+    override suspend fun getExchangeBinding(exchangeId: String): Result<IdentityExchangeBinding?> =
         error("Not used")
 
     override suspend fun invalidateExchange(
@@ -303,32 +317,32 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveExchange(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        offer: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer,
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit> = error("Not used")
 
     override suspend fun acceptApprovedIncomingExchange(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        offer: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer,
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit> = error("Not used")
 
     override suspend fun reassignPeer(fromPeerId: String, toPeerId: String): Result<Unit> = error("Not used")
 
     override suspend fun receiveManualIdentity(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.protocol.packet.IdentityPacket
+        context: IncomingPacketContext,
+        packet: IdentityPacket
     ): Result<Boolean> = error("Not used")
 
     override suspend fun receiveIdentityAcknowledgement(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+        context: IncomingPacketContext,
+        packet: IdentityAcknowledgementPacket
     ): Result<Boolean> = error("Not used")
 
     override suspend fun receiveAccepted(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        acceptance: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
+        context: IncomingPacketContext,
+        acceptance: IdentityExchangeAcceptance
     ): Result<Unit> = error("Not used")
 
     override suspend fun recordRemoteDecline(
@@ -340,8 +354,8 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveReady(
-        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
-        ready: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
+        context: IncomingPacketContext,
+        ready: IdentityExchangeReady
     ): Result<Unit> = error("Not used")
 }
 

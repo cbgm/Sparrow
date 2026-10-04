@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
 
 class ConfirmGroupMembershipIdentityUseCase(
@@ -8,7 +9,7 @@ class ConfirmGroupMembershipIdentityUseCase(
     suspend operator fun invoke(
         sourceId: String,
         updatedAtEpochMilliseconds: Long,
-        context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
+        context: GroupMembershipContext,
         memberEncryptionPublicKey: ByteArray,
         memberSigningPublicKey: ByteArray,
         memberPhoneNumber: String

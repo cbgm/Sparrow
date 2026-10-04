@@ -7,6 +7,7 @@ import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
@@ -43,7 +44,7 @@ class GroupSecurityManagerTest {
             groupSecurityStore = GroupSecurityStoreDataSource(dao),
             groupKeyDataSource = keyStorage
         )
-    private val epochSecurity = com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource(
+    private val epochSecurity = GroupEpochSecurityDataSource(
         groupCrypto = crypto,
         cryptoHash = DefaultCryptoHash(),
         payloadEncoder = encoder,

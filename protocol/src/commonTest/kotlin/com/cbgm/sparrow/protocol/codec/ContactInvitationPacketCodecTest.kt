@@ -6,6 +6,7 @@ import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
 import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -146,7 +147,7 @@ class ContactInvitationPacketCodecTest {
         assertEquals(original, roundTrip<DirectChatAuthorizationRevokedPacket>(original))
     }
 
-    private inline fun <reified T : Any> roundTrip(packet: com.cbgm.sparrow.protocol.packet.SparrowPacket): T =
+    private inline fun <reified T : Any> roundTrip(packet: SparrowPacket): T =
         assertIs<T>(
             codec.decode(codec.encode(packet).getOrThrow()).getOrThrow()
         )

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
@@ -107,7 +108,7 @@ class GroupPacketBroadcasterTest {
                 contactId = contactId,
                 packetId = packetId,
                 encodedPacket = byteArrayOf(1),
-                status = com.cbgm.sparrow.protocol.outbox.OutboxStatus.PENDING,
+                status = OutboxStatus.PENDING,
                 attemptCount = 0,
                 lastError = null,
                 createdAtEpochMilliseconds = 1L,
