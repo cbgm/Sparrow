@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.data.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 /** A null groupId denotes a regular message attachment. */
 internal data class AttachmentTargetDto(

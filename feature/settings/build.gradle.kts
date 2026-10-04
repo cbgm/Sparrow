@@ -15,9 +15,9 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.data.datastore)
-            implementation(projects.core.embedding)
+            implementation(projects.feature.embedding)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
             implementation(projects.feature.applock)
@@ -27,6 +27,7 @@ kotlin {
             implementation(projects.feature.voice)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)
+            implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

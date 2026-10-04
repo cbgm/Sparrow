@@ -3,8 +3,8 @@ package com.cbgm.sparrow.feature.membership.device
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator

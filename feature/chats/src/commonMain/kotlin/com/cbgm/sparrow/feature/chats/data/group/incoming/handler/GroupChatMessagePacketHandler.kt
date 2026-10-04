@@ -1,13 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
@@ -19,6 +12,13 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.PrefetchLinkPreviewsUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 
 class GroupChatMessagePacketHandler(
     private val incomingMessageDataSource: IncomingMessageDataSource,

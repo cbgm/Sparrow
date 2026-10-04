@@ -1,9 +1,5 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.feature.membership.domain.model.IncomingMembershipOffer
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipDeclineResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
@@ -11,6 +7,10 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipJoinRequest
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.sparrow.protocol.packet.GroupJoinRequestPacket
 import kotlinx.coroutines.flow.Flow
 
 interface MembershipRepository {

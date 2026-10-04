@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingTransportResult
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingTransportState
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

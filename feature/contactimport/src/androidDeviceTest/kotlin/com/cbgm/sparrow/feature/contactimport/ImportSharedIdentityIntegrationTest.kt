@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
@@ -303,7 +303,13 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveExchange(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
+        offer: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer,
+        wasKnownPeerAtReceive: Boolean
+    ): Result<Unit> = error("Not used")
+
+    override suspend fun acceptApprovedIncomingExchange(
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
         offer: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer,
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit> = error("Not used")
@@ -311,17 +317,17 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     override suspend fun reassignPeer(fromPeerId: String, toPeerId: String): Result<Unit> = error("Not used")
 
     override suspend fun receiveManualIdentity(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.core.protocol.packet.IdentityPacket
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.protocol.packet.IdentityPacket
     ): Result<Boolean> = error("Not used")
 
     override suspend fun receiveIdentityAcknowledgement(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
     ): Result<Boolean> = error("Not used")
 
     override suspend fun receiveAccepted(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
         acceptance: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
     ): Result<Unit> = error("Not used")
 
@@ -334,7 +340,7 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveReady(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        context: com.cbgm.sparrow.protocol.handler.IncomingPacketContext,
         ready: com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
     ): Result<Unit> = error("Not used")
 }

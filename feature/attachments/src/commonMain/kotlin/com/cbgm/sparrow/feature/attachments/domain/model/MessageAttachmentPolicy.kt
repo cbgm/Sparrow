@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentConstraints
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentConstraints
 
 object MessageAttachmentPolicy {
     const val MAX_ATTACHMENTS_PER_MESSAGE = MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE

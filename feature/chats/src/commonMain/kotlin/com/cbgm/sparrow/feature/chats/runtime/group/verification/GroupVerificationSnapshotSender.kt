@@ -2,16 +2,16 @@ package com.cbgm.sparrow.feature.chats.runtime.group.verification
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
-import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationPayloadEncoder
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.GroupVerificationMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
+import com.cbgm.sparrow.protocol.version.ProtocolVersion
 
 @Suppress("LongParameterList")
 internal class GroupVerificationSnapshotSender(

@@ -3,10 +3,6 @@ package com.cbgm.sparrow.feature.settings.presentation.network
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneSettingsUiState
@@ -16,6 +12,10 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

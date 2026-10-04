@@ -2,11 +2,6 @@ package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -21,6 +16,11 @@ import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessage
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(

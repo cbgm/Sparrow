@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.routing
 
-import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.DefaultPhoneNumberNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

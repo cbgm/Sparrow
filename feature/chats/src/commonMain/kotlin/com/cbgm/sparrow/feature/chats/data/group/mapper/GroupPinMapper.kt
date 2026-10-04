@@ -1,10 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -14,6 +9,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 
 internal fun GroupPinEntity.toDomain(
     groupMessageContentCodec: GroupMessageContentCodec

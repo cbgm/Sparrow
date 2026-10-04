@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentContentPayloadDto
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentTargetDto
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
@@ -8,6 +7,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal fun AttachmentTarget.toDto(): AttachmentTargetDto =
     AttachmentTargetDto(

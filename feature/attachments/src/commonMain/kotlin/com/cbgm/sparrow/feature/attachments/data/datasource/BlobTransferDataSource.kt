@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
@@ -12,6 +11,7 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete

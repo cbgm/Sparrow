@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.presentation.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 sealed interface MessageAttachmentUi {
     val id: String

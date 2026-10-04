@@ -25,6 +25,10 @@ import androidx.navigation.compose.rememberNavController
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.feature.notification.domain.model.NotificationConversationTarget
+import com.cbgm.sparrow.feature.notification.domain.usecase.ResolveNotificationConversationUseCase
+import com.cbgm.sparrow.feature.notification.presentation.navigation.NotificationNavigationController
+import com.cbgm.sparrow.feature.notification.presentation.navigation.NotificationNavigationTarget
 import com.cbgm.sparrow.navigation.routing.graph.attachmentsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.chatsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.contactsNavGraph
@@ -34,10 +38,6 @@ import com.cbgm.sparrow.navigation.routing.graph.mainNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.mediaNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.settingsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.startupNavGraph
-import com.cbgm.sparrow.notification.domain.model.NotificationConversationTarget
-import com.cbgm.sparrow.notification.domain.usecase.ResolveNotificationConversationUseCase
-import com.cbgm.sparrow.notification.presentation.navigation.NotificationNavigationController
-import com.cbgm.sparrow.notification.presentation.navigation.NotificationNavigationTarget
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.app_connection_offline_hint
 import com.cbgm.sparrow.resources.app_connection_reconnected_hint

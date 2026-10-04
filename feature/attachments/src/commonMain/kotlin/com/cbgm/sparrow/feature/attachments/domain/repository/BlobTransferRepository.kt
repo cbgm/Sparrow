@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
-import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
+import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 
 interface BlobTransferRepository {
     suspend fun upload(

@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.transport.sender
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
@@ -11,6 +8,9 @@ import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 
 class WebSocketOutgoingWireSender(
     private val webSocketTransportClient: WebSocketTransportClient,
@@ -23,7 +23,7 @@ class WebSocketOutgoingWireSender(
         recipientAddress: String,
         encodedTransportPayload: String
     ): Result<Unit> =
-        sendWithAcceptance(recipientAddress, encodedTransportPayload).map { Unit }
+        sendWithAcceptance(recipientAddress, encodedTransportPayload).map { }
 
     override suspend fun sendWithAcceptance(
         recipientAddress: String,

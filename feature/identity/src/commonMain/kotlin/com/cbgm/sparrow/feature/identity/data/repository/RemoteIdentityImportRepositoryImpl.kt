@@ -1,7 +1,5 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteIdentityDataSource
@@ -11,6 +9,8 @@ import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityUpdate
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityImportRepository
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 
 /** Identity owns persistence and trust transitions; Contacts only persists address-book metadata. */
 class RemoteIdentityImportRepositoryImpl(

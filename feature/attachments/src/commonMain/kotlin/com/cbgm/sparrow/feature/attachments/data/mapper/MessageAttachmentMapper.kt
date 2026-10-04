@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 fun List<MessageAttachmentEntity>.toMessageAttachmentsByMessageId(
     resolveLocalFilePath: (String) -> String?

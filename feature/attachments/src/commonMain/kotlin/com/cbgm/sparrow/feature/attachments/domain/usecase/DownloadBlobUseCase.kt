@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
+import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 
 class DownloadBlobUseCase(
     private val repository: BlobTransferRepository

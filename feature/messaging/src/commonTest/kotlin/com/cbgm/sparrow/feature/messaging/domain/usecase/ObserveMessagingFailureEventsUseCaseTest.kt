@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.model
 
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 
 data class GroupWelcomeRecipientDto(
     val contactId: String,

@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.group.verification
 
-import com.cbgm.sparrow.core.crypto.util.ByteArrays
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.protocol.packet.GroupVerificationMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
 
 class GroupVerificationPayloadEncoder {
     fun encodeReceipt(packet: GroupVerificationReceiptPacket): ByteArray =

@@ -1,15 +1,15 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.crypto.identity.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.data.model.StoredKeyExchangeStatusDto
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
 
 internal class ManualIdentityExchangeDataSource(
     private val remoteIdentityDataSource: RemoteIdentityDataSource,

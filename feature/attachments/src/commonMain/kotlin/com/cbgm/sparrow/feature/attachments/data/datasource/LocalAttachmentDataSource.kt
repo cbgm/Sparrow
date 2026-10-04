@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

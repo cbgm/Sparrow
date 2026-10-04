@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.IncomingMessageDataSource
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.MessageDeletionPacket
 
 class DirectMessageDeletionPacketHandler(
     private val incomingMessageDataSource: IncomingMessageDataSource,

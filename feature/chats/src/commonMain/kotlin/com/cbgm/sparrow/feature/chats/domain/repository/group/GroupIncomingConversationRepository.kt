@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.group
 
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 interface GroupIncomingConversationRepository {
     suspend fun recordWelcomeRestart(

@@ -1,10 +1,6 @@
 package com.cbgm.sparrow.feature.chats.di
 
 import androidx.lifecycle.SavedStateHandle
-import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarProvider
-import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
-import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.feature.chats.data.datasource.IncomingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
@@ -163,6 +159,10 @@ import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificati
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel

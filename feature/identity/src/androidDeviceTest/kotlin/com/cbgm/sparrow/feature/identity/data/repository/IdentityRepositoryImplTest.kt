@@ -3,15 +3,15 @@ package com.cbgm.sparrow.feature.identity.data.repository
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
-import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.SodiumTransportMessageCipher
-import com.cbgm.sparrow.core.protocol.identity.LocalIdentityUnavailableException
 import com.cbgm.sparrow.data.datastore.createSparrowDataStore
+import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
+import com.cbgm.sparrow.protocol.identity.LocalIdentityUnavailableException
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

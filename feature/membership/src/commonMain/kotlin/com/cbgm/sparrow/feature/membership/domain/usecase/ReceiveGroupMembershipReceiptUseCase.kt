@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
 
 class ReceiveGroupMembershipReceiptUseCase(
     private val repository: MembershipRepository

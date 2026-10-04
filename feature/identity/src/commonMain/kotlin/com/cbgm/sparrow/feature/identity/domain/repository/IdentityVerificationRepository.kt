@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.domain.repository
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
 
 interface IdentityVerificationRepository {
     suspend fun verify(contactId: String): Result<Unit>

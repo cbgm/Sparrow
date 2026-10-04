@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.BuildKonfig
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.logging.StartupTrace
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies

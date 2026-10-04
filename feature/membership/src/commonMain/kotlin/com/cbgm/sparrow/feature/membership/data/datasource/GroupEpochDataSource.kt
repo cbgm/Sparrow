@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_OWNER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipParticipantDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
+import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
 
 internal class GroupEpochDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,

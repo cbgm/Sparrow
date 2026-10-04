@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.settings.domain.model
 
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
 
 data class ControlPlaneSettingsContext(
     val statuses: List<ControlPlaneEndpointStatus>,

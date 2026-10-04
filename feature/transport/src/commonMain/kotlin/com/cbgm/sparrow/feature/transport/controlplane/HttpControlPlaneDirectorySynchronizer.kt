@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex

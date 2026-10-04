@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureProvider
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureSnapshot
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.protocol.profile.ProfilePicturePayload
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSnapshot
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.protocol.profile.ProfilePicturePayload
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

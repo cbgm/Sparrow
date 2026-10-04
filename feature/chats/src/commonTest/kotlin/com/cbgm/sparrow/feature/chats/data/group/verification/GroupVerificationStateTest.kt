@@ -1,11 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.verification
 
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationState
@@ -37,6 +31,12 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest

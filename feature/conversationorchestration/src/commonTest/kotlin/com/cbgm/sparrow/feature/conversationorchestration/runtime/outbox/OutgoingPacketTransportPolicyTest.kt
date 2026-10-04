@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -23,15 +23,15 @@ class OutgoingPacketTransportPolicyTest {
 
     @Test
     fun textCannotFallBackToPlaintextWhenKeysAreUnavailable() {
-        val requirement = policy.resolve(chatPacket("hello"), contact).getOrThrow()
+        val requirement = policy.resolve(chatPacket(), contact).getOrThrow()
         assertTrue(requirement.requiresEncryption)
         assertFalse(requirement.forcePlaintext)
     }
 
-    private fun chatPacket(text: String) = ChatMessagePacket(
+    private fun chatPacket() = ChatMessagePacket(
         packetId = "packet-1",
         messageId = "message-1",
         sentAtEpochMilliseconds = 1L,
-        text = text
+        text = "hello"
     )
 }

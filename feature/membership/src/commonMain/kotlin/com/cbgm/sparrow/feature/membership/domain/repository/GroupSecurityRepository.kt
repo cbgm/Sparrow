@@ -1,15 +1,15 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.feature.membership.domain.model.GroupWelcomeMemberKey
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedGroupWelcomeDto
 import com.cbgm.sparrow.feature.membership.domain.model.SecuredGroupMessageDto
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 /** Membership owns the secure group epoch/key lifecycle and message crypto. */
 interface GroupSecurityRepository {

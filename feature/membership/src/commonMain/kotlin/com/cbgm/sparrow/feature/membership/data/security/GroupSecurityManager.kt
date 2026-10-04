@@ -1,24 +1,13 @@
 package com.cbgm.sparrow.feature.membership.data.security
 
-import com.cbgm.sparrow.core.crypto.group.GroupCiphertext
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
-import com.cbgm.sparrow.core.crypto.group.GroupKeyConfirmation
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
@@ -29,6 +18,17 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupWelcomeMemberKey
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedGroupWelcomeDto
 import com.cbgm.sparrow.feature.membership.domain.model.SecuredGroupMessageDto
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.protocol.version.ProtocolVersion
 
 internal class GroupSecurityManager internal constructor(
     private val groupCrypto: GroupCrypto,
@@ -79,30 +79,30 @@ internal class GroupSecurityManager internal constructor(
         groupId: String,
         createdAtEpochMilliseconds: Long,
         localSigningKeyPair: LocalSigningKeyPair
-    ): Result<Unit> = safeSuspendCall {
-        require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        val state = groupSecurityStore.findState(groupId)
-        if (state != null) {
-            check(
-                state.localRole.isGroupAdminRole() &&
-                    state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
-                    groupKeyDataSource.load(groupId, state.currentEpoch) != null
-            ) { "Existing group security state is not a usable local owner epoch" }
-            return@safeSuspendCall
-        }
-        // No remote member is admitted at creation; an empty recipient set creates
-        // the persisted owner epoch/key without transmitting a welcome to invitees.
-        createOwnedGroup(
-            groupId = groupId,
-            title = "",
-            createdAtEpochMilliseconds = createdAtEpochMilliseconds,
-            memberPayloads = emptyList(),
-            memberKeys = emptyList(),
-            recipients = emptyList(),
-            localSigningKeyPair = localSigningKeyPair
-        ).getOrThrow()
-        Unit
-    }
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            val state = groupSecurityStore.findState(groupId)
+            if (state != null) {
+                check(
+                    state.localRole.isGroupAdminRole() &&
+                        state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
+                        groupKeyDataSource.load(groupId, state.currentEpoch) != null
+                ) { "Existing group security state is not a usable local owner epoch" }
+                return@safeSuspendCall
+            }
+            // No remote member is admitted at creation; an empty recipient set creates
+            // the persisted owner epoch/key without transmitting a welcome to invitees.
+            createOwnedGroup(
+                groupId = groupId,
+                title = "",
+                createdAtEpochMilliseconds = createdAtEpochMilliseconds,
+                memberPayloads = emptyList(),
+                memberKeys = emptyList(),
+                recipients = emptyList(),
+                localSigningKeyPair = localSigningKeyPair
+            ).getOrThrow()
+        }.map { }
 
     suspend fun createOwnedGroup(
         groupId: String,

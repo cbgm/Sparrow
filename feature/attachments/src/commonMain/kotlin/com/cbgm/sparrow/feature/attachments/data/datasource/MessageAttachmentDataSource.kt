@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
@@ -10,6 +8,8 @@ import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextD
 import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
+import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -17,7 +17,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class MessageAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,

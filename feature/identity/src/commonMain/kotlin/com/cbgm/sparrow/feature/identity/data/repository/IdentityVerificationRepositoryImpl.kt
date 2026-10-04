@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityVerificationDataSource
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityVerificationRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
 
 internal class IdentityVerificationRepositoryImpl(
     private val dataSource: IdentityVerificationDataSource

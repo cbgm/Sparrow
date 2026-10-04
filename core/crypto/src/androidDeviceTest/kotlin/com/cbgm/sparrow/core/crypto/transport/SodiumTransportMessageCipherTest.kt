@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.crypto.transport
 
-import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
+import com.cbgm.sparrow.core.crypto.SodiumRuntime
+import com.ionspin.kotlin.crypto.box.Box
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -8,19 +9,13 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class SodiumTransportMessageCipherTest {
-    private val identityKeyGenerator =
-        SodiumIdentityKeyGenerator()
-
     private val cipher =
         SodiumTransportMessageCipher()
 
     @Test
     fun encryptedMessageCanBeDecryptedByRecipient() =
         runTest {
-            val recipient =
-                identityKeyGenerator
-                    .generate()
-                    .getOrThrow()
+            val recipient = generateEncryptionKeyPair()
 
             val plaintext =
                 "Hello secure world"
@@ -31,9 +26,7 @@ class SodiumTransportMessageCipherTest {
                     .encryptForRecipient(
                         plaintext = plaintext,
                         recipientPublicKey =
-                            recipient
-                                .encryptionPublicKey
-                                .toByteArray()
+                            recipient.publicKey
                     ).getOrThrow()
 
             assertTrue(
@@ -48,13 +41,9 @@ class SodiumTransportMessageCipherTest {
                         encryptedPayload =
                         encrypted,
                         localPublicKey =
-                            recipient
-                                .encryptionPublicKey
-                                .toByteArray(),
+                            recipient.publicKey,
                         localPrivateKey =
-                            recipient
-                                .encryptionPrivateKey
-                                .toByteArray()
+                            recipient.secretKey
                     ).getOrThrow()
 
             assertContentEquals(
@@ -66,15 +55,9 @@ class SodiumTransportMessageCipherTest {
     @Test
     fun anotherIdentityCannotDecryptMessage() =
         runTest {
-            val recipient =
-                identityKeyGenerator
-                    .generate()
-                    .getOrThrow()
+            val recipient = generateEncryptionKeyPair()
 
-            val attacker =
-                identityKeyGenerator
-                    .generate()
-                    .getOrThrow()
+            val attacker = generateEncryptionKeyPair()
 
             val encrypted =
                 cipher
@@ -83,9 +66,7 @@ class SodiumTransportMessageCipherTest {
                             "Private message"
                                 .encodeToByteArray(),
                         recipientPublicKey =
-                            recipient
-                                .encryptionPublicKey
-                                .toByteArray()
+                            recipient.publicKey
                     ).getOrThrow()
 
             val result =
@@ -93,17 +74,27 @@ class SodiumTransportMessageCipherTest {
                     encryptedPayload =
                     encrypted,
                     localPublicKey =
-                        attacker
-                            .encryptionPublicKey
-                            .toByteArray(),
+                        attacker.publicKey,
                     localPrivateKey =
-                        attacker
-                            .encryptionPrivateKey
-                            .toByteArray()
+                        attacker.secretKey
                 )
 
             assertTrue(
                 result.isFailure
             )
         }
+
+    private suspend fun generateEncryptionKeyPair(): TestEncryptionKeyPair {
+        SodiumRuntime.initialize().getOrThrow()
+        val keyPair = Box.keypair()
+        return TestEncryptionKeyPair(
+            publicKey = keyPair.publicKey.toByteArray(),
+            secretKey = keyPair.secretKey.toByteArray()
+        )
+    }
+
+    private class TestEncryptionKeyPair(
+        val publicKey: ByteArray,
+        val secretKey: ByteArray
+    )
 }

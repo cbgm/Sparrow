@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 
 class ApplyRemoteProfilePictureMetadataUseCase(
     private val processor: RemoteProfilePictureMetadataProcessor

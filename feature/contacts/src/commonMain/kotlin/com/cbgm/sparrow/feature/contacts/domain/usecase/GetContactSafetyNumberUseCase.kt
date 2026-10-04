@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.crypto.model.PublicIdentityKeySet
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumberGenerator
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumber
+import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumberGenerator
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 
 class GetContactSafetyNumberUseCase(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
@@ -31,12 +31,12 @@ class GetContactSafetyNumberUseCase(
             safetyNumberGenerator
                 .generate(
                     firstIdentity =
-                        PublicIdentityKeySet(
+                        PublicIdentity(
                             signingPublicKey = localIdentity.signingPublicKey,
                             encryptionPublicKey = localIdentity.encryptionPublicKey
                         ),
                     secondIdentity =
-                        PublicIdentityKeySet(
+                        PublicIdentity(
                             signingPublicKey = remoteIdentity.signingPublicKey,
                             encryptionPublicKey = remoteIdentity.encryptionPublicKey
                         )

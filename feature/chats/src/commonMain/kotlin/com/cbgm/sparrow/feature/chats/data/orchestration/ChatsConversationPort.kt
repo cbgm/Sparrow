@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.orchestration
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
@@ -18,6 +16,8 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTitleReposito
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 /**
  * Chats adapter for cross-feature conversation orchestration.

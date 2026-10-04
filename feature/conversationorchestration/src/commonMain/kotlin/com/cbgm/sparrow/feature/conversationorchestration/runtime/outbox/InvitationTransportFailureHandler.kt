@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.codec.PacketCodec
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
+import com.cbgm.sparrow.protocol.codec.PacketCodec
+import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
 
 /** The application interprets failed packets; Messaging only manages transport state. */
 class InvitationTransportFailureHandler(

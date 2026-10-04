@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
-import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
+import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest

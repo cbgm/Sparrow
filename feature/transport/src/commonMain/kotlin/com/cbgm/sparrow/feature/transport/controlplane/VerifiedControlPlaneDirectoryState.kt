@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.transport.controlplane
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

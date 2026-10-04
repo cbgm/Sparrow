@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.incoming
 
-import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
+import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 /** Routes the shared receipt packet format to the owning conversation path. */
 class ReceiptIncomingPacketRouter(

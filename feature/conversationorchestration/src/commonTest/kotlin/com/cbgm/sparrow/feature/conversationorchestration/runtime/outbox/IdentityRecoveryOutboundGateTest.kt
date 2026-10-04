@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.MessageDeletionPacket
+import com.cbgm.sparrow.protocol.packet.MessageEditPacket
+import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

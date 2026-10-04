@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.di
 
 import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
@@ -10,6 +12,7 @@ import org.koin.dsl.module
 
 val sharedModule =
     module {
+        single<PhoneNumberNormalizer> { DefaultPhoneNumberNormalizer() }
         single { AttachmentConversationNameObserver(conversationRepository = get(), contacts = get(), attachments = get()) }
         single { ApplicationCoroutineScope() }
         single {

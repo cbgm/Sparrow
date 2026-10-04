@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

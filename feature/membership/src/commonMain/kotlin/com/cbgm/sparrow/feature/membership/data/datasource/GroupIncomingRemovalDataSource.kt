@@ -1,16 +1,16 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 /** Membership alone validates removal authority and advances its persisted membership state. */
 internal class GroupIncomingRemovalDataSource(

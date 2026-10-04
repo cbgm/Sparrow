@@ -1,11 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
-import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
@@ -18,6 +13,11 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
 
 @Suppress("LongParameterList")
 internal class GroupLeaveDataSource(

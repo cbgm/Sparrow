@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.extensions.escapeShareValue
+import com.cbgm.sparrow.core.extensions.hexToByteArray
+import com.cbgm.sparrow.core.extensions.toHexString
 import com.cbgm.sparrow.core.extensions.unescapeShareValue
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload

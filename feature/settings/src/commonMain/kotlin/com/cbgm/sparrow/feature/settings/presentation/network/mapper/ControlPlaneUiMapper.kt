@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.mapper
 
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
 
 /**
  * A Control Plane may be independently configured by the user AND discovered

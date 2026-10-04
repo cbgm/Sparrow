@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.CONTACT_MIME_TYPE
-import com.cbgm.sparrow.core.protocol.attachment.LOCATION_MIME_TYPE
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
+import com.cbgm.sparrow.protocol.attachment.CONTACT_MIME_TYPE
+import com.cbgm.sparrow.protocol.attachment.LOCATION_MIME_TYPE
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal fun OutgoingMessageAttachment.toDto(): OutgoingMessageAttachmentDto =
     when (this) {

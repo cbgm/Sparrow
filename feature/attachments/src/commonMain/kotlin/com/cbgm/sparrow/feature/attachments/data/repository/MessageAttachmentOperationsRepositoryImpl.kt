@@ -14,7 +14,7 @@ import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentO
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class MessageAttachmentOperationsRepositoryImpl(
     private val dataSource: MessageAttachmentDataSource,

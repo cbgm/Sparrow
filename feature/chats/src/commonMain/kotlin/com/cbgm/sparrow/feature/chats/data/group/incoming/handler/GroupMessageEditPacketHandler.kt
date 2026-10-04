@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.message.MessageEditPayloadCodec
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.IncomingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.message.MessageEditPayloadCodec
+import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupMessageEditPacketHandler(
     private val incomingMessageDataSource: IncomingMessageDataSource,

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.transport.mailbox
 
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.serialization.Serializable
 
 interface MailboxGateway {

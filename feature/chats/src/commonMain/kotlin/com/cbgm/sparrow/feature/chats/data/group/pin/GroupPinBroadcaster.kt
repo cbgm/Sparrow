@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.data.group.pin
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
 
 internal class GroupPinBroadcaster(
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,

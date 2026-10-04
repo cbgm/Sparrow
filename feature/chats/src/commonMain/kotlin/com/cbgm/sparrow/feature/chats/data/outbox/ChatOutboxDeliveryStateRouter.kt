@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.outbox
 
-import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
+import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
 
 class ChatOutboxDeliveryStateRouter(
     private val directHandler: DirectOutboxDeliveryHandler,

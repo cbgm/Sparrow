@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.feature.membership.data.security
 
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedGroupWelcomeDto
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
 
 internal class GroupWelcomeSecurity(
     private val groupCrypto: GroupCrypto,

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.data.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 /** Data-layer transfer input. Validation of domain policy happens before mapping in the repository. */
 data class OutgoingMessageAttachmentDto(

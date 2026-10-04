@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

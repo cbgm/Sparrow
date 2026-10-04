@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.transport.connection
 
-import com.cbgm.sparrow.core.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.core.transport.TransportDiagnostics
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

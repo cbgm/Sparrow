@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
+import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
 
 class RecoverIncompleteIdentityUseCase(
     private val identityRepository: IdentityRepository,

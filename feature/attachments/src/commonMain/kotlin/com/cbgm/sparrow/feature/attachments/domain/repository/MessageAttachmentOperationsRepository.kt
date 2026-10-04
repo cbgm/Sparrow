@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
 import kotlinx.coroutines.flow.Flow
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 /** Attachment persistence and transfer API; callers never access attachment DAOs or datasources. */
 interface MessageAttachmentOperationsRepository {

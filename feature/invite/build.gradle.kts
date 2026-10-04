@@ -13,7 +13,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.core.ui)
             implementation(projects.feature.avatar)
             implementation(projects.data.database)

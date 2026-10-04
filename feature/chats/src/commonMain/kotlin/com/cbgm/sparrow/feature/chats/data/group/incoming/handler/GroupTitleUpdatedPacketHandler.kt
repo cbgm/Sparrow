@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.GroupTitleUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupTitleDataSource
 import com.cbgm.sparrow.feature.chats.data.group.title.GroupTitlePacketProtocol
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupTitleUpdatedPacketHandler internal constructor(
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,

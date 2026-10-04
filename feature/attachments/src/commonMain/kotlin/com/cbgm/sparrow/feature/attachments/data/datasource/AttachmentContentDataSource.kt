@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentContentPayloadDto
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentTargetDto
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal class AttachmentContentDataSource(
     private val messageAttachmentDataSource: MessageAttachmentDataSource,

@@ -1,26 +1,26 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
-import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupDescriptionUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupTitleUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.handler.ProtocolPacketHandler
+import com.cbgm.sparrow.protocol.packet.GroupAvatarUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupDescriptionUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupIncomingPacketProcessor(
     private val policy: GroupIncomingPacketPolicy,

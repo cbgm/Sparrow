@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupAvatarUpdatedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupChatMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupDescriptionUpdatedPacketHandler
@@ -12,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupTitleUpda
 import com.cbgm.sparrow.feature.chats.runtime.group.incoming.GroupVerificationReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.runtime.group.incoming.GroupVerificationSnapshotPacketHandler
 import com.cbgm.sparrow.feature.chats.runtime.group.incoming.GroupVerificationSnapshotRequestPacketHandler
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupPacketHandlerRegistry internal constructor(
     avatarUpdated: GroupAvatarUpdatedPacketHandler,

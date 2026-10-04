@@ -1,8 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
@@ -16,11 +13,14 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPinTarget
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class GroupPinRepositoryImpl(
     private val attachmentDataSource: MessageAttachmentOperationsRepository,

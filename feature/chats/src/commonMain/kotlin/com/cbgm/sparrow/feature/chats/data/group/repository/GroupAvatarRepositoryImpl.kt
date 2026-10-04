@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarProvider
-import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarSnapshot
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatarMetadata
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex

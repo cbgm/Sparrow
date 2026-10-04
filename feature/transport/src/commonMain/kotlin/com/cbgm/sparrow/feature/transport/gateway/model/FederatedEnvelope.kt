@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.gateway.model
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxDeliveryRoute
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.extensions.toFingerprint
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.feature.identity.data.datasource.PendingRemoteIdentityChangeDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -92,10 +92,8 @@ internal class PendingRemoteIdentityChangeRepositoryImpl(
         // its verified offer was durably stored. No second user approval is needed.
     }
 
-    override suspend fun discard(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
-        source.discard(peerId, invitationId)
-        Unit
-    }
+    override suspend fun discard(peerId: String, invitationId: String): Result<Unit> =
+        safeSuspendCall { source.discard(peerId, invitationId) }.map { }
 }
 
 private fun PendingRemoteIdentityChange.toEntity() = PendingRemoteIdentityChangeEntity(

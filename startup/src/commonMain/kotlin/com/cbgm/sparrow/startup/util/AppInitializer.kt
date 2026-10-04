@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.startup.util
 
 import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.embedding.domain.usecase.InitializeLocalEmbeddingUseCase
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.feature.embedding.domain.usecase.InitializeLocalEmbeddingUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase

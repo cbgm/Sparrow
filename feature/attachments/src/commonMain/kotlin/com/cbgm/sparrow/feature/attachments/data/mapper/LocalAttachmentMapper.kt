@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal fun List<LocalMessageAttachmentRowDto>.toLocalAttachments(): List<LocalAttachment> =
     mapNotNull { row -> row.toLocalAttachment() }

@@ -1,16 +1,12 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
-import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureProvider
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
+import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
+import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
+import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityAcknowledgementCrypto
+import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.IdentityLocalResetHandler
 import com.cbgm.sparrow.feature.identity.data.datasource.ApprovedIdentityReconnectionDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDataSource
@@ -116,6 +112,15 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseC
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -123,6 +128,11 @@ import org.koin.dsl.module
 
 val identityModule =
     module {
+        single { IdentityAcknowledgementPayloadEncoder() }
+        single<IdentityAcknowledgementCrypto> {
+            SodiumIdentityAcknowledgementCrypto(payloadEncoder = get())
+        }
+        single<IdentityKeyGenerator> { SodiumIdentityKeyGenerator() }
         single<LocalIdentityChangeHandler> {
             IdentityLocalResetHandler(
                 mailboxCapabilityLifecycle = get(),

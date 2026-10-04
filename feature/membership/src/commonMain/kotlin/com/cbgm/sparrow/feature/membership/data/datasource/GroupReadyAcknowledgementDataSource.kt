@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyConfirmation
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 
 /** Only Membership loads the installed epoch key and signs the membership-ready packet. */
 internal class GroupReadyAcknowledgementDataSource(

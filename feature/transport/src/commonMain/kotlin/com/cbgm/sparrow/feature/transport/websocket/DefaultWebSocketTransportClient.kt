@@ -102,7 +102,7 @@ class DefaultWebSocketTransportClient internal constructor(
         envelope: TransportEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
-        sendEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
+        sendEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { }
 
     override suspend fun sendEnvelopeAndAwaitServerAcceptance(
         envelope: TransportEnvelope,
@@ -119,7 +119,7 @@ class DefaultWebSocketTransportClient internal constructor(
         envelope: FederatedEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
-        sendFederatedEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
+        sendFederatedEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { }
 
     override suspend fun sendFederatedEnvelopeAndAwaitServerAcceptance(
         envelope: FederatedEnvelope,

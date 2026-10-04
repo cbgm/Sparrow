@@ -14,7 +14,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.core.ui)
             implementation(projects.feature.attachments)
             implementation(projects.feature.autoreply)
@@ -31,7 +31,7 @@ kotlin {
             implementation(projects.feature.settings)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)
-            implementation(projects.notification)
+            implementation(projects.feature.notification)
             implementation(projects.startup)
 
             implementation(libs.bundles.compose)

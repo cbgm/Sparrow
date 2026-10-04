@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 
 class ReceiveGroupReadyAcknowledgementUseCase(
     private val repository: GroupMembershipRepository

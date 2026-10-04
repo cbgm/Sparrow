@@ -1,8 +1,5 @@
 package com.cbgm.sparrow.feature.identity.domain.repository
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
@@ -12,6 +9,9 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
 import kotlinx.coroutines.flow.Flow
 
 interface IdentityExchangeRepository {

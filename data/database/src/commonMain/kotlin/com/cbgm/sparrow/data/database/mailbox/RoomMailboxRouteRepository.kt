@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.data.database.mailbox
 
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxDeliveryRoute
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.data.database.dao.MailboxRouteDao
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
 class RoomMailboxRouteRepository(
     private val dao: MailboxRouteDao

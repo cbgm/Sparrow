@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.port
 
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 /**
  * Chats boundary used by conversation orchestration.

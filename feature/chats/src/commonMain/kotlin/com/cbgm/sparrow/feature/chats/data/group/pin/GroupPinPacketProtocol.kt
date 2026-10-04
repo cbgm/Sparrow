@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.group.pin
 
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
 
 internal class GroupPinPacketProtocol(
     private val groupCrypto: GroupCrypto,

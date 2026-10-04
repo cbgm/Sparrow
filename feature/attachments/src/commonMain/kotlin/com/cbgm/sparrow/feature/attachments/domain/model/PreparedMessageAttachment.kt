@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.protocol.attachment.MessageAttachment
 
 data class PreparedMessageAttachment(
     val attachment: MessageAttachment,

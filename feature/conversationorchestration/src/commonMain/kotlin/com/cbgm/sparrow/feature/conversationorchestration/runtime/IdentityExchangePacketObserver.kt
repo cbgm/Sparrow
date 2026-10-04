@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
 import com.cbgm.sparrow.feature.identity.domain.usecase.HandleIdentityVerificationReceiptUseCase
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.protocol.packet.ContactInviteAcceptedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
+import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
+import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 internal class IdentityExchangePacketObserver(
     private val flowHandler: ConversationFlowHandler,

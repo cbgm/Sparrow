@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.incoming.PreviousGroupMembershipDto
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupIncomingConversationRepository
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 internal class GroupIncomingConversationRepositoryImpl(
     private val dataSource: GroupIncomingConversationDataSource

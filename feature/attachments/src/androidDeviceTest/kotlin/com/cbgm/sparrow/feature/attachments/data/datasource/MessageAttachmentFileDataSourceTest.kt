@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import java.io.File
 import java.util.UUID
 import kotlin.test.AfterTest

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.workflow
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

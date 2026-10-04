@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath

@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
-import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDomain
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
+import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 
 internal class BlobTransferRepositoryImpl(
     private val dataSource: BlobTransferDataSource

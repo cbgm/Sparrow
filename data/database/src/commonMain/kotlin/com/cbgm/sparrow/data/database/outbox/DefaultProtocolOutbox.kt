@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.data.database.outbox
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.codec.PacketCodec
-import com.cbgm.sparrow.core.protocol.outbox.OutboxEvent
-import com.cbgm.sparrow.core.protocol.outbox.OutboxStateMachine
-import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
+import com.cbgm.sparrow.protocol.codec.PacketCodec
+import com.cbgm.sparrow.protocol.outbox.OutboxEvent
+import com.cbgm.sparrow.protocol.outbox.OutboxStateMachine
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -182,8 +182,7 @@ class DefaultProtocolOutbox(
         runCatching {
             require(nowEpochMilliseconds >= 0L)
             outboxDao.retryTransientFailed(nowEpochMilliseconds)
-            Unit
-        }
+        }.map { }
 
     override suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?> =
         runCatching {

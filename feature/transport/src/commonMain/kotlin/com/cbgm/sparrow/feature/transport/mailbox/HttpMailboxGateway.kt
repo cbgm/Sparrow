@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.mailbox
 
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth

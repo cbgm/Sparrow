@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 
 /** Chats-owned side of membership cleanup; Membership never invokes this datasource directly. */
 internal class GroupLocalCleanupDataSource(

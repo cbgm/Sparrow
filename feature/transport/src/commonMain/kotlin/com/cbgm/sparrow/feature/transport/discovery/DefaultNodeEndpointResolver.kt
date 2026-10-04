@@ -2,10 +2,10 @@ package com.cbgm.sparrow.feature.transport.discovery
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException

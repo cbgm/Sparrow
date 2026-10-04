@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.data.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ContactEntity

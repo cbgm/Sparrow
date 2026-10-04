@@ -1,15 +1,16 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.seconds
 
 class HttpControlPlaneHealthMonitor(
     private val httpClient: HttpClient,
@@ -28,7 +29,7 @@ class HttpControlPlaneHealthMonitor(
     private suspend fun probe(endpoint: ControlPlaneEndpoint) {
         val isAvailable =
             runCatching {
-                withTimeout(HEALTH_TIMEOUT_MILLISECONDS) {
+                withTimeout(HEALTH_TIMEOUT) {
                     httpClient
                         .get("${endpoint.baseUrl}/health/registry")
                         .status.value in MIN_SUCCESS_STATUS..MAX_SUCCESS_STATUS
@@ -43,7 +44,7 @@ class HttpControlPlaneHealthMonitor(
     }
 
     private companion object {
-        const val HEALTH_TIMEOUT_MILLISECONDS = 1_000L
+        val HEALTH_TIMEOUT = 1.seconds
         const val MIN_SUCCESS_STATUS = 200
         const val MAX_SUCCESS_STATUS = 299
     }

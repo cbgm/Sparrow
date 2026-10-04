@@ -1,13 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
@@ -32,6 +25,13 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.sparrow.protocol.packet.GroupJoinRequestPacket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
