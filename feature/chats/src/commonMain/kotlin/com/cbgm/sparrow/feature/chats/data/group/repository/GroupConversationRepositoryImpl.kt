@@ -100,9 +100,9 @@ internal class GroupConversationRepositoryImpl(
                         attachmentsByMessageId
                             .mapValues { (_, values) -> values.toMessagePartDtos().toMutableList() }
                             .toMutableMap()
-                    loadedTextParts.forEach { row ->
-                        parts.getOrPut(row.messageId) { mutableListOf() }
-                            .add(0, MessagePartDto.TextDto(text = row.text))
+                    loadedTextParts.forEach { (messageId, textParts) ->
+                        parts.getOrPut(messageId) { mutableListOf() }
+                            .addAll(0, textParts)
                     }
                     MessageSnapshotDto(
                         conversation = conversation,

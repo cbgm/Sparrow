@@ -41,7 +41,7 @@ class MessagePartDtoMapperTest {
     }
 
     @Test
-    fun voiceMapsLocalFilePathToDomainWithoutBlobInfrastructure() {
+    fun voiceMapsWithoutBlobInfrastructure() {
         val voice =
             assertIs<Voice>(
                 VoiceDto(
@@ -49,12 +49,11 @@ class MessagePartDtoMapperTest {
                     blob = blobReference(),
                     mimeType = "audio/wav",
                     byteSize = 512L,
-                    durationMilliseconds = 2_000L,
-                    localFilePath = "/cache/voice.wav"
+                    durationMilliseconds = 2_000L
                 ).toMessagePart()
             )
 
-        assertEquals("/cache/voice.wav", voice.localFilePath)
+        assertEquals(2_000L, voice.durationMilliseconds)
     }
 
     private fun blobReference() =

@@ -44,8 +44,7 @@ data class Voice(
     override val id: String,
     val mimeType: String,
     val byteSize: Long,
-    val durationMilliseconds: Long,
-    val localFilePath: String? = null
+    val durationMilliseconds: Long
 ) : MessagePart
 
 data class Location(

@@ -42,19 +42,18 @@ class MessagePartUiMapperTest {
     }
 
     @Test
-    fun voiceMapsLocalFilePathAndSourceToUi() {
+    fun voiceMapsSourceToUi() {
         val voice =
             Voice(
                 id = "voice-1",
                 mimeType = "audio/wav",
                 byteSize = 512L,
-                durationMilliseconds = 2_000L,
-                localFilePath = "/cache/voice.wav"
+                durationMilliseconds = 2_000L
             )
 
         val ui = assertIs<VoiceUi>(voice.toMessagePartUi())
 
-        assertEquals("/cache/voice.wav", ui.localFilePath)
+        assertEquals(2_000L, ui.durationMilliseconds)
         assertEquals(MessagePartSourceUi.Message, ui.source)
     }
 }

@@ -50,8 +50,7 @@ data class VoiceDto(
     val blob: EncryptedBlobReferenceDto,
     val mimeType: String,
     val byteSize: Long,
-    val durationMilliseconds: Long,
-    val localFilePath: String? = null
+    val durationMilliseconds: Long
 ) : MessagePartDto
 
 data class LocationDto(

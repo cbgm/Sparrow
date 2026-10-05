@@ -3,6 +3,11 @@ package com.cbgm.sparrow.feature.attachments.presentation.management
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.ui.mapper.toMessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -11,8 +16,6 @@ import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveLocalAttachmen
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessageAttachmentsUi
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -34,7 +37,8 @@ class AttachmentManagementViewModel(
     // uiState is the only exposed StateFlow; the snapshot is an intermediate Flow value.
     val uiState = combine(
         observeLocalAttachments(conversationId).map { records ->
-            val items = records.toMessageAttachmentsUi()
+            val items = records.map { part -> part.toMessagePartUi() }
+                .filter { part -> part is ImageUi || part is VideoUi || part is FileUi }
             AttachmentSnapshot(items, items.mapTo(mutableSetOf()) { it.id })
         },
         localState
@@ -102,7 +106,7 @@ class AttachmentManagementViewModel(
 
         if (
             uiState.value.attachments.none { attachment ->
-                attachment.id == attachmentId && attachment !is MessageAttachmentUi.FileAttachmentUi
+                attachment.id == attachmentId && attachment !is FileUi
             }
         ) {
             return
@@ -175,6 +179,6 @@ private data class AttachmentManagementLocalState(
 )
 
 private data class AttachmentSnapshot(
-    val items: List<MessageAttachmentUi>,
+    val items: List<MessagePartUi>,
     val ids: Set<String>
 )

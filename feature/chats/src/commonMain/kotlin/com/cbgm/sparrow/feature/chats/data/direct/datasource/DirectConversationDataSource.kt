@@ -8,9 +8,10 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
-import com.cbgm.sparrow.data.database.model.MessageTextPartRowDto
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
+import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 class DirectConversationDataSource(
     private val chatDao: ChatDao,
@@ -53,8 +54,20 @@ class DirectConversationDataSource(
     ): Flow<List<MessageEntity>> =
         chatDao.observeMessagesFromCursor(conversationId, fromTimestamp, fromMessageId)
 
-    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<List<MessageTextPartRowDto>> =
-        chatDao.observeTextPartsByMessageIds(messageIds)
+    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePartDto>>> =
+        combine(
+            chatDao.observeTextPartEntitiesByMessageIds(messageIds),
+            chatDao.observeTextEntitiesByMessageIds(messageIds)
+        ) { parts, texts ->
+            val textByPartId = texts.associateBy { text -> text.partId }
+            parts.groupBy { part -> part.messageId }
+                .mapValues { (_, messageParts) ->
+                    messageParts.sortedBy { part -> part.position }
+                        .mapNotNull { part ->
+                            textByPartId[part.id]?.let { text -> MessagePartDto.TextDto(text.text) }
+                        }
+                }
+        }
 
     fun observeRecentReactions(conversationId: String, messageLimit: Int): Flow<List<MessageReactionEntity>> =
         reactionDao.observeRecentByConversationId(conversationId, messageLimit)

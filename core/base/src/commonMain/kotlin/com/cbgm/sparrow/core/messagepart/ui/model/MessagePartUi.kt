@@ -50,7 +50,6 @@ data class VoiceUi(
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long,
-    val localFilePath: String? = null,
     val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 

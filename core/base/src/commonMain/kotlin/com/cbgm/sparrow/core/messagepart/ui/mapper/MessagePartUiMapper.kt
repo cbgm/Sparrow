@@ -90,7 +90,6 @@ private fun Voice.toVoiceUi(source: MessagePartSource): VoiceUi =
         mimeType = mimeType,
         byteSize = byteSize,
         durationMilliseconds = durationMilliseconds,
-        localFilePath = localFilePath,
         source = source.toMessagePartSourceUi()
     )
 

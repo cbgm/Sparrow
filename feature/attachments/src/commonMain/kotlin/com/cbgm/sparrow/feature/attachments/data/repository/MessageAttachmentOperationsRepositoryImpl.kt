@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentFileDataSource
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDomain
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageAttachmentsByMessageId
@@ -18,8 +17,7 @@ import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessage
 
 internal class MessageAttachmentOperationsRepositoryImpl(
     private val dataSource: MessageAttachmentDataSource,
-    private val cacheCoordinator: MessageAttachmentCacheCoordinator,
-    private val fileDataSource: MessageAttachmentFileDataSource
+    private val cacheCoordinator: MessageAttachmentCacheCoordinator
 ) : MessageAttachmentOperationsRepository {
     override suspend fun prepareAttachments(attachments: List<OutgoingMessageAttachment>): List<PreparedMessageAttachment> {
         MessageAttachmentPolicy.requireValid(attachments)
@@ -56,7 +54,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
 
     override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessageAttachment>>> =
         dataSource.observeByMessageIds(messageIds)
-            .map { entities -> entities.toMessageAttachmentsByMessageId(fileDataSource::resolveCacheFilePath) }
+            .map { partsByMessageId -> partsByMessageId.toMessageAttachmentsByMessageId() }
 
     override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
 }

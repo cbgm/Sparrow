@@ -1,11 +1,17 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.model.FileDto
+import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
+import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
-import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
-import com.cbgm.sparrow.data.database.model.MessageBlobPartRowDto
+import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
+import com.cbgm.sparrow.data.database.entity.MessagePartEntity
+import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtos
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -16,34 +22,26 @@ internal class LocalAttachmentDataSource(
     private val logger = SparrowLog.withTag("LocalAttachmentDataSource")
 
     suspend fun saveIncomingConversationCopy(
-        row: MessageBlobPartRowDto,
+        messageId: String,
+        part: MessagePartDto,
         bytes: ByteArray
     ) {
-        if (
-            row.type == MessageAttachmentType.LOCATION.name ||
-            row.type == MessageAttachmentType.CONTACT.name ||
-            row.type == MessageAttachmentType.VOICE.name
-        ) {
-            return
-        }
+        val saveMetadata = part.toSavedFileMetadata() ?: return
 
         try {
-            val context = attachmentDao.findMessageContext(row.messageId) ?: return
+            val context = attachmentDao.findMessageContext(messageId) ?: return
             if (context.isMine) return
 
             fileDataSource.saveForConversation(
                 conversationId = context.conversationId,
                 displayName = context.displayName,
-                attachmentId = row.partId,
-                type = MessageAttachmentType.valueOf(row.type),
-                mimeType = row.mimeType,
+                attachmentId = part.id,
+                isMedia = saveMetadata.isMedia,
+                mimeType = saveMetadata.mimeType,
                 bytes = bytes
             )
-            context.senderContactId?.let { senderContactId ->
-                fileDataSource.deleteLegacyContactAttachment(senderContactId, row.partId)
-            }
         } catch (error: Throwable) {
-            logger.error(error) { "Could not save Sparrow conversation copy for message part ${row.partId}" }
+            logger.error(error) { "Could not save Sparrow conversation copy for message part ${part.id}" }
         }
     }
 
@@ -51,22 +49,46 @@ internal class LocalAttachmentDataSource(
         fileDataSource.updateSavedConversationName(conversationId, displayName)
     }
 
-    fun observeByConversation(conversationId: String): Flow<List<LocalMessageAttachmentRowDto>> {
+    fun observeByConversation(conversationId: String): Flow<List<MessagePartDto>> {
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-        return attachmentDao.observeLocalByConversationId(conversationId)
+        return attachmentDao.observeLocalPartsByConversationId(conversationId)
+            .map { parts ->
+                parts.toMessagePartDtos(loadBlobs(parts), fileDataSource::resolveCacheFilePath)
+                    .filter { part -> part.isManagedLocalPart() }
+            }
     }
 
     fun observeStorageSummaries(): Flow<List<AttachmentStorageSummaryDto>> =
-        attachmentDao.observeAllLocal()
-            .map { rows ->
-                rows.groupBy { row -> row.conversationId }
-                    .mapNotNull { (conversationId, conversationRows) ->
-                        val first = conversationRows.firstOrNull() ?: return@mapNotNull null
+        attachmentDao.observeAllLocalParts()
+            .map { parts ->
+                if (parts.isEmpty()) return@map emptyList()
+
+                val blobsByPartId = loadBlobs(parts).associateBy(MessageBlobEntity::partId)
+                val contextsByMessageId =
+                    attachmentDao.findMessageContexts(parts.map(MessagePartEntity::messageId).distinct())
+                        .associateBy { context -> context.messageId }
+
+                parts.mapNotNull { part ->
+                    val context = contextsByMessageId[part.messageId] ?: return@mapNotNull null
+                    val blob = blobsByPartId[part.id] ?: return@mapNotNull null
+                    part.toMessagePartDto(blob, fileDataSource::resolveCacheFilePath)
+                        .takeIf { partDto -> partDto.isManagedLocalPart() }
+                        ?.let { partDto ->
+                            StoredPart(
+                                conversationId = context.conversationId,
+                                displayName = context.displayName,
+                                isGroup = context.isGroup,
+                                part = partDto
+                            )
+                        }
+                }.groupBy(StoredPart::conversationId)
+                    .mapNotNull { (conversationId, storedParts) ->
+                        val first = storedParts.firstOrNull() ?: return@mapNotNull null
                         AttachmentStorageSummaryDto(
                             conversationId = conversationId,
                             displayName = first.displayName,
                             isGroup = first.isGroup,
-                            rows = conversationRows
+                            parts = storedParts.map(StoredPart::part)
                         )
                     }.sortedBy { summary -> summary.displayName.lowercase() }
             }
@@ -74,40 +96,64 @@ internal class LocalAttachmentDataSource(
     suspend fun delete(attachmentIds: Set<String>) {
         if (attachmentIds.isEmpty()) return
 
-        val rows = attachmentDao.findLocalRowsByIds(attachmentIds.toList())
-        for (row in rows) {
-            deleteLocalCopies(row)
+        val parts = attachmentDao.findLocalPartsByIds(attachmentIds.toList())
+        if (parts.isEmpty()) return
+
+        val blobsByPartId = loadBlobs(parts).associateBy(MessageBlobEntity::partId)
+        val contextsByMessageId =
+            attachmentDao.findMessageContexts(parts.map(MessagePartEntity::messageId).distinct())
+                .associateBy { context -> context.messageId }
+
+        parts.forEach { part ->
+            blobsByPartId[part.id]?.localFilePath?.let(fileDataSource::delete)
+            contextsByMessageId[part.messageId]?.let { context ->
+                fileDataSource.deleteSavedAttachment(
+                    conversationId = context.conversationId,
+                    attachmentId = part.id
+                )
+            }
         }
 
-        if (rows.isNotEmpty()) {
-            attachmentDao.clearLocalFilePaths(rows.map { row -> row.attachment.partId })
-        }
+        attachmentDao.clearLocalFilePaths(parts.map(MessagePartEntity::id))
     }
 
     suspend fun deleteForConversation(conversationId: String) {
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-        attachmentDao.findByConversationId(conversationId).forEach { row ->
-            row.localFilePath?.let(fileDataSource::delete)
-            deleteLegacyCopy(row)
+        val parts = attachmentDao.findBlobPartsByConversationId(conversationId)
+        loadBlobs(parts).forEach { blob ->
+            blob.localFilePath?.let(fileDataSource::delete)
         }
         fileDataSource.deleteSavedConversation(conversationId)
         attachmentDao.clearLocalFilePathsForConversation(conversationId)
     }
 
-    private suspend fun deleteLocalCopies(row: LocalMessageAttachmentRowDto) {
-        row.attachment.localFilePath?.let(fileDataSource::delete)
-        fileDataSource.deleteSavedAttachment(
-            conversationId = row.conversationId,
-            attachmentId = row.attachment.partId
-        )
-        deleteLegacyCopy(row.attachment)
-    }
+    private suspend fun loadBlobs(parts: List<MessagePartEntity>): List<MessageBlobEntity> =
+        if (parts.isEmpty()) {
+            emptyList()
+        } else {
+            attachmentDao.findBlobsByPartIds(parts.map(MessagePartEntity::id))
+        }
 
-    private suspend fun deleteLegacyCopy(row: MessageBlobPartRowDto) {
-        attachmentDao.findMessageContext(row.messageId)
-            ?.senderContactId
-            ?.let { senderContactId ->
-                fileDataSource.deleteLegacyContactAttachment(senderContactId, row.partId)
-            }
-    }
+    private fun MessagePartDto.isManagedLocalPart(): Boolean =
+        this is ImageDto || this is VideoDto || this is FileDto || this is VoiceDto
+
+    private fun MessagePartDto.toSavedFileMetadata(): SavedFileMetadata? =
+        when (this) {
+            is ImageDto -> SavedFileMetadata(isMedia = true, mimeType = mimeType)
+            is VideoDto -> SavedFileMetadata(isMedia = true, mimeType = mimeType)
+            is FileDto -> SavedFileMetadata(isMedia = false, mimeType = mimeType)
+            else -> null
+        }
+
+    private data class SavedFileMetadata(
+        val isMedia: Boolean,
+        val mimeType: String
+    )
+
+    private data class StoredPart(
+        val conversationId: String,
+        val displayName: String,
+        val isGroup: Boolean,
+        val part: MessagePartDto
+    )
 }

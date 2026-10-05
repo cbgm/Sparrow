@@ -7,8 +7,6 @@ import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
-import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
-import com.cbgm.sparrow.data.database.model.MessageBlobPartRowDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,6 +16,9 @@ interface MessageAttachmentDao {
 
     @Query("SELECT * FROM attachment_message_contexts WHERE messageId = :messageId LIMIT 1")
     suspend fun findMessageContext(messageId: String): AttachmentMessageContextEntity?
+
+    @Query("SELECT * FROM attachment_message_contexts WHERE messageId IN (:messageIds)")
+    suspend fun findMessageContexts(messageIds: List<String>): List<AttachmentMessageContextEntity>
 
     @Query(
         """
@@ -51,120 +52,40 @@ interface MessageAttachmentDao {
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         WHERE message_parts.messageId IN (:messageIds)
         ORDER BY message_parts.messageId ASC, message_parts.position ASC
         """
     )
-    fun observeByMessageIds(messageIds: List<String>): Flow<List<MessageBlobPartRowDto>>
+    fun observeBlobPartsByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         WHERE message_parts.messageId = :messageId
         ORDER BY message_parts.position ASC
         """
     )
-    suspend fun findByMessageId(messageId: String): List<MessageBlobPartRowDto>
+    suspend fun findBlobPartsByMessageId(messageId: String): List<MessagePartEntity>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         WHERE message_parts.messageId IN (:messageIds)
         ORDER BY message_parts.messageId ASC, message_parts.position ASC
         """
     )
-    suspend fun findByMessageIds(messageIds: List<String>): List<MessageBlobPartRowDto>
+    suspend fun findBlobPartsByMessageIds(messageIds: List<String>): List<MessagePartEntity>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
@@ -172,35 +93,11 @@ interface MessageAttachmentDao {
         ORDER BY ctx.createdAtEpochMilliseconds ASC, message_parts.messageId ASC, message_parts.position ASC
         """
     )
-    suspend fun findByConversationId(conversationId: String): List<MessageBlobPartRowDto>
+    suspend fun findBlobPartsByConversationId(conversationId: String): List<MessagePartEntity>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath,
-            ctx.conversationId AS conversationId,
-            ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
-            ctx.displayName AS displayName,
-            ctx.isGroup AS isGroup
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
@@ -208,35 +105,11 @@ interface MessageAttachmentDao {
         ORDER BY ctx.createdAtEpochMilliseconds DESC, message_parts.position ASC
         """
     )
-    fun observeAllLocal(): Flow<List<LocalMessageAttachmentRowDto>>
+    fun observeAllLocalParts(): Flow<List<MessagePartEntity>>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath,
-            ctx.conversationId AS conversationId,
-            ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
-            ctx.displayName AS displayName,
-            ctx.isGroup AS isGroup
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
         INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
@@ -245,43 +118,27 @@ interface MessageAttachmentDao {
         ORDER BY ctx.createdAtEpochMilliseconds DESC, message_parts.position ASC
         """
     )
-    fun observeLocalByConversationId(conversationId: String): Flow<List<LocalMessageAttachmentRowDto>>
+    fun observeLocalPartsByConversationId(conversationId: String): Flow<List<MessagePartEntity>>
 
     @Query(
         """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath,
-            ctx.conversationId AS conversationId,
-            ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
-            ctx.displayName AS displayName,
-            ctx.isGroup AS isGroup
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
-        INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
         WHERE message_parts.id IN (:partIds)
           AND message_blobs.localFilePath IS NOT NULL
         """
     )
-    suspend fun findLocalRowsByIds(partIds: List<String>): List<LocalMessageAttachmentRowDto>
+    suspend fun findLocalPartsByIds(partIds: List<String>): List<MessagePartEntity>
+
+    @Query("SELECT * FROM message_parts WHERE id = :partId LIMIT 1")
+    suspend fun findPartById(partId: String): MessagePartEntity?
+
+    @Query("SELECT * FROM message_blobs WHERE partId IN (:partIds)")
+    suspend fun findBlobsByPartIds(partIds: List<String>): List<MessageBlobEntity>
+
+    @Query("SELECT * FROM message_blobs WHERE partId = :partId LIMIT 1")
+    suspend fun findBlobByPartId(partId: String): MessageBlobEntity?
 
     @Query("UPDATE message_blobs SET localFilePath = NULL WHERE partId IN (:partIds)")
     suspend fun clearLocalFilePaths(partIds: List<String>): Int
@@ -299,68 +156,6 @@ interface MessageAttachmentDao {
         """
     )
     suspend fun clearLocalFilePathsForConversation(conversationId: String): Int
-
-    @Query(
-        """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
-        FROM message_parts
-        INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
-        WHERE message_parts.id = :partId
-        LIMIT 1
-        """
-    )
-    fun observeById(partId: String): Flow<MessageBlobPartRowDto?>
-
-    @Query(
-        """
-        SELECT
-            message_parts.id AS partId,
-            message_parts.messageId AS messageId,
-            message_parts.position AS position,
-            message_parts.type AS type,
-            message_blobs.mimeType AS mimeType,
-            message_blobs.byteSize AS byteSize,
-            message_blobs.fileName AS fileName,
-            message_blobs.width AS width,
-            message_blobs.height AS height,
-            message_blobs.durationMilliseconds AS durationMilliseconds,
-            message_blobs.nodeId AS nodeId,
-            message_blobs.blobId AS blobId,
-            message_blobs.readCapability AS readCapability,
-            message_blobs.ciphertextByteSize AS ciphertextByteSize,
-            message_blobs.blobExpiresAtEpochMilliseconds AS blobExpiresAtEpochMilliseconds,
-            message_blobs.encryptionKey AS encryptionKey,
-            message_blobs.nonce AS nonce,
-            message_blobs.ciphertextSha256 AS ciphertextSha256,
-            message_blobs.deleteCapability AS deleteCapability,
-            message_blobs.localFilePath AS localFilePath
-        FROM message_parts
-        INNER JOIN message_blobs ON message_blobs.partId = message_parts.id
-        WHERE message_parts.id = :partId
-        LIMIT 1
-        """
-    )
-    suspend fun findById(partId: String): MessageBlobPartRowDto?
 
     @Query("UPDATE message_blobs SET localFilePath = :localFilePath WHERE partId = :partId")
     suspend fun updateLocalFilePath(partId: String, localFilePath: String): Int

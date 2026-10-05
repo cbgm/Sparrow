@@ -13,7 +13,6 @@ import com.cbgm.sparrow.data.database.entity.MessageTextEntity
 import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.data.database.model.MessageCursorDto
-import com.cbgm.sparrow.data.database.model.MessageTextPartRowDto
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
@@ -323,11 +322,7 @@ interface ChatDao {
 
     @Query(
         """
-        SELECT
-            message_parts.messageId AS messageId,
-            message_parts.id AS partId,
-            message_parts.position AS position,
-            message_text.text AS text
+        SELECT message_parts.*
         FROM message_parts
         INNER JOIN message_text ON message_text.partId = message_parts.id
         WHERE message_parts.messageId IN (:messageIds)
@@ -335,7 +330,18 @@ interface ChatDao {
         ORDER BY message_parts.messageId ASC, message_parts.position ASC
         """
     )
-    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<List<MessageTextPartRowDto>>
+    fun observeTextPartEntitiesByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
+
+    @Query(
+        """
+        SELECT message_text.*
+        FROM message_text
+        INNER JOIN message_parts ON message_parts.id = message_text.partId
+        WHERE message_parts.messageId IN (:messageIds)
+          AND message_parts.type = 'TEXT'
+        """
+    )
+    fun observeTextEntitiesByMessageIds(messageIds: List<String>): Flow<List<MessageTextEntity>>
 
     @Query(
         """

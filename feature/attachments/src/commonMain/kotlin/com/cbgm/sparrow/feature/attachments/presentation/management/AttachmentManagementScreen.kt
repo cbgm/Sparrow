@@ -50,6 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
@@ -60,15 +64,11 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
-import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
-import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
@@ -91,10 +91,10 @@ fun AttachmentManagementScreen(
     modifier: Modifier = Modifier
 ) {
     val mediaItems = remember(uiState.attachments) {
-        uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>()
+        uiState.attachments.filter { part -> part is ImageUi || part is VideoUi }
     }
     val fileItems = remember(uiState.attachments) {
-        uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachmentUi>()
+        uiState.attachments.filterIsInstance<FileUi>()
     }
     val onAttachmentClick = remember(onUiEvent) {
         { id: String -> onUiEvent(AttachmentManagementUiEvent.AttachmentClicked(id)) }
@@ -146,8 +146,8 @@ fun AttachmentManagementScreen(
 
 @Composable
 private fun AttachmentManagementBody(
-    mediaItems: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
-    fileItems: List<MessageAttachmentUi.FileAttachmentUi>,
+    mediaItems: List<MessagePartUi>,
+    fileItems: List<FileUi>,
     selectedTab: AttachmentManagementTab,
     selectedIds: State<Set<String>>,
     isSelectionMode: State<Boolean>,
@@ -208,18 +208,22 @@ private fun AttachmentDeleteConfirmation(
 @Composable
 private fun AttachmentManagementViewer(
     viewerId: String?,
-    mediaItems: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    mediaItems: List<MessagePartUi>,
     onUiEvent: (AttachmentManagementUiEvent) -> Unit
 ) {
-    viewerId?.let { selectedId ->
-        MessageAttachmentViewer(
-            attachments = mediaItems,
-            selectedAttachmentId = selectedId,
-            canSaveToCameraRoll = false,
-            onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
-            onError = { onUiEvent(AttachmentManagementUiEvent.ViewerError(it)) }
-        )
-    }
+    val selectedIndex = mediaItems.indexOfFirst { part -> part.id == viewerId }
+    if (selectedIndex < 0) return
+
+    val mediaLabel = stringResource(Res.string.feature_attachments_media)
+    val media = remember(mediaItems) { mediaItems.map(MessagePartUi::toMediaItemUi) }
+
+    MediaViewer(
+        media = media,
+        initialIndex = selectedIndex,
+        onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
+        localFilePathProvider = MediaItemUi::localFilePath,
+        title = { currentIndex, total -> "$mediaLabel ${currentIndex + 1}/$total" }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -345,7 +349,7 @@ private fun RowScope.AttachmentTab(
 
 @Composable
 private fun MediaGrid(
-    attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    attachments: List<MessagePartUi>,
     selectedIds: State<Set<String>>,
     isSelectionMode: State<Boolean>,
     bottomPadding: Dp,
@@ -377,7 +381,7 @@ private fun MediaGrid(
 @Composable
 private fun SelectableGridItem(
     onClick: () -> Unit,
-    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
+    attachment: MessagePartUi,
     selectionIds: State<Set<String>>,
     selectionMode: State<Boolean>
 ) {
@@ -390,7 +394,7 @@ private fun SelectableGridItem(
 @Composable
 private fun GridItem(
     onClick: () -> Unit,
-    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
+    attachment: MessagePartUi,
     selected: Boolean
 ) {
     Surface(
@@ -410,19 +414,15 @@ private fun GridItem(
 
 @Composable
 private fun AttachmentGridThumbnail(
-    attachment: MessageAttachmentUi.ImageVideoAttachmentUi
+    attachment: MessagePartUi
 ) {
-    val attachmentState = rememberAttachmentUiState(attachment.target)
-    val localFilePath =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.LocalFile }
-            ?.localFilePath
+    val media = attachment.toMediaItemUi()
+    val localFilePath = media.localFilePath
 
     Box(modifier = Modifier.fillMaxWidth()) {
         if (localFilePath != null) {
             MediaThumbnail(
-                media = attachment.media,
+                media = media,
                 localFilePath = localFilePath,
                 modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                 contentScale = ContentScale.Crop
@@ -435,7 +435,7 @@ private fun AttachmentGridThumbnail(
                 CircularProgressIndicator()
             }
         }
-        if (attachment.media.type == MediaTypeUi.VIDEO) {
+        if (media.type == MediaTypeUi.VIDEO) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = MaterialTheme.shapes.extraLarge,
@@ -475,7 +475,7 @@ private fun AttachmentSelectionIndicator(
 
 @Composable
 private fun FileList(
-    attachments: List<MessageAttachmentUi.FileAttachmentUi>,
+    attachments: List<FileUi>,
     selectedIds: State<Set<String>>,
     isSelectionMode: State<Boolean>,
     bottomPadding: Dp,
@@ -529,7 +529,7 @@ private fun FileList(
 
 @Composable
 private fun SelectableAttachmentFileRow(
-    attachment: MessageAttachmentUi.FileAttachmentUi,
+    attachment: FileUi,
     selectionIds: State<Set<String>>,
     selectionMode: State<Boolean>,
     onClick: () -> Unit
@@ -542,7 +542,7 @@ private fun SelectableAttachmentFileRow(
 
 @Composable
 private fun AttachmentFileRow(
-    attachment: MessageAttachmentUi.FileAttachmentUi,
+    attachment: FileUi,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -582,6 +582,34 @@ private fun AttachmentFileRow(
 private fun AttachmentFileSelectionIndicator(selected: Boolean) {
     if (selected) Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
 }
+
+private fun MessagePartUi.toMediaItemUi(): MediaItemUi =
+    when (this) {
+        is ImageUi ->
+            MediaItemUi(
+                id = id,
+                type = MediaTypeUi.IMAGE,
+                mimeType = mimeType,
+                localFilePath = localFilePath,
+                thumbnailFilePath = thumbnailFilePath,
+                width = width,
+                height = height
+            )
+
+        is VideoUi ->
+            MediaItemUi(
+                id = id,
+                type = MediaTypeUi.VIDEO,
+                mimeType = mimeType,
+                localFilePath = localFilePath,
+                thumbnailFilePath = thumbnailFilePath,
+                width = width,
+                height = height,
+                durationMilliseconds = durationMilliseconds
+            )
+
+        else -> error("Message part $id is not visual media")
+    }
 
 @Preview
 @Composable
@@ -623,22 +651,18 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
     AttachmentManagementUiState(
         attachments =
             listOf(
-                MessageAttachmentUi.ImageVideoAttachmentUi(
+                ImageUi(
                     id = "preview-image",
-                    media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
+                    mimeType = "image/jpeg",
                     byteSize = 0
                 ),
-                MessageAttachmentUi.ImageVideoAttachmentUi(
+                VideoUi(
                     id = "preview-video",
-                    media = MediaItemUi(
-                        id = "preview-video",
-                        type = MediaTypeUi.VIDEO,
-                        mimeType = "video/mp4",
-                        durationMilliseconds = 42_000
-                    ),
-                    byteSize = 0
+                    mimeType = "video/mp4",
+                    byteSize = 0,
+                    durationMilliseconds = 42_000
                 ),
-                MessageAttachmentUi.FileAttachmentUi(
+                FileUi(
                     id = "preview-file",
                     mimeType = "application/pdf",
                     byteSize = 240_000,

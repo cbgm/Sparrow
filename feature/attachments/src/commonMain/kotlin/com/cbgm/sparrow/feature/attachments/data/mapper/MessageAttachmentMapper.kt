@@ -1,61 +1,58 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.data.database.model.MessageBlobPartRowDto
+import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.FileDto
+import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
+import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
-fun List<MessageBlobPartRowDto>.toMessageAttachmentsByMessageId(
-    resolveLocalFilePath: (String) -> String?
-): Map<String, List<MessageAttachment>> =
-    groupBy(MessageBlobPartRowDto::messageId)
-        .mapValues { (_, attachments) ->
-            attachments
-                .sortedBy(MessageBlobPartRowDto::position)
-                .map { row -> row.toMessageAttachment(resolveLocalFilePath) }
-        }
+internal fun Map<String, List<MessagePartDto>>.toMessageAttachmentsByMessageId(): Map<String, List<MessageAttachment>> =
+    mapValues { (_, parts) -> parts.mapNotNull(MessagePartDto::toMessageAttachmentOrNull) }
 
-private fun MessageBlobPartRowDto.toMessageAttachment(
-    resolveLocalFilePath: (String) -> String?
-): MessageAttachment =
-    when (MessageAttachmentType.valueOf(type)) {
-        MessageAttachmentType.IMAGE ->
+private fun MessagePartDto.toMessageAttachmentOrNull(): MessageAttachment? =
+    when (this) {
+        is ImageDto ->
             MessageAttachment.Image(
-                id = partId,
+                id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
                 width = requireNotNull(width),
                 height = requireNotNull(height),
-                localFilePath = localFilePath?.let(resolveLocalFilePath)
+                localFilePath = localFilePath
             )
 
-        MessageAttachmentType.VIDEO ->
+        is VideoDto ->
             MessageAttachment.Video(
-                id = partId,
+                id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
                 width = width,
                 height = height,
                 durationMilliseconds = durationMilliseconds,
-                localFilePath = localFilePath?.let(resolveLocalFilePath)
+                localFilePath = localFilePath
             )
 
-        MessageAttachmentType.FILE ->
+        is FileDto ->
             MessageAttachment.File(
-                id = partId,
+                id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
-                fileName = fileName ?: partId,
-                localFilePath = localFilePath?.let(resolveLocalFilePath)
+                fileName = fileName,
+                localFilePath = localFilePath
             )
 
-        MessageAttachmentType.VOICE ->
+        is VoiceDto ->
             MessageAttachment.Voice(
-                id = partId,
+                id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
-                durationMilliseconds = requireNotNull(durationMilliseconds)
+                durationMilliseconds = durationMilliseconds
             )
 
-        MessageAttachmentType.LOCATION -> MessageAttachment.Location(partId)
-        MessageAttachmentType.CONTACT -> MessageAttachment.Contact(partId)
+        is LocationDto -> MessageAttachment.Location(id)
+        is ContactDto -> MessageAttachment.Contact(id)
+        else -> null
     }

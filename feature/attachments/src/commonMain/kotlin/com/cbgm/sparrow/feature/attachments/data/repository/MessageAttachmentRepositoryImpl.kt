@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.AttachmentContentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentContentDataSource
@@ -10,13 +12,11 @@ import com.cbgm.sparrow.feature.attachments.data.mapper.toAttachmentStorageSumma
 import com.cbgm.sparrow.feature.attachments.data.mapper.toAttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDomain
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toLocalAttachments
 import com.cbgm.sparrow.feature.attachments.data.mapper.toPersistedTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
-import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -72,21 +72,13 @@ internal class MessageAttachmentRepositoryImpl(
         messageAttachmentDataSource.observeTranscript(attachmentId)
             .map { value -> value?.toAttachmentTranscript() }
 
-    override fun observeLocalAttachments(conversationId: String): Flow<List<LocalAttachment>> =
+    override fun observeLocalAttachments(conversationId: String): Flow<List<MessagePart>> =
         localAttachmentDataSource.observeByConversation(conversationId)
-            .map { rows -> rows.toLocalAttachments() }
+            .map { parts -> parts.map { part -> part.toMessagePart() } }
 
     override fun observeStorageSummaries(): Flow<List<AttachmentStorageSummary>> =
         localAttachmentDataSource.observeStorageSummaries()
-            .map { summaries ->
-                summaries.map { summary ->
-                    summary.rows.toLocalAttachments().toAttachmentStorageSummary(
-                        conversationId = summary.conversationId,
-                        displayName = summary.displayName,
-                        isGroup = summary.isGroup
-                    )
-                }
-            }
+            .map { summaries -> summaries.map { summary -> summary.toAttachmentStorageSummary() } }
 
     override suspend fun deleteLocalAttachments(attachmentIds: Set<String>): Result<Unit> = safeSuspendCall {
         localAttachmentDataSource.delete(attachmentIds)

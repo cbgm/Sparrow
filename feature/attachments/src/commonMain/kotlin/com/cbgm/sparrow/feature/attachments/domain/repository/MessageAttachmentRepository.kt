@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
-import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import kotlinx.coroutines.flow.Flow
 
 interface MessageAttachmentRepository {
@@ -18,7 +18,7 @@ interface MessageAttachmentRepository {
 
     fun observeTranscript(attachmentId: String): Flow<AttachmentTranscript?>
 
-    fun observeLocalAttachments(conversationId: String): Flow<List<LocalAttachment>>
+    fun observeLocalAttachments(conversationId: String): Flow<List<MessagePart>>
 
     fun observeStorageSummaries(): Flow<List<AttachmentStorageSummary>>
 
