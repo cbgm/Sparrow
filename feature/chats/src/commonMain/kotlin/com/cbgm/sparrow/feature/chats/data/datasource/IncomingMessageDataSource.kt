@@ -16,8 +16,14 @@ class IncomingMessageDataSource(
 
     suspend fun findMessage(messageId: String): MessageEntity? = chatDao.findMessageById(messageId)
 
-    suspend fun saveMessage(message: MessageEntity) {
-        chatDao.upsertMessage(message)
+    suspend fun saveMessage(message: MessageEntity, text: String = "") {
+        chatDao.upsertMessageWithText(message, text)
+    }
+
+    suspend fun findMessageText(messageId: String): String? = chatDao.findMessageText(messageId)
+
+    suspend fun replaceMessageText(messageId: String, text: String) {
+        chatDao.replaceMessageText(messageId, text)
     }
 
     suspend fun deleteMessages(messages: List<MessageEntity>) {

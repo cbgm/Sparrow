@@ -50,7 +50,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        messageParts = partsByMessageId[message.id].orEmpty(),
                         reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
@@ -77,7 +77,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachmentParts: List<MessagePartDto>,
+    messageParts: List<MessagePartDto>,
     reactions: List<MessageReaction>
 ): GroupMessage {
     val deliveryStatus =
@@ -101,13 +101,7 @@ private fun MessageEntity.toGroupMessage(
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),
-        parts =
-            buildList {
-                text
-                    .takeIf(String::isNotBlank)
-                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
-                addAll(attachmentParts)
-            }.map { part -> part.toMessagePart() }
+        parts = messageParts.map { part -> part.toMessagePart() }
     )
 }
 

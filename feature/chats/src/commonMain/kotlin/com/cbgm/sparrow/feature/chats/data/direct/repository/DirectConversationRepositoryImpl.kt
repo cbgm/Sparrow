@@ -55,8 +55,12 @@ class DirectConversationRepositoryImpl(
                 replay = 1
             )
 
-            val attachments = sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
-                messageAttachmentDataSource.observeByMessageIds(messageIds)
+            val messageIds = sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged()
+            val attachments = messageIds.flatMapLatest { ids ->
+                messageAttachmentDataSource.observeByMessageIds(ids)
+            }
+            val textParts = messageIds.flatMapLatest { ids ->
+                conversationDataSource.observeTextPartsByMessageIds(ids)
             }
             val reactions = observeReactions(conversationId, oldestCursor)
 
@@ -64,15 +68,21 @@ class DirectConversationRepositoryImpl(
                 conversationDataSource.observeConversationById(conversationId),
                 sharedMessages,
                 attachments,
+                textParts,
                 reactions
-            ) { conversation, loadedMessages, attachmentsByMessageId, loadedReactions ->
+            ) { conversation, loadedMessages, attachmentsByMessageId, loadedTextParts, loadedReactions ->
                 conversation?.let {
+                    val parts =
+                        attachmentsByMessageId
+                            .mapValues { (_, values) -> values.toMessagePartDtos().toMutableList() }
+                            .toMutableMap()
+                    loadedTextParts.forEach { row ->
+                        parts.getOrPut(row.messageId) { mutableListOf() }
+                            .add(0, MessagePartDto.TextDto(text = row.text))
+                    }
                     DirectConversationSnapshotDto(
                         conversation = ConversationWithMessagesDto(it, loadedMessages),
-                        partsByMessageId =
-                            attachmentsByMessageId.mapValues { (_, values) ->
-                                values.toMessagePartDtos()
-                            },
+                        partsByMessageId = parts,
                         reactionsByMessageId = loadedReactions.toDomainReactionsByMessageId()
                     )
                 }

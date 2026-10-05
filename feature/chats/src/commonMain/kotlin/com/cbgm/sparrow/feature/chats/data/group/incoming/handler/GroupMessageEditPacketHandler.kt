@@ -45,11 +45,11 @@ class GroupMessageEditPacketHandler(
             check(!target.isMine && target.senderContactId == context.contactId) {
                 "Only the original sender can edit a group message"
             }
-            check(target.text.isNotBlank()) { "Only text messages can be edited" }
+            check(!incomingMessageDataSource.findMessageText(edit.messageId).isNullOrBlank()) { "Only text messages can be edited" }
             check(attachmentTransfer.protocolAttachments(edit.messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
-            incomingMessageDataSource.saveMessage(target.copy(text = edit.text.trim()))
+            incomingMessageDataSource.replaceMessageText(edit.messageId, edit.text.trim())
         }
 
     private companion object {

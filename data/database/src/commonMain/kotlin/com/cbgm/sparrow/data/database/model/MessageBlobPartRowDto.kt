@@ -1,29 +1,7 @@
-package com.cbgm.sparrow.data.database.entity
+package com.cbgm.sparrow.data.database.model
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
-@Entity(
-    tableName = "message_attachments",
-    foreignKeys = [
-        ForeignKey(
-            entity = MessageEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["messageId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index(value = ["messageId"]),
-        Index(value = ["messageId", "position"], unique = true),
-        Index(value = ["blobId"], unique = true)
-    ]
-)
-data class MessageAttachmentEntity(
-    @PrimaryKey
-    val id: String,
+data class MessageBlobPartRowDto(
+    val partId: String,
     val messageId: String,
     val position: Int,
     val type: String,
@@ -41,20 +19,14 @@ data class MessageAttachmentEntity(
     val encryptionKey: ByteArray,
     val nonce: ByteArray,
     val ciphertextSha256: ByteArray,
-    /** Only present for blobs uploaded by this device. Never sent to peers. */
     val deleteCapability: String?,
-    /** File name inside Sparrow's private message-attachment cache. */
-    val localFileName: String?,
-    /** Plain attachment payload kept in Room only for attachment types that must never be file-backed. */
-    val payloadBytes: ByteArray? = null,
-    /** Local-only transcript for voice attachments. Never sent to peers. */
-    val transcript: String? = null
+    val localFilePath: String?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as MessageAttachmentEntity
+        other as MessageBlobPartRowDto
 
         if (position != other.position) return false
         if (byteSize != other.byteSize) return false
@@ -63,7 +35,7 @@ data class MessageAttachmentEntity(
         if (durationMilliseconds != other.durationMilliseconds) return false
         if (ciphertextByteSize != other.ciphertextByteSize) return false
         if (blobExpiresAtEpochMilliseconds != other.blobExpiresAtEpochMilliseconds) return false
-        if (id != other.id) return false
+        if (partId != other.partId) return false
         if (messageId != other.messageId) return false
         if (type != other.type) return false
         if (mimeType != other.mimeType) return false
@@ -75,10 +47,7 @@ data class MessageAttachmentEntity(
         if (!nonce.contentEquals(other.nonce)) return false
         if (!ciphertextSha256.contentEquals(other.ciphertextSha256)) return false
         if (deleteCapability != other.deleteCapability) return false
-        if (localFileName != other.localFileName) return false
-        if (payloadBytes == null && other.payloadBytes != null) return false
-        if (payloadBytes != null && (other.payloadBytes == null || !payloadBytes.contentEquals(other.payloadBytes))) return false
-        if (transcript != other.transcript) return false
+        if (localFilePath != other.localFilePath) return false
 
         return true
     }
@@ -91,7 +60,7 @@ data class MessageAttachmentEntity(
         result = 31 * result + (durationMilliseconds?.hashCode() ?: 0)
         result = 31 * result + ciphertextByteSize.hashCode()
         result = 31 * result + blobExpiresAtEpochMilliseconds.hashCode()
-        result = 31 * result + id.hashCode()
+        result = 31 * result + partId.hashCode()
         result = 31 * result + messageId.hashCode()
         result = 31 * result + type.hashCode()
         result = 31 * result + mimeType.hashCode()
@@ -103,9 +72,7 @@ data class MessageAttachmentEntity(
         result = 31 * result + nonce.contentHashCode()
         result = 31 * result + ciphertextSha256.contentHashCode()
         result = 31 * result + (deleteCapability?.hashCode() ?: 0)
-        result = 31 * result + (localFileName?.hashCode() ?: 0)
-        result = 31 * result + (payloadBytes?.contentHashCode() ?: 0)
-        result = 31 * result + (transcript?.hashCode() ?: 0)
+        result = 31 * result + (localFilePath?.hashCode() ?: 0)
         return result
     }
 }

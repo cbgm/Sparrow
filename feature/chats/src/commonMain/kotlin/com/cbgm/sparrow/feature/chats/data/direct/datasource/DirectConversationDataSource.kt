@@ -8,6 +8,7 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
+import com.cbgm.sparrow.data.database.model.MessageTextPartRowDto
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
@@ -52,6 +53,9 @@ class DirectConversationDataSource(
     ): Flow<List<MessageEntity>> =
         chatDao.observeMessagesFromCursor(conversationId, fromTimestamp, fromMessageId)
 
+    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<List<MessageTextPartRowDto>> =
+        chatDao.observeTextPartsByMessageIds(messageIds)
+
     fun observeRecentReactions(conversationId: String, messageLimit: Int): Flow<List<MessageReactionEntity>> =
         reactionDao.observeRecentByConversationId(conversationId, messageLimit)
 
@@ -77,13 +81,24 @@ class DirectConversationDataSource(
     suspend fun upsertMessage(message: MessageEntity) =
         chatDao.upsertMessage(message)
 
+    suspend fun upsertMessageWithText(message: MessageEntity, text: String) =
+        chatDao.upsertMessageWithText(message, text)
+
+    suspend fun findMessageText(messageId: String): String? =
+        chatDao.findMessageText(messageId)
+
+    suspend fun replaceMessageText(messageId: String, text: String) =
+        chatDao.replaceMessageText(messageId, text)
+
     suspend fun upsertIncomingChatMessage(
         conversation: ConversationEntity,
         message: MessageEntity,
+        text: String,
         timestamp: Long
     ) = chatDao.upsertIncomingChatMessage(
         conversation = conversation,
         message = message,
+        text = text,
         timestamp = timestamp
     )
 

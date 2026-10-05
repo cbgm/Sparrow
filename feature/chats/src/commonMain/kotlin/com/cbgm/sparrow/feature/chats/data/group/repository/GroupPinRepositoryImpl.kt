@@ -83,7 +83,7 @@ internal class GroupPinRepositoryImpl(
                 val attachments = attachmentDataSource.protocolAttachments(messageId)
                 val content =
                     GroupMessageContent(
-                        text = message.text,
+                        text = dataSource.findMessageText(messageId).orEmpty(),
                         attachments = attachments,
                         replyToMessageId = message.replyToMessageId
                     )

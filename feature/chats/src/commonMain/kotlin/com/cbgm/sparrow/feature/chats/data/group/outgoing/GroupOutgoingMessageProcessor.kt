@@ -82,15 +82,15 @@ class GroupOutgoingMessageProcessor(
                     flushQueuedLocked(groupId, recipients)
                 }
 
-                val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
+                val message = createQueuedMessage(groupId, replyToMessageId)
                 val prepared = attachmentTransfer.prepareAttachments(attachments)
                 try {
                     if (recipients.isEmpty()) {
                         // No pending invitee may receive this message. Persist it and
                         // its encrypted attachment blobs locally, with NO packet yet.
-                        persistMessage(message, emptyList(), prepared)
+                        persistMessage(message, normalizedText, emptyList(), prepared)
                     } else {
-                        encryptAndEnqueue(message, recipients, prepared)
+                        encryptAndEnqueue(message, normalizedText, recipients, prepared)
                     }
                 } catch (error: Throwable) {
                     val stored = messageDataSource.findMessage(message.id) != null
@@ -156,6 +156,7 @@ class GroupOutgoingMessageProcessor(
                         // reconciliation handles a crash between these writes.
                         messageDataSource.saveOutgoingMessage(
                             message = message,
+                            text = messageDataSource.findMessageText(message.id).orEmpty(),
                             recipientStates = states,
                             timestamp = message.createdAtEpochMilliseconds
                         )
@@ -297,7 +298,7 @@ class GroupOutgoingMessageProcessor(
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
             check(target.isMine) { "Only your own messages can be edited" }
-            check(target.text.isNotBlank()) { "Only text messages can be edited" }
+            check(!messageDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
             check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
@@ -340,7 +341,7 @@ class GroupOutgoingMessageProcessor(
                 ).getOrThrow()
             }
 
-            messageDataSource.saveMessage(target.copy(text = normalizedText))
+            messageDataSource.replaceMessageText(messageId, normalizedText)
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
@@ -446,14 +447,12 @@ class GroupOutgoingMessageProcessor(
 
     private fun createQueuedMessage(
         groupId: String,
-        text: String,
         replyToMessageId: String?
     ): MessageEntity =
         MessageEntity(
             id = IdGenerator.generate(prefix = "group-message"),
             conversationId = groupId,
             packetId = null,
-            text = text,
             replyToMessageId = replyToMessageId,
             transportPayload = null,
             transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
@@ -472,22 +471,25 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
+        text: String,
         recipients: List<String>,
         prepared: List<PreparedMessageAttachment>
     ) {
         val packets = createPackets(message, recipients, prepared.map { it.attachment })
         val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
-        persistMessage(message, recipientStates, prepared)
+        persistMessage(message, text, recipientStates, prepared)
         enqueuePackets(packets)
     }
 
     private suspend fun persistMessage(
         message: MessageEntity,
+        text: String,
         recipientStates: List<MessageRecipientStateEntity>,
         prepared: List<PreparedMessageAttachment>
     ) {
         messageDataSource.saveOutgoingMessage(
             message = message,
+            text = text,
             recipientStates = recipientStates,
             timestamp = message.createdAtEpochMilliseconds
         )
@@ -546,7 +548,7 @@ class GroupOutgoingMessageProcessor(
         val plaintext =
             groupMessageContentCodec.encode(
                 GroupMessageContent(
-                    text = message.text,
+                    text = messageDataSource.findMessageText(message.id).orEmpty(),
                     attachments = attachments,
                     replyToMessageId = message.replyToMessageId
                 )

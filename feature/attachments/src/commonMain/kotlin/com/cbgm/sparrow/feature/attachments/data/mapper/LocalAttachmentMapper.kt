@@ -29,7 +29,7 @@ private fun LocalMessageAttachmentRowDto.toLocalAttachment(): LocalAttachment? {
         MessageAttachmentType.IMAGE,
         MessageAttachmentType.VIDEO ->
             LocalAttachment.Media(
-                id = attachment.id,
+                id = attachment.partId,
                 conversationId = conversationId,
                 mimeType = attachment.mimeType,
                 byteSize = attachment.byteSize,
@@ -43,7 +43,7 @@ private fun LocalMessageAttachmentRowDto.toLocalAttachment(): LocalAttachment? {
 
         MessageAttachmentType.FILE ->
             LocalAttachment.File(
-                id = attachment.id,
+                id = attachment.partId,
                 conversationId = conversationId,
                 mimeType = attachment.mimeType,
                 byteSize = attachment.byteSize,
@@ -53,12 +53,12 @@ private fun LocalMessageAttachmentRowDto.toLocalAttachment(): LocalAttachment? {
 
         MessageAttachmentType.VOICE ->
             LocalAttachment.Voice(
-                id = attachment.id,
+                id = attachment.partId,
                 conversationId = conversationId,
                 mimeType = attachment.mimeType,
                 byteSize = attachment.byteSize,
                 durationMilliseconds = requireNotNull(attachment.durationMilliseconds) {
-                    "Voice attachment ${attachment.id} is missing duration"
+                    "Voice attachment ${attachment.partId} is missing duration"
                 },
                 createdAtEpochMilliseconds = createdAtEpochMilliseconds
             )

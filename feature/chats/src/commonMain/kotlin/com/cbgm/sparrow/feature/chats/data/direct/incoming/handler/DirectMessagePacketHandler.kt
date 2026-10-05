@@ -126,6 +126,7 @@ class DirectMessagePacketHandler(
         conversationDataSource.upsertIncomingChatMessage(
             conversation = conversation,
             message = packet.toMessageEntity(conversation.id, context),
+            text = packet.text,
             timestamp = context.receivedAtEpochMilliseconds
         )
     }
@@ -138,7 +139,6 @@ class DirectMessagePacketHandler(
             id = messageId,
             conversationId = conversationId,
             packetId = packetId,
-            text = text,
             replyToMessageId = replyToMessageId,
             transportPayload = context.encodedTransportPayload,
             transportMode = context.transportMode,

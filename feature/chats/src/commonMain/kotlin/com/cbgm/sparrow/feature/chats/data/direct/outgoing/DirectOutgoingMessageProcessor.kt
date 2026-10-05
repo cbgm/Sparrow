@@ -175,13 +175,13 @@ class DirectOutgoingMessageProcessor(
             check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
             check(message.isMine) { "Only your own messages can be edited" }
             check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
-            check(message.text.isNotBlank()) { "Only text messages can be edited" }
+            check(!conversationDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
             check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
 
             if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
-                conversationDataSource.upsertMessage(message.copy(text = normalizedText))
+                conversationDataSource.replaceMessageText(messageId, normalizedText)
                 return@runCatching
             }
 
@@ -195,7 +195,7 @@ class DirectOutgoingMessageProcessor(
                     text = normalizedText
                 )
             ).getOrThrow()
-            conversationDataSource.upsertMessage(message.copy(text = normalizedText))
+            conversationDataSource.replaceMessageText(messageId, normalizedText)
         }
 
     suspend fun queueUntilAuthorized(
@@ -388,7 +388,7 @@ class DirectOutgoingMessageProcessor(
         val packet =
             createPacket(
                 messageId = message.id,
-                text = message.text,
+                text = conversationDataSource.findMessageText(message.id).orEmpty(),
                 attachments = attachmentTransfer.protocolAttachments(message.id),
                 replyToMessageId = message.replyToMessageId
             )
@@ -451,7 +451,6 @@ class DirectOutgoingMessageProcessor(
                 id = messageId,
                 conversationId = target.conversationId,
                 packetId = null,
-                text = text,
                 replyToMessageId = replyToMessageId,
                 transportPayload = null,
                 // A waiting message has no transport packet yet. Recording the
@@ -469,7 +468,7 @@ class DirectOutgoingMessageProcessor(
             )
 
         try {
-            conversationDataSource.upsertMessage(message)
+            conversationDataSource.upsertMessageWithText(message, text)
             attachmentTransfer.persistOutgoing(
                 messageId = messageId,
                 prepared = prepared,

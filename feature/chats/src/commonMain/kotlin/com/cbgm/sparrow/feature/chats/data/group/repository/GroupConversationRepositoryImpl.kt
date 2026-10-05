@@ -83,22 +83,31 @@ internal class GroupConversationRepositoryImpl(
                 replay = 1
             )
 
+            val messageIds = sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged()
             val messageSnapshot =
                 combine(
                     historyDataSource.observeConversation(groupId),
                     sharedMessages,
-                    sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
-                        messageAttachmentDataSource.observeByMessageIds(messageIds)
+                    messageIds.flatMapLatest { ids ->
+                        messageAttachmentDataSource.observeByMessageIds(ids)
+                    },
+                    messageIds.flatMapLatest { ids ->
+                        historyDataSource.observeTextPartsByMessageIds(ids)
                     },
                     observeReactions(groupId, oldestCursor)
-                ) { conversation, loadedMessages, attachmentsByMessageId, reactions ->
+                ) { conversation, loadedMessages, attachmentsByMessageId, loadedTextParts, reactions ->
+                    val parts =
+                        attachmentsByMessageId
+                            .mapValues { (_, values) -> values.toMessagePartDtos().toMutableList() }
+                            .toMutableMap()
+                    loadedTextParts.forEach { row ->
+                        parts.getOrPut(row.messageId) { mutableListOf() }
+                            .add(0, MessagePartDto.TextDto(text = row.text))
+                    }
                     MessageSnapshotDto(
                         conversation = conversation,
                         messages = loadedMessages,
-                        partsByMessageId =
-                            attachmentsByMessageId.mapValues { (_, values) ->
-                                values.toMessagePartDtos()
-                            },
+                        partsByMessageId = parts,
                         reactionsByMessageId = reactions.toDomainReactionsByMessageId()
                     )
                 }

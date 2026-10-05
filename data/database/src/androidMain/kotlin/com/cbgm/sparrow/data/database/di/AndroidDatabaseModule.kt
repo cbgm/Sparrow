@@ -107,6 +107,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().voiceTranscriptDao()
+        }
+
+        single {
             get<SparrowDatabase>().mailboxRouteDao()
         }
 

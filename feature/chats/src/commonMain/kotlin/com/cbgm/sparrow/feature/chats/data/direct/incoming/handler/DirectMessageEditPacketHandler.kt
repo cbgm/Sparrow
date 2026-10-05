@@ -25,10 +25,10 @@ class DirectMessageEditPacketHandler(
             check(!target.isMine && target.senderContactId == context.contactId) {
                 "Only the original sender can edit a direct message"
             }
-            check(target.text.isNotBlank()) { "Only text messages can be edited" }
+            check(!incomingMessageDataSource.findMessageText(packet.messageId).isNullOrBlank()) { "Only text messages can be edited" }
             check(attachmentTransfer.protocolAttachments(packet.messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
-            incomingMessageDataSource.saveMessage(target.copy(text = packet.text.trim()))
+            incomingMessageDataSource.replaceMessageText(packet.messageId, packet.text.trim())
         }
 }

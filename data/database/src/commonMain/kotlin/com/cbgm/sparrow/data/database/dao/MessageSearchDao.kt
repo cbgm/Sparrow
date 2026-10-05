@@ -24,9 +24,13 @@ interface MessageSearchDao {
             END AS senderName,
             conversations.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
-            messages.text AS text,
+            message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
         FROM messages
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
@@ -36,7 +40,7 @@ interface MessageSearchDao {
             ON message_search_embeddings.messageId = messages.id
             AND message_search_embeddings.modelVersion = :modelVersion
         WHERE messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
+          AND TRIM(message_text.text) != ''
           AND message_search_embeddings.messageId IS NULL
         ORDER BY messages.createdAtEpochMilliseconds ASC
         LIMIT :limit
@@ -51,8 +55,12 @@ interface MessageSearchDao {
         """
         SELECT COUNT(*)
         FROM messages
-        WHERE contentStatus = 'READABLE'
-          AND TRIM(text) != ''
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
+        WHERE messages.contentStatus = 'READABLE'
+          AND TRIM(message_text.text) != ''
         """
     )
     suspend fun getSearchableMessageCount(): Int
@@ -84,15 +92,19 @@ interface MessageSearchDao {
             conversations.contactId AS contactId,
             conversations.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
-            messages.text AS text,
+            message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
         FROM messages
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
         WHERE messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
-          AND INSTR(LOWER(messages.text), LOWER(:query)) > 0
+          AND TRIM(message_text.text) != ''
+          AND INSTR(LOWER(message_text.text), LOWER(:query)) > 0
         ORDER BY messages.createdAtEpochMilliseconds DESC
         LIMIT :limit
         """
@@ -116,11 +128,15 @@ interface MessageSearchDao {
             END AS senderName,
             conversations.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
-            messages.text AS text,
+            message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
             message_search_embeddings.embedding AS embedding
         FROM message_search_embeddings
         INNER JOIN messages ON messages.id = message_search_embeddings.messageId
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
@@ -128,7 +144,7 @@ interface MessageSearchDao {
             ON sender_contacts.id = messages.senderContactId
         WHERE message_search_embeddings.modelVersion = :modelVersion
           AND messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
+          AND TRIM(message_text.text) != ''
         """
     )
     suspend fun getIndexedMessages(modelVersion: Int): List<StoredMessageEmbeddingDto>

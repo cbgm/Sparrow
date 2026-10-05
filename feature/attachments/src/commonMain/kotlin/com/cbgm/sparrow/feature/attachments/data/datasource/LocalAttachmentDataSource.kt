@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
-import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
+import com.cbgm.sparrow.data.database.model.MessageBlobPartRowDto
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
@@ -16,34 +16,34 @@ internal class LocalAttachmentDataSource(
     private val logger = SparrowLog.withTag("LocalAttachmentDataSource")
 
     suspend fun saveIncomingConversationCopy(
-        entity: MessageAttachmentEntity,
+        row: MessageBlobPartRowDto,
         bytes: ByteArray
     ) {
         if (
-            entity.type == MessageAttachmentType.LOCATION.name ||
-            entity.type == MessageAttachmentType.CONTACT.name ||
-            entity.type == MessageAttachmentType.VOICE.name
+            row.type == MessageAttachmentType.LOCATION.name ||
+            row.type == MessageAttachmentType.CONTACT.name ||
+            row.type == MessageAttachmentType.VOICE.name
         ) {
             return
         }
 
         try {
-            val context = attachmentDao.findMessageContext(entity.messageId) ?: return
+            val context = attachmentDao.findMessageContext(row.messageId) ?: return
             if (context.isMine) return
 
             fileDataSource.saveForConversation(
                 conversationId = context.conversationId,
                 displayName = context.displayName,
-                attachmentId = entity.id,
-                type = MessageAttachmentType.valueOf(entity.type),
-                mimeType = entity.mimeType,
+                attachmentId = row.partId,
+                type = MessageAttachmentType.valueOf(row.type),
+                mimeType = row.mimeType,
                 bytes = bytes
             )
             context.senderContactId?.let { senderContactId ->
-                fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
+                fileDataSource.deleteLegacyContactAttachment(senderContactId, row.partId)
             }
         } catch (error: Throwable) {
-            logger.error(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
+            logger.error(error) { "Could not save Sparrow conversation copy for message part ${row.partId}" }
         }
     }
 
@@ -80,34 +80,34 @@ internal class LocalAttachmentDataSource(
         }
 
         if (rows.isNotEmpty()) {
-            attachmentDao.clearLocalFileNames(rows.map { row -> row.attachment.id })
+            attachmentDao.clearLocalFilePaths(rows.map { row -> row.attachment.partId })
         }
     }
 
     suspend fun deleteForConversation(conversationId: String) {
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-        attachmentDao.findByConversationId(conversationId).forEach { entity ->
-            entity.localFileName?.let(fileDataSource::delete)
-            deleteLegacyCopy(entity)
+        attachmentDao.findByConversationId(conversationId).forEach { row ->
+            row.localFilePath?.let(fileDataSource::delete)
+            deleteLegacyCopy(row)
         }
         fileDataSource.deleteSavedConversation(conversationId)
-        attachmentDao.clearLocalFileNamesForConversation(conversationId)
+        attachmentDao.clearLocalFilePathsForConversation(conversationId)
     }
 
     private suspend fun deleteLocalCopies(row: LocalMessageAttachmentRowDto) {
-        row.attachment.localFileName?.let(fileDataSource::delete)
+        row.attachment.localFilePath?.let(fileDataSource::delete)
         fileDataSource.deleteSavedAttachment(
             conversationId = row.conversationId,
-            attachmentId = row.attachment.id
+            attachmentId = row.attachment.partId
         )
         deleteLegacyCopy(row.attachment)
     }
 
-    private suspend fun deleteLegacyCopy(entity: MessageAttachmentEntity) {
-        attachmentDao.findMessageContext(entity.messageId)
+    private suspend fun deleteLegacyCopy(row: MessageBlobPartRowDto) {
+        attachmentDao.findMessageContext(row.messageId)
             ?.senderContactId
             ?.let { senderContactId ->
-                fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
+                fileDataSource.deleteLegacyContactAttachment(senderContactId, row.partId)
             }
     }
 }

@@ -9,6 +9,7 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
+import com.cbgm.sparrow.data.database.model.MessageTextPartRowDto
 import kotlinx.coroutines.flow.Flow
 
 /** Chats-owned group conversation, history, receipt, reaction and verification persistence. */
@@ -34,6 +35,9 @@ internal class GroupConversationHistoryDataSource(
         fromMessageId: String
     ): Flow<List<MessageEntity>> =
         chatDao.observeMessagesFromCursor(conversationId, fromTimestamp, fromMessageId)
+
+    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<List<MessageTextPartRowDto>> =
+        chatDao.observeTextPartsByMessageIds(messageIds)
 
     fun observeMessagesByTransportModes(
         groupId: String,

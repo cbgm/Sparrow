@@ -2,8 +2,12 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
+import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
-import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
+import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
+import com.cbgm.sparrow.data.database.entity.MessagePartEntity
+import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
+import com.cbgm.sparrow.data.database.model.MessageBlobPartRowDto
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
 import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
@@ -15,12 +19,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class MessageAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,
+    private val voiceTranscriptDao: VoiceTranscriptDao,
     private val fileDataSource: MessageAttachmentFileDataSource,
     private val blobTransferDataSource: BlobTransferDataSource,
     private val localAttachmentDataSource: LocalAttachmentDataSource
@@ -67,17 +71,12 @@ internal class MessageAttachmentDataSource(
         durationMilliseconds: Long? = null
     ): PreparedMessageAttachmentDto {
         val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds)
-
-        val localFileName =
-            if (type == MessageAttachmentType.VOICE) {
-                null
-            } else {
-                try {
-                    fileDataSource.write(bytes)
-                } catch (error: Throwable) {
-                    blobTransferDataSource.delete(uploaded)
-                    throw error
-                }
+        val localFilePath =
+            try {
+                fileDataSource.write(bytes)
+            } catch (error: Throwable) {
+                blobTransferDataSource.delete(uploaded)
+                throw error
             }
 
         return PreparedMessageAttachmentDto(
@@ -93,32 +92,37 @@ internal class MessageAttachmentDataSource(
                 durationMilliseconds = durationMilliseconds
             ),
             deleteCapability = uploaded.deleteCapability,
-            localFileName = localFileName,
-            payloadBytes = bytes.takeIf { type == MessageAttachmentType.VOICE }
+            localFileName = localFilePath,
+            payloadBytes = null
         )
     }
 
-    suspend fun persistOutgoing(messageId: String, prepared: List<PreparedMessageAttachmentDto>, context: AttachmentMessageContextDto) {
+    suspend fun persistOutgoing(
+        messageId: String,
+        prepared: List<PreparedMessageAttachmentDto>,
+        context: AttachmentMessageContextDto
+    ) {
         if (prepared.isEmpty()) return
         saveMessageContext(messageId, context)
-        attachmentDao.upsertAll(
-            prepared.mapIndexed { index, item ->
-                item.toMessageAttachmentEntity(messageId = messageId, position = index)
-            }
+        attachmentDao.upsertBlobParts(
+            parts = prepared.mapIndexed { index, item -> item.attachment.toMessagePartEntity(messageId, index + 1) },
+            blobs = prepared.map { item -> item.toMessageBlobEntity() }
         )
     }
 
-    suspend fun persistIncoming(messageId: String, attachments: List<ProtocolMessageAttachment>, context: AttachmentMessageContextDto) {
+    suspend fun persistIncoming(
+        messageId: String,
+        attachments: List<ProtocolMessageAttachment>,
+        context: AttachmentMessageContextDto
+    ) {
         if (attachments.isEmpty()) return
         saveMessageContext(messageId, context)
-        attachmentDao.upsertAll(
-            attachments.mapIndexed { index, attachment ->
-                attachment.toMessageAttachmentEntity(
-                    messageId = messageId,
-                    position = index,
+        attachmentDao.upsertBlobParts(
+            parts = attachments.mapIndexed { index, attachment -> attachment.toMessagePartEntity(messageId, index + 1) },
+            blobs = attachments.map { attachment ->
+                attachment.toMessageBlobEntity(
                     deleteCapability = null,
-                    localFileName = null,
-                    payloadBytes = null
+                    localFilePath = null
                 )
             }
         )
@@ -143,13 +147,11 @@ internal class MessageAttachmentDataSource(
         require(conversationId.isNotBlank())
         val normalizedName = displayName.ifBlank { conversationId }
         attachmentDao.updateConversationDisplayName(conversationId, normalizedName, isGroup)
-        // File-system naming is Attachments-owned. Keep existing saved copies in the
-        // same conversation directory when Chats or Contacts changes its display name.
         localAttachmentDataSource.updateSavedConversationName(conversationId, normalizedName)
     }
 
     suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
-        attachmentDao.findByMessageId(messageId).map { entity -> entity.toProtocolMessageAttachment() }
+        attachmentDao.findByMessageId(messageId).map { it.toProtocolMessageAttachment() }
 
     suspend fun loadDetachedBytes(attachment: ProtocolMessageAttachment): ByteArray =
         withContext(Dispatchers.IO) {
@@ -159,12 +161,12 @@ internal class MessageAttachmentDataSource(
     suspend fun cacheIncoming(messageId: String) {
         coroutineScope {
             attachmentDao.findByMessageId(messageId)
-                .map { entity ->
+                .map { row ->
                     async {
                         try {
-                            loadBytes(entity.id)
+                            loadBytes(row.partId)
                         } catch (error: Exception) {
-                            logger.error(error) { "Could not cache message attachment ${entity.id}" }
+                            logger.error(error) { "Could not cache message part ${row.partId}" }
                         }
                     }
                 }.awaitAll()
@@ -172,76 +174,64 @@ internal class MessageAttachmentDataSource(
     }
 
     suspend fun updateTranscript(attachmentId: String, transcript: String) {
-        check(attachmentDao.updateTranscript(attachmentId, transcript) == 1) {
-            "Message attachment disappeared while its transcript was saved"
-        }
+        voiceTranscriptDao.upsert(
+            VoiceTranscriptEntity(
+                partId = attachmentId,
+                transcript = transcript
+            )
+        )
     }
 
     fun observeTranscript(attachmentId: String): Flow<String?> =
-        attachmentDao.observeById(attachmentId)
-            .map { entity -> entity?.transcript }
+        voiceTranscriptDao.observe(attachmentId)
 
     suspend fun resolveLocalFilePath(attachmentId: String): String? =
         withContext(Dispatchers.IO) {
             attachmentDao
                 .findById(attachmentId)
-                ?.localFileName
+                ?.localFilePath
                 ?.let(fileDataSource::resolveCacheFilePath)
         }
 
     suspend fun loadBytes(attachmentId: String): ByteArray =
         withContext(Dispatchers.IO) {
-            val entity = attachmentDao.findById(attachmentId) ?: error("Message attachment was not found")
-            val type = MessageAttachmentType.valueOf(entity.type)
-            val bytes =
-                if (type == MessageAttachmentType.VOICE) {
-                    entity.payloadBytes ?: downloadAndPersistPayload(entity)
-                } else {
-                    entity.localFileName?.let(fileDataSource::read) ?: downloadAndCacheFile(entity)
-                }
+            val row = attachmentDao.findById(attachmentId) ?: error("Message part was not found")
+            val bytes = row.localFilePath?.let(fileDataSource::read) ?: downloadAndCacheFile(row)
 
-            if (type != MessageAttachmentType.VOICE) {
-                localAttachmentDataSource.saveIncomingConversationCopy(entity, bytes)
+            if (row.type != MessageAttachmentType.VOICE.name) {
+                localAttachmentDataSource.saveIncomingConversationCopy(row, bytes)
             }
             bytes
         }
 
-    private suspend fun downloadAndCacheFile(entity: MessageAttachmentEntity): ByteArray {
-        val bytes = blobTransferDataSource.download(entity.toEncryptedBlobReference())
-        val localFileName = fileDataSource.write(bytes)
-        check(attachmentDao.updateLocalFileName(entity.id, localFileName) == 1) {
-            "Message attachment disappeared while it was cached"
+    private suspend fun downloadAndCacheFile(row: MessageBlobPartRowDto): ByteArray {
+        val bytes = blobTransferDataSource.download(row.toEncryptedBlobReference())
+        val localFilePath = fileDataSource.write(bytes)
+        check(attachmentDao.updateLocalFilePath(row.partId, localFilePath) == 1) {
+            "Message part disappeared while it was cached"
         }
         return bytes
     }
 
-    private suspend fun downloadAndPersistPayload(entity: MessageAttachmentEntity): ByteArray {
-        val bytes = blobTransferDataSource.download(entity.toEncryptedBlobReference())
-        check(attachmentDao.updatePayloadBytes(entity.id, bytes) == 1) {
-            "Message attachment disappeared while its payload was cached"
-        }
-        return bytes
-    }
-
-    fun observeByMessageIds(messageIds: List<String>): Flow<List<MessageAttachmentEntity>> =
+    fun observeByMessageIds(messageIds: List<String>): Flow<List<MessageBlobPartRowDto>> =
         attachmentDao.observeByMessageIds(messageIds)
 
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
-        val entities = attachmentDao.findByMessageIds(messageIds)
-        localAttachmentDataSource.delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id))
+        val rows = attachmentDao.findByMessageIds(messageIds)
+        localAttachmentDataSource.delete(rows.mapTo(mutableSetOf(), MessageBlobPartRowDto::partId))
 
-        entities.forEach { entity ->
-            entity.deleteCapability?.let { deleteCapability ->
+        rows.forEach { row ->
+            row.deleteCapability?.let { deleteCapability ->
                 try {
                     blobTransferDataSource.delete(
                         UploadedBlobDto(
-                            reference = entity.toEncryptedBlobReference(),
+                            reference = row.toEncryptedBlobReference(),
                             deleteCapability = deleteCapability
                         )
                     )
                 } catch (error: Throwable) {
-                    logger.error(error) { "Could not delete remote attachment blob ${entity.blobId}" }
+                    logger.error(error) { "Could not delete remote message blob ${row.blobId}" }
                 }
             }
         }
@@ -252,44 +242,41 @@ internal class MessageAttachmentDataSource(
         prepared.forEach { item ->
             try {
                 item.localFileName?.let(fileDataSource::delete)
-                item.deleteCapability.let { capability ->
-                    blobTransferDataSource.delete(
-                        UploadedBlobDto(
-                            reference = item.attachment.blob,
-                            deleteCapability = capability
-                        )
+                blobTransferDataSource.delete(
+                    UploadedBlobDto(
+                        reference = item.attachment.blob,
+                        deleteCapability = item.deleteCapability
                     )
-                }
-            } catch (e: Exception) {
-                logger.error(e) { "Failed to cleanup prepared attachment during rollback" }
+                )
+            } catch (error: Exception) {
+                logger.error(error) { "Failed to cleanup prepared message blob during rollback" }
             }
         }
     }
 
-    private fun PreparedMessageAttachmentDto.toMessageAttachmentEntity(
+    private fun ProtocolMessageAttachment.toMessagePartEntity(
         messageId: String,
         position: Int
-    ): MessageAttachmentEntity =
-        attachment.toMessageAttachmentEntity(
-            messageId = messageId,
-            position = position,
-            deleteCapability = deleteCapability,
-            localFileName = localFileName,
-            payloadBytes = payloadBytes
-        )
-
-    private fun ProtocolMessageAttachment.toMessageAttachmentEntity(
-        messageId: String,
-        position: Int,
-        deleteCapability: String?,
-        localFileName: String?,
-        payloadBytes: ByteArray? = null
-    ): MessageAttachmentEntity =
-        MessageAttachmentEntity(
+    ): MessagePartEntity =
+        MessagePartEntity(
             id = attachmentId,
             messageId = messageId,
             position = position,
-            type = type.name,
+            type = type.name
+        )
+
+    private fun PreparedMessageAttachmentDto.toMessageBlobEntity(): MessageBlobEntity =
+        attachment.toMessageBlobEntity(
+            deleteCapability = deleteCapability,
+            localFilePath = localFileName
+        )
+
+    private fun ProtocolMessageAttachment.toMessageBlobEntity(
+        deleteCapability: String?,
+        localFilePath: String?
+    ): MessageBlobEntity =
+        MessageBlobEntity(
+            partId = attachmentId,
             mimeType = mimeType,
             byteSize = byteSize,
             fileName = fileName,
@@ -305,14 +292,12 @@ internal class MessageAttachmentDataSource(
             nonce = blob.nonce.copyOf(),
             ciphertextSha256 = blob.ciphertextSha256.copyOf(),
             deleteCapability = deleteCapability,
-            localFileName = localFileName,
-            payloadBytes = payloadBytes,
-            transcript = null
+            localFilePath = localFilePath
         )
 
-    private fun MessageAttachmentEntity.toProtocolMessageAttachment(): ProtocolMessageAttachment =
+    private fun MessageBlobPartRowDto.toProtocolMessageAttachment(): ProtocolMessageAttachment =
         ProtocolMessageAttachment(
-            attachmentId = id,
+            attachmentId = partId,
             type = MessageAttachmentType.valueOf(type),
             mimeType = mimeType,
             byteSize = byteSize,
@@ -323,7 +308,7 @@ internal class MessageAttachmentDataSource(
             blob = toEncryptedBlobReference()
         )
 
-    private fun MessageAttachmentEntity.toEncryptedBlobReference(): EncryptedBlobReference =
+    private fun MessageBlobPartRowDto.toEncryptedBlobReference(): EncryptedBlobReference =
         EncryptedBlobReference(
             nodeId = nodeId,
             blobId = blobId,

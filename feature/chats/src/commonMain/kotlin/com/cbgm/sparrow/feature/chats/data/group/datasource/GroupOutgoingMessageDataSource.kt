@@ -37,16 +37,19 @@ class GroupOutgoingMessageDataSource(
 
     suspend fun markReadReceiptSent(messageId: String): Int = chatDao.markReadReceiptSent(messageId)
 
-    suspend fun saveMessage(message: MessageEntity) {
-        chatDao.upsertMessage(message)
+    suspend fun findMessageText(messageId: String): String? = chatDao.findMessageText(messageId)
+
+    suspend fun replaceMessageText(messageId: String, text: String) {
+        chatDao.replaceMessageText(messageId, text)
     }
 
     suspend fun saveOutgoingMessage(
         message: MessageEntity,
+        text: String,
         recipientStates: List<MessageRecipientStateEntity>,
         timestamp: Long
     ) {
-        chatDao.upsertOutgoingGroupMessage(message, recipientStates, timestamp)
+        chatDao.upsertOutgoingGroupMessage(message, text, recipientStates, timestamp)
     }
 
     suspend fun deleteMessages(messages: List<MessageEntity>) {

@@ -4,7 +4,7 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
-import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupSystemMessage
 
 /** Persists Chats-owned state modified by incoming group lifecycle packets. */
 class GroupIncomingConversationDataSource(
@@ -24,25 +24,21 @@ class GroupIncomingConversationDataSource(
         chatDao.upsertConversation(conversation)
     }
 
-    suspend fun upsertMessage(message: MessageEntity) {
-        chatDao.upsertMessage(message)
+    internal suspend fun upsertMessage(message: GroupSystemMessage) {
+        chatDao.upsertMessageWithText(message.message, message.text)
     }
 
-    suspend fun replaceConversationParticipantsWithMessages(
+    internal suspend fun replaceConversationParticipantsWithMessages(
         conversationId: String,
         participants: List<ConversationParticipantEntity>,
-        messages: List<MessageEntity>
+        messages: List<GroupSystemMessage>
     ) {
-        // Keep ChatDao's existing transaction boundary for participants and their history events.
-        chatDao.replaceConversationParticipantsWithMessages(conversationId, participants, messages)
+        chatDao.replaceConversationParticipants(conversationId, participants)
+        messages.forEach { message -> chatDao.upsertMessageWithText(message.message, message.text) }
     }
 
-    suspend fun upsertConversationParticipant(participant: ConversationParticipantEntity) {
-        chatDao.upsertConversationParticipant(participant)
-    }
-
-    suspend fun applyLocalGroupRemoval(message: MessageEntity) {
-        chatDao.applyLocalGroupRemoval(message)
+    internal suspend fun applyLocalGroupRemoval(message: GroupSystemMessage) {
+        chatDao.applyLocalGroupRemoval(message.message, message.text)
     }
 
     suspend fun deleteConversationParticipants(groupId: String) {

@@ -21,25 +21,25 @@ internal class GroupLocalCleanupDataSource(
         epoch: Int,
         endedAtEpochMilliseconds: Long
     ) {
-        chatDao.applyLocalGroupRemoval(
+        val message =
             GroupMembershipMessageFactory.localMembershipLeft(
                 conversationId = groupId,
                 invitationId = referenceId,
                 epoch = epoch,
                 createdAtEpochMilliseconds = endedAtEpochMilliseconds
             )
-        )
+        chatDao.applyLocalGroupRemoval(message.message, message.text)
         groupKeyDataSource.deleteGroup(groupId)
         groupVerificationDao.deleteByGroupId(groupId)
     }
 
     suspend fun deleteConversationHistory(groupId: String, deletedAtEpochMilliseconds: Long) {
-        chatDao.hideGroupConversation(
+        val marker =
             GroupMembershipMessageFactory.localConversationDeletedMarker(
                 conversationId = groupId,
                 createdAtEpochMilliseconds = deletedAtEpochMilliseconds
             )
-        )
+        chatDao.hideGroupConversation(marker.message, marker.text)
         groupKeyDataSource.deleteGroup(groupId)
         groupVerificationDao.deleteByGroupId(groupId)
         groupAvatarDataSource.deleteLocal(groupId)

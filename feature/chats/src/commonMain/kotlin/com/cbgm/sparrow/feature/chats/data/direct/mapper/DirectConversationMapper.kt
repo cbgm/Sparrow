@@ -25,7 +25,7 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
                 .map { message ->
                     message.toDirectMessage(
                         contactId = requireNotNull(conversation.contactId),
-                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        messageParts = partsByMessageId[message.id].orEmpty(),
                         reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
@@ -39,7 +39,7 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
 
 private fun MessageEntity.toDirectMessage(
     contactId: String,
-    attachmentParts: List<MessagePartDto>,
+    messageParts: List<MessagePartDto>,
     reactions: List<MessageReaction>
 ): DirectMessage =
     DirectMessage(
@@ -57,13 +57,7 @@ private fun MessageEntity.toDirectMessage(
             },
         replyToMessageId = replyToMessageId,
         reactions = reactions,
-        parts =
-            buildList {
-                text
-                    .takeIf(String::isNotBlank)
-                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
-                addAll(attachmentParts)
-            }.map { part -> part.toMessagePart() }
+        parts = messageParts.map { part -> part.toMessagePart() }
     )
 
 private fun String.toMessageSecurity(): MessageSecurity =
