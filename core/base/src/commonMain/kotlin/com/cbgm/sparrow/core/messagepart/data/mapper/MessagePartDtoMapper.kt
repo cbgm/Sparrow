@@ -77,7 +77,8 @@ private fun VoiceDto.toVoice(): Voice =
         id = id,
         mimeType = mimeType,
         byteSize = byteSize,
-        durationMilliseconds = durationMilliseconds
+        durationMilliseconds = durationMilliseconds,
+        localFilePath = localFilePath
     )
 
 private fun LocationDto.toLocation(): Location =

@@ -44,7 +44,8 @@ data class Voice(
     override val id: String,
     val mimeType: String,
     val byteSize: Long,
-    val durationMilliseconds: Long
+    val durationMilliseconds: Long,
+    val localFilePath: String? = null
 ) : MessagePart
 
 data class Location(
@@ -72,3 +73,15 @@ data class PollOption(
     val id: String,
     val text: String
 )
+
+sealed interface MessagePartSource {
+    data object Message : MessagePartSource
+
+    data class GroupPin(
+        val groupId: String
+    ) : MessagePartSource {
+        init {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        }
+    }
+}

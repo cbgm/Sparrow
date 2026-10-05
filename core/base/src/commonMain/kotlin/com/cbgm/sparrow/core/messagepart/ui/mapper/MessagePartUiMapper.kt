@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
@@ -21,7 +22,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 
-fun MessagePart.toMessagePartUi(source: MessagePartSourceUi = MessagePartSourceUi.Message): MessagePartUi =
+fun MessagePart.toMessagePartUi(source: MessagePartSource = MessagePartSource.Message): MessagePartUi =
     when (this) {
         is Text -> toTextUi(source)
         is Image -> toImageUi(source)
@@ -33,14 +34,20 @@ fun MessagePart.toMessagePartUi(source: MessagePartSourceUi = MessagePartSourceU
         is Poll -> toPollUi(source)
     }
 
-private fun Text.toTextUi(source: MessagePartSourceUi): TextUi =
+fun MessagePartSource.toMessagePartSourceUi(): MessagePartSourceUi =
+    when (this) {
+        MessagePartSource.Message -> MessagePartSourceUi.Message
+        is MessagePartSource.GroupPin -> MessagePartSourceUi.GroupPin(groupId)
+    }
+
+private fun Text.toTextUi(source: MessagePartSource): TextUi =
     TextUi(
         id = id,
         text = text,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Image.toImageUi(source: MessagePartSourceUi): ImageUi =
+private fun Image.toImageUi(source: MessagePartSource): ImageUi =
     ImageUi(
         id = id,
         mimeType = mimeType,
@@ -50,10 +57,10 @@ private fun Image.toImageUi(source: MessagePartSourceUi): ImageUi =
         fileName = fileName,
         localFilePath = localFilePath,
         thumbnailFilePath = thumbnailFilePath,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Video.toVideoUi(source: MessagePartSourceUi): VideoUi =
+private fun Video.toVideoUi(source: MessagePartSource): VideoUi =
     VideoUi(
         id = id,
         mimeType = mimeType,
@@ -64,41 +71,42 @@ private fun Video.toVideoUi(source: MessagePartSourceUi): VideoUi =
         durationMilliseconds = durationMilliseconds,
         localFilePath = localFilePath,
         thumbnailFilePath = thumbnailFilePath,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun File.toFileUi(source: MessagePartSourceUi): FileUi =
+private fun File.toFileUi(source: MessagePartSource): FileUi =
     FileUi(
         id = id,
         mimeType = mimeType,
         byteSize = byteSize,
         fileName = fileName,
         localFilePath = localFilePath,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Voice.toVoiceUi(source: MessagePartSourceUi): VoiceUi =
+private fun Voice.toVoiceUi(source: MessagePartSource): VoiceUi =
     VoiceUi(
         id = id,
         mimeType = mimeType,
         byteSize = byteSize,
         durationMilliseconds = durationMilliseconds,
-        source = source
+        localFilePath = localFilePath,
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Location.toLocationUi(source: MessagePartSourceUi): LocationUi =
+private fun Location.toLocationUi(source: MessagePartSource): LocationUi =
     LocationUi(
         id = id,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Contact.toContactUi(source: MessagePartSourceUi): ContactUi =
+private fun Contact.toContactUi(source: MessagePartSource): ContactUi =
     ContactUi(
         id = id,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
 
-private fun Poll.toPollUi(source: MessagePartSourceUi): PollUi =
+private fun Poll.toPollUi(source: MessagePartSource): PollUi =
     PollUi(
         id = id,
         question = question,
@@ -110,5 +118,5 @@ private fun Poll.toPollUi(source: MessagePartSourceUi): PollUi =
         isAnonymous = isAnonymous,
         expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
         closedAtEpochMilliseconds = closedAtEpochMilliseconds,
-        source = source
+        source = source.toMessagePartSourceUi()
     )
