@@ -1,9 +1,16 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.mapper
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.File
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.messagepart.domain.model.Location
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.messagepart.domain.model.Video
+import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
-import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
-import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
@@ -19,23 +26,36 @@ private fun MessagePart.toMessagePartUi(
     attachmentSource: AttachmentSource
 ): MessagePartUi =
     when (this) {
-        is MessagePart.Text ->
+        is Text ->
             MessagePartUi.Text(
                 text = text,
                 isContentFailed = false
             )
 
-        is MessagePart.ImageVideo ->
+        is Image ->
             MessagePartUi.ImageVideo(
                 id = id,
                 media =
                     MediaItemUi(
                         id = id,
-                        type =
-                            when (type) {
-                                ImageVideoType.IMAGE -> MediaTypeUi.IMAGE
-                                ImageVideoType.VIDEO -> MediaTypeUi.VIDEO
-                            },
+                        type = MediaTypeUi.IMAGE,
+                        mimeType = mimeType,
+                        width = width,
+                        height = height,
+                        durationMilliseconds = null
+                    ),
+                byteSize = byteSize,
+                fileName = fileName,
+                attachmentSource = attachmentSource
+            )
+
+        is Video ->
+            MessagePartUi.ImageVideo(
+                id = id,
+                media =
+                    MediaItemUi(
+                        id = id,
+                        type = MediaTypeUi.VIDEO,
                         mimeType = mimeType,
                         width = width,
                         height = height,
@@ -46,7 +66,7 @@ private fun MessagePart.toMessagePartUi(
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.File ->
+        is File ->
             MessagePartUi.File(
                 id = id,
                 mimeType = mimeType,
@@ -55,19 +75,19 @@ private fun MessagePart.toMessagePartUi(
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.Location ->
+        is Location ->
             MessagePartUi.Location(
                 id = id,
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.Contact ->
+        is Contact ->
             MessagePartUi.Contact(
                 id = id,
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.Voice ->
+        is Voice ->
             MessagePartUi.Voice(
                 id = id,
                 mimeType = mimeType,
@@ -76,7 +96,7 @@ private fun MessagePart.toMessagePartUi(
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.Poll ->
+        is Poll ->
             MessagePartUi.Poll(
                 id = id,
                 question = question,

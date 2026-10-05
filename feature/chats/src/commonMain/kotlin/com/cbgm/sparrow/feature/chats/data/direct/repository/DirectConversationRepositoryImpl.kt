@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
-import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
@@ -74,11 +74,11 @@ class DirectConversationRepositoryImpl(
                 conversation?.let {
                     val parts =
                         attachmentsByMessageId
-                            .mapValues { (_, values) -> values.toMessagePartDtos().toMutableList() }
+                            .mapValues { (_, values) -> values.toMutableList() }
                             .toMutableMap()
                     loadedTextParts.forEach { (messageId, textParts) ->
                         parts.getOrPut(messageId) { mutableListOf() }
-                            .addAll(0, textParts)
+                            .addAll(0, textParts.map { part -> part.toMessagePart() })
                     }
                     DirectConversationSnapshotDto(
                         conversation = ConversationWithMessagesDto(it, loadedMessages),
@@ -166,7 +166,7 @@ class DirectConversationRepositoryImpl(
 
     private data class DirectConversationSnapshotDto(
         val conversation: ConversationWithMessagesDto,
-        val partsByMessageId: Map<String, List<MessagePartDto>>,
+        val partsByMessageId: Map<String, List<MessagePart>>,
         val reactionsByMessageId: Map<String, List<MessageReaction>>
     )
 

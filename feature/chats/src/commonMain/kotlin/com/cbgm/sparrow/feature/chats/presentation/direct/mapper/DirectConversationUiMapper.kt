@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
+import com.cbgm.sparrow.core.messagepart.domain.model.File
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
@@ -86,12 +88,12 @@ private fun String?.toDirectReplyPreview(
 
 private fun List<MessagePart>?.toReplyPreviewText(): String? =
     this
-        ?.filterIsInstance<MessagePart.Text>()
+        ?.filterIsInstance<Text>()
         ?.firstOrNull()
         ?.text
         ?.takeIf(String::isNotBlank)
         ?: this
-            ?.filterIsInstance<MessagePart.File>()
+            ?.filterIsInstance<File>()
             ?.firstOrNull()
             ?.fileName
             ?.takeIf(String::isNotBlank)

@@ -1,10 +1,16 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.File
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.messagepart.domain.model.Location
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.messagepart.domain.model.Video
+import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
-import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
@@ -36,7 +42,7 @@ internal fun GroupPinEntity.toDomain(
                     buildList {
                         content.text
                             .takeIf(String::isNotBlank)
-                            ?.let { text -> add(MessagePart.Text(text)) }
+                            ?.let { text -> add(Text(id = messageId, text = text)) }
                         addAll(content.attachments.map(MessageAttachment::toMessagePart))
                     }
             ),
@@ -113,16 +119,19 @@ internal fun unpinnedGroupPinEntity(
 
 private fun MessageAttachment.toMessagePart(): MessagePart =
     when (type) {
-        MessageAttachmentType.IMAGE,
-        MessageAttachmentType.VIDEO ->
-            MessagePart.ImageVideo(
+        MessageAttachmentType.IMAGE ->
+            Image(
                 id = attachmentId,
-                type =
-                    if (type == MessageAttachmentType.IMAGE) {
-                        ImageVideoType.IMAGE
-                    } else {
-                        ImageVideoType.VIDEO
-                    },
+                mimeType = mimeType,
+                byteSize = byteSize,
+                fileName = fileName,
+                width = width,
+                height = height
+            )
+
+        MessageAttachmentType.VIDEO ->
+            Video(
+                id = attachmentId,
                 mimeType = mimeType,
                 byteSize = byteSize,
                 fileName = fileName,
@@ -132,17 +141,17 @@ private fun MessageAttachment.toMessagePart(): MessagePart =
             )
 
         MessageAttachmentType.FILE ->
-            MessagePart.File(
+            File(
                 id = attachmentId,
                 mimeType = mimeType,
                 byteSize = byteSize,
                 fileName = fileName ?: attachmentId
             )
 
-        MessageAttachmentType.LOCATION -> MessagePart.Location(id = attachmentId)
-        MessageAttachmentType.CONTACT -> MessagePart.Contact(id = attachmentId)
+        MessageAttachmentType.LOCATION -> Location(id = attachmentId)
+        MessageAttachmentType.CONTACT -> Contact(id = attachmentId)
         MessageAttachmentType.VOICE ->
-            MessagePart.Voice(
+            Voice(
                 id = attachmentId,
                 mimeType = mimeType,
                 byteSize = byteSize,

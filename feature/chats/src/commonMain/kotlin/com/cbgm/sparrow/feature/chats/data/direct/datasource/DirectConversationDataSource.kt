@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.direct.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
@@ -9,7 +11,6 @@ import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -64,7 +65,7 @@ class DirectConversationDataSource(
                 .mapValues { (_, messageParts) ->
                     messageParts.sortedBy { part -> part.position }
                         .mapNotNull { part ->
-                            textByPartId[part.id]?.let { text -> MessagePartDto.TextDto(text.text) }
+                            textByPartId[part.id]?.let { text -> TextDto(id = part.id, text = text.text) }
                         }
                 }
         }

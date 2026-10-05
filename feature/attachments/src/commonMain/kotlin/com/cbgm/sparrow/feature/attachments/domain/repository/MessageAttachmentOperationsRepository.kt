@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +27,7 @@ interface MessageAttachmentOperationsRepository {
     suspend fun cleanupPrepared(prepared: List<PreparedMessageAttachment>)
 
     /** Chats owns paging and supplies the visible message IDs. */
-    fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessageAttachment>>>
+    fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>>
 
     /** Non-blocking, deduplicated, best-effort caching after a message is received. */
     fun cacheIncoming(messageId: String)

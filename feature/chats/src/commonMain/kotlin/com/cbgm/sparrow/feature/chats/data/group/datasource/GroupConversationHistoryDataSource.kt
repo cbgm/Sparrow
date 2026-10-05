@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
@@ -9,7 +11,6 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -47,7 +48,7 @@ internal class GroupConversationHistoryDataSource(
                 .mapValues { (_, messageParts) ->
                     messageParts.sortedBy { part -> part.position }
                         .mapNotNull { part ->
-                            textByPartId[part.id]?.let { text -> MessagePartDto.TextDto(text.text) }
+                            textByPartId[part.id]?.let { text -> TextDto(id = part.id, text = text.text) }
                         }
                 }
         }

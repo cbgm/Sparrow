@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
@@ -13,8 +15,6 @@ import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentO
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
-import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
@@ -98,11 +98,11 @@ internal class GroupConversationRepositoryImpl(
                 ) { conversation, loadedMessages, attachmentsByMessageId, loadedTextParts, reactions ->
                     val parts =
                         attachmentsByMessageId
-                            .mapValues { (_, values) -> values.toMessagePartDtos().toMutableList() }
+                            .mapValues { (_, values) -> values.toMutableList() }
                             .toMutableMap()
                     loadedTextParts.forEach { (messageId, textParts) ->
                         parts.getOrPut(messageId) { mutableListOf() }
-                            .addAll(0, textParts)
+                            .addAll(0, textParts.map { part -> part.toMessagePart() })
                     }
                     MessageSnapshotDto(
                         conversation = conversation,
@@ -208,7 +208,7 @@ internal class GroupConversationRepositoryImpl(
     private data class MessageSnapshotDto(
         val conversation: ConversationEntity?,
         val messages: List<MessageEntity>,
-        val partsByMessageId: Map<String, List<MessagePartDto>>,
+        val partsByMessageId: Map<String, List<MessagePart>>,
         val reactionsByMessageId: Map<String, List<MessageReaction>>
     )
 

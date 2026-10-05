@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDomain
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageAttachmentsByMessageId
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
@@ -52,9 +52,13 @@ internal class MessageAttachmentOperationsRepositoryImpl(
 
     override suspend fun cleanupPrepared(prepared: List<PreparedMessageAttachment>) = dataSource.cleanupPrepared(prepared.map { it.toDto() })
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessageAttachment>>> =
+    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
         dataSource.observeByMessageIds(messageIds)
-            .map { partsByMessageId -> partsByMessageId.toMessageAttachmentsByMessageId() }
+            .map { partsByMessageId ->
+                partsByMessageId.mapValues { (_, parts) ->
+                    parts.map { part -> part.toMessagePart() }
+                }
+            }
 
     override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
 }
