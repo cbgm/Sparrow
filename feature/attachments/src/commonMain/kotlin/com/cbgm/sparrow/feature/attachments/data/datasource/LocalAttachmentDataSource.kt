@@ -11,6 +11,7 @@ import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtos
+import com.cbgm.sparrow.feature.attachments.data.mapper.toSavedFileMetadata
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -136,19 +137,6 @@ internal class LocalAttachmentDataSource(
 
     private fun MessagePartDto.isManagedLocalPart(): Boolean =
         this is ImageDto || this is VideoDto || this is FileDto || this is VoiceDto
-
-    private fun MessagePartDto.toSavedFileMetadata(): SavedFileMetadata? =
-        when (this) {
-            is ImageDto -> SavedFileMetadata(isMedia = true, mimeType = mimeType)
-            is VideoDto -> SavedFileMetadata(isMedia = true, mimeType = mimeType)
-            is FileDto -> SavedFileMetadata(isMedia = false, mimeType = mimeType)
-            else -> null
-        }
-
-    private data class SavedFileMetadata(
-        val isMedia: Boolean,
-        val mimeType: String
-    )
 
     private data class StoredPart(
         val conversationId: String,

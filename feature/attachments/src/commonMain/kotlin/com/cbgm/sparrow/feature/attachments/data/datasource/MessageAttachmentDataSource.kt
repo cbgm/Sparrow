@@ -4,17 +4,21 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
-import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toEncryptedBlobReferenceDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toEntity
+import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageBlobEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtosByMessageId
+import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartEntity
+import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocol
+import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocolMessageAttachment
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
 import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
-import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
-import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -73,12 +77,12 @@ internal class MessageAttachmentDataSource(
         height: Int? = null,
         durationMilliseconds: Long? = null
     ): PreparedMessageAttachmentDto {
-        val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds)
+        val (blobReference, deleteCapability) = blobTransferDataSource.upload(bytes, retentionMilliseconds)
         val localFilePath =
             try {
                 fileDataSource.write(bytes)
             } catch (error: Throwable) {
-                blobTransferDataSource.delete(uploaded)
+                blobTransferDataSource.delete(blobReference, deleteCapability)
                 throw error
             }
 
@@ -88,13 +92,13 @@ internal class MessageAttachmentDataSource(
                 type = type,
                 mimeType = mimeType,
                 byteSize = bytes.size.toLong(),
-                blob = uploaded.reference,
+                blob = blobReference.toProtocol(),
                 fileName = fileName,
                 width = width,
                 height = height,
                 durationMilliseconds = durationMilliseconds
             ),
-            deleteCapability = uploaded.deleteCapability,
+            deleteCapability = deleteCapability,
             localFileName = localFilePath,
             payloadBytes = null
         )
@@ -133,17 +137,7 @@ internal class MessageAttachmentDataSource(
 
     private suspend fun saveMessageContext(messageId: String, context: AttachmentMessageContextDto) {
         require(context.conversationId.isNotBlank())
-        attachmentDao.upsertMessageContext(
-            AttachmentMessageContextEntity(
-                messageId = messageId,
-                conversationId = context.conversationId,
-                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
-                displayName = context.displayName.ifBlank { context.conversationId },
-                isGroup = context.isGroup,
-                isMine = context.isMine,
-                senderContactId = context.senderContactId
-            )
-        )
+        attachmentDao.upsertMessageContext(context.toEntity(messageId))
     }
 
     suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) {
@@ -165,7 +159,7 @@ internal class MessageAttachmentDataSource(
 
     suspend fun loadDetachedBytes(attachment: ProtocolMessageAttachment): ByteArray =
         withContext(Dispatchers.IO) {
-            blobTransferDataSource.download(attachment.blob)
+            blobTransferDataSource.download(attachment.blob.toDto())
         }
 
     suspend fun cacheIncoming(messageId: String) {
@@ -220,7 +214,7 @@ internal class MessageAttachmentDataSource(
         }
 
     private suspend fun downloadAndCacheFile(blob: MessageBlobEntity): ByteArray {
-        val bytes = blobTransferDataSource.download(blob.toEncryptedBlobReference())
+        val bytes = blobTransferDataSource.download(blob.toEncryptedBlobReferenceDto())
         val localFilePath = fileDataSource.write(bytes)
         check(attachmentDao.updateLocalFilePath(blob.partId, localFilePath) == 1) {
             "Message part disappeared while it was cached"
@@ -247,10 +241,8 @@ internal class MessageAttachmentDataSource(
             blob.deleteCapability?.let { deleteCapability ->
                 try {
                     blobTransferDataSource.delete(
-                        UploadedBlobDto(
-                            reference = blob.toEncryptedBlobReference(),
-                            deleteCapability = deleteCapability
-                        )
+                        reference = blob.toEncryptedBlobReferenceDto(),
+                        deleteCapability = deleteCapability
                     )
                 } catch (error: Throwable) {
                     logger.error(error) { "Could not delete remote message blob ${blob.blobId}" }
@@ -265,10 +257,8 @@ internal class MessageAttachmentDataSource(
             try {
                 item.localFileName?.let(fileDataSource::delete)
                 blobTransferDataSource.delete(
-                    UploadedBlobDto(
-                        reference = item.attachment.blob,
-                        deleteCapability = item.deleteCapability
-                    )
+                    reference = item.attachment.blob.toDto(),
+                    deleteCapability = item.deleteCapability
                 )
             } catch (error: Exception) {
                 logger.error(error) { "Failed to cleanup prepared message blob during rollback" }
@@ -282,70 +272,4 @@ internal class MessageAttachmentDataSource(
         } else {
             attachmentDao.findBlobsByPartIds(parts.map(MessagePartEntity::id))
         }
-
-    private fun ProtocolMessageAttachment.toMessagePartEntity(
-        messageId: String,
-        position: Int
-    ): MessagePartEntity =
-        MessagePartEntity(
-            id = attachmentId,
-            messageId = messageId,
-            position = position,
-            type = type.name
-        )
-
-    private fun PreparedMessageAttachmentDto.toMessageBlobEntity(): MessageBlobEntity =
-        attachment.toMessageBlobEntity(
-            deleteCapability = deleteCapability,
-            localFilePath = localFileName
-        )
-
-    private fun ProtocolMessageAttachment.toMessageBlobEntity(
-        deleteCapability: String?,
-        localFilePath: String?
-    ): MessageBlobEntity =
-        MessageBlobEntity(
-            partId = attachmentId,
-            mimeType = mimeType,
-            byteSize = byteSize,
-            fileName = fileName,
-            width = width,
-            height = height,
-            durationMilliseconds = durationMilliseconds,
-            nodeId = blob.nodeId,
-            blobId = blob.blobId,
-            readCapability = blob.readCapability,
-            ciphertextByteSize = blob.ciphertextByteSize,
-            blobExpiresAtEpochMilliseconds = blob.expiresAtEpochMilliseconds,
-            encryptionKey = blob.encryptionKey.copyOf(),
-            nonce = blob.nonce.copyOf(),
-            ciphertextSha256 = blob.ciphertextSha256.copyOf(),
-            deleteCapability = deleteCapability,
-            localFilePath = localFilePath
-        )
-
-    private fun MessagePartEntity.toProtocolMessageAttachment(blob: MessageBlobEntity): ProtocolMessageAttachment =
-        ProtocolMessageAttachment(
-            attachmentId = id,
-            type = MessageAttachmentType.valueOf(type),
-            mimeType = blob.mimeType,
-            byteSize = blob.byteSize,
-            fileName = blob.fileName,
-            width = blob.width,
-            height = blob.height,
-            durationMilliseconds = blob.durationMilliseconds,
-            blob = blob.toEncryptedBlobReference()
-        )
-
-    private fun MessageBlobEntity.toEncryptedBlobReference(): EncryptedBlobReference =
-        EncryptedBlobReference(
-            nodeId = nodeId,
-            blobId = blobId,
-            readCapability = readCapability,
-            ciphertextByteSize = ciphertextByteSize,
-            expiresAtEpochMilliseconds = blobExpiresAtEpochMilliseconds,
-            encryptionKey = encryptionKey.copyOf(),
-            nonce = nonce.copyOf(),
-            ciphertextSha256 = ciphertextSha256.copyOf()
-        )
 }

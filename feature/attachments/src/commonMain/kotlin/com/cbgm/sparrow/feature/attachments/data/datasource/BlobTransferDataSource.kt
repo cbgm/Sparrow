@@ -1,17 +1,16 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
+import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
-import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
@@ -39,7 +38,7 @@ internal class BlobTransferDataSource(
     suspend fun upload(
         plaintext: ByteArray,
         retentionMilliseconds: Long
-    ): UploadedBlobDto {
+    ): Pair<EncryptedBlobReferenceDto, String> {
         require(plaintext.isNotEmpty()) { "Attachment blob must not be empty" }
         require(retentionMilliseconds > 0L) { "Blob retention must be positive" }
 
@@ -48,7 +47,7 @@ internal class BlobTransferDataSource(
         val deleteCapability = capability()
         val associatedData = associatedData(blobId)
         val encrypted = blobCipher.encrypt(plaintext, associatedData).getOrThrow()
-        check(encrypted.ciphertext.size.toLong() <= EncryptedBlobReference.MAX_BLOB_CIPHERTEXT_BYTES) {
+        check(encrypted.ciphertext.size.toLong() <= MAX_BLOB_CIPHERTEXT_BYTES) {
             "Encrypted blob exceeds the supported client size"
         }
         val now = SystemClock.nowEpochMilliseconds()
@@ -90,23 +89,19 @@ internal class BlobTransferDataSource(
             "Blob upload failed with HTTP ${response.status.value}"
         }
 
-        return UploadedBlobDto(
-            reference =
-                EncryptedBlobReference(
-                    nodeId = ticket.nodeId,
-                    blobId = blobId,
-                    readCapability = readCapability,
-                    ciphertextByteSize = encrypted.ciphertext.size.toLong(),
-                    expiresAtEpochMilliseconds = ticket.blobExpiresAtEpochMilliseconds,
-                    encryptionKey = encrypted.key,
-                    nonce = encrypted.nonce,
-                    ciphertextSha256 = cryptoHash.sha256(encrypted.ciphertext)
-                ),
-            deleteCapability = deleteCapability
-        )
+        return EncryptedBlobReferenceDto(
+            nodeId = ticket.nodeId,
+            blobId = blobId,
+            readCapability = readCapability,
+            ciphertextByteSize = encrypted.ciphertext.size.toLong(),
+            expiresAtEpochMilliseconds = ticket.blobExpiresAtEpochMilliseconds,
+            encryptionKey = encrypted.key,
+            nonce = encrypted.nonce,
+            ciphertextSha256 = cryptoHash.sha256(encrypted.ciphertext)
+        ) to deleteCapability
     }
 
-    suspend fun download(reference: EncryptedBlobReference): ByteArray {
+    suspend fun download(reference: EncryptedBlobReferenceDto): ByteArray {
         val endpoint = resolveBlobEndpoint(reference.nodeId)
         val response =
             httpClient.get("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
@@ -128,12 +123,14 @@ internal class BlobTransferDataSource(
             ).getOrThrow()
     }
 
-    suspend fun delete(uploadedBlob: UploadedBlobDto) {
-        val reference = uploadedBlob.reference
+    suspend fun delete(
+        reference: EncryptedBlobReferenceDto,
+        deleteCapability: String
+    ) {
         val endpoint = resolveBlobEndpoint(reference.nodeId)
         val response =
             httpClient.delete("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
-                bearerAuth(uploadedBlob.deleteCapability)
+                bearerAuth(deleteCapability)
             }
         check(response.status.isSuccess() || response.status.value == HTTP_NOT_FOUND) {
             "Blob delete failed with HTTP ${response.status.value}"
@@ -141,7 +138,7 @@ internal class BlobTransferDataSource(
     }
 
     private suspend fun HttpResponse.readExactly(expectedBytes: Long): ByteArray {
-        require(expectedBytes in 1..EncryptedBlobReference.MAX_BLOB_CIPHERTEXT_BYTES) {
+        require(expectedBytes in 1..MAX_BLOB_CIPHERTEXT_BYTES) {
             "Invalid blob ciphertext size"
         }
         val expectedSize = expectedBytes.toInt()
@@ -198,6 +195,7 @@ internal class BlobTransferDataSource(
         const val CAPABILITY_BYTES = 32
         const val TICKET_TIMEOUT_MILLISECONDS = 10_000L
         const val HTTP_NOT_FOUND = 404
+        const val MAX_BLOB_CIPHERTEXT_BYTES = 128L * 1024L * 1024L
         const val HEX = "0123456789abcdef"
     }
 }

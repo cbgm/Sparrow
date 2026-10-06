@@ -67,6 +67,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
@@ -582,34 +583,6 @@ private fun AttachmentFileRow(
 private fun AttachmentFileSelectionIndicator(selected: Boolean) {
     if (selected) Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
 }
-
-private fun MessagePartUi.toMediaItemUi(): MediaItemUi =
-    when (this) {
-        is ImageUi ->
-            MediaItemUi(
-                id = id,
-                type = MediaTypeUi.IMAGE,
-                mimeType = mimeType,
-                localFilePath = localFilePath,
-                thumbnailFilePath = thumbnailFilePath,
-                width = width,
-                height = height
-            )
-
-        is VideoUi ->
-            MediaItemUi(
-                id = id,
-                type = MediaTypeUi.VIDEO,
-                mimeType = mimeType,
-                localFilePath = localFilePath,
-                thumbnailFilePath = thumbnailFilePath,
-                width = width,
-                height = height,
-                durationMilliseconds = durationMilliseconds
-            )
-
-        else -> error("Message part $id is not visual media")
-    }
 
 @Preview
 @Composable
