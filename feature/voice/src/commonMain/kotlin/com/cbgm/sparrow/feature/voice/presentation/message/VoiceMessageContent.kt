@@ -42,10 +42,13 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptCue
@@ -66,9 +69,10 @@ import kotlin.math.roundToInt
 
 @Composable
 fun VoiceMessageContent(
-    target: VoiceMessageTarget,
+    part: VoiceUi,
     modifier: Modifier = Modifier
 ) {
+    val target = part.toVoiceMessageTarget()
     val viewModel =
         koinViewModel<VoiceMessageViewModel>(key = target.stableKey) {
             parametersOf(target)
@@ -76,7 +80,7 @@ fun VoiceMessageContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     VoiceMessageContentBody(
-        durationMilliseconds = target.durationMilliseconds,
+        durationMilliseconds = part.durationMilliseconds,
         playbackPositionMilliseconds = uiState.playbackPositionMilliseconds,
         isPlaying = uiState.isPlaying,
         waveform = emptyList(),
@@ -320,6 +324,16 @@ private fun TranscriptScroll(
     }
 }
 
+private fun VoiceUi.toVoiceMessageTarget(): VoiceMessageTarget =
+    VoiceMessageTarget(
+        attachmentId = id,
+        durationMilliseconds = durationMilliseconds,
+        source = when (val partSource = source) {
+            MessagePartSourceUi.Message -> AttachmentSource.Message
+            is MessagePartSourceUi.GroupPin -> AttachmentSource.GroupPin(partSource.groupId)
+        }
+    )
+
 private fun Long.positionAt(progress: Float): Long =
     (coerceAtLeast(0L).toFloat() * progress.coerceIn(0f, 1f)).roundToInt().toLong()
 
@@ -547,8 +561,10 @@ private fun calculateTranscriptTargetScroll(
 private fun VoiceMessageContentPreview() {
     SparrowTheme {
         VoiceMessageContent(
-            target = VoiceMessageTarget(
-                attachmentId = "1",
+            part = VoiceUi(
+                id = "1",
+                mimeType = "audio/wav",
+                byteSize = 0L,
                 durationMilliseconds = 10000L
             ),
             modifier = Modifier.fillMaxWidth()

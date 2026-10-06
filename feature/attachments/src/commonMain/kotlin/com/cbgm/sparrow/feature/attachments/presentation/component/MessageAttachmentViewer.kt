@@ -16,25 +16,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
-import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageAttachmentViewer(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessagePartUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -46,30 +50,33 @@ fun MessageAttachmentViewer(
         } ?: return
 
     when (selectedAttachment) {
-        is MessageAttachmentUi.ImageVideoAttachmentUi ->
+        is ImageUi,
+        is VideoUi ->
             MessageMediaViewer(
-                attachments = attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>(),
+                attachments = attachments.filter { part -> part is ImageUi || part is VideoUi },
                 selectedAttachmentId = selectedAttachmentId,
                 canSaveToCameraRoll = canSaveToCameraRoll,
                 onDismiss = onDismiss,
                 onError = onError
             )
 
-        is MessageAttachmentUi.LocationAttachmentUi ->
+        is LocationUi ->
             MessageLocationViewer(
                 attachment = selectedAttachment,
                 onDismiss = onDismiss,
                 onError = onError
             )
 
-        is MessageAttachmentUi.FileAttachmentUi,
-        is MessageAttachmentUi.ContactAttachmentUi -> Unit
+        is FileUi,
+        is ContactUi -> Unit
+
+        else -> Unit
     }
 }
 
 @Composable
 private fun MessageMediaViewer(
-    attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    attachments: List<MessagePartUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -88,7 +95,7 @@ private fun MessageMediaViewer(
 
     val loadedMedia =
         attachments.map { attachment ->
-            val state = rememberAttachmentUiState(attachment.target)
+            val state = rememberAttachmentUiState(attachment)
             val localFilePath =
                 (state as? AttachmentUiState.Ready)
                     ?.content
@@ -116,7 +123,7 @@ private fun MessageMediaViewer(
     val localFilePaths = loadedMedia.associate { (attachment, localFilePath) -> attachment.id to localFilePath }
 
     MediaViewer(
-        media = attachments.map(MessageAttachmentUi.ImageVideoAttachmentUi::media),
+        media = attachments.map { attachment -> attachment.toMediaItemUi() },
         localFilePathProvider = { media -> localFilePaths[media.id] },
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
@@ -154,12 +161,12 @@ private fun MessageMediaViewer(
 
 @Composable
 private fun MessageLocationViewer(
-    attachment: MessageAttachmentUi.LocationAttachmentUi,
+    attachment: LocationUi,
     onDismiss: () -> Unit,
     onError: (String) -> Unit
 ) {
     val locationOpener = rememberLocationOpener()
-    val state = rememberAttachmentUiState(attachment.target)
+    val state = rememberAttachmentUiState(attachment)
     val location =
         (state as? AttachmentUiState.Ready)
             ?.content
@@ -186,14 +193,14 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageAttachmentUi.ImageVideoAttachmentUi(
+                    ImageUi(
                         id = "preview-image",
-                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
+                        mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.ImageVideoAttachmentUi(
+                    VideoUi(
                         id = "preview-video",
-                        media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
+                        mimeType = "video/mp4",
                         byteSize = 0
                     )
                 ),

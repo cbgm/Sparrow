@@ -31,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -40,18 +41,16 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toAttachmentTarget
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.fake_contact_card
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun ContactMessageBubbleBody(
-    contactPart: MessagePartUi.Contact,
+    contactPart: ContactUi,
     onContactClick: (SharedContact) -> Unit
 ) {
-    val attachmentState = rememberAttachmentUiState(contactPart.toAttachmentTarget())
+    val attachmentState = rememberAttachmentUiState(contactPart)
     val contact =
         (attachmentState as? AttachmentUiState.Ready)
             ?.content
@@ -222,7 +221,7 @@ private fun SharedContact.initial(): String =
 private fun ContactMessageBubbleBodyPreview() {
     SparrowTheme {
         ContactMessageBubbleBody(
-            contactPart = MessagePartUi.Contact(id = "preview-contact"),
+            contactPart = ContactUi(id = "preview-contact"),
             onContactClick = {}
         )
     }

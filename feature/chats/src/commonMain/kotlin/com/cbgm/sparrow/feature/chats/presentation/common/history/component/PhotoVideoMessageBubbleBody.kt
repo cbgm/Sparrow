@@ -22,22 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toAttachmentTarget
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
-import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 
 @Composable
 internal fun PhotoVideoMessageBubbleBody(
-    imageVideoParts: List<MessagePartUi.ImageVideo>,
+    imageVideoParts: List<MessagePartUi>,
     onAttachmentClick: (String) -> Unit
 ) {
     Content(
@@ -48,7 +48,7 @@ internal fun PhotoVideoMessageBubbleBody(
 
 @Composable
 private fun Content(
-    imageVideoParts: List<MessagePartUi.ImageVideo>,
+    imageVideoParts: List<MessagePartUi>,
     onAttachmentClick: (String) -> Unit
 ) {
     val visiblePhotoVideoParts = imageVideoParts.take(MAX_PREVIEW_ATTACHMENTS)
@@ -92,10 +92,10 @@ private fun Content(
 
 @Composable
 private fun MessageMediaPreview(
-    imageVideoPart: MessagePartUi.ImageVideo,
+    imageVideoPart: MessagePartUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val attachmentState = rememberAttachmentUiState(imageVideoPart.toAttachmentTarget())
+    val attachmentState = rememberAttachmentUiState(imageVideoPart)
     val localFilePath =
         (attachmentState as? AttachmentUiState.Ready)
             ?.content
@@ -117,7 +117,7 @@ private fun MessageMediaPreview(
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
                 MediaThumbnail(
-                    media = imageVideoPart.media,
+                    media = imageVideoPart.toMediaItemUi(),
                     localFilePath = localFilePath,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -136,7 +136,7 @@ private fun MessageMediaPreview(
                 }
             }
 
-            if (imageVideoPart.media.type == MediaTypeUi.VIDEO) {
+            if (imageVideoPart is VideoUi) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -189,26 +189,10 @@ private fun MediaMessageBubbleBodyPreview() {
         PhotoVideoMessageBubbleBody(
             imageVideoParts =
                 listOf(
-                    MessagePartUi.ImageVideo(
-                        id = "preview-image",
-                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
-                        byteSize = 0
-                    ),
-                    MessagePartUi.ImageVideo(
-                        id = "preview-video",
-                        media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
-                        byteSize = 0
-                    ),
-                    MessagePartUi.ImageVideo(
-                        id = "preview-image-2",
-                        media = MediaItemUi("preview-image-2", MediaTypeUi.IMAGE, "image/jpeg"),
-                        byteSize = 0
-                    ),
-                    MessagePartUi.ImageVideo(
-                        id = "preview-image-3",
-                        media = MediaItemUi("preview-image-3", MediaTypeUi.IMAGE, "image/jpeg"),
-                        byteSize = 0
-                    )
+                    ImageUi(id = "preview-image", mimeType = "image/jpeg", byteSize = 0),
+                    VideoUi(id = "preview-video", mimeType = "video/mp4", byteSize = 0),
+                    ImageUi(id = "preview-image-2", mimeType = "image/jpeg", byteSize = 0),
+                    ImageUi(id = "preview-image-3", mimeType = "image/jpeg", byteSize = 0)
                 ),
             onAttachmentClick = {}
         )

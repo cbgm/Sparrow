@@ -3,6 +3,13 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
@@ -11,7 +18,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.resolveDirectComposerS
 import com.cbgm.sparrow.feature.chats.domain.model.isEditable
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
@@ -57,12 +63,12 @@ internal fun DirectMessage.toMessageBubbleUi(
         reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
             MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
         },
-        imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
-        fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
-        locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
-        contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
-        voicePart = partsUi.filterIsInstance<MessagePartUi.Voice>().firstOrNull(),
-        textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull()
+        imageVideoParts = partsUi.filter { part -> part is ImageUi || part is VideoUi },
+        fileParts = partsUi.filterIsInstance<FileUi>(),
+        locationPart = partsUi.filterIsInstance<LocationUi>().firstOrNull(),
+        contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
+        voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
+        textPart = partsUi.filterIsInstance<TextUi>().firstOrNull()
     )
 }
 

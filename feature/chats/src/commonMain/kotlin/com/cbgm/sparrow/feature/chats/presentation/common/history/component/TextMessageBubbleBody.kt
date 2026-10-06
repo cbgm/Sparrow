@@ -15,17 +15,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.linkpreview.presentation.component.LinkPreview
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.TextContentPart
+import com.cbgm.sparrow.feature.linkpreview.presentation.model.toTextContentParts
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
 @Composable
 internal fun TextMessageBubbleBody(
-    textPart: MessagePartUi.Text,
+    textPart: TextUi,
     safetyWarning: MessageSafetyWarningUi?,
     onSafetyDetailsClick: () -> Unit
 ) {
@@ -41,7 +42,7 @@ internal fun TextMessageBubbleBody(
                 )
             } else {
                 TextContent(
-                    parts = textPart.contentParts,
+                    parts = textPart.text.toTextContentParts(),
                     modifier = Modifier.padding(padding)
                 )
             }
@@ -108,7 +109,8 @@ private fun TextMessageBubbleBodyPreview() {
     SparrowTheme {
         TextMessageBubbleBody(
             textPart =
-                MessagePartUi.Text(
+                TextUi(
+                    id = "preview-text",
                     text = "Encrypted message",
                     isContentFailed = false
                 ),

@@ -34,6 +34,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -41,18 +47,16 @@ import com.cbgm.sparrow.core.ui.theme.attachmentColors
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
-import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import kotlin.math.roundToLong
 
 @Composable
 fun MessageAttachments(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessagePartUi>,
     onAttachmentClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     onOpenError: (String) -> Unit = {}
@@ -61,10 +65,9 @@ fun MessageAttachments(
 
     val previewAttachments =
         attachments.filter { attachment ->
-            attachment is MessageAttachmentUi.ImageVideoAttachmentUi ||
-                attachment is MessageAttachmentUi.LocationAttachmentUi
+            attachment is ImageUi || attachment is VideoUi || attachment is LocationUi
         }
-    val fileItems = attachments.filterIsInstance<MessageAttachmentUi.FileAttachmentUi>()
+    val fileItems = attachments.filterIsInstance<FileUi>()
 
     if (previewAttachments.isNotEmpty()) {
         MessageAttachmentGrid(
@@ -85,7 +88,7 @@ fun MessageAttachments(
 
 @Composable
 private fun MessageAttachmentGrid(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessagePartUi>,
     onAttachmentClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,33 +130,36 @@ private fun MessageAttachmentGrid(
 
 @Composable
 private fun MessageAttachmentPreview(
-    attachment: MessageAttachmentUi,
+    attachment: MessagePartUi,
     onAttachmentClick: (String) -> Unit
 ) {
     when (attachment) {
-        is MessageAttachmentUi.ImageVideoAttachmentUi ->
+        is ImageUi,
+        is VideoUi ->
             MessageVisualAttachment(
                 attachment = attachment,
                 onAttachmentClick = onAttachmentClick
             )
 
-        is MessageAttachmentUi.LocationAttachmentUi ->
+        is LocationUi ->
             MessageLocationAttachment(
                 attachment = attachment,
                 onAttachmentClick = onAttachmentClick
             )
 
-        is MessageAttachmentUi.FileAttachmentUi,
-        is MessageAttachmentUi.ContactAttachmentUi -> Unit
+        is FileUi,
+        is ContactUi -> Unit
+
+        else -> Unit
     }
 }
 
 @Composable
 private fun MessageLocationAttachment(
-    attachment: MessageAttachmentUi.LocationAttachmentUi,
+    attachment: LocationUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val state = rememberAttachmentUiState(attachment.target)
+    val state = rememberAttachmentUiState(attachment)
     val location =
         (state as? AttachmentUiState.Ready)
             ?.content
@@ -205,10 +211,10 @@ private fun MessageLocationAttachment(
 
 @Composable
 private fun MessageVisualAttachment(
-    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
+    attachment: MessagePartUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val state = rememberAttachmentUiState(attachment.target)
+    val state = rememberAttachmentUiState(attachment)
     val localFilePath =
         (state as? AttachmentUiState.Ready)
             ?.content
@@ -230,7 +236,7 @@ private fun MessageVisualAttachment(
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
                 MediaThumbnail(
-                    media = attachment.media,
+                    media = attachment.toMediaItemUi(),
                     localFilePath = localFilePath,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -249,7 +255,7 @@ private fun MessageVisualAttachment(
                 }
             }
 
-            if (attachment.media.type == MediaTypeUi.VIDEO) {
+            if (attachment is VideoUi) {
                 Surface(
                     modifier = Modifier.align(Alignment.Center),
                     shape = MaterialTheme.shapes.circle,
@@ -271,7 +277,7 @@ private fun MessageVisualAttachment(
 
 @Composable
 private fun MessageFileList(
-    attachments: List<MessageAttachmentUi.FileAttachmentUi>,
+    attachments: List<FileUi>,
     onOpenError: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -284,7 +290,7 @@ private fun MessageFileList(
     ) {
         attachments.forEach { attachment ->
             val isOpening = pendingFileId == attachment.id
-            val state = rememberAttachmentUiState(attachment.target, load = isOpening)
+            val state = rememberAttachmentUiState(attachment, load = isOpening)
             val localFilePath =
                 (state as? AttachmentUiState.Ready)
                     ?.content
@@ -401,9 +407,9 @@ private fun MessageAttachmentsPreview() {
         MessageAttachments(
             attachments =
                 listOf(
-                    MessageAttachmentUi.ImageVideoAttachmentUi(
+                    ImageUi(
                         id = "preview-image",
-                        media = MediaItemUi("preview-image", MediaTypeUi.IMAGE, "image/jpeg"),
+                        mimeType = "image/jpeg",
                         byteSize = 0
                     )
                 ),

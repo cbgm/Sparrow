@@ -1,5 +1,12 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.model
 
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -20,13 +27,13 @@ data class MessageBubbleUi(
     val safetyWarning: MessageSafetyWarningUi? = null,
     val reply: MessageReplyUi? = null,
     val reactions: List<MessageReactionUi> = emptyList(),
-    val fileParts: List<MessagePartUi.File> = emptyList(),
-    val imageVideoParts: List<MessagePartUi.ImageVideo> = emptyList(),
-    val locationPart: MessagePartUi.Location? = null,
-    val contactPart: MessagePartUi.Contact? = null,
-    val voicePart: MessagePartUi.Voice? = null,
-    val textPart: MessagePartUi.Text? = null,
-    val pollPart: MessagePartUi.Poll? = null
+    val fileParts: List<FileUi> = emptyList(),
+    val imageVideoParts: List<MessagePartUi> = emptyList(),
+    val locationPart: LocationUi? = null,
+    val contactPart: ContactUi? = null,
+    val voicePart: VoiceUi? = null,
+    val textPart: TextUi? = null,
+    val pollPart: PollUi? = null
 )
 
 data class DeliveryProgressUi(

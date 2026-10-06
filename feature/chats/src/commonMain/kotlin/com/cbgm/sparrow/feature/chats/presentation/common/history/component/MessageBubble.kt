@@ -43,6 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
@@ -57,15 +61,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
-import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_delivered
@@ -307,15 +307,21 @@ private fun BubbleBody(
                         pollId = pollPart.id,
                         question = pollPart.question,
                         description = pollPart.description,
-                        options = pollPart.options,
-                        totalVoters = pollPart.totalVoters,
-                        submittedOptionIds = pollPart.submittedOptionIds,
+                        options = pollPart.options.map { option ->
+                            com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi(
+                                id = option.id,
+                                text = option.text,
+                                voteCount = 0
+                            )
+                        },
+                        totalVoters = 0,
+                        submittedOptionIds = emptySet(),
                         allowMultipleSelection = pollPart.allowMultipleSelection,
                         allowVoteChange = pollPart.allowVoteChange,
                         isAnonymous = pollPart.isAnonymous,
-                        isClosed = pollPart.isClosed,
-                        isExpired = pollPart.isExpired,
-                        expiryLabel = pollPart.expiryLabel
+                        isClosed = pollPart.closedAtEpochMilliseconds != null,
+                        isExpired = false,
+                        expiryLabel = null
                     ),
                     onVoteSubmit = { selectedOptionIds ->
                         // vote submit
@@ -338,14 +344,7 @@ private fun BubbleBody(
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
-                VoiceMessageContent(
-                    target =
-                        VoiceMessageTarget(
-                            attachmentId = voicePart.id,
-                            durationMilliseconds = voicePart.durationMilliseconds,
-                            source = voicePart.attachmentSource
-                        )
-                )
+                VoiceMessageContent(part = voicePart)
             }
         }
 
@@ -427,7 +426,8 @@ private fun BubbleBody(
                 TextMessageBubbleBody(
                     textPart =
                         message.textPart
-                            ?: MessagePartUi.Text(
+                            ?: TextUi(
+                                id = message.id,
                                 text = state.text,
                                 isContentFailed = state.isContentFailed
                             ),
@@ -854,7 +854,8 @@ private fun MessageBubblePreview() {
                             MessageReactionUi(emoji = "🔥", count = 1, reactedByMe = false)
                         ),
                     textPart =
-                        MessagePartUi.Text(
+                        TextUi(
+                            id = "preview-text",
                             text = "Encrypted message",
                             isContentFailed = false
                         )
@@ -878,7 +879,7 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
                     fileParts = listOf(
-                        MessagePartUi.File(
+                        FileUi(
                             id = "preview-file",
                             mimeType = "application/pdf",
                             byteSize = 0,
@@ -886,19 +887,20 @@ private fun MessageBubbleWithAttachmentsPreview() {
                         )
                     ),
                     imageVideoParts = listOf(
-                        MessagePartUi.ImageVideo(
+                        ImageUi(
                             id = "preview-image-1",
-                            media = MediaItemUi("preview-image-1", MediaTypeUi.IMAGE, "image/jpeg"),
+                            mimeType = "image/jpeg",
                             byteSize = 0
                         ),
-                        MessagePartUi.ImageVideo(
+                        VideoUi(
                             id = "preview-video",
-                            media = MediaItemUi("preview-video", MediaTypeUi.VIDEO, "video/mp4"),
+                            mimeType = "video/mp4",
                             byteSize = 0
                         )
                     ),
                     locationPart = null,
-                    textPart = MessagePartUi.Text(
+                    textPart = TextUi(
+                        id = "preview-text",
                         text = "Test message",
                         isContentFailed = false
                     )

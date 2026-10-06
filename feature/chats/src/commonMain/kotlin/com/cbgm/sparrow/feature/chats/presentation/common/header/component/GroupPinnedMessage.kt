@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.time.formatMessageTimestamp
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -44,8 +45,6 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Loca
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.PhotoVideoMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.TextMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_attachment
@@ -170,12 +169,7 @@ internal fun GroupPinnedMessageContent(
 
             message.voicePart?.let { voicePart ->
                 VoiceMessageContent(
-                    target =
-                        VoiceMessageTarget(
-                            attachmentId = voicePart.id,
-                            durationMilliseconds = voicePart.durationMilliseconds,
-                            source = voicePart.attachmentSource
-                        ),
+                    part = voicePart,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -270,7 +264,8 @@ private fun GroupPinnedMessageBarPreview() {
                 contentStatus = MessageContentStatus.READABLE,
                 deliveryStatus = MessageDeliveryStatus.DELIVERED,
                 textPart =
-                    MessagePartUi.Text(
+                    TextUi(
+                        id = "preview-text",
                         text = "I'm free this evening.",
                         isContentFailed = false
                     )
