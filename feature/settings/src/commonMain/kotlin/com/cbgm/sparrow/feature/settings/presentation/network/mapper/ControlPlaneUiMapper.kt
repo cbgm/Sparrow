@@ -52,6 +52,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
     directoryError: ControlPlaneDirectoryError?,
     directoryFailureDetail: String?,
     isRefreshing: Boolean,
+    isAdding: Boolean,
     isDirectorySyncing: Boolean,
     lastDirectoryCount: Int?,
     manualRemovalError: String?
@@ -69,6 +70,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
         directoryError = directoryError,
         directoryFailureDetail = directoryFailureDetail,
         isRefreshing = isRefreshing,
+        isAdding = isAdding,
         isDirectorySyncing = isDirectorySyncing,
         lastDirectoryCount = lastDirectoryCount,
         manualRemovalError = manualRemovalError

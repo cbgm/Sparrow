@@ -13,6 +13,7 @@ data class ControlPlaneSettingsUiState(
     val directoryError: ControlPlaneDirectoryError? = null,
     val directoryFailureDetail: String? = null,
     val isRefreshing: Boolean = false,
+    val isAdding: Boolean = false,
     val isDirectorySyncing: Boolean = false,
     val lastDirectoryCount: Int? = null,
     val manualRemovalError: String? = null

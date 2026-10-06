@@ -6,6 +6,9 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -79,7 +82,10 @@ class HttpControlPlaneDirectorySynchronizer(
     private suspend fun <T> safely(block: suspend () -> T): Result<T> = try {
         Result.success(block())
     } catch (error: Throwable) {
-        if (error is CancellationException) throw error
+        // A timeout of an inner request is a failure while the caller is still active;
+        // only a genuine cancellation of the caller must propagate.
+        val timedOutInside = error is TimeoutCancellationException && currentCoroutineContext().isActive
+        if (error is CancellationException && !timedOutInside) throw error
         Result.failure(error)
     }
 }

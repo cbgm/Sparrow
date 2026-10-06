@@ -135,6 +135,8 @@ fun ControlPlaneSettingsScreen(
         editingDirectory = uiState.isEditingDirectory,
         onSourceChanged = { onUiEvent(ControlPlaneSettingsUiEvent.AddSourceChanged(it)) },
         error = uiState.addError,
+        failureDetail = uiState.directoryFailureDetail,
+        isLoading = uiState.isAdding,
         onValueChanged = { onUiEvent(ControlPlaneSettingsUiEvent.NewUrlChanged(it)) },
         onConfirm = { onUiEvent(ControlPlaneSettingsUiEvent.AddConfirmed) },
         onDismiss = { onUiEvent(ControlPlaneSettingsUiEvent.AddDismissed) }

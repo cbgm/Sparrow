@@ -16,6 +16,8 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,6 +87,7 @@ class ControlPlaneSettingsViewModel(
                     directoryError = action.directoryError,
                     directoryFailureDetail = action.directoryFailureDetail,
                     isRefreshing = action.isRefreshing,
+                    isAdding = action.isAdding,
                     isDirectorySyncing = action.isDirectorySyncing,
                     lastDirectoryCount = action.lastDirectoryCount,
                     manualRemovalError = action.manualRemovalError
@@ -149,92 +152,112 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun addControlPlane() {
+        // A second tap while the first request is still running would only queue
+        // behind the mutex without any visible effect.
+        if (actionState.value.isAdding) return
+        actionState.update {
+            it.copy(isAdding = true, addError = null, directoryFailureDetail = null)
+        }
         viewModelScope.launch {
-            configurationActionMutex.withLock {
-                val raw = newUrl.value.trim()
-                val type = addSource.value
-                val candidate = when (type) {
-                    ControlPlaneAddSource.PLANE -> raw.normalizePlaneOrigin()
-                    ControlPlaneAddSource.SIGNED_DIRECTORY -> raw.normalizeDirectoryOrigin()
-                    ControlPlaneAddSource.JSON_LIST -> raw.normalizeJsonListUrl()
-                }
-                if (actionState.value.editingDirectory && type == ControlPlaneAddSource.PLANE) {
-                    actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
-                    return@withLock
-                }
-                if (candidate == null) {
-                    actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
-                    return@withLock
-                }
-                if (type == ControlPlaneAddSource.PLANE &&
-                    (
-                        candidate == configuration.directoryUrl.value ||
-                            candidate == configuration.jsonDirectoryUrl.value
-                    )
-                ) {
-                    actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
-                    return@withLock
-                }
-                if (type == ControlPlaneAddSource.PLANE && candidate in configuration.manualBaseUrls.value) {
-                    actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
-                    return@withLock
-                }
-                when (type) {
-                    ControlPlaneAddSource.PLANE -> {
-                        configuration.addManual(candidate).fold(
-                            onSuccess = {
-                                clearAddDialogForm()
-                                actionState.update { it.copy(addError = null) }
-                                healthMonitor.refresh()
-                            },
-                            onFailure = { error ->
-                                SparrowLog.withTag("ControlPlaneSettingsViewModel").warn {
-                                    "Manual Control Plane was not saved: ${error.message}"
+            try {
+                configurationActionMutex.withLock {
+                    SparrowLog.withTag("ControlPlaneSettingsViewModel").debug {
+                        "Add started: source=${addSource.value}"
+                    }
+                    val raw = newUrl.value.trim()
+                    val type = addSource.value
+                    val candidate = when (type) {
+                        ControlPlaneAddSource.PLANE -> raw.normalizePlaneOrigin()
+                        ControlPlaneAddSource.SIGNED_DIRECTORY -> raw.normalizeDirectoryOrigin()
+                        ControlPlaneAddSource.JSON_LIST -> raw.normalizeJsonListUrl()
+                    }
+                    if (actionState.value.editingDirectory && type == ControlPlaneAddSource.PLANE) {
+                        actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+                        return@withLock
+                    }
+                    if (candidate == null) {
+                        actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+                        return@withLock
+                    }
+                    if (type == ControlPlaneAddSource.PLANE &&
+                        (
+                            candidate == configuration.directoryUrl.value ||
+                                candidate == configuration.jsonDirectoryUrl.value
+                        )
+                    ) {
+                        actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+                        return@withLock
+                    }
+                    if (type == ControlPlaneAddSource.PLANE && candidate in configuration.manualBaseUrls.value) {
+                        actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
+                        return@withLock
+                    }
+                    when (type) {
+                        ControlPlaneAddSource.PLANE -> {
+                            configuration.addManual(candidate).fold(
+                                onSuccess = {
+                                    clearAddDialogForm()
+                                    actionState.update { it.copy(addError = null) }
+                                    healthMonitor.refresh()
+                                },
+                                onFailure = { error ->
+                                    SparrowLog.withTag("ControlPlaneSettingsViewModel").warn {
+                                        "Manual Control Plane was not saved: ${error.message}"
+                                    }
+                                    actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
                                 }
-                                actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
-                            }
-                        )
-                    }
-                    ControlPlaneAddSource.SIGNED_DIRECTORY -> {
-                        // The first directory is a *setting*, not a successful HTTP request.
-                        // Persist it so offline/unreachable directories can be edited or removed.
-                        // A replacement URL may not change an existing trusted signer unless
-                        // its signed snapshot has actually been verified first.
-                        val previouslyConfigured = configuration.directoryUrl.value
-                        val syncResult = if (previouslyConfigured != null &&
-                            previouslyConfigured != candidate
-                        ) {
-                            directorySynchronizer.synchronizeFrom(candidate)
-                        } else {
-                            configuration.setDirectoryUrl(candidate).map { 0 }
+                            )
                         }
-                        syncResult.fold(
-                            onSuccess = {
-                                configuration.clearJsonDirectory().fold(
-                                    onSuccess = {
-                                        clearAddDialogForm()
-                                        actionState.update { it.copy(addError = null, editingDirectory = false) }
-                                        refreshDirectoryWithoutGlobalError()
-                                    },
-                                    onFailure = { error -> showDirectorySaveError(error) }
-                                )
-                            },
-                            onFailure = { error -> showDirectorySaveError(error) }
-                        )
-                    }
-                    ControlPlaneAddSource.JSON_LIST -> {
-                        // A JSON URL is a one-time bulk manual import, not the
-                        // signed directory setting and not a recurring feed.
-                        directorySynchronizer.importJsonDirectory(candidate).fold(
-                            onSuccess = {
-                                clearAddDialogForm()
-                                actionState.update { it.copy(addError = null, editingDirectory = false) }
-                                healthMonitor.refresh()
-                            },
-                            onFailure = { error -> showDirectorySaveError(error) }
-                        )
+                        ControlPlaneAddSource.SIGNED_DIRECTORY -> {
+                            // The first directory is a *setting*, not a successful HTTP request.
+                            // Persist it so offline/unreachable directories can be edited or removed.
+                            // A replacement URL may not change an existing trusted signer unless
+                            // its signed snapshot has actually been verified first.
+                            val previouslyConfigured = configuration.directoryUrl.value
+                            val syncResult = if (previouslyConfigured != null &&
+                                previouslyConfigured != candidate
+                            ) {
+                                directorySynchronizer.synchronizeFrom(candidate)
+                            } else {
+                                configuration.setDirectoryUrl(candidate).map { 0 }
+                            }
+                            syncResult.fold(
+                                onSuccess = {
+                                    configuration.clearJsonDirectory().fold(
+                                        onSuccess = {
+                                            clearAddDialogForm()
+                                            actionState.update { it.copy(addError = null, editingDirectory = false) }
+                                            refreshDirectoryWithoutGlobalError()
+                                        },
+                                        onFailure = { error -> showDirectorySaveError(error) }
+                                    )
+                                },
+                                onFailure = { error -> showDirectorySaveError(error) }
+                            )
+                        }
+                        ControlPlaneAddSource.JSON_LIST -> {
+                            // A JSON URL is a one-time bulk manual import, not the
+                            // signed directory setting and not a recurring feed.
+                            directorySynchronizer.importJsonDirectory(candidate).fold(
+                                onSuccess = {
+                                    clearAddDialogForm()
+                                    actionState.update { it.copy(addError = null, editingDirectory = false) }
+                                    healthMonitor.refresh()
+                                },
+                                onFailure = { error -> showDirectorySaveError(error) }
+                            )
+                        }
                     }
                 }
+            } catch (timeout: TimeoutCancellationException) {
+                showDirectorySaveError(timeout)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                showDirectorySaveError(error)
+            } finally {
+                actionState.update { it.copy(isAdding = false) }
+                SparrowLog.withTag("ControlPlaneSettingsViewModel").debug { "Add finished" }
             }
         }
     }
@@ -418,6 +441,7 @@ class ControlPlaneSettingsViewModel(
 
     private data class ControlPlaneActionState(
         val editingDirectory: Boolean = false,
+        val isAdding: Boolean = false,
         val addError: ControlPlaneSettingsError? = null,
         val directoryError: ControlPlaneDirectoryError? = null,
         val isRefreshing: Boolean = false,
