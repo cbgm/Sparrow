@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.data.datastore)
             implementation(projects.feature.attachments)
+            implementation(projects.feature.media)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

@@ -1,43 +1,48 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
-import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
+import com.cbgm.sparrow.core.messagepart.domain.model.File
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 
-suspend fun MediaSelectionUi.toOutgoingMessageAttachment(
-    files: MediaSelectionFileRepository
-): OutgoingMessageAttachment =
+fun MediaSelectionUi.toMessagePart(): MessagePart =
     when (this) {
         is VisualMediaSelectionUi ->
             when (type) {
                 MediaTypeUi.IMAGE ->
-                    OutgoingMessageAttachment.Image(
+                    Image(
                         id = id,
-                        bytes = files.read(localFilePath),
                         mimeType = mimeType,
+                        byteSize = byteSize,
                         width = requireNotNull(width),
-                        height = requireNotNull(height)
+                        height = requireNotNull(height),
+                        localFilePath = localFilePath,
+                        thumbnailFilePath = thumbnailFilePath
                     )
 
                 MediaTypeUi.VIDEO ->
-                    OutgoingMessageAttachment.Video(
+                    Video(
                         id = id,
-                        bytes = files.read(localFilePath),
                         mimeType = mimeType,
+                        byteSize = byteSize,
                         width = width,
                         height = height,
-                        durationMilliseconds = durationMilliseconds
+                        durationMilliseconds = durationMilliseconds,
+                        localFilePath = localFilePath,
+                        thumbnailFilePath = thumbnailFilePath
                     )
             }
 
         is FileMediaSelectionUi ->
-            OutgoingMessageAttachment.File(
+            File(
                 id = id,
-                bytes = files.read(localFilePath),
                 mimeType = mimeType,
-                fileName = fileName
+                byteSize = byteSize,
+                fileName = fileName,
+                localFilePath = localFilePath
             )
     }

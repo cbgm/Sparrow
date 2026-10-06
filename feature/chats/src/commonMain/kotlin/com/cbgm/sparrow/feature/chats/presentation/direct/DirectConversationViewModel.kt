@@ -4,13 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
@@ -345,12 +345,14 @@ class DirectConversationViewModel(
             is DirectConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             DirectConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
-            is DirectConversationUiEvent.ShareCurrentLocation -> shareCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is DirectConversationUiEvent.ShareCurrentLocation ->
+                shareCurrentLocation(event.location.toMessagePart())
             is DirectConversationUiEvent.LocationCaptureFailed -> {
                 transitionLocationShare(LocationShareEvent.FAILED)
                 setError(event.message)
             }
-            is DirectConversationUiEvent.ShareContact -> sendAttachmentOnly(event.contact.toOutgoingMessageAttachment())
+            is DirectConversationUiEvent.ShareContact ->
+                sendAttachmentOnly(event.contact.toMessagePart())
             is DirectConversationUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is DirectConversationUiEvent.AttachmentError -> setError(event.message)
             DirectConversationUiEvent.HeaderClicked -> openContactDetails()
@@ -481,57 +483,56 @@ class DirectConversationViewModel(
         if (selections.isEmpty()) {
             dispatchSend(
                 text = text,
-                attachments = emptyList(),
+                parts = emptyList(),
                 clearComposerOnSuccess = true
             )
             return
         }
 
         preparingMediaSend = true
-        viewModelScope.launch {
-            try {
-                val attachments = selections.map { it.toOutgoingMessageAttachment(mediaFiles) }
-                // Selection could change while the files are being read.
-                if (selectedMedia.value != selections) return@launch
-                dispatchSend(
-                    text = text,
-                    attachments = attachments,
-                    clearComposerOnSuccess = true
-                )
-            } catch (error: Exception) {
-                setError(error.message ?: "Selected media could not be read")
-            } finally {
-                preparingMediaSend = false
-            }
+        try {
+            val parts = selections.map { it.toMessagePart() }
+            if (selectedMedia.value != selections) return
+            dispatchSend(
+                text = text,
+                parts = parts,
+                clearComposerOnSuccess = true
+            )
+        } catch (error: Exception) {
+            setError(error.message ?: "Selected media could not be prepared")
+        } finally {
+            preparingMediaSend = false
         }
     }
 
     private fun sendVoiceMessage() {
-        getRecordedVoiceAttachment()
-            .onSuccess { attachment ->
-                dispatchSend(
-                    text = "",
-                    attachments = listOf(attachment),
-                    clearComposerOnSuccess = false,
-                    clearVoiceOnSuccess = true
-                )
-            }.onFailure { error ->
-                setError(error.message ?: "Voice message is not ready to send")
-            }
+        viewModelScope.launch {
+            getRecordedVoiceAttachment()
+                .onSuccess { part ->
+                    dispatchSend(
+                        text = "",
+                        parts = listOf(part),
+                        clearComposerOnSuccess = false,
+                        clearVoiceOnSuccess = true
+                    )
+                }.onFailure { error ->
+                    setError(error.message ?: "Voice message is not ready to send")
+                }
+        }
     }
 
-    private fun shareCurrentLocation(attachment: OutgoingMessageAttachment) {
+    private fun shareCurrentLocation(part: MessagePart) {
         transitionLocationShare(LocationShareEvent.LOCATION_CAPTURED)
-        sendAttachmentOnly(attachment, isLocationShare = true)
+        sendAttachmentOnly(part, isLocationShare = true)
     }
 
     private fun sendAttachmentOnly(
-        attachment: OutgoingMessageAttachment,
+        part: MessagePart,
         isLocationShare: Boolean = false
     ) {
         dispatchSend(
             text = "",
-            attachments = listOf(attachment),
+            parts = listOf(part),
             clearComposerOnSuccess = false,
             isLocationShare = isLocationShare
         )
@@ -539,7 +540,7 @@ class DirectConversationViewModel(
 
     private fun dispatchSend(
         text: String,
-        attachments: List<OutgoingMessageAttachment>,
+        parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         clearVoiceOnSuccess: Boolean = false,
         isLocationShare: Boolean = false
@@ -567,12 +568,16 @@ class DirectConversationViewModel(
                     contactId = contactId,
                     conversationId = conversationId,
                     text = text,
-                    attachments = attachments,
+                    parts = parts,
                     replyToMessageId = replyTo
                 ).onSuccess { result ->
                     when {
                         clearComposerOnSuccess -> clearComposer()
                         clearVoiceOnSuccess -> {
+                            parts.filterIsInstance<com.cbgm.sparrow.core.messagepart.domain.model.Voice>()
+                                .singleOrNull()
+                                ?.localFilePath
+                                ?.let { path -> runCatching { mediaFiles.delete(path) } }
                             resetVoiceComposer()
                             clearReply()
                         }

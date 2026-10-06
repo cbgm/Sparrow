@@ -93,7 +93,8 @@ internal fun MessagePartEntity.toMessagePartDto(
                 byteSize = blob.byteSize,
                 durationMilliseconds = requireNotNull(blob.durationMilliseconds) {
                     "Voice message part $id is missing duration"
-                }
+                },
+                localFilePath = localFilePath
             )
 
         LOCATION_TYPE ->

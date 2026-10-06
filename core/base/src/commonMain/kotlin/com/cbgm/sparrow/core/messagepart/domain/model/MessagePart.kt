@@ -44,16 +44,31 @@ data class Voice(
     override val id: String,
     val mimeType: String,
     val byteSize: Long,
-    val durationMilliseconds: Long
+    val durationMilliseconds: Long,
+    val localFilePath: String? = null
 ) : MessagePart
 
 data class Location(
-    override val id: String
-) : MessagePart
+    override val id: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+) : MessagePart {
+    init {
+        require((latitude == null) == (longitude == null)) { "Location coordinates must either both be present or both be absent" }
+        latitude?.let { require(it in -90.0..90.0) { "Latitude must be between -90 and 90" } }
+        longitude?.let { require(it in -180.0..180.0) { "Longitude must be between -180 and 180" } }
+    }
+}
 
 data class Contact(
-    override val id: String
-) : MessagePart
+    override val id: String,
+    val displayName: String? = null,
+    val phoneNumber: String? = null
+) : MessagePart {
+    init {
+        require(phoneNumber == null || phoneNumber.isNotBlank()) { "Shared contact phone number must not be blank" }
+    }
+}
 
 data class Poll(
     override val id: String,

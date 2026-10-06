@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 
 class QueueDirectMessageUntilAuthorizedUseCase(
@@ -9,7 +9,7 @@ class QueueDirectMessageUntilAuthorizedUseCase(
     suspend operator fun invoke(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null
-    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, text, attachments, replyToMessageId)
+    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, text, parts, replyToMessageId)
 }

@@ -38,6 +38,13 @@ class MessageAttachmentFileDataSource(
         }
     }
 
+    fun readLocalFile(localFilePath: String): ByteArray {
+        require(localFilePath.isNotBlank()) { "Local file path must not be blank" }
+        val path = localFilePath.toPath()
+        check(fileSystem.exists(path)) { "Local message-part source file does not exist" }
+        return fileSystem.read(path) { readByteArray() }
+    }
+
     fun resolveCacheFilePath(fileName: String): String? {
         val path = fileName.toSafeCachePath()
         return path.toString().takeIf { fileSystem.exists(path) }

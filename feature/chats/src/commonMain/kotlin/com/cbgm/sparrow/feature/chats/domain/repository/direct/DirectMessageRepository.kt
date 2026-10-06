@@ -1,19 +1,19 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.direct
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 
 interface DirectMessageRepository {
     suspend fun send(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit>
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit>
 

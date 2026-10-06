@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -9,8 +11,6 @@ import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
@@ -67,37 +67,23 @@ class GroupOutgoingMessageProcessor(
     suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             sendMutex.withLock {
-                val normalizedText = requireMessageContent(text, attachments)
+                val normalizedText = requireMessageContent(text, parts)
                 requireActiveMembership(groupId, access)
                 val recipients = findCurrentRecipients(groupId)
-                // A previously queued owner message must go out before newly sent
-                // messages once an active participant is available.
                 if (recipients.isNotEmpty()) {
                     flushQueuedLocked(groupId, recipients)
                 }
 
                 val message = createQueuedMessage(groupId, replyToMessageId)
-                val prepared = attachmentTransfer.prepareAttachments(attachments)
-                try {
-                    if (recipients.isEmpty()) {
-                        // No pending invitee may receive this message. Persist it and
-                        // its encrypted attachment blobs locally, with NO packet yet.
-                        persistMessage(message, normalizedText, emptyList(), prepared)
-                    } else {
-                        encryptAndEnqueue(message, normalizedText, recipients, prepared)
-                    }
-                } catch (error: Throwable) {
-                    val stored = messageDataSource.findMessage(message.id) != null
-                    if (!stored) {
-                        attachmentTransfer.cleanupPrepared(prepared)
-                    }
-                    throw error
+                val protocolAttachments = persistMessage(message, normalizedText, parts)
+                if (recipients.isNotEmpty()) {
+                    encryptAndEnqueue(message, recipients, protocolAttachments)
                 }
             }
         }
@@ -471,34 +457,39 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
-        text: String,
         recipients: List<String>,
-        prepared: List<PreparedMessageAttachment>
+        attachments: List<MessageAttachment>
     ) {
-        val packets = createPackets(message, recipients, prepared.map { it.attachment })
+        val packets =
+            try {
+                createPackets(message, recipients, attachments)
+            } catch (error: Throwable) {
+                attachmentTransfer.deleteForMessages(listOf(message.id))
+                messageDataSource.deleteMessages(listOf(message))
+                throw error
+            }
         val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
-        persistMessage(message, text, recipientStates, prepared)
+        messageDataSource.saveRecipientStates(recipientStates)
         enqueuePackets(packets)
     }
 
     private suspend fun persistMessage(
         message: MessageEntity,
         text: String,
-        recipientStates: List<MessageRecipientStateEntity>,
-        prepared: List<PreparedMessageAttachment>
-    ) {
+        parts: List<MessagePart>
+    ): List<MessageAttachment> {
         messageDataSource.saveOutgoingMessage(
             message = message,
             text = text,
-            recipientStates = recipientStates,
+            recipientStates = emptyList(),
             timestamp = message.createdAtEpochMilliseconds
         )
         try {
             val conversation = messageDataSource.findConversation(message.conversationId)
                 ?: error("Group conversation was not found")
-            attachmentTransfer.persistOutgoing(
+            return attachmentTransfer.persistOutgoing(
                 messageId = message.id,
-                prepared = prepared,
+                parts = parts,
                 context = AttachmentMessageContext(
                     conversationId = message.conversationId,
                     createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
@@ -510,7 +501,6 @@ class GroupOutgoingMessageProcessor(
             )
         } catch (error: Throwable) {
             messageDataSource.deleteMessages(listOf(message))
-            attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
     }
@@ -630,14 +620,14 @@ class GroupOutgoingMessageProcessor(
 
     private fun requireMessageContent(
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        parts: List<MessagePart>
     ): String {
-        MessageAttachmentPolicy.requireValid(attachments)
+        MessageAttachmentPolicy.requireValid(parts)
         return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
+            require(normalizedText.isNotEmpty() || parts.isNotEmpty()) {
                 "Message must contain text or attachments"
             }
-            require(attachments.none { it is OutgoingMessageAttachment.Voice } || normalizedText.isEmpty()) {
+            require(parts.none { it is Voice } || normalizedText.isEmpty()) {
                 "A voice message cannot contain text"
             }
         }

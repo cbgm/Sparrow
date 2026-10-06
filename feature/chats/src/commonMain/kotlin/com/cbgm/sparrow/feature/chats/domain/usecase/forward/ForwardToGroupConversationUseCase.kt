@@ -17,7 +17,7 @@ class ForwardToGroupConversationUseCase(
             sendGroupMessage(
                 groupId = groupId,
                 text = content.text,
-                attachments = content.attachments
+                parts = content.parts
             ).getOrThrow()
 
             conversationOverviewRepository

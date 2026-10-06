@@ -21,7 +21,7 @@ class ForwardDirectMessageUseCase(
                 contactId = contactId,
                 conversationId = conversationId,
                 text = content.text,
-                attachments = content.attachments
+                parts = content.parts
             ).getOrThrow()
 
             val resolvedConversationId =

@@ -161,7 +161,7 @@ class DirectMessagePacketHandler(
             outgoingMessageProcessor.send(
                 conversationId = conversationId,
                 text = claimedReply.text,
-                attachments = emptyList(),
+                parts = emptyList(),
                 replyToMessageId = null
             )
 

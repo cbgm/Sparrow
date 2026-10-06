@@ -67,6 +67,10 @@ class GroupOutgoingMessageDataSource(
         messageReactionDao.upsert(reaction)
     }
 
+    suspend fun saveRecipientStates(states: List<MessageRecipientStateEntity>) {
+        if (states.isNotEmpty()) messageRecipientStateDao.upsertAll(states)
+    }
+
     suspend fun findRecipientStates(messageId: String): List<MessageRecipientStateEntity> =
         messageRecipientStateDao.findByMessageId(messageId)
 

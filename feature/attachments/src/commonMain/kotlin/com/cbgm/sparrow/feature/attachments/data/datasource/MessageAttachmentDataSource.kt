@@ -14,11 +14,8 @@ import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageBlobEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtosByMessageId
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocol
 import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocolMessageAttachment
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
-import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -38,82 +35,27 @@ internal class MessageAttachmentDataSource(
 ) {
     private val logger = SparrowLog.withTag("MessageAttachmentDataSource")
 
-    suspend fun prepareAttachments(
-        attachments: List<OutgoingMessageAttachmentDto>,
-        retentionMilliseconds: Long
-    ): List<PreparedMessageAttachmentDto> {
-        require(retentionMilliseconds > 0L) { "Attachment retention must be positive" }
-
-        val prepared = mutableListOf<PreparedMessageAttachmentDto>()
-        return try {
-            attachments.forEach { item ->
-                prepared += prepareAttachment(
-                    attachmentId = item.id,
-                    type = item.type,
-                    bytes = item.bytes,
-                    mimeType = item.mimeType,
-                    retentionMilliseconds = retentionMilliseconds,
-                    fileName = item.fileName,
-                    width = item.width,
-                    height = item.height,
-                    durationMilliseconds = item.durationMilliseconds
-                )
-            }
-            prepared
-        } catch (error: Throwable) {
-            cleanupPrepared(prepared)
-            throw error
-        }
-    }
-
-    private suspend fun prepareAttachment(
-        attachmentId: String,
-        type: MessageAttachmentType,
-        bytes: ByteArray,
-        mimeType: String,
-        retentionMilliseconds: Long,
-        fileName: String? = null,
-        width: Int? = null,
-        height: Int? = null,
-        durationMilliseconds: Long? = null
-    ): PreparedMessageAttachmentDto {
-        val (blobReference, deleteCapability) = blobTransferDataSource.upload(bytes, retentionMilliseconds)
-        val localFilePath =
-            try {
-                fileDataSource.write(bytes)
-            } catch (error: Throwable) {
-                blobTransferDataSource.delete(blobReference, deleteCapability)
-                throw error
-            }
-
-        return PreparedMessageAttachmentDto(
-            attachment = ProtocolMessageAttachment(
-                attachmentId = attachmentId,
-                type = type,
-                mimeType = mimeType,
-                byteSize = bytes.size.toLong(),
-                blob = blobReference.toProtocol(),
-                fileName = fileName,
-                width = width,
-                height = height,
-                durationMilliseconds = durationMilliseconds
-            ),
-            deleteCapability = deleteCapability,
-            localFileName = localFilePath,
-            payloadBytes = null
-        )
-    }
-
     suspend fun persistOutgoing(
         messageId: String,
-        prepared: List<PreparedMessageAttachmentDto>,
+        parts: List<MessagePartDto>,
+        deleteCapabilities: Map<String, String>,
+        localFileNames: Map<String, String>,
         context: AttachmentMessageContextDto
     ) {
-        if (prepared.isEmpty()) return
+        if (parts.isEmpty()) return
         saveMessageContext(messageId, context)
         attachmentDao.upsertBlobParts(
-            parts = prepared.mapIndexed { index, item -> item.attachment.toMessagePartEntity(messageId, index + 1) },
-            blobs = prepared.map { item -> item.toMessageBlobEntity() }
+            parts = parts.mapIndexed { index, part -> part.toMessagePartEntity(messageId, index + 1) },
+            blobs = parts.map { part ->
+                part.toMessageBlobEntity(
+                    deleteCapability = requireNotNull(deleteCapabilities[part.id]) {
+                        "Missing delete capability for message part ${part.id}"
+                    },
+                    localFilePath = requireNotNull(localFileNames[part.id]) {
+                        "Missing local file for message part ${part.id}"
+                    }
+                )
+            }
         )
     }
 
@@ -250,20 +192,6 @@ internal class MessageAttachmentDataSource(
             }
         }
         attachmentDao.deleteByMessageIds(messageIds)
-    }
-
-    suspend fun cleanupPrepared(prepared: List<PreparedMessageAttachmentDto>) {
-        prepared.forEach { item ->
-            try {
-                item.localFileName?.let(fileDataSource::delete)
-                blobTransferDataSource.delete(
-                    reference = item.attachment.blob.toDto(),
-                    deleteCapability = item.deleteCapability
-                )
-            } catch (error: Exception) {
-                logger.error(error) { "Failed to cleanup prepared message blob during rollback" }
-            }
-        }
     }
 
     private suspend fun loadBlobs(parts: List<MessagePartEntity>): List<MessageBlobEntity> =

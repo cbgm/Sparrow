@@ -4,13 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.IndicatorType
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
@@ -363,14 +363,15 @@ class GroupConversationViewModel(
             is GroupConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             GroupConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
-            is GroupConversationUiEvent.ShareCurrentLocation -> shareCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is GroupConversationUiEvent.ShareCurrentLocation ->
+                shareCurrentLocation(event.location.toMessagePart())
             is GroupConversationUiEvent.LocationCaptureFailed -> {
                 transitionLocationShare(LocationShareEvent.FAILED)
                 setError(event.message)
             }
             is GroupConversationUiEvent.ShareContact ->
                 sendAttachmentOnly(
-                    attachment = event.contact.toOutgoingMessageAttachment(),
+                    part = event.contact.toMessagePart(),
                     fallbackError = "Contact could not be sent"
                 )
             is GroupConversationUiEvent.AddSharedContact -> addSharedContact(event.contact)
@@ -517,7 +518,7 @@ class GroupConversationViewModel(
         if (selections.isEmpty()) {
             dispatchSend(
                 text = text,
-                attachments = emptyList(),
+                parts = emptyList(),
                 clearComposerOnSuccess = true,
                 fallbackError = "Message could not be sent"
             )
@@ -525,57 +526,56 @@ class GroupConversationViewModel(
         }
 
         preparingMediaSend = true
-        viewModelScope.launch {
-            try {
-                val attachments = selections.map { it.toOutgoingMessageAttachment(mediaFiles) }
-                // Selection could change while the files are being read.
-                if (selectedMedia.value != selections) return@launch
-                dispatchSend(
-                    text = text,
-                    attachments = attachments,
-                    clearComposerOnSuccess = true,
-                    fallbackError = "Message could not be sent"
-                )
-            } catch (error: Exception) {
-                setError(error.message ?: "Selected media could not be read")
-            } finally {
-                preparingMediaSend = false
-            }
+        try {
+            val parts = selections.map { it.toMessagePart() }
+            if (selectedMedia.value != selections) return
+            dispatchSend(
+                text = text,
+                parts = parts,
+                clearComposerOnSuccess = true,
+                fallbackError = "Message could not be sent"
+            )
+        } catch (error: Exception) {
+            setError(error.message ?: "Selected media could not be prepared")
+        } finally {
+            preparingMediaSend = false
         }
     }
 
     private fun sendVoiceMessage() {
-        getRecordedVoiceAttachment()
-            .onSuccess { attachment ->
-                dispatchSend(
-                    text = "",
-                    attachments = listOf(attachment),
-                    clearComposerOnSuccess = false,
-                    clearVoiceOnSuccess = true,
-                    fallbackError = "Voice message could not be sent"
-                )
-            }.onFailure { error ->
-                setError(error.message ?: "Voice message is not ready to send")
-            }
+        viewModelScope.launch {
+            getRecordedVoiceAttachment()
+                .onSuccess { part ->
+                    dispatchSend(
+                        text = "",
+                        parts = listOf(part),
+                        clearComposerOnSuccess = false,
+                        clearVoiceOnSuccess = true,
+                        fallbackError = "Voice message could not be sent"
+                    )
+                }.onFailure { error ->
+                    setError(error.message ?: "Voice message is not ready to send")
+                }
+        }
     }
 
-    private fun shareCurrentLocation(attachment: OutgoingMessageAttachment) {
+    private fun shareCurrentLocation(part: MessagePart) {
         transitionLocationShare(LocationShareEvent.LOCATION_CAPTURED)
         sendAttachmentOnly(
-            attachment = attachment,
+            part = part,
             fallbackError = "Location could not be sent",
             isLocationShare = true
         )
     }
 
     private fun sendAttachmentOnly(
-        attachment: OutgoingMessageAttachment,
+        part: MessagePart,
         fallbackError: String,
         isLocationShare: Boolean = false
     ) {
         dispatchSend(
             text = "",
-            attachments = listOf(attachment),
+            parts = listOf(part),
             clearComposerOnSuccess = false,
             fallbackError = fallbackError,
             isLocationShare = isLocationShare
@@ -584,7 +584,7 @@ class GroupConversationViewModel(
 
     private fun dispatchSend(
         text: String,
-        attachments: List<OutgoingMessageAttachment>,
+        parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         fallbackError: String,
         clearVoiceOnSuccess: Boolean = false,
@@ -610,11 +610,15 @@ class GroupConversationViewModel(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             isSending.value = true
             try {
-                sendMessage(groupId, text, attachments, replyTo)
+                sendMessage(groupId, text, parts, replyTo)
                     .onSuccess {
                         when {
                             clearComposerOnSuccess -> clearComposer()
                             clearVoiceOnSuccess -> {
+                                parts.filterIsInstance<com.cbgm.sparrow.core.messagepart.domain.model.Voice>()
+                                    .singleOrNull()
+                                    ?.localFilePath
+                                    ?.let { path -> runCatching { mediaFiles.delete(path) } }
                                 resetVoiceComposer()
                                 clearReply()
                             }

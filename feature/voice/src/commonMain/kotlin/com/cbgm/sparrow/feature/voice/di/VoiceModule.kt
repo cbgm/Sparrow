@@ -56,7 +56,7 @@ val voiceModule =
         factory { ToggleVoicePreviewUseCase(repository = get()) }
         factory { CancelVoiceRecordingUseCase(repository = get()) }
         factory { ResetVoiceComposerUseCase(repository = get()) }
-        factory { GetRecordedVoiceAttachmentUseCase(repository = get()) }
+        factory { GetRecordedVoiceAttachmentUseCase(repository = get(), mediaFiles = get()) }
         factory { ObserveVoicePlaybackUseCase(repository = get()) }
         factory {
             ToggleVoiceMessagePlaybackUseCase(

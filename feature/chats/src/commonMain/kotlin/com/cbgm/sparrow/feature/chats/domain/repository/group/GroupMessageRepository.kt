@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.group
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
 
 interface GroupMessageRepository {
     suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
     ): Result<Unit>

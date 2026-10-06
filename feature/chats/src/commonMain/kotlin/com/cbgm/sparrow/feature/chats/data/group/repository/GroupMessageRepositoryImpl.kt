@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
@@ -12,67 +12,33 @@ class GroupMessageRepositoryImpl(
     override suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment>,
+        parts: List<MessagePart>,
         replyToMessageId: String?,
         access: GroupMessageMembershipAccess
     ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             text = text,
-            attachments = attachments,
+            parts = parts,
             replyToMessageId = replyToMessageId,
             access = access
         )
 
-    override suspend fun toggleReaction(
-        groupId: String,
-        messageId: String,
-        emoji: String,
-        access: GroupMessageMembershipAccess
-    ): Result<Unit> =
-        safeSuspendCall {
-            outgoingMessageProcessor.toggleReaction(
-                groupId = groupId,
-                messageId = messageId,
-                emoji = emoji,
-                access = access
-            )
-        }
+    override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String, access: GroupMessageMembershipAccess): Result<Unit> =
+        safeSuspendCall { outgoingMessageProcessor.toggleReaction(groupId, messageId, emoji, access) }
 
     override suspend fun deleteMessage(groupId: String, messageId: String, access: GroupMessageMembershipAccess): Result<Unit> =
-        safeSuspendCall {
-            outgoingMessageProcessor.deleteMessage(
-                groupId = groupId,
-                messageId = messageId,
-                access = access
-            )
-        }
+        safeSuspendCall { outgoingMessageProcessor.deleteMessage(groupId, messageId, access) }
 
-    override suspend fun editMessage(
-        groupId: String,
-        messageId: String,
-        text: String,
-        access: GroupMessageMembershipAccess
-    ): Result<Unit> = safeSuspendCall {
-        outgoingMessageProcessor.editMessage(
-            groupId = groupId,
-            messageId = messageId,
-            text = text,
-            access = access
-        )
-    }
+    override suspend fun editMessage(groupId: String, messageId: String, text: String, access: GroupMessageMembershipAccess): Result<Unit> =
+        safeSuspendCall { outgoingMessageProcessor.editMessage(groupId, messageId, text, access) }
 
-    override suspend fun retry(messageId: String): Result<Unit> = safeSuspendCall {
-        outgoingMessageProcessor.retry(messageId)
-    }
+    override suspend fun retry(messageId: String): Result<Unit> = safeSuspendCall { outgoingMessageProcessor.retry(messageId) }
 
-    override suspend fun flushQueued(groupId: String): Result<Unit> =
-        outgoingMessageProcessor.flushQueued(groupId)
+    override suspend fun flushQueued(groupId: String): Result<Unit> = outgoingMessageProcessor.flushQueued(groupId)
 
-    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> =
-        outgoingMessageProcessor.findGroupIdForMessage(messageId)
+    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> = outgoingMessageProcessor.findGroupIdForMessage(messageId)
 
-    override suspend fun markConversationRead(groupId: String): Result<Unit> = safeSuspendCall {
-        outgoingMessageProcessor.sendReadReceipts(groupId)
-    }
+    override suspend fun markConversationRead(groupId: String): Result<Unit> =
+        safeSuspendCall { outgoingMessageProcessor.sendReadReceipts(groupId) }
 }

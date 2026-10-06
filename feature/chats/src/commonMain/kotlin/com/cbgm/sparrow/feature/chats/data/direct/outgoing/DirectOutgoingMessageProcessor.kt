@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
@@ -10,8 +12,6 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
@@ -69,23 +69,22 @@ class DirectOutgoingMessageProcessor(
     suspend fun send(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, attachments)
+            val normalizedText = requireMessageContent(text, parts)
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
-            val prepared = attachmentTransfer.prepareAttachments(attachments)
-            persistPreparedMessage(
+            val protocolAttachments = persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = messageId,
                 text = normalizedText,
-                prepared = prepared,
+                parts = parts,
                 deliveryStatus = MessageDeliveryStatus.QUEUED,
                 replyToMessageId = replyToMessageId
             )
@@ -94,7 +93,7 @@ class DirectOutgoingMessageProcessor(
                     createPacket(
                         messageId = messageId,
                         text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachment::attachment),
+                        attachments = protocolAttachments,
                         replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
@@ -201,20 +200,19 @@ class DirectOutgoingMessageProcessor(
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, attachments)
+            val normalizedText = requireMessageContent(text, parts)
             val target = loadTarget(conversationId)
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val prepared = attachmentTransfer.prepareAttachments(attachments)
-            persistPreparedMessage(
+            persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = IdGenerator.generate(prefix = "message"),
                 text = normalizedText,
-                prepared = prepared,
+                parts = parts,
                 deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
                 replyToMessageId = replyToMessageId
             )
@@ -436,15 +434,15 @@ class DirectOutgoingMessageProcessor(
             }
     }
 
-    private suspend fun persistPreparedMessage(
+    private suspend fun persistOutgoingMessage(
         target: DirectTargetDto,
         contact: Contact,
         messageId: String,
         text: String,
-        prepared: List<PreparedMessageAttachment>,
+        parts: List<MessagePart>,
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
-    ) {
+    ): List<MessageAttachment> {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
             MessageEntity(
@@ -453,8 +451,6 @@ class DirectOutgoingMessageProcessor(
                 packetId = null,
                 replyToMessageId = replyToMessageId,
                 transportPayload = null,
-                // A waiting message has no transport packet yet. Recording the
-                // intended mode must not require keys that are still being exchanged.
                 transportMode = if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
                     TransportEncryptionMode.SEALED_BOX.name
                 } else {
@@ -469,9 +465,9 @@ class DirectOutgoingMessageProcessor(
 
         try {
             conversationDataSource.upsertMessageWithText(message, text)
-            attachmentTransfer.persistOutgoing(
+            return attachmentTransfer.persistOutgoing(
                 messageId = messageId,
-                prepared = prepared,
+                parts = parts,
                 context = AttachmentMessageContext(
                     conversationId = target.conversationId,
                     createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
@@ -484,7 +480,6 @@ class DirectOutgoingMessageProcessor(
             )
         } catch (error: Throwable) {
             runCatching { conversationDataSource.deleteMessages(listOf(message)) }
-            attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
     }
@@ -568,14 +563,14 @@ class DirectOutgoingMessageProcessor(
 
     private fun requireMessageContent(
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        parts: List<MessagePart>
     ): String {
-        MessageAttachmentPolicy.requireValid(attachments)
+        MessageAttachmentPolicy.requireValid(parts)
         return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
+            require(normalizedText.isNotEmpty() || parts.isNotEmpty()) {
                 "Message must contain text or attachments"
             }
-            require(attachments.none { it is OutgoingMessageAttachment.Voice } || normalizedText.isEmpty()) {
+            require(parts.none { it is Voice } || normalizedText.isEmpty()) {
                 "A voice message cannot contain text"
             }
         }
