@@ -26,7 +26,6 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
@@ -95,12 +94,9 @@ private fun MessageMediaViewer(
 
     val loadedMedia =
         attachments.map { attachment ->
-            val state = rememberAttachmentUiState(attachment)
+            val state = rememberLocalFileUiState(attachment)
             val localFilePath =
-                (state as? AttachmentUiState.Ready)
-                    ?.content
-                    ?.let { content -> content as? AttachmentContent.LocalFile }
-                    ?.localFilePath
+                (state as? AttachmentUiState.Ready)?.value
             attachment to localFilePath
         }
 
@@ -166,12 +162,9 @@ private fun MessageLocationViewer(
     onError: (String) -> Unit
 ) {
     val locationOpener = rememberLocationOpener()
-    val state = rememberAttachmentUiState(attachment)
+    val state = rememberLocationUiState(attachment)
     val location =
-        (state as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Location }
-            ?.location
+        (state as? AttachmentUiState.Ready)?.value
 
     LaunchedEffect(attachment.id, location) {
         val loadedLocation = location ?: return@LaunchedEffect

@@ -1,10 +1,11 @@
 package com.cbgm.sparrow.feature.voice.presentation.message
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveMessageAttachmentTranscriptUseCase
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptCue
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
@@ -23,7 +24,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class VoiceMessageViewModel(
-    private val target: VoiceMessageTarget,
+    private val part: VoiceUi,
     observeVoicePlayback: ObserveVoicePlaybackUseCase,
     observeTranscriptionEnabled: ObserveVoiceTranscriptionEnabledUseCase,
     observePersistedTranscript: ObserveMessageAttachmentTranscriptUseCase,
@@ -36,13 +37,14 @@ class VoiceMessageViewModel(
     private val _uiState = MutableStateFlow(VoiceMessageUiState())
     val uiState: StateFlow<VoiceMessageUiState> = _uiState.asStateFlow()
     private var transcriptionJob: Job? = null
+    private val groupId = (part.source as? MessagePartSourceUi.GroupPin)?.groupId
 
     init {
         viewModelScope.launch {
             combine(
-                observeVoicePlayback(target.attachmentId),
+                observeVoicePlayback(part.id),
                 observeTranscriptionEnabled(),
-                observePersistedTranscript(target.attachmentId),
+                observePersistedTranscript(part.id),
                 transcriptionState
             ) { playback, enabled, persisted, transcription ->
                 val completedTranscript =
@@ -60,22 +62,35 @@ class VoiceMessageViewModel(
     }
 
     fun togglePlayback() {
-        viewModelScope.launch { toggleVoicePlayback(target) }
+        viewModelScope.launch {
+            toggleVoicePlayback(
+                partId = part.id,
+                durationMilliseconds = part.durationMilliseconds,
+                groupId = groupId
+            )
+        }
     }
 
     fun startScrub() {
-        startVoiceScrub(target.attachmentId)
+        startVoiceScrub(part.id)
     }
 
     fun finishScrub(positionMilliseconds: Long) {
-        viewModelScope.launch { finishVoiceScrub(target, positionMilliseconds) }
+        viewModelScope.launch {
+            finishVoiceScrub(
+                partId = part.id,
+                durationMilliseconds = part.durationMilliseconds,
+                positionMilliseconds = positionMilliseconds,
+                groupId = groupId
+            )
+        }
     }
 
     fun transcribe() {
         if (transcriptionJob?.isActive == true) return
         transcriptionJob =
             viewModelScope.launch {
-                transcribeVoiceMessage(target).collect { state ->
+                transcribeVoiceMessage(part.id, groupId).collect { state ->
                     transcriptionState.value = state
                 }
             }

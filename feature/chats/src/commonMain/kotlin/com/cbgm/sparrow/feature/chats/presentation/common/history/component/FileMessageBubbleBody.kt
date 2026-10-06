@@ -29,8 +29,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberLocalFileUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.media.device.FileOpener
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
@@ -67,15 +66,12 @@ private fun MessageFileItem(
     onOpened: () -> Unit
 ) {
     val attachmentState =
-        rememberAttachmentUiState(
+        rememberLocalFileUiState(
             part = attachment,
             load = isOpening
         )
     val localFilePath =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.LocalFile }
-            ?.localFilePath
+        (attachmentState as? AttachmentUiState.Ready)?.value
 
     LaunchedEffect(isOpening, localFilePath) {
         if (!isOpening || localFilePath == null) return@LaunchedEffect

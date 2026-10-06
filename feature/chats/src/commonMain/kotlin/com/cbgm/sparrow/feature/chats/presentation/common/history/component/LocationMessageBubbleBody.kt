@@ -34,9 +34,8 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberLocationUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.fake_location_map
@@ -49,12 +48,9 @@ internal fun LocationMessageBubbleBody(
     locationPart: LocationUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val attachmentState = rememberAttachmentUiState(locationPart)
+    val attachmentState = rememberLocationUiState(locationPart)
     val location =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Location }
-            ?.location
+        (attachmentState as? AttachmentUiState.Ready)?.value
 
     Content(
         location = location,

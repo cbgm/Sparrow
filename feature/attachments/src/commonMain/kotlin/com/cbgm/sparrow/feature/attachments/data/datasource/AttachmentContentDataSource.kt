@@ -1,77 +1,38 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.feature.attachments.data.model.AttachmentContentPayloadDto
-import com.cbgm.sparrow.feature.attachments.data.model.AttachmentTargetDto
 import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal class AttachmentContentDataSource(
     private val messageAttachmentDataSource: MessageAttachmentDataSource,
     private val messageAttachmentFileDataSource: MessageAttachmentFileDataSource,
     private val groupPinnedAttachmentProvider: GroupPinnedAttachmentProvider
 ) {
-    suspend fun load(target: AttachmentTargetDto): AttachmentContentPayloadDto =
-        if (target.groupId == null) {
-            loadMessageAttachment(target)
-        } else {
-            loadPinnedAttachment(target.groupId, target)
-        }
-
-    suspend fun loadBytes(target: AttachmentTargetDto): ByteArray =
-        if (target.groupId == null) {
-            messageAttachmentDataSource.loadBytes(target.id)
-        } else {
-            groupPinnedAttachmentProvider.load(target.groupId, target.id)
-        }
-
-    private suspend fun loadMessageAttachment(target: AttachmentTargetDto): AttachmentContentPayloadDto =
-        when (target.type) {
-            MessageAttachmentType.IMAGE,
-            MessageAttachmentType.VIDEO,
-            MessageAttachmentType.FILE -> {
-                messageAttachmentDataSource.resolveLocalFilePath(target.id)?.let { localFilePath ->
-                    return AttachmentContentPayloadDto.LocalFile(localFilePath)
-                }
-
-                messageAttachmentDataSource.loadBytes(target.id)
-                val localFilePath =
-                    requireNotNull(messageAttachmentDataSource.resolveLocalFilePath(target.id)) {
-                        "Attachment was loaded but no local cache file exists"
-                    }
-                AttachmentContentPayloadDto.LocalFile(localFilePath)
+    suspend fun loadLocalFile(partId: String, groupId: String?): String {
+        require(partId.isNotBlank()) { "Message part ID must not be blank" }
+        if (groupId == null) {
+            messageAttachmentDataSource.resolveLocalFilePath(partId)?.let { localFilePath ->
+                return localFilePath
             }
 
-            MessageAttachmentType.LOCATION,
-            MessageAttachmentType.CONTACT ->
-                AttachmentContentPayloadDto.Payload(
-                    messageAttachmentDataSource.loadBytes(target.id)
-                )
-
-            MessageAttachmentType.VOICE ->
-                error("Voice attachments are loaded by the voice-message path")
+            messageAttachmentDataSource.loadBytes(partId)
+            return requireNotNull(messageAttachmentDataSource.resolveLocalFilePath(partId)) {
+                "Message part was loaded but no local cache file exists"
+            }
         }
 
-    private suspend fun loadPinnedAttachment(
-        groupId: String,
-        target: AttachmentTargetDto
-    ): AttachmentContentPayloadDto {
-        val bytes = groupPinnedAttachmentProvider.load(groupId, target.id)
+        val bytes = groupPinnedAttachmentProvider.load(groupId, partId)
+        val fileName = messageAttachmentFileDataSource.write(bytes)
+        return requireNotNull(messageAttachmentFileDataSource.resolveCacheFilePath(fileName)) {
+            "Pinned message-part cache file could not be resolved"
+        }
+    }
 
-        return when (target.type) {
-            MessageAttachmentType.IMAGE,
-            MessageAttachmentType.VIDEO,
-            MessageAttachmentType.FILE -> {
-                val fileName = messageAttachmentFileDataSource.write(bytes)
-                val localFilePath =
-                    requireNotNull(messageAttachmentFileDataSource.resolveCacheFilePath(fileName)) {
-                        "Pinned attachment cache file could not be resolved"
-                    }
-                AttachmentContentPayloadDto.LocalFile(localFilePath)
-            }
-
-            MessageAttachmentType.LOCATION,
-            MessageAttachmentType.CONTACT -> AttachmentContentPayloadDto.Payload(bytes)
-            MessageAttachmentType.VOICE -> error("Voice attachments are loaded by the voice-message path")
+    suspend fun loadBytes(partId: String, groupId: String?): ByteArray {
+        require(partId.isNotBlank()) { "Message part ID must not be blank" }
+        return if (groupId == null) {
+            messageAttachmentDataSource.loadBytes(partId)
+        } else {
+            groupPinnedAttachmentProvider.load(groupId, partId)
         }
     }
 }

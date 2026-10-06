@@ -46,7 +46,6 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.attachmentColors
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
@@ -159,12 +158,9 @@ private fun MessageLocationAttachment(
     attachment: LocationUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val state = rememberAttachmentUiState(attachment)
+    val state = rememberLocationUiState(attachment)
     val location =
-        (state as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Location }
-            ?.location
+        (state as? AttachmentUiState.Ready)?.value
 
     Surface(
         modifier =
@@ -214,12 +210,9 @@ private fun MessageVisualAttachment(
     attachment: MessagePartUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val state = rememberAttachmentUiState(attachment)
+    val state = rememberLocalFileUiState(attachment)
     val localFilePath =
-        (state as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.LocalFile }
-            ?.localFilePath
+        (state as? AttachmentUiState.Ready)?.value
 
     Surface(
         modifier =
@@ -290,12 +283,9 @@ private fun MessageFileList(
     ) {
         attachments.forEach { attachment ->
             val isOpening = pendingFileId == attachment.id
-            val state = rememberAttachmentUiState(attachment, load = isOpening)
+            val state = rememberLocalFileUiState(attachment, load = isOpening)
             val localFilePath =
-                (state as? AttachmentUiState.Ready)
-                    ?.content
-                    ?.let { content -> content as? AttachmentContent.LocalFile }
-                    ?.localFilePath
+                (state as? AttachmentUiState.Ready)?.value
 
             LaunchedEffect(isOpening, localFilePath) {
                 if (!isOpening || localFilePath == null) return@LaunchedEffect

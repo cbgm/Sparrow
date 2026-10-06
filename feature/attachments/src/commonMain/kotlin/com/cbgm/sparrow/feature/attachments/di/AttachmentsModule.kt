@@ -2,13 +2,11 @@ package com.cbgm.sparrow.feature.attachments.di
 
 import com.cbgm.sparrow.feature.attachments.data.datasource.AttachmentContentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
-import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentContentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.repository.BlobTransferRepositoryImpl
 import com.cbgm.sparrow.feature.attachments.data.repository.MessageAttachmentOperationsRepositoryImpl
 import com.cbgm.sparrow.feature.attachments.data.repository.MessageAttachmentRepositoryImpl
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
@@ -42,7 +40,6 @@ val attachmentsModule =
         singleOf(::LocalAttachmentDataSource)
         singleOf(::MessageAttachmentDataSource)
         singleOf(::AttachmentContentDataSource)
-        singleOf(::LocalAttachmentContentDataSource)
         singleOf(::MessageAttachmentCacheCoordinator)
         singleOf(::MessageAttachmentOperationsRepositoryImpl) {
             bind<MessageAttachmentOperationsRepository>()
@@ -90,7 +87,7 @@ val attachmentsModule =
 
         viewModel { parameters ->
             AttachmentViewModel(
-                target = parameters.get<AttachmentTarget>(),
+                part = parameters.get(),
                 loadAttachmentContent = get()
             )
         }

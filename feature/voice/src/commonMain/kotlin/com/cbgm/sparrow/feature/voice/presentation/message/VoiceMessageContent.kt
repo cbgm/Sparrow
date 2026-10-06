@@ -42,14 +42,11 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptCue
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
@@ -72,10 +69,9 @@ fun VoiceMessageContent(
     part: VoiceUi,
     modifier: Modifier = Modifier
 ) {
-    val target = part.toVoiceMessageTarget()
     val viewModel =
-        koinViewModel<VoiceMessageViewModel>(key = target.stableKey) {
-            parametersOf(target)
+        koinViewModel<VoiceMessageViewModel>(key = part.instanceKey) {
+            parametersOf(part)
         }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -323,16 +319,6 @@ private fun TranscriptScroll(
         }
     }
 }
-
-private fun VoiceUi.toVoiceMessageTarget(): VoiceMessageTarget =
-    VoiceMessageTarget(
-        attachmentId = id,
-        durationMilliseconds = durationMilliseconds,
-        source = when (val partSource = source) {
-            MessagePartSourceUi.Message -> AttachmentSource.Message
-            is MessagePartSourceUi.GroupPin -> AttachmentSource.GroupPin(partSource.groupId)
-        }
-    )
 
 private fun Long.positionAt(progress: Float): Long =
     (coerceAtLeast(0L).toFloat() * progress.coerceIn(0f, 1f)).roundToInt().toLong()

@@ -1,18 +1,20 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
+import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import kotlinx.coroutines.flow.Flow
 
 interface MessageAttachmentRepository {
-    suspend fun loadContent(target: AttachmentTarget): Result<AttachmentContent>
+    suspend fun loadLocalFile(partId: String, groupId: String? = null): Result<String>
 
-    suspend fun loadBytes(attachmentId: String): Result<ByteArray>
+    suspend fun loadLocation(partId: String, groupId: String? = null): Result<CurrentLocation>
 
-    suspend fun loadBytes(target: AttachmentTarget): Result<ByteArray>
+    suspend fun loadContact(partId: String, groupId: String? = null): Result<SharedContact>
+
+    suspend fun loadBytes(partId: String, groupId: String? = null): Result<ByteArray>
 
     suspend fun saveTranscript(attachmentId: String, transcription: AttachmentTranscript): Result<Unit>
 

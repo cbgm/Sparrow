@@ -9,7 +9,6 @@ import com.cbgm.sparrow.feature.voice.data.repository.VoiceRepositoryImpl
 import com.cbgm.sparrow.feature.voice.data.repository.VoiceTranscriptionSettingsRepositoryImpl
 import com.cbgm.sparrow.feature.voice.device.VoicePlayer
 import com.cbgm.sparrow.feature.voice.device.VoiceRecorder
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.repository.VoiceRepository
 import com.cbgm.sparrow.feature.voice.domain.repository.VoiceTranscriptionRepository
 import com.cbgm.sparrow.feature.voice.domain.repository.VoiceTranscriptionSettingsRepository
@@ -97,7 +96,7 @@ val voiceModule =
 
         viewModel { parameters ->
             VoiceMessageViewModel(
-                target = parameters.get<VoiceMessageTarget>(),
+                part = parameters.get(),
                 observeVoicePlayback = get(),
                 observeTranscriptionEnabled = get(),
                 observePersistedTranscript = get<ObserveMessageAttachmentTranscriptUseCase>(),

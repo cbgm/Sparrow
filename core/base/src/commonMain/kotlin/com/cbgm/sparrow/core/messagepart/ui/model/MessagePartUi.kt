@@ -2,12 +2,20 @@ package com.cbgm.sparrow.core.messagepart.ui.model
 
 sealed interface MessagePartUi {
     val id: String
+    val source: MessagePartSourceUi
+
+    val instanceKey: String
+        get() =
+            when (val partSource = source) {
+                MessagePartSourceUi.Message -> "message:$id"
+                is MessagePartSourceUi.GroupPin -> "group-pin:${partSource.groupId}:$id"
+            }
 }
 
 data class TextUi(
     override val id: String,
     val text: String,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message,
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message,
     val isContentFailed: Boolean = false
 ) : MessagePartUi
 
@@ -20,7 +28,7 @@ data class ImageUi(
     val fileName: String? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class VideoUi(
@@ -33,7 +41,7 @@ data class VideoUi(
     val durationMilliseconds: Long? = null,
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class FileUi(
@@ -42,7 +50,7 @@ data class FileUi(
     val byteSize: Long,
     val fileName: String,
     val localFilePath: String? = null,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class VoiceUi(
@@ -50,17 +58,17 @@ data class VoiceUi(
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class LocationUi(
     override val id: String,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class ContactUi(
     override val id: String,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class PollUi(
@@ -74,7 +82,7 @@ data class PollUi(
     val isAnonymous: Boolean = false,
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null,
-    val source: MessagePartSourceUi = MessagePartSourceUi.Message
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class PollOptionUi(

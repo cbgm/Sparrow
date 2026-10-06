@@ -37,9 +37,8 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.attachmentColors
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberContactUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.fake_contact_card
@@ -50,12 +49,9 @@ internal fun ContactMessageBubbleBody(
     contactPart: ContactUi,
     onContactClick: (SharedContact) -> Unit
 ) {
-    val attachmentState = rememberAttachmentUiState(contactPart)
+    val attachmentState = rememberContactUiState(contactPart)
     val contact =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Contact }
-            ?.contact
+        (attachmentState as? AttachmentUiState.Ready)?.value
 
     Content(
         contact = contact,
