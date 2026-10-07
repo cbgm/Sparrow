@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
@@ -136,7 +136,7 @@ class GroupOutgoingMessageProcessor(
                     val packets = createPackets(
                         message = message,
                         recipients = missingRecipients,
-                        parts = attachmentTransfer.messageParts(message.id)
+                        parts = attachmentTransfer.messageParts(message.id).getOrThrow()
                     )
                     if (previousStates.isEmpty()) {
                         val states = packets.map { (contactId, packet) ->
@@ -289,7 +289,7 @@ class GroupOutgoingMessageProcessor(
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
             check(target.isMine) { "Only your own messages can be edited" }
             check(!messageDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.messageParts(messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(messageId).getOrThrow().isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
             check(
@@ -462,7 +462,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
         recipients: List<String>,
-        parts: List<MessagePartDto>
+        parts: List<MessagePart>
     ) {
         val packets =
             try {
@@ -481,7 +481,7 @@ class GroupOutgoingMessageProcessor(
         message: MessageEntity,
         text: String,
         parts: List<MessagePart>
-    ): List<MessagePartDto> {
+    ): List<MessagePart> {
         messageDataSource.saveOutgoingMessage(
             message = message,
             text = text,
@@ -502,7 +502,7 @@ class GroupOutgoingMessageProcessor(
                     isMine = true,
                     senderContactId = null
                 )
-            )
+            ).getOrThrow()
         } catch (error: Throwable) {
             messageDataSource.deleteMessages(listOf(message))
             throw error
@@ -534,7 +534,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun createPackets(
         message: MessageEntity,
         recipients: List<String>,
-        parts: List<MessagePartDto>
+        parts: List<MessagePart>
     ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
@@ -547,7 +547,7 @@ class GroupOutgoingMessageProcessor(
                             messageDataSource.findMessageText(message.id)
                                 ?.takeIf(String::isNotBlank)
                                 ?.let { text -> add(TextDto(id = message.id, text = text)) }
-                            addAll(parts)
+                            addAll(parts.map { it.toDto() })
                         },
                     replyToMessageId = message.replyToMessageId
                 )

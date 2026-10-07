@@ -96,9 +96,12 @@ internal class MessageAttachmentDataSource(
         )
     }
 
-    suspend fun loadDetachedBytes(part: MessagePartDto): ByteArray =
+    suspend fun loadDetachedBytes(partId: String): ByteArray =
         withContext(Dispatchers.IO) {
-            blobTransferDataSource.download(part.requireBlobReference())
+            val part = attachmentDao.findPartById(partId) ?: error("Message part was not found")
+            val blob = attachmentDao.findBlobByPartId(partId) ?: error("Message blob was not found")
+            val partDto = part.toMessagePartDto(blob, fileDataSource::resolveCacheFilePath)
+            blobTransferDataSource.download(partDto.requireBlobReference())
         }
 
     suspend fun cacheIncoming(messageId: String) {

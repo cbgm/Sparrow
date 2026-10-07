@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import kotlinx.coroutines.flow.Flow
@@ -11,20 +10,20 @@ interface MessageAttachmentOperationsRepository {
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ): List<MessagePartDto>
+    ): Result<List<MessagePart>>
 
     suspend fun persistIncoming(
         messageId: String,
-        parts: List<MessagePartDto>,
+        parts: List<MessagePart>,
         context: AttachmentMessageContext
     )
 
     /** Synchronizes owner-provided names without exposing Chats or Contacts DAOs. */
     suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean)
 
-    suspend fun messageParts(messageId: String): List<MessagePartDto>
+    suspend fun messageParts(messageId: String): Result<List<MessagePart>>
 
-    suspend fun loadDetachedBytes(part: MessagePartDto): ByteArray
+    suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray>
 
     suspend fun deleteForMessages(messageIds: List<String>)
 

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.time.SystemClock
@@ -68,7 +69,7 @@ class DirectMessagePacketHandler(
             storeMessage(conversation, context, packet)
             attachmentTransfer.persistIncoming(
                 messageId = packet.messageId,
-                parts = packet.parts.filterNot { part -> part is TextDto },
+                parts = packet.parts.filterNot { part -> part is TextDto }.map { it.toMessagePart() },
                 context = AttachmentMessageContext(
                     conversationId = conversation.id,
                     createdAtEpochMilliseconds = conversationDataSource.findMessageById(packet.messageId)

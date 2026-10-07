@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.result.safeSuspendCall
@@ -81,7 +83,7 @@ internal class GroupPinRepositoryImpl(
                 require(senderSigningPublicKey.isNotEmpty()) { "Pinned message sender identity was not found" }
                 val senderKey = senderSigningPublicKey.copyOf()
 
-                val attachmentParts = attachmentDataSource.messageParts(messageId)
+                val attachmentParts = attachmentDataSource.messageParts(messageId).getOrThrow()
                 val content =
                     GroupMessageContent(
                         parts =
@@ -89,7 +91,7 @@ internal class GroupPinRepositoryImpl(
                                 dataSource.findMessageText(messageId)
                                     ?.takeIf(String::isNotBlank)
                                     ?.let { text -> add(TextDto(id = messageId, text = text)) }
-                                addAll(attachmentParts)
+                                addAll(attachmentParts.map { it.toDto() })
                             },
                         replyToMessageId = message.replyToMessageId
                     )
@@ -123,11 +125,9 @@ internal class GroupPinRepositoryImpl(
         groupId: String,
         attachmentId: String
     ): Result<ByteArray> =
-        safeSuspendCall {
-            attachmentDataSource.loadDetachedBytes(
-                findPinnedAttachment(groupId, attachmentId)
-            )
-        }
+        attachmentDataSource.loadDetachedBytes(
+            findPinnedAttachment(groupId, attachmentId).toMessagePart()
+        )
 
     private suspend fun findPinnedAttachment(
         groupId: String,

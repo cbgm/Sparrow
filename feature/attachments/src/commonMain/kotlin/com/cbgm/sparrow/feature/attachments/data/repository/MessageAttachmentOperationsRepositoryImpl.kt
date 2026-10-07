@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
+import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
@@ -21,6 +23,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentFileDataSource
@@ -48,8 +51,8 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ): List<MessagePartDto> {
-        if (parts.isEmpty()) return emptyList()
+    ): Result<List<MessagePart>> = safeSuspendCall {
+        if (parts.isEmpty()) return@safeSuspendCall emptyList()
         MessageAttachmentPolicy.requireValid(parts)
 
         val outgoing = parts.map { part -> createOutgoingDto(part) }
@@ -90,7 +93,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 localFileNames = localFileNames,
                 context = context.toDto()
             )
-            return uploaded
+            uploaded.map { it.toMessagePart() }
         } catch (error: Throwable) {
             cleanupUploads(uploaded, deleteCapabilities, localFileNames)
             throw error
@@ -99,18 +102,25 @@ internal class MessageAttachmentOperationsRepositoryImpl(
 
     override suspend fun persistIncoming(
         messageId: String,
-        parts: List<MessagePartDto>,
+        parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ) = dataSource.persistIncoming(messageId, parts, context.toDto())
+    ) {
+        val dtos = parts.map { it.toDto() }
+        dataSource.persistIncoming(messageId, dtos, context.toDto())
+    }
 
     override suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) =
         dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
 
-    override suspend fun messageParts(messageId: String): List<MessagePartDto> =
-        dataSource.messageParts(messageId)
+    override suspend fun messageParts(messageId: String): Result<List<MessagePart>> =
+        safeSuspendCall {
+            dataSource.messageParts(messageId).map { it.toMessagePart() }
+        }
 
-    override suspend fun loadDetachedBytes(part: MessagePartDto): ByteArray =
-        dataSource.loadDetachedBytes(part)
+    override suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray> =
+        safeSuspendCall {
+            dataSource.loadDetachedBytes(part.id)
+        }
 
     override suspend fun deleteForMessages(messageIds: List<String>) = dataSource.deleteForMessages(messageIds)
 
@@ -239,7 +249,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             }
         ) { "Message part $id has no outgoing payload bytes" }
 
-    private fun MessagePartDto.withBlob(blob: com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto): MessagePartDto =
+    private fun MessagePartDto.withBlob(blob: EncryptedBlobReferenceDto): MessagePartDto =
         when (this) {
             is ImageDto -> copy(blob = blob)
             is VideoDto -> copy(blob = blob)

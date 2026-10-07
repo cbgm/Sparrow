@@ -26,7 +26,7 @@ class DirectMessageEditPacketHandler(
                 "Only the original sender can edit a direct message"
             }
             check(!incomingMessageDataSource.findMessageText(packet.messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.messageParts(packet.messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(packet.messageId).getOrThrow().isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
             incomingMessageDataSource.replaceMessageText(packet.messageId, packet.text.trim())

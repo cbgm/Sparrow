@@ -1,11 +1,14 @@
 package com.cbgm.sparrow.core.messagepart.data.mapper
 
+import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollOptionDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
@@ -19,9 +22,13 @@ import com.cbgm.sparrow.core.messagepart.domain.model.PollOption
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import java.util.concurrent.ConcurrentHashMap
 
-fun MessagePartDto.toMessagePart(): MessagePart =
-    when (this) {
+private val dtoRegistry = ConcurrentHashMap<String, MessagePartDto>()
+
+fun MessagePartDto.toMessagePart(): MessagePart {
+    dtoRegistry[id] = this
+    return when (this) {
         is TextDto -> toText()
         is ImageDto -> toImage()
         is VideoDto -> toVideo()
@@ -31,6 +38,94 @@ fun MessagePartDto.toMessagePart(): MessagePart =
         is ContactDto -> toContact()
         is PollDto -> toPoll()
     }
+}
+
+fun MessagePart.toDto(): MessagePartDto {
+    val cached = dtoRegistry[id]
+    return when (this) {
+        is Text -> cached as? TextDto ?: TextDto(id = id, text = text)
+        is Image -> (cached as? ImageDto)?.copy(
+            mimeType = mimeType,
+            byteSize = byteSize,
+            width = width,
+            height = height,
+            fileName = fileName,
+            localFilePath = localFilePath,
+            thumbnailFilePath = thumbnailFilePath
+        ) ?: ImageDto(
+            id = id,
+            mimeType = mimeType,
+            byteSize = byteSize,
+            width = width,
+            height = height,
+            fileName = fileName,
+            localFilePath = localFilePath,
+            thumbnailFilePath = thumbnailFilePath
+        )
+        is Video -> (cached as? VideoDto)?.copy(
+            mimeType = mimeType,
+            byteSize = byteSize,
+            fileName = fileName,
+            width = width,
+            height = height,
+            durationMilliseconds = durationMilliseconds,
+            localFilePath = localFilePath,
+            thumbnailFilePath = thumbnailFilePath
+        ) ?: VideoDto(
+            id = id,
+            mimeType = mimeType,
+            byteSize = byteSize,
+            fileName = fileName,
+            width = width,
+            height = height,
+            durationMilliseconds = durationMilliseconds,
+            localFilePath = localFilePath,
+            thumbnailFilePath = thumbnailFilePath
+        )
+        is File -> (cached as? FileDto)?.copy(
+            mimeType = mimeType,
+            byteSize = byteSize,
+            fileName = fileName,
+            localFilePath = localFilePath
+        ) ?: FileDto(
+            id = id,
+            mimeType = mimeType,
+            byteSize = byteSize,
+            fileName = fileName,
+            localFilePath = localFilePath
+        )
+        is Voice -> (cached as? VoiceDto)?.copy(
+            mimeType = mimeType,
+            byteSize = byteSize,
+            durationMilliseconds = durationMilliseconds,
+            localFilePath = localFilePath
+        ) ?: VoiceDto(
+            id = id,
+            mimeType = mimeType,
+            byteSize = byteSize,
+            durationMilliseconds = durationMilliseconds,
+            localFilePath = localFilePath
+        )
+        is Location -> (cached as? LocationDto)?.copy(
+            mimeType = LOCATION_MIME_TYPE
+        ) ?: LocationDto(id = id, mimeType = LOCATION_MIME_TYPE, byteSize = 0L)
+        is Contact -> (cached as? ContactDto)?.copy(
+            mimeType = CONTACT_MIME_TYPE
+        ) ?: ContactDto(id = id, mimeType = CONTACT_MIME_TYPE, byteSize = 0L)
+        is Poll -> cached as? PollDto ?: PollDto(
+            id = id,
+            question = question,
+            description = description,
+            options = options.map { PollOptionDto(it.id, it.text) },
+            images = images.map { (it.toDto() as? ImageDto) ?: ImageDto(id = it.id, mimeType = it.mimeType, byteSize = it.byteSize) },
+            allowMultipleSelection = allowMultipleSelection,
+            allowVoteChange = allowVoteChange,
+            isAnonymous = isAnonymous,
+            expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+            closedAtEpochMilliseconds = closedAtEpochMilliseconds
+        )
+    }
+}
 
 private fun TextDto.toText(): Text =
     Text(

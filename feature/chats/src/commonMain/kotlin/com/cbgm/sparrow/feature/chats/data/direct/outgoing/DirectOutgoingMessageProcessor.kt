@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
@@ -178,7 +178,7 @@ class DirectOutgoingMessageProcessor(
             check(message.isMine) { "Only your own messages can be edited" }
             check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
             check(!conversationDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.messageParts(messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(messageId).getOrThrow().isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
 
@@ -391,7 +391,7 @@ class DirectOutgoingMessageProcessor(
             createPacket(
                 messageId = message.id,
                 text = conversationDataSource.findMessageText(message.id).orEmpty(),
-                parts = attachmentTransfer.messageParts(message.id),
+                parts = attachmentTransfer.messageParts(message.id).getOrThrow(),
                 replyToMessageId = message.replyToMessageId
             )
         conversationDataSource.upsertMessage(
@@ -446,7 +446,7 @@ class DirectOutgoingMessageProcessor(
         parts: List<MessagePart>,
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
-    ): List<MessagePartDto> {
+    ): List<MessagePart> {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
             MessageEntity(
@@ -481,7 +481,7 @@ class DirectOutgoingMessageProcessor(
                     isMine = true,
                     senderContactId = null
                 )
-            )
+            ).getOrThrow()
         } catch (error: Throwable) {
             runCatching { conversationDataSource.deleteMessages(listOf(message)) }
             throw error
@@ -522,7 +522,7 @@ class DirectOutgoingMessageProcessor(
     private suspend fun createPacket(
         messageId: String,
         text: String,
-        parts: List<MessagePartDto>,
+        parts: List<MessagePart>,
         replyToMessageId: String?
     ): ChatMessagePacket =
         ChatMessagePacket(
@@ -533,7 +533,7 @@ class DirectOutgoingMessageProcessor(
                 buildList {
                     text.takeIf(String::isNotBlank)
                         ?.let { value -> add(TextDto(id = messageId, text = value)) }
-                    addAll(parts)
+                    addAll(parts.map { it.toDto() })
                 },
             replyToMessageId = replyToMessageId,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),

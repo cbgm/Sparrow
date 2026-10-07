@@ -46,7 +46,7 @@ class GroupMessageEditPacketHandler(
                 "Only the original sender can edit a group message"
             }
             check(!incomingMessageDataSource.findMessageText(edit.messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.messageParts(edit.messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(edit.messageId).getOrThrow().isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
             incomingMessageDataSource.replaceMessageText(edit.messageId, edit.text.trim())

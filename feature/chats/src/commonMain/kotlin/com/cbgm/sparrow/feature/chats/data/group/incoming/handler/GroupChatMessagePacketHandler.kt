@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -84,7 +85,7 @@ class GroupChatMessagePacketHandler(
                 prefetchLinkPreviews(text)
                 attachmentTransfer.persistIncoming(
                     messageId = groupPacket.messageId,
-                    parts = attachmentParts,
+                    parts = attachmentParts.map { it.toMessagePart() },
                     context = AttachmentMessageContext(
                         conversationId = conversation.id,
                         createdAtEpochMilliseconds = existingMessage.createdAtEpochMilliseconds,
@@ -125,7 +126,7 @@ class GroupChatMessagePacketHandler(
             prefetchLinkPreviews(text)
             attachmentTransfer.persistIncoming(
                 messageId = groupPacket.messageId,
-                parts = attachmentParts,
+                parts = attachmentParts.map { it.toMessagePart() },
                 context = AttachmentMessageContext(
                     conversationId = conversation.id,
                     createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds,
