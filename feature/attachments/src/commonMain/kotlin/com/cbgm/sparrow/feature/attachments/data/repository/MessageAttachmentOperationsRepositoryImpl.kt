@@ -60,9 +60,36 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             outgoing.sumOf { part -> part.requirePayloadBytes().size.toLong() }
         )
 
+        val localFileNames = linkedMapOf<String, String>()
+        val localParts = mutableListOf<MessagePartDto>()
+
+        outgoing.forEach { part ->
+            val bytes = part.requirePayloadBytes()
+            val localFileName = fileDataSource.write(bytes)
+            localFileNames[part.id] = localFileName
+            val localBlob = EncryptedBlobReferenceDto(
+                nodeId = "",
+                blobId = "local-${part.id}",
+                readCapability = "",
+                ciphertextByteSize = bytes.size.toLong(),
+                expiresAtEpochMilliseconds = 0L,
+                encryptionKey = ByteArray(0),
+                nonce = ByteArray(0),
+                ciphertextSha256 = ByteArray(0)
+            )
+            localParts += part.withBlob(localBlob)
+        }
+
+        dataSource.persistOutgoing(
+            messageId = messageId,
+            parts = localParts,
+            deleteCapabilities = emptyMap(),
+            localFileNames = localFileNames,
+            context = context.toDto()
+        )
+
         val uploaded = mutableListOf<MessagePartDto>()
         val deleteCapabilities = linkedMapOf<String, String>()
-        val localFileNames = linkedMapOf<String, String>()
 
         try {
             outgoing.forEach { part ->
@@ -72,27 +99,18 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                         plaintext = bytes,
                         retentionMilliseconds = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
                     )
-                val localFileName =
-                    try {
-                        fileDataSource.write(bytes)
-                    } catch (error: Throwable) {
-                        blobTransferDataSource.delete(blobReference, deleteCapability)
-                        throw error
-                    }
+
+                dataSource.updateRemoteBlobReference(
+                    partId = part.id,
+                    blobReference = blobReference,
+                    deleteCapability = deleteCapability
+                )
 
                 val uploadedPart = part.withBlob(blobReference)
                 uploaded += uploadedPart
-                deleteCapabilities[uploadedPart.id] = deleteCapability
-                localFileNames[uploadedPart.id] = localFileName
+                deleteCapabilities[part.id] = deleteCapability
             }
 
-            dataSource.persistOutgoing(
-                messageId = messageId,
-                parts = uploaded,
-                deleteCapabilities = deleteCapabilities,
-                localFileNames = localFileNames,
-                context = context.toDto()
-            )
             uploaded.map { it.toMessagePart() }
         } catch (error: Throwable) {
             cleanupUploads(uploaded, deleteCapabilities, localFileNames)

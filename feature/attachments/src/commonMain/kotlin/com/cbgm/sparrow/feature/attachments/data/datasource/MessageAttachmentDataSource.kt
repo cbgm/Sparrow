@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
+import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
@@ -47,15 +48,32 @@ internal class MessageAttachmentDataSource(
             parts = parts.mapIndexed { index, part -> part.toMessagePartEntity(messageId, index + 1) },
             blobs = parts.map { part ->
                 part.toMessageBlobEntity(
-                    deleteCapability = requireNotNull(deleteCapabilities[part.id]) {
-                        "Missing delete capability for message part ${part.id}"
-                    },
-                    localFilePath = requireNotNull(localFileNames[part.id]) {
-                        "Missing local file for message part ${part.id}"
-                    }
+                    deleteCapability = deleteCapabilities[part.id],
+                    localFilePath = localFileNames[part.id]
                 )
             }
         )
+    }
+
+    suspend fun updateRemoteBlobReference(
+        partId: String,
+        blobReference: EncryptedBlobReferenceDto,
+        deleteCapability: String
+    ) {
+        check(
+            attachmentDao.updateRemoteBlobReference(
+                partId = partId,
+                nodeId = blobReference.nodeId,
+                blobId = blobReference.blobId,
+                readCapability = blobReference.readCapability,
+                ciphertextByteSize = blobReference.ciphertextByteSize,
+                blobExpiresAtEpochMilliseconds = blobReference.expiresAtEpochMilliseconds,
+                encryptionKey = blobReference.encryptionKey,
+                nonce = blobReference.nonce,
+                ciphertextSha256 = blobReference.ciphertextSha256,
+                deleteCapability = deleteCapability
+            ) == 1
+        ) { "Message blob was not found to update remote reference" }
     }
 
     suspend fun persistIncoming(

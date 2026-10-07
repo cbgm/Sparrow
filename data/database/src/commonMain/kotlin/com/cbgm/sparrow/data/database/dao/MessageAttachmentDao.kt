@@ -162,6 +162,34 @@ interface MessageAttachmentDao {
 
     @Query(
         """
+        UPDATE message_blobs
+        SET nodeId = :nodeId,
+            blobId = :blobId,
+            readCapability = :readCapability,
+            ciphertextByteSize = :ciphertextByteSize,
+            blobExpiresAtEpochMilliseconds = :blobExpiresAtEpochMilliseconds,
+            encryptionKey = :encryptionKey,
+            nonce = :nonce,
+            ciphertextSha256 = :ciphertextSha256,
+            deleteCapability = :deleteCapability
+        WHERE partId = :partId
+        """
+    )
+    suspend fun updateRemoteBlobReference(
+        partId: String,
+        nodeId: String,
+        blobId: String,
+        readCapability: String,
+        ciphertextByteSize: Long,
+        blobExpiresAtEpochMilliseconds: Long,
+        encryptionKey: ByteArray,
+        nonce: ByteArray,
+        ciphertextSha256: ByteArray,
+        deleteCapability: String
+    ): Int
+
+    @Query(
+        """
         DELETE FROM message_parts
         WHERE messageId IN (:messageIds)
           AND type IN ('IMAGE', 'VIDEO', 'FILE', 'VOICE', 'LOCATION', 'CONTACT')
