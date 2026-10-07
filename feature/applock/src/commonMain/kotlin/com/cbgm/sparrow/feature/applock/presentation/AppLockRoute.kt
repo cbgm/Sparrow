@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.applock.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationLauncher
@@ -16,8 +17,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun AppLockRoute(
     onUnlocked: () -> Unit,
-    onLockedContentReady: () -> Unit,
     modifier: Modifier = Modifier,
+    onContentReady: () -> Unit = {},
     viewModel: AppLockViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -32,10 +33,6 @@ fun AppLockRoute(
         }
 
         is AppLockUiState.Locked -> {
-            LaunchedEffect(Unit) {
-                onLockedContentReady()
-            }
-
             AppLockAuthenticationLauncher(
                 requestId = state.authenticationRequestId,
                 enabled = state.isAuthenticating,
@@ -49,6 +46,11 @@ fun AppLockRoute(
                 onUnlockRequested = viewModel::requestAuthentication,
                 modifier = modifier
             )
+
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                onContentReady()
+            }
         }
     }
 }

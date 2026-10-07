@@ -43,7 +43,6 @@ import com.cbgm.sparrow.resources.app_connection_offline_hint
 import com.cbgm.sparrow.resources.app_connection_reconnected_hint
 import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
 import com.cbgm.sparrow.startup.domain.usecase.ObserveAppConnectionAvailabilityUseCase
-import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,10 +83,6 @@ fun AppNavigation(
         mutableStateOf(false)
     }
 
-    var startupWasOffline by rememberSaveable {
-        mutableStateOf(false)
-    }
-
     val snackbarHostState = remember {
         SnackbarHostState()
     }
@@ -98,7 +93,6 @@ fun AppNavigation(
 
     ObserveConnectionSnackbar(
         startupComplete = startupComplete,
-        startupWasOffline = startupWasOffline,
         observeAppConnectionAvailability = observeAppConnectionAvailability
     )
 
@@ -121,18 +115,11 @@ fun AppNavigation(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             startupNavGraph(
-                onStartupReady = { connection ->
-                    startupWasOffline =
-                        connection == StartupConnection.OFFLINE
-
-                    startupComplete = true
-                },
+                onStartupReady = { startupComplete = true },
                 onStartupContentReady = onStartupContentReady
             )
 
-            mainNavGraph(
-                onMainReady = onStartupContentReady
-            )
+            mainNavGraph(onContentReady = onStartupContentReady)
 
             chatsNavGraph()
             attachmentsNavGraph()
@@ -191,7 +178,6 @@ private fun ObserveGlobalFeedback(
 @Composable
 private fun ObserveConnectionSnackbar(
     startupComplete: Boolean,
-    startupWasOffline: Boolean,
     observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase
 ) {
     val offlineHint = stringResource(
@@ -209,7 +195,7 @@ private fun ObserveConnectionSnackbar(
     ) {
         if (!startupComplete) return@LaunchedEffect
 
-        var connectionUnavailable = startupWasOffline
+        var connectionUnavailable = false
         var offlineHintWasShown = false
 
         var pendingOfflineHintJob: Job? = null
@@ -225,10 +211,6 @@ private fun ObserveConnectionSnackbar(
 
                 SparrowLog.hint(offlineHint)
             }
-        }
-
-        if (connectionUnavailable) {
-            scheduleOfflineHint()
         }
 
         observeAppConnectionAvailability().collect { availability ->

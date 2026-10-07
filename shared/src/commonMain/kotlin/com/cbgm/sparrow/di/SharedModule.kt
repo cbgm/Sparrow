@@ -7,6 +7,10 @@ import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
+import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
+import com.cbgm.sparrow.runtime.startup.ApplicationStartupRunner
+import com.cbgm.sparrow.runtime.startup.createApplicationStartupTasks
+import com.cbgm.sparrow.startup.domain.runner.StartupRunner
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -18,6 +22,11 @@ val sharedModule =
         single {
             AppInitializationDependencies(
                 initializeCryptoRuntime = get(),
+                getIdentityStatus = get(),
+                recoverIncompleteIdentity = get(),
+                initializeLocalEmbedding = get(),
+                initializeSemanticSearch = get(),
+                initializeMessageSafety = get(),
                 platformNotificationRuntime = get(),
                 conversationNotificationCoordinator = get(),
                 attachmentConversationNameObserver = get(),
@@ -47,12 +56,31 @@ val sharedModule =
             )
         }
 
+        single {
+            ForegroundRuntimeCoordinator(
+                foreground = get(),
+                notificationRuntime = get(),
+                applicationScope = get<ApplicationCoroutineScope>()
+            )
+        }
+
+        single<StartupRunner> {
+            val initialization = get<AppInitializationDependencies>()
+
+            ApplicationStartupRunner(
+                startupTasks =
+                    createApplicationStartupTasks(
+                        initAppLanguageUseCase = get(),
+                        initialization = initialization
+                    ),
+                backgroundScope = get<ApplicationCoroutineScope>(),
+                foregroundRuntime = get()
+            )
+        }
+
         viewModel {
             AppViewModel(
-                initAppLanguageUseCase = get(),
-                initialization = get(),
-                foreground = get(),
-                startupRuntimeReadiness = get()
+                foregroundRuntime = get()
             )
         }
     }
