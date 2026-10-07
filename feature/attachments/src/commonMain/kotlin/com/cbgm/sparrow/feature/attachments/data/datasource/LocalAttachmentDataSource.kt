@@ -9,8 +9,8 @@ import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtos
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDtos
 import com.cbgm.sparrow.feature.attachments.data.mapper.toSavedFileMetadata
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
 import kotlinx.coroutines.flow.Flow
@@ -54,7 +54,7 @@ internal class LocalAttachmentDataSource(
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         return attachmentDao.observeLocalPartsByConversationId(conversationId)
             .map { parts ->
-                parts.toMessagePartDtos(loadBlobs(parts), fileDataSource::resolveCacheFilePath)
+                parts.toDtos(loadBlobs(parts), fileDataSource::resolveCacheFilePath)
                     .filter { part -> part.isManagedLocalPart() }
             }
     }
@@ -72,7 +72,7 @@ internal class LocalAttachmentDataSource(
                 parts.mapNotNull { part ->
                     val context = contextsByMessageId[part.messageId] ?: return@mapNotNull null
                     val blob = blobsByPartId[part.id] ?: return@mapNotNull null
-                    part.toMessagePartDto(blob, fileDataSource::resolveCacheFilePath)
+                    part.toDto(blob, fileDataSource::resolveCacheFilePath)
                         .takeIf { partDto -> partDto.isManagedLocalPart() }
                         ?.let { partDto ->
                             StoredPart(

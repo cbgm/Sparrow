@@ -11,35 +11,18 @@ import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
-import com.cbgm.sparrow.data.database.entity.MessageStructuredEntity
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.serialization.json.Json
 
-internal fun List<MessagePartEntity>.toMessagePartDtos(
+internal fun List<MessagePartEntity>.toDtos(
     blobs: List<MessageBlobEntity>,
     resolveLocalFilePath: (String) -> String?
 ): List<MessagePartDto> {
     val blobsByPartId = blobs.associateBy(MessageBlobEntity::partId)
-    return map { part ->
-        part.toMessagePartDto(
-            blob = requireNotNull(blobsByPartId[part.id]) { "Message blob ${part.id} was not found" },
-            resolveLocalFilePath = resolveLocalFilePath
-        )
-    }
-}
-
-internal fun List<MessagePartEntity>.toMessagePartDtos(
-    blobs: List<MessageBlobEntity>,
-    structured: List<MessageStructuredEntity>,
-    resolveLocalFilePath: (String) -> String?
-): List<MessagePartDto> {
-    val blobsByPartId = blobs.associateBy(MessageBlobEntity::partId)
-    val structuredByPartId = structured.associateBy(MessageStructuredEntity::partId)
     val orderedParts = sortedBy(MessagePartEntity::position)
     val decodedById = orderedParts.associate { part ->
-        part.id to part.toMessagePartDto(
+        part.id to part.toDto(
             blob = blobsByPartId[part.id],
-            structured = structuredByPartId[part.id],
             resolveLocalFilePath = resolveLocalFilePath
         )
     }
@@ -50,41 +33,98 @@ internal fun List<MessagePartEntity>.toMessagePartDtos(
         .map { part -> decodedById.getValue(part.id).withNestedParts(decodedById) }
 }
 
-internal fun List<MessagePartEntity>.toMessagePartDtosByMessageId(
-    blobs: List<MessageBlobEntity>,
-    resolveLocalFilePath: (String) -> String?
-): Map<String, List<MessagePartDto>> {
-    val blobsByPartId = blobs.associateBy(MessageBlobEntity::partId)
-    return groupBy(MessagePartEntity::messageId)
-        .mapValues { (_, parts) ->
-            parts.sortedBy(MessagePartEntity::position)
-                .map { part ->
-                    part.toMessagePartDto(
-                        blob = requireNotNull(blobsByPartId[part.id]) { "Message blob ${part.id} was not found" },
-                        resolveLocalFilePath = resolveLocalFilePath
-                    )
-                }
-        }
-}
-
-private fun MessagePartEntity.toMessagePartDto(
+internal fun MessagePartEntity.toDto(
     blob: MessageBlobEntity?,
-    structured: MessageStructuredEntity?,
     resolveLocalFilePath: (String) -> String?
 ): MessagePartDto =
     when (MessageAttachmentType.valueOf(type)) {
         MessageAttachmentType.POLL -> {
-            requireNotNull(structured) { "Structured message part $id was not found" }
-            require(id == structured.partId) { "Message part/structured ID mismatch" }
-            Json.decodeFromString(PollDto.serializer(), structured.json).also { poll ->
-                require(poll.id == id) { "Message part/structured payload ID mismatch" }
+            val json = requireNotNull(payload) { "Poll message part $id is missing payload" }
+            Json.decodeFromString(PollDto.serializer(), json).also { poll ->
+                require(poll.id == id) { "Message part/payload ID mismatch" }
             }
         }
 
-        else -> toMessagePartDto(
-            blob = requireNotNull(blob) { "Message blob $id was not found" },
-            resolveLocalFilePath = resolveLocalFilePath
-        )
+        MessageAttachmentType.IMAGE -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            ImageDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize,
+                width = persistedBlob.width,
+                height = persistedBlob.height,
+                fileName = persistedBlob.fileName,
+                localFilePath = persistedBlob.localFilePath?.let(resolveLocalFilePath)
+            )
+        }
+
+        MessageAttachmentType.VIDEO -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            VideoDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize,
+                fileName = persistedBlob.fileName,
+                width = persistedBlob.width,
+                height = persistedBlob.height,
+                durationMilliseconds = persistedBlob.durationMilliseconds,
+                localFilePath = persistedBlob.localFilePath?.let(resolveLocalFilePath)
+            )
+        }
+
+        MessageAttachmentType.FILE -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            FileDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize,
+                fileName = persistedBlob.fileName ?: id,
+                localFilePath = persistedBlob.localFilePath?.let(resolveLocalFilePath)
+            )
+        }
+
+        MessageAttachmentType.VOICE -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            VoiceDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize,
+                durationMilliseconds = requireNotNull(persistedBlob.durationMilliseconds) {
+                    "Voice message part $id is missing duration"
+                },
+                localFilePath = persistedBlob.localFilePath?.let(resolveLocalFilePath)
+            )
+        }
+
+        MessageAttachmentType.LOCATION -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            LocationDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize
+            )
+        }
+
+        MessageAttachmentType.CONTACT -> {
+            val persistedBlob = requireNotNull(blob) { "Message blob $id was not found" }
+            require(id == persistedBlob.partId) { "Message part/blob ID mismatch" }
+            ContactDto(
+                id = id,
+                blob = persistedBlob.toEncryptedBlobReferenceDto(),
+                mimeType = persistedBlob.mimeType,
+                byteSize = persistedBlob.byteSize
+            )
+        }
     }
 
 private fun MessagePartDto.nestedPartIds(): List<String> =
@@ -104,82 +144,6 @@ private fun MessagePartDto.withNestedParts(partsById: Map<String, MessagePartDto
 
         else -> this
     }
-
-internal fun MessagePartEntity.toMessagePartDto(
-    blob: MessageBlobEntity,
-    resolveLocalFilePath: (String) -> String?
-): MessagePartDto {
-    require(id == blob.partId) { "Message part/blob ID mismatch" }
-    val reference = blob.toEncryptedBlobReferenceDto()
-    val localFilePath = blob.localFilePath?.let(resolveLocalFilePath)
-
-    return when (MessageAttachmentType.valueOf(type)) {
-        MessageAttachmentType.IMAGE ->
-            ImageDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize,
-                width = blob.width,
-                height = blob.height,
-                fileName = blob.fileName,
-                localFilePath = localFilePath
-            )
-
-        MessageAttachmentType.VIDEO ->
-            VideoDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize,
-                fileName = blob.fileName,
-                width = blob.width,
-                height = blob.height,
-                durationMilliseconds = blob.durationMilliseconds,
-                localFilePath = localFilePath
-            )
-
-        MessageAttachmentType.FILE ->
-            FileDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize,
-                fileName = blob.fileName ?: id,
-                localFilePath = localFilePath
-            )
-
-        MessageAttachmentType.VOICE ->
-            VoiceDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize,
-                durationMilliseconds = requireNotNull(blob.durationMilliseconds) {
-                    "Voice message part $id is missing duration"
-                },
-                localFilePath = localFilePath
-            )
-
-        MessageAttachmentType.LOCATION ->
-            LocationDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize
-            )
-
-        MessageAttachmentType.CONTACT ->
-            ContactDto(
-                id = id,
-                blob = reference,
-                mimeType = blob.mimeType,
-                byteSize = blob.byteSize
-            )
-
-        MessageAttachmentType.POLL -> error("Poll is a structured message part")
-    }
-}
 
 internal fun MessageBlobEntity.toEncryptedBlobReferenceDto(): EncryptedBlobReferenceDto =
     EncryptedBlobReferenceDto(

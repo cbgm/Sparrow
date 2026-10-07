@@ -53,7 +53,6 @@ import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
-import com.cbgm.sparrow.data.database.entity.MessageStructuredEntity
 import com.cbgm.sparrow.data.database.entity.MessageTextEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
@@ -84,7 +83,6 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         MessageEntity::class,
         MessagePartEntity::class,
         MessageTextEntity::class,
-        MessageStructuredEntity::class,
         MessageBlobEntity::class,
         VoiceTranscriptEntity::class,
         AttachmentMessageContextEntity::class,
@@ -98,7 +96,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 53,
+    version = 54,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),

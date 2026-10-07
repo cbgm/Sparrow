@@ -3,6 +3,7 @@ package com.cbgm.sparrow.data.database.device
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.cbgm.sparrow.data.database.SparrowDatabase
+import com.cbgm.sparrow.data.database.migration.MessagePartPayloadMigration53To54
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -12,5 +13,5 @@ fun buildSparrowDatabase(builder: RoomDatabase.Builder<SparrowDatabase>): Sparro
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
-        .addMigrations()
+        .addMigrations(MessagePartPayloadMigration53To54)
         .build()

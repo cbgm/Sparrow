@@ -25,5 +25,6 @@ data class MessagePartEntity(
     val id: String,
     val messageId: String,
     val position: Int,
-    val type: String
+    val type: String,
+    val payload: String? = null
 )

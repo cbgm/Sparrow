@@ -11,7 +11,6 @@ import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
-import com.cbgm.sparrow.data.database.entity.MessageStructuredEntity
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.serialization.json.Json
 
@@ -49,16 +48,13 @@ internal fun MessagePartDto.toMessagePartEntity(
         id = id,
         messageId = messageId,
         position = position,
-        type = persistenceType()
+        type = persistenceType(),
+        payload = persistencePayload()
     )
 
-internal fun MessagePartDto.toMessageStructuredEntityOrNull(): MessageStructuredEntity? =
+private fun MessagePartDto.persistencePayload(): String? =
     when (this) {
-        is PollDto -> MessageStructuredEntity(
-            partId = id,
-            json = Json.encodeToString(PollDto.serializer(), this)
-        )
-
+        is PollDto -> Json.encodeToString(PollDto.serializer(), this)
         else -> null
     }
 

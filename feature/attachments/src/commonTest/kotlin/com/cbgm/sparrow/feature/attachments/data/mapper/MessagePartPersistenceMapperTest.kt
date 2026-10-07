@@ -10,7 +10,7 @@ import kotlin.test.assertIs
 
 class MessagePartPersistenceMapperTest {
     @Test
-    fun structuredPartReloadUsesCurrentNestedBlobReferences() {
+    fun pollPayloadReloadUsesCurrentNestedBlobReferences() {
         val reference = EncryptedBlobReferenceDto(
             nodeId = "node",
             blobId = "uploaded",
@@ -38,11 +38,10 @@ class MessagePartPersistenceMapperTest {
         val parts = persistedParts.mapIndexed { index, part ->
             part.toMessagePartEntity("message", index + 1)
         }
-        val restored = parts.toMessagePartDtos(
+        val restored = parts.toDtos(
             blobs = listOf(
                 image.copy(blob = reference).toMessageBlobEntity("delete", "cached.jpg")
             ),
-            structured = listOfNotNull(poll.toMessageStructuredEntityOrNull()),
             resolveLocalFilePath = { "/cache/$it" }
         )
 
@@ -53,11 +52,10 @@ class MessagePartPersistenceMapperTest {
     }
 
     @Test
-    fun structuredPartWithoutNestedBlobsNeedsNoBlobRows() {
+    fun pollPayloadWithoutNestedBlobsNeedsNoBlobRows() {
         val poll = PollDto(id = "poll", question = "Where?")
-        val restored = listOf(poll.toMessagePartEntity("message", 1)).toMessagePartDtos(
+        val restored = listOf(poll.toMessagePartEntity("message", 1)).toDtos(
             blobs = emptyList(),
-            structured = listOfNotNull(poll.toMessageStructuredEntityOrNull()),
             resolveLocalFilePath = { it }
         )
 

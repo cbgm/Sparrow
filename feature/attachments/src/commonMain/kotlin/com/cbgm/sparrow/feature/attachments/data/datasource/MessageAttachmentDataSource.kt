@@ -10,13 +10,12 @@ import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.flattenForPersistence
 import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDtos
 import com.cbgm.sparrow.feature.attachments.data.mapper.toEncryptedBlobReferenceDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageBlobEntityOrNull
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtos
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageStructuredEntityOrNull
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +46,6 @@ internal class MessageAttachmentDataSource(
         saveMessageContext(messageId, context)
         val persistedParts = parts.flattenForPersistence()
         attachmentDao.upsertMessageParts(
-            structured = persistedParts.mapNotNull { part -> part.toMessageStructuredEntityOrNull() },
             parts = persistedParts.mapIndexed { index, part -> part.toMessagePartEntity(messageId, index + 1) },
             blobs = persistedParts.mapNotNull { part ->
                 part.toMessageBlobEntityOrNull(
@@ -92,7 +90,6 @@ internal class MessageAttachmentDataSource(
             check(existing == null || existing.messageId == messageId) { "Message part ID belongs to another message" }
         }
         attachmentDao.upsertMessageParts(
-            structured = persistedParts.mapNotNull { part -> part.toMessageStructuredEntityOrNull() },
             parts = persistedParts.mapIndexed { index, part -> part.toMessagePartEntity(messageId, index + 1) },
             blobs = persistedParts.mapNotNull { part ->
                 part.toMessageBlobEntityOrNull(
@@ -117,9 +114,8 @@ internal class MessageAttachmentDataSource(
 
     suspend fun messageParts(messageId: String): List<MessagePartDto> {
         val parts = attachmentDao.findMessagePartsByMessageId(messageId)
-        return parts.toMessagePartDtos(
+        return parts.toDtos(
             blobs = loadBlobs(parts),
-            structured = attachmentDao.findStructuredByPartIds(parts.map(MessagePartEntity::id)),
             resolveLocalFilePath = fileDataSource::resolveCacheFilePath
         )
     }
@@ -128,7 +124,7 @@ internal class MessageAttachmentDataSource(
         withContext(Dispatchers.IO) {
             val part = attachmentDao.findPartById(partId) ?: error("Message part was not found")
             val blob = attachmentDao.findBlobByPartId(partId) ?: error("Message blob was not found")
-            val partDto = part.toMessagePartDto(blob, fileDataSource::resolveCacheFilePath)
+            val partDto = part.toDto(blob, fileDataSource::resolveCacheFilePath)
             blobTransferDataSource.download(partDto.requireBlobReference())
         }
 
@@ -170,7 +166,7 @@ internal class MessageAttachmentDataSource(
         withContext(Dispatchers.IO) {
             val part = attachmentDao.findPartById(attachmentId) ?: error("Message part was not found")
             val blob = attachmentDao.findBlobByPartId(attachmentId) ?: error("Message blob was not found")
-            val partDto = part.toMessagePartDto(blob, fileDataSource::resolveCacheFilePath)
+            val partDto = part.toDto(blob, fileDataSource::resolveCacheFilePath)
             val bytes = blob.localFilePath?.let(fileDataSource::read) ?: downloadAndCacheFile(blob)
 
             if (part.type != MessageAttachmentType.VOICE.name) {
@@ -196,11 +192,9 @@ internal class MessageAttachmentDataSource(
         attachmentDao.observeMessagePartsByMessageIds(messageIds)
             .map { parts ->
                 val blobs = loadBlobs(parts)
-                val structured = attachmentDao.findStructuredByPartIds(parts.map(MessagePartEntity::id))
                 parts.groupBy(MessagePartEntity::messageId).mapValues { (_, messageParts) ->
-                    messageParts.toMessagePartDtos(
+                    messageParts.toDtos(
                         blobs = blobs,
-                        structured = structured,
                         resolveLocalFilePath = fileDataSource::resolveCacheFilePath
                     )
                 }

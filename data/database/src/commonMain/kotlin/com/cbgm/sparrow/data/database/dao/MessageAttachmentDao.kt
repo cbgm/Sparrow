@@ -7,7 +7,6 @@ import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
-import com.cbgm.sparrow.data.database.entity.MessageStructuredEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -38,31 +37,21 @@ interface MessageAttachmentDao {
     @Upsert
     suspend fun upsertParts(parts: List<MessagePartEntity>)
 
-    @Upsert
-    suspend fun upsertStructured(parts: List<MessageStructuredEntity>)
-
     @Transaction
     suspend fun upsertMessageParts(
         parts: List<MessagePartEntity>,
-        blobs: List<MessageBlobEntity>,
-        structured: List<MessageStructuredEntity>
+        blobs: List<MessageBlobEntity>
     ) {
         upsertParts(parts)
         upsertBlobs(blobs)
-        upsertStructured(structured)
     }
-
-    @Query("SELECT * FROM message_structured WHERE partId IN (:partIds)")
-    suspend fun findStructuredByPartIds(partIds: List<String>): List<MessageStructuredEntity>
 
     @Query(
         """
-        SELECT message_parts.* FROM message_parts
-        LEFT JOIN message_blobs ON message_blobs.partId = message_parts.id
-        LEFT JOIN message_structured ON message_structured.partId = message_parts.id
-        WHERE message_parts.messageId IN (:messageIds) AND message_parts.type != 'TEXT'
-        ORDER BY message_parts.messageId, message_parts.position
-    """
+        SELECT * FROM message_parts
+        WHERE messageId IN (:messageIds) AND type != 'TEXT'
+        ORDER BY messageId, position
+        """
     )
     fun observeMessagePartsByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
 
