@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SaveAlt
@@ -24,7 +23,6 @@ import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
@@ -130,23 +128,18 @@ private fun MessageMediaViewer(
             if (canSaveToCameraRoll) {
                 IconButton(
                     onClick = { savePending = true },
-                    enabled = !savePending,
-                    modifier = Modifier.background(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f),
-                        shape = MaterialTheme.shapes.circle
-                    )
+                    enabled = !savePending
                 ) {
                     if (savePending) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
                             strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.SaveAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            contentDescription = null
                         )
                     }
                 }

@@ -74,7 +74,7 @@ fun PollOptionsEditor(
             }
         }
 
-        TextButton(onClick = onAddOption) {
+        TextButton(onClick = onAddOption, enabled = options.size < PollConstants.MAX_OPTIONS) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Text(text = stringResource(Res.string.feature_polls_add_option))
         }

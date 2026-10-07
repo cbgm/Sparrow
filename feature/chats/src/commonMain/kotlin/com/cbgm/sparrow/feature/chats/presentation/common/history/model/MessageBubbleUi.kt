@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
+import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
 data class MessageBubbleUi(
@@ -33,7 +34,8 @@ data class MessageBubbleUi(
     val contactPart: ContactUi? = null,
     val voicePart: VoiceUi? = null,
     val textPart: TextUi? = null,
-    val pollPart: PollUi? = null
+    val pollPart: PollUi? = null,
+    val pollState: PollMessageUiState? = null
 )
 
 data class DeliveryProgressUi(

@@ -64,7 +64,6 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
-import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
@@ -303,26 +302,7 @@ private fun BubbleBody(
                 onLongPress = onLongPress
             ) {
                 PollMessageContent(
-                    initialState = PollMessageUiState(
-                        pollId = pollPart.id,
-                        question = pollPart.question,
-                        description = pollPart.description,
-                        options = pollPart.options.map { option ->
-                            com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi(
-                                id = option.id,
-                                text = option.text,
-                                voteCount = 0
-                            )
-                        },
-                        totalVoters = 0,
-                        submittedOptionIds = emptySet(),
-                        allowMultipleSelection = pollPart.allowMultipleSelection,
-                        allowVoteChange = pollPart.allowVoteChange,
-                        isAnonymous = pollPart.isAnonymous,
-                        isClosed = pollPart.closedAtEpochMilliseconds != null,
-                        isExpired = false,
-                        expiryLabel = null
-                    ),
+                    initialState = requireNotNull(message.pollState),
                     onVoteSubmit = { selectedOptionIds ->
                         // vote submit
                     },
@@ -330,7 +310,7 @@ private fun BubbleBody(
                         // close poll
                     },
                     onMediaClick = { index ->
-                        // media click
+                        pollPart.images.getOrNull(index)?.let { onAttachmentClick(it.id) }
                     }
                 )
             }

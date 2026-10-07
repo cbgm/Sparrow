@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.polls.presentation.create
 
+import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -10,11 +12,14 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
+import com.cbgm.sparrow.feature.polls.domain.usecase.FinishPollUseCase
+import com.cbgm.sparrow.feature.polls.presentation.create.mapper.toPoll
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiEvent
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiState
 import com.cbgm.sparrow.feature.polls.presentation.create.model.PollOptionEditorUi
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_DESCRIPTION_LENGTH
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_MEDIA_ITEMS
+import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_OPTIONS
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_QUESTION_LENGTH
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MIN_OPTIONS
 import kotlinx.coroutines.CoroutineScope
@@ -32,17 +37,21 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 
 class CreatePollViewModel(
-    private val mediaFiles: MediaSelectionFileRepository
+    private val mediaFiles: MediaSelectionFileRepository,
+    private val finishPoll: FinishPollUseCase
 ) : BaseViewModel() {
+    private val pollId = IdGenerator.generate("poll")
+    private val logger = SparrowLog.withTag("CreatePollViewModel")
     private val _uiState = MutableStateFlow(initialState())
     val uiState: StateFlow<CreatePollUiState> = _uiState.asStateFlow()
     private val mediaCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun onUiEvent(event: CreatePollUiEvent) {
+        if (_uiState.value.isSending) return
         when (event) {
             CreatePollUiEvent.BackClicked -> onBackClicked()
             CreatePollUiEvent.AddOptionClicked -> addOption()
-            CreatePollUiEvent.CreateClicked -> validateForCreate()
+            CreatePollUiEvent.CreateClicked -> createPoll()
             CreatePollUiEvent.ExpiryCleared -> updateExpiryEnabled(false)
             is CreatePollUiEvent.QuestionChanged -> updateQuestion(event.value)
             is CreatePollUiEvent.DescriptionChanged -> updateDescription(event.value)
@@ -76,6 +85,7 @@ class CreatePollViewModel(
 
     private fun addOption() {
         _uiState.update { state ->
+            if (state.options.size >= MAX_OPTIONS) return@update state
             state.copy(
                 options = state.options + PollOptionEditorUi(id = IdGenerator.generate("poll-option"))
             ).validated()
@@ -138,16 +148,10 @@ class CreatePollViewModel(
         if (media.sumOf(VisualMediaSelectionUi::byteSize) > MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) return false
 
         return media.all { item ->
-            when (item.type) {
-                MediaTypeUi.IMAGE ->
-                    item.byteSize in 1..MessageAttachmentPolicy.MAX_IMAGE_BYTES.toLong() &&
-                        item.mimeType.startsWith("image/") &&
-                        item.width != null && item.height != null
-
-                MediaTypeUi.VIDEO ->
-                    item.byteSize in 1..MessageAttachmentPolicy.MAX_VIDEO_BYTES &&
-                        item.mimeType.startsWith("video/")
-            }
+            item.type == MediaTypeUi.IMAGE &&
+                item.byteSize in 1..MessageAttachmentPolicy.MAX_IMAGE_BYTES.toLong() &&
+                item.mimeType.startsWith("image/") &&
+                item.width != null && item.height != null
         }
     }
 
@@ -196,8 +200,25 @@ class CreatePollViewModel(
         _uiState.update { it.copy(isAnonymous = enabled).validated() }
     }
 
-    private fun validateForCreate() {
-        _uiState.update { it.withResolvedExpiry().validated() }
+    private fun createPoll() {
+        val state = _uiState.value.withResolvedExpiry().validated()
+        _uiState.value = state
+        if (!state.canCreate) return
+        _uiState.value = state.copy(isSending = true, canCreate = false)
+        viewModelScope.launch {
+            try {
+                finishPoll(state.toPoll(pollId))
+                    .onSuccess {
+                        _uiState.update { it.copy(media = emptyList()) }
+                        navigator.popBackStack()
+                    }
+                    .onFailure { error ->
+                        logger.warn(error) { "Poll could not be finished" }
+                    }
+            } finally {
+                _uiState.update { it.copy(isSending = false).validated() }
+            }
+        }
     }
 
     private fun CreatePollUiState.withResolvedExpiry(): CreatePollUiState {
@@ -214,9 +235,9 @@ class CreatePollViewModel(
     }
 
     private fun CreatePollUiState.validated(): CreatePollUiState {
-        val validOptions = options.size >= MIN_OPTIONS && options.all { it.text.isNotBlank() }
+        val validOptions = options.size in MIN_OPTIONS..MAX_OPTIONS && options.all { it.text.isNotBlank() }
         val validExpiry = !expiryEnabled || expiresAtEpochMilliseconds != null
-        return copy(canCreate = question.isNotBlank() && validOptions && validExpiry)
+        return copy(canCreate = !isSending && question.isNotBlank() && validOptions && validExpiry && isValidPollMedia(media))
     }
 
     override fun onCleared() {

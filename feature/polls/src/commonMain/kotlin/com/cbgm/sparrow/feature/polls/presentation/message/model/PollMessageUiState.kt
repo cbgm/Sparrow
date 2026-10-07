@@ -20,6 +20,8 @@ data class PollMessageUiState(
     val isAnonymous: Boolean = false,
     val isClosed: Boolean = false,
     val isExpired: Boolean = false,
+    val expiresAtEpochMilliseconds: Long? = null,
+    val isVotingAvailable: Boolean = true,
     val isVotePending: Boolean = false,
     val expiryLabel: String? = null,
     val canClose: Boolean = false,

@@ -136,7 +136,7 @@ class GroupOutgoingMessageProcessor(
                     val packets = createPackets(
                         message = message,
                         recipients = missingRecipients,
-                        parts = attachmentTransfer.messageParts(message.id).getOrThrow()
+                        parts = attachmentTransfer.prepareOutgoing(message.id).getOrThrow()
                     )
                     if (previousStates.isEmpty()) {
                         val states = packets.map { (contactId, packet) ->
@@ -641,8 +641,8 @@ class GroupOutgoingMessageProcessor(
         }
 
         val attachments = parts.filterNot { part -> part is Text }
-        require(attachments.none { part -> part is Poll }) {
-            "Poll message-part transport is not wired yet"
+        require(attachments.none { part -> part is Poll } || normalizedText.isEmpty()) {
+            "A poll must be sent without a separate text part"
         }
         MessageAttachmentPolicy.requireValid(attachments)
         require(attachments.none { it is Voice } || normalizedText.isEmpty()) {

@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ fun PollMessageContent(
         koinViewModel<PollMessageViewModel>(key = "poll:${initialState.pollId}") {
             parametersOf(initialState)
         }
+    LaunchedEffect(initialState) { viewModel.updateState(initialState) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     PollMessageContentBody(

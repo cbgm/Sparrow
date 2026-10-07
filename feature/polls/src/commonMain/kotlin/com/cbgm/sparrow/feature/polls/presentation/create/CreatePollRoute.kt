@@ -18,6 +18,7 @@ fun CreatePollRoute(
     val mediaLauncher =
         rememberMediaSelectionLauncher(
             maxItems = PollConstants.MAX_MEDIA_ITEMS,
+            galleryImagesOnly = true,
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
             maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,

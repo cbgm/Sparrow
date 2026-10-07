@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
@@ -27,8 +28,10 @@ import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentFileDataSource
+import com.cbgm.sparrow.feature.attachments.data.mapper.flattenForPersistence
 import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.withPersistedParts
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
@@ -54,16 +57,19 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     ): Result<List<MessagePart>> = safeSuspendCall {
         if (parts.isEmpty()) return@safeSuspendCall emptyList()
         MessageAttachmentPolicy.requireValid(parts)
+        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
 
-        val outgoing = parts.map { part -> createOutgoingDto(part) }
+        val preparedParts = parts.map { part -> createOutgoingDto(part) }
+        val uploadableParts = preparedParts
+            .flattenForPersistence()
+            .filter { part -> part.payloadBytesOrNull() != null }
+
         MessageAttachmentPolicy.requireValidTotalPayloadBytes(
-            outgoing.sumOf { part -> part.requirePayloadBytes().size.toLong() }
+            uploadableParts.sumOf { part -> part.requirePayloadBytes().size.toLong() }
         )
 
         val localFileNames = linkedMapOf<String, String>()
-        val localParts = mutableListOf<MessagePartDto>()
-
-        outgoing.forEach { part ->
+        val localParts = uploadableParts.map { part ->
             val bytes = part.requirePayloadBytes()
             val localFileName = fileDataSource.write(bytes)
             localFileNames[part.id] = localFileName
@@ -77,12 +83,12 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 nonce = ByteArray(0),
                 ciphertextSha256 = ByteArray(0)
             )
-            localParts += part.withBlob(localBlob)
+            part.withBlob(localBlob)
         }
 
         dataSource.persistOutgoing(
             messageId = messageId,
-            parts = localParts,
+            parts = preparedParts.withPersistedParts(localParts),
             deleteCapabilities = emptyMap(),
             localFileNames = localFileNames,
             context = context.toDto()
@@ -92,7 +98,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         val deleteCapabilities = linkedMapOf<String, String>()
 
         try {
-            outgoing.forEach { part ->
+            uploadableParts.forEach { part ->
                 val bytes = part.requirePayloadBytes()
                 val (blobReference, deleteCapability) =
                     blobTransferDataSource.upload(
@@ -111,7 +117,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 deleteCapabilities[part.id] = deleteCapability
             }
 
-            uploaded.map { it.toMessagePart() }
+            dataSource.messageParts(messageId).map { it.toMessagePart() }
         } catch (error: Throwable) {
             cleanupUploads(uploaded, deleteCapabilities, localFileNames)
             throw error
@@ -123,6 +129,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         parts: List<MessagePart>,
         context: AttachmentMessageContext
     ) {
+        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
         val dtos = parts.map { it.toDto() }
         dataSource.persistIncoming(messageId, dtos, context.toDto())
     }
@@ -134,6 +141,22 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         safeSuspendCall {
             dataSource.messageParts(messageId).map { it.toMessagePart() }
         }
+
+    override suspend fun prepareOutgoing(messageId: String): Result<List<MessagePart>> = safeSuspendCall {
+        dataSource.messageParts(messageId)
+            .flattenForPersistence()
+            .filter { part -> part.isBlobBacked() && part.blobReferenceOrNull()?.nodeId.isNullOrBlank() }
+            .forEach { part ->
+                val bytes = dataSource.loadBytes(part.id)
+                MessageAttachmentPolicy.requireValidPayload(part.toMessagePart(), bytes)
+                val (reference, deleteCapability) = blobTransferDataSource.upload(
+                    plaintext = bytes,
+                    retentionMilliseconds = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
+                )
+                dataSource.updateRemoteBlobReference(part.id, reference, deleteCapability)
+            }
+        dataSource.messageParts(messageId).map { it.toMessagePart() }
+    }
 
     override suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray> =
         safeSuspendCall {
@@ -248,24 +271,44 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             }
 
             is Text -> error("Text is not uploaded as an attachment message part")
-            is Poll -> error("Poll upload is handled by the poll message-part flow")
+            is Poll -> (part.toDto() as PollDto).copy(
+                images = part.images.map { image -> createOutgoingDto(image) as ImageDto }
+            )
         }
 
     private suspend fun resolveFileBackedBytes(localFilePath: String?, sourcePartId: String): ByteArray =
         localFilePath?.let(fileDataSource::readLocalFile) ?: dataSource.loadBytes(sourcePartId)
 
+    private fun MessagePartDto.isBlobBacked(): Boolean =
+        when (this) {
+            is ImageDto, is VideoDto, is FileDto, is VoiceDto, is LocationDto, is ContactDto -> true
+            else -> false
+        }
+
+    private fun MessagePartDto.blobReferenceOrNull(): EncryptedBlobReferenceDto? =
+        when (this) {
+            is ImageDto -> blob
+            is VideoDto -> blob
+            is FileDto -> blob
+            is VoiceDto -> blob
+            is LocationDto -> blob
+            is ContactDto -> blob
+            else -> null
+        }
+
+    private fun MessagePartDto.payloadBytesOrNull(): ByteArray? =
+        when (this) {
+            is ImageDto -> bytes
+            is VideoDto -> bytes
+            is FileDto -> bytes
+            is VoiceDto -> bytes
+            is LocationDto -> bytes
+            is ContactDto -> bytes
+            else -> null
+        }
+
     private fun MessagePartDto.requirePayloadBytes(): ByteArray =
-        requireNotNull(
-            when (this) {
-                is ImageDto -> bytes
-                is VideoDto -> bytes
-                is FileDto -> bytes
-                is VoiceDto -> bytes
-                is LocationDto -> bytes
-                is ContactDto -> bytes
-                else -> null
-            }
-        ) { "Message part $id has no outgoing payload bytes" }
+        requireNotNull(payloadBytesOrNull()) { "Message part $id has no outgoing payload bytes" }
 
     private fun MessagePartDto.withBlob(blob: EncryptedBlobReferenceDto): MessagePartDto =
         when (this) {

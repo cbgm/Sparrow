@@ -20,7 +20,7 @@ data class GroupMessageContent(
 ) {
     init {
         if (reaction == null) {
-            parts.requireValidWireMessageParts()
+            parts.requireValidWireMessageParts(allowPolls = true)
         } else {
             require(parts.isEmpty() && replyToMessageId == null) {
                 "Group reaction content must not contain message content or a reply target"

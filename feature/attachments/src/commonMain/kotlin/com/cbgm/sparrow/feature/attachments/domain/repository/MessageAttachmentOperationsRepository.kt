@@ -23,6 +23,9 @@ interface MessageAttachmentOperationsRepository {
 
     suspend fun messageParts(messageId: String): Result<List<MessagePart>>
 
+    /** Completes interrupted outgoing uploads before queued transport is resumed. */
+    suspend fun prepareOutgoing(messageId: String): Result<List<MessagePart>>
+
     suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray>
 
     suspend fun deleteForMessages(messageIds: List<String>)

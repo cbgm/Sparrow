@@ -584,7 +584,7 @@ class DirectOutgoingMessageProcessor(
 
         val attachments = parts.filterNot { part -> part is Text }
         require(attachments.none { part -> part is Poll }) {
-            "Poll message-part transport is not wired yet"
+            "Polls are only supported in group conversations"
         }
         MessageAttachmentPolicy.requireValid(attachments)
         require(attachments.none { it is Voice } || normalizedText.isEmpty()) {

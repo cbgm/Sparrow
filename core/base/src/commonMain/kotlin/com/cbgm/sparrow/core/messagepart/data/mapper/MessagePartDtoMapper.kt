@@ -112,7 +112,7 @@ fun MessagePart.toDto(): MessagePartDto {
         is Contact -> (cached as? ContactDto)?.copy(
             mimeType = CONTACT_MIME_TYPE
         ) ?: ContactDto(id = id, mimeType = CONTACT_MIME_TYPE, byteSize = 0L)
-        is Poll -> cached as? PollDto ?: PollDto(
+        is Poll -> PollDto(
             id = id,
             question = question,
             description = description,
@@ -188,7 +188,7 @@ private fun PollDto.toPoll(): Poll =
         question = question,
         description = description,
         options = options.map { PollOption(id = it.id, text = it.text) },
-        images = images.map(ImageDto::toImage),
+        images = images.map { it.toMessagePart() as Image },
         allowMultipleSelection = allowMultipleSelection,
         allowVoteChange = allowVoteChange,
         isAnonymous = isAnonymous,

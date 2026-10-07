@@ -723,4 +723,6 @@
         <item quantity="other">%1$d voters</item>
     </plurals>
 
+    <string name="feature_polls_label">Poll</string>
+    <string name="feature_polls_send_failed">Poll could not be sent. Please try again.</string>
 </resources>

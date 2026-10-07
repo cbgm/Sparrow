@@ -11,7 +11,35 @@ import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
+import com.cbgm.sparrow.data.database.entity.MessageStructuredEntity
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
+import kotlinx.serialization.json.Json
+
+internal fun List<MessagePartDto>.flattenForPersistence(): List<MessagePartDto> =
+    flatMap { part -> part.flattenForPersistence() }
+
+private fun MessagePartDto.flattenForPersistence(): List<MessagePartDto> =
+    when (this) {
+        is PollDto -> listOf(this) + images
+        else -> listOf(this)
+    }
+
+internal fun List<MessagePartDto>.withPersistedParts(parts: List<MessagePartDto>): List<MessagePartDto> {
+    val partsById = parts.associateBy(MessagePartDto::id)
+    return map { part -> part.withPersistedParts(partsById) }
+}
+
+private fun MessagePartDto.withPersistedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
+    when (this) {
+        is PollDto -> copy(
+            images = images.map { image ->
+                partsById[image.id] as? ImageDto
+                    ?: error("Poll image ${image.id} was not persisted")
+            }
+        )
+
+        else -> partsById[id] ?: this
+    }
 
 internal fun MessagePartDto.toMessagePartEntity(
     messageId: String,
@@ -23,6 +51,25 @@ internal fun MessagePartDto.toMessagePartEntity(
         position = position,
         type = persistenceType()
     )
+
+internal fun MessagePartDto.toMessageStructuredEntityOrNull(): MessageStructuredEntity? =
+    when (this) {
+        is PollDto -> MessageStructuredEntity(
+            partId = id,
+            json = Json.encodeToString(PollDto.serializer(), this)
+        )
+
+        else -> null
+    }
+
+internal fun MessagePartDto.toMessageBlobEntityOrNull(
+    deleteCapability: String?,
+    localFilePath: String?
+): MessageBlobEntity? =
+    when (this) {
+        is TextDto, is PollDto -> null
+        else -> toMessageBlobEntity(deleteCapability, localFilePath)
+    }
 
 internal fun MessagePartDto.toMessageBlobEntity(
     deleteCapability: String?,
@@ -89,8 +136,8 @@ private fun MessagePartDto.persistenceType(): String =
         is VoiceDto -> MessageAttachmentType.VOICE.name
         is LocationDto -> MessageAttachmentType.LOCATION.name
         is ContactDto -> MessageAttachmentType.CONTACT.name
-        is TextDto -> error("Text is not persisted as a blob-backed message part")
-        is PollDto -> error("Poll is not persisted as a blob-backed attachment part")
+        is TextDto -> error("Text is not persisted as an attachment message part")
+        is PollDto -> MessageAttachmentType.POLL.name
     }
 
 private fun MessagePartDto.mimeType(): String =

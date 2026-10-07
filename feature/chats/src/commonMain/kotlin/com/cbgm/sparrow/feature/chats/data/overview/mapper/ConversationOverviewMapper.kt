@@ -40,7 +40,7 @@ internal fun ConversationSummaryDto.toConversationOverview(): ConversationOvervi
                 MessageAttachmentType.LOCATION -> ConversationOverviewPreview.LOCATION
                 MessageAttachmentType.CONTACT -> ConversationOverviewPreview.CONTACT_CARD
                 MessageAttachmentType.VOICE -> ConversationOverviewPreview.VOICE
-                MessageAttachmentType.POLL -> ConversationOverviewPreview.ATTACHMENT
+                MessageAttachmentType.POLL -> ConversationOverviewPreview.POLL
             }
     )
 }

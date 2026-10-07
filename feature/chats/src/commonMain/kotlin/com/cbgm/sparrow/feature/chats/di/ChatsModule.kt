@@ -428,6 +428,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             getRecordedVoiceAttachment = get(),
             resetVoiceComposer = get(),
             observeVoiceRecordingActive = get(),
+            observeFinishedPoll = get(),
+            clearFinishedPoll = get(),
             mediaFiles = get()
         )
     }

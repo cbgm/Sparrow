@@ -15,7 +15,8 @@ data class CreatePollUiState(
     val allowMultipleSelection: Boolean = false,
     val allowVoteChange: Boolean = true,
     val isAnonymous: Boolean = false,
-    val canCreate: Boolean = false
+    val canCreate: Boolean = false,
+    val isSending: Boolean = false
 )
 
 data class PollOptionEditorUi(

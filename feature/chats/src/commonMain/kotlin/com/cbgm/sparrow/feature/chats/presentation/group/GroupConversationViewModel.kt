@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
@@ -59,6 +60,8 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.polls.domain.usecase.ClearFinishedPollUseCase
+import com.cbgm.sparrow.feature.polls.domain.usecase.ObserveFinishedPollUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
@@ -106,6 +109,8 @@ class GroupConversationViewModel(
     private val getRecordedVoiceAttachment: GetRecordedVoiceAttachmentUseCase,
     private val resetVoiceComposer: ResetVoiceComposerUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
+    observeFinishedPoll: ObserveFinishedPollUseCase,
+    private val clearFinishedPoll: ClearFinishedPollUseCase,
     private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId =
@@ -340,6 +345,9 @@ class GroupConversationViewModel(
                     sendsIndicators = conversationState.value.composerState.sendsIndicators
                 )
             }
+        }
+        viewModelScope.launch {
+            observeFinishedPoll().collect(::sendFinishedPoll)
         }
         ensureTargetMessageLoaded()
     }
@@ -576,6 +584,20 @@ class GroupConversationViewModel(
         }
     }
 
+    private fun sendFinishedPoll(poll: Poll) {
+        sendAttachmentOnly(
+            part = poll,
+            fallbackError = "Poll could not be sent",
+            onSuccess = {
+                poll.images
+                    .flatMap { image -> listOfNotNull(image.localFilePath, image.thumbnailFilePath) }
+                    .distinct()
+                    .forEach { path -> mediaCleanupScope.launch { runCatching { mediaFiles.delete(path) } } }
+                clearFinishedPoll()
+            }
+        )
+    }
+
     private fun shareCurrentLocation(part: MessagePart) {
         transitionLocationShare(LocationShareEvent.LOCATION_CAPTURED)
         sendAttachmentOnly(
@@ -588,13 +610,15 @@ class GroupConversationViewModel(
     private fun sendAttachmentOnly(
         part: MessagePart,
         fallbackError: String,
-        isLocationShare: Boolean = false
+        isLocationShare: Boolean = false,
+        onSuccess: () -> Unit = {}
     ) {
         dispatchSend(
             parts = listOf(part),
             clearComposerOnSuccess = false,
             fallbackError = fallbackError,
-            isLocationShare = isLocationShare
+            isLocationShare = isLocationShare,
+            onSuccess = onSuccess
         )
     }
 
@@ -603,7 +627,8 @@ class GroupConversationViewModel(
         clearComposerOnSuccess: Boolean,
         fallbackError: String,
         clearVoiceOnSuccess: Boolean = false,
-        isLocationShare: Boolean = false
+        isLocationShare: Boolean = false,
+        onSuccess: () -> Unit = {}
     ) {
         val sendAllowed =
             if (isLocationShare) {
@@ -639,6 +664,7 @@ class GroupConversationViewModel(
                             }
                             else -> clearReply()
                         }
+                        onSuccess()
                     }
                     .onFailure { error -> setError(error.message ?: fallbackError) }
             } finally {

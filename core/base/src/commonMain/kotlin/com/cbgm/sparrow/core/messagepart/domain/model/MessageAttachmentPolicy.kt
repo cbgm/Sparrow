@@ -17,6 +17,9 @@ object MessageAttachmentPolicy {
             "Message part IDs must be unique"
         }
 
+        require(parts.none { it is Poll } || (parts.size == 1 && parts.single() is Poll)) {
+            "A poll cannot contain other attachment parts"
+        }
         val voiceCount = parts.count { it is Voice }
         require(voiceCount == 0 || (voiceCount == 1 && parts.size == 1)) {
             "A voice message cannot contain other attachments"
@@ -58,7 +61,7 @@ object MessageAttachmentPolicy {
                 is Contact -> Unit
 
                 is Text -> error("Text is not an attachment payload")
-                is Poll -> error("Poll transfer is handled by the poll message-part flow")
+                is Poll -> PollPolicy.requireValid(part)
             }
         }
     }
@@ -73,7 +76,7 @@ object MessageAttachmentPolicy {
             is Location,
             is Contact -> Unit
             is Text -> error("Text is not an attachment payload")
-            is Poll -> error("Poll transfer is handled by the poll message-part flow")
+            is Poll -> error("Poll is a structured message part")
         }
     }
 

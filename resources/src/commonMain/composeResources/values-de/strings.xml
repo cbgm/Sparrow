@@ -727,4 +727,6 @@
         <item quantity="other">%1$d Teilnehmer</item>
     </plurals>
 
+    <string name="feature_polls_label">Umfrage</string>
+    <string name="feature_polls_send_failed">Die Umfrage konnte nicht gesendet werden. Bitte versuche es erneut.</string>
 </resources>

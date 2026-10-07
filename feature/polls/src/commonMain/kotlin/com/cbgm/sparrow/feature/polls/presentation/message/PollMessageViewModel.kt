@@ -1,21 +1,49 @@
 package com.cbgm.sparrow.feature.polls.presentation.message
 
+import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVoterSectionUi
 import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVotersUiState
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_MESSAGE_MEDIA_PREVIEW
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_VOTER_PREVIEW
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class PollMessageViewModel(
     initialState: PollMessageUiState
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(initialState.derived())
     val uiState: StateFlow<PollMessageUiState> = _uiState.asStateFlow()
+
+    private var expiryJob: Job? = null
+
+    init {
+        scheduleExpiry(initialState.expiresAtEpochMilliseconds)
+    }
+
+    fun updateState(state: PollMessageUiState) {
+        _uiState.update { current ->
+            state.copy(draftOptionIds = current.draftOptionIds, votersOverlay = current.votersOverlay).derived()
+        }
+        scheduleExpiry(state.expiresAtEpochMilliseconds)
+    }
+
+    private fun scheduleExpiry(expiresAt: Long?) {
+        expiryJob?.cancel()
+        if (expiresAt == null) return
+        expiryJob = viewModelScope.launch {
+            delay((expiresAt - SystemClock.nowEpochMilliseconds()).coerceAtLeast(0L).milliseconds)
+            _uiState.update { it.copy(isExpired = true).derived() }
+        }
+    }
 
     fun onOptionClick(optionId: String) {
         _uiState.update { state ->
@@ -59,7 +87,7 @@ class PollMessageViewModel(
 
     private fun PollMessageUiState.derived(): PollMessageUiState {
         val locked = isClosed || isExpired || (!allowVoteChange && submittedOptionIds.isNotEmpty())
-        val interactionEnabled = !locked && !isVotePending
+        val interactionEnabled = isVotingAvailable && !locked && !isVotePending
         val optionIds = options.mapTo(mutableSetOf()) { it.id }
         val validDraft = draftOptionIds.intersect(optionIds)
         val normalizedOptions =

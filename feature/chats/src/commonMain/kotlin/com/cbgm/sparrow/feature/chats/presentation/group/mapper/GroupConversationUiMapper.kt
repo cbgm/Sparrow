@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
@@ -32,6 +33,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
+import com.cbgm.sparrow.feature.polls.presentation.message.mapper.toPollMessageUiState
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 import kotlin.collections.component1
@@ -147,6 +149,7 @@ internal fun GroupMessage.toMessageBubbleUi(
         voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
         pollPart = partsUi.filterIsInstance<PollUi>().firstOrNull(),
+        pollState = partsUi.filterIsInstance<PollUi>().firstOrNull()?.toPollMessageUiState(),
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId
@@ -232,6 +235,7 @@ private fun List<MessagePart>?.toReplyPreviewText(): String? =
         ?.firstOrNull()
         ?.text
         ?.takeIf(String::isNotBlank)
+        ?: this?.filterIsInstance<Poll>()?.firstOrNull()?.question
         ?: this
             ?.filterIsInstance<File>()
             ?.firstOrNull()

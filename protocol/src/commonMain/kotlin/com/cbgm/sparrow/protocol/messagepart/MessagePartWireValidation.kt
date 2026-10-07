@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.protocol.messagepart
 
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
@@ -12,9 +13,12 @@ import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 
 internal fun List<MessagePartDto>.requireValidWireMessageParts(
-    expectedTextPartId: String? = null
+    expectedTextPartId: String? = null,
+    allowPolls: Boolean = false
 ) {
     require(isNotEmpty()) { "Message must contain at least one message part" }
     require(map(MessagePartDto::id).distinct().size == size) {
@@ -101,7 +105,11 @@ internal fun List<MessagePartDto>.requireValidWireMessageParts(
                 }
                 require(part.byteSize > 0L) { "Contact message part byte size must be positive" }
             }
-            is PollDto -> error("Poll message-part transport is not wired yet")
+            is PollDto -> {
+                require(allowPolls && size == 1) { "Polls require a standalone group message" }
+                PollPolicy.requireValid(part.toMessagePart() as Poll)
+                if (part.images.isNotEmpty()) part.images.requireValidWireMessageParts()
+            }
         }
     }
 }

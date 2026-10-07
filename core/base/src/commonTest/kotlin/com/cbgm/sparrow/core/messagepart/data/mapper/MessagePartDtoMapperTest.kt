@@ -13,6 +13,29 @@ import kotlin.test.assertIs
 
 class MessagePartDtoMapperTest {
     @Test
+    fun pollCopyKeepsUpdatedFieldsAndNestedBlobReference() {
+        val reference = EncryptedBlobReferenceDto(
+            nodeId = "node",
+            blobId = "blob",
+            readCapability = "read",
+            ciphertextByteSize = 26,
+            expiresAtEpochMilliseconds = 10000,
+            encryptionKey = ByteArray(32),
+            nonce = ByteArray(12),
+            ciphertextSha256 = ByteArray(32)
+        )
+        val original = PollDto(
+            id = "poll-copy",
+            question = "Before",
+            images = listOf(ImageDto(id = "nested-copy", mimeType = "image/jpeg", byteSize = 10, blob = reference))
+        )
+        val copied = assertIs<Poll>(original.toMessagePart()).copy(question = "After")
+        val mapped = assertIs<PollDto>(copied.toDto())
+        assertEquals("After", mapped.question)
+        assertEquals(reference, mapped.images.single().blob)
+    }
+
+    @Test
     fun pollMapsImagesAndOptionsToDomain() {
         val dto =
             PollDto(

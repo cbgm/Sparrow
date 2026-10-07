@@ -13,6 +13,7 @@ internal fun List<MessagePart>.toMessagePartsUi(
 internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessagePartUi> =
     buildList {
         addAll(imageVideoParts)
+        pollPart?.images?.let(::addAll)
         addAll(fileParts)
         locationPart?.let(::add)
         contactPart?.let(::add)
