@@ -72,6 +72,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeBindi
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
@@ -317,6 +318,10 @@ val identityModule =
 
         single {
             NormalizeLocalPhoneNumberUseCase(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
+        }
+
+        single {
+            GetLocalIdentityNameUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
         }
 
         single {

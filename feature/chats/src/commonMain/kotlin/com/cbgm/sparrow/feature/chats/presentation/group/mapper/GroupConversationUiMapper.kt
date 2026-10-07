@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
@@ -44,10 +45,17 @@ internal fun toGroupConversationUiState(
     isLoading: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     administration: GroupAdministrationState = GroupAdministrationState(),
-    pin: GroupPin? = null
+    pin: GroupPin? = null,
+    localVoterDisplayName: String? = null
 ): GroupConversationUiState {
     val contactsById = contacts.associateBy(Contact::id)
-    val pollVoterDisplayNames = contactsById.toPollVoterDisplayNames()
+    val pollVoterDisplayNames =
+        buildMap {
+            putAll(contactsById.toPollVoterDisplayNames())
+            localVoterDisplayName?.takeIf(String::isNotBlank)?.let { displayName ->
+                put(PollPolicy.LOCAL_VOTER_ID, displayName)
+            }
+        }
     val pinnedMessage =
         pin?.message?.let { message ->
             val sender = message.senderContactId?.let(contactsById::get)

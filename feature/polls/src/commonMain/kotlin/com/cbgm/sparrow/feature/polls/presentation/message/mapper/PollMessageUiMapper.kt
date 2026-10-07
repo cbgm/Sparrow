@@ -49,7 +49,7 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState {
                     option.voterIds.map { voterId ->
                         PollVoterUi(
                             id = voterId,
-                            displayName = voterDisplayNames[voterId] ?: voterId
+                            displayName = voterDisplayNames[voterId] ?: "Unknown contact"
                         )
                     }
                 }
@@ -117,7 +117,7 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState {
                     .toString()
                     .replace('T', ' ')
             },
-        canClose = canClose && !isClosed,
+        canClose = canClose,
         canInteract = canInteract,
         canShowVotes = canShowVotes,
         votersOverlay = votersOverlay

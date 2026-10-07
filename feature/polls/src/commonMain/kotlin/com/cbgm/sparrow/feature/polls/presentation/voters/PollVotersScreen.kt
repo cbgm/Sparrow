@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -43,7 +42,6 @@ import com.cbgm.sparrow.resources.feature_polls_no_votes
 import com.cbgm.sparrow.resources.feature_polls_percentage
 import com.cbgm.sparrow.resources.feature_polls_voters
 import com.cbgm.sparrow.resources.feature_polls_voters_title
-import com.cbgm.sparrow.resources.feature_polls_you
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -195,13 +193,13 @@ private fun PollVoterRow(
             modifier = Modifier.fillMaxWidth(),
             leadingContent = {
                 SparrowAvatar(
-                    name = voter.displayName(),
+                    name = voter.displayName,
                     target = AvatarTarget.User(voter.id)
                 )
             },
             headlineContent = {
                 Text(
-                    text = voter.displayName(),
+                    text = voter.displayName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground
@@ -218,14 +216,6 @@ private fun PollVoterRow(
         }
     }
 }
-
-@Composable
-private fun PollVoterUi.displayName(): String =
-    if (id == PollPolicy.LOCAL_VOTER_ID) {
-        stringResource(Res.string.feature_polls_you)
-    } else {
-        displayName
-    }
 
 @Composable
 private fun PollVotersTopBar(

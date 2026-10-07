@@ -13,6 +13,7 @@ object Dimens {
 
     object Poll {
         val previewMediaSelectionSize = 80.dp
+        val buttonSize = 22.dp
     }
 
     object ActionMenu {

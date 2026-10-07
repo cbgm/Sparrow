@@ -55,6 +55,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversation
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
@@ -115,6 +116,7 @@ class GroupConversationViewModel(
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
     observeFinishedPoll: ObserveFinishedPollUseCase,
     private val clearFinishedPoll: ClearFinishedPollUseCase,
+    getLocalIdentityName: GetLocalIdentityNameUseCase,
     private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId =
@@ -122,9 +124,13 @@ class GroupConversationViewModel(
     private val targetMessageId =
         savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupConversationViewModel")
+    private val localVoterDisplayName = MutableStateFlow<String?>(null)
 
     init {
         ChatOpenTrace.event("group ViewModel constructed")
+        viewModelScope.launch {
+            localVoterDisplayName.value = getLocalIdentityName().getOrNull()
+        }
     }
 
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
@@ -204,8 +210,9 @@ class GroupConversationViewModel(
     val conversationState: StateFlow<GroupConversationUiState> =
         combine(
             presentationContext,
-            observeMessageSafetyAssessments()
-        ) { presentation, safetyAssessments ->
+            observeMessageSafetyAssessments(),
+            localVoterDisplayName
+        ) { presentation, safetyAssessments, localDisplayName ->
             val mappingStarted = TimeSource.Monotonic.markNow()
             val mapped = toGroupConversationUiState(
                 groupId = groupId,
@@ -214,7 +221,8 @@ class GroupConversationViewModel(
                 isLoading = presentation is GroupContextObservation.Loading,
                 safetyAssessments = safetyAssessments,
                 administration = presentation.context?.administration ?: GroupAdministrationState(),
-                pin = presentation.context?.pin
+                pin = presentation.context?.pin,
+                localVoterDisplayName = localDisplayName
             )
             ChatOpenTrace.event("group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
             mapped

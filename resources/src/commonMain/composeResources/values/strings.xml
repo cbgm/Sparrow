@@ -680,7 +680,6 @@
 
     <!-- Feature: polls -->
     <string name="feature_polls_create_title">Create poll</string>
-    <string name="feature_polls_you">You</string>
     <string name="feature_polls_create">Create</string>
     <string name="feature_polls_question">Question</string>
     <string name="feature_polls_question_placeholder">Ask a question…</string>

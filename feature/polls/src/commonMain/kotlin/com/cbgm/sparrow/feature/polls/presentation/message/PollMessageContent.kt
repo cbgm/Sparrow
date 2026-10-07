@@ -1,16 +1,29 @@
 package com.cbgm.sparrow.feature.polls.presentation.message
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
@@ -35,7 +49,6 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_anonymous
 import com.cbgm.sparrow.resources.feature_polls_close_poll
 import com.cbgm.sparrow.resources.feature_polls_closed
-import com.cbgm.sparrow.resources.feature_polls_expired
 import com.cbgm.sparrow.resources.feature_polls_multiple_answers
 import com.cbgm.sparrow.resources.feature_polls_show_votes
 import com.cbgm.sparrow.resources.feature_polls_voters
@@ -167,11 +180,11 @@ private fun PollMessageContentBody(
             )
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
                 ) {
                     Text(
                         text = pluralStringResource(
@@ -183,9 +196,17 @@ private fun PollMessageContentBody(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (uiState.canShowVotes) {
-                        TextButton(onClick = onShowVotes) {
-                            Text(text = stringResource(Res.string.feature_polls_show_votes))
-                        }
+                        Text(
+                            text = stringResource(Res.string.feature_polls_show_votes),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(bounded = true),
+                                    onClick = onShowVotes
+                                ).padding(MaterialTheme.spacing.base)
+                        )
                     }
                 }
                 if (uiState.allowMultipleSelection) {
@@ -209,28 +230,34 @@ private fun PollMessageContentBody(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                when {
-                    uiState.isClosed -> PollStateLabel(stringResource(Res.string.feature_polls_closed))
-                    uiState.isExpired -> PollStateLabel(stringResource(Res.string.feature_polls_expired))
-                }
             }
 
-            if (uiState.canClose && !uiState.isClosed) {
-                TextButton(onClick = onClosePoll) {
-                    Text(text = stringResource(Res.string.feature_polls_close_poll))
-                }
+            IconButton(
+                onClick = onClosePoll,
+                enabled = !uiState.isClosed && uiState.canClose,
+                modifier = Modifier.align(Alignment.BottomEnd)
+                    .size(Dimens.Poll.buttonSize)
+            ) {
+                Icon(
+                    imageVector = if (uiState.isClosed) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription =
+                        stringResource(
+                            if (uiState.isClosed) {
+                                Res.string.feature_polls_closed
+                            } else {
+                                Res.string.feature_polls_close_poll
+                            }
+                        ),
+                    tint =
+                        if (uiState.isClosed) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            if (uiState.canClose) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                )
             }
         }
     }
-}
-
-@Composable
-private fun PollStateLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary
-    )
 }
 
 private fun previewState(
@@ -302,7 +329,7 @@ private fun previewState(
         canInteract = !expired && !closed,
         canShowVotes = !anonymous,
         expiryLabel = if (expired) "Poll ended 25 May 2026 at 18:00" else "Poll ends 1 Oct 2026 at 18:00",
-        canClose = !closed
+        canClose = true
     )
 }
 
