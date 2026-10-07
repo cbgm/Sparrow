@@ -49,6 +49,7 @@ fun rememberMediaSelectionLauncher(
     onResult: (MediaSelectionResultUi) -> Unit,
     onFilePickerSessionStarted: (String) -> Unit,
     galleryTitle: String? = null,
+    galleryImagesOnly: Boolean = false,
     closeContentDescription: String? = null,
     filePickerLauncher: FilePickerLauncher = koinInject(),
     mediaFiles: MediaSelectionFileRepository = koinInject(),
@@ -79,6 +80,7 @@ fun rememberMediaSelectionLauncher(
         maxImageBytes = maxImageBytes,
         maxVideoBytes = maxVideoBytes,
         galleryTitle = galleryTitle,
+        imagesOnly = galleryImagesOnly,
         closeContentDescription = closeContentDescription,
         currentMedia = currentMedia,
         currentResult = currentResult,
@@ -137,6 +139,7 @@ private fun rememberSubGalleryLauncher(
     maxImageBytes: Int,
     maxVideoBytes: Long,
     galleryTitle: String?,
+    imagesOnly: Boolean,
     closeContentDescription: String?,
     currentMedia: List<MediaSelectionUi>,
     currentResult: State<(MediaSelectionResultUi) -> Unit>,
@@ -150,7 +153,8 @@ private fun rememberSubGalleryLauncher(
         },
         maxImageDimension = maxImageDimension,
         maxImageBytes = maxImageBytes,
-        maxVideoBytes = maxVideoBytes
+        maxVideoBytes = maxVideoBytes,
+        imagesOnly = imagesOnly
     ),
     selectedSourceReferences = currentMedia
         .filter { it.source == MediaSourceUi.GALLERY }
