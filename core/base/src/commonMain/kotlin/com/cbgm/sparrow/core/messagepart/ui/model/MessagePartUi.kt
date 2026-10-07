@@ -84,12 +84,14 @@ data class PollUi(
     val isAnonymous: Boolean = false,
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null,
+    val canClose: Boolean = false,
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
 data class PollOptionUi(
     val id: String,
-    val text: String
+    val text: String,
+    val voterIds: Set<String> = emptySet()
 )
 
 sealed interface MessagePartSourceUi {

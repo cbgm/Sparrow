@@ -95,6 +95,8 @@ internal fun MessageBubble(
     onReplyPreviewClick: (String) -> Unit = {},
     onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true,
     isContextSelected: Boolean = false,
@@ -126,6 +128,8 @@ internal fun MessageBubble(
             onReplyPreviewClick = onReplyPreviewClick,
             onLongPress = onLongPress,
             onReactionsClick = onReactionsClick,
+            onPollVoteSubmit = onPollVoteSubmit,
+            onPollClose = onPollClose,
             modifier = contentModifier,
             isSearchHighlighted = isSearchHighlighted,
             showMetadata = showMetadata
@@ -155,6 +159,8 @@ private fun MessageBubbleContent(
     onReplyPreviewClick: (String) -> Unit,
     onLongPress: () -> Unit,
     onReactionsClick: (SparrowOverlayAnchor) -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit,
+    onPollClose: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true
@@ -189,6 +195,8 @@ private fun MessageBubbleContent(
                     onContactClick = onContactClick,
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress,
+                    onPollVoteSubmit = onPollVoteSubmit,
+                    onPollClose = onPollClose,
                     onSafetyDetailsClick = {
                         safetyWarning?.let(onSafetyDetailsClick)
                     }
@@ -274,6 +282,8 @@ private fun BubbleBody(
     onContactClick: (SharedContact) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
     onLongPress: () -> Unit = {},
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
@@ -304,10 +314,10 @@ private fun BubbleBody(
                 PollMessageContent(
                     part = pollPart,
                     onVoteSubmit = { selectedOptionIds ->
-                        // vote submit
+                        onPollVoteSubmit(message.id, pollPart.id, selectedOptionIds)
                     },
                     onClosePoll = {
-                        // close poll
+                        onPollClose(message.id, pollPart.id)
                     },
                     onMediaClick = { index ->
                         pollPart.images.getOrNull(index)?.let { onAttachmentClick(it.id) }

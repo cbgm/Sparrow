@@ -71,7 +71,8 @@ internal fun toGroupConversationUiState(
         isLocalAdmin = administration.isLocalAdmin,
         messages = conversation.toMessageBubbleUi(
             contactsById = contactsById,
-            safetyAssessments = safetyAssessments
+            safetyAssessments = safetyAssessments,
+            isLocalAdmin = administration.isLocalAdmin
         ),
         isLoading = isLoading,
         state = conversation?.state ?: GroupConversationState.READY,
@@ -100,7 +101,8 @@ internal fun GroupMessage.toMessageBubbleUi(
     senderIsInContacts: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     source: MessagePartSource = MessagePartSource.Message,
-    reply: MessageReplyUi? = null
+    reply: MessageReplyUi? = null,
+    canClosePoll: Boolean = false
 ): MessageBubbleUi {
     val partsUi =
         parts.toMessagePartsUi(
@@ -146,7 +148,10 @@ internal fun GroupMessage.toMessageBubbleUi(
         contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
         voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
-        pollPart = partsUi.filterIsInstance<PollUi>().firstOrNull(),
+        pollPart =
+            partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
+                canClose = canClosePoll
+            ),
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId
@@ -182,7 +187,8 @@ internal fun Set<String>.toIndicatorDisplayName(contacts: List<Contact>): String
 
 private fun GroupConversation?.toMessageBubbleUi(
     contactsById: Map<String, Contact>,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    isLocalAdmin: Boolean
 ): List<MessageBubbleUi> {
     val messages = this?.messages.orEmpty()
     val messagesById = messages.associateBy(GroupMessage::id)
@@ -198,7 +204,8 @@ private fun GroupConversation?.toMessageBubbleUi(
                     senderName = sender.displayNameForChat(senderIsInContacts),
                     senderIsInContacts = senderIsInContacts,
                     safetyAssessments = safetyAssessments,
-                    reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById)
+                    reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById),
+                    canClosePoll = message.isMine || isLocalAdmin
                 )
             )
         }

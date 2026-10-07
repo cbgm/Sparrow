@@ -13,8 +13,7 @@ import com.cbgm.sparrow.protocol.invitation.ContactInvitationHandshakeProtocol
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationPayloadEncoder
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationRequestProtocol
 import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.protocol.message.MessageDeletionPayloadCodec
-import com.cbgm.sparrow.protocol.message.MessageEditPayloadCodec
+import com.cbgm.sparrow.protocol.message.OperationMessageCodec
 import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
@@ -42,13 +41,8 @@ val protocolModule =
         single {
             GroupMessageContentCodec(json = get())
         }
-
         single {
-            MessageDeletionPayloadCodec(json = get())
-        }
-
-        single {
-            MessageEditPayloadCodec(json = get())
+            OperationMessageCodec(json = get())
         }
 
         single<PacketCodec> {

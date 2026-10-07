@@ -44,6 +44,17 @@ sealed interface GroupConversationUiEvent {
         val emoji: String
     ) : GroupConversationUiEvent
 
+    data class PollVoteSubmitted(
+        val messageId: String,
+        val pollId: String,
+        val selectedOptionIds: Set<String>
+    ) : GroupConversationUiEvent
+
+    data class PollCloseRequested(
+        val messageId: String,
+        val pollId: String
+    ) : GroupConversationUiEvent
+
     data class DeleteMessage(
         val messageId: String
     ) : GroupConversationUiEvent

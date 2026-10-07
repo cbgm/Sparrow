@@ -110,7 +110,7 @@ private fun Poll.toPollUi(source: MessagePartSource): PollUi =
         id = id,
         question = question,
         description = description,
-        options = options.map { PollOptionUi(id = it.id, text = it.text) },
+        options = options.map { PollOptionUi(id = it.id, text = it.text, voterIds = it.voterIds) },
         images = images.map { it.toImageUi(source) },
         allowMultipleSelection = allowMultipleSelection,
         allowVoteChange = allowVoteChange,

@@ -708,8 +708,6 @@
     <string name="feature_polls_multiple_answers">Multiple answers</string>
     <string name="feature_polls_percentage">%1$d%%</string>
     <string name="feature_polls_more_media">+%1$d</string>
-    <string name="feature_polls_vote">Vote</string>
-    <string name="feature_polls_change_vote">Change vote</string>
     <string name="feature_polls_close_poll">Close poll</string>
     <string name="feature_polls_view_voters">View voters</string>
     <string name="feature_polls_show_votes">Show votes</string>

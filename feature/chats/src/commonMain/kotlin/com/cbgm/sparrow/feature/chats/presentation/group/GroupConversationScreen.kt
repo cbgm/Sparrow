@@ -258,7 +258,24 @@ fun GroupConversationScreen(
                                 )
                         }
                     },
-                    onContactClick = { contact -> pendingSharedContact = contact }
+                    onContactClick = { contact -> pendingSharedContact = contact },
+                    onPollVoteSubmit = { messageId, pollId, selectedOptionIds ->
+                        onUiEvent(
+                            GroupConversationUiEvent.PollVoteSubmitted(
+                                messageId = messageId,
+                                pollId = pollId,
+                                selectedOptionIds = selectedOptionIds
+                            )
+                        )
+                    },
+                    onPollClose = { messageId, pollId ->
+                        onUiEvent(
+                            GroupConversationUiEvent.PollCloseRequested(
+                                messageId = messageId,
+                                pollId = pollId
+                            )
+                        )
+                    }
                 )
             }
         }

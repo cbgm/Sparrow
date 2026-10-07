@@ -21,8 +21,6 @@ import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
@@ -92,8 +90,6 @@ class OutgoingRecipientRoutingResolver(
             is GroupDescriptionUpdatedPacket -> groupId
             is GroupTitleUpdatedPacket -> groupId
             is GroupChatMessagePacket -> groupId
-            is GroupMessageDeletionPacket -> groupId
-            is GroupMessageEditPacket -> groupId
             is GroupPinUpdatedPacket -> groupId
             is GroupCreatedPacket -> groupId
             is GroupLeaveRequestPacket -> groupId

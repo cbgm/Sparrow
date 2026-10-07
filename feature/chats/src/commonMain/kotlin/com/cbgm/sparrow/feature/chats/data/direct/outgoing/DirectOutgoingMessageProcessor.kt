@@ -33,12 +33,12 @@ import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryption
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
-import com.cbgm.sparrow.protocol.message.MessageReactionPayload
+import com.cbgm.sparrow.protocol.message.MessageOperation
+import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.MessageEditPacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
@@ -130,15 +130,20 @@ class DirectOutgoingMessageProcessor(
                 )
             }
 
-            val packet = ChatMessagePacket(
-                packetId = IdGenerator.generate(prefix = "reaction-packet"),
-                messageId = IdGenerator.generate(prefix = "reaction"),
-                sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                reaction = MessageReactionPayload(messageId = messageId, emoji = emoji, removed = removed),
-                senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
-                profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
-            )
-            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            protocolOutbox.enqueue(
+                target.contactId,
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Reaction(
+                                messageId = messageId,
+                                emoji = emoji,
+                                removed = removed
+                            )
+                        )
+                )
+            ).getOrThrow()
         }
 
     suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> =
@@ -156,13 +161,19 @@ class DirectOutgoingMessageProcessor(
 
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
-            val packet =
-                MessageDeletionPacket(
-                    packetId = IdGenerator.generate(prefix = "delete-packet"),
-                    messageId = messageId,
-                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            protocolOutbox.enqueue(
+                target.contactId,
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Delete(
+                                messageId = messageId,
+                                deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                            )
+                        )
                 )
-            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            ).getOrThrow()
             discardMessages(listOf(message))
         }
 
@@ -190,11 +201,16 @@ class DirectOutgoingMessageProcessor(
             requireDirectChatAuthorization(target.contactId).getOrThrow()
             protocolOutbox.enqueue(
                 target.contactId,
-                MessageEditPacket(
-                    packetId = IdGenerator.generate(prefix = "edit-packet"),
-                    messageId = messageId,
-                    editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                    text = normalizedText
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Edit(
+                                messageId = messageId,
+                                text = normalizedText,
+                                editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                            )
+                        )
                 )
             ).getOrThrow()
             conversationDataSource.replaceMessageText(messageId, normalizedText)

@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.result.safeSuspendCall
@@ -26,23 +27,21 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.protocol.message.MessageDeletionPayload
-import com.cbgm.sparrow.protocol.message.MessageDeletionPayloadCodec
-import com.cbgm.sparrow.protocol.message.MessageEditPayload
-import com.cbgm.sparrow.protocol.message.MessageEditPayloadCodec
-import com.cbgm.sparrow.protocol.message.MessageReactionPayload
+import com.cbgm.sparrow.protocol.message.MessageOperation
+import com.cbgm.sparrow.protocol.message.OperationMessage
+import com.cbgm.sparrow.protocol.message.OperationMessageCodec
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -57,11 +56,11 @@ class GroupOutgoingMessageProcessor(
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityRepository,
+    private val groupMembershipRepository: GroupMembershipRepository,
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
-    private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
-    private val messageEditPayloadCodec: MessageEditPayloadCodec,
+    private val operationMessageCodec: OperationMessageCodec,
     private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) {
     private val sendMutex = Mutex()
@@ -188,37 +187,76 @@ class GroupOutgoingMessageProcessor(
                 )
             }
 
-            val eventId = IdGenerator.generate(prefix = "group-reaction")
-            val timestamp = SystemClock.nowEpochMilliseconds()
-            val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
-            val plaintext = groupMessageContentCodec.encode(
-                GroupMessageContent(reaction = MessageReactionPayload(messageId, emoji, removed))
-            )
-            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val secured = groupSecurityManager.encryptMessage(
+            sendOperation(
                 groupId = groupId,
-                messageId = eventId,
-                sentAtEpochMilliseconds = timestamp,
-                plaintext = plaintext,
-                localSigningKeyPair = localSigningKeyPair,
-                profilePicture = profilePicture
-            ).getOrThrow()
-            recipients.forEach { contactId ->
-                protocolOutbox.enqueue(
-                    contactId,
-                    GroupChatMessagePacket(
-                        packetId = "group-reaction-$eventId-$contactId",
-                        groupId = groupId,
-                        epoch = secured.epoch,
-                        messageId = eventId,
-                        sentAtEpochMilliseconds = timestamp,
-                        profilePicture = profilePicture,
-                        nonce = secured.nonce.copyOf(),
-                        ciphertext = secured.ciphertext.copyOf(),
-                        senderSignature = secured.senderSignature.copyOf()
-                    )
-                ).getOrThrow()
-            }
+                operation = MessageOperation.Reaction(messageId = messageId, emoji = emoji, removed = removed),
+                recipients = recipients
+            )
+        }
+
+    suspend fun votePoll(
+        groupId: String,
+        messageId: String,
+        pollId: String,
+        selectedOptionIds: Set<String>,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        safeSuspendCall {
+            requireActiveMembership(groupId, access)
+            val target = requireTargetMessage(groupId, messageId)
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Poll target is not a user message" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val poll = requirePoll(messageId, pollId)
+            val updated =
+                PollPolicy.vote(
+                    poll = poll,
+                    voterId = PollPolicy.LOCAL_VOTER_ID,
+                    selectedOptionIds = selectedOptionIds,
+                    nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
+            attachmentTransfer.updateMessagePart(messageId, updated).getOrThrow()
+            sendOperation(
+                groupId = groupId,
+                operation =
+                    MessageOperation.PollVote(
+                        messageId = messageId,
+                        pollId = pollId,
+                        selectedOptionIds = selectedOptionIds
+                    ),
+                recipients = recipients
+            )
+        }
+
+    suspend fun closePoll(
+        groupId: String,
+        messageId: String,
+        pollId: String,
+        closedAtEpochMilliseconds: Long,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        safeSuspendCall {
+            requireActiveMembership(groupId, access)
+            val target = requireTargetMessage(groupId, messageId)
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Poll target is not a user message" }
+            val isLocalAdmin = groupMembershipRepository.observeAdministration(groupId).first().isLocalAdmin
+            check(target.isMine || isLocalAdmin) { "Only the poll creator or a group admin can close the poll" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val updated = PollPolicy.close(requirePoll(messageId, pollId), closedAtEpochMilliseconds)
+            attachmentTransfer.updateMessagePart(messageId, updated).getOrThrow()
+            sendOperation(
+                groupId = groupId,
+                operation =
+                    MessageOperation.PollClose(
+                        messageId = messageId,
+                        pollId = pollId,
+                        closedAtEpochMilliseconds = closedAtEpochMilliseconds
+                    ),
+                recipients = recipients
+            )
         }
 
     suspend fun deleteMessage(
@@ -236,37 +274,15 @@ class GroupOutgoingMessageProcessor(
             val recipients = findCurrentRecipients(groupId)
             check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-            val eventId = IdGenerator.generate(prefix = "group-delete")
-            val timestamp = SystemClock.nowEpochMilliseconds()
-            val plaintext =
-                messageDeletionPayloadCodec.encode(
-                    MessageDeletionPayload(messageId)
-                )
-            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val secured =
-                groupSecurityManager.encryptMessageDeletion(
-                    groupId = groupId,
-                    deletionId = eventId,
-                    deletedAtEpochMilliseconds = timestamp,
-                    plaintext = plaintext,
-                    localSigningKeyPair = localSigningKeyPair
-                ).getOrThrow()
-
-            recipients.forEach { contactId ->
-                protocolOutbox.enqueue(
-                    contactId,
-                    GroupMessageDeletionPacket(
-                        packetId = "group-delete-$eventId-$contactId",
-                        groupId = groupId,
-                        epoch = secured.epoch,
-                        deletionId = eventId,
-                        deletedAtEpochMilliseconds = timestamp,
-                        nonce = secured.nonce.copyOf(),
-                        ciphertext = secured.ciphertext.copyOf(),
-                        senderSignature = secured.senderSignature.copyOf()
-                    )
-                ).getOrThrow()
-            }
+            sendOperation(
+                groupId = groupId,
+                operation =
+                    MessageOperation.Delete(
+                        messageId = messageId,
+                        deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    ),
+                recipients = recipients
+            )
 
             attachmentTransfer.deleteForMessages(listOf(messageId))
             messageDataSource.deleteMessages(listOf(target))
@@ -301,35 +317,16 @@ class GroupOutgoingMessageProcessor(
             val recipients = findCurrentRecipients(groupId)
             check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-            val editId = IdGenerator.generate(prefix = "group-edit")
-            val timestamp = SystemClock.nowEpochMilliseconds()
-            val plaintext = messageEditPayloadCodec.encode(MessageEditPayload(messageId, normalizedText))
-            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val secured =
-                groupSecurityManager
-                    .encryptMessageEdit(
-                        groupId = groupId,
-                        editId = editId,
-                        editedAtEpochMilliseconds = timestamp,
-                        plaintext = plaintext,
-                        localSigningKeyPair = localSigningKeyPair
-                    ).getOrThrow()
-
-            recipients.forEach { contactId ->
-                protocolOutbox.enqueue(
-                    contactId,
-                    GroupMessageEditPacket(
-                        packetId = "group-edit-$editId-$contactId",
-                        groupId = groupId,
-                        epoch = secured.epoch,
-                        editId = editId,
-                        editedAtEpochMilliseconds = timestamp,
-                        nonce = secured.nonce.copyOf(),
-                        ciphertext = secured.ciphertext.copyOf(),
-                        senderSignature = secured.senderSignature.copyOf()
-                    )
-                ).getOrThrow()
-            }
+            sendOperation(
+                groupId = groupId,
+                operation =
+                    MessageOperation.Edit(
+                        messageId = messageId,
+                        text = normalizedText,
+                        editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    ),
+                recipients = recipients
+            )
 
             messageDataSource.replaceMessageText(messageId, normalizedText)
         }
@@ -452,6 +449,61 @@ class GroupOutgoingMessageProcessor(
             isMine = true,
             createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
+
+    private suspend fun requireTargetMessage(groupId: String, messageId: String): MessageEntity {
+        require(messageId.isNotBlank()) { "Message ID must not be blank" }
+        val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
+        check(target.conversationId == groupId) { "Message does not belong to this group" }
+        return target
+    }
+
+    private suspend fun requirePoll(messageId: String, pollId: String): Poll {
+        require(pollId.isNotBlank()) { "Poll ID must not be blank" }
+        return attachmentTransfer
+            .messageParts(messageId)
+            .getOrThrow()
+            .filterIsInstance<Poll>()
+            .singleOrNull { poll -> poll.id == pollId }
+            ?: error("Poll was not found")
+    }
+
+    private suspend fun sendOperation(
+        groupId: String,
+        operation: MessageOperation,
+        recipients: List<String>
+    ) {
+        val eventId = IdGenerator.generate(prefix = "group-operation")
+        val timestamp = SystemClock.nowEpochMilliseconds()
+        val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+        val plaintext = operationMessageCodec.encode(OperationMessage(operation))
+        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val secured =
+            groupSecurityManager.encryptMessage(
+                groupId = groupId,
+                messageId = eventId,
+                sentAtEpochMilliseconds = timestamp,
+                plaintext = plaintext,
+                localSigningKeyPair = localSigningKeyPair,
+                profilePicture = profilePicture
+            ).getOrThrow()
+
+        recipients.forEach { contactId ->
+            protocolOutbox.enqueue(
+                contactId,
+                GroupChatMessagePacket(
+                    packetId = "group-operation-$eventId-$contactId",
+                    groupId = groupId,
+                    epoch = secured.epoch,
+                    messageId = eventId,
+                    sentAtEpochMilliseconds = timestamp,
+                    profilePicture = profilePicture,
+                    nonce = secured.nonce.copyOf(),
+                    ciphertext = secured.ciphertext.copyOf(),
+                    senderSignature = secured.senderSignature.copyOf()
+                )
+            ).getOrThrow()
+        }
+    }
 
     private suspend fun findCurrentRecipients(groupId: String): List<String> =
         messageDataSource

@@ -25,6 +25,24 @@ class GroupMessageRepositoryImpl(
     override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String, access: GroupMessageMembershipAccess): Result<Unit> =
         safeSuspendCall { outgoingMessageProcessor.toggleReaction(groupId, messageId, emoji, access) }
 
+    override suspend fun votePoll(
+        groupId: String,
+        messageId: String,
+        pollId: String,
+        selectedOptionIds: Set<String>,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        outgoingMessageProcessor.votePoll(groupId, messageId, pollId, selectedOptionIds, access)
+
+    override suspend fun closePoll(
+        groupId: String,
+        messageId: String,
+        pollId: String,
+        closedAtEpochMilliseconds: Long,
+        access: GroupMessageMembershipAccess
+    ): Result<Unit> =
+        outgoingMessageProcessor.closePoll(groupId, messageId, pollId, closedAtEpochMilliseconds, access)
+
     override suspend fun deleteMessage(groupId: String, messageId: String, access: GroupMessageMembershipAccess): Result<Unit> =
         safeSuspendCall { outgoingMessageProcessor.deleteMessage(groupId, messageId, access) }
 

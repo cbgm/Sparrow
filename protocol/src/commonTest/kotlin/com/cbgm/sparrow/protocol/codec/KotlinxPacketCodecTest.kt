@@ -3,10 +3,13 @@ package com.cbgm.sparrow.protocol.codec
 import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.protocol.message.MessageOperation
+import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.IdentityPacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -64,6 +67,75 @@ class KotlinxPacketCodecTest {
             actual =
             packet
         )
+    }
+
+    @Test
+    fun operationMessageRoundTrip() {
+        val original =
+            OperationMessagePacket(
+                packetId = "operation-packet-1",
+                message =
+                    OperationMessage(
+                        MessageOperation.PollVote(
+                            messageId = "message-1",
+                            pollId = "poll-1",
+                            selectedOptionIds = setOf("option-1", "option-2")
+                        )
+                    )
+            )
+
+        val decoded = codec.decode(codec.encode(original).getOrThrow()).getOrThrow()
+        val packet = assertIs<OperationMessagePacket>(decoded)
+        val operation = assertIs<MessageOperation.PollVote>(packet.message.operation)
+
+        assertEquals(original.packetId, packet.packetId)
+        assertEquals("message-1", operation.messageId)
+        assertEquals("poll-1", operation.pollId)
+        assertEquals(setOf("option-1", "option-2"), operation.selectedOptionIds)
+    }
+
+    @Test
+    fun editOperationRoundTrip() {
+        val original =
+            OperationMessagePacket(
+                packetId = "operation-edit-1",
+                message =
+                    OperationMessage(
+                        MessageOperation.Edit(
+                            messageId = "message-1",
+                            text = "Updated",
+                            editedAtEpochMilliseconds = 123L
+                        )
+                    )
+            )
+
+        val decoded = codec.decode(codec.encode(original).getOrThrow()).getOrThrow()
+        val operation = assertIs<MessageOperation.Edit>(assertIs<OperationMessagePacket>(decoded).message.operation)
+
+        assertEquals("message-1", operation.messageId)
+        assertEquals("Updated", operation.text)
+        assertEquals(123L, operation.editedAtEpochMilliseconds)
+    }
+
+    @Test
+    fun deleteOperationRoundTrip() {
+        val original =
+            OperationMessagePacket(
+                packetId = "operation-delete-1",
+                message =
+                    OperationMessage(
+                        MessageOperation.Delete(
+                            messageId = "message-1",
+                            deletedAtEpochMilliseconds = 456L
+                        )
+                    )
+            )
+
+        val decoded = codec.decode(codec.encode(original).getOrThrow()).getOrThrow()
+        val operation = assertIs<MessageOperation.Delete>(assertIs<OperationMessagePacket>(decoded).message.operation)
+
+        assertEquals("message-1", operation.messageId)
+        assertEquals(456L, operation.deletedAtEpochMilliseconds)
     }
 
     @Test

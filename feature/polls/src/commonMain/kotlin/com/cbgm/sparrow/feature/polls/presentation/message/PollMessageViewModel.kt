@@ -35,48 +35,41 @@ class PollMessageViewModel(
             _uiState.update { state ->
                 state.copy(
                     isExpired = true,
-                    canInteract = false,
-                    canSubmitVote = false
+                    canInteract = false
                 )
             }
         }
     }
 
-    fun onOptionClick(optionId: String) {
-        _uiState.update { state ->
-            if (!state.canInteract || state.options.none { it.id == optionId }) return@update state
+    fun onOptionClick(
+        optionId: String,
+        onSubmit: (Set<String>) -> Unit
+    ) {
+        val state = _uiState.value
+        if (!state.canInteract || state.options.none { it.id == optionId }) return
 
-            val selectedOptionIds =
-                if (part.allowMultipleSelection) {
-                    if (optionId in state.draftOptionIds) {
-                        state.draftOptionIds - optionId
-                    } else {
-                        state.draftOptionIds + optionId
-                    }
-                } else if (state.draftOptionIds == setOf(optionId)) {
-                    emptySet()
+        val selectedOptionIds =
+            if (part.allowMultipleSelection) {
+                if (optionId in state.submittedOptionIds) {
+                    state.submittedOptionIds - optionId
                 } else {
-                    setOf(optionId)
+                    state.submittedOptionIds + optionId
                 }
+            } else {
+                setOf(optionId)
+            }
 
+        if (selectedOptionIds.isEmpty() || selectedOptionIds == state.submittedOptionIds) return
+
+        _uiState.value =
             state.copy(
-                draftOptionIds = selectedOptionIds,
+                submittedOptionIds = selectedOptionIds,
                 options =
                     state.options.map { option ->
                         option.copy(isSelected = option.id in selectedOptionIds)
-                    },
-                canSubmitVote =
-                    selectedOptionIds.isNotEmpty() &&
-                        selectedOptionIds != state.submittedOptionIds,
-                isChangingVote = state.submittedOptionIds.isNotEmpty()
+                    }
             )
-        }
-    }
-
-    fun submitVote(onSubmit: (Set<String>) -> Unit) {
-        val state = _uiState.value
-        if (!state.canSubmitVote) return
-        onSubmit(state.draftOptionIds)
+        onSubmit(selectedOptionIds)
     }
 
     fun openVoters() {

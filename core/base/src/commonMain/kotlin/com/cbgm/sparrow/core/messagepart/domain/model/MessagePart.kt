@@ -85,7 +85,8 @@ data class Poll(
 
 data class PollOption(
     val id: String,
-    val text: String
+    val text: String,
+    val voterIds: Set<String> = emptySet()
 )
 
 sealed interface MessagePartSource {

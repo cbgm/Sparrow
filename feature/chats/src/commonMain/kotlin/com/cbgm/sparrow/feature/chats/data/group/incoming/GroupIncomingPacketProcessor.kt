@@ -12,8 +12,6 @@ import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
@@ -73,8 +71,6 @@ internal fun SparrowPacket.groupIdOrNull(): String? =
         is GroupMemberRemovedPacket -> groupId
         is GroupMemberActivationAcknowledgementPacket -> groupId
         is GroupChatMessagePacket -> groupId
-        is GroupMessageDeletionPacket -> groupId
-        is GroupMessageEditPacket -> groupId
         is GroupPinUpdatedPacket -> groupId
         is GroupLeaveRequestPacket -> groupId
         is GroupReadyAcknowledgementPacket -> groupId

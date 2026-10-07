@@ -1,27 +1,24 @@
 package com.cbgm.sparrow.feature.chats.data.direct.incoming
 
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
-import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
-import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
+import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectOperationMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.MessageEditPacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,
     private val messagePacketHandler: DirectMessagePacketHandler,
-    private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
-    private val editPacketHandler: DirectMessageEditPacketHandler,
+    private val operationMessagePacketHandler: DirectOperationMessagePacketHandler,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
-        packet is ChatMessagePacket || packet is MessageDeletionPacket || packet is MessageEditPacket
+        packet is ChatMessagePacket || packet is OperationMessagePacket
 
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
         val authorization =
@@ -44,8 +41,7 @@ class DirectIncomingPacketProcessor(
         val context = incoming.toIncomingPacketContext(conversationId)
         return when (val packet = incoming.packet) {
             is ChatMessagePacket -> messagePacketHandler.handle(context, packet)
-            is MessageDeletionPacket -> deletionPacketHandler.handle(context, packet)
-            is MessageEditPacket -> editPacketHandler.handle(context, packet)
+            is OperationMessagePacket -> operationMessagePacketHandler.handle(context, packet)
             else -> error("DirectIncomingPacketProcessor received a non-direct packet")
         }
     }

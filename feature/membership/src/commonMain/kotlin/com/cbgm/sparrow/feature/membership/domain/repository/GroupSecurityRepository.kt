@@ -7,8 +7,6 @@ import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 /** Membership owns the secure group epoch/key lifecycle and message crypto. */
@@ -49,25 +47,5 @@ interface GroupSecurityRepository {
         profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
     ): Result<SecuredGroupMessageDto>
 
-    suspend fun encryptMessageDeletion(
-        groupId: String,
-        deletionId: String,
-        deletedAtEpochMilliseconds: Long,
-        plaintext: String,
-        localSigningKeyPair: LocalSigningKeyPair
-    ): Result<SecuredGroupMessageDto>
-
-    suspend fun encryptMessageEdit(
-        groupId: String,
-        editId: String,
-        editedAtEpochMilliseconds: Long,
-        plaintext: String,
-        localSigningKeyPair: LocalSigningKeyPair
-    ): Result<SecuredGroupMessageDto>
-
     suspend fun decryptMessage(packet: GroupChatMessagePacket, senderContactId: String): Result<String>
-
-    suspend fun decryptMessageDeletion(packet: GroupMessageDeletionPacket, senderContactId: String): Result<String>
-
-    suspend fun decryptMessageEdit(packet: GroupMessageEditPacket, senderContactId: String): Result<String>
 }

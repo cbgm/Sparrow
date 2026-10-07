@@ -112,6 +112,14 @@ internal class MessageAttachmentDataSource(
         localAttachmentDataSource.updateSavedConversationName(conversationId, normalizedName)
     }
 
+    suspend fun updateMessagePart(messageId: String, part: MessagePartDto) {
+        val existing = attachmentDao.findPartById(part.id) ?: error("Message part was not found")
+        check(existing.messageId == messageId) { "Message part belongs to another message" }
+        attachmentDao.upsertParts(
+            listOf(part.toMessagePartEntity(messageId = messageId, position = existing.position))
+        )
+    }
+
     suspend fun messageParts(messageId: String): List<MessagePartDto> {
         val parts = attachmentDao.findMessagePartsByMessageId(messageId)
         return parts.toDtos(

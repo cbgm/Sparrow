@@ -23,8 +23,7 @@ import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
-import com.cbgm.sparrow.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.protocol.packet.MessageEditPacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class OutgoingPacketTransportPolicy {
@@ -65,23 +64,10 @@ class OutgoingPacketTransportPolicy {
                     )
                 }
 
-                is MessageDeletionPacket ->
+                is ChatMessagePacket,
+                is OperationMessagePacket ->
                     OutgoingTransportRequirement(
-                        requiresEncryption = true,
-                        encryptionUnavailableMessage =
-                            "Direct message deletion requires an encrypted Sparrow transport"
-                    )
-
-                is MessageEditPacket ->
-                    OutgoingTransportRequirement(
-                        requiresEncryption = true,
-                        encryptionUnavailableMessage =
-                            "Direct message edit requires an encrypted Sparrow transport"
-                    )
-
-                is ChatMessagePacket ->
-                    OutgoingTransportRequirement(
-                        // Text, reactions and attachments must all remain encrypted,
+                        // Direct messages and operations must remain encrypted,
                         // including when a remote installation loses its old identity.
                         requiresEncryption = true,
                         encryptionUnavailableMessage =

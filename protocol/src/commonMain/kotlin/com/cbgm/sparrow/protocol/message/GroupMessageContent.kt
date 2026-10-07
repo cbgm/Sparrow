@@ -14,18 +14,10 @@ data class GroupMessageContent(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val parts: List<MessagePartDto> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val replyToMessageId: String? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val reaction: MessageReactionPayload? = null
+    val replyToMessageId: String? = null
 ) {
     init {
-        if (reaction == null) {
-            parts.requireValidWireMessageParts(allowPolls = true)
-        } else {
-            require(parts.isEmpty() && replyToMessageId == null) {
-                "Group reaction content must not contain message content or a reply target"
-            }
-        }
+        parts.requireValidWireMessageParts(allowPolls = true)
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"
         }

@@ -26,6 +26,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
@@ -37,6 +38,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupIndicatorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.UnpinGroupMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.VoteInGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toIndicatorUiType
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
@@ -95,6 +97,8 @@ class GroupConversationViewModel(
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
     private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
+    private val voteInPollUseCase: VoteInGroupPollUseCase,
+    private val closePollUseCase: CloseGroupPollUseCase,
     private val deleteMessageUseCase: DeleteGroupMessageUseCase,
     private val editMessageUseCase: EditGroupMessageUseCase,
     private val pinMessageUseCase: PinGroupMessageUseCase,
@@ -366,6 +370,9 @@ class GroupConversationViewModel(
             GroupConversationUiEvent.MessageContextDismissed -> contextMessageId.value = null
             GroupConversationUiEvent.CancelEdit -> cancelEdit()
             is GroupConversationUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
+            is GroupConversationUiEvent.PollVoteSubmitted ->
+                voteInPoll(event.messageId, event.pollId, event.selectedOptionIds)
+            is GroupConversationUiEvent.PollCloseRequested -> closePoll(event.messageId, event.pollId)
             is GroupConversationUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is GroupConversationUiEvent.PinMessage -> pinMessage(event.messageId)
             GroupConversationUiEvent.UnpinMessage -> unpinMessage()
@@ -828,6 +835,20 @@ class GroupConversationViewModel(
         viewModelScope.launch {
             toggleMessageReaction(groupId, messageId, emoji)
                 .onFailure { error -> setError(error.message ?: "Reaction could not be sent") }
+        }
+    }
+
+    private fun voteInPoll(messageId: String, pollId: String, selectedOptionIds: Set<String>) {
+        viewModelScope.launch {
+            voteInPollUseCase(groupId, messageId, pollId, selectedOptionIds)
+                .onFailure { error -> setError(error.message ?: "Poll vote could not be sent") }
+        }
+    }
+
+    private fun closePoll(messageId: String, pollId: String) {
+        viewModelScope.launch {
+            closePollUseCase(groupId, messageId, pollId)
+                .onFailure { error -> setError(error.message ?: "Poll could not be closed") }
         }
     }
 

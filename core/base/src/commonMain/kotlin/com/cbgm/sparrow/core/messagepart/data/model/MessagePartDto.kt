@@ -303,5 +303,6 @@ data class PollDto(
 @Serializable
 data class PollOptionDto(
     val id: String,
-    val text: String
+    val text: String,
+    val voterIds: Set<String> = emptySet()
 )

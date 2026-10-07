@@ -54,6 +54,8 @@ internal fun MessageList(
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     onContactClick: (SharedContact) -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     contentPadding: PaddingValues,
     historyState: MessageHistoryUiState,
     onLoadOlderMessages: () -> Unit,
@@ -149,6 +151,8 @@ internal fun MessageList(
                                     )
                                 )
                             },
+                            onPollVoteSubmit = onPollVoteSubmit,
+                            onPollClose = onPollClose,
                             isContextSelected = selectedContextMessageId == message.id,
                             isSearchHighlighted =
                                 message.id == searchTargetState.highlightedMessageId ||

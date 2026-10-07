@@ -31,13 +31,11 @@ import com.cbgm.sparrow.feature.polls.presentation.voters.PollVotersScreen
 import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVotersUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_anonymous
-import com.cbgm.sparrow.resources.feature_polls_change_vote
 import com.cbgm.sparrow.resources.feature_polls_close_poll
 import com.cbgm.sparrow.resources.feature_polls_closed
 import com.cbgm.sparrow.resources.feature_polls_expired
 import com.cbgm.sparrow.resources.feature_polls_multiple_answers
 import com.cbgm.sparrow.resources.feature_polls_show_votes
-import com.cbgm.sparrow.resources.feature_polls_vote
 import com.cbgm.sparrow.resources.feature_polls_voters
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -60,8 +58,7 @@ fun PollMessageContent(
 
     PollMessageContentBody(
         uiState = uiState,
-        onOptionClick = viewModel::onOptionClick,
-        onVoteSubmit = { viewModel.submitVote(onVoteSubmit) },
+        onOptionClick = { optionId -> viewModel.onOptionClick(optionId, onVoteSubmit) },
         onClosePoll = onClosePoll,
         onMediaClick = onMediaClick,
         onShowVotes = viewModel::openVoters,
@@ -99,7 +96,6 @@ private fun PollVotersOverlay(
 private fun PollMessageContentBody(
     uiState: PollMessageUiState,
     onOptionClick: (String) -> Unit,
-    onVoteSubmit: () -> Unit,
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
     onShowVotes: () -> Unit,
@@ -185,24 +181,9 @@ private fun PollMessageContentBody(
                 }
             }
 
-            Column {
-                if (uiState.canSubmitVote) {
-                    TextButton(onClick = onVoteSubmit) {
-                        Text(
-                            text = stringResource(
-                                if (uiState.isChangingVote) {
-                                    Res.string.feature_polls_change_vote
-                                } else {
-                                    Res.string.feature_polls_vote
-                                }
-                            )
-                        )
-                    }
-                }
-                if (uiState.canClose && !uiState.isClosed) {
-                    TextButton(onClick = onClosePoll) {
-                        Text(text = stringResource(Res.string.feature_polls_close_poll))
-                    }
+            if (uiState.canClose && !uiState.isClosed) {
+                TextButton(onClick = onClosePoll) {
+                    Text(text = stringResource(Res.string.feature_polls_close_poll))
                 }
             }
         }
@@ -218,7 +199,6 @@ private fun previewState(
     mediaCount: Int = 0,
     allowMultiple: Boolean = false,
     submitted: Set<String> = emptySet(),
-    draft: Set<String> = submitted,
     expired: Boolean = false,
     closed: Boolean = false,
     anonymous: Boolean = false
@@ -276,15 +256,12 @@ private fun previewState(
         ),
         totalVoters = 24,
         submittedOptionIds = submitted,
-        draftOptionIds = draft,
         allowMultipleSelection = allowMultiple,
         allowVoteChange = true,
         isAnonymous = anonymous,
         isExpired = expired,
         isClosed = closed,
         canInteract = !expired && !closed,
-        canSubmitVote = !expired && !closed && draft.isNotEmpty() && draft != submitted,
-        isChangingVote = submitted.isNotEmpty(),
         canShowVotes = !anonymous,
         expiryLabel = if (expired) "Poll ended 25 May 2026 at 18:00" else "Poll ends 1 Oct 2026 at 18:00",
         canClose = !closed
@@ -294,23 +271,22 @@ private fun previewState(
 @Preview
 @Composable
 private fun PollMessageNotVotedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(), {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageVotedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(submitted = setOf("1")), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(submitted = setOf("1")), {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
-private fun PollMessageMultipleDraftPreview() {
+private fun PollMessageMultipleSelectionPreview() {
     SparrowTheme {
         Surface {
             PollMessageContentBody(
-                previewState(allowMultiple = true, draft = setOf("1", "2")),
-                {},
+                previewState(allowMultiple = true, submitted = setOf("1", "2")),
                 {},
                 {},
                 {},
@@ -323,23 +299,23 @@ private fun PollMessageMultipleDraftPreview() {
 @Preview
 @Composable
 private fun PollMessageMediaOverflowPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(mediaCount = 5), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(mediaCount = 5), {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageExpiredPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(expired = true), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(expired = true), {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageClosedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(closed = true), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(closed = true), {}, {}, {}, {}) } }
 }
 
 @Preview
 @Composable
 private fun PollMessageAnonymousPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(anonymous = true), {}, {}, {}, {}, {}) } }
+    SparrowTheme { Surface { PollMessageContentBody(previewState(anonymous = true), {}, {}, {}, {}) } }
 }

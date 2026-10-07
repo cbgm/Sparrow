@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.protocol.packet
 
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.protocol.messagepart.requireValidWireMessageParts
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.version.ProtocolVersion
@@ -28,8 +27,6 @@ data class ChatMessagePacket(
     val parts: List<MessagePartDto> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val replyToMessageId: String? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val reaction: MessageReactionPayload? = null,
     val senderPhoneNumber: String? = null,
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
@@ -39,13 +36,7 @@ data class ChatMessagePacket(
         require(messageId.isNotBlank()) { "Message ID must not be blank" }
         require(sentAtEpochMilliseconds >= 0L) { "Message timestamp must not be negative" }
 
-        if (reaction == null) {
-            parts.requireValidWireMessageParts(expectedTextPartId = messageId)
-        } else {
-            require(parts.isEmpty() && replyToMessageId == null) {
-                "Reaction packets must not contain message content or a reply target"
-            }
-        }
+        parts.requireValidWireMessageParts(expectedTextPartId = messageId)
 
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"

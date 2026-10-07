@@ -9,12 +9,10 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ClaimAutoReplyForContactUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ReleaseAutoReplyRecipientUseCase
-import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -30,7 +28,6 @@ import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 class DirectMessagePacketHandler(
     private val conversationDataSource: DirectConversationDataSource,
     private val contactRepository: ContactRepository,
-    private val messageReactionDataSource: MessageReactionDataSource,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val attachmentTransfer: MessageAttachmentOperationsRepository,
@@ -45,18 +42,6 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
-            packet.reaction?.let { reaction ->
-                val target = conversationDataSource.findMessageById(reaction.messageId) ?: return@runCatching
-                check(target.conversationId == context.conversationId) { "Reaction target belongs to another conversation" }
-                if (reaction.removed) {
-                    messageReactionDataSource.delete(reaction.messageId, context.contactId, reaction.emoji)
-                } else {
-                    messageReactionDataSource.upsert(
-                        MessageReactionEntity(reaction.messageId, context.conversationId, context.contactId, reaction.emoji)
-                    )
-                }
-                return@runCatching
-            }
             validateMessage(context, packet)
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)

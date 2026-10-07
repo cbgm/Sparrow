@@ -137,6 +137,11 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     override suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) =
         dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
 
+    override suspend fun updateMessagePart(messageId: String, part: MessagePart): Result<Unit> =
+        safeSuspendCall {
+            dataSource.updateMessagePart(messageId = messageId, part = part.toDto())
+        }
+
     override suspend fun messageParts(messageId: String): Result<List<MessagePart>> =
         safeSuspendCall {
             dataSource.messageParts(messageId).map { it.toMessagePart() }

@@ -712,8 +712,6 @@
     <string name="feature_polls_multiple_answers">Mehrfachauswahl</string>
     <string name="feature_polls_percentage">%1$d%%</string>
     <string name="feature_polls_more_media">+%1$d</string>
-    <string name="feature_polls_vote">Abstimmen</string>
-    <string name="feature_polls_change_vote">Stimme ändern</string>
     <string name="feature_polls_close_poll">Umfrage schließen</string>
     <string name="feature_polls_view_voters">Abstimmende anzeigen</string>
     <string name="feature_polls_show_votes">Stimmen anzeigen</string>

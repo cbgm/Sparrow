@@ -21,6 +21,8 @@ interface MessageAttachmentOperationsRepository {
     /** Synchronizes owner-provided names without exposing Chats or Contacts DAOs. */
     suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean)
 
+    suspend fun updateMessagePart(messageId: String, part: MessagePart): Result<Unit>
+
     suspend fun messageParts(messageId: String): Result<List<MessagePart>>
 
     /** Completes interrupted outgoing uploads before queued transport is resumed. */
