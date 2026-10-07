@@ -10,20 +10,17 @@ class DirectMessageRepositoryImpl(
 ) : DirectMessageRepository {
     override suspend fun send(
         conversationId: String,
-        text: String,
         parts: List<MessagePart>,
         replyToMessageId: String?
     ): Result<Unit> =
-        outgoingMessageProcessor.send(conversationId, text, parts, replyToMessageId)
+        outgoingMessageProcessor.send(conversationId, parts, replyToMessageId)
 
     override suspend fun queueUntilAuthorized(
         conversationId: String,
-        text: String,
         parts: List<MessagePart>,
         replyToMessageId: String?
     ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(
         conversationId,
-        text,
         parts,
         replyToMessageId
     )

@@ -5,15 +5,13 @@ import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 interface DirectMessageRepository {
     suspend fun send(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit>
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit>
 

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.protocol.packet
 
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentConstraints
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.protocol.message.MessageReactionPayload
+import com.cbgm.sparrow.protocol.messagepart.requireValidWireMessageParts
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.version.ProtocolVersion
 import kotlinx.serialization.EncodeDefault
@@ -24,9 +24,8 @@ data class ChatMessagePacket(
      */
     val messageId: String,
     val sentAtEpochMilliseconds: Long,
-    val text: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val attachments: List<MessageAttachment> = emptyList(),
+    val parts: List<MessagePartDto> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val replyToMessageId: String? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
@@ -35,45 +34,22 @@ data class ChatMessagePacket(
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
     init {
-        require(packetId.isNotBlank()) {
-            "Packet ID must not be blank"
-        }
+        require(packetId.isNotBlank()) { "Packet ID must not be blank" }
+        require(version > 0) { "Protocol version must be positive" }
+        require(messageId.isNotBlank()) { "Message ID must not be blank" }
+        require(sentAtEpochMilliseconds >= 0L) { "Message timestamp must not be negative" }
 
-        require(version > 0) {
-            "Protocol version must be positive"
-        }
-
-        require(messageId.isNotBlank()) {
-            "Message ID must not be blank"
-        }
-
-        require(sentAtEpochMilliseconds >= 0L) {
-            "Message timestamp must not be negative"
-        }
-
-        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
-            "Message must contain text, an attachment, or a reaction"
-        }
-
-        require(
-            reaction == null ||
-                (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
-        ) {
-            "Reaction packets must not contain message content or a reply target"
-        }
-
-        require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
-            "A message can contain at most ${MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE} attachments"
-        }
-
-        require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
-            "Attachment IDs must be unique within a message"
+        if (reaction == null) {
+            parts.requireValidWireMessageParts(expectedTextPartId = messageId)
+        } else {
+            require(parts.isEmpty() && replyToMessageId == null) {
+                "Reaction packets must not contain message content or a reply target"
+            }
         }
 
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"
         }
-
         require(senderPhoneNumber == null || senderPhoneNumber.isNotBlank()) {
             "Sender phone number must not be blank"
         }

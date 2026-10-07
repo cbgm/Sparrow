@@ -1,7 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -65,7 +68,7 @@ class DirectMessagePacketHandler(
             storeMessage(conversation, context, packet)
             attachmentTransfer.persistIncoming(
                 messageId = packet.messageId,
-                attachments = packet.attachments,
+                parts = packet.parts.filterNot { part -> part is TextDto },
                 context = AttachmentMessageContext(
                     conversationId = conversation.id,
                     createdAtEpochMilliseconds = conversationDataSource.findMessageById(packet.messageId)
@@ -88,11 +91,11 @@ class DirectMessagePacketHandler(
         context: IncomingPacketContext,
         packet: ChatMessagePacket
     ) {
-        require(packet.text.isNotBlank() || packet.attachments.isNotEmpty()) {
-            "Incoming chat message must contain text or attachments"
+        require(packet.parts.isNotEmpty()) {
+            "Incoming chat message must contain message parts"
         }
         require(
-            packet.attachments.isEmpty() ||
+            packet.parts.all { part -> part is TextDto } ||
                 context.transportMode == TransportEncryptionMode.SEALED_BOX.name
         ) {
             "Direct message attachments require an encrypted Sparrow transport"
@@ -126,7 +129,7 @@ class DirectMessagePacketHandler(
         conversationDataSource.upsertIncomingChatMessage(
             conversation = conversation,
             message = packet.toMessageEntity(conversation.id, context),
-            text = packet.text,
+            text = packet.parts.filterIsInstance<TextDto>().singleOrNull()?.text.orEmpty(),
             timestamp = context.receivedAtEpochMilliseconds
         )
     }
@@ -160,8 +163,13 @@ class DirectMessagePacketHandler(
         val sendResult =
             outgoingMessageProcessor.send(
                 conversationId = conversationId,
-                text = claimedReply.text,
-                parts = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = claimedReply.text
+                        )
+                    ),
                 replyToMessageId = null
             )
 

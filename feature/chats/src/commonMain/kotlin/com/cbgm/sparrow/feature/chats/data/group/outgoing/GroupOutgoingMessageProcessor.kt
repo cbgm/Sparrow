@@ -2,7 +2,12 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
@@ -10,7 +15,6 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
@@ -23,7 +27,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
@@ -66,14 +69,15 @@ class GroupOutgoingMessageProcessor(
 
     suspend fun send(
         groupId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             sendMutex.withLock {
-                val normalizedText = requireMessageContent(text, parts)
+                val normalizedParts = requireMessageContent(parts)
+                val text = normalizedParts.filterIsInstance<Text>().singleOrNull()?.text.orEmpty()
+                val attachmentParts = normalizedParts.filterNot { part -> part is Text }
                 requireActiveMembership(groupId, access)
                 val recipients = findCurrentRecipients(groupId)
                 if (recipients.isNotEmpty()) {
@@ -81,9 +85,9 @@ class GroupOutgoingMessageProcessor(
                 }
 
                 val message = createQueuedMessage(groupId, replyToMessageId)
-                val protocolAttachments = persistMessage(message, normalizedText, parts)
+                val messageParts = persistMessage(message, text, attachmentParts)
                 if (recipients.isNotEmpty()) {
-                    encryptAndEnqueue(message, recipients, protocolAttachments)
+                    encryptAndEnqueue(message, recipients, messageParts)
                 }
             }
         }
@@ -132,7 +136,7 @@ class GroupOutgoingMessageProcessor(
                     val packets = createPackets(
                         message = message,
                         recipients = missingRecipients,
-                        attachments = attachmentTransfer.protocolAttachments(message.id)
+                        parts = attachmentTransfer.messageParts(message.id)
                     )
                     if (previousStates.isEmpty()) {
                         val states = packets.map { (contactId, packet) ->
@@ -285,7 +289,7 @@ class GroupOutgoingMessageProcessor(
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
             check(target.isMine) { "Only your own messages can be edited" }
             check(!messageDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
             check(
@@ -458,11 +462,11 @@ class GroupOutgoingMessageProcessor(
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
         recipients: List<String>,
-        attachments: List<MessageAttachment>
+        parts: List<MessagePartDto>
     ) {
         val packets =
             try {
-                createPackets(message, recipients, attachments)
+                createPackets(message, recipients, parts)
             } catch (error: Throwable) {
                 attachmentTransfer.deleteForMessages(listOf(message.id))
                 messageDataSource.deleteMessages(listOf(message))
@@ -477,7 +481,7 @@ class GroupOutgoingMessageProcessor(
         message: MessageEntity,
         text: String,
         parts: List<MessagePart>
-    ): List<MessageAttachment> {
+    ): List<MessagePartDto> {
         messageDataSource.saveOutgoingMessage(
             message = message,
             text = text,
@@ -530,7 +534,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun createPackets(
         message: MessageEntity,
         recipients: List<String>,
-        attachments: List<MessageAttachment>
+        parts: List<MessagePartDto>
     ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
@@ -538,8 +542,13 @@ class GroupOutgoingMessageProcessor(
         val plaintext =
             groupMessageContentCodec.encode(
                 GroupMessageContent(
-                    text = messageDataSource.findMessageText(message.id).orEmpty(),
-                    attachments = attachments,
+                    parts =
+                        buildList {
+                            messageDataSource.findMessageText(message.id)
+                                ?.takeIf(String::isNotBlank)
+                                ?.let { text -> add(TextDto(id = message.id, text = text)) }
+                            addAll(parts)
+                        },
                     replyToMessageId = message.replyToMessageId
                 )
             )
@@ -618,18 +627,33 @@ class GroupOutgoingMessageProcessor(
                     )
             ).map { }
 
-    private fun requireMessageContent(
-        text: String,
-        parts: List<MessagePart>
-    ): String {
-        MessageAttachmentPolicy.requireValid(parts)
-        return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || parts.isNotEmpty()) {
-                "Message must contain text or attachments"
+    private fun requireMessageContent(parts: List<MessagePart>): List<MessagePart> {
+        require(parts.isNotEmpty()) { "Message must contain message parts" }
+        require(parts.map(MessagePart::id).distinct().size == parts.size) {
+            "Message part IDs must be unique"
+        }
+
+        val textParts = parts.filterIsInstance<Text>()
+        require(textParts.size <= 1) { "A message can contain at most one text part" }
+        val normalizedText = textParts.singleOrNull()?.text?.trim().orEmpty()
+        require(textParts.isEmpty() || normalizedText.isNotEmpty()) {
+            "Message text must not be blank"
+        }
+
+        val attachments = parts.filterNot { part -> part is Text }
+        require(attachments.none { part -> part is Poll }) {
+            "Poll message-part transport is not wired yet"
+        }
+        MessageAttachmentPolicy.requireValid(attachments)
+        require(attachments.none { it is Voice } || normalizedText.isEmpty()) {
+            "A voice message cannot contain text"
+        }
+
+        return buildList {
+            textParts.singleOrNull()?.let { textPart ->
+                add(textPart.copy(text = normalizedText))
             }
-            require(parts.none { it is Voice } || normalizedText.isEmpty()) {
-                "A voice message cannot contain text"
-            }
+            addAll(attachments)
         }
     }
 

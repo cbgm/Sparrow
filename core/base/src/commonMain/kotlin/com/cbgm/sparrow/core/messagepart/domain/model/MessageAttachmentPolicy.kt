@@ -1,18 +1,7 @@
-package com.cbgm.sparrow.feature.attachments.domain.model
-
-import com.cbgm.sparrow.core.messagepart.domain.model.Contact
-import com.cbgm.sparrow.core.messagepart.domain.model.File
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.Location
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.Text
-import com.cbgm.sparrow.core.messagepart.domain.model.Video
-import com.cbgm.sparrow.core.messagepart.domain.model.Voice
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentConstraints
+package com.cbgm.sparrow.core.messagepart.domain.model
 
 object MessageAttachmentPolicy {
-    const val MAX_ATTACHMENTS_PER_MESSAGE = MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE
+    const val MAX_ATTACHMENTS_PER_MESSAGE = 8
     const val MAX_IMAGE_BYTES = 4 * 1024 * 1024
     const val MAX_VIDEO_BYTES = 64L * 1024L * 1024L
     const val MAX_FILE_BYTES = 96L * 1024L * 1024L

@@ -8,9 +8,8 @@ class SendDirectMessageUseCase(
 ) {
     suspend operator fun invoke(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> =
-        repository.send(conversationId, text, parts, replyToMessageId)
+        repository.send(conversationId, parts, replyToMessageId)
 }

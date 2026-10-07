@@ -2,9 +2,11 @@ package com.cbgm.sparrow.feature.attachments.data.repository
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
@@ -13,6 +15,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Contact
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
@@ -21,21 +24,17 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentFileDataSource
+import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocolMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
-import com.cbgm.sparrow.protocol.attachment.CONTACT_MIME_TYPE
-import com.cbgm.sparrow.protocol.attachment.LOCATION_MIME_TYPE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class MessageAttachmentOperationsRepositoryImpl(
     private val dataSource: MessageAttachmentDataSource,
@@ -49,7 +48,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ): List<ProtocolMessageAttachment> {
+    ): List<MessagePartDto> {
         if (parts.isEmpty()) return emptyList()
         MessageAttachmentPolicy.requireValid(parts)
 
@@ -91,7 +90,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 localFileNames = localFileNames,
                 context = context.toDto()
             )
-            return uploaded.map { it.toProtocolMessageAttachment() }
+            return uploaded
         } catch (error: Throwable) {
             cleanupUploads(uploaded, deleteCapabilities, localFileNames)
             throw error
@@ -100,18 +99,18 @@ internal class MessageAttachmentOperationsRepositoryImpl(
 
     override suspend fun persistIncoming(
         messageId: String,
-        attachments: List<ProtocolMessageAttachment>,
+        parts: List<MessagePartDto>,
         context: AttachmentMessageContext
-    ) = dataSource.persistIncoming(messageId, attachments, context.toDto())
+    ) = dataSource.persistIncoming(messageId, parts, context.toDto())
 
     override suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) =
         dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
 
-    override suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
-        dataSource.protocolAttachments(messageId)
+    override suspend fun messageParts(messageId: String): List<MessagePartDto> =
+        dataSource.messageParts(messageId)
 
-    override suspend fun loadDetachedBytes(attachment: ProtocolMessageAttachment): ByteArray =
-        dataSource.loadDetachedBytes(attachment)
+    override suspend fun loadDetachedBytes(part: MessagePartDto): ByteArray =
+        dataSource.loadDetachedBytes(part)
 
     override suspend fun deleteForMessages(messageIds: List<String>) = dataSource.deleteForMessages(messageIds)
 
@@ -259,10 +258,10 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         parts.forEach { part ->
             localFileNames[part.id]?.let(fileDataSource::delete)
             val deleteCapability = deleteCapabilities[part.id] ?: return@forEach
-            val protocol = runCatching { part.toProtocolMessageAttachment() }.getOrNull() ?: return@forEach
+            val reference = part.requireBlobReference()
             runCatching {
                 blobTransferDataSource.delete(
-                    reference = protocol.blob.toDto(),
+                    reference = reference,
                     deleteCapability = deleteCapability
                 )
             }.onFailure { error ->

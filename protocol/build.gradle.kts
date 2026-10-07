@@ -10,6 +10,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(projects.core.base)
             implementation(projects.core.util)
             implementation(projects.core.crypto)
             implementation(libs.bundles.coroutines)

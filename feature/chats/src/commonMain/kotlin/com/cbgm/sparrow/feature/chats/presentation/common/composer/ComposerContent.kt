@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.chats.presentation.common.composer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.device.rememberCurrentLocationLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerPreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toMessageInputState

@@ -3,7 +3,12 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
@@ -11,7 +16,6 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
@@ -29,7 +33,6 @@ import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryption
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
@@ -68,23 +71,24 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun send(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, parts)
+            val normalizedParts = requireMessageContent(parts)
+            val text = normalizedParts.filterIsInstance<Text>().singleOrNull()?.text.orEmpty()
+            val attachmentParts = normalizedParts.filterNot { part -> part is Text }
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
-            val protocolAttachments = persistOutgoingMessage(
+            val messageParts = persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = messageId,
-                text = normalizedText,
-                parts = parts,
+                text = text,
+                parts = attachmentParts,
                 deliveryStatus = MessageDeliveryStatus.QUEUED,
                 replyToMessageId = replyToMessageId
             )
@@ -92,8 +96,8 @@ class DirectOutgoingMessageProcessor(
                 try {
                     createPacket(
                         messageId = messageId,
-                        text = normalizedText,
-                        attachments = protocolAttachments,
+                        text = text,
+                        parts = messageParts,
                         replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
@@ -130,7 +134,6 @@ class DirectOutgoingMessageProcessor(
                 packetId = IdGenerator.generate(prefix = "reaction-packet"),
                 messageId = IdGenerator.generate(prefix = "reaction"),
                 sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                text = "",
                 reaction = MessageReactionPayload(messageId = messageId, emoji = emoji, removed = removed),
                 senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
                 profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
@@ -175,7 +178,7 @@ class DirectOutgoingMessageProcessor(
             check(message.isMine) { "Only your own messages can be edited" }
             check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
             check(!conversationDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+            check(attachmentTransfer.messageParts(messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
 
@@ -199,20 +202,21 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, parts)
+            val normalizedParts = requireMessageContent(parts)
+            val text = normalizedParts.filterIsInstance<Text>().singleOrNull()?.text.orEmpty()
+            val attachmentParts = normalizedParts.filterNot { part -> part is Text }
             val target = loadTarget(conversationId)
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = IdGenerator.generate(prefix = "message"),
-                text = normalizedText,
-                parts = parts,
+                text = text,
+                parts = attachmentParts,
                 deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
                 replyToMessageId = replyToMessageId
             )
@@ -387,7 +391,7 @@ class DirectOutgoingMessageProcessor(
             createPacket(
                 messageId = message.id,
                 text = conversationDataSource.findMessageText(message.id).orEmpty(),
-                attachments = attachmentTransfer.protocolAttachments(message.id),
+                parts = attachmentTransfer.messageParts(message.id),
                 replyToMessageId = message.replyToMessageId
             )
         conversationDataSource.upsertMessage(
@@ -442,7 +446,7 @@ class DirectOutgoingMessageProcessor(
         parts: List<MessagePart>,
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
-    ): List<MessageAttachment> {
+    ): List<MessagePartDto> {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
             MessageEntity(
@@ -518,15 +522,19 @@ class DirectOutgoingMessageProcessor(
     private suspend fun createPacket(
         messageId: String,
         text: String,
-        attachments: List<MessageAttachment>,
+        parts: List<MessagePartDto>,
         replyToMessageId: String?
     ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
             messageId = messageId,
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-            text = text,
-            attachments = attachments,
+            parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value -> add(TextDto(id = messageId, text = value)) }
+                    addAll(parts)
+                },
             replyToMessageId = replyToMessageId,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
             profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
@@ -561,18 +569,33 @@ class DirectOutgoingMessageProcessor(
         ).getOrThrow()
     }
 
-    private fun requireMessageContent(
-        text: String,
-        parts: List<MessagePart>
-    ): String {
-        MessageAttachmentPolicy.requireValid(parts)
-        return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || parts.isNotEmpty()) {
-                "Message must contain text or attachments"
+    private fun requireMessageContent(parts: List<MessagePart>): List<MessagePart> {
+        require(parts.isNotEmpty()) { "Message must contain message parts" }
+        require(parts.map(MessagePart::id).distinct().size == parts.size) {
+            "Message part IDs must be unique"
+        }
+
+        val textParts = parts.filterIsInstance<Text>()
+        require(textParts.size <= 1) { "A message can contain at most one text part" }
+        val normalizedText = textParts.singleOrNull()?.text?.trim().orEmpty()
+        require(textParts.isEmpty() || normalizedText.isNotEmpty()) {
+            "Message text must not be blank"
+        }
+
+        val attachments = parts.filterNot { part -> part is Text }
+        require(attachments.none { part -> part is Poll }) {
+            "Poll message-part transport is not wired yet"
+        }
+        MessageAttachmentPolicy.requireValid(attachments)
+        require(attachments.none { it is Voice } || normalizedText.isEmpty()) {
+            "A voice message cannot contain text"
+        }
+
+        return buildList {
+            textParts.singleOrNull()?.let { textPart ->
+                add(textPart.copy(text = normalizedText))
             }
-            require(parts.none { it is Voice } || normalizedText.isEmpty()) {
-                "A voice message cannot contain text"
-            }
+            addAll(attachments)
         }
     }
 

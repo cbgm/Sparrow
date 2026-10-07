@@ -1,9 +1,5 @@
-package com.cbgm.sparrow.feature.attachments.domain.model
+package com.cbgm.sparrow.core.messagepart.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.File
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 

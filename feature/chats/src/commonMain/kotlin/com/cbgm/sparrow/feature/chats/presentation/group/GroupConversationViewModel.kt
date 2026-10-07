@@ -2,13 +2,15 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
@@ -517,8 +519,13 @@ class GroupConversationViewModel(
         if (preparingMediaSend) return
         if (selections.isEmpty()) {
             dispatchSend(
-                text = text,
-                parts = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = text
+                        )
+                    ),
                 clearComposerOnSuccess = true,
                 fallbackError = "Message could not be sent"
             )
@@ -527,10 +534,21 @@ class GroupConversationViewModel(
 
         preparingMediaSend = true
         try {
-            val parts = selections.map { it.toMessagePart() }
+            val parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            add(
+                                Text(
+                                    id = IdGenerator.generate(prefix = "text"),
+                                    text = value
+                                )
+                            )
+                        }
+                    addAll(selections.map { it.toMessagePart() })
+                }
             if (selectedMedia.value != selections) return
             dispatchSend(
-                text = text,
                 parts = parts,
                 clearComposerOnSuccess = true,
                 fallbackError = "Message could not be sent"
@@ -547,7 +565,6 @@ class GroupConversationViewModel(
             getRecordedVoiceAttachment()
                 .onSuccess { part ->
                     dispatchSend(
-                        text = "",
                         parts = listOf(part),
                         clearComposerOnSuccess = false,
                         clearVoiceOnSuccess = true,
@@ -574,7 +591,6 @@ class GroupConversationViewModel(
         isLocationShare: Boolean = false
     ) {
         dispatchSend(
-            text = "",
             parts = listOf(part),
             clearComposerOnSuccess = false,
             fallbackError = fallbackError,
@@ -583,7 +599,6 @@ class GroupConversationViewModel(
     }
 
     private fun dispatchSend(
-        text: String,
         parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         fallbackError: String,
@@ -610,7 +625,7 @@ class GroupConversationViewModel(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             isSending.value = true
             try {
-                sendMessage(groupId, text, parts, replyTo)
+                sendMessage(groupId, parts, replyTo)
                     .onSuccess {
                         when {
                             clearComposerOnSuccess -> clearComposer()

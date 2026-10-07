@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
@@ -32,6 +33,6 @@ class OutgoingPacketTransportPolicyTest {
         packetId = "packet-1",
         messageId = "message-1",
         sentAtEpochMilliseconds = 1L,
-        text = "hello"
+        parts = listOf(TextDto(id = "message-1", text = "hello"))
     )
 }

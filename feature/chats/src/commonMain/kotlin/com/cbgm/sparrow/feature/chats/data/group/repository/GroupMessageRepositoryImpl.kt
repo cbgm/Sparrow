@@ -11,14 +11,12 @@ class GroupMessageRepositoryImpl(
 ) : GroupMessageRepository {
     override suspend fun send(
         groupId: String,
-        text: String,
         parts: List<MessagePart>,
         replyToMessageId: String?,
         access: GroupMessageMembershipAccess
     ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
-            text = text,
             parts = parts,
             replyToMessageId = replyToMessageId,
             access = access

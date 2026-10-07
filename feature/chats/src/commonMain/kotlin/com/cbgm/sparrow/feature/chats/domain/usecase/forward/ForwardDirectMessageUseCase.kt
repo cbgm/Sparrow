@@ -20,7 +20,6 @@ class ForwardDirectMessageUseCase(
             sendOrQueueDirectMessage(
                 contactId = contactId,
                 conversationId = conversationId,
-                text = content.text,
                 parts = content.parts
             ).getOrThrow()
 

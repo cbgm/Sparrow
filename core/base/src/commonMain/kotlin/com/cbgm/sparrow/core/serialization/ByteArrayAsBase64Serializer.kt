@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.protocol.serializer
+package com.cbgm.sparrow.core.serialization
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -27,11 +27,7 @@ object ByteArrayAsBase64Serializer : KSerializer<ByteArray> {
     @OptIn(ExperimentalEncodingApi::class)
     override fun deserialize(decoder: Decoder): ByteArray {
         val encoded = decoder.decodeString()
-
-        if (encoded.isEmpty()) {
-            return byteArrayOf()
-        }
-
+        if (encoded.isEmpty()) return byteArrayOf()
         return Base64.decode(encoded)
     }
 }

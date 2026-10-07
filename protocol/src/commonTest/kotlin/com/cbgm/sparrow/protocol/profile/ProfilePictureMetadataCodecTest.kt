@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.protocol.profile
 
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.codec.KotlinxPacketCodec
 import com.cbgm.sparrow.protocol.codec.createProtocolJson
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
@@ -18,7 +19,7 @@ class ProfilePictureMetadataCodecTest {
                 packetId = "packet-1",
                 messageId = "message-1",
                 sentAtEpochMilliseconds = 100L,
-                text = "hello",
+                parts = listOf(TextDto(id = "message-1", text = "hello")),
                 profilePicture =
                     ProfilePictureMetadata(
                         changedAtEpochMilliseconds = 80L,

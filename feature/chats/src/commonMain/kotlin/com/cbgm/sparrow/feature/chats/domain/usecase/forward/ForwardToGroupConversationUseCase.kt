@@ -16,7 +16,6 @@ class ForwardToGroupConversationUseCase(
         safeSuspendCall {
             sendGroupMessage(
                 groupId = groupId,
-                text = content.text,
                 parts = content.parts
             ).getOrThrow()
 

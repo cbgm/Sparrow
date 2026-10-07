@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.protocol.message
 
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentConstraints
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.protocol.messagepart.requireValidWireMessageParts
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -10,29 +11,20 @@ import kotlinx.serialization.json.Json
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GroupMessageContent(
-    val text: String = "",
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val attachments: List<MessageAttachment> = emptyList(),
+    val parts: List<MessagePartDto> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val replyToMessageId: String? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val reaction: MessageReactionPayload? = null
 ) {
     init {
-        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
-            "Group message must contain text, attachments, or a reaction"
-        }
-        require(
-            reaction == null ||
-                (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
-        ) {
-            "Group reaction content must not contain message content or a reply target"
-        }
-        require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
-            "Group message can contain at most ${MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE} attachments"
-        }
-        require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
-            "Group attachment IDs must be unique"
+        if (reaction == null) {
+            parts.requireValidWireMessageParts()
+        } else {
+            require(parts.isEmpty() && replyToMessageId == null) {
+                "Group reaction content must not contain message content or a reply target"
+            }
         }
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"
@@ -50,10 +42,18 @@ class GroupMessageContentCodec(
         if (plaintext.startsWith(FORMAT_PREFIX)) {
             json.decodeFromString<GroupMessageContent>(plaintext.removePrefix(FORMAT_PREFIX))
         } else {
-            GroupMessageContent(text = plaintext)
+            GroupMessageContent(
+                parts = listOf(
+                    TextDto(
+                        id = LEGACY_TEXT_PART_ID,
+                        text = plaintext
+                    )
+                )
+            )
         }
 
     private companion object {
         const val FORMAT_PREFIX = "sparrow-group-message-v2:"
+        const val LEGACY_TEXT_PART_ID = "legacy-text"
     }
 }

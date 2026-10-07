@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.packet
 
-import com.cbgm.sparrow.protocol.serializer.ByteArrayAsBase64Serializer
+import com.cbgm.sparrow.core.serialization.ByteArrayAsBase64Serializer
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.sparrow.kmp.library)
+    alias(libs.plugins.sparrow.kmp.serialization)
     alias(libs.plugins.sparrow.kmp.testing)
 }
 
@@ -9,6 +9,10 @@ kotlin {
     }
 
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.bundles.serialization)
+        }
+
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

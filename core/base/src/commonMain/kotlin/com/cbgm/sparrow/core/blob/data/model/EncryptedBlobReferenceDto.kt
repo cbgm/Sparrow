@@ -1,13 +1,20 @@
 package com.cbgm.sparrow.core.blob.data.model
 
+import com.cbgm.sparrow.core.serialization.ByteArrayAsBase64Serializer
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class EncryptedBlobReferenceDto(
     val nodeId: String,
     val blobId: String,
     val readCapability: String,
     val ciphertextByteSize: Long,
     val expiresAtEpochMilliseconds: Long,
+    @Serializable(with = ByteArrayAsBase64Serializer::class)
     val encryptionKey: ByteArray,
+    @Serializable(with = ByteArrayAsBase64Serializer::class)
     val nonce: ByteArray,
+    @Serializable(with = ByteArrayAsBase64Serializer::class)
     val ciphertextSha256: ByteArray
 ) {
     override fun equals(other: Any?): Boolean {

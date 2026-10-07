@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.protocol.handler
 
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlinx.coroutines.test.runTest
@@ -104,7 +105,7 @@ class DefaultProtocolPacketHandlerTest {
             packetId = "packet-1",
             messageId = "message-1",
             sentAtEpochMilliseconds = 1L,
-            text = "Hello"
+            parts = listOf(TextDto(id = "message-1", text = "Hello"))
         )
 
     private fun createContext(): IncomingPacketContext =

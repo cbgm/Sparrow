@@ -6,8 +6,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAc
 interface GroupMessageRepository {
     suspend fun send(
         groupId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
     ): Result<Unit>

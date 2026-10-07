@@ -14,8 +14,7 @@ class SendOrQueueDirectMessageUseCase(
 ) {
     suspend operator fun invoke(
         contactId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null,
         conversationId: String? = null
     ): Result<DirectMessageDispatchResult> =
@@ -34,7 +33,6 @@ class SendOrQueueDirectMessageUseCase(
                 ConversationMessagePlan.Send -> {
                     sendDirectMessage(
                         conversationId = resolvedConversationId,
-                        text = text,
                         parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()
@@ -44,7 +42,6 @@ class SendOrQueueDirectMessageUseCase(
                 ConversationMessagePlan.Queue -> {
                     queueDirectMessageUntilAuthorized(
                         conversationId = resolvedConversationId,
-                        text = text,
                         parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()
@@ -54,7 +51,6 @@ class SendOrQueueDirectMessageUseCase(
                 is ConversationMessagePlan.QueueWithAuthorizationFailure -> {
                     queueDirectMessageUntilAuthorized(
                         conversationId = resolvedConversationId,
-                        text = text,
                         parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()

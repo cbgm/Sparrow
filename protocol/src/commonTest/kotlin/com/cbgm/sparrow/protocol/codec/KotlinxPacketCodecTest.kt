@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.protocol.codec
 
-import com.cbgm.sparrow.protocol.attachment.EncryptedBlobReference
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
@@ -32,8 +32,13 @@ class KotlinxPacketCodecTest {
                     "message-1",
                 sentAtEpochMilliseconds =
                 123_456L,
-                text =
-                    "Hello"
+                parts =
+                    listOf(
+                        TextDto(
+                            id = "message-1",
+                            text = "Hello"
+                        )
+                    )
             )
 
         val encoded =
@@ -64,15 +69,17 @@ class KotlinxPacketCodecTest {
     @Test
     fun chatMessageAttachmentRoundTrip() {
         val attachment =
-            MessageAttachment(
-                attachmentId = "attachment-1",
-                type = MessageAttachmentType.IMAGE,
+            ImageDto(
+                id = "attachment-1",
                 mimeType = "image/jpeg",
                 byteSize = 512L,
                 width = 1200,
                 height = 800,
+                localFilePath = "/tmp/local-image",
+                thumbnailFilePath = "/tmp/local-thumb",
+                bytes = byteArrayOf(9, 8, 7),
                 blob =
-                    EncryptedBlobReference(
+                    EncryptedBlobReferenceDto(
                         nodeId = "node-a",
                         blobId = "blob-1234567890123456",
                         readCapability = "read-capability",
@@ -88,45 +95,57 @@ class KotlinxPacketCodecTest {
                 packetId = "packet-attachment-1",
                 messageId = "message-attachment-1",
                 sentAtEpochMilliseconds = 123_456L,
-                text = "",
-                attachments = listOf(attachment)
+                parts = listOf(attachment)
             )
 
         val encoded = codec.encode(original).getOrThrow()
+        val encodedJson = encoded.decodeToString()
+        assertFalse("localFilePath" in encodedJson)
+        assertFalse("thumbnailFilePath" in encodedJson)
+        assertFalse("\"bytes\"" in encodedJson)
         val decoded = codec.decode(encoded).getOrThrow()
         val packet = assertIs<ChatMessagePacket>(decoded)
-        val decodedAttachment = packet.attachments.single()
+        val decodedAttachment = assertIs<ImageDto>(packet.parts.single())
 
-        assertEquals(attachment.attachmentId, decodedAttachment.attachmentId)
-        assertEquals(attachment.type, decodedAttachment.type)
+        assertEquals(attachment.id, decodedAttachment.id)
         assertEquals(attachment.mimeType, decodedAttachment.mimeType)
         assertEquals(attachment.byteSize, decodedAttachment.byteSize)
         assertEquals(attachment.width, decodedAttachment.width)
         assertEquals(attachment.height, decodedAttachment.height)
-        assertEquals(attachment.blob.nodeId, decodedAttachment.blob.nodeId)
-        assertEquals(attachment.blob.blobId, decodedAttachment.blob.blobId)
-        assertEquals(attachment.blob.ciphertextByteSize, decodedAttachment.blob.ciphertextByteSize)
-        assertContentEquals(attachment.blob.encryptionKey, decodedAttachment.blob.encryptionKey)
-        assertContentEquals(attachment.blob.nonce, decodedAttachment.blob.nonce)
-        assertContentEquals(attachment.blob.ciphertextSha256, decodedAttachment.blob.ciphertextSha256)
+        val expectedBlob = requireNotNull(attachment.blob)
+        val actualBlob = requireNotNull(decodedAttachment.blob)
+        assertEquals(expectedBlob.nodeId, actualBlob.nodeId)
+        assertEquals(expectedBlob.blobId, actualBlob.blobId)
+        assertEquals(expectedBlob.ciphertextByteSize, actualBlob.ciphertextByteSize)
+        assertContentEquals(expectedBlob.encryptionKey, actualBlob.encryptionKey)
+        assertContentEquals(expectedBlob.nonce, actualBlob.nonce)
+        assertContentEquals(expectedBlob.ciphertextSha256, actualBlob.ciphertextSha256)
     }
 
     @Test
-    fun emptyAttachmentListIsNotAddedToLegacyTextPacket() {
+    fun chatMessageUsesMessagePartsField() {
         val encoded =
             codec
                 .encode(
                     ChatMessagePacket(
-                        packetId = "packet-legacy-shape",
-                        messageId = "message-legacy-shape",
+                        packetId = "packet-parts-shape",
+                        messageId = "message-parts-shape",
                         sentAtEpochMilliseconds = 123_456L,
-                        text = "Hello"
+                        parts =
+                            listOf(
+                                TextDto(
+                                    id = "message-parts-shape",
+                                    text = "Hello"
+                                )
+                            )
                     )
                 ).getOrThrow()
 
         val encodedJson = encoded.decodeToString()
 
+        assertTrue("\"parts\"" in encodedJson)
         assertFalse("\"attachments\"" in encodedJson)
+        assertTrue("\"partType\":\"TEXT\"" in encodedJson)
     }
 
     @Test
@@ -136,7 +155,7 @@ class KotlinxPacketCodecTest {
                 packetId = "packet-reply-1",
                 messageId = "message-reply-1",
                 sentAtEpochMilliseconds = 123_456L,
-                text = "Reply",
+                parts = listOf(TextDto(id = "message-reply-1", text = "Reply")),
                 replyToMessageId = "message-original-1"
             )
 
@@ -149,7 +168,7 @@ class KotlinxPacketCodecTest {
     }
 
     @Test
-    fun replyFieldIsNotAddedToLegacyTextPacket() {
+    fun replyFieldIsOmittedWhenAbsent() {
         val encoded =
             codec
                 .encode(
@@ -157,7 +176,7 @@ class KotlinxPacketCodecTest {
                         packetId = "packet-no-reply",
                         messageId = "message-no-reply",
                         sentAtEpochMilliseconds = 123_456L,
-                        text = "Hello"
+                        parts = listOf(TextDto(id = "message-no-reply", text = "Hello"))
                     )
                 ).getOrThrow()
 
@@ -413,8 +432,13 @@ class KotlinxPacketCodecTest {
                     "message-1",
                 sentAtEpochMilliseconds =
                 1L,
-                text =
-                    "Hello"
+                parts =
+                    listOf(
+                        TextDto(
+                            id = "message-1",
+                            text = "Hello"
+                        )
+                    )
             )
 
         val encoded =

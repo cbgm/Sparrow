@@ -10,11 +10,10 @@ class SendGroupMessageUseCase(
 ) {
     suspend operator fun invoke(
         groupId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> {
         val access = getMessageMembershipAccess(groupId).getOrElse { return Result.failure(it) }
-        return repository.send(groupId, text, parts, replyToMessageId, access)
+        return repository.send(groupId, parts, replyToMessageId, access)
     }
 }

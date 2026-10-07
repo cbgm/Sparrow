@@ -2,13 +2,15 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
@@ -482,8 +484,13 @@ class DirectConversationViewModel(
         if (preparingMediaSend) return
         if (selections.isEmpty()) {
             dispatchSend(
-                text = text,
-                parts = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = text
+                        )
+                    ),
                 clearComposerOnSuccess = true
             )
             return
@@ -491,10 +498,21 @@ class DirectConversationViewModel(
 
         preparingMediaSend = true
         try {
-            val parts = selections.map { it.toMessagePart() }
+            val parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            add(
+                                Text(
+                                    id = IdGenerator.generate(prefix = "text"),
+                                    text = value
+                                )
+                            )
+                        }
+                    addAll(selections.map { it.toMessagePart() })
+                }
             if (selectedMedia.value != selections) return
             dispatchSend(
-                text = text,
                 parts = parts,
                 clearComposerOnSuccess = true
             )
@@ -510,7 +528,6 @@ class DirectConversationViewModel(
             getRecordedVoiceAttachment()
                 .onSuccess { part ->
                     dispatchSend(
-                        text = "",
                         parts = listOf(part),
                         clearComposerOnSuccess = false,
                         clearVoiceOnSuccess = true
@@ -531,7 +548,6 @@ class DirectConversationViewModel(
         isLocationShare: Boolean = false
     ) {
         dispatchSend(
-            text = "",
             parts = listOf(part),
             clearComposerOnSuccess = false,
             isLocationShare = isLocationShare
@@ -539,7 +555,6 @@ class DirectConversationViewModel(
     }
 
     private fun dispatchSend(
-        text: String,
         parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         clearVoiceOnSuccess: Boolean = false,
@@ -567,7 +582,6 @@ class DirectConversationViewModel(
                 sendOrQueueDirectMessage(
                     contactId = contactId,
                     conversationId = conversationId,
-                    text = text,
                     parts = parts,
                     replyToMessageId = replyTo
                 ).onSuccess { result ->

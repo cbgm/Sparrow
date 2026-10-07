@@ -7,14 +7,14 @@ import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
 import com.cbgm.sparrow.feature.attachments.data.mapper.toEncryptedBlobReferenceDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageBlobEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDto
+import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtos
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartDtosByMessageId
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toProtocolMessageAttachment
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +24,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class MessageAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,
@@ -61,15 +60,15 @@ internal class MessageAttachmentDataSource(
 
     suspend fun persistIncoming(
         messageId: String,
-        attachments: List<ProtocolMessageAttachment>,
+        parts: List<MessagePartDto>,
         context: AttachmentMessageContextDto
     ) {
-        if (attachments.isEmpty()) return
+        if (parts.isEmpty()) return
         saveMessageContext(messageId, context)
         attachmentDao.upsertBlobParts(
-            parts = attachments.mapIndexed { index, attachment -> attachment.toMessagePartEntity(messageId, index + 1) },
-            blobs = attachments.map { attachment ->
-                attachment.toMessageBlobEntity(
+            parts = parts.mapIndexed { index, part -> part.toMessagePartEntity(messageId, index + 1) },
+            blobs = parts.map { part ->
+                part.toMessageBlobEntity(
                     deleteCapability = null,
                     localFilePath = null
                 )
@@ -89,19 +88,17 @@ internal class MessageAttachmentDataSource(
         localAttachmentDataSource.updateSavedConversationName(conversationId, normalizedName)
     }
 
-    suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> {
+    suspend fun messageParts(messageId: String): List<MessagePartDto> {
         val parts = attachmentDao.findBlobPartsByMessageId(messageId)
-        val blobsByPartId = loadBlobs(parts).associateBy(MessageBlobEntity::partId)
-        return parts.map { part ->
-            part.toProtocolMessageAttachment(
-                requireNotNull(blobsByPartId[part.id]) { "Message blob ${part.id} was not found" }
-            )
-        }
+        return parts.toMessagePartDtos(
+            blobs = loadBlobs(parts),
+            resolveLocalFilePath = fileDataSource::resolveCacheFilePath
+        )
     }
 
-    suspend fun loadDetachedBytes(attachment: ProtocolMessageAttachment): ByteArray =
+    suspend fun loadDetachedBytes(part: MessagePartDto): ByteArray =
         withContext(Dispatchers.IO) {
-            blobTransferDataSource.download(attachment.blob.toDto())
+            blobTransferDataSource.download(part.requireBlobReference())
         }
 
     suspend fun cacheIncoming(messageId: String) {

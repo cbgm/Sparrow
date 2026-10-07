@@ -8,8 +8,7 @@ class QueueDirectMessageUntilAuthorizedUseCase(
 ) {
     suspend operator fun invoke(
         conversationId: String,
-        text: String,
-        parts: List<MessagePart> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
-    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, text, parts, replyToMessageId)
+    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, parts, replyToMessageId)
 }

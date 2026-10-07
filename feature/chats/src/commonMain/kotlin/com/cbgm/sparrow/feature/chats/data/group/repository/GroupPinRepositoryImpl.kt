@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
@@ -20,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.cbgm.sparrow.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class GroupPinRepositoryImpl(
     private val attachmentDataSource: MessageAttachmentOperationsRepository,
@@ -80,11 +81,16 @@ internal class GroupPinRepositoryImpl(
                 require(senderSigningPublicKey.isNotEmpty()) { "Pinned message sender identity was not found" }
                 val senderKey = senderSigningPublicKey.copyOf()
 
-                val attachments = attachmentDataSource.protocolAttachments(messageId)
+                val attachmentParts = attachmentDataSource.messageParts(messageId)
                 val content =
                     GroupMessageContent(
-                        text = dataSource.findMessageText(messageId).orEmpty(),
-                        attachments = attachments,
+                        parts =
+                            buildList {
+                                dataSource.findMessageText(messageId)
+                                    ?.takeIf(String::isNotBlank)
+                                    ?.let { text -> add(TextDto(id = messageId, text = text)) }
+                                addAll(attachmentParts)
+                            },
                         replyToMessageId = message.replyToMessageId
                     )
                 val changedAt =
@@ -126,14 +132,14 @@ internal class GroupPinRepositoryImpl(
     private suspend fun findPinnedAttachment(
         groupId: String,
         attachmentId: String
-    ): ProtocolMessageAttachment {
+    ): MessagePartDto {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
 
         val state = dataSource.get(groupId) ?: error("Group pin was not found")
         val encodedContent = state.messageContent ?: error("Group pin has no message content")
         val content = groupMessageContentCodec.decode(encodedContent)
-        return content.attachments.firstOrNull { item -> item.attachmentId == attachmentId }
+        return content.parts.firstOrNull { item -> item.id == attachmentId }
             ?: error("Pinned message attachment was not found")
     }
 

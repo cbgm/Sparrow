@@ -1,16 +1,31 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package com.cbgm.sparrow.core.messagepart.data.model
 
 import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.JsonClassDiscriminator
 
+const val LOCATION_MIME_TYPE = "application/vnd.sparrow.location"
+const val CONTACT_MIME_TYPE = "application/vnd.sparrow.contact"
+
+@Serializable
+@JsonClassDiscriminator("partType")
 sealed interface MessagePartDto {
     val id: String
 }
 
+@Serializable
+@SerialName("TEXT")
 data class TextDto(
     override val id: String,
     val text: String
 ) : MessagePartDto
 
+@Serializable
+@SerialName("IMAGE")
 data class ImageDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
@@ -19,8 +34,11 @@ data class ImageDto(
     val width: Int? = null,
     val height: Int? = null,
     val fileName: String? = null,
+    @Transient
     val localFilePath: String? = null,
+    @Transient
     val thumbnailFilePath: String? = null,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -58,6 +76,8 @@ data class ImageDto(
     }
 }
 
+@Serializable
+@SerialName("VIDEO")
 data class VideoDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
@@ -67,8 +87,11 @@ data class VideoDto(
     val width: Int? = null,
     val height: Int? = null,
     val durationMilliseconds: Long? = null,
+    @Transient
     val localFilePath: String? = null,
+    @Transient
     val thumbnailFilePath: String? = null,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -108,13 +131,17 @@ data class VideoDto(
     }
 }
 
+@Serializable
+@SerialName("FILE")
 data class FileDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
     val mimeType: String,
     val byteSize: Long,
     val fileName: String,
+    @Transient
     val localFilePath: String? = null,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -146,13 +173,17 @@ data class FileDto(
     }
 }
 
+@Serializable
+@SerialName("VOICE")
 data class VoiceDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
     val mimeType: String,
     val byteSize: Long,
     val durationMilliseconds: Long,
+    @Transient
     val localFilePath: String? = null,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -184,11 +215,14 @@ data class VoiceDto(
     }
 }
 
+@Serializable
+@SerialName("LOCATION")
 data class LocationDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
-    val mimeType: String,
+    val mimeType: String = LOCATION_MIME_TYPE,
     val byteSize: Long,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -216,11 +250,14 @@ data class LocationDto(
     }
 }
 
+@Serializable
+@SerialName("CONTACT")
 data class ContactDto(
     override val id: String,
     val blob: EncryptedBlobReferenceDto? = null,
-    val mimeType: String,
+    val mimeType: String = CONTACT_MIME_TYPE,
     val byteSize: Long,
+    @Transient
     val bytes: ByteArray? = null
 ) : MessagePartDto {
     override fun equals(other: Any?): Boolean {
@@ -248,6 +285,8 @@ data class ContactDto(
     }
 }
 
+@Serializable
+@SerialName("POLL")
 data class PollDto(
     override val id: String,
     val question: String,
@@ -261,6 +300,7 @@ data class PollDto(
     val closedAtEpochMilliseconds: Long? = null
 ) : MessagePartDto
 
+@Serializable
 data class PollOptionDto(
     val id: String,
     val text: String

@@ -16,7 +16,8 @@ class ConversationOverviewMapperTest {
             MessageAttachmentType.FILE to ConversationOverviewPreview.MEDIA,
             MessageAttachmentType.LOCATION to ConversationOverviewPreview.LOCATION,
             MessageAttachmentType.CONTACT to ConversationOverviewPreview.CONTACT_CARD,
-            MessageAttachmentType.VOICE to ConversationOverviewPreview.VOICE
+            MessageAttachmentType.VOICE to ConversationOverviewPreview.VOICE,
+            MessageAttachmentType.POLL to ConversationOverviewPreview.ATTACHMENT
         )
         cases.forEach { (type, expected) ->
             assertEquals(expected, summary(type).toConversationOverview().lastMessagePreview)

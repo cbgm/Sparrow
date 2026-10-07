@@ -10,6 +10,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 internal fun List<MessagePartEntity>.toMessagePartDtos(
     blobs: List<MessageBlobEntity>,
@@ -49,8 +50,8 @@ internal fun MessagePartEntity.toMessagePartDto(
     val reference = blob.toEncryptedBlobReferenceDto()
     val localFilePath = blob.localFilePath?.let(resolveLocalFilePath)
 
-    return when (type) {
-        IMAGE_TYPE ->
+    return when (MessageAttachmentType.valueOf(type)) {
+        MessageAttachmentType.IMAGE ->
             ImageDto(
                 id = id,
                 blob = reference,
@@ -62,7 +63,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 localFilePath = localFilePath
             )
 
-        VIDEO_TYPE ->
+        MessageAttachmentType.VIDEO ->
             VideoDto(
                 id = id,
                 blob = reference,
@@ -75,7 +76,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 localFilePath = localFilePath
             )
 
-        FILE_TYPE ->
+        MessageAttachmentType.FILE ->
             FileDto(
                 id = id,
                 blob = reference,
@@ -85,7 +86,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 localFilePath = localFilePath
             )
 
-        VOICE_TYPE ->
+        MessageAttachmentType.VOICE ->
             VoiceDto(
                 id = id,
                 blob = reference,
@@ -97,7 +98,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 localFilePath = localFilePath
             )
 
-        LOCATION_TYPE ->
+        MessageAttachmentType.LOCATION ->
             LocationDto(
                 id = id,
                 blob = reference,
@@ -105,7 +106,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 byteSize = blob.byteSize
             )
 
-        CONTACT_TYPE ->
+        MessageAttachmentType.CONTACT ->
             ContactDto(
                 id = id,
                 blob = reference,
@@ -113,7 +114,7 @@ internal fun MessagePartEntity.toMessagePartDto(
                 byteSize = blob.byteSize
             )
 
-        else -> error("Unsupported blob-backed message part type $type")
+        MessageAttachmentType.POLL -> error("Poll is not a blob-backed attachment part")
     }
 }
 
@@ -128,10 +129,3 @@ internal fun MessageBlobEntity.toEncryptedBlobReferenceDto(): EncryptedBlobRefer
         nonce = nonce.copyOf(),
         ciphertextSha256 = ciphertextSha256.copyOf()
     )
-
-private const val IMAGE_TYPE = "IMAGE"
-private const val VIDEO_TYPE = "VIDEO"
-private const val FILE_TYPE = "FILE"
-private const val VOICE_TYPE = "VOICE"
-private const val LOCATION_TYPE = "LOCATION"
-private const val CONTACT_TYPE = "CONTACT"

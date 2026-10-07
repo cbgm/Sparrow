@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
@@ -63,6 +64,8 @@ class GroupChatMessagePacketHandler(
                         senderContactId = context.contactId
                     ).getOrThrow()
             val content = groupMessageContentCodec.decode(plaintext)
+            val text = content.parts.filterIsInstance<TextDto>().singleOrNull()?.text.orEmpty()
+            val attachmentParts = content.parts.filterNot { part -> part is TextDto }
 
             content.reaction?.let { reaction ->
                 val target = incomingMessageDataSource.findMessage(reaction.messageId) ?: return@runCatching
@@ -78,10 +81,10 @@ class GroupChatMessagePacketHandler(
             }
 
             if (existingMessage != null) {
-                prefetchLinkPreviews(content.text)
+                prefetchLinkPreviews(text)
                 attachmentTransfer.persistIncoming(
                     messageId = groupPacket.messageId,
-                    attachments = content.attachments,
+                    parts = attachmentParts,
                     context = AttachmentMessageContext(
                         conversationId = conversation.id,
                         createdAtEpochMilliseconds = existingMessage.createdAtEpochMilliseconds,
@@ -103,24 +106,26 @@ class GroupChatMessagePacketHandler(
                 }
 
             incomingMessageDataSource.saveMessage(
-                MessageEntity(
-                    id = groupPacket.messageId,
-                    conversationId = groupPacket.groupId,
-                    packetId = groupPacket.packetId,
-                    replyToMessageId = content.replyToMessageId,
-                    transportPayload = context.encodedTransportPayload,
-                    transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
-                    contentStatus = MessageContentStatus.READABLE.name,
-                    deliveryStatus = MessageDeliveryStatus.NOT_APPLICABLE.name,
-                    senderContactId = context.contactId,
-                    isMine = false,
-                    createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds
-                )
+                message =
+                    MessageEntity(
+                        id = groupPacket.messageId,
+                        conversationId = groupPacket.groupId,
+                        packetId = groupPacket.packetId,
+                        replyToMessageId = content.replyToMessageId,
+                        transportPayload = context.encodedTransportPayload,
+                        transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
+                        contentStatus = MessageContentStatus.READABLE.name,
+                        deliveryStatus = MessageDeliveryStatus.NOT_APPLICABLE.name,
+                        senderContactId = context.contactId,
+                        isMine = false,
+                        createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds
+                    ),
+                text = text
             )
-            prefetchLinkPreviews(content.text)
+            prefetchLinkPreviews(text)
             attachmentTransfer.persistIncoming(
                 messageId = groupPacket.messageId,
-                attachments = content.attachments,
+                parts = attachmentParts,
                 context = AttachmentMessageContext(
                     conversationId = conversation.id,
                     createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds,
