@@ -47,6 +47,7 @@ internal fun toGroupConversationUiState(
     pin: GroupPin? = null
 ): GroupConversationUiState {
     val contactsById = contacts.associateBy(Contact::id)
+    val pollVoterDisplayNames = contactsById.toPollVoterDisplayNames()
     val pinnedMessage =
         pin?.message?.let { message ->
             val sender = message.senderContactId?.let(contactsById::get)
@@ -59,7 +60,8 @@ internal fun toGroupConversationUiState(
                 reply = message.replyToMessageId.toGroupReplyPreview(
                     conversation?.messages.orEmpty().associateBy(GroupMessage::id),
                     contactsById
-                )
+                ),
+                pollVoterDisplayNames = pollVoterDisplayNames
             )
         }
 
@@ -72,7 +74,8 @@ internal fun toGroupConversationUiState(
         messages = conversation.toMessageBubbleUi(
             contactsById = contactsById,
             safetyAssessments = safetyAssessments,
-            isLocalAdmin = administration.isLocalAdmin
+            isLocalAdmin = administration.isLocalAdmin,
+            pollVoterDisplayNames = pollVoterDisplayNames
         ),
         isLoading = isLoading,
         state = conversation?.state ?: GroupConversationState.READY,
@@ -102,7 +105,8 @@ internal fun GroupMessage.toMessageBubbleUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     source: MessagePartSource = MessagePartSource.Message,
     reply: MessageReplyUi? = null,
-    canClosePoll: Boolean = false
+    canClosePoll: Boolean = false,
+    pollVoterDisplayNames: Map<String, String> = emptyMap()
 ): MessageBubbleUi {
     val partsUi =
         parts.toMessagePartsUi(
@@ -150,7 +154,8 @@ internal fun GroupMessage.toMessageBubbleUi(
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
         pollPart =
             partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
-                canClose = canClosePoll
+                canClose = canClosePoll,
+                voterDisplayNames = pollVoterDisplayNames
             ),
         groupExtension = GroupMessageUi(
             type = type,
@@ -158,6 +163,12 @@ internal fun GroupMessage.toMessageBubbleUi(
         )
     )
 }
+
+private fun Map<String, Contact>.toPollVoterDisplayNames(): Map<String, String> =
+    mapValues { (_, contact) ->
+        val isInContacts = contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
+        contact.displayNameForChat(isInContacts)
+    }
 
 internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     if (this == null) return "Unknown contact"
@@ -188,7 +199,8 @@ internal fun Set<String>.toIndicatorDisplayName(contacts: List<Contact>): String
 private fun GroupConversation?.toMessageBubbleUi(
     contactsById: Map<String, Contact>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    isLocalAdmin: Boolean
+    isLocalAdmin: Boolean,
+    pollVoterDisplayNames: Map<String, String>
 ): List<MessageBubbleUi> {
     val messages = this?.messages.orEmpty()
     val messagesById = messages.associateBy(GroupMessage::id)
@@ -205,7 +217,8 @@ private fun GroupConversation?.toMessageBubbleUi(
                     senderIsInContacts = senderIsInContacts,
                     safetyAssessments = safetyAssessments,
                     reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById),
-                    canClosePoll = message.isMine || isLocalAdmin
+                    canClosePoll = message.isMine || isLocalAdmin,
+                    pollVoterDisplayNames = pollVoterDisplayNames
                 )
             )
         }

@@ -313,6 +313,7 @@ private fun BubbleBody(
             ) {
                 PollMessageContent(
                     part = pollPart,
+                    color = state.bubbleColor,
                     onVoteSubmit = { selectedOptionIds ->
                         onPollVoteSubmit(message.id, pollPart.id, selectedOptionIds)
                     },

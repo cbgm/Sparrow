@@ -85,6 +85,7 @@ data class PollUi(
     val expiresAtEpochMilliseconds: Long? = null,
     val closedAtEpochMilliseconds: Long? = null,
     val canClose: Boolean = false,
+    val voterDisplayNames: Map<String, String> = emptyMap(),
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 

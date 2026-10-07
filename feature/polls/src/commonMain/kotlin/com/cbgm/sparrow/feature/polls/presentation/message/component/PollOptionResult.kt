@@ -22,10 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.ui.component.PercentageBar
+import com.cbgm.sparrow.core.ui.helper.darker
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -35,7 +38,9 @@ import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.polls.presentation.model.PollVoterUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_voters
+import com.cbgm.sparrow.resources.feature_polls_you
 import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PollOptionResult(
@@ -46,12 +51,13 @@ fun PollOptionResult(
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
+    color: Color,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick),
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = color.darker(0.9f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         border =
             BorderStroke(
@@ -138,7 +144,7 @@ private fun PollVoterPreview(voters: List<PollVoterUi>) {
     ) {
         voters.forEachIndexed { index, voter ->
             SparrowAvatar(
-                name = voter.displayName,
+                name = voter.displayName(),
                 target = AvatarTarget.User(voter.id),
                 size = avatarSize,
                 modifier =
@@ -154,6 +160,14 @@ private fun PollVoterPreview(voters: List<PollVoterUi>) {
         }
     }
 }
+
+@Composable
+private fun PollVoterUi.displayName(): String =
+    if (id == PollPolicy.LOCAL_VOTER_ID) {
+        stringResource(Res.string.feature_polls_you)
+    } else {
+        displayName
+    }
 
 @Preview
 @Composable
@@ -179,6 +193,7 @@ private fun PollOptionResultPreview() {
                         ),
                     selected = false,
                     enabled = true,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     onClick = {}
                 )
                 PollOptionResult(
@@ -192,6 +207,7 @@ private fun PollOptionResultPreview() {
                         ),
                     selected = true,
                     enabled = true,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     onClick = {}
                 )
             }

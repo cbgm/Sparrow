@@ -46,9 +46,12 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState {
                 if (isAnonymous) {
                     emptyList()
                 } else {
-                    option.voterIds
-                        .filterNot { voterId -> voterId == PollPolicy.LOCAL_VOTER_ID }
-                        .map { voterId -> PollVoterUi(id = voterId, displayName = voterId) }
+                    option.voterIds.map { voterId ->
+                        PollVoterUi(
+                            id = voterId,
+                            displayName = voterDisplayNames[voterId] ?: voterId
+                        )
+                    }
                 }
             val percentage =
                 if (totalVoters == 0) {

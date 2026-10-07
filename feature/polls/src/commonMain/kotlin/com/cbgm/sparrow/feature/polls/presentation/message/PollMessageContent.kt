@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,6 +25,7 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.polls.presentation.message.component.PollMessageMedia
 import com.cbgm.sparrow.feature.polls.presentation.message.component.PollOptionResult
+import com.cbgm.sparrow.feature.polls.presentation.message.mapper.toPollMessageUiState
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi
 import com.cbgm.sparrow.feature.polls.presentation.model.PollVoterUi
@@ -45,6 +47,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun PollMessageContent(
     part: PollUi,
+    color: Color,
     onVoteSubmit: (Set<String>) -> Unit,
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
@@ -54,11 +57,37 @@ fun PollMessageContent(
         koinViewModel<PollMessageViewModel>(key = part.instanceKey) {
             parametersOf(part)
         }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isExpired by viewModel.isExpired.collectAsStateWithLifecycle()
+    val isVotersOverlayVisible by viewModel.isVotersOverlayVisible.collectAsStateWithLifecycle()
+    val mappedState = part.toPollMessageUiState()
+    val uiState =
+        mappedState.copy(
+            isExpired = mappedState.isExpired || isExpired,
+            canInteract = mappedState.canInteract && !isExpired,
+            isVotersOverlayVisible = isVotersOverlayVisible
+        )
 
     PollMessageContentBody(
         uiState = uiState,
-        onOptionClick = { optionId -> viewModel.onOptionClick(optionId, onVoteSubmit) },
+        color = color,
+        onOptionClick = { optionId ->
+            if (uiState.canInteract && uiState.options.any { it.id == optionId }) {
+                val selectedOptionIds =
+                    if (uiState.allowMultipleSelection) {
+                        if (optionId in uiState.submittedOptionIds) {
+                            uiState.submittedOptionIds - optionId
+                        } else {
+                            uiState.submittedOptionIds + optionId
+                        }
+                    } else {
+                        setOf(optionId)
+                    }
+
+                if (selectedOptionIds.isNotEmpty() && selectedOptionIds != uiState.submittedOptionIds) {
+                    onVoteSubmit(selectedOptionIds)
+                }
+            }
+        },
         onClosePoll = onClosePoll,
         onMediaClick = onMediaClick,
         onShowVotes = viewModel::openVoters,
@@ -99,9 +128,13 @@ private fun PollMessageContentBody(
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
     onShowVotes: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.surfaceContainer
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
         Text(
             text = uiState.question,
             style = MaterialTheme.typography.titleSmall,
@@ -123,6 +156,7 @@ private fun PollMessageContentBody(
 
         uiState.options.forEach { option ->
             PollOptionResult(
+                color = color,
                 text = option.text,
                 voteCount = option.voteCount,
                 percentage = option.percentage,
@@ -192,7 +226,11 @@ private fun PollMessageContentBody(
 
 @Composable
 private fun PollStateLabel(text: String) {
-    Text(text = text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary
+    )
 }
 
 private fun previewState(
@@ -277,7 +315,17 @@ private fun PollMessageNotVotedPreview() {
 @Preview
 @Composable
 private fun PollMessageVotedPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(submitted = setOf("1")), {}, {}, {}, {}) } }
+    SparrowTheme {
+        Surface {
+            PollMessageContentBody(
+                previewState(submitted = setOf("1")),
+                {},
+                {},
+                {},
+                {}
+            )
+        }
+    }
 }
 
 @Preview
@@ -299,13 +347,33 @@ private fun PollMessageMultipleSelectionPreview() {
 @Preview
 @Composable
 private fun PollMessageMediaOverflowPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(mediaCount = 5), {}, {}, {}, {}) } }
+    SparrowTheme {
+        Surface {
+            PollMessageContentBody(
+                previewState(mediaCount = 5),
+                {},
+                {},
+                {},
+                {}
+            )
+        }
+    }
 }
 
 @Preview
 @Composable
 private fun PollMessageExpiredPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(expired = true), {}, {}, {}, {}) } }
+    SparrowTheme {
+        Surface {
+            PollMessageContentBody(
+                previewState(expired = true),
+                {},
+                {},
+                {},
+                {}
+            )
+        }
+    }
 }
 
 @Preview
@@ -317,5 +385,15 @@ private fun PollMessageClosedPreview() {
 @Preview
 @Composable
 private fun PollMessageAnonymousPreview() {
-    SparrowTheme { Surface { PollMessageContentBody(previewState(anonymous = true), {}, {}, {}, {}) } }
+    SparrowTheme {
+        Surface {
+            PollMessageContentBody(
+                previewState(anonymous = true),
+                {},
+                {},
+                {},
+                {}
+            )
+        }
+    }
 }
