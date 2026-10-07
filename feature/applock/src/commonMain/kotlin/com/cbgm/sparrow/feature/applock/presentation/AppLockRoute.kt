@@ -1,9 +1,10 @@
 package com.cbgm.sparrow.feature.applock.presentation
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationLauncher
@@ -24,9 +25,13 @@ fun AppLockRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        AppLockUiState.Loading -> Unit
+        AppLockUiState.Loading -> {
+            Surface(modifier = modifier.fillMaxSize()) { }
+        }
 
         AppLockUiState.Unlocked -> {
+            Surface(modifier = modifier.fillMaxSize()) { }
+
             LaunchedEffect(Unit) {
                 onUnlocked()
             }
@@ -48,7 +53,6 @@ fun AppLockRoute(
             )
 
             LaunchedEffect(Unit) {
-                withFrameNanos { }
                 onContentReady()
             }
         }

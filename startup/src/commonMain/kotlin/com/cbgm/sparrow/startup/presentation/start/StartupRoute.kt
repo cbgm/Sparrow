@@ -46,9 +46,14 @@ fun StartupRoute(
                 onUnlocked = {
                     startupViewModel.completeStartup()
                     onStartupReady()
-                },
-                onContentReady = onStartupContentReady
+                }
             )
+
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                StartupTrace.event("startup ready frame; releasing native splash")
+                onStartupContentReady()
+            }
         }
 
         is StartupUiState.Error -> {
