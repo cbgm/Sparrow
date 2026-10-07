@@ -6,16 +6,14 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollOptionUi
+import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_MESSAGE_MEDIA_PREVIEW
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
-fun PollUi.toPollMessageUiState(): PollMessageUiState =
-    PollMessageUiState(
-        pollId = id,
-        question = question,
-        description = description,
-        media = images.map { image ->
+fun PollUi.toPollMessageUiState(): PollMessageUiState {
+    val media =
+        images.map { image ->
             MediaItemUi(
                 id = image.id,
                 type = MediaTypeUi.IMAGE,
@@ -25,7 +23,16 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState =
                 width = image.width,
                 height = image.height
             )
-        },
+        }
+    val mediaPreview = media.take(MAX_MESSAGE_MEDIA_PREVIEW)
+
+    return PollMessageUiState(
+        pollId = id,
+        question = question,
+        description = description,
+        media = media,
+        mediaPreview = mediaPreview,
+        remainingMediaCount = (media.size - mediaPreview.size).coerceAtLeast(0),
         options = options.map { PollOptionUi(id = it.id, text = it.text, voteCount = 0) },
         allowMultipleSelection = allowMultipleSelection,
         allowVoteChange = allowVoteChange,
@@ -38,3 +45,4 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState =
         },
         isVotingAvailable = false
     )
+}

@@ -10,13 +10,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -46,17 +46,16 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun PollMessageContent(
-    initialState: PollMessageUiState,
+    part: PollUi,
     onVoteSubmit: (Set<String>) -> Unit,
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel =
-        koinViewModel<PollMessageViewModel>(key = "poll:${initialState.pollId}") {
-            parametersOf(initialState)
+        koinViewModel<PollMessageViewModel>(key = part.instanceKey) {
+            parametersOf(part)
         }
-    LaunchedEffect(initialState) { viewModel.updateState(initialState) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     PollMessageContentBody(
@@ -70,7 +69,7 @@ fun PollMessageContent(
     )
 
     PollVotersOverlay(
-        state = uiState.votersOverlay,
+        state = uiState.votersOverlay.takeIf { uiState.isVotersOverlayVisible },
         onDismissRequest = viewModel::dismissVoters
     )
 }

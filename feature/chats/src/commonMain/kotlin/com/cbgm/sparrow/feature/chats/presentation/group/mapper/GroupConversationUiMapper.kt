@@ -7,11 +7,10 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
@@ -33,7 +32,6 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.polls.presentation.message.mapper.toPollMessageUiState
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 import kotlin.collections.component1
@@ -142,14 +140,13 @@ internal fun GroupMessage.toMessageBubbleUi(
                 reactedByMe = values.any { it.isMine }
             )
         },
-        imageVideoParts = partsUi.filter { part -> part is ImageUi || part is VideoUi },
+        imageVideoParts = partsUi.filterIsInstance<ImageVideoUi>(),
         fileParts = partsUi.filterIsInstance<FileUi>(),
         locationPart = partsUi.filterIsInstance<LocationUi>().firstOrNull(),
         contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
         voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
         pollPart = partsUi.filterIsInstance<PollUi>().firstOrNull(),
-        pollState = partsUi.filterIsInstance<PollUi>().firstOrNull()?.toPollMessageUiState(),
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId

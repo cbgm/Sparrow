@@ -23,7 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
@@ -36,7 +36,7 @@ import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
 internal fun PhotoVideoMessageBubbleBody(
-    imageVideoParts: List<MessagePartUi>,
+    imageVideoParts: List<ImageVideoUi>,
     onAttachmentClick: (String) -> Unit
 ) {
     Content(
@@ -47,7 +47,7 @@ internal fun PhotoVideoMessageBubbleBody(
 
 @Composable
 private fun Content(
-    imageVideoParts: List<MessagePartUi>,
+    imageVideoParts: List<ImageVideoUi>,
     onAttachmentClick: (String) -> Unit
 ) {
     val visiblePhotoVideoParts = imageVideoParts.take(MAX_PREVIEW_ATTACHMENTS)
@@ -91,7 +91,7 @@ private fun Content(
 
 @Composable
 private fun MessageMediaPreview(
-    imageVideoPart: MessagePartUi,
+    imageVideoPart: ImageVideoUi,
     onAttachmentClick: (String) -> Unit
 ) {
     val attachmentState = rememberLocalFileUiState(imageVideoPart)

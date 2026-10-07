@@ -19,6 +19,8 @@ data class TextUi(
     val isContentFailed: Boolean = false
 ) : MessagePartUi
 
+sealed interface ImageVideoUi : MessagePartUi
+
 data class ImageUi(
     override val id: String,
     val mimeType: String,
@@ -29,7 +31,7 @@ data class ImageUi(
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
-) : MessagePartUi
+) : ImageVideoUi
 
 data class VideoUi(
     override val id: String,
@@ -42,7 +44,7 @@ data class VideoUi(
     val localFilePath: String? = null,
     val thumbnailFilePath: String? = null,
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
-) : MessagePartUi
+) : ImageVideoUi
 
 data class FileUi(
     override val id: String,

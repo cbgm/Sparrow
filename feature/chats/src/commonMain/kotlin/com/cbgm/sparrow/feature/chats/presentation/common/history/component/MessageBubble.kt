@@ -302,7 +302,7 @@ private fun BubbleBody(
                 onLongPress = onLongPress
             ) {
                 PollMessageContent(
-                    initialState = requireNotNull(message.pollState),
+                    part = pollPart,
                     onVoteSubmit = { selectedOptionIds ->
                         // vote submit
                     },

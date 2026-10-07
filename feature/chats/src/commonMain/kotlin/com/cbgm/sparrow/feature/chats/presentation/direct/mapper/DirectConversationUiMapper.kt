@@ -5,10 +5,9 @@ import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
@@ -63,7 +62,7 @@ internal fun DirectMessage.toMessageBubbleUi(
         reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
             MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
         },
-        imageVideoParts = partsUi.filter { part -> part is ImageUi || part is VideoUi },
+        imageVideoParts = partsUi.filterIsInstance<ImageVideoUi>(),
         fileParts = partsUi.filterIsInstance<FileUi>(),
         locationPart = partsUi.filterIsInstance<LocationUi>().firstOrNull(),
         contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),

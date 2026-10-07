@@ -29,7 +29,8 @@ data class PollMessageUiState(
     val canSubmitVote: Boolean = false,
     val isChangingVote: Boolean = false,
     val canShowVotes: Boolean = false,
-    val votersOverlay: PollVotersUiState? = null
+    val votersOverlay: PollVotersUiState? = null,
+    val isVotersOverlayVisible: Boolean = false
 )
 
 data class PollOptionUi(
