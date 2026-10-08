@@ -107,14 +107,15 @@ nav:
       - Contributing: development/contributing.md
       - Release Process: development/release-process.md
       - 2026-10-08 Release Audit: development/release-2026-10-08.md
+  - Reference:
+      - Current Code Inventory: reference/current-code-inventory.md
+      - Documentation Audit: reference/documentation-audit.md
   - Generated Reference:
       - Overview: generated/index.md
       - Architecture: generated/architecture.md
       - Module Catalog: generated/modules.md
       - Dependency Matrix: generated/dependency-matrix.md
       - Statistics: generated/statistics.md
-      - Current Code Inventory: generated/current-code-inventory.md
-      - Documentation Audit: generated/documentation-audit.md
   - Design Decisions: design-decisions.md
   - Roadmap: roadmap.md
   - FAQ: faq.md

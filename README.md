@@ -83,7 +83,7 @@ The current source tree includes:
 - unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
 - Docker/Ktor server services, persistent registry/mailbox/federation/push state, observability and deployment tooling.
 
-See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/generated/current-code-inventory.md).
+See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/reference/current-code-inventory.md).
 
 ## The system in one picture
 
