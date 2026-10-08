@@ -735,4 +735,10 @@
 
     <string name="feature_polls_label">Poll</string>
     <string name="feature_polls_send_failed">Poll could not be sent. Please try again.</string>
+    <string name="feature_expenses_group_features">Group features</string>
+    <string name="feature_expenses_activate">Activate expenses</string>
+    <string name="feature_expenses_active">Expenses active</string>
+    <string name="feature_expenses_close">Close expenses</string>
+    <string name="feature_expenses_board">Group expenses</string>
+    <string name="feature_expenses_activation_failed">Group expenses could not be activated.</string>
 </resources>

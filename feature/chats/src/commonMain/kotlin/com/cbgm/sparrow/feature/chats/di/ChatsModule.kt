@@ -112,7 +112,9 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardToDirectConv
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardToGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.PrepareForwardMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ActivateGroupExpensesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupExpensesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
@@ -349,6 +351,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::SendGroupMessageUseCase)
+    singleOf(::ActivateGroupExpensesUseCase)
+    singleOf(::CloseGroupExpensesUseCase)
     singleOf(::ToggleGroupMessageReactionUseCase)
     singleOf(::VoteInGroupPollUseCase)
     singleOf(::CloseGroupPollUseCase)
@@ -417,6 +421,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             deleteMessageUseCase = get(),
             editMessageUseCase = get(),
             pinMessageUseCase = get(),
+            activateExpensesUseCase = get(),
+            closeExpensesUseCase = get(),
             unpinMessageUseCase = get(),
             observeMemberIndicator = get(),
             setGroupIndicator = get(),

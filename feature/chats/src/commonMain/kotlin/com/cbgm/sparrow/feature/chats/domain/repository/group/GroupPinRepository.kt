@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 interface GroupPinRepository {
     fun observe(groupId: String): Flow<GroupPin?>
 
+    suspend fun requireCanPin(groupId: String): Result<Unit>
+
     suspend fun getPinTarget(groupId: String, messageId: String): Result<GroupPinTarget>
 
     suspend fun pin(
@@ -17,6 +19,9 @@ interface GroupPinRepository {
     ): Result<Unit>
 
     suspend fun unpin(groupId: String): Result<Unit>
+
+    /** Releases the exclusive pin owned by the currently active expense board. */
+    suspend fun closeExpenses(groupId: String): Result<Unit>
 
     suspend fun loadAttachment(
         groupId: String,

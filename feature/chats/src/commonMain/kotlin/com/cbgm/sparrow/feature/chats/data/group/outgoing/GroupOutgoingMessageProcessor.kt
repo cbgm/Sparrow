@@ -73,7 +73,7 @@ class GroupOutgoingMessageProcessor(
         parts: List<MessagePart>,
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
-    ): Result<Unit> =
+    ): Result<String> =
         safeSuspendCall {
             sendMutex.withLock {
                 val normalizedParts = requireMessageContent(parts)
@@ -90,6 +90,7 @@ class GroupOutgoingMessageProcessor(
                 if (recipients.isNotEmpty()) {
                     encryptAndEnqueue(message, recipients, messageParts)
                 }
+                message.id
             }
         }
 

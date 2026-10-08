@@ -5,30 +5,51 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 
-/** Calculates balances using accepted attachments only. Payments are intentionally excluded for now. */
+/** Each member's balance is the amount they paid minus their share of expenses. */
 class CalculateExpenseBalancesUseCase {
-    operator fun invoke(board: ExpenseBoard, expenses: List<Expense>): List<ExpenseBalance> {
+    operator fun invoke(board: ExpenseBoard, expenses: List<Expense>): Result<List<ExpenseBalance>> =
+        runCatching { calculateBalances(board, expenses) }
+
+    private fun calculateBalances(board: ExpenseBoard, expenses: List<Expense>): List<ExpenseBalance> {
         ExpensePolicy.requireValid(board)
-        val balances = mutableMapOf<String, Long>()
-        val ids = mutableSetOf<String>()
-        expenses.forEach { expense ->
-            ExpensePolicy.requireValid(expense)
-            require(expense.boardId == board.id) { "Expense belongs to another board" }
-            require(expense.currencyCode == board.currencyCode) { "Expense currency differs from its board" }
-            require(ids.add(expense.id)) { "Duplicate expense ID" }
-            balances[expense.paidByMemberId] = addExact(balances[expense.paidByMemberId] ?: 0L, expense.amountMinor)
-            expense.allocations.forEach { allocation ->
-                balances[allocation.memberId] = addExact(balances[allocation.memberId] ?: 0L, -allocation.amountMinor)
+        val balancesByMember = mutableMapOf<String, Long>()
+        val expenseIds = mutableSetOf<String>()
+
+        for (expense in expenses) {
+            validateExpense(board, expense)
+            require(expenseIds.add(expense.id)) { "Duplicate expense ID" }
+
+            // The payer receives credit for covering the entire bill.
+            balancesByMember.addAmount(expense.paidByMemberId, expense.amountMinor)
+
+            // Each participant owes their assigned share of that bill.
+            for (share in expense.allocations) {
+                balancesByMember.addAmount(share.memberId, -share.amountMinor)
             }
         }
-        require(balances.values.fold(0L, ::addExact) == 0L) { "Expense balances do not balance" }
-        return balances.toSortedMap().map { (id, amount) -> ExpenseBalance(id, amount) }
+
+        require(balancesByMember.values.fold(0L, ::addAmountsSafely) == 0L) {
+            "Expense balances do not balance"
+        }
+        return balancesByMember.toSortedMap().map { (memberId, amount) ->
+            ExpenseBalance(memberId, amount)
+        }
     }
 
-    private fun addExact(a: Long, b: Long): Long {
-        require((b >= 0 && a <= Long.MAX_VALUE - b) || (b < 0 && a >= Long.MIN_VALUE - b)) {
-            "Expense balance overflow"
-        }
-        return a + b
+    private fun validateExpense(board: ExpenseBoard, expense: Expense) {
+        ExpensePolicy.requireValid(expense)
+        require(expense.boardId == board.id) { "Expense belongs to another board" }
+        require(expense.currencyCode == board.currencyCode) { "Expense currency differs from its board" }
     }
+
+    private fun MutableMap<String, Long>.addAmount(memberId: String, amount: Long) {
+        this[memberId] = addAmountsSafely(this[memberId] ?: 0L, amount)
+    }
+}
+
+/** Prevent overflow when adding amounts stored in minor currency units. */
+internal fun addAmountsSafely(current: Long, addition: Long): Long {
+    if (addition > 0L) require(current <= Long.MAX_VALUE - addition) { "Expense amount overflow" }
+    if (addition < 0L) require(current >= Long.MIN_VALUE - addition) { "Expense amount overflow" }
+    return current + addition
 }

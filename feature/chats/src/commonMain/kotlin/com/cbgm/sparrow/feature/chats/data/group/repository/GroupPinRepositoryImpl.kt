@@ -2,11 +2,13 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.createGroupPinEntity
@@ -39,6 +41,9 @@ internal class GroupPinRepositoryImpl(
         dataSource
             .observe(groupId)
             .map { entity -> entity?.toDomain(groupMessageContentCodec) }
+
+    override suspend fun requireCanPin(groupId: String): Result<Unit> =
+        broadcaster.requireLocalAdmin(groupId)
 
     override suspend fun getPinTarget(groupId: String, messageId: String): Result<GroupPinTarget> =
         safeSuspendCall { requirePinTarget(groupId, messageId) }
@@ -80,6 +85,10 @@ internal class GroupPinRepositoryImpl(
 
                 val currentState = dataSource.get(groupId)
                 if (currentState?.messageId == messageId) return@withLock
+
+                check(!currentState.hasActiveExpenses()) {
+                    "An active expense board occupies the group pin"
+                }
 
                 require(senderSigningPublicKey.isNotEmpty()) { "Pinned message sender identity was not found" }
                 val senderKey = senderSigningPublicKey.copyOf()
@@ -151,7 +160,11 @@ internal class GroupPinRepositoryImpl(
     override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
         broadcaster.sendCurrentTo(groupId, peerId)
 
-    override suspend fun unpin(groupId: String): Result<Unit> =
+    override suspend fun unpin(groupId: String): Result<Unit> = updatePin(groupId, closeExpenses = false)
+
+    override suspend fun closeExpenses(groupId: String): Result<Unit> = updatePin(groupId, closeExpenses = true)
+
+    private suspend fun updatePin(groupId: String, closeExpenses: Boolean): Result<Unit> =
         safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
 
@@ -159,6 +172,14 @@ internal class GroupPinRepositoryImpl(
                 broadcaster.requireLocalAdmin(groupId).getOrThrow()
                 val currentState = dataSource.get(groupId)
                 if (currentState?.messageId == null) return@withLock
+
+                check(currentState.hasActiveExpenses() == closeExpenses) {
+                    if (closeExpenses) {
+                        "There is no active expense board"
+                    } else {
+                        "Close group expenses before removing the expense board pin"
+                    }
+                }
 
                 val changedAt =
                     maxOf(
@@ -174,4 +195,11 @@ internal class GroupPinRepositoryImpl(
                 broadcaster.broadcast(groupId).getOrThrow()
             }
         }
+
+    private fun GroupPinEntity?.hasActiveExpenses(): Boolean =
+        this?.messageContent?.let { encoded ->
+            groupMessageContentCodec.decode(encoded).parts
+                .filterIsInstance<ExpenseBoardDto>()
+                .any { it.closedAtEpochMilliseconds == null }
+        } ?: false
 }

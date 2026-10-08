@@ -12,7 +12,7 @@ class SendGroupMessageUseCase(
         groupId: String,
         parts: List<MessagePart>,
         replyToMessageId: String? = null
-    ): Result<Unit> {
+    ): Result<String> {
         val access = getMessageMembershipAccess(groupId).getOrElse { return Result.failure(it) }
         return repository.send(groupId, parts, replyToMessageId, access)
     }

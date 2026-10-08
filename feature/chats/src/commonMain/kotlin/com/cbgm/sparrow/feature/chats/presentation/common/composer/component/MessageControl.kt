@@ -188,6 +188,19 @@ fun MessageControl(
                             onClick()
                         }
                     },
+                    onClickActivateExpenses = actions.onClickActivateExpenses?.let { onClick ->
+                        {
+                            isAttachmentBarVisible = false
+                            onClick()
+                        }
+                    },
+                    onClickCloseExpenses = actions.onClickCloseExpenses?.let { onClick ->
+                        {
+                            isAttachmentBarVisible = false
+                            onClick()
+                        }
+                    },
+                    isExpensesActive = actions.isExpensesActive,
                     isGalleryEnabled = state.isGalleryEnabled,
                     isCameraEnabled = state.isCameraEnabled,
                     isFileEnabled = state.isFileEnabled,

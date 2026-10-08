@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toEntity
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinPacketProtocol
@@ -40,6 +41,16 @@ class GroupPinUpdatedPacketHandler internal constructor(
 
             val current = dataSource.get(update.groupId)
             if (update.changedAtEpochMilliseconds <= (current?.changedAtEpochMilliseconds ?: 0L)) {
+                return@runCatching
+            }
+
+            val activeExpenses = current?.messageContent?.let { encoded ->
+                groupMessageContentCodec.decode(encoded).parts
+                    .filterIsInstance<ExpenseBoardDto>()
+                    .any { it.closedAtEpochMilliseconds == null }
+            } ?: false
+            if (activeExpenses && update.messageId != null && update.messageId != current.messageId) {
+                // An active expense board exclusively owns the group's pin slot.
                 return@runCatching
             }
 

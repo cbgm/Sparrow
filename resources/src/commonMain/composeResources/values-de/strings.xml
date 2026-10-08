@@ -739,4 +739,10 @@
 
     <string name="feature_polls_label">Umfrage</string>
     <string name="feature_polls_send_failed">Die Umfrage konnte nicht gesendet werden. Bitte versuche es erneut.</string>
+    <string name="feature_expenses_group_features">Gruppenfunktionen</string>
+    <string name="feature_expenses_activate">Ausgaben aktivieren</string>
+    <string name="feature_expenses_active">Ausgaben aktiv</string>
+    <string name="feature_expenses_close">Ausgaben schließen</string>
+    <string name="feature_expenses_board">Gruppenausgaben</string>
+    <string name="feature_expenses_activation_failed">Gruppenausgaben konnten nicht aktiviert werden.</string>
 </resources>

@@ -63,6 +63,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageB
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseBoardMessageContent
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
@@ -259,9 +260,10 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-private enum class PrimaryContent { POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+private enum class PrimaryContent { EXPENSE_BOARD, POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
+    expenseBoardPart != null -> PrimaryContent.EXPENSE_BOARD
     pollPart != null -> PrimaryContent.POLL
     voicePart != null -> PrimaryContent.VOICE
     contactPart != null -> PrimaryContent.CONTACT
@@ -287,7 +289,8 @@ private fun BubbleBody(
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
-        message.pollPart == null &&
+        message.expenseBoardPart == null &&
+            message.pollPart == null &&
             message.voicePart == null &&
             message.locationPart == null &&
             message.contactPart == null &&
@@ -302,6 +305,18 @@ private fun BubbleBody(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
+        message.expenseBoardPart?.let { board ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.EXPENSE_BOARD),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
+            ) {
+                ExpenseBoardMessageContent(board = board)
+            }
+        }
         message.pollPart?.let { pollPart ->
             MessageBubbleSurface(
                 message = message,

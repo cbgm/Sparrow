@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
@@ -86,6 +87,7 @@ internal fun toGroupConversationUiState(
         groupId = groupId,
         title = conversation?.title.orEmpty(),
         pinnedMessage = pinnedMessage,
+        expensesActive = pinnedMessage?.expenseBoardPart?.let { it.closedAtEpochMilliseconds == null } ?: false,
         pinnedAtEpochMilliseconds = pin?.pinnedAtEpochMilliseconds ?: 0L,
         isLocalAdmin = administration.isLocalAdmin,
         messages = conversation.toMessageBubbleUi(
@@ -169,6 +171,7 @@ internal fun GroupMessage.toMessageBubbleUi(
         contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
         voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
+        expenseBoardPart = partsUi.filterIsInstance<ExpenseBoardUi>().firstOrNull(),
         pollPart =
             partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
                 canClose = canClosePoll,

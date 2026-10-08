@@ -45,11 +45,13 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Loca
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.PhotoVideoMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.TextMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseBoardMessageContent
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_pinned_message
+import com.cbgm.sparrow.resources.feature_expenses_board
 import com.cbgm.sparrow.resources.ic_pin
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -64,7 +66,8 @@ internal fun GroupPinnedMessageBar(
     modifier: Modifier = Modifier
 ) {
     val fallback = stringResource(Res.string.feature_chats_attachment)
-    val preview = message.pinnedPreviewText(fallback)
+    val boardLabel = stringResource(Res.string.feature_expenses_board)
+    val preview = if (message.expenseBoardPart != null) boardLabel else message.pinnedPreviewText(fallback)
     val sender = message.senderName?.takeIf { !message.isMine && it.isNotBlank() }
     val pinnedTime = formatMessageTimestamp(pinnedAtEpochMilliseconds)
     val label = sender?.let { "$it \u00B7 $pinnedTime" } ?: pinnedTime
@@ -159,6 +162,12 @@ internal fun GroupPinnedMessageContent(
                     .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
+            message.expenseBoardPart?.let { board ->
+                ExpenseBoardMessageContent(
+                    board = board,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             message.senderName
                 ?.takeIf { !message.isMine && it.isNotBlank() }
                 ?.let { senderName ->

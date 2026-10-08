@@ -9,7 +9,7 @@ interface GroupMessageRepository {
         parts: List<MessagePart>,
         replyToMessageId: String? = null,
         access: GroupMessageMembershipAccess
-    ): Result<Unit>
+    ): Result<String>
 
     suspend fun toggleReaction(groupId: String, messageId: String, emoji: String, access: GroupMessageMembershipAccess): Result<Unit>
 

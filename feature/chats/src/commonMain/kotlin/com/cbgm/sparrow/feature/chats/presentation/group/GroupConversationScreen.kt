@@ -123,6 +123,7 @@ fun GroupConversationScreen(
             onForwardClick = { contextMessage?.id?.let(onForwardMessageRequested) },
             showPin =
                 uiState.isLocalAdmin &&
+                    !uiState.expensesActive &&
                     contextMessage?.groupExtension?.type == ChatMessageType.USER,
             isPinned = contextMessage?.id == uiState.pinnedMessage?.id,
             onPinClick = {
@@ -204,7 +205,7 @@ fun GroupConversationScreen(
                             GroupPinnedMessageBar(
                                 message = pinnedMessage,
                                 pinnedAtEpochMilliseconds = uiState.pinnedAtEpochMilliseconds,
-                                canUnpin = uiState.isLocalAdmin,
+                                canUnpin = uiState.isLocalAdmin && !uiState.expensesActive,
                                 onClick = { showPinnedMessage = true },
                                 onUnpinClick = { onUiEvent(GroupConversationUiEvent.UnpinMessage) }
                             )
@@ -216,6 +217,8 @@ fun GroupConversationScreen(
                         composerState = composerState,
                         indicatorState = indicatorState,
                         containerColor = containerColor,
+                        expensesActive = uiState.expensesActive,
+                        canActivateExpenses = uiState.isLocalAdmin,
                         onUiEvent = onUiEvent,
                         onContactAttachmentClick = { showContactSelection = true }
                     )
@@ -431,6 +434,8 @@ private fun BottomBar(
     composerState: MessageComposerUiState,
     indicatorState: IndicatorUiState,
     containerColor: Color,
+    expensesActive: Boolean,
+    canActivateExpenses: Boolean,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onContactAttachmentClick: () -> Unit
 ) {
@@ -449,6 +454,17 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(GroupConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(GroupConversationUiEvent.LocationCaptureFailed(it)) },
         onPollAttachmentClick = { onUiEvent(GroupConversationUiEvent.CreatePollClicked) },
+        onActivateExpensesClick = if (canActivateExpenses) {
+            { onUiEvent(GroupConversationUiEvent.ActivateExpensesClicked) }
+        } else {
+            null
+        },
+        onCloseExpensesClick = if (canActivateExpenses && expensesActive) {
+            { onUiEvent(GroupConversationUiEvent.CloseExpensesClicked) }
+        } else {
+            null
+        },
+        isExpensesActive = expensesActive,
         onAttachmentError = { onUiEvent(GroupConversationUiEvent.AttachmentError(it)) },
         onVoiceSendClick = { onUiEvent(GroupConversationUiEvent.VoiceSendClicked) }
     )

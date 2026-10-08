@@ -26,6 +26,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ActivateGroupExpensesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupExpensesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
@@ -103,6 +105,8 @@ class GroupConversationViewModel(
     private val deleteMessageUseCase: DeleteGroupMessageUseCase,
     private val editMessageUseCase: EditGroupMessageUseCase,
     private val pinMessageUseCase: PinGroupMessageUseCase,
+    private val activateExpensesUseCase: ActivateGroupExpensesUseCase,
+    private val closeExpensesUseCase: CloseGroupExpensesUseCase,
     private val unpinMessageUseCase: UnpinGroupMessageUseCase,
     observeMemberIndicator: ObserveGroupMemberIndicatorUseCase,
     setGroupIndicator: SetGroupIndicatorUseCase,
@@ -403,6 +407,8 @@ class GroupConversationViewModel(
             is GroupConversationUiEvent.AttachmentError -> setError(event.message)
             GroupConversationUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
+            GroupConversationUiEvent.ActivateExpensesClicked -> activateExpenses()
+            GroupConversationUiEvent.CloseExpensesClicked -> closeExpenses()
             is GroupConversationUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is GroupConversationUiEvent.SafetyWarningClicked ->
                 navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, event.contactId))
@@ -480,6 +486,26 @@ class GroupConversationViewModel(
             pinMessageUseCase(groupId, messageId)
                 .onFailure { error ->
                     setError(error.message ?: "Message could not be pinned")
+                }
+        }
+    }
+
+    private fun activateExpenses() {
+        viewModelScope.launch {
+            activateExpensesUseCase(groupId, "EUR")
+                .onFailure { error ->
+                    logger.error(error) { "Could not activate group expenses" }
+                    error.message?.let(::setError)
+                }
+        }
+    }
+
+    private fun closeExpenses() {
+        viewModelScope.launch {
+            closeExpensesUseCase(groupId)
+                .onFailure { error ->
+                    logger.error(error) { "Could not close group expenses" }
+                    error.message?.let(::setError)
                 }
         }
     }

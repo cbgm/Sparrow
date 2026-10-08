@@ -14,7 +14,7 @@ class GroupMessageRepositoryImpl(
         parts: List<MessagePart>,
         replyToMessageId: String?,
         access: GroupMessageMembershipAccess
-    ): Result<Unit> =
+    ): Result<String> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             parts = parts,

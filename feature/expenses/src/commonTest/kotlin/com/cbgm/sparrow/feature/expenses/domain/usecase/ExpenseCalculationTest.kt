@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseSettlementSuggestion
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class ExpenseCalculationTest {
     private val board = ExpenseBoard("board-1", "EUR", 1L)
@@ -35,7 +35,7 @@ class ExpenseCalculationTest {
     )
 
     @Test fun calculatesBalancesAndTransfers() {
-        val balances = CalculateExpenseBalancesUseCase()(board, expenses)
+        val balances = CalculateExpenseBalancesUseCase()(board, expenses).getOrThrow()
         assertEquals(
             listOf(
                 ExpenseBalance("alex", 5000L),
@@ -49,19 +49,31 @@ class ExpenseCalculationTest {
                 ExpenseSettlementSuggestion("ben", "alex", 1000L),
                 ExpenseSettlementSuggestion("chris", "alex", 4000L)
             ),
-            CalculateExpenseSettlementsUseCase()(balances)
+            CalculateExpenseSettlementsUseCase()(balances).getOrThrow()
         )
     }
 
     @Test fun rejectsExpenseFromOtherBoard() {
-        assertFailsWith<IllegalArgumentException> {
-            CalculateExpenseBalancesUseCase()(board, listOf(expenses[0].copy(boardId = "another")))
-        }
+        val result = CalculateExpenseBalancesUseCase()(board, listOf(expenses[0].copy(boardId = "another")))
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }
 
     @Test fun rejectsUnbalancedInput() {
-        assertFailsWith<IllegalArgumentException> {
-            CalculateExpenseSettlementsUseCase()(listOf(ExpenseBalance("alex", 42L)))
-        }
+        val result = CalculateExpenseSettlementsUseCase()(listOf(ExpenseBalance("alex", 42L)))
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test fun rejectsUnrepresentableDebts() {
+        val result = CalculateExpenseSettlementsUseCase()(
+            listOf(ExpenseBalance("alex", Long.MIN_VALUE), ExpenseBalance("ben", Long.MAX_VALUE))
+        )
+        assertTrue(result.isFailure)
+    }
+
+    @Test fun supportsAlreadySettledBalances() {
+        val balances = listOf(ExpenseBalance("alex", 0L), ExpenseBalance("ben", 0L))
+        assertEquals(emptyList(), CalculateExpenseSettlementsUseCase()(balances).getOrThrow())
     }
 }
