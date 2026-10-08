@@ -745,4 +745,12 @@
     <string name="feature_expenses_close">Ausgaben schließen</string>
     <string name="feature_expenses_board">Gruppenausgaben</string>
     <string name="feature_expenses_activation_failed">Gruppenausgaben konnten nicht aktiviert werden.</string>
+    <string name="feature_expenses_add">Ausgabe hinzufügen</string>
+    <string name="feature_expenses_description">Beschreibung</string>
+    <string name="feature_expenses_description_hint">Wofür war die Ausgabe?</string>
+    <string name="feature_expenses_amount">Betrag</string>
+    <string name="feature_expenses_paid_by">Bezahlt von</string>
+    <string name="feature_expenses_participants">Teilnehmer</string>
+    <string name="feature_expenses_equal_split">Gleichmäßig aufteilen</string>
+    <string name="feature_expenses_you">Du</string>
 </resources>

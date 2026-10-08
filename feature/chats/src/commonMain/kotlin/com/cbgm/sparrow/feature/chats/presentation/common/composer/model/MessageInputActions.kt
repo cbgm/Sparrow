@@ -16,6 +16,7 @@ data class MessageInputActions(
     val onClickPoll: (() -> Unit)? = null,
     val onClickActivateExpenses: (() -> Unit)? = null,
     val onClickCloseExpenses: (() -> Unit)? = null,
+    val onClickAddExpense: (() -> Unit)? = null,
     val isExpensesActive: Boolean = false,
     val onVoiceSendClick: () -> Unit = {}
 )

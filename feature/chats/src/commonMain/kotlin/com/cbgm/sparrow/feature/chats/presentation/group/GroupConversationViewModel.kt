@@ -91,7 +91,8 @@ class GroupConversationViewModel(
             }
         }
 
-    // Shares the error-aware presentation stream, so errors still become Failed.
+    // Share the error-aware presentation stream, so errors still become Failed.
+    // All UI states, indicators and forwarding now consume the same observation.
     private val presentationContext: StateFlow<GroupContextObservation> =
         groupContext
             .map<GroupChatContext, GroupContextObservation> { context ->
@@ -266,6 +267,12 @@ class GroupConversationViewModel(
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             GroupConversationUiEvent.ActivateExpensesClicked -> pinController.activateExpenseBoard()
             GroupConversationUiEvent.CloseExpensesClicked -> pinController.closeExpenseBoard()
+            GroupConversationUiEvent.AddExpenseClicked -> navigator.navigateTo(
+                AppRoute.CreateExpense(
+                    groupId
+                )
+            )
+
             is GroupConversationUiEvent.RetryMessage -> actionsController.retryFailedMessage(event.messageId)
             is GroupConversationUiEvent.SafetyWarningClicked ->
                 navigator.navigateTo(

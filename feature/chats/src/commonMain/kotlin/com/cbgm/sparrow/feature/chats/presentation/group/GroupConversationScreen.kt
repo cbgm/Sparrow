@@ -459,6 +459,11 @@ private fun BottomBar(
         } else {
             null
         },
+        onAddExpenseClick = if (expensesActive) {
+            { onUiEvent(GroupConversationUiEvent.AddExpenseClicked) }
+        } else {
+            null
+        },
         onCloseExpensesClick = if (canActivateExpenses && expensesActive) {
             { onUiEvent(GroupConversationUiEvent.CloseExpensesClicked) }
         } else {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Close
@@ -47,6 +48,7 @@ fun AttachmentBar(
     onClickPoll: (() -> Unit)? = null,
     onClickActivateExpenses: (() -> Unit)? = null,
     onClickCloseExpenses: (() -> Unit)? = null,
+    onClickAddExpense: (() -> Unit)? = null,
     isExpensesActive: Boolean = false,
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
@@ -126,26 +128,31 @@ fun AttachmentBar(
                     }
                     val hasCloseAction = onClickCloseExpenses != null
 
-                    if (isExpensesActive || onClickActivateExpenses != null) {
+                    FilledButton(
+                        imageVector = if (isExpensesActive && hasCloseAction) {
+                            Icons.Filled.Close
+                        } else {
+                            Icons.Filled.AccountBalanceWallet
+                        },
+                        onClick = if (isExpensesActive) {
+                            (onClickCloseExpenses ?: {})
+                        } else {
+                            (onClickActivateExpenses ?: {})
+                        },
+                        tint = if (isExpensesActive && hasCloseAction) {
+                            MaterialTheme.colorScheme.error
+                        } else if (isExpensesActive) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        enabled = !isExpensesActive || hasCloseAction
+                    )
+
+                    if (isExpensesActive && onClickAddExpense != null) {
                         FilledButton(
-                            imageVector = if (isExpensesActive && hasCloseAction) {
-                                Icons.Filled.Close
-                            } else {
-                                Icons.Filled.AccountBalanceWallet
-                            },
-                            onClick = if (isExpensesActive) {
-                                (onClickCloseExpenses ?: {})
-                            } else {
-                                (onClickActivateExpenses ?: {})
-                            },
-                            tint = if (isExpensesActive && hasCloseAction) {
-                                MaterialTheme.colorScheme.error
-                            } else if (isExpensesActive) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                            enabled = !isExpensesActive || hasCloseAction
+                            imageVector = Icons.Filled.AddCircle,
+                            onClick = onClickAddExpense
                         )
                     }
                 }
@@ -208,6 +215,7 @@ private fun AttachmentBarPreview() {
             onClickPoll = {},
             onClickActivateExpenses = {},
             onClickCloseExpenses = {},
+            onClickAddExpense = {},
             isExpensesActive = true,
             isGalleryEnabled = true,
             isCameraEnabled = true,

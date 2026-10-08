@@ -111,6 +111,11 @@ sealed interface AppRoute {
     data object CreatePoll : AppRoute
 
     @Serializable
+    data class CreateExpense(
+        val groupId: String
+    ) : AppRoute
+
+    @Serializable
     data class AttachmentManagement(
         val conversationId: String
     ) : AppRoute

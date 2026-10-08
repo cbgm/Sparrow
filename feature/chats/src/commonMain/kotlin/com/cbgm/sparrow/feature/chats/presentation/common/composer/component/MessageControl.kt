@@ -194,6 +194,12 @@ fun MessageControl(
                             onClick()
                         }
                     },
+                    onClickAddExpense = actions.onClickAddExpense?.let { onClick ->
+                        {
+                            isAttachmentBarVisible = false
+                            onClick()
+                        }
+                    },
                     onClickCloseExpenses = actions.onClickCloseExpenses?.let { onClick ->
                         {
                             isAttachmentBarVisible = false

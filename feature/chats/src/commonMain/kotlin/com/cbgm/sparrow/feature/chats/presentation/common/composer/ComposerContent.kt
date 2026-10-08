@@ -35,6 +35,7 @@ fun ComposerContent(
     onPollAttachmentClick: (() -> Unit)? = null,
     onActivateExpensesClick: (() -> Unit)? = null,
     onCloseExpensesClick: (() -> Unit)? = null,
+    onAddExpenseClick: (() -> Unit)? = null,
     isExpensesActive: Boolean = false,
     onAttachmentError: (String) -> Unit,
     onVoiceSendClick: () -> Unit
@@ -94,6 +95,7 @@ fun ComposerContent(
                 onClickPoll = onPollAttachmentClick,
                 onClickActivateExpenses = onActivateExpensesClick,
                 onClickCloseExpenses = onCloseExpensesClick,
+                onClickAddExpense = onAddExpenseClick,
                 isExpensesActive = isExpensesActive,
                 onVoiceSendClick = onVoiceSendClick
             )

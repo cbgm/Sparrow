@@ -108,6 +108,8 @@ sealed interface GroupConversationUiEvent {
 
     data object CloseExpensesClicked : GroupConversationUiEvent
 
+    data object AddExpenseClicked : GroupConversationUiEvent
+
     data class RetryMessage(
         val messageId: String
     ) : GroupConversationUiEvent

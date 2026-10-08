@@ -117,8 +117,10 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCas
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupExpensesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupExpenseUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupExpenseCreationContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LoadGroupPinnedAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
@@ -154,6 +156,7 @@ import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationView
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationActionsController
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationActionsController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupPinController
@@ -360,6 +363,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::SendGroupMessageUseCase)
+    singleOf(::GetGroupExpenseCreationContextUseCase)
+    singleOf(::CreateGroupExpenseUseCase)
     singleOf(::ActivateGroupExpensesUseCase)
     singleOf(::CloseGroupExpensesUseCase)
     singleOf(::ToggleGroupMessageReactionUseCase)
@@ -388,6 +393,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
 }
 
 private fun org.koin.core.module.Module.registerViewModels() {
+    viewModel { CreateGroupExpenseViewModel(savedStateHandle = get(), getContext = get(), createExpense = get()) }
     factory { ConversationHistoryController(get(), get()) }
     factory { ConversationMediaController(get()) }
     factory { SharedContactController(get()) }

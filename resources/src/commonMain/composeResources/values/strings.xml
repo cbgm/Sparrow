@@ -741,4 +741,12 @@
     <string name="feature_expenses_close">Close expenses</string>
     <string name="feature_expenses_board">Group expenses</string>
     <string name="feature_expenses_activation_failed">Group expenses could not be activated.</string>
+    <string name="feature_expenses_add">Add expense</string>
+    <string name="feature_expenses_description">Description</string>
+    <string name="feature_expenses_description_hint">What was this expense for?</string>
+    <string name="feature_expenses_amount">Amount</string>
+    <string name="feature_expenses_paid_by">Paid by</string>
+    <string name="feature_expenses_participants">Participants</string>
+    <string name="feature_expenses_equal_split">Split equally</string>
+    <string name="feature_expenses_you">You</string>
 </resources>
