@@ -289,7 +289,7 @@ private fun MessageListPreview() {
                         textPart =
                             TextUi(
                                 id = "preview-text",
-                                text = "Should we meet around 18:00?",
+                                text = "Should we meet around 18:00? Or do we not? Tell me",
                                 isContentFailed = false
                             )
                     ),

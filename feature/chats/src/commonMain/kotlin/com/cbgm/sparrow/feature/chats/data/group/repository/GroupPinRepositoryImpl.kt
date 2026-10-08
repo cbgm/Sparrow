@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
@@ -139,7 +140,11 @@ internal class GroupPinRepositoryImpl(
         val state = dataSource.get(groupId) ?: error("Group pin was not found")
         val encodedContent = state.messageContent ?: error("Group pin has no message content")
         val content = groupMessageContentCodec.decode(encodedContent)
-        return content.parts.firstOrNull { item -> item.id == attachmentId }
+        return content.parts.firstOrNull { part -> part.id == attachmentId }
+            ?: content.parts
+                .filterIsInstance<PollDto>()
+                .flatMap(PollDto::images)
+                .firstOrNull { image -> image.id == attachmentId }
             ?: error("Pinned message attachment was not found")
     }
 

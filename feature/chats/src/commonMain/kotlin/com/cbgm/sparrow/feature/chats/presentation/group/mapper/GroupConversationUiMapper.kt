@@ -57,18 +57,27 @@ internal fun toGroupConversationUiState(
             }
         }
     val pinnedMessage =
-        pin?.message?.let { message ->
+        pin?.message?.let { pinnedSnapshot ->
+            val liveMessage =
+                conversation?.messages?.firstOrNull { message -> message.id == pinnedSnapshot.id }
+            val message = liveMessage ?: pinnedSnapshot
             val sender = message.senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
             message.toMessageBubbleUi(
                 senderName = sender.displayNameForChat(senderIsInContacts),
                 senderIsInContacts = senderIsInContacts,
                 safetyAssessments = safetyAssessments,
-                source = MessagePartSource.GroupPin(groupId),
+                source =
+                    if (liveMessage == null) {
+                        MessagePartSource.GroupPin(groupId)
+                    } else {
+                        MessagePartSource.Message
+                    },
                 reply = message.replyToMessageId.toGroupReplyPreview(
                     conversation?.messages.orEmpty().associateBy(GroupMessage::id),
                     contactsById
                 ),
+                canClosePoll = message.isMine || administration.isLocalAdmin,
                 pollVoterDisplayNames = pollVoterDisplayNames
             )
         }

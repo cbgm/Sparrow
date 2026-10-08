@@ -9,7 +9,6 @@ import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.flattenForPersistence
-import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDtos
 import com.cbgm.sparrow.feature.attachments.data.mapper.toEncryptedBlobReferenceDto
@@ -130,10 +129,8 @@ internal class MessageAttachmentDataSource(
 
     suspend fun loadDetachedBytes(partId: String): ByteArray =
         withContext(Dispatchers.IO) {
-            val part = attachmentDao.findPartById(partId) ?: error("Message part was not found")
             val blob = attachmentDao.findBlobByPartId(partId) ?: error("Message blob was not found")
-            val partDto = part.toDto(blob, fileDataSource::resolveCacheFilePath)
-            blobTransferDataSource.download(partDto.requireBlobReference())
+            blob.localFilePath?.let(fileDataSource::read) ?: downloadAndCacheFile(blob)
         }
 
     suspend fun cacheIncoming(messageId: String) {

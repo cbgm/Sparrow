@@ -15,6 +15,8 @@ fun MessagePartUi.toMediaItemUi(): MediaItemUi =
                 id = id,
                 type = MediaTypeUi.IMAGE,
                 mimeType = mimeType,
+                localFilePath = localFilePath,
+                thumbnailFilePath = thumbnailFilePath,
                 width = width,
                 height = height
             )
@@ -24,6 +26,8 @@ fun MessagePartUi.toMediaItemUi(): MediaItemUi =
                 id = id,
                 type = MediaTypeUi.VIDEO,
                 mimeType = mimeType,
+                localFilePath = localFilePath,
+                thumbnailFilePath = thumbnailFilePath,
                 width = width,
                 height = height,
                 durationMilliseconds = durationMilliseconds

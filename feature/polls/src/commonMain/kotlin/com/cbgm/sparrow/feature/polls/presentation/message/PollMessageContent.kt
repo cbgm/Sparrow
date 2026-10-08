@@ -281,13 +281,14 @@ private fun previewState(
     val secondOptionVoters = listOf(PollVoterUi("erin", "Erin"), PollVoterUi("frank", "Frank"))
     val thirdOptionVoters = listOf(PollVoterUi("grace", "Grace"))
 
+    val mediaPreview = media.take(3)
     return PollMessageUiState(
         pollId = "preview",
         question = "What should we do this weekend?",
         description = "Let's decide together!",
         media = media,
-        mediaPreview = media.take(3),
-        remainingMediaCount = (media.size - 3).coerceAtLeast(0),
+        mediaPreview = mediaPreview,
+        remainingMediaCount = (media.size - mediaPreview.size).coerceAtLeast(0),
         options = listOf(
             PollOptionUi(
                 id = "1",

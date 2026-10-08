@@ -45,6 +45,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Loca
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.PhotoVideoMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.TextMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_attachment
@@ -135,7 +136,9 @@ internal fun GroupPinnedMessageContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onAttachmentClick: (String) -> Unit = {},
-    onContactClick: (SharedContact) -> Unit = {}
+    onContactClick: (SharedContact) -> Unit = {},
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> }
 ) {
     SparrowScrollScaffold(
         modifier = modifier.fillMaxSize(),
@@ -166,6 +169,25 @@ internal fun GroupPinnedMessageContent(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+            message.pollPart?.let { pollPart ->
+                PollMessageContent(
+                    part = pollPart,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    onVoteSubmit = { selectedOptionIds ->
+                        onPollVoteSubmit(message.id, pollPart.id, selectedOptionIds)
+                    },
+                    onClosePoll = {
+                        onPollClose(message.id, pollPart.id)
+                    },
+                    onMediaClick = { index ->
+                        pollPart.images.getOrNull(index)?.let { image ->
+                            onAttachmentClick(image.id)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             message.voicePart?.let { voicePart ->
                 VoiceMessageContent(
@@ -249,6 +271,7 @@ private fun MessageBubbleUi.pinnedPreviewText(fallback: String): String =
         ?.text
         ?.trim()
         ?.takeIf(String::isNotBlank)
+        ?: pollPart?.question?.trim()?.takeIf(String::isNotBlank)
         ?: fileParts.firstOrNull()?.fileName?.takeIf(String::isNotBlank)
         ?: fallback
 

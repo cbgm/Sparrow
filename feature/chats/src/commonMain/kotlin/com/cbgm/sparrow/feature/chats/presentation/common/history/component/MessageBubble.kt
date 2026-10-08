@@ -173,7 +173,7 @@ private fun MessageBubbleContent(
         horizontalArrangement = if (message.isMine) Arrangement.End else Arrangement.Start
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(fraction = 0.78f),
+            modifier = Modifier.fillMaxWidth(fraction = 0.85f),
             horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
         ) {
             SenderLabel(message = message)
