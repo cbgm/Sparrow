@@ -48,9 +48,12 @@ interface MessageAttachmentDao {
 
     @Query(
         """
-        SELECT * FROM message_parts
-        WHERE messageId IN (:messageIds) AND type != 'TEXT'
-        ORDER BY messageId, position
+        SELECT message_parts.*
+        FROM message_parts
+        LEFT JOIN message_blobs ON message_blobs.partId = message_parts.id
+        WHERE message_parts.messageId IN (:messageIds)
+          AND message_parts.type != 'TEXT'
+        ORDER BY message_parts.messageId, message_parts.position
         """
     )
     fun observeMessagePartsByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
