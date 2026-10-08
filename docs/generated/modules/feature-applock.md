@@ -1,4 +1,4 @@
-# `:feature:autoreply`
+# `:feature:applock`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,30 +6,31 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `autoreply` |
+| Name | `applock` |
 | Group | `feature` |
-| Directory | `feature/autoreply` |
-| Build file | `feature/autoreply/build.gradle.kts` |
-| Kotlin files | 21 |
-| Production Kotlin files | 21 |
+| Directory | `feature/applock` |
+| Build file | `feature/applock/build.gradle.kts` |
+| Kotlin files | 13 |
+| Production Kotlin files | 13 |
 | Test Kotlin files | 0 |
-| Resource files | 0 |
+| Resource files | 1 |
 | Direct dependencies | 3 |
-| Direct dependents | 4 |
+| Direct dependents | 3 |
 
 ## Source sets
 
+- `androidMain`
 - `commonMain`
+- `iosMain`
 
 ## Dependencies
 
 - [`:core:ui`](../modules/core-ui.md)
 - [`:core:util`](../modules/core-util.md)
-- [`:data:database`](../modules/data-database.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 
 ## Dependents
 
-- [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:settings`](../modules/feature-settings.md)
-- [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)
+- [`:startup`](../modules/startup.md)

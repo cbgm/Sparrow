@@ -1,60 +1,38 @@
 # Application protocol
 
-`:core:protocol` defines transport-independent application packet types and codecs. The server routes opaque encoded/encrypted payloads rather than importing client packet semantics.
+`:protocol` defines client application packets/codecs. Server infrastructure contracts remain in `:server:protocol`.
 
-## Important packet families
+## User-message content
 
-Direct/contact:
+`GroupMessageContent` carries:
 
-- `ChatMessagePacket`
-- `ContactInvitePacket`
-- `ContactInviteAcceptedPacket`
-- `ContactInviteDeclinedPacket`
-- `ContactReadyPacket`
-- `ContactVerificationReceiptPacket`
-- `DirectChatAuthorizationRevokedPacket`
-- `DeliveryReceiptPacket`
-- `ReadReceiptPacket`
-- `IdentityPacket`
-- `IdentityAcknowledgementPacket`
-- `MailboxRoutePacket`
+```kotlin
+val parts: List<MessagePartDto>
+val replyToMessageId: String?
+```
 
-Group:
+It validates wire message parts with polls allowed and is encoded with `sparrow-group-message-v2:`. Legacy group plaintext is decoded as a text part for compatibility.
 
-- `GroupChatMessagePacket`
-- `GroupCreatedPacket`
-- `GroupConversationDeletedPacket`
-- `GroupInvitePacket`
-- `GroupInviteReceivedPacket`
-- `GroupJoinRequestPacket`
-- `GroupInviteDeclinedPacket`
-- `GroupLeaveRequestPacket`
-- `GroupMemberActivatedPacket`
-- `GroupMemberActivationAcknowledgementPacket`
-- `GroupMemberRemovedPacket`
-- `GroupReadyAcknowledgementPacket`
-- `GroupVerificationReceiptPacket`
-- `GroupVerificationSnapshotRequestPacket`
-- `GroupVerificationSnapshotPacket`
+The shared serialized part hierarchy includes `TEXT`, `IMAGE`, `VIDEO`, `FILE`, `VOICE`, `LOCATION`, `CONTACT` and `POLL`. Binary parts carry `EncryptedBlobReferenceDto`; raw bytes are transferred through the blob service rather than embedded in packets. Poll structured fields are serialized in `PollDto`, including nested image descriptors.
 
-## Message attachments
+## Operations on existing messages
 
-`ChatMessagePacket` and `GroupMessageContent` can carry attachment metadata alongside text. The current attachment types are:
+`OperationMessage` wraps one sealed `MessageOperation` and is encoded with `sparrow-operation-message-v1:`.
 
-- `IMAGE`
-- `VIDEO`
-- `FILE`
-- `LOCATION`
-- `CONTACT`
+- `EDIT` — message ID, replacement text, edit timestamp
+- `DELETE` — message ID, deletion timestamp
+- `REACTION` — message ID, emoji, removed flag
+- `POLL_VOTE` — message ID, poll ID, selected option IDs
+- `POLL_CLOSE` — message ID, poll ID, close timestamp
 
-A message may contain at most 8 attachments and attachment IDs must be unique within the message. The packet carries metadata plus an `EncryptedBlobReference`; raw attachment bytes are uploaded/downloaded through the blob transport rather than embedded directly into the chat packet.
+Direct incoming processing accepts Edit/Delete/Reaction and rejects poll operations. Group processing supports the full set.
 
-Location and contact are currently structured payloads stored in the same encrypted blob attachment system, using Sparrow-specific MIME types. This keeps the protocol extensible if those attachment payloads gain richer data later.
+## Packet boundary
 
-## Codec boundary
+`OperationMessagePacket` carries the encoded operation message. User-message packets and operation packets remain distinct because operations mutate existing persisted messages rather than adding content to history.
 
-`PacketCodec` encodes/decodes `SparrowPacket`. Transport encryption is a separate layer. This separation allows the outbox to persist protocol packets before the final recipient routing/encryption/wire step.
+`PacketCodec` is independent from transport encryption. The durable protocol outbox can therefore persist packets before final recipient routing/encryption/transmission.
 
-## Server protocol
+## Other packet families
 
-`server:protocol` is a separate server-facing contract module containing gateway, envelope, node and presence HTTP models. Do not merge it with `:core:protocol`: one describes client application packets; the other describes server infrastructure APIs.
+Identity/invitation/direct/group membership, delivery/read receipts, group pin updates, verification and mailbox-route packet families remain part of the same application protocol. See the generated [`:protocol` module reference](../generated/modules/protocol.md) for the current declaration inventory.

@@ -1,61 +1,55 @@
 # Design decisions
 
-This page records the current architectural direction in plain language.
+## One shared message-part hierarchy
 
-## Typed layer models and target-named mappers
+Message content is represented by `MessagePartDto` -> `MessagePart` -> `MessagePartUi` under `:core:base`. Image, video, file, voice, location, contact and poll are concrete variants of the same hierarchy.
 
-Data representations use `...Dto`, domain models are unsuffixed, and presentation representations use `...Ui`. Mapper names describe the concrete destination: `toNameDto()`, `toName()` and `toNameUi()`. Room persistence types remain `...Entity`.
+Reason: chat, attachments, voice, polls, pinned messages and protocol serialization need the same content semantics; parallel feature-owned hierarchies caused duplicate mapping and nullable/type-field workarounds.
 
-Reason: a type/function name should reveal its architectural layer and destination without relying on package context or generic names such as `toDomain()`/`toUi()`.
+## Attachment module owns bytes, not message semantics
 
-## Attachment ownership vs chat representation
+`:feature:attachments` owns encrypted blob transfer, cache, saved copies and attachment loading. It does not own a second generic `MessageAttachment` content hierarchy. Chat/poll/voice content remains a shared `MessagePart`.
 
-`:feature:attachments` owns attachment source data, encrypted blob transfer/loading/cache and saved-copy storage. `:feature:chats` owns its conversation representation through `MessagePartDto` -> `MessagePart` -> `MessagePartUi`, with typed text/image-video/file/location/contact variants.
+## General operation messages
 
-Reason: attachment transport/storage can evolve independently (including richer payloads later) without forcing Direct/Group domain models to depend on the attachment module's source model or add parallel per-type fields.
+`OperationMessage` carries one `MessageOperation`: `Edit`, `Delete`, `Reaction`, `PollVote` or `PollClose`. The operation owns the target `messageId`; the envelope/packet ID remains transport metadata.
 
-## Strict dependency direction inside features
+Reason: edit/delete/reaction/poll updates are operations on an existing message, not new user-message content.
 
-Datasources do not call repositories, and repositories do not call other repositories. Domain use cases may compose other use cases when that composition is the explicit business workflow; cross-feature composition belongs at an explicit orchestration boundary such as `:feature:conversationorchestration` rather than being hidden inside data-layer dependencies.
+## Poll expiry is derived, manual close is synchronized
 
-Reason: this keeps data access, business operations and orchestration ownership explicit and prevents dependency chains from becoming circular or difficult to test.
+Poll creation stores an absolute `expiresAtEpochMilliseconds` derived from an input duration in minutes. `PollPolicy.isClosedAt(...)` treats expiry as closed when evaluated. Expiry does not broadcast a `PollClose`; only an explicit creator/admin close writes `closedAtEpochMilliseconds` and sends `MessageOperation.PollClose`.
 
-## Separate Direct and Group stacks
+Reason: client clock skew should not let one device permanently broadcast an early automatic close. The absolute timestamp still makes every client converge on closed as its clock passes the same deadline.
 
-Direct and Group conversations share transport/protocol infrastructure only where semantics are truly identical. Membership, typing, delivery aggregation, message repositories, outgoing processing and UI/ViewModels remain separate.
+## Poll creation hands off to chat sending
 
-Reason: Group membership/security/history semantics are materially different from one-to-one messaging, and forcing them through a generic chat abstraction previously made regressions easier to introduce.
+`:feature:polls` finishes a domain `Poll` into `PollComposerRepository`. `GroupConversationViewModel` observes and sends it through the existing group-message orchestration.
 
-## Persistent outbox before transport
+Reason: polls are group message parts. The poll UI should not own a parallel group send stack.
 
-Packet-producing features enqueue to `ProtocolOutbox`. `DefaultOutboxRunner`/`DefaultOutboxProcessor` handle later routing/encryption/wire transmission.
+## Pin is a source context, not a separate attachment type
 
-Reason: reliable retry and delivery state should survive temporary transport outages and should not require a screen to remain open.
+Pinned snapshots can load detached message parts, including nested poll images, but they reuse the generic attachment/blob cache. No `writePinned`/`readPinned` filesystem API is required.
 
-## Control Plane directory instead of hardcoded plane URLs
+## Task-based startup
 
-The app and Community Node obtain Control Plane addresses from one configurable JSON directory. The app's build-time value is `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL` sourced from `local.properties`.
+Application startup is a list of `StartupTask` instances. Only the small set marked `waitForCompletion` blocks navigation; background runtime starts after `AppRoute.Main`.
 
-Reason: plane addresses can change without embedding a list of deployment URLs in client/server source.
+Reason: startup has one visible red line, avoids a bloated startup ViewModel, and keeps application-lifetime observers out of Composable lifecycle.
 
-## Control Plane vs Community Node
+## Strict feature dependency direction
 
-The Control Plane owns discovery/presence/push. Community Nodes own client WebSockets, federation and mailbox storage.
+Datasources do not call repositories; repository implementations do not call repositories/use cases. Cross-feature business workflows live in explicit orchestration/runtime boundaries such as `:feature:conversationorchestration`.
 
-Reason: routing capacity can scale independently and Community Nodes can be operated independently while using shared trusted discovery/control infrastructure.
+## Direct and Group remain semantically separate
 
-## PostgreSQL for durable data, Redis for presence
+Direct and Group processors/ViewModels/repositories remain separate where membership/security/delivery semantics differ. They share only genuinely common primitives such as message parts, protocol operations and transport infrastructure.
 
-Registry, push, federation queue and mailbox data require durable state and use PostgreSQL. Presence routes are short-lived and reconstructable, so Redis is a better fit.
+## Durable outbox before transport
 
-## Caddy as the edge
+Packet-producing features enqueue to the durable protocol outbox; messaging/transport runtime processes it later. A screen does not need to stay open for delivery/retry.
 
-Each deployable package exposes one operator/client edge and uses relative `/index` links. Internal JVM service names/ports remain Docker-internal details.
+## App lock uses platform authentication behind a common contract
 
-## Build-time directory variables
-
-Normal/debug packages use GitHub variable `CONTROL_PLANE_DIRECTORY_URL`; signed release packages use `CONTROL_PLANE_RELEASE_DIRECTORY_URL`. Both produce the same KMP constant name inside their independent build.
-
-## Release packaging follows current checked-in tooling
-
-The current source-verified public server package is the unified `dist/sparrow-server.zip` built by `server/unified/Build-SparrowServer.cmd`. Exact GitHub Actions change-classification behavior must be documented from the workflow files in the release checkout; those workflow files are not present in this source snapshot.
+`:feature:applock` keeps enabled state/domain/presentation in common code and delegates device-owner authentication to expect/actual `AppLockAuthenticationLauncher` implementations.

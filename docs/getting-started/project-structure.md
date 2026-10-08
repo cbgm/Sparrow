@@ -1,65 +1,57 @@
 # Project structure
 
-Sparrow is split by ownership. The current Gradle settings declare **44 modules**.
+The current `settings.gradle.kts` declares **47 Gradle modules**.
 
-## Client/application modules
+## Client/shared modules
 
 | Module | Responsibility |
 |---|---|
-| `:androidApp` | Thin Android host, manifest and Android packaging |
-| `:shared` | Shared application shell, `AppViewModel`, common composition |
-| `:startup` | Startup presentation/state |
-| `:navigation` | Routes, nav graphs, recovery inbox integration |
-| `:notification` | Visibility, Android push/notification runtime |
-| `:resources` | Shared Compose resources |
-| `:core` | logging/time/IDs/common contracts |
-| `:core:crypto` | cryptographic implementations/providers |
-| `:core:embedding` | local embedding model/runtime |
-| `:core:protocol` | packets/codecs/outbox/transport-independent protocol contracts |
-| `:core:ui` | reusable UI/navigation primitives |
-| `:data:database` | Room schema v53, DAOs/entities/migrations |
+| `:androidApp` | Android host, manifest, packaging and app version resolution |
+| `:shared` | app shell, shared DI and application runtime/startup tasks |
+| `:startup` | startup contract/presentation gate |
+| `:navigation` | application navigation graphs |
+| `:resources` | shared Compose resources |
+| `:core:base` | shared base/domain primitives including the message-part hierarchy |
+| `:core:util` | cross-cutting utilities |
+| `:core:crypto` | crypto implementations/providers |
+| `:core:ui` | shared Compose/navigation primitives |
+| `:protocol` | client wire packets, codecs, operation messages and protocol contracts |
+| `:data:database` | Room schema v54, DAOs/entities/migrations |
 | `:data:datastore` | key/value/settings persistence |
-| `:feature:identity` | identity, exchange/trust, backup/restore, identity-change/reconnection persistence |
-| `:feature:invite` | generic Direct/Group invitation lifecycle + inbox UI |
-| `:feature:contacts` | contacts, blocking, peer metadata/identity mappings |
-| `:feature:contactimport` | device contact + shared identity import |
-| `:feature:autoreply` | auto reply configuration/claiming |
-| `:feature:avatar` | avatar loading/cache/presentation |
-| `:feature:linkpreview` | preview fetch/cache/rendering |
-| `:feature:chats` | Direct/Group conversations/messages/receipts/pins |
-| `:feature:conversationorchestration` | cross-feature conversation/invite/identity/membership workflows |
-| `:feature:membership` | Group membership/security/roles/welcome/activation/admin lifecycle |
-| `:feature:attachments` | attachment transfer/cache/storage/transcripts |
-| `:feature:media` | gallery/camera/file/media rendering/export |
-| `:feature:voice` | voice record/playback/local transcription |
-| `:feature:messaging` | generic durable outbox/incoming-envelope runners |
-| `:feature:transport` | Control Plane/node discovery, WebSocket/presence/mailbox/push transport |
-| `:feature:onboarding` | onboarding |
-| `:feature:settings` | user/developer/network/AI settings |
+| `:feature:embedding` | local embedding runtime/model lifecycle |
+| `:feature:identity` | identity lifecycle/exchange/backup/recovery persistence |
+| `:feature:applock` | device-owner app lock |
+| `:feature:invite` | Direct/Group invitations and inbox |
+| `:feature:contacts` | contacts, blocking, routing/peer projection |
+| `:feature:contactimport` | device/shared contact import |
+| `:feature:autoreply` | automatic reply rules |
+| `:feature:avatar` | avatar observation/editing/cache |
+| `:feature:linkpreview` | link extraction/cache/rendering |
+| `:feature:chats` | Direct/Group messages, operations, receipts, pins and chat UI |
+| `:feature:conversationorchestration` | cross-feature identity/invite/membership/chat workflows |
+| `:feature:membership` | group membership/security/admin lifecycle |
+| `:feature:attachments` | encrypted blob transfer/cache/storage and attachment UI state |
+| `:feature:media` | gallery/camera/files/media viewers/export |
+| `:feature:voice` | recording/playback/local transcription |
+| `:feature:polls` | poll creation and poll-specific presentation |
+| `:feature:messaging` | durable outbox/incoming-envelope execution |
+| `:feature:transport` | discovery/WebSocket/routing/mailbox/push gateways |
+| `:feature:onboarding` | onboarding flows |
+| `:feature:notification` | notification/background integration |
+| `:feature:settings` | user/developer/network/AI/app-lock settings |
 | `:feature:search` | exact + semantic message search |
 | `:feature:safety` | local message-safety analysis |
+| `:quality:detekt-rules` | project-specific Detekt rules |
 
 ## Server modules
 
-| Module | Responsibility |
-|---|---|
-| `:server:protocol` | server wire models |
-| `:server:security` | node signatures/auth/rate limits/replay protection |
-| `:server:persistence` | shared server persistence/environment helpers |
-| `:server:observability` | readiness/health/metrics/request IDs |
-| `:server:node-registry` | signed healthy Community Node directory |
-| `:server:presence-directory` | ephemeral routing presence |
-| `:server:gateway` | client WebSocket gateway + encrypted blob store |
-| `:server:federation` | cross-node routing + durable retry |
-| `:server:mailbox` | recipient capability-based offline mailbox |
-| `:server:push` | push registrations/wakeups/pending fallback |
-| `:server:link-preview` | metadata/image preview proxy service |
+The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push` and `:server:link-preview`.
 
-The deployment templates (`server/control-plane`, `server/community-node`, `server/unified`) are runtime packaging directories rather than Gradle modules.
+Deployment folders under `server/control-plane`, `server/community-node`, `server/unified` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
 
 ## Feature layering
 
-Typical structure:
+Typical feature layout is:
 
 ```text
 presentation/
@@ -70,10 +62,10 @@ data/datasource/
 data/model/
 data/repository/
 data/mapper/
-device/          # in platform source sets where required
+device/
 di/
 ```
 
-Use cases may compose other use cases when they are the explicit workflow layer. Repositories/datasources still must not create hidden cross-feature dependency chains.
+Cross-feature shared models are placed in an explicit shared module rather than duplicated inside features. The current message-part hierarchy is the main example: `MessagePartDto` / `MessagePart` / `MessagePartUi` live under `:core:base`.
 
-For a class-level inventory of the current source tree, see [Current code inventory](../generated/current-code-inventory.md).
+See the generated [Module catalog](../generated/modules.md) for the source-derived dependency/declaration inventory.

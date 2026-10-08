@@ -1,68 +1,49 @@
 # Chats
 
-`:feature:chats` implements Direct and Group conversation/message behavior and presentation. Group membership/security is supplied by `:feature:membership`; invitations and identity exchange are coordinated outside Chats.
+`:feature:chats` owns Direct and Group conversation/message semantics and presentation. Shared message content is represented by the `:core:base` `MessagePart` hierarchy; encrypted blob transport/storage is delegated to `:feature:attachments`.
 
-## Presentation
+## Shared message content
 
-Primary screens/view models include:
+Current user-message parts are `Text`, `Image`, `Video`, `File`, `Voice`, `Location`, `Contact` and `Poll`. Direct and Group messages consume the same shared types, but business rules remain separate.
 
-- `DirectConversationViewModel`
-- `GroupConversationViewModel`
-- conversation overview presentation
-- Group details/verification presentation
-- shared message history/bubble/context actions
+## Direct
 
-## Direct messages
+`DirectConversationViewModel`, `DirectMessageRepositoryImpl`, `DirectOutgoingMessageProcessor` and Direct incoming handlers own one-to-one semantics. Edit/delete/reaction are sent through `OperationMessage`. `DirectOperationMessagePacketHandler` validates sender/conversation ownership and rejects `PollVote` / `PollClose` because polls are group-only.
 
-Key use cases include:
+Important use cases include `ObserveDirectChatContextUseCase`, `SendDirectMessageUseCase`, `SendOrQueueDirectMessageUseCase`, `RetryDirectMessageUseCase`, `EditDirectMessageUseCase`, `DeleteDirectMessageUseCase`, `ToggleDirectMessageReactionUseCase` and `MarkDirectConversationReadUseCase`.
 
-- `ObserveDirectChatContextUseCase`
-- `ObserveDirectConversationUseCase`
-- `SendDirectMessageUseCase`
-- `SendOrQueueDirectMessageUseCase`
-- `QueueDirectMessageUntilAuthorizedUseCase`
-- `RetryDirectMessageUseCase`
-- `EditDirectMessageUseCase`
-- `DeleteDirectMessageUseCase`
-- `ToggleDirectMessageReactionUseCase`
-- `MarkDirectConversationReadUseCase`
-- `SetDirectIndicatorUseCase`, `ObserveDirectIndicatorUseCase`
-- `GetOrCreateDirectConversationUseCase`
-- `ActivateAuthorizedDirectConversationUseCase`
-- `DiscardPendingAuthorizationMessagesUseCase`
+## Group
 
-The data path is centered on `DirectMessageRepositoryImpl` and `DirectOutgoingMessageProcessor`.
+`GroupConversationViewModel`, `GroupMessageRepositoryImpl`, `GroupOutgoingMessageProcessor` and Group incoming handlers own group semantics. Membership/security comes from `:feature:membership`.
 
-## Group messages
+Important use cases include `ObserveGroupChatContextUseCase`, `SendGroupMessageUseCase`, `RetryGroupMessageUseCase`, `EditGroupMessageUseCase`, `DeleteGroupMessageUseCase`, `ToggleGroupMessageReactionUseCase`, `VoteInGroupPollUseCase`, `CloseGroupPollUseCase`, `PinGroupMessageUseCase`, `UnpinGroupMessageUseCase` and read/indicator use cases.
 
-Key use cases include:
+## General operations
 
-- `CreateGroupConversationUseCase`
-- `AddGroupMembersUseCase`
-- `ObserveGroupChatContextUseCase`
-- `ObserveGroupConversationUseCase`
-- `SendGroupMessageUseCase`
-- `RetryGroupMessageUseCase`
-- `EditGroupMessageUseCase`
-- `DeleteGroupMessageUseCase`
-- `ToggleGroupMessageReactionUseCase`
-- `MarkGroupConversationReadUseCase`
-- `SetGroupIndicatorUseCase`, `ObserveGroupMemberIndicatorUseCase`
-- `SetGroupTitleUseCase`, `SetGroupDescriptionUseCase`, `SetGroupAvatarUseCase`, `RemoveGroupAvatarUseCase`
-- `PinGroupMessageUseCase`, `UnpinGroupMessageUseCase`
+```text
+OperationMessage
+└── MessageOperation
+    ├── Edit(messageId, text, editedAt)
+    ├── Delete(messageId, deletedAt)
+    ├── Reaction(messageId, emoji, removed)
+    ├── PollVote(messageId, pollId, selectedOptionIds)
+    └── PollClose(messageId, pollId, closedAt)
+```
 
-The outgoing data path is centered on `GroupMessageRepositoryImpl` and `GroupOutgoingMessageProcessor`.
+Operations mutate an existing message; they are not user-message content and do not need their own domain message ID beyond the packet/envelope transport ID.
 
-## Forwarding/history
+## Poll sending
 
-Forwarding is a distinct domain path with `PrepareForwardMessageUseCase`, `ForwardMessageUseCase`, `ForwardDirectMessageUseCase`, `ForwardToContactUseCase`, `ForwardToDirectConversationUseCase`, `ForwardToGroupConversationUseCase` and `LoadOlderMessagesUseCase`.
+`CreatePollViewModel` publishes a finished `Poll` through `PollComposerRepository`. `GroupConversationViewModel` collects `ObserveFinishedPollUseCase`, sends the poll through the normal attachment-only group send path, cleans temporary media after success and calls `ClearFinishedPollUseCase`.
 
-## Message content
+Voting and manual closing are group operations. Expiry is evaluated by `PollPolicy.isClosedAt(now)` and does not create a background close operation.
 
-Chats represents text plus attachment-backed content. Attachment transfer/storage is owned by `:feature:attachments`, media selection/rendering by `:feature:media`, and voice recording/playback/transcription by `:feature:voice`.
+## Pinned messages
 
-## Group details and membership
+One current group pin is synchronized through `GroupPinRepositoryImpl`/`GroupPinBroadcaster`. `GroupPinnedMessage` can render ordinary message content and interactive polls. Detached pinned images reuse the generic attachment/blob loading path.
 
-Group details can edit title/description/avatar and administer members, but the underlying membership/role/security operations are domain APIs from `:feature:membership` coordinated through `:feature:conversationorchestration` where cross-feature decisions are required.
+## History/forwarding
 
-See [Chats architecture](../architecture/chats.md), [Group membership](group-membership.md), [Pinned messages](pinned-messages.md), and [Runtime flows](../architecture/runtime-flows.md).
+Forwarding remains a dedicated domain path (`PrepareForwardMessageUseCase`, `ForwardMessageUseCase`, Direct/contact/group forwarding implementations and `LoadOlderMessagesUseCase`). History pagination is separate from transport delivery.
+
+See [Chats architecture](../architecture/chats.md), [Polls](polls.md), [Pinned messages](pinned-messages.md) and [Group membership](group-membership.md).

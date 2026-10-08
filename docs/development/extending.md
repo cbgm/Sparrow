@@ -53,7 +53,7 @@ Room entities remain `SomethingEntity`; wire packets remain explicit protocol pa
 `:feature:chats` owns the chat representation:
 
 ```text
-MessagePartDto -> MessagePart -> MessagePartUi
+`MessagePartDto` -> `MessagePart` -> `MessagePartUi` in `:core:base`
 ```
 
 When adding a new attachment type, extend the attachment source/protocol behavior in the attachment-owning boundary, then map it into the typed chats part variants. Do not make Direct/Group messages expose the attachment module's source model directly, and do not introduce parallel top-level fields for every attachment kind.
@@ -82,7 +82,7 @@ Keep common contracts/models in `commonMain`. Put Android/iOS implementations in
 
 ## Add a new application packet
 
-1. Define the packet in `:core:protocol` and update `PacketCodec` support as required.
+1. Define the packet in `:protocol` and update `PacketCodec` support as required.
 2. Decide which feature owns its meaning.
 3. Add an explicit incoming handler/route in that feature.
 4. Define outgoing creation in that feature, enqueue through `ProtocolOutbox` rather than calling WebSocket directly.

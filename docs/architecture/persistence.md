@@ -1,40 +1,58 @@
-# Persistence model
+# Persistence
 
-The client database is Room/SQLite in `:data:database`. The current `SparrowDatabase` schema version is **53**.
+The Android client uses Room. The current `SparrowDatabase` schema version is **54**.
 
-## Current entities
+## Message storage
 
-`SparrowDatabase` currently registers these entities:
+The current message schema separates message envelope/state, text, typed parts and blob metadata:
 
-- `AutoReplyEntity`, `AutoReplyRecipientEntity`
-- `ContactEntity`, `ContactPhoneNumberEntity`, `ContactPublicIdentityEntity`, `ContactRoutingIdEntity`
-- `PendingRemoteIdentityChangeEntity`, `ApprovedIdentityReconnectionEntity`, `IdentityExchangeEntity`
-- `ConversationEntity`, `ConversationParticipantEntity`
-- `GroupSecurityStateEntity`, `GroupMemberKeyEntity`, `GroupMembershipEntity`, `GroupPinEntity`, `GroupVerificationPairEntity`
-- `InvitationEntity`
-- `MessageEntity`, `MessageAttachmentEntity`, `AttachmentMessageContextEntity`, `MessageRecipientStateEntity`, `MessageReactionEntity`
-- `MessageSearchEmbeddingEntity`, `MessageSafetyAssessmentEntity`
-- `ProtocolOutboxEntity`, `ProtocolOutboxFailureEventEntity`
-- `LocalMailboxCredentialEntity`, `RemoteMailboxRouteEntity`
-- `LinkPreviewEntity`
+```mermaid
+erDiagram
+    ConversationEntity ||--o{ MessageEntity : contains
+    MessageEntity ||--o{ MessagePartEntity : has
+    MessagePartEntity ||--o| MessageTextEntity : text
+    MessagePartEntity ||--o| MessageBlobEntity : blob
+    MessageEntity ||--o{ MessageRecipientStateEntity : delivery
+    MessageEntity ||--o{ MessageReactionEntity : reactions
+    MessageEntity ||--o{ AttachmentMessageContextEntity : attachment_context
+```
 
-## Recent explicit migrations
+Key entities include `ConversationEntity`, `MessageEntity`, `MessagePartEntity`, `MessageTextEntity`, `MessageBlobEntity`, `MessageRecipientStateEntity`, `MessageReactionEntity`, `AttachmentMessageContextEntity`, `VoiceTranscriptEntity`, `GroupPinEntity`, membership/security tables, identity/recovery tables and the durable protocol outbox tables.
 
-`DatabaseBuilder` installs explicit migrations for the later schema changes:
+`MessagePartEntity` is the generic structural row:
 
-- `IdentityExchangeMigration43To44`
-- `InvitationPeerDetailsMigration44To45`
-- `AttachmentMessageContextMigration45To46`
-- `AttachmentMessageContextMigration46To47`
-- `GroupMemberPhoneMigration47To48`
-- `ProtocolOutboxFailuresMigration48To49`
-- `PendingRemoteIdentityChangeMigration49To50`
-- `PendingRemoteIdentityChangeMigration50To51`
-- `ApprovedIdentityReconnectionMigration51To52`
-- `ApprovedIdentityOfferMigration52To53`
+```text
+id
+messageId
+position
+type
+payload?
+```
 
-This migration history is useful when diagnosing behavior introduced by recovery/invite/attachment refactors: those features have durable schema state and cannot be treated as only UI changes.
+`MessageBlobEntity` owns blob-related fields such as MIME type, byte size, dimensions/duration, node/blob capabilities, AEAD key/nonce/hash, delete capability and `localFilePath`.
 
-## Ownership rule
+## Structured message-part payloads
 
-Room DAOs/entities live in `:data:database`, but feature repository contracts remain in their owning feature modules. A feature datasource may use its DAO; a repository implementation may use its own datasources. Repositories must not call unrelated repositories to create cross-feature workflows.
+Schema 54 stores structured part JSON directly in `MessagePartEntity.payload`. `MessagePartPayloadMigration53To54` copies legacy values from `message_structured.json` into that column and drops the legacy table.
+
+`PollDto` is currently the structured payload user of this mechanism. Its nested images are persisted as separate image parts/blobs and are reattached by `MessagePartPersistenceMapper.withPersistedParts(...)`.
+
+## Outbox
+
+`ProtocolOutboxEntity` and `ProtocolOutboxFailureEventEntity` persist transport work independently of a screen. Feature code creates packets/operations; `:feature:messaging` runners process the durable outbox later. This is why outgoing work can survive temporary transport failure.
+
+## Group state
+
+Group persistence includes `GroupMembershipEntity`, `GroupSecurityStateEntity`, `GroupMemberKeyEntity`, `GroupVerificationPairEntity` and `GroupPinEntity`. Delivery/read aggregation is per recipient through `MessageRecipientStateEntity`.
+
+## Identity and recovery
+
+Identity/reconnection state is durable through `IdentityExchangeEntity`, `PendingRemoteIdentityChangeEntity`, `ApprovedIdentityReconnectionEntity`, contact public identity/routing tables and invitation state. Recovery is therefore not an in-memory navigation event.
+
+## Local search/safety
+
+`MessageSearchEmbeddingEntity` stores local search embeddings and `MessageSafetyAssessmentEntity` stores local safety-analysis output. These are client-side feature data and are not sent as message content.
+
+## Schema source of truth
+
+Use `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/SparrowDatabase.kt` and exported Room schemas under `data/database/schemas/` as the authoritative schema. Historical entity files can remain for migration code even when they are no longer registered in the current database.

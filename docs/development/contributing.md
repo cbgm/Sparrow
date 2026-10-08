@@ -49,7 +49,7 @@ See [Clean architecture](../architecture/clean-architecture.md) and [Coding styl
 
 ## Chat changes
 
-Read [Chats architecture](../architecture/chats.md) first. Keep Direct and Group responsibilities separate. Keep attachment source/blob ownership in `:feature:attachments` and map chat content through `MessagePartDto` -> `MessagePart` -> `MessagePartUi`.
+Read [Chats architecture](../architecture/chats.md) first. Keep Direct and Group responsibilities separate. Keep attachment source/blob ownership in `:feature:attachments` and reuse the shared `:core:base` `MessagePartDto` -> `MessagePart` -> `MessagePartUi` hierarchy.
 
 ## Documentation changes
 

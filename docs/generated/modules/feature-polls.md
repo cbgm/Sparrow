@@ -1,4 +1,4 @@
-# `:feature:autoreply`
+# `:feature:polls`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,30 +6,33 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `autoreply` |
+| Name | `polls` |
 | Group | `feature` |
-| Directory | `feature/autoreply` |
-| Build file | `feature/autoreply/build.gradle.kts` |
-| Kotlin files | 21 |
-| Production Kotlin files | 21 |
+| Directory | `feature/polls` |
+| Build file | `feature/polls/build.gradle.kts` |
+| Kotlin files | 27 |
+| Production Kotlin files | 27 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 3 |
-| Direct dependents | 4 |
+| Direct dependencies | 6 |
+| Direct dependents | 3 |
 
 ## Source sets
 
 - `commonMain`
+- `commonTest`
 
 ## Dependencies
 
 - [`:core:ui`](../modules/core-ui.md)
 - [`:core:util`](../modules/core-util.md)
-- [`:data:database`](../modules/data-database.md)
+- [`:feature:attachments`](../modules/feature-attachments.md)
+- [`:feature:avatar`](../modules/feature-avatar.md)
+- [`:feature:media`](../modules/feature-media.md)
+- [`:protocol`](../modules/protocol.md)
 
 ## Dependents
 
 - [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:settings`](../modules/feature-settings.md)
 - [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)

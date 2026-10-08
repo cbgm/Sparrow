@@ -1,45 +1,21 @@
 # Settings and diagnostics
 
-`:feature:settings` owns the user-facing Settings screens plus developer/network diagnostics.
+Settings aggregates user-facing preferences and developer/operational diagnostics.
 
-## Current settings areas
+## App lock
 
-- profile settings;
-- language selection;
-- privacy/disclaimer pages;
-- dependency/open-source licence information;
-- Control Plane configuration;
-- semantic-search enable/disable and preparation state;
-- message-safety enable/disable and preparation/analysis state;
-- attachment-storage navigation;
-- developer diagnostics and persisted error log.
+`SettingsViewModel` observes `ObserveAppLockEnabledUseCase` and updates through `SetAppLockEnabledUseCase`. `SettingsScreen` authenticates through `AppLockAuthenticationLauncher` before applying a toggle change. Failed/unavailable/cancelled authentication does not silently change the preference.
 
-## Local AI feature controls
+See [App lock](app-lock.md).
 
-Semantic search and message safety have separate toggles but share the local embedding runtime in `:core:embedding`. Settings displays preparation/download progress and feature-specific ready/failure state. Disabling one feature does not imply that the shared model can be removed if the other still needs it.
+## Local intelligence
 
-## Attachment storage
+Settings exposes semantic-search/message-safety controls and their model/download/index state. The shared embedding runtime lives in `:feature:embedding`.
 
-The Settings overview links to `AttachmentStorageRoute`, owned by `:feature:attachments`. That screen summarizes saved attachments by conversation and allows the user to inspect/manage locally saved attachment copies.
+## Attachments
 
-## Developer menu
+Settings links to `AttachmentStorageRoute` and per-conversation `AttachmentManagementRoute`. Media/files are observed through the attachment repository and can be removed locally without changing the remote message protocol content.
 
-The Developer menu includes network diagnostics and the developer error log.
+## Network/developer diagnostics
 
-The error log:
-
-- persists captured developer-facing errors;
-- displays a visible timestamp for each entry;
-- exposes a clear action with confirmation;
-- is presented through `DeveloperErrorLogRoute` / `DeveloperErrorLogViewModel`.
-
-The network diagnostics remain focused on Control Plane/node reachability, active-node state, connection counts and cooldown information.
-
-## Important classes
-
-- `SettingsViewModel`
-- `ControlPlaneSettingsViewModel`
-- `DeveloperMenuViewModel`
-- `DeveloperErrorLogViewModel`
-- `DeveloperErrorLogRepository`
-- `DeveloperErrorLogRepositoryImpl`
+Network/developer UI exposes Control Plane/node state, connection diagnostics and persisted developer error logs with timestamps/clear actions. The exact source inventory is available in the generated `:feature:settings` module page.

@@ -17,7 +17,7 @@ flowchart LR
     BK --> DS --> CP --> ND --> ER --> CM --> WS
 ```
 
-`AppViewModel` synchronizes the configured directory during startup. The directory response body is read as raw text and decoded as JSON, so `text/plain` and `application/json` both work.
+Control Plane directory startup is task based. `LoadControlPlaneConfigurationStartupTask` and `RestoreControlPlaneDirectoryStartupTask` establish the initial state; `MaintainControlPlaneDirectoryStartupTask`, `MaintainControlPlaneHealthStartupTask` and `ObserveControlPlaneRegistrationTargetsStartupTask` maintain it after navigation. The directory response body is read as raw text and decoded as JSON, so `text/plain` and `application/json` both work.
 
 The directory format is:
 

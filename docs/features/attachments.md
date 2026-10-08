@@ -1,82 +1,82 @@
-# Attachments
+# Attachments and message parts
 
-`:feature:attachments` owns the attachment source/transfer/cache/storage behavior. `:feature:media` owns platform media/file selection, rendering/opening and export helpers. `:feature:chats` maps attachment source data into its typed message-part representation for Direct and Group conversation UI.
+Sparrow now uses one shared message-part hierarchy in `:core:base`. Attachment transfer/storage lives in `:feature:attachments`, media selection/viewing lives in `:feature:media`, and chat messages carry `MessagePart` values rather than a second chat-specific attachment model.
 
-## Supported attachment types
+## Shared hierarchy
 
-| Type | Current behavior |
-|---|---|
-| Image | Gallery/camera selection, thumbnail preview, viewer, received local copy |
-| Video | Gallery selection, thumbnail + play indicator, tap-to-play viewer, received local copy |
-| File | File-browser selection, filename/size bubble, download/open on tap, received local copy |
-| Location | Current location is encoded as an attachment blob and sent immediately |
-| Contact | Existing Contacts UI selects one contact; name/number are encoded as an attachment blob and sent immediately |
+`core/base/.../messagepart` defines aligned representations:
 
-All attachment types currently use the encrypted blob attachment pipeline. Location/contact are intentionally still attachments so their payload can evolve later without inventing a separate message-content transport.
+```text
+MessagePartDto   data/protocol representation
+MessagePart      domain representation
+MessagePartUi    presentation representation
+```
+
+Current concrete parts are:
+
+- `Text` / `TextDto` / `TextUi`
+- `Image` / `ImageDto` / `ImageUi`
+- `Video` / `VideoDto` / `VideoUi`
+- `File` / `FileDto` / `FileUi`
+- `Voice` / `VoiceDto` / `VoiceUi`
+- `Location` / `LocationDto` / `LocationUi`
+- `Contact` / `ContactDto` / `ContactUi`
+- `Poll` / `PollDto` / `PollUi`
+
+Image and video are distinct concrete types. The older combined `ImageVideo` chat model is no longer the source of truth.
+
+## Ownership
+
+`:feature:attachments` owns:
+
+- `BlobTransferDataSource` — encrypted blob upload/download;
+- `MessageAttachmentDataSource` — persistence/cache coordination;
+- `MessageAttachmentFileDataSource` — local cache and saved-copy filesystem access;
+- `LocalAttachmentDataSource` — conversation storage copies;
+- `AttachmentContentDataSource` — resolves part content for presentation;
+- `MessageAttachmentOperationsRepository` — persistence/update/delete operations used by chats;
+- `MessageAttachmentRepository` — loading/storage/transcript-facing contract;
+- `MessageAttachmentCacheCoordinator` — incoming cache coordination;
+- storage/management screens and `AttachmentViewModel`.
+
+`:feature:media` owns gallery/camera/file selection, `MediaItemUi`, viewers and export. `:feature:voice` owns recording/playback/transcription while reusing the shared `Voice` part and attachment persistence.
+
+## Persistence
+
+Message-part metadata is split by concern:
+
+```mermaid
+flowchart LR
+    M[MessageEntity] --> P[MessagePartEntity]
+    P -->|text linkage| T[MessageTextEntity]
+    P -->|blob-backed part| B[MessageBlobEntity]
+    P -->|structured payload| PAYLOAD[MessagePartEntity.payload]
+    P -->|voice transcript| VT[VoiceTranscriptEntity]
+    P --> CTX[AttachmentMessageContextEntity]
+```
+
+`MessagePartEntity` stores `id`, `messageId`, `position`, `type` and optional `payload`. `MessageBlobEntity` stores blob capabilities, crypto material, media metadata and `localFilePath`. Database schema version is **54**.
+
+Migration `MessagePartPayloadMigration53To54` moved legacy `message_structured.json` into `message_parts.payload` and drops the `message_structured` table. The old entity source file remains only as historical/migration source; it is not registered in `SparrowDatabase` v54.
+
+Poll persistence is special only in composition: `MessagePartPersistenceMapper.flattenForPersistence()` stores the `PollDto` plus each nested image as individual persisted parts. The poll JSON goes into `MessagePartEntity.payload`; nested image binary metadata goes through `MessageBlobEntity`.
+
+## Cache and receiver refresh
+
+Incoming blob data is cached locally and the DB stores the resolved local path in `MessageBlobEntity.localFilePath`. Presentation mapping must carry `localFilePath` / `thumbnailFilePath` forward into `ImageUi`, `VideoUi` and `MediaItemUi`; the renderer should not invent a second cache.
+
+Room observations that render media must react to blob-path updates as well as part-row updates. This matters on the receiving side: the message can exist before the blob cache finishes, so a later `localFilePath` update must cause the mapped UI to refresh.
 
 ## Limits
 
-`MessageAttachmentPolicy` and protocol constraints enforce:
+`MessageAttachmentPolicy` is the domain source for size/count validation. Creation flows validate both per-part and total payload constraints before sending. Normal composer selection supports up to the configured attachment maximum; poll media is images-only and is validated against the same image/total limits.
 
-- at most 8 attachments per message;
-- images: at most 4 MiB each;
-- videos: at most 64 MiB each;
-- files: at most 96 MiB each;
-- at most 96 MiB total selected attachment bytes per message;
-- image dimensions are normalized/limited by the media preparation path.
+## Location and contact
 
-## Sending
+Location and contact are typed message parts. Their detailed payloads use attachment content encoding/loading, while presentation receives `LocationUi` / `ContactUi`. They are not modeled as generic nullable file fields.
 
-The attachment bar exposes gallery, camera, file, contact and current-location actions. Image/video/file selections can coexist with normal text. Location/contact are single-shot attachment actions and are sent without requiring extra text. Current-location permission is requested when the location action is used rather than as a permanent onboarding requirement.
+## Saved media/files screens
 
-Before the message packet is queued, attachment payloads are prepared and uploaded through the blob-transfer layer. The message packet contains typed attachment metadata plus an encrypted blob reference rather than embedding large raw bytes in the normal chat packet.
+`AttachmentStorageViewModel` exposes per-conversation storage summaries. `AttachmentManagementViewModel` drives the Media/Files management tabs using `ObserveLocalAttachmentsUseCase` and `DeleteLocalAttachmentsUseCase`.
 
-## Chat-domain representation
-
-Chats do not expose the attachment module's source model as their conversation content model. The current layering is:
-
-```text
-feature/attachments source/transfer model
-        |
-        v
-feature/chats data MessagePartDto
-        |
-        v
-feature/chats domain MessagePart
-        |
-        v
-feature/chats presentation MessagePartUi
-```
-
-The chat part hierarchy is typed: text, image/video, file, location and contact have distinct variants. This keeps attachment transport/storage ownership in `:feature:attachments` while keeping chat data/domain/presentation independent from one generic nullable-everything content model.
-
-## Bubble and viewer behavior
-
-- image/video bubbles show at most three media previews; additional media is represented by a `+N` tile;
-- media viewer supports swiping between message media;
-- videos never autoplay;
-- file bubbles show filename and readable byte size and open the local/downloaded file on tap;
-- location bubbles show coordinates after the payload is loaded and open through the platform location opener;
-- contact bubbles show the available display name plus phone number;
-- tapping a loaded contact asks for confirmation before adding it to device contacts.
-
-## Storage behavior
-
-Incoming binary image/video/file attachments get a saved conversation copy. Location/contact blobs are excluded from that media/files copy because they are structured attachment payloads rather than user-managed files.
-
-Settings exposes attachment-storage summaries and management screens. The attachment module distinguishes a private message-attachment cache from the user-visible saved conversation copies. Sender-side cache data is not treated as a received saved-copy entry.
-
-## Important classes
-
-- `BlobTransferRepository` / `BlobTransferRepositoryImpl`
-- `MessageAttachmentRepository` / `MessageAttachmentRepositoryImpl`
-- `MessageAttachmentDataSource`
-- `MessageAttachmentFileDataSource`
-- `LocalAttachmentDataSource`
-- `MessageAttachmentCacheCoordinator`
-- `OutgoingMessageAttachment`
-- `MessageAttachmentPolicy`
-- `LocationAttachmentPayload`
-- `ContactAttachmentPayload`
-- `AttachmentStorageViewModel`
-- `MessageAttachmentViewer`
+The Media branch maps image/video parts to `MediaItemUi`; cache paths must be preserved by `MessagePartMediaMapper` so thumbnails do not remain in a permanent loading state.

@@ -1,98 +1,49 @@
-# Chats architecture: Direct, Group and orchestration boundaries
+# Chats architecture
 
-`:feature:chats` owns conversation/message behavior. It no longer owns the Group membership lifecycle or the generic invitation lifecycle.
-
-## Current boundary
+Direct and Group share primitives but intentionally keep separate business stacks.
 
 ```mermaid
-flowchart TB
-    ORCH[feature:conversationorchestration\nConversationFlowHandler]
-    INV[feature:invite]
-    ID[feature:identity]
-    MEM[feature:membership]
-    CHAT[feature:chats]
-    MSG[feature:messaging]
-
-    ORCH --> INV
-    ORCH --> ID
-    ORCH --> MEM
-    ORCH --> CHAT
-    CHAT --> MSG
+flowchart TD
+    UI[Direct/Group ViewModel] --> UC[chat use cases]
+    UC --> REPO[Direct/Group repository]
+    REPO --> PROC[outgoing processor]
+    PROC --> PARTS[MessagePart / attachments]
+    PROC --> OP[OperationMessage]
+    PROC --> OUTBOX[ProtocolOutbox]
+    OUTBOX --> MSG[:feature:messaging]
+    MSG --> TX[:feature:transport]
 ```
 
-## Direct outgoing path
+## Why Direct and Group stay separate
+
+Direct authorization/identity state differs from Group membership/epoch/admin/per-recipient state. Shared abstractions are used only where semantics are actually identical: message parts, operation protocol, attachment storage and durable transport infrastructure.
+
+## Message content boundary
+
+The canonical content hierarchy is in `:core:base`:
 
 ```text
-DirectConversationViewModel
-  -> Direct domain use case
-  -> DirectMessageRepositoryImpl
-  -> DirectOutgoingMessageProcessor
-  -> ProtocolOutbox
-  -> DefaultOutboxRunner / DefaultOutboxProcessor
-  -> OutgoingPacketSender
+MessagePartDto -> MessagePart -> MessagePartUi
 ```
 
-`DirectOutgoingMessageProcessor` implements `send`, reactions, delete/edit, read receipts, retry, and the waiting-for-authorization queue. It delegates the authorization decision to `RequireDirectChatAuthorizationUseCase` instead of reading Identity internals itself.
+`GroupMessageContent` serializes `List<MessagePartDto>` and allows polls. `GroupMessageContentCodec` uses the `sparrow-group-message-v2:` prefix and can decode legacy plaintext into a synthetic text part.
 
-Important methods:
+`:feature:attachments` persists blob-backed parts and structured payloads; Chats owns conversation/message behavior rather than redefining content models.
 
-- `send()`
-- `queueUntilAuthorized()`
-- `releaseWaitingForAuthorization()`
-- `discardWaitingForAuthorization()`
-- `retry()`
-- `sendReadReceipts()`
+## Operations
 
-## Direct incoming path
+`OperationMessage`/`MessageOperation` is the protocol path for edit/delete/reaction/poll updates. Direct supports Edit/Delete/Reaction. Group supports those plus PollVote/PollClose.
 
-`IncomingPacketRouter` dispatches Direct chat packets to `DirectIncomingPacketProcessor` and explicit handlers. Identity/invitation packets are not treated as chat messages; they are routed into `ConversationFlowHandler` through the protocol/orchestration boundary.
+`GroupOutgoingMessageProcessor` applies local mutation and sends operations to current active recipients. Group incoming handling validates the sender/target/membership/admin conditions before mutating local state.
 
-## Direct authorization
+## Polls
 
-A missing/invalid authorization does not cause plaintext fallback. Source material is persisted as waiting-for-authorization and released only after orchestration establishes fresh authorization. Explicit reconnect uses `ReconnectExistingConversationUseCase`/`ConversationFlowHandler.startExplicitReconnection()`.
+Polls are ordinary group `MessagePart`s. `GroupConversationViewModel` observes finished polls from `:feature:polls`, sends them through `SendGroupMessageUseCase`, and handles vote/close UI events through `VoteInGroupPollUseCase` and `CloseGroupPollUseCase`.
 
-## Group outgoing path
+## Delivery
 
-```text
-GroupConversationViewModel
-  -> Group domain use case
-  -> GroupMessageRepositoryImpl
-  -> GroupOutgoingMessageProcessor
-  -> GetGroupTransportRoutingMembersUseCase (membership)
-  -> current group security epoch / recipient keys
-  -> ProtocolOutbox (one packet per active recipient)
-```
+Direct delivery state is message-oriented. Group delivery/read state is aggregated from `MessageRecipientStateEntity` rows for each active recipient. Retrying a group message targets failed recipients rather than creating a new logical message.
 
-`GroupOutgoingMessageProcessor` currently implements send/flush, reactions, edit/delete, retry and read receipts. It requires active membership and current recipients; removed/inactive members are not ordinary recipients.
+## Pins
 
-## Group membership is not in Chats
-
-Group membership/security moved to `:feature:membership`. Current key implementation types include:
-
-- `GroupMembershipStateMachine`
-- `GroupMembershipLock`
-- `GroupMembershipPacketProtocol`
-- `GroupSecurityManager`
-- `GroupOwnerWelcomeDataSource`
-- `GroupIncomingWelcomeDataSource`
-- `GroupMembershipActivationDataSource`
-- `GroupMemberPromotionDataSource`
-- `GroupMemberRemovalDataSource`
-- `GroupLeaveDataSource`
-- `GroupMembershipDeletionDataSource`
-
-Chats asks Membership through domain use cases (`GetGroupTransportRoutingMembersUseCase`, `AuthorizeGroupMetadataUseCase`, `GetGroupCurrentEpochUseCase`, etc.).
-
-See [Group membership and group security](../features/group-membership.md).
-
-## Group pins
-
-Pins are chat-owned content metadata but use Membership for current admin authorization. `PinGroupMessageUseCase` and `UnpinGroupMessageUseCase` persist through `GroupPinRepositoryImpl`; `GroupPinBroadcaster` emits `GroupPinUpdatedPacket` to currently authorized members. See [Group pinned messages](../features/pinned-messages.md).
-
-## Typed message content
-
-Direct and Group both map chat-owned content representations across layers. Attachment storage/transfer remains in `:feature:attachments`; voice is an attachment-backed message feature in `:feature:voice`.
-
-## Presentation/recomposition boundary
-
-Direct and Group use separate `DirectConversationViewModel` and `GroupConversationViewModel` paths. Item-level child components/view models (for example voice message playback) should own fast-changing per-item state instead of forcing unrelated message rows to rebuild.
+`GroupPinRepositoryImpl` snapshots encoded `GroupMessageContent` with sender identity metadata. Pin synchronization is separate from message-history pagination. Poll pins can load nested image parts and forward live poll actions.

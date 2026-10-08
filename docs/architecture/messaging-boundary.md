@@ -4,8 +4,8 @@ Messaging crosses several modules, but the current code has a deliberate split b
 
 | Concern | Owner | Representative classes |
 |---|---|---|
-| Packet contracts/codecs | `:core:protocol` | `SparrowPacket`, `KotlinxPacketCodec`, packet data classes |
-| Persistent outbox contracts/state | `:core:protocol` | `ProtocolOutbox`, outbox state/event types |
+| Packet contracts/codecs | `:protocol` | `SparrowPacket`, `KotlinxPacketCodec`, packet data classes |
+| Persistent outbox contracts/state | `:protocol` | `ProtocolOutbox`, outbox state/event types |
 | Persistent outbox storage | `:data:database` | `ProtocolOutboxEntity`, `ProtocolOutboxDao`, `ProtocolOutboxFailureEventEntity` |
 | Generic outbox/incoming execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner` |
 | Cross-feature send/receive policy | `:feature:conversationorchestration` | `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `DefaultIncomingEnvelopeProcessor`, `ConversationFlowHandler` |
@@ -57,6 +57,10 @@ sequenceDiagram
     PH->>FLOW: identity/invite/membership/control workflow
     PH->>CHAT: conversation message/receipt workflow
 ```
+
+## Message operations
+
+Edits, deletes, reactions, poll votes and poll closes use the general `OperationMessage` / `MessageOperation` protocol. Direct chat accepts Edit/Delete/Reaction; Group additionally accepts PollVote/PollClose. These operations mutate existing messages and are processed through the same durable packet/outbox boundary rather than being stored as normal user-message content.
 
 ## Attachment/voice/link boundaries
 

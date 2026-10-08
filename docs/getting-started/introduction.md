@@ -71,8 +71,10 @@ URL whose body looks like:
 The HTTP `Content-Type` is irrelevant; the response body is explicitly parsed as JSON.
 
 For local builds, the directory URL is stored in `local.properties` as `controlPlaneDirectoryUrl`. The shared
-module exposes it through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`, and `AppViewModel` owns synchronization and
-health maintenance.
+module exposes it through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`. Startup/runtime ownership is task based:
+`LoadControlPlaneConfigurationStartupTask` loads the configured source, `RestoreControlPlaneDirectoryStartupTask`
+restores directory state, and `MaintainControlPlaneDirectoryStartupTask`, `MaintainControlPlaneHealthStartupTask`
+and `ObserveControlPlaneRegistrationTargetsStartupTask` keep it synchronized after navigation.
 
 ## Read next
 

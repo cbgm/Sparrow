@@ -14,7 +14,7 @@ The UI exposes these effective states:
 
 ## Local embedding model
 
-`core:embedding` owns the shared local embedding runtime. On Android it uses MediaPipe Text Embedder. The model is downloaded/prepared on device, stored locally and integrity-checked before being used.
+`feature:embedding` owns the shared local embedding runtime. On Android it uses MediaPipe Text Embedder. The model is downloaded/prepared on device, stored locally and integrity-checked before being used.
 
 The same local embedding runtime can be required by semantic search and message safety; enabling either feature can therefore require the shared model. No message text is sent to a cloud AI service for semantic search.
 

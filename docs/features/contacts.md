@@ -45,7 +45,7 @@ This keeps contact merging/routing ownership inside Contacts while `Conversation
 
 Device-contact reading/writing is exposed through repository/use-case boundaries including `ImportDeviceContactsUseCase`, `AddDeviceContactUseCase`, `DeviceContactsRepository`, `DeviceContactWriterRepository` and permission repositories/adapters.
 
-`AppViewModel` performs device contact synchronization after local identity readiness when read-contact permission is available.
+`SynchronizeDeviceContactsStartupTask` performs device-contact synchronization after local identity readiness when read-contact permission is available. The synchronization is registered with the application startup/runtime task set rather than being owned by `AppViewModel`.
 
 ## Blocking
 

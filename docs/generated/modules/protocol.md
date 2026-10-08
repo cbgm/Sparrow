@@ -1,4 +1,4 @@
-# `:core:crypto`
+# `:protocol`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,37 +6,42 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `crypto` |
-| Group | `core` |
-| Directory | `core/crypto` |
-| Build file | `core/crypto/build.gradle.kts` |
-| Kotlin files | 25 |
-| Production Kotlin files | 22 |
-| Test Kotlin files | 3 |
+| Name | `protocol` |
+| Group | `protocol` |
+| Directory | `protocol` |
+| Build file | `protocol/build.gradle.kts` |
+| Kotlin files | 96 |
+| Production Kotlin files | 77 |
+| Test Kotlin files | 19 |
 | Resource files | 1 |
-| Direct dependencies | 0 |
-| Direct dependents | 10 |
+| Direct dependencies | 3 |
+| Direct dependents | 14 |
 
 ## Source sets
 
-- `androidDeviceTest`
 - `androidMain`
 - `commonMain`
 - `commonTest`
 
 ## Dependencies
 
-None.
+- [`:core:base`](../modules/core-base.md)
+- [`:core:crypto`](../modules/core-crypto.md)
+- [`:core:util`](../modules/core-util.md)
 
 ## Dependents
 
+- [`:data:database`](../modules/data-database.md)
 - [`:feature:attachments`](../modules/feature-attachments.md)
+- [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:membership`](../modules/feature-membership.md)
+- [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:feature:notification`](../modules/feature-notification.md)
+- [`:feature:polls`](../modules/feature-polls.md)
 - [`:feature:transport`](../modules/feature-transport.md)
-- [`:protocol`](../modules/protocol.md)
+- [`:feature:voice`](../modules/feature-voice.md)
 - [`:shared`](../modules/shared.md)

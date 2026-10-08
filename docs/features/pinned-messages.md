@@ -1,42 +1,52 @@
-# Group pinned messages
+# Pinned group messages
 
-Sparrow supports one synchronized Group pin state through Chats, with authorization supplied by Membership.
+Groups support one current pinned user message. Pinning is admin-controlled and persists a snapshot so the pin can be rendered even when the original history page is not loaded.
 
-## Classes
+## Main classes
 
-- `GroupPin`, `GroupPinTarget`
+- `GroupPin` / `GroupPinTarget`
 - `GroupPinRepository` / `GroupPinRepositoryImpl`
 - `GroupPinDataSource`
 - `GroupPinBroadcaster`
-- `GroupPinPacketProtocol`
 - `PinGroupMessageUseCase`
 - `UnpinGroupMessageUseCase`
 - `LoadGroupPinnedAttachmentUseCase`
-- `GroupPinUpdatedPacket`
 - `GroupPinUpdatedPacketHandler`
-- `GroupPinEntity`, `GroupPinDao`
-- `GroupPinnedMessage` presentation component
+- `GroupPinnedMessage`
 
-## Pin flow
+## Snapshot model
 
-`PinGroupMessageUseCase` resolves the signing identity of the message sender using `GetGroupPinSenderSigningKeyUseCase` and, when required, `GetRemoteIdentityUseCase`. Chats' repository never reaches into Membership/Identity repositories directly.
-
-`GroupPinBroadcaster` calls `AuthorizeGroupMetadataUseCase.send(...)` to require current admin authorization and obtain the current epoch/recipient set. It signs/builds a `GroupPinUpdatedPacket` through `GroupPinPacketProtocol` and sends it through `GroupPacketBroadcaster` to active recipients.
+`GroupPinRepositoryImpl.pin(...)` validates that the target is a readable group user message, resolves the sender signing key, builds `GroupMessageContent` from text plus message parts, stores the pin and broadcasts the new state.
 
 ```mermaid
 sequenceDiagram
-    participant UI as Group conversation UI
+    participant UI as GroupConversationViewModel
     participant UC as PinGroupMessageUseCase
-    participant MEM as AuthorizeGroupMetadataUseCase
-    participant REP as GroupPinRepositoryImpl
+    participant R as GroupPinRepositoryImpl
+    participant DB as GroupPinDataSource
     participant B as GroupPinBroadcaster
-    participant OUT as GroupPacketBroadcaster
 
-    UI->>UC: pin(groupId, messageId)
-    UC->>REP: resolve pin target
-    UC->>MEM: resolve sender/admin security input
-    UC->>REP: persist pin
-    REP->>B: broadcast current pin
-    B->>MEM: authorize metadata + current recipients
-    B->>OUT: GroupPinUpdatedPacket per recipient
+    UI->>UC: pin(messageId)
+    UC->>R: getPinTarget / pin
+    R->>R: require local admin + readable group message
+    R->>DB: save GroupPinEntity + encoded GroupMessageContent
+    R->>B: broadcast(groupId)
 ```
+
+`GroupPinEntity` stores the message ID, sent/pinned/change timestamps, sender identity metadata and encoded message content. Unpinning writes an unpinned state with a monotonically increasing `changedAtEpochMilliseconds` and broadcasts it.
+
+## Attachments
+
+Pinned attachment loading uses the same message-part/blob infrastructure. `GroupPinRepositoryImpl.findPinnedAttachment(...)` searches top-level snapshot parts and nested `PollDto.images`, then `loadDetachedBytes(...)` resolves the encrypted blob.
+
+The filesystem cache does **not** need separate `writePinned`/`readPinned` APIs; “pinned” is a source context, not a different kind of attachment file.
+
+## Polls
+
+Pinned polls are rendered through the normal `PollMessageContent`. `GroupPinnedMessage` forwards vote and close callbacks with the original message ID and poll ID, so a pin is interactive rather than a static screenshot.
+
+`MessagePartSourceUi.GroupPin(groupId)` gives pinned parts a stable source-aware `instanceKey` (`group-pin:<groupId>:<partId>`) without creating a parallel poll model.
+
+## Live vs snapshot state
+
+The snapshot is required when the original history message is unavailable. When the corresponding message is already present in live conversation state, presentation should prefer that current message so reactions, poll votes and close state reflect ongoing updates rather than remaining frozen at pin time.
