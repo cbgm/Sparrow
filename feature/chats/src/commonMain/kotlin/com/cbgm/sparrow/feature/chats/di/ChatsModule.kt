@@ -143,11 +143,21 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.VoteInGroupPollUseCas
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.DirectIdentityController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationActionsController
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationActionsController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupPinController
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupPollController
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.chats.runtime.group.incoming.GroupVerificationReceiptPacketHandler
@@ -159,7 +169,6 @@ import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificati
 import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
-import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
 import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
 import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
@@ -379,6 +388,11 @@ private fun org.koin.core.module.Module.registerUseCases() {
 }
 
 private fun org.koin.core.module.Module.registerViewModels() {
+    factory { ConversationHistoryController(get(), get()) }
+    factory { ConversationMediaController(get()) }
+    factory { SharedContactController(get()) }
+    factory { DirectIdentityController(get(), get()) }
+
     viewModel {
         ContactsFlowViewModel(prepareConversationOpen = get())
     }
@@ -409,35 +423,38 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel {
+        val savedStateHandle = get<SavedStateHandle>()
+        val media = get<ConversationMediaController>()
+        val composer = ConversationComposerController(savedStateHandle, media)
+        val actions = GroupConversationActionsController(
+            get(),
+            composer,
+            media,
+            ConversationVoiceController(get(), get(), media),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get()
+        )
+        val pollController = GroupPollController(get(), get(), get(), get(), media)
+        val pinController = GroupPinController(get(), get(), get(), get())
         GroupConversationViewModel(
-            savedStateHandle = get(),
+            savedStateHandle = savedStateHandle,
             observeChatContext = get(),
-            sendMessage = get(),
-            markConversationRead = get(),
-            retryMessage = get(),
-            toggleMessageReaction = get(),
-            voteInPollUseCase = get(),
-            closePollUseCase = get(),
-            deleteMessageUseCase = get(),
-            editMessageUseCase = get(),
-            pinMessageUseCase = get(),
-            activateExpensesUseCase = get(),
-            closeExpensesUseCase = get(),
-            unpinMessageUseCase = get(),
             observeMemberIndicator = get(),
             setGroupIndicator = get(),
             observeMessageSafetyAssessments = get(),
-            addDeviceContact = get(),
-            forwardMessageUseCase = get(),
-            loadOlderMessageHistory = get(),
-            findMessageHistoryCursor = get(),
-            getRecordedVoiceAttachment = get(),
-            resetVoiceComposer = get(),
             observeVoiceRecordingActive = get(),
-            observeFinishedPoll = get(),
-            clearFinishedPoll = get(),
             getLocalIdentityName = get(),
-            mediaFiles = get()
+            historyController = get(),
+            mediaController = media,
+            composerController = composer,
+            actionsController = actions,
+            pollController = pollController,
+            pinController = pinController
         )
     }
 
@@ -473,28 +490,33 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel { (savedStateHandle: SavedStateHandle) ->
+        val media = get<ConversationMediaController>()
+        val composer = ConversationComposerController(savedStateHandle, media)
+        val actions = DirectConversationActionsController(
+            get(),
+            composer,
+            media,
+            ConversationVoiceController(get(), get(), media),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get()
+        )
         DirectConversationViewModel(
             savedStateHandle = savedStateHandle,
             observeChatContext = get(),
-            sendOrQueueDirectMessage = get(),
-            recoverManualIdentityExchange = get(),
-            recordLocalIdentityShared = get<RecordLocalIdentitySharedUseCase>(),
-            markConversationRead = get(),
-            retryMessage = get(),
-            toggleMessageReaction = get(),
-            deleteMessageUseCase = get(),
-            editMessageUseCase = get(),
             observeIndicator = get(),
             setIndicator = get(),
             observeMessageSafetyAssessments = get(),
-            addDeviceContact = get(),
-            forwardMessageUseCase = get(),
-            loadOlderMessageHistory = get(),
-            findMessageHistoryCursor = get(),
-            getRecordedVoiceAttachment = get(),
-            resetVoiceComposer = get(),
             observeVoiceRecordingActive = get(),
-            mediaFiles = get()
+            historyController = get(),
+            mediaController = media,
+            composerController = composer,
+            identityController = get(),
+            actionsController = actions
         )
     }
 }

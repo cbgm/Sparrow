@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.attachmentColors
@@ -102,10 +103,15 @@ fun AttachmentBar(
             if (onClickPoll != null || onClickActivateExpenses != null || isExpensesActive) {
                 HorizontalDivider(
                     thickness = Dimens.Base.dividerThickness,
-                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.base)
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider),
+                    modifier = Modifier.padding(
+                        vertical = MaterialTheme.spacing.base,
+                        horizontal = MaterialTheme.spacing.medium
+                    )
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.base),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(vertical = MaterialTheme.spacing.micro),
                     horizontalArrangement = Arrangement.spacedBy(
                         space = MaterialTheme.spacing.large,
                         alignment = Alignment.CenterHorizontally
