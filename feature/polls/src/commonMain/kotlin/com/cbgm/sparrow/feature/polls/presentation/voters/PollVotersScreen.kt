@@ -98,7 +98,7 @@ private fun PollVotersHeader(
     ) {
         Text(
             text = uiState.question,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -133,7 +133,7 @@ private fun PollVoterGroup(
             Text(
                 text = section.optionText,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )

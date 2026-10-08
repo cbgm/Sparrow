@@ -35,8 +35,11 @@ fun PollUi.toPollMessageUiState(nowEpochMilliseconds: Long): PollMessageUiState 
     val totalVoters = voterIds.size
     val remainingOpenMilliseconds = expiresAtEpochMilliseconds?.minus(nowEpochMilliseconds)
     val isClosed =
-        closedAtEpochMilliseconds != null ||
-            remainingOpenMilliseconds?.let { it <= 0L } == true
+        PollPolicy.isClosedAt(
+            closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+            expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+            epochMilliseconds = nowEpochMilliseconds
+        )
     val remainingOpenMinutes =
         remainingOpenMilliseconds
             ?.takeIf { !isClosed }

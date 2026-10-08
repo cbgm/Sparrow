@@ -1,11 +1,26 @@
 package com.cbgm.sparrow.core.messagepart.domain.model
 
+fun Poll.isClosedAt(epochMilliseconds: Long): Boolean =
+    PollPolicy.isClosedAt(
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+        epochMilliseconds = epochMilliseconds
+    )
+
 object PollPolicy {
     const val MIN_OPTIONS = 2
     const val MAX_OPTIONS = 6
     const val MAX_QUESTION_LENGTH = 200
     const val MAX_DESCRIPTION_LENGTH = 500
     const val LOCAL_VOTER_ID = "__local_poll_voter__"
+
+    fun isClosedAt(
+        closedAtEpochMilliseconds: Long?,
+        expiresAtEpochMilliseconds: Long?,
+        epochMilliseconds: Long
+    ): Boolean =
+        closedAtEpochMilliseconds != null ||
+            expiresAtEpochMilliseconds?.let { expiresAt -> epochMilliseconds >= expiresAt } == true
 
     fun requireValid(poll: Poll) {
         require(poll.id.isNotBlank()) { "Poll ID must not be blank" }
@@ -34,8 +49,7 @@ object PollPolicy {
         requireValid(poll)
         require(voterId.isNotBlank()) { "Poll voter ID must not be blank" }
         require(selectedOptionIds.isNotEmpty()) { "A poll vote requires at least one option" }
-        require(poll.closedAtEpochMilliseconds == null) { "Poll is closed" }
-        require(poll.expiresAtEpochMilliseconds?.let { it > nowEpochMilliseconds } != false) { "Poll is expired" }
+        require(!poll.isClosedAt(nowEpochMilliseconds)) { "Poll is closed" }
 
         val optionIds = poll.options.mapTo(mutableSetOf(), PollOption::id)
         require(selectedOptionIds.all { it in optionIds }) { "Poll vote contains an unknown option" }

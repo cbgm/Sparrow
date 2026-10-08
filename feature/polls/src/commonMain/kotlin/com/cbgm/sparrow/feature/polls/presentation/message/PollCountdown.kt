@@ -1,11 +1,15 @@
 package com.cbgm.sparrow.feature.polls.presentation.message
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MILLISECONDS_PER_MINUTE
@@ -20,6 +24,23 @@ internal fun rememberPollNowEpochMilliseconds(part: PollUi): Long {
         part.closedAtEpochMilliseconds
     ) {
         mutableLongStateOf(SystemClock.nowEpochMilliseconds())
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, part.instanceKey) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
+                    nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+        }
+
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(
