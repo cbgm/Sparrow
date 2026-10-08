@@ -2,8 +2,9 @@ package com.cbgm.sparrow.feature.polls.presentation.create.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
@@ -24,7 +25,6 @@ import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.polls.util.PollConstants
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_add_media
-import com.cbgm.sparrow.resources.feature_polls_media
 import com.cbgm.sparrow.resources.feature_polls_media_limit
 import org.jetbrains.compose.resources.stringResource
 
@@ -36,12 +36,14 @@ fun PollMediaEditor(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        Text(text = stringResource(Res.string.feature_polls_media), style = MaterialTheme.typography.titleSmall)
         Text(
-            text = stringResource(Res.string.feature_polls_media_limit, PollConstants.MAX_MEDIA_ITEMS),
+            text = stringResource(
+                Res.string.feature_polls_media_limit,
+                PollConstants.MAX_MEDIA_ITEMS
+            ),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -54,11 +56,12 @@ fun PollMediaEditor(
         )
 
         if (media.size < PollConstants.MAX_MEDIA_ITEMS) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                TextButton(onClick = onAddMedia) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Text(text = stringResource(Res.string.feature_polls_add_media))
-                }
+            TextButton(
+                onClick = onAddMedia,
+                contentPadding = PaddingValues(MaterialTheme.spacing.zero)
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                Text(text = stringResource(Res.string.feature_polls_add_media))
             }
         }
     }

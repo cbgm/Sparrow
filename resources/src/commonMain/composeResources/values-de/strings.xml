@@ -690,6 +690,7 @@
     <string name="feature_polls_description">Beschreibung (optional)</string>
     <string name="feature_polls_description_placeholder">Weitere Informationen hinzufügen…</string>
     <string name="feature_polls_options">Antwortmöglichkeiten</string>
+    <string name="feature_polls_infos">Titel und Beschreibung</string>
     <string name="feature_polls_option">Option %1$d</string>
     <string name="feature_polls_add_option">Option hinzufügen</string>
     <string name="feature_polls_remove_option">Option entfernen</string>
@@ -699,12 +700,24 @@
     <string name="feature_polls_add_from_camera">Kamera</string>
     <string name="feature_polls_settings">Umfrageeinstellungen</string>
     <string name="feature_polls_poll_ends">Umfrage endet</string>
-    <string name="feature_polls_expiry_hint">Lokales Datum und lokale Uhrzeit eingeben.</string>
-    <string name="feature_polls_expiry_date">Datum</string>
-    <string name="feature_polls_expiry_time">Uhrzeit</string>
-    <string name="feature_polls_expiry_date_placeholder">JJJJ-MM-TT</string>
-    <string name="feature_polls_expiry_time_placeholder">HH:MM</string>
-    <string name="feature_polls_expiry_invalid">Wähle ein gültiges Datum und eine gültige Uhrzeit in der Zukunft.</string>
+    <string name="feature_polls_expiry_hint">Gib ein, wie viele Minuten die Umfrage geöffnet bleibt.</string>
+    <string name="feature_polls_expiry_minutes">Minuten</string>
+    <string name="feature_polls_expiry_minutes_placeholder">z. B. 3600</string>
+    <string name="feature_polls_expiry_invalid">Gib eine positive Anzahl an Minuten ein.</string>
+    <string name="feature_polls_duration_conversion">= %1$s</string>
+    <string name="feature_polls_open_for">Offen für %1$s</string>
+    <plurals name="feature_polls_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <plurals name="feature_polls_hours">
+        <item quantity="one">%1$d Stunde</item>
+        <item quantity="other">%1$d Stunden</item>
+    </plurals>
+    <plurals name="feature_polls_minutes">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minuten</item>
+    </plurals>
     <string name="feature_polls_allow_multiple">Mehrere Antworten erlauben</string>
     <string name="feature_polls_allow_vote_change">Ändern der Stimme erlauben</string>
     <string name="feature_polls_anonymous">Anonyme Abstimmung</string>
@@ -719,7 +732,6 @@
     <string name="feature_polls_voters_title">Umfrage-Stimmen</string>
     <string name="feature_polls_voted_for">Abgestimmt für %1$s</string>
     <string name="feature_polls_closed">Umfrage geschlossen</string>
-    <string name="feature_polls_expired">Umfrage abgelaufen</string>
     <plurals name="feature_polls_voters">
         <item quantity="one">%1$d Teilnehmer</item>
         <item quantity="other">%1$d Teilnehmer</item>

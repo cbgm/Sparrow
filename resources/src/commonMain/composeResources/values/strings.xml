@@ -685,6 +685,7 @@
     <string name="feature_polls_question_placeholder">Ask a question…</string>
     <string name="feature_polls_description">Description (optional)</string>
     <string name="feature_polls_description_placeholder">Add more context…</string>
+    <string name="feature_polls_infos">Title and description</string>
     <string name="feature_polls_options">Options</string>
     <string name="feature_polls_option">Option %1$d</string>
     <string name="feature_polls_add_option">Add option</string>
@@ -695,12 +696,24 @@
     <string name="feature_polls_add_from_camera">Camera</string>
     <string name="feature_polls_settings">Poll settings</string>
     <string name="feature_polls_poll_ends">Poll ends</string>
-    <string name="feature_polls_expiry_hint">Enter the local date and time.</string>
-    <string name="feature_polls_expiry_date">Date</string>
-    <string name="feature_polls_expiry_time">Time</string>
-    <string name="feature_polls_expiry_date_placeholder">YYYY-MM-DD</string>
-    <string name="feature_polls_expiry_time_placeholder">HH:MM</string>
-    <string name="feature_polls_expiry_invalid">Choose a valid future date and time.</string>
+    <string name="feature_polls_expiry_hint">Enter how many minutes the poll stays open.</string>
+    <string name="feature_polls_expiry_minutes">Minutes</string>
+    <string name="feature_polls_expiry_minutes_placeholder">e.g. 3600</string>
+    <string name="feature_polls_expiry_invalid">Enter a positive number of minutes.</string>
+    <string name="feature_polls_duration_conversion">= %1$s</string>
+    <string name="feature_polls_open_for">Open for %1$s</string>
+    <plurals name="feature_polls_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="feature_polls_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="feature_polls_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
     <string name="feature_polls_allow_multiple">Allow multiple answers</string>
     <string name="feature_polls_allow_vote_change">Allow changing vote</string>
     <string name="feature_polls_anonymous">Anonymous voting</string>
@@ -715,7 +728,6 @@
     <string name="feature_polls_voters_title">Poll votes</string>
     <string name="feature_polls_voted_for">Voted for %1$s</string>
     <string name="feature_polls_closed">Poll closed</string>
-    <string name="feature_polls_expired">Poll expired</string>
     <plurals name="feature_polls_voters">
         <item quantity="one">%1$d voter</item>
         <item quantity="other">%1$d voters</item>

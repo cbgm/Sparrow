@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.polls.presentation.message.mapper
 
 import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
-import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState
@@ -12,11 +11,9 @@ import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVoterSection
 import com.cbgm.sparrow.feature.polls.presentation.voters.model.PollVotersUiState
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_MESSAGE_MEDIA_PREVIEW
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_VOTER_PREVIEW
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
+import com.cbgm.sparrow.feature.polls.util.PollConstants.MILLISECONDS_PER_MINUTE
 
-fun PollUi.toPollMessageUiState(): PollMessageUiState {
+fun PollUi.toPollMessageUiState(nowEpochMilliseconds: Long): PollMessageUiState {
     val media =
         images.map { image ->
             MediaItemUi(
@@ -36,9 +33,17 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState {
             .mapTo(linkedSetOf()) { option -> option.id }
     val voterIds = options.flatMapTo(linkedSetOf()) { option -> option.voterIds }
     val totalVoters = voterIds.size
-    val isExpired = expiresAtEpochMilliseconds?.let { it <= SystemClock.nowEpochMilliseconds() } == true
-    val isClosed = closedAtEpochMilliseconds != null
-    val canInteract = !isClosed && !isExpired && (allowVoteChange || submittedOptionIds.isEmpty())
+    val remainingOpenMilliseconds = expiresAtEpochMilliseconds?.minus(nowEpochMilliseconds)
+    val isClosed =
+        closedAtEpochMilliseconds != null ||
+            remainingOpenMilliseconds?.let { it <= 0L } == true
+    val remainingOpenMinutes =
+        remainingOpenMilliseconds
+            ?.takeIf { !isClosed }
+            ?.let { remaining ->
+                (remaining + MILLISECONDS_PER_MINUTE - 1L) / MILLISECONDS_PER_MINUTE
+            }
+    val canInteract = !isClosed && (allowVoteChange || submittedOptionIds.isEmpty())
 
     val mappedOptions =
         options.map { option ->
@@ -108,15 +113,7 @@ fun PollUi.toPollMessageUiState(): PollMessageUiState {
         allowVoteChange = allowVoteChange,
         isAnonymous = isAnonymous,
         isClosed = isClosed,
-        isExpired = isExpired,
-        expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
-        expiryLabel =
-            expiresAtEpochMilliseconds?.let {
-                Instant.fromEpochMilliseconds(it)
-                    .toLocalDateTime(TimeZone.currentSystemDefault())
-                    .toString()
-                    .replace('T', ' ')
-            },
+        remainingOpenMinutes = remainingOpenMinutes,
         canClose = canClose,
         canInteract = canInteract,
         canShowVotes = canShowVotes,

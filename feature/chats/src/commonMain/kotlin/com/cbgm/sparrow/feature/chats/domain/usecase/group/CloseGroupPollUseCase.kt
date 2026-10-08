@@ -11,14 +11,15 @@ class CloseGroupPollUseCase(
     suspend operator fun invoke(
         groupId: String,
         messageId: String,
-        pollId: String
+        pollId: String,
+        closedAtEpochMilliseconds: Long = SystemClock.nowEpochMilliseconds()
     ): Result<Unit> {
         val access = getMessageMembershipAccess(groupId).getOrElse { return Result.failure(it) }
         return repository.closePoll(
             groupId = groupId,
             messageId = messageId,
             pollId = pollId,
-            closedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+            closedAtEpochMilliseconds = closedAtEpochMilliseconds,
             access = access
         )
     }

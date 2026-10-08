@@ -2,8 +2,10 @@ package com.cbgm.sparrow.feature.polls.presentation.create.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,7 +29,6 @@ import com.cbgm.sparrow.feature.polls.util.PollConstants
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_add_option
 import com.cbgm.sparrow.resources.feature_polls_option
-import com.cbgm.sparrow.resources.feature_polls_options
 import com.cbgm.sparrow.resources.feature_polls_remove_option
 import org.jetbrains.compose.resources.stringResource
 
@@ -39,15 +40,7 @@ fun PollOptionsEditor(
     onAddOption: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-    ) {
-        Text(
-            text = stringResource(Res.string.feature_polls_options),
-            style = MaterialTheme.typography.titleSmall
-        )
-
+    Column(modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacing.small)) {
         options.forEachIndexed { index, option ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -74,7 +67,13 @@ fun PollOptionsEditor(
             }
         }
 
-        TextButton(onClick = onAddOption, enabled = options.size < PollConstants.MAX_OPTIONS) {
+        TextButton(
+            onClick = onAddOption,
+            enabled = options.size < PollConstants.MAX_OPTIONS,
+            contentPadding = PaddingValues(
+                MaterialTheme.spacing.zero
+            )
+        ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Text(text = stringResource(Res.string.feature_polls_add_option))
         }

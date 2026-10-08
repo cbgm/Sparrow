@@ -18,6 +18,7 @@ import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiEven
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiState
 import com.cbgm.sparrow.feature.polls.presentation.create.model.PollOptionEditorUi
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_DESCRIPTION_LENGTH
+import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_EXPIRY_MINUTES
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_MEDIA_ITEMS
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_OPTIONS
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_QUESTION_LENGTH
@@ -30,11 +31,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
 
 class CreatePollViewModel(
     private val mediaFiles: MediaSelectionFileRepository,
@@ -52,7 +48,6 @@ class CreatePollViewModel(
             CreatePollUiEvent.BackClicked -> onBackClicked()
             CreatePollUiEvent.AddOptionClicked -> addOption()
             CreatePollUiEvent.CreateClicked -> createPoll()
-            CreatePollUiEvent.ExpiryCleared -> updateExpiryEnabled(false)
             is CreatePollUiEvent.QuestionChanged -> updateQuestion(event.value)
             is CreatePollUiEvent.DescriptionChanged -> updateDescription(event.value)
             is CreatePollUiEvent.OptionChanged -> updateOption(event.id, event.value)
@@ -60,8 +55,7 @@ class CreatePollViewModel(
             is CreatePollUiEvent.MediaSelectionChanged -> updateMedia(event.result)
             is CreatePollUiEvent.RemoveMediaClicked -> removeMedia(event.id)
             is CreatePollUiEvent.ExpiryEnabledChanged -> updateExpiryEnabled(event.enabled)
-            is CreatePollUiEvent.ExpiryDateChanged -> updateExpiryDate(event.value)
-            is CreatePollUiEvent.ExpiryTimeChanged -> updateExpiryTime(event.value)
+            is CreatePollUiEvent.ExpiryMinutesChanged -> updateExpiryMinutes(event.value)
             is CreatePollUiEvent.MultipleSelectionChanged -> updateMultipleSelection(event.enabled)
             is CreatePollUiEvent.VoteChangeChanged -> updateVoteChange(event.enabled)
             is CreatePollUiEvent.AnonymousChanged -> updateAnonymous(event.enabled)
@@ -166,26 +160,17 @@ class CreatePollViewModel(
 
     private fun updateExpiryEnabled(enabled: Boolean) {
         _uiState.update { state ->
-            if (enabled) {
-                state.copy(expiryEnabled = true).withResolvedExpiry()
-            } else {
-                state.copy(
-                    expiryEnabled = false,
-                    expiryDate = "",
-                    expiryTime = "",
-                    expiresAtEpochMilliseconds = null,
-                    expiryInvalid = false
-                ).validated()
-            }
+            state.copy(
+                expiryEnabled = enabled,
+                expiryMinutes = if (enabled) state.expiryMinutes else "",
+                expiryInvalid = false
+            ).validated()
         }
     }
 
-    private fun updateExpiryDate(value: String) {
-        _uiState.update { it.copy(expiryDate = value).withResolvedExpiry() }
-    }
-
-    private fun updateExpiryTime(value: String) {
-        _uiState.update { it.copy(expiryTime = value).withResolvedExpiry() }
+    private fun updateExpiryMinutes(value: String) {
+        val minutes = value.filter(Char::isDigit)
+        _uiState.update { it.copy(expiryMinutes = minutes).validated() }
     }
 
     private fun updateMultipleSelection(enabled: Boolean) {
@@ -201,13 +186,18 @@ class CreatePollViewModel(
     }
 
     private fun createPoll() {
-        val state = _uiState.value.withResolvedExpiry().validated()
+        val state = _uiState.value.validated()
         _uiState.value = state
         if (!state.canCreate) return
         _uiState.value = state.copy(isSending = true, canCreate = false)
         viewModelScope.launch {
             try {
-                finishPoll(state.toPoll(pollId))
+                finishPoll(
+                    state.toPoll(
+                        id = pollId,
+                        nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    )
+                )
                     .onSuccess {
                         _uiState.update { it.copy(media = emptyList()) }
                         navigator.popBackStack()
@@ -221,23 +211,17 @@ class CreatePollViewModel(
         }
     }
 
-    private fun CreatePollUiState.withResolvedExpiry(): CreatePollUiState {
-        if (!expiryEnabled) return validated()
-
-        val fieldsComplete = expiryDate.isNotBlank() && expiryTime.isNotBlank()
-        val resolved = if (fieldsComplete) resolvePollExpiry(expiryDate, expiryTime) else null
-        val valid = resolved != null && resolved > SystemClock.nowEpochMilliseconds()
-
-        return copy(
-            expiresAtEpochMilliseconds = resolved?.takeIf { valid },
-            expiryInvalid = fieldsComplete && !valid
-        ).validated()
-    }
-
     private fun CreatePollUiState.validated(): CreatePollUiState {
         val validOptions = options.size in MIN_OPTIONS..MAX_OPTIONS && options.all { it.text.isNotBlank() }
-        val validExpiry = !expiryEnabled || expiresAtEpochMilliseconds != null
-        return copy(canCreate = !isSending && question.isNotBlank() && validOptions && validExpiry && isValidPollMedia(media))
+        val parsedExpiryMinutes = expiryMinutes.toLongOrNull()
+        val validExpiry =
+            !expiryEnabled ||
+                parsedExpiryMinutes != null && parsedExpiryMinutes in 1L..MAX_EXPIRY_MINUTES
+
+        return copy(
+            expiryInvalid = expiryEnabled && expiryMinutes.isNotBlank() && !validExpiry,
+            canCreate = !isSending && question.isNotBlank() && validOptions && validExpiry && isValidPollMedia(media)
+        )
     }
 
     override fun onCleared() {
@@ -248,13 +232,4 @@ class CreatePollViewModel(
         CreatePollUiState(
             options = List(MIN_OPTIONS) { PollOptionEditorUi(id = IdGenerator.generate("poll-option")) }
         ).validated()
-
-    private fun resolvePollExpiry(date: String, time: String): Long? =
-        runCatching {
-            val localDate = LocalDate.parse(date.trim())
-            val localTime = LocalTime.parse(time.trim())
-            LocalDateTime(localDate, localTime)
-                .toInstant(TimeZone.currentSystemDefault())
-                .toEpochMilliseconds()
-        }.getOrNull()
 }

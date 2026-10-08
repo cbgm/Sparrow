@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -12,38 +13,36 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.polls.presentation.component.pollDurationLabel
+import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_EXPIRY_MINUTES
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_polls_allow_multiple
 import com.cbgm.sparrow.resources.feature_polls_allow_vote_change
 import com.cbgm.sparrow.resources.feature_polls_anonymous
 import com.cbgm.sparrow.resources.feature_polls_anonymous_hint
-import com.cbgm.sparrow.resources.feature_polls_expiry_date
-import com.cbgm.sparrow.resources.feature_polls_expiry_date_placeholder
+import com.cbgm.sparrow.resources.feature_polls_duration_conversion
 import com.cbgm.sparrow.resources.feature_polls_expiry_hint
 import com.cbgm.sparrow.resources.feature_polls_expiry_invalid
-import com.cbgm.sparrow.resources.feature_polls_expiry_time
-import com.cbgm.sparrow.resources.feature_polls_expiry_time_placeholder
+import com.cbgm.sparrow.resources.feature_polls_expiry_minutes
+import com.cbgm.sparrow.resources.feature_polls_expiry_minutes_placeholder
 import com.cbgm.sparrow.resources.feature_polls_poll_ends
-import com.cbgm.sparrow.resources.feature_polls_settings
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PollSettingsSection(
     expiryEnabled: Boolean,
-    expiryDate: String,
-    expiryTime: String,
+    expiryMinutes: String,
     expiryInvalid: Boolean,
     allowMultipleSelection: Boolean,
     allowVoteChange: Boolean,
     isAnonymous: Boolean,
     onExpiryEnabledChanged: (Boolean) -> Unit,
-    onExpiryDateChanged: (String) -> Unit,
-    onExpiryTimeChanged: (String) -> Unit,
+    onExpiryMinutesChanged: (String) -> Unit,
     onMultipleSelectionChanged: (Boolean) -> Unit,
     onVoteChangeChanged: (Boolean) -> Unit,
     onAnonymousChanged: (Boolean) -> Unit,
@@ -53,68 +52,66 @@ fun PollSettingsSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        Text(
-            text = stringResource(Res.string.feature_polls_settings),
-            style = MaterialTheme.typography.titleSmall
-        )
-        SparrowCardNoAnimation {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-            ) {
-                PollSettingSwitchRow(
-                    title = stringResource(Res.string.feature_polls_poll_ends),
-                    checked = expiryEnabled,
-                    onCheckedChange = onExpiryEnabledChanged
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
+            PollSettingSwitchRow(
+                title = stringResource(Res.string.feature_polls_poll_ends),
+                checked = expiryEnabled,
+                onCheckedChange = onExpiryEnabledChanged
+            )
+            if (expiryEnabled) {
+                Text(
+                    text = stringResource(Res.string.feature_polls_expiry_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (expiryEnabled) {
-                    Text(
-                        text = stringResource(Res.string.feature_polls_expiry_hint),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+                ) {
+                    SparrowInputField(
+                        value = expiryMinutes,
+                        onValueChange = onExpiryMinutesChanged,
+                        label = stringResource(Res.string.feature_polls_expiry_minutes),
+                        placeholderText = stringResource(Res.string.feature_polls_expiry_minutes_placeholder),
+                        modifier = Modifier.weight(1f),
+                        isSingleLine = true,
+                        isError = expiryInvalid,
+                        errorText = stringResource(Res.string.feature_polls_expiry_invalid),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-                    ) {
-                        SparrowInputField(
-                            value = expiryDate,
-                            onValueChange = onExpiryDateChanged,
-                            label = stringResource(Res.string.feature_polls_expiry_date),
-                            placeholderText = stringResource(Res.string.feature_polls_expiry_date_placeholder),
-                            modifier = Modifier.weight(1f),
-                            isSingleLine = true,
-                            isError = expiryInvalid,
-                            errorText = stringResource(Res.string.feature_polls_expiry_invalid)
-                        )
-                        SparrowInputField(
-                            value = expiryTime,
-                            onValueChange = onExpiryTimeChanged,
-                            label = stringResource(Res.string.feature_polls_expiry_time),
-                            placeholderText = stringResource(Res.string.feature_polls_expiry_time_placeholder),
-                            modifier = Modifier.weight(1f),
-                            isSingleLine = true,
-                            isError = expiryInvalid,
-                            errorText = stringResource(Res.string.feature_polls_expiry_invalid)
-                        )
-                    }
+                    expiryMinutes.toLongOrNull()?.takeIf { it in 1L..MAX_EXPIRY_MINUTES }
+                        ?.let { minutes ->
+                            Text(
+                                text = stringResource(
+                                    Res.string.feature_polls_duration_conversion,
+                                    pollDurationLabel(minutes)
+                                ),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                 }
-                PollSettingSwitchRow(
-                    title = stringResource(Res.string.feature_polls_allow_multiple),
-                    checked = allowMultipleSelection,
-                    onCheckedChange = onMultipleSelectionChanged
-                )
-                PollSettingSwitchRow(
-                    title = stringResource(Res.string.feature_polls_allow_vote_change),
-                    checked = allowVoteChange,
-                    onCheckedChange = onVoteChangeChanged
-                )
-                PollSettingSwitchRow(
-                    title = stringResource(Res.string.feature_polls_anonymous),
-                    description = stringResource(Res.string.feature_polls_anonymous_hint),
-                    checked = isAnonymous,
-                    onCheckedChange = onAnonymousChanged
-                )
             }
+            PollSettingSwitchRow(
+                title = stringResource(Res.string.feature_polls_allow_multiple),
+                checked = allowMultipleSelection,
+                onCheckedChange = onMultipleSelectionChanged
+            )
+            PollSettingSwitchRow(
+                title = stringResource(Res.string.feature_polls_allow_vote_change),
+                checked = allowVoteChange,
+                onCheckedChange = onVoteChangeChanged
+            )
+            PollSettingSwitchRow(
+                title = stringResource(Res.string.feature_polls_anonymous),
+                description = stringResource(Res.string.feature_polls_anonymous_hint),
+                checked = isAnonymous,
+                onCheckedChange = onAnonymousChanged
+            )
         }
     }
 }
@@ -158,15 +155,13 @@ private fun PollSettingsSectionPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             PollSettingsSection(
                 expiryEnabled = true,
-                expiryDate = "2026-10-01",
-                expiryTime = "18:00",
+                expiryMinutes = "3600",
                 expiryInvalid = false,
                 allowMultipleSelection = true,
                 allowVoteChange = true,
                 isAnonymous = false,
                 onExpiryEnabledChanged = {},
-                onExpiryDateChanged = {},
-                onExpiryTimeChanged = {},
+                onExpiryMinutesChanged = {},
                 onMultipleSelectionChanged = {},
                 onVoteChangeChanged = {},
                 onAnonymousChanged = {}

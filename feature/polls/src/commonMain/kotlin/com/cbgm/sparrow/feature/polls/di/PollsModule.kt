@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.polls.di
 
-import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.feature.polls.data.repository.PollComposerRepositoryImpl
 import com.cbgm.sparrow.feature.polls.domain.repository.PollComposerRepository
 import com.cbgm.sparrow.feature.polls.domain.usecase.ClearFinishedPollUseCase
@@ -20,9 +19,5 @@ val pollsModule =
         factory { ClearFinishedPollUseCase(repository = get()) }
 
         viewModel { CreatePollViewModel(mediaFiles = get(), finishPoll = get()) }
-        viewModel { parameters ->
-            PollMessageViewModel(
-                part = parameters.get<PollUi>()
-            )
-        }
+        viewModel { PollMessageViewModel() }
     }

@@ -9,8 +9,6 @@ sealed interface CreatePollUiEvent {
 
     data object CreateClicked : CreatePollUiEvent
 
-    data object ExpiryCleared : CreatePollUiEvent
-
     data class QuestionChanged(
         val value: String
     ) : CreatePollUiEvent
@@ -40,11 +38,7 @@ sealed interface CreatePollUiEvent {
         val enabled: Boolean
     ) : CreatePollUiEvent
 
-    data class ExpiryDateChanged(
-        val value: String
-    ) : CreatePollUiEvent
-
-    data class ExpiryTimeChanged(
+    data class ExpiryMinutesChanged(
         val value: String
     ) : CreatePollUiEvent
 

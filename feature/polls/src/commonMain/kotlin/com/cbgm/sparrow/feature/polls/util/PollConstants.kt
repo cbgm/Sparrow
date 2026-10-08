@@ -11,4 +11,6 @@ object PollConstants {
     const val MAX_DESCRIPTION_LENGTH = PollPolicy.MAX_DESCRIPTION_LENGTH
     const val MAX_VOTER_PREVIEW = 3
     const val MAX_MESSAGE_MEDIA_PREVIEW = 3
+    const val MILLISECONDS_PER_MINUTE = 60_000L
+    const val MAX_EXPIRY_MINUTES = 2_147_483_647L
 }

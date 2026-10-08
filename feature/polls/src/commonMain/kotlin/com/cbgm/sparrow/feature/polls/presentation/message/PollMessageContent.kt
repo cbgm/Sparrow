@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -37,6 +35,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.polls.presentation.component.pollDurationLabel
 import com.cbgm.sparrow.feature.polls.presentation.message.component.PollMessageMedia
 import com.cbgm.sparrow.feature.polls.presentation.message.component.PollOptionResult
 import com.cbgm.sparrow.feature.polls.presentation.message.mapper.toPollMessageUiState
@@ -50,12 +49,12 @@ import com.cbgm.sparrow.resources.feature_polls_anonymous
 import com.cbgm.sparrow.resources.feature_polls_close_poll
 import com.cbgm.sparrow.resources.feature_polls_closed
 import com.cbgm.sparrow.resources.feature_polls_multiple_answers
+import com.cbgm.sparrow.resources.feature_polls_open_for
 import com.cbgm.sparrow.resources.feature_polls_show_votes
 import com.cbgm.sparrow.resources.feature_polls_voters
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 @Composable
 fun PollMessageContent(
@@ -66,17 +65,11 @@ fun PollMessageContent(
     onMediaClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val viewModel =
-        koinViewModel<PollMessageViewModel>(key = part.instanceKey) {
-            parametersOf(part)
-        }
-    val isExpired by viewModel.isExpired.collectAsStateWithLifecycle()
+    val viewModel = koinViewModel<PollMessageViewModel>(key = part.instanceKey)
     val isVotersOverlayVisible by viewModel.isVotersOverlayVisible.collectAsStateWithLifecycle()
-    val mappedState = part.toPollMessageUiState()
+    val nowEpochMilliseconds = rememberPollNowEpochMilliseconds(part)
     val uiState =
-        mappedState.copy(
-            isExpired = mappedState.isExpired || isExpired,
-            canInteract = mappedState.canInteract && !isExpired,
+        part.toPollMessageUiState(nowEpochMilliseconds).copy(
             isVotersOverlayVisible = isVotersOverlayVisible
         )
 
@@ -174,7 +167,7 @@ private fun PollMessageContentBody(
                 voteCount = option.voteCount,
                 percentage = option.percentage,
                 voters = option.voterPreview,
-                selected = option.isSelected,
+                selected = option.isSelected && !uiState.isClosed,
                 enabled = uiState.canInteract,
                 onClick = { onOptionClick(option.id) }
             )
@@ -223,9 +216,12 @@ private fun PollMessageContentBody(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                uiState.expiryLabel?.let { expiry ->
+                uiState.remainingOpenMinutes?.let { minutes ->
                     Text(
-                        text = expiry,
+                        text = stringResource(
+                            Res.string.feature_polls_open_for,
+                            pollDurationLabel(minutes)
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -264,7 +260,6 @@ private fun previewState(
     mediaCount: Int = 0,
     allowMultiple: Boolean = false,
     submitted: Set<String> = emptySet(),
-    expired: Boolean = false,
     closed: Boolean = false,
     anonymous: Boolean = false
 ): PollMessageUiState {
@@ -324,11 +319,10 @@ private fun previewState(
         allowMultipleSelection = allowMultiple,
         allowVoteChange = true,
         isAnonymous = anonymous,
-        isExpired = expired,
         isClosed = closed,
-        canInteract = !expired && !closed,
+        canInteract = !closed,
         canShowVotes = !anonymous,
-        expiryLabel = if (expired) "Poll ended 25 May 2026 at 18:00" else "Poll ends 1 Oct 2026 at 18:00",
+        remainingOpenMinutes = if (closed) null else 3_600L,
         canClose = true
     )
 }
@@ -378,22 +372,6 @@ private fun PollMessageMediaOverflowPreview() {
         Surface {
             PollMessageContentBody(
                 previewState(mediaCount = 5),
-                {},
-                {},
-                {},
-                {}
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun PollMessageExpiredPreview() {
-    SparrowTheme {
-        Surface {
-            PollMessageContentBody(
-                previewState(expired = true),
                 {},
                 {},
                 {},
