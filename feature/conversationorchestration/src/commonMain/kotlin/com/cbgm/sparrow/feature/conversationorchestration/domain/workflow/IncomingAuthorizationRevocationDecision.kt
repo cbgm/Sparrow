@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.workflow
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
 
 /** A revocation signed by an unrecognized key cannot revoke the stored identity's exchange.
  * Call only after verifying the packet's detached signature. A mismatched signer is a

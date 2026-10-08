@@ -13,7 +13,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.core.ui)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
@@ -38,7 +38,7 @@ kotlin {
             implementation(libs.bundles.android.device.testing)
             implementation(libs.bundles.room.runtime)
             implementation(projects.data.database)
-            implementation(projects.core.protocol)
+            implementation(projects.protocol)
         }
     }
 }

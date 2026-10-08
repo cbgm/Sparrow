@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.search.domain.usecase
 
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
-import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
+import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
 import kotlinx.coroutines.flow.Flow

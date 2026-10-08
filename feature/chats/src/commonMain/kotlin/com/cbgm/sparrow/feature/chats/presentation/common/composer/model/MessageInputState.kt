@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.composer.model
 
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 
 data class MessageInputState(
     val messageText: String = "",
@@ -10,7 +10,7 @@ data class MessageInputState(
     val isInputEnabled: Boolean = true,
     val isSendEnabled: Boolean = false,
     val isLocationInProgress: Boolean = false,
-    val selectedMedia: List<MediaSelection> = emptyList(),
+    val selectedMedia: List<MediaSelectionUi> = emptyList(),
     val isGalleryEnabled: Boolean = true,
     val isCameraEnabled: Boolean = true,
     val isFileEnabled: Boolean = true

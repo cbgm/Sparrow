@@ -1,34 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.workflow
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.authorization.DirectChatAuthorizationRevocationProtocol
-import com.cbgm.sparrow.core.protocol.authorization.DirectChatAuthorizationRevocationSender
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.invitation.ContactInvitationDeclineProtocol
-import com.cbgm.sparrow.core.protocol.invitation.ContactInvitationHandshakeProtocol
-import com.cbgm.sparrow.core.protocol.invitation.ContactInvitationRequestProtocol
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.model.IncomingPeerContactCandidate
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
@@ -134,6 +108,33 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCa
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
+import com.cbgm.sparrow.protocol.authorization.DirectChatAuthorizationRevocationProtocol
+import com.cbgm.sparrow.protocol.authorization.DirectChatAuthorizationRevocationSender
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
+import com.cbgm.sparrow.protocol.invitation.ContactInvitationHandshakeProtocol
+import com.cbgm.sparrow.protocol.invitation.ContactInvitationRequestProtocol
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.protocol.packet.ContactInviteAcceptedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
+import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.sparrow.protocol.packet.GroupJoinRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 /**
  * The only place in conversation orchestration that sequences public feature use cases.
@@ -1095,6 +1096,7 @@ internal class ConversationFlowHandler(
                         ownerContactId = context.contactId,
                         ownerSigningPublicKey = ownerSigningPublicKey
                     ).getOrThrow()
+                    conversationPort.deleteGroupAttachments(packet.groupId).getOrThrow()
                     conversationPort.prepareIncomingGroupDeletion(packet.groupId).getOrThrow()
                     completeIncomingGroupDeletion(packet, context.contactId).getOrThrow()
                     conversationPort.finishIncomingGroupDeletion(
@@ -1670,7 +1672,7 @@ internal class ConversationFlowHandler(
 
     private suspend fun applyPeerProfilePicture(
         contactId: String,
-        metadata: com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+        metadata: ProfilePictureMetadata
     ) {
         applyRemoteProfilePictureMetadata(contactId, metadata)
             .onFailure { error ->

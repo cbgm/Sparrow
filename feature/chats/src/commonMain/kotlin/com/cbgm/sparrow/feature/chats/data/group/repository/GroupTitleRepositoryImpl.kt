@@ -14,6 +14,9 @@ internal class GroupTitleRepositoryImpl(
 ) : GroupTitleRepository {
     private val updateMutex = Mutex()
 
+    override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
+        broadcaster.sendCurrentTo(groupId, peerId)
+
     override suspend fun set(
         groupId: String,
         title: String

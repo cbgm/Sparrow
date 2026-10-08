@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.applock.presentation
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,26 +18,26 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun AppLockRoute(
     onUnlocked: () -> Unit,
-    onLockedContentReady: () -> Unit,
     modifier: Modifier = Modifier,
+    onContentReady: () -> Unit = {},
     viewModel: AppLockViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        AppLockUiState.Loading -> Unit
+        AppLockUiState.Loading -> {
+            Surface(modifier = modifier.fillMaxSize()) { }
+        }
 
         AppLockUiState.Unlocked -> {
+            Surface(modifier = modifier.fillMaxSize()) { }
+
             LaunchedEffect(Unit) {
                 onUnlocked()
             }
         }
 
         is AppLockUiState.Locked -> {
-            LaunchedEffect(Unit) {
-                onLockedContentReady()
-            }
-
             AppLockAuthenticationLauncher(
                 requestId = state.authenticationRequestId,
                 enabled = state.isAuthenticating,
@@ -49,6 +51,10 @@ fun AppLockRoute(
                 onUnlockRequested = viewModel::requestAuthentication,
                 modifier = modifier
             )
+
+            LaunchedEffect(Unit) {
+                onContentReady()
+            }
         }
     }
 }

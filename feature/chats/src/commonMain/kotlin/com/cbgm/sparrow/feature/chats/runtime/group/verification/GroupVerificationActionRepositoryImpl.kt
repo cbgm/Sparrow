@@ -11,6 +11,9 @@ class GroupVerificationActionRepositoryImpl(
     override suspend fun synchronize(groupId: String): Result<Unit> =
         verificationCoordinator.synchronize(groupId)
 
+    override suspend fun refreshOwnedGroup(groupId: String): Result<Unit> =
+        verificationCoordinator.onOwnedMembershipChanged(groupId)
+
     override suspend fun verify(
         groupId: String,
         contactId: String

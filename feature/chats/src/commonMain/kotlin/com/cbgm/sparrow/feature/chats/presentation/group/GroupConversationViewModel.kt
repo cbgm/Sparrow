@@ -2,15 +2,18 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.IndicatorType
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
@@ -23,6 +26,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
@@ -34,6 +38,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupIndicatorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.UnpinGroupMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.VoteInGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toIndicatorUiType
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
@@ -50,10 +55,16 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversation
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.polls.domain.usecase.ClearFinishedPollUseCase
+import com.cbgm.sparrow.feature.polls.domain.usecase.ObserveFinishedPollUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
@@ -87,6 +98,8 @@ class GroupConversationViewModel(
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
     private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
+    private val voteInPollUseCase: VoteInGroupPollUseCase,
+    private val closePollUseCase: CloseGroupPollUseCase,
     private val deleteMessageUseCase: DeleteGroupMessageUseCase,
     private val editMessageUseCase: EditGroupMessageUseCase,
     private val pinMessageUseCase: PinGroupMessageUseCase,
@@ -101,6 +114,9 @@ class GroupConversationViewModel(
     private val getRecordedVoiceAttachment: GetRecordedVoiceAttachmentUseCase,
     private val resetVoiceComposer: ResetVoiceComposerUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
+    observeFinishedPoll: ObserveFinishedPollUseCase,
+    private val clearFinishedPoll: ClearFinishedPollUseCase,
+    getLocalIdentityName: GetLocalIdentityNameUseCase,
     private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId =
@@ -108,16 +124,20 @@ class GroupConversationViewModel(
     private val targetMessageId =
         savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupConversationViewModel")
+    private val localVoterDisplayName = MutableStateFlow<String?>(null)
 
     init {
         ChatOpenTrace.event("group ViewModel constructed")
+        viewModelScope.launch {
+            localVoterDisplayName.value = getLocalIdentityName().getOrNull()
+        }
     }
 
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
-    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
+    private val selectedMedia = MutableStateFlow<List<MediaSelectionUi>>(emptyList())
     private var preparingMediaSend = false
 
     // Draft cleanup must survive ViewModel clearing (viewModelScope is cancelled).
@@ -190,8 +210,9 @@ class GroupConversationViewModel(
     val conversationState: StateFlow<GroupConversationUiState> =
         combine(
             presentationContext,
-            observeMessageSafetyAssessments()
-        ) { presentation, safetyAssessments ->
+            observeMessageSafetyAssessments(),
+            localVoterDisplayName
+        ) { presentation, safetyAssessments, localDisplayName ->
             val mappingStarted = TimeSource.Monotonic.markNow()
             val mapped = toGroupConversationUiState(
                 groupId = groupId,
@@ -200,7 +221,8 @@ class GroupConversationViewModel(
                 isLoading = presentation is GroupContextObservation.Loading,
                 safetyAssessments = safetyAssessments,
                 administration = presentation.context?.administration ?: GroupAdministrationState(),
-                pin = presentation.context?.pin
+                pin = presentation.context?.pin,
+                localVoterDisplayName = localDisplayName
             )
             ChatOpenTrace.event("group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
             mapped
@@ -336,6 +358,9 @@ class GroupConversationViewModel(
                 )
             }
         }
+        viewModelScope.launch {
+            observeFinishedPoll().collect(::sendFinishedPoll)
+        }
         ensureTargetMessageLoaded()
     }
 
@@ -353,6 +378,9 @@ class GroupConversationViewModel(
             GroupConversationUiEvent.MessageContextDismissed -> contextMessageId.value = null
             GroupConversationUiEvent.CancelEdit -> cancelEdit()
             is GroupConversationUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
+            is GroupConversationUiEvent.PollVoteSubmitted ->
+                voteInPoll(event.messageId, event.pollId, event.selectedOptionIds)
+            is GroupConversationUiEvent.PollCloseRequested -> closePoll(event.messageId, event.pollId)
             is GroupConversationUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is GroupConversationUiEvent.PinMessage -> pinMessage(event.messageId)
             GroupConversationUiEvent.UnpinMessage -> unpinMessage()
@@ -360,19 +388,21 @@ class GroupConversationViewModel(
             is GroupConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             GroupConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
-            is GroupConversationUiEvent.ShareCurrentLocation -> shareCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is GroupConversationUiEvent.ShareCurrentLocation ->
+                shareCurrentLocation(event.location.toMessagePart())
             is GroupConversationUiEvent.LocationCaptureFailed -> {
                 transitionLocationShare(LocationShareEvent.FAILED)
                 setError(event.message)
             }
             is GroupConversationUiEvent.ShareContact ->
                 sendAttachmentOnly(
-                    attachment = event.contact.toOutgoingMessageAttachment(),
+                    part = event.contact.toMessagePart(),
                     fallbackError = "Contact could not be sent"
                 )
             is GroupConversationUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is GroupConversationUiEvent.AttachmentError -> setError(event.message)
             GroupConversationUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
+            GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             is GroupConversationUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is GroupConversationUiEvent.SafetyWarningClicked ->
                 navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, event.contactId))
@@ -512,8 +542,13 @@ class GroupConversationViewModel(
         if (preparingMediaSend) return
         if (selections.isEmpty()) {
             dispatchSend(
-                text = text,
-                attachments = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = text
+                        )
+                    ),
                 clearComposerOnSuccess = true,
                 fallbackError = "Message could not be sent"
             )
@@ -521,70 +556,94 @@ class GroupConversationViewModel(
         }
 
         preparingMediaSend = true
-        viewModelScope.launch {
-            try {
-                val attachments = selections.map { it.toOutgoingMessageAttachment(mediaFiles) }
-                // Selection could change while the files are being read.
-                if (selectedMedia.value != selections) return@launch
-                dispatchSend(
-                    text = text,
-                    attachments = attachments,
-                    clearComposerOnSuccess = true,
-                    fallbackError = "Message could not be sent"
-                )
-            } catch (error: Exception) {
-                setError(error.message ?: "Selected media could not be read")
-            } finally {
-                preparingMediaSend = false
-            }
+        try {
+            val parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            add(
+                                Text(
+                                    id = IdGenerator.generate(prefix = "text"),
+                                    text = value
+                                )
+                            )
+                        }
+                    addAll(selections.map { it.toMessagePart() })
+                }
+            if (selectedMedia.value != selections) return
+            dispatchSend(
+                parts = parts,
+                clearComposerOnSuccess = true,
+                fallbackError = "Message could not be sent"
+            )
+        } catch (error: Exception) {
+            setError(error.message ?: "Selected media could not be prepared")
+        } finally {
+            preparingMediaSend = false
         }
     }
 
     private fun sendVoiceMessage() {
-        getRecordedVoiceAttachment()
-            .onSuccess { attachment ->
-                dispatchSend(
-                    text = "",
-                    attachments = listOf(attachment),
-                    clearComposerOnSuccess = false,
-                    clearVoiceOnSuccess = true,
-                    fallbackError = "Voice message could not be sent"
-                )
-            }.onFailure { error ->
-                setError(error.message ?: "Voice message is not ready to send")
-            }
+        viewModelScope.launch {
+            getRecordedVoiceAttachment()
+                .onSuccess { part ->
+                    dispatchSend(
+                        parts = listOf(part),
+                        clearComposerOnSuccess = false,
+                        clearVoiceOnSuccess = true,
+                        fallbackError = "Voice message could not be sent"
+                    )
+                }.onFailure { error ->
+                    setError(error.message ?: "Voice message is not ready to send")
+                }
+        }
     }
 
-    private fun shareCurrentLocation(attachment: OutgoingMessageAttachment) {
+    private fun sendFinishedPoll(poll: Poll) {
+        sendAttachmentOnly(
+            part = poll,
+            fallbackError = "Poll could not be sent",
+            onSuccess = {
+                poll.images
+                    .flatMap { image -> listOfNotNull(image.localFilePath, image.thumbnailFilePath) }
+                    .distinct()
+                    .forEach { path -> mediaCleanupScope.launch { runCatching { mediaFiles.delete(path) } } }
+                clearFinishedPoll()
+            }
+        )
+    }
+
+    private fun shareCurrentLocation(part: MessagePart) {
         transitionLocationShare(LocationShareEvent.LOCATION_CAPTURED)
         sendAttachmentOnly(
-            attachment = attachment,
+            part = part,
             fallbackError = "Location could not be sent",
             isLocationShare = true
         )
     }
 
     private fun sendAttachmentOnly(
-        attachment: OutgoingMessageAttachment,
+        part: MessagePart,
         fallbackError: String,
-        isLocationShare: Boolean = false
+        isLocationShare: Boolean = false,
+        onSuccess: () -> Unit = {}
     ) {
         dispatchSend(
-            text = "",
-            attachments = listOf(attachment),
+            parts = listOf(part),
             clearComposerOnSuccess = false,
             fallbackError = fallbackError,
-            isLocationShare = isLocationShare
+            isLocationShare = isLocationShare,
+            onSuccess = onSuccess
         )
     }
 
     private fun dispatchSend(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>,
+        parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         fallbackError: String,
         clearVoiceOnSuccess: Boolean = false,
-        isLocationShare: Boolean = false
+        isLocationShare: Boolean = false,
+        onSuccess: () -> Unit = {}
     ) {
         val sendAllowed =
             if (isLocationShare) {
@@ -606,16 +665,21 @@ class GroupConversationViewModel(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             isSending.value = true
             try {
-                sendMessage(groupId, text, attachments, replyTo)
+                sendMessage(groupId, parts, replyTo)
                     .onSuccess {
                         when {
                             clearComposerOnSuccess -> clearComposer()
                             clearVoiceOnSuccess -> {
+                                parts.filterIsInstance<com.cbgm.sparrow.core.messagepart.domain.model.Voice>()
+                                    .singleOrNull()
+                                    ?.localFilePath
+                                    ?.let { path -> runCatching { mediaFiles.delete(path) } }
                                 resetVoiceComposer()
                                 clearReply()
                             }
                             else -> clearReply()
                         }
+                        onSuccess()
                     }
                     .onFailure { error -> setError(error.message ?: fallbackError) }
             } finally {
@@ -649,33 +713,39 @@ class GroupConversationViewModel(
         }
     }
 
-    private fun updateMediaSelection(media: List<MediaSelection>) {
+    private fun updateMediaSelection(media: List<MediaSelectionUi>) {
         runCatching {
             require(media.size <= MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE) {
                 "Too many attachments selected"
             }
-            require(media.map(MediaSelection::id).distinct().size == media.size) {
+            require(media.map(MediaSelectionUi::id).distinct().size == media.size) {
                 "Attachment IDs must be unique"
             }
-            require(media.sumOf(MediaSelection::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
+            require(media.sumOf(MediaSelectionUi::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
                 "Selected attachments exceed the total attachment size limit"
             }
             media.forEach { item ->
                 require(item.byteSize > 0L) { "Selected attachment is empty" }
-                when (item.type) {
-                    MediaSelectionType.IMAGE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
-                        require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
-                            "Invalid image attachment"
+                when (item) {
+                    is VisualMediaSelectionUi ->
+                        when (item.type) {
+                            MediaTypeUi.IMAGE -> {
+                                require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
+                                require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
+                                    "Invalid image attachment"
+                                }
+                            }
+
+                            MediaTypeUi.VIDEO -> {
+                                require(
+                                    item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES &&
+                                        item.mimeType.startsWith("video/")
+                                ) { "Invalid video attachment" }
+                            }
                         }
-                    }
-                    MediaSelectionType.VIDEO -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES && item.mimeType.startsWith("video/")) {
-                            "Invalid video attachment"
-                        }
-                    }
-                    MediaSelectionType.FILE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && !item.fileName.isNullOrBlank()) {
+
+                    is FileMediaSelectionUi -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && item.fileName.isNotBlank()) {
                             "Invalid file attachment"
                         }
                     }
@@ -689,7 +759,7 @@ class GroupConversationViewModel(
         }.onFailure { error ->
             // A rejected selection may already have been copied to private storage.
             // Do not remove any file still referenced by the accepted composer state.
-            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelection::id)
+            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelectionUi::id)
             deletePendingSelections(media.filterNot { it.id in acceptedIds })
             setError(error.message ?: "Selected attachments could not be attached")
         }
@@ -705,12 +775,12 @@ class GroupConversationViewModel(
         deletePendingSelections(consumed)
     }
 
-    private fun deletePendingSelections(media: List<MediaSelection>) {
+    private fun deletePendingSelections(media: List<MediaSelectionUi>) {
         if (media.isEmpty()) return
         mediaCleanupScope.launch {
             media.forEach { item ->
                 // Delete each path independently: a missing original must not leak the thumbnail.
-                for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
+                for (path in item.localFilePaths) {
                     runCatching { mediaFiles.delete(path) }
                         .onFailure { error -> logger.error(error) { "Could not clean up pending media" } }
                 }
@@ -776,6 +846,20 @@ class GroupConversationViewModel(
         }
     }
 
+    private fun voteInPoll(messageId: String, pollId: String, selectedOptionIds: Set<String>) {
+        viewModelScope.launch {
+            voteInPollUseCase(groupId, messageId, pollId, selectedOptionIds)
+                .onFailure { error -> setError(error.message ?: "Poll vote could not be sent") }
+        }
+    }
+
+    private fun closePoll(messageId: String, pollId: String) {
+        viewModelScope.launch {
+            closePollUseCase(groupId, messageId, pollId)
+                .onFailure { error -> setError(error.message ?: "Poll could not be closed") }
+        }
+    }
+
     private fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             deleteMessageUseCase(groupId, messageId)
@@ -838,7 +922,7 @@ class GroupConversationViewModel(
     )
 
     private data class GroupComposerRuntime(
-        val media: List<MediaSelection>,
+        val media: List<MediaSelectionUi>,
         val isSending: Boolean,
         val locationShareState: LocationShareState
     )

@@ -1,49 +1,44 @@
 package com.cbgm.sparrow.feature.chats.data.orchestration
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
-import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectPendingAuthorizationMessageCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationDataSource
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupIncomingConversationDataSource
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
-import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupCreatedIncomingProcessor
-import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupWelcomePersistence
-import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
-import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
-import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.title.GroupTitleBroadcaster
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationProjectionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ActivateAuthorizedDirectConversationUseCase
-import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationCoordinator
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupIncomingConversationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupLocalConversationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTitleRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
+/**
+ * Chats adapter for cross-feature conversation orchestration.
+ *
+ * This boundary depends on domain repositories only. Chats data sources,
+ * processors, broadcasters and runtime coordinators stay behind repositories.
+ */
 internal class ChatsConversationPort(
-    private val conversationRepository: DirectConversationRepository,
+    private val directConversationRepository: DirectConversationRepository,
     private val directMessageRepository: DirectMessageRepository,
-    private val activateAuthorizedDirectConversation: ActivateAuthorizedDirectConversationUseCase,
-    private val pendingAuthorizationMessageCoordinator: DirectPendingAuthorizationMessageCoordinator,
     private val messageAttachmentRepository: MessageAttachmentRepository,
     private val groupConversationRepository: GroupConversationRepository,
-    private val groupConversationDataSource: GroupConversationDataSource,
-    private val groupLocalCleanupDataSource: GroupLocalCleanupDataSource,
-    private val groupOutgoingMessageDataSource: GroupOutgoingMessageDataSource,
-    private val groupOutgoingMessageProcessor: GroupOutgoingMessageProcessor,
-    private val verificationCoordinator: GroupVerificationCoordinator,
-    private val incomingConversationDataSource: GroupIncomingConversationDataSource,
-    private val createdIncomingProcessor: GroupCreatedIncomingProcessor,
-    private val welcomePersistence: GroupWelcomePersistence,
-    private val groupAvatarBroadcaster: GroupAvatarBroadcaster,
-    private val groupTitleBroadcaster: GroupTitleBroadcaster,
-    private val groupDescriptionBroadcaster: GroupDescriptionBroadcaster,
-    private val groupPinBroadcaster: GroupPinBroadcaster
+    private val groupConversationProjectionRepository: GroupConversationProjectionRepository,
+    private val groupIncomingConversationRepository: GroupIncomingConversationRepository,
+    private val groupLocalConversationRepository: GroupLocalConversationRepository,
+    private val groupMessageRepository: GroupMessageRepository,
+    private val groupVerificationActionRepository: GroupVerificationActionRepository,
+    private val groupAvatarRepository: GroupAvatarRepository,
+    private val groupTitleRepository: GroupTitleRepository,
+    private val groupDescriptionRepository: GroupDescriptionRepository,
+    private val groupPinRepository: GroupPinRepository
 ) : ConversationPort {
     private val logger = SparrowLog.withTag("ChatsConversationPort")
 
@@ -51,30 +46,25 @@ internal class ChatsConversationPort(
         groupConversationRepository.create(title)
 
     override suspend fun initializeOwnedGroupVerification(groupId: String): Result<Unit> =
-        verificationCoordinator.initializeOwnedGroup(groupId)
+        groupVerificationActionRepository.initializeOwnedGroup(groupId)
 
     override suspend fun flushPendingGroupMessages(groupId: String): Result<Unit> =
-        groupOutgoingMessageProcessor.flushQueued(groupId)
+        groupMessageRepository.flushQueued(groupId)
 
     override suspend fun recordIncomingGroupWelcomeRestart(
         packet: GroupCreatedPacket,
         invitationId: String?,
         isFirstWelcome: Boolean,
         persistedAt: Long
-    ): Result<Unit> = runCatching {
-        welcomePersistence.recordMembershipRestartIfNeeded(
-            packet,
-            invitationId,
-            isFirstWelcome,
-            persistedAt
-        )
-    }
+    ): Result<Unit> = groupIncomingConversationRepository.recordWelcomeRestart(
+        packet = packet,
+        invitationId = invitationId,
+        isFirstWelcome = isFirstWelcome,
+        persistedAt = persistedAt
+    )
 
     override suspend fun getCurrentGroupParticipantIds(groupId: String): Result<List<String>> =
-        runCatching {
-            incomingConversationDataSource.findConversationParticipants(groupId)
-                .map { it.contactId }
-        }
+        groupIncomingConversationRepository.getParticipantIds(groupId)
 
     override suspend fun installIncomingGroupWelcome(
         packet: GroupCreatedPacket,
@@ -82,73 +72,30 @@ internal class ChatsConversationPort(
         contactIdsByMember: List<String?>,
         contactDisplayNames: Map<String, String>,
         persistedAt: Long
-    ): Result<Set<String>> = createdIncomingProcessor.process(
-        packet,
-        previousSigningKeysByContactId,
-        contactIdsByMember,
-        contactDisplayNames,
-        persistedAt
+    ): Result<Set<String>> = groupIncomingConversationRepository.installWelcome(
+        packet = packet,
+        previousSigningKeysByContactId = previousSigningKeysByContactId,
+        contactIdsByMember = contactIdsByMember,
+        contactDisplayNames = contactDisplayNames,
+        persistedAt = persistedAt
     )
 
     override suspend fun sendCurrentGroupMetadataTo(groupId: String, peerId: String) {
-        groupAvatarBroadcaster.sendCurrentTo(groupId, peerId)
+        groupAvatarRepository.sendCurrentTo(groupId, peerId)
             .onFailure { error -> logger.warn(error) { "Could not queue current group avatar for $peerId" } }
-        groupTitleBroadcaster.sendCurrentTo(groupId, peerId)
+        groupTitleRepository.sendCurrentTo(groupId, peerId)
             .onFailure { error -> logger.warn(error) { "Could not queue current group title for $peerId" } }
-        groupDescriptionBroadcaster.sendCurrentTo(groupId, peerId)
+        groupDescriptionRepository.sendCurrentTo(groupId, peerId)
             .onFailure { error -> logger.warn(error) { "Could not queue current group description for $peerId" } }
-        groupPinBroadcaster.sendCurrentTo(groupId, peerId)
+        groupPinRepository.sendCurrentTo(groupId, peerId)
             .onFailure { error -> logger.warn(error) { "Could not queue current group pin for $peerId" } }
     }
 
-    override suspend fun applyIncomingGroupRemoval(
-        packet: GroupMemberRemovedPacket,
-        senderContactId: String
-    ): Result<Unit> = runCatching {
-        val wasLocallyHidden = incomingConversationDataSource.hasMessageWithTransportMode(
-            conversationId = packet.groupId,
-            transportMode = GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE
-        )
-        if (!wasLocallyHidden) {
-            val message =
-                if (packet.reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
-                    GroupMembershipMessageFactory.localMembershipLeft(
-                        conversationId = packet.groupId,
-                        invitationId = packet.invitationId,
-                        epoch = packet.epoch,
-                        createdAtEpochMilliseconds = packet.removedAtEpochMilliseconds
-                    )
-                } else {
-                    GroupMembershipMessageFactory.localMembershipRemoved(
-                        conversationId = packet.groupId,
-                        invitationId = packet.invitationId,
-                        epoch = packet.epoch,
-                        createdAtEpochMilliseconds = packet.removedAtEpochMilliseconds
-                    )
-                }
-            incomingConversationDataSource.applyLocalGroupRemoval(message)
-        }
-        incomingConversationDataSource.deleteVerificationRows(packet.groupId)
-    }
-
-    override suspend fun prepareIncomingGroupDeletion(groupId: String): Result<Unit> = runCatching {
-        messageAttachmentRepository.deleteLocalAttachmentsForConversation(groupId).getOrThrow()
-        incomingConversationDataSource.deleteConversationParticipants(groupId)
-        incomingConversationDataSource.deleteVerificationRows(groupId)
-    }
-
-    override suspend fun finishIncomingGroupDeletion(
-        groupId: String,
-        deletedAtEpochMilliseconds: Long
-    ): Result<Unit> = runCatching {
-        incomingConversationDataSource.updateConversationTimestamp(
-            conversationId = groupId,
-            timestamp = deletedAtEpochMilliseconds
-        )
-    }
+    override suspend fun refreshOwnedGroupVerification(groupId: String): Result<Unit> =
+        groupVerificationActionRepository.refreshOwnedGroup(groupId)
 
     override suspend fun onLocalGroupMemberActivated(groupId: String): Result<Unit> =
-        verificationCoordinator.synchronize(groupId)
+        groupVerificationActionRepository.synchronize(groupId)
 
     override suspend fun recordRemoteGroupMemberAdded(
         groupId: String,
@@ -157,16 +104,14 @@ internal class ChatsConversationPort(
         activationId: String,
         memberDisplayName: String,
         joinedAtEpochMilliseconds: Long
-    ): Result<Unit> = runCatching {
-        groupConversationDataSource.recordRemoteMemberAdded(
-            groupId = groupId,
-            peerId = contactId,
-            epoch = epoch,
-            activationId = activationId,
-            memberDisplayName = memberDisplayName,
-            joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
-        )
-    }
+    ): Result<Unit> = groupConversationProjectionRepository.recordRemoteMemberAdded(
+        groupId = groupId,
+        peerId = contactId,
+        epoch = epoch,
+        activationId = activationId,
+        memberDisplayName = memberDisplayName,
+        joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
+    )
 
     override suspend fun onRemoteGroupMemberActivated(
         groupId: String,
@@ -176,87 +121,91 @@ internal class ChatsConversationPort(
         activationId: String,
         memberDisplayName: String,
         joinedAtEpochMilliseconds: Long
-    ): Result<Unit> = runCatching {
-        groupConversationDataSource.activateRemoteParticipant(
-            groupId = groupId,
-            peerId = contactId,
-            role = role,
-            epoch = epoch,
-            activationId = activationId,
-            memberDisplayName = memberDisplayName,
-            joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
-        )
-    }
+    ): Result<Unit> = groupConversationProjectionRepository.activateRemoteParticipant(
+        groupId = groupId,
+        peerId = contactId,
+        role = role,
+        epoch = epoch,
+        activationId = activationId,
+        memberDisplayName = memberDisplayName,
+        joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
+    )
 
-    override suspend fun refreshOwnedGroupVerification(groupId: String): Result<Unit> =
-        verificationCoordinator.onOwnedMembershipChanged(groupId)
+    override suspend fun applyIncomingGroupRemoval(
+        packet: GroupMemberRemovedPacket,
+        senderContactId: String
+    ): Result<Unit> = groupIncomingConversationRepository.applyRemoval(packet)
+
+    override suspend fun prepareIncomingGroupDeletion(groupId: String): Result<Unit> =
+        runCatching {
+            messageAttachmentRepository.deleteLocalAttachmentsForConversation(groupId).getOrThrow()
+            groupIncomingConversationRepository.prepareDeletion(groupId).getOrThrow()
+        }
+
+    override suspend fun finishIncomingGroupDeletion(
+        groupId: String,
+        deletedAtEpochMilliseconds: Long
+    ): Result<Unit> = groupIncomingConversationRepository.finishDeletion(
+        groupId = groupId,
+        deletedAtEpochMilliseconds = deletedAtEpochMilliseconds
+    )
 
     override suspend fun getOrCreateConversation(peerId: String): Result<String> =
-        conversationRepository.getOrCreate(peerId)
+        directConversationRepository.getOrCreate(peerId)
 
     override suspend fun findConversationId(peerId: String): Result<String?> =
-        conversationRepository.findConversationId(peerId)
+        directConversationRepository.findConversationId(peerId)
 
     override suspend fun activateAuthorizedConversation(peerId: String): Result<Unit> =
-        activateAuthorizedDirectConversation(peerId)
+        runCatching {
+            directConversationRepository.getOrCreate(peerId).getOrThrow()
+            directMessageRepository.releaseWaitingForAuthorization(peerId).getOrThrow()
+        }
 
     override suspend fun discardPendingAuthorizationMessages(peerId: String): Result<Unit> =
         directMessageRepository.discardWaitingForAuthorization(peerId)
 
     override suspend fun runPendingAuthorizationCleanup() {
-        pendingAuthorizationMessageCoordinator.run()
+        directMessageRepository.runPendingAuthorizationCleanup()
     }
 
     override suspend fun findPeerId(conversationId: String): Result<String?> =
-        conversationRepository.findContactId(conversationId)
+        directConversationRepository.findContactId(conversationId)
 
-    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> = runCatching {
-        val message = groupOutgoingMessageDataSource.findMessage(messageId) ?: return@runCatching null
-        val conversation = groupOutgoingMessageDataSource.findConversation(message.conversationId)
-            ?: return@runCatching null
-        conversation.id.takeIf { conversation.type == "GROUP" }
-    }
+    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> =
+        groupMessageRepository.findGroupIdForMessage(messageId)
 
     override suspend fun deleteConversation(conversationId: String): Result<Unit> =
-        conversationRepository.delete(conversationId)
+        directConversationRepository.delete(conversationId)
 
     override suspend fun getGroupTitle(groupId: String): Result<String> =
-        getGroupMembershipContext(groupId).map { context -> context.title }
+        getGroupMembershipContext(groupId).map(GroupMembershipContext::title)
 
     override suspend fun getGroupMembershipContext(groupId: String): Result<GroupMembershipContext> =
-        runCatching {
-            val context = groupConversationDataSource.getContext(groupId)
-            GroupMembershipContext(
-                title = context.title,
-                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds
-            )
-        }
+        groupConversationProjectionRepository.getMembershipContext(groupId)
 
     override suspend fun stageIncomingGroupConversation(
         groupId: String,
         title: String,
         createdAtEpochMilliseconds: Long,
         updatedAtEpochMilliseconds: Long
-    ): Result<Boolean> =
-        runCatching {
-            groupConversationDataSource.stageIncoming(
-                groupId = groupId,
-                title = title,
-                createdAtEpochMilliseconds = createdAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-            )
-        }
+    ): Result<Boolean> = groupConversationProjectionRepository.stageIncoming(
+        groupId = groupId,
+        title = title,
+        createdAtEpochMilliseconds = createdAtEpochMilliseconds,
+        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+    )
 
     override suspend fun showAcceptedIncomingGroupConversation(groupId: String): Result<Unit> =
-        runCatching { groupConversationDataSource.showAcceptedIncoming(groupId) }
+        groupConversationProjectionRepository.showAcceptedIncoming(groupId)
 
     override suspend fun discardPendingGroupConversation(
         groupId: String,
         updatedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        runCatching {
-            groupConversationDataSource.discardPending(groupId, updatedAtEpochMilliseconds)
-        }
+    ): Result<Unit> = groupConversationProjectionRepository.discardPending(
+        groupId = groupId,
+        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+    )
 
     override suspend fun addGroupParticipant(
         groupId: String,
@@ -265,30 +214,24 @@ internal class ChatsConversationPort(
         epoch: Int,
         joinedAtEpochMilliseconds: Long,
         eventId: String
-    ): Result<Unit> =
-        runCatching {
-            groupConversationDataSource.addParticipant(
-                groupId = groupId,
-                peerId = peerId,
-                memberDisplayName = memberDisplayName,
-                epoch = epoch,
-                joinedAtEpochMilliseconds = joinedAtEpochMilliseconds,
-                eventId = eventId
-            )
-        }
+    ): Result<Unit> = groupConversationProjectionRepository.addParticipant(
+        groupId = groupId,
+        peerId = peerId,
+        memberDisplayName = memberDisplayName,
+        epoch = epoch,
+        joinedAtEpochMilliseconds = joinedAtEpochMilliseconds,
+        eventId = eventId
+    )
 
     override suspend fun promoteGroupParticipant(
         groupId: String,
         peerId: String,
         updatedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        runCatching {
-            groupConversationDataSource.promoteParticipant(
-                groupId = groupId,
-                peerId = peerId,
-                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-            )
-        }
+    ): Result<Unit> = groupConversationProjectionRepository.promoteParticipant(
+        groupId = groupId,
+        peerId = peerId,
+        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+    )
 
     override suspend fun removeGroupParticipant(
         groupId: String,
@@ -298,34 +241,35 @@ internal class ChatsConversationPort(
         eventId: String,
         updatedAtEpochMilliseconds: Long,
         memberLeft: Boolean
-    ): Result<Unit> =
-        runCatching {
-            groupConversationDataSource.removeParticipant(
-                groupId = groupId,
-                peerId = peerId,
-                memberDisplayName = memberDisplayName,
-                epoch = epoch,
-                eventId = eventId,
-                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
-                memberLeft = memberLeft
-            )
-        }
+    ): Result<Unit> = groupConversationProjectionRepository.removeParticipant(
+        groupId = groupId,
+        peerId = peerId,
+        memberDisplayName = memberDisplayName,
+        epoch = epoch,
+        eventId = eventId,
+        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
+        memberLeft = memberLeft
+    )
 
     override suspend fun endLocalGroupMembership(
         groupId: String,
         referenceId: String,
         epoch: Int,
         endedAtEpochMilliseconds: Long
-    ): Result<Unit> = runCatching {
-        groupLocalCleanupDataSource.endMembership(groupId, referenceId, epoch, endedAtEpochMilliseconds)
-    }
+    ): Result<Unit> = groupLocalConversationRepository.endMembership(
+        groupId = groupId,
+        referenceId = referenceId,
+        epoch = epoch,
+        endedAtEpochMilliseconds = endedAtEpochMilliseconds
+    )
 
     override suspend fun deleteLocalGroupConversation(
         groupId: String,
         deletedAtEpochMilliseconds: Long
-    ): Result<Unit> = runCatching {
-        groupLocalCleanupDataSource.deleteConversationHistory(groupId, deletedAtEpochMilliseconds)
-    }
+    ): Result<Unit> = groupLocalConversationRepository.deleteConversation(
+        groupId = groupId,
+        deletedAtEpochMilliseconds = deletedAtEpochMilliseconds
+    )
 
     override suspend fun deleteGroupAttachments(groupId: String): Result<Unit> =
         messageAttachmentRepository.deleteLocalAttachmentsForConversation(groupId)

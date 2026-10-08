@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.di
 
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumberGenerator
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactByRoutingIdDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactRoutingDataSource
@@ -48,6 +49,7 @@ import org.koin.dsl.module
 
 val contactsModule =
     module {
+        single { SafetyNumberGenerator(cryptoHash = get()) }
 
         singleOf(::ContactLocalDataSource)
         singleOf(::ContactRoutingIdDataSource)

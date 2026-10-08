@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.membership.di
 
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.crypto.SodiumGroupCrypto
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
@@ -77,6 +79,7 @@ import org.koin.dsl.module
 
 val membershipModule =
     module {
+        single<GroupCrypto> { SodiumGroupCrypto() }
         singleOf(::GroupMembershipLock)
         singleOf(::GroupMembershipPayloadEncoder)
         single {

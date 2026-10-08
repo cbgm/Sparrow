@@ -1,14 +1,15 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
-import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMutualContactSigningPublicKeyUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class MailboxRoutePacketHandler(
     private val getMutualContactSigningPublicKey: GetMutualContactSigningPublicKeyUseCase,
@@ -38,7 +39,7 @@ class MailboxRoutePacketHandler(
         }
 
     private fun validateRoute(
-        route: com.cbgm.sparrow.core.protocol.mailbox.MailboxDeliveryRoute
+        route: MailboxDeliveryRoute
     ) {
         require(route.routeId.isNotBlank() && route.nodeId.isNotBlank()) {
             "Mailbox route identity is invalid"

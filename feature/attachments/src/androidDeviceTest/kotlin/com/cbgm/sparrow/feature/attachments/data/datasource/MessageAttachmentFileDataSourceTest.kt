@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import java.io.File
 import java.util.UUID
 import kotlin.test.AfterTest
@@ -77,7 +76,7 @@ class MessageAttachmentFileDataSourceTest {
             conversationId = conversationId,
             displayName = displayName,
             attachmentId = attachmentId,
-            type = MessageAttachmentType.IMAGE,
+            isMedia = true,
             mimeType = "image/jpeg",
             bytes = byteArrayOf(1, 2, 3)
         )

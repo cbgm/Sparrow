@@ -12,15 +12,17 @@ import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileReposi
 import com.cbgm.sparrow.feature.media.domain.usecase.BrowseFileDirectoryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
+import com.cbgm.sparrow.feature.media.domain.usecase.PrepareMediaSelectionUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.ReadFileBrowserEntryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.SetFileBrowserRootUseCase
-import com.cbgm.sparrow.feature.media.presentation.filepicker.mapper.toFileBrowserEntryUi
+import com.cbgm.sparrow.feature.media.presentation.filepicker.mapper.toFilePickerEntriesUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerBreadcrumbUi
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortMode
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortModeUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiEvent
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiState
-import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.mapper.toUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +37,8 @@ class FilePickerViewModel(
     private val getRoot: GetFileBrowserRootUseCase,
     private val browseDirectory: BrowseFileDirectoryUseCase,
     private val readFile: ReadFileBrowserEntryUseCase,
-    private val mediaFiles: MediaSelectionFileRepository
+    private val mediaFiles: MediaSelectionFileRepository,
+    private val prepareMediaSelection: PrepareMediaSelectionUseCase
 ) : BaseViewModel() {
     private val sessionId = savedStateHandle.requireRouteArgument<String>(AppRoute.FilePicker::sessionId.name)
     private val session = sessions.snapshot(sessionId)
@@ -209,7 +212,7 @@ class FilePickerViewModel(
         publishEntries()
     }
 
-    private fun updateSort(mode: FilePickerSortMode) {
+    private fun updateSort(mode: FilePickerSortModeUi) {
         _uiState.update { state -> state.copy(sortMode = mode) }
         publishEntries()
     }
@@ -220,30 +223,16 @@ class FilePickerViewModel(
     }
 
     private fun publishEntries() {
-        val state = _uiState.value
-        val query = state.searchQuery.trim()
-        val filtered =
-            if (query.isEmpty()) rawEntries else rawEntries.filter { it.displayName.contains(query, ignoreCase = true) }
-        val directories = filtered.filter(FileBrowserEntry::isDirectory).sortedBy { it.displayName.lowercase() }
-        val files = filtered.filterNot(FileBrowserEntry::isDirectory)
-        val sortedFiles =
-            when (state.sortMode) {
-                FilePickerSortMode.NAME -> files.sortedBy { it.displayName.lowercase() }
-                FilePickerSortMode.SIZE ->
-                    files.sortedWith(
-                        compareBy<FileBrowserEntry> { it.byteSize ?: Long.MAX_VALUE }
-                            .thenBy { it.displayName.lowercase() }
+        _uiState.update { state ->
+            state.copy(
+                entries =
+                    rawEntries.toFilePickerEntriesUi(
+                        searchQuery = state.searchQuery,
+                        sortMode = state.sortMode,
+                        sortAscending = state.sortAscending,
+                        blockedSourceReferences = blockedSourceReferences
                     )
-
-                FilePickerSortMode.TYPE ->
-                    files.sortedWith(
-                        compareBy<FileBrowserEntry> { it.mimeType.orEmpty() }
-                            .thenBy { it.displayName.lowercase() }
-                    )
-            }.let { sorted -> if (state.sortAscending) sorted else sorted.reversed() }
-
-        _uiState.update { current ->
-            current.copy(entries = (directories + sortedFiles).map { it.toFileBrowserEntryUi(blockedSourceReferences) })
+            )
         }
     }
 
@@ -255,16 +244,18 @@ class FilePickerViewModel(
         _uiState.update { state -> state.copy(isConfirming = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                val prepared = mutableListOf<MediaSelection>()
+                val prepared = mutableListOf<MediaSelectionUi>()
                 try {
                     selectedReferences.forEach { reference ->
-                        prepared += readFile(reference, currentSession.maxFileBytes).getOrThrow()
-                            .toMediaSelection(mediaFiles)
+                        prepared += prepareMediaSelection
+                            .fromFileBrowserContent(readFile(reference, currentSession.maxFileBytes).getOrThrow())
+                            .toUi()
                     }
                 } catch (error: Exception) {
                     prepared.forEach { selection ->
-                        runCatching { mediaFiles.delete(selection.localFilePath) }
-                        selection.thumbnailFilePath?.let { path -> runCatching { mediaFiles.delete(path) } }
+                        selection.localFilePaths.forEach { path ->
+                            runCatching { mediaFiles.delete(path) }
+                        }
                     }
                     throw error
                 }

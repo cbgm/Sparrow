@@ -2,15 +2,17 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
@@ -49,8 +51,11 @@ import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
@@ -117,7 +122,7 @@ class DirectConversationViewModel(
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
-    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
+    private val selectedMedia = MutableStateFlow<List<MediaSelectionUi>>(emptyList())
     private var preparingMediaSend = false
 
     // Draft cleanup must survive ViewModel clearing (viewModelScope is cancelled).
@@ -342,12 +347,14 @@ class DirectConversationViewModel(
             is DirectConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             DirectConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
-            is DirectConversationUiEvent.ShareCurrentLocation -> shareCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is DirectConversationUiEvent.ShareCurrentLocation ->
+                shareCurrentLocation(event.location.toMessagePart())
             is DirectConversationUiEvent.LocationCaptureFailed -> {
                 transitionLocationShare(LocationShareEvent.FAILED)
                 setError(event.message)
             }
-            is DirectConversationUiEvent.ShareContact -> sendAttachmentOnly(event.contact.toOutgoingMessageAttachment())
+            is DirectConversationUiEvent.ShareContact ->
+                sendAttachmentOnly(event.contact.toMessagePart())
             is DirectConversationUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is DirectConversationUiEvent.AttachmentError -> setError(event.message)
             DirectConversationUiEvent.HeaderClicked -> openContactDetails()
@@ -477,66 +484,78 @@ class DirectConversationViewModel(
         if (preparingMediaSend) return
         if (selections.isEmpty()) {
             dispatchSend(
-                text = text,
-                attachments = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = text
+                        )
+                    ),
                 clearComposerOnSuccess = true
             )
             return
         }
 
         preparingMediaSend = true
-        viewModelScope.launch {
-            try {
-                val attachments = selections.map { it.toOutgoingMessageAttachment(mediaFiles) }
-                // Selection could change while the files are being read.
-                if (selectedMedia.value != selections) return@launch
-                dispatchSend(
-                    text = text,
-                    attachments = attachments,
-                    clearComposerOnSuccess = true
-                )
-            } catch (error: Exception) {
-                setError(error.message ?: "Selected media could not be read")
-            } finally {
-                preparingMediaSend = false
-            }
+        try {
+            val parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            add(
+                                Text(
+                                    id = IdGenerator.generate(prefix = "text"),
+                                    text = value
+                                )
+                            )
+                        }
+                    addAll(selections.map { it.toMessagePart() })
+                }
+            if (selectedMedia.value != selections) return
+            dispatchSend(
+                parts = parts,
+                clearComposerOnSuccess = true
+            )
+        } catch (error: Exception) {
+            setError(error.message ?: "Selected media could not be prepared")
+        } finally {
+            preparingMediaSend = false
         }
     }
 
     private fun sendVoiceMessage() {
-        getRecordedVoiceAttachment()
-            .onSuccess { attachment ->
-                dispatchSend(
-                    text = "",
-                    attachments = listOf(attachment),
-                    clearComposerOnSuccess = false,
-                    clearVoiceOnSuccess = true
-                )
-            }.onFailure { error ->
-                setError(error.message ?: "Voice message is not ready to send")
-            }
+        viewModelScope.launch {
+            getRecordedVoiceAttachment()
+                .onSuccess { part ->
+                    dispatchSend(
+                        parts = listOf(part),
+                        clearComposerOnSuccess = false,
+                        clearVoiceOnSuccess = true
+                    )
+                }.onFailure { error ->
+                    setError(error.message ?: "Voice message is not ready to send")
+                }
+        }
     }
 
-    private fun shareCurrentLocation(attachment: OutgoingMessageAttachment) {
+    private fun shareCurrentLocation(part: MessagePart) {
         transitionLocationShare(LocationShareEvent.LOCATION_CAPTURED)
-        sendAttachmentOnly(attachment, isLocationShare = true)
+        sendAttachmentOnly(part, isLocationShare = true)
     }
 
     private fun sendAttachmentOnly(
-        attachment: OutgoingMessageAttachment,
+        part: MessagePart,
         isLocationShare: Boolean = false
     ) {
         dispatchSend(
-            text = "",
-            attachments = listOf(attachment),
+            parts = listOf(part),
             clearComposerOnSuccess = false,
             isLocationShare = isLocationShare
         )
     }
 
     private fun dispatchSend(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>,
+        parts: List<MessagePart>,
         clearComposerOnSuccess: Boolean,
         clearVoiceOnSuccess: Boolean = false,
         isLocationShare: Boolean = false
@@ -563,13 +582,16 @@ class DirectConversationViewModel(
                 sendOrQueueDirectMessage(
                     contactId = contactId,
                     conversationId = conversationId,
-                    text = text,
-                    attachments = attachments,
+                    parts = parts,
                     replyToMessageId = replyTo
                 ).onSuccess { result ->
                     when {
                         clearComposerOnSuccess -> clearComposer()
                         clearVoiceOnSuccess -> {
+                            parts.filterIsInstance<com.cbgm.sparrow.core.messagepart.domain.model.Voice>()
+                                .singleOrNull()
+                                ?.localFilePath
+                                ?.let { path -> runCatching { mediaFiles.delete(path) } }
                             resetVoiceComposer()
                             clearReply()
                         }
@@ -621,33 +643,39 @@ class DirectConversationViewModel(
         }
     }
 
-    private fun updateMediaSelection(media: List<MediaSelection>) {
+    private fun updateMediaSelection(media: List<MediaSelectionUi>) {
         runCatching {
             require(media.size <= MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE) {
                 "Too many attachments selected"
             }
-            require(media.map(MediaSelection::id).distinct().size == media.size) {
+            require(media.map(MediaSelectionUi::id).distinct().size == media.size) {
                 "Attachment IDs must be unique"
             }
-            require(media.sumOf(MediaSelection::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
+            require(media.sumOf(MediaSelectionUi::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
                 "Selected attachments exceed the total attachment size limit"
             }
             media.forEach { item ->
                 require(item.byteSize > 0L) { "Selected attachment is empty" }
-                when (item.type) {
-                    MediaSelectionType.IMAGE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
-                        require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
-                            "Invalid image attachment"
+                when (item) {
+                    is VisualMediaSelectionUi ->
+                        when (item.type) {
+                            MediaTypeUi.IMAGE -> {
+                                require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
+                                require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
+                                    "Invalid image attachment"
+                                }
+                            }
+
+                            MediaTypeUi.VIDEO -> {
+                                require(
+                                    item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES &&
+                                        item.mimeType.startsWith("video/")
+                                ) { "Invalid video attachment" }
+                            }
                         }
-                    }
-                    MediaSelectionType.VIDEO -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES && item.mimeType.startsWith("video/")) {
-                            "Invalid video attachment"
-                        }
-                    }
-                    MediaSelectionType.FILE -> {
-                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && !item.fileName.isNullOrBlank()) {
+
+                    is FileMediaSelectionUi -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && item.fileName.isNotBlank()) {
                             "Invalid file attachment"
                         }
                     }
@@ -661,7 +689,7 @@ class DirectConversationViewModel(
         }.onFailure { error ->
             // A rejected selection may already have been copied to private storage.
             // Do not remove any file still referenced by the accepted composer state.
-            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelection::id)
+            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelectionUi::id)
             deletePendingSelections(media.filterNot { it.id in acceptedIds })
             setError(error.message ?: "Selected attachments could not be attached")
         }
@@ -677,12 +705,12 @@ class DirectConversationViewModel(
         deletePendingSelections(consumed)
     }
 
-    private fun deletePendingSelections(media: List<MediaSelection>) {
+    private fun deletePendingSelections(media: List<MediaSelectionUi>) {
         if (media.isEmpty()) return
         mediaCleanupScope.launch {
             media.forEach { item ->
                 // Delete each path independently: a missing original must not leak the thumbnail.
-                for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
+                for (path in item.localFilePaths) {
                     runCatching { mediaFiles.delete(path) }
                         .onFailure { error -> logger.error(error) { "Could not clean up pending media" } }
                 }
@@ -796,7 +824,7 @@ class DirectConversationViewModel(
     )
 
     private data class ComposerRuntime(
-        val media: List<MediaSelection>,
+        val media: List<MediaSelectionUi>,
         val isSending: Boolean,
         val locationShareState: LocationShareState
     )

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 
 /** Coordinates Chats persistence, Membership epoch initialization, and invites in that order. */
 class CreateConversationGroupUseCase internal constructor(

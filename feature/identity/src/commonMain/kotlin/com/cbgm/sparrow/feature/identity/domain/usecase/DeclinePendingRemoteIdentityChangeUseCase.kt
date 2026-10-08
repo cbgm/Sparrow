@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.invitation.ContactInvitationDeclineProtocol
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import kotlinx.coroutines.flow.first
 
 /** Decline the signed identity-change offer with the SAME signed reply as a normal

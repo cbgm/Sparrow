@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.di
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.device.AndroidGroupKeyStore
 import org.koin.dsl.module
 

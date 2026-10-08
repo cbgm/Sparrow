@@ -43,6 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
@@ -55,14 +59,12 @@ import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
+import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_delivered
@@ -93,6 +95,8 @@ internal fun MessageBubble(
     onReplyPreviewClick: (String) -> Unit = {},
     onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true,
     isContextSelected: Boolean = false,
@@ -124,6 +128,8 @@ internal fun MessageBubble(
             onReplyPreviewClick = onReplyPreviewClick,
             onLongPress = onLongPress,
             onReactionsClick = onReactionsClick,
+            onPollVoteSubmit = onPollVoteSubmit,
+            onPollClose = onPollClose,
             modifier = contentModifier,
             isSearchHighlighted = isSearchHighlighted,
             showMetadata = showMetadata
@@ -153,6 +159,8 @@ private fun MessageBubbleContent(
     onReplyPreviewClick: (String) -> Unit,
     onLongPress: () -> Unit,
     onReactionsClick: (SparrowOverlayAnchor) -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit,
+    onPollClose: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true
@@ -165,7 +173,7 @@ private fun MessageBubbleContent(
         horizontalArrangement = if (message.isMine) Arrangement.End else Arrangement.Start
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(fraction = 0.78f),
+            modifier = Modifier.fillMaxWidth(fraction = 0.85f),
             horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
         ) {
             SenderLabel(message = message)
@@ -187,6 +195,8 @@ private fun MessageBubbleContent(
                     onContactClick = onContactClick,
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress,
+                    onPollVoteSubmit = onPollVoteSubmit,
+                    onPollClose = onPollClose,
                     onSafetyDetailsClick = {
                         safetyWarning?.let(onSafetyDetailsClick)
                     }
@@ -249,9 +259,10 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-private enum class PrimaryContent { VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+private enum class PrimaryContent { POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
+    pollPart != null -> PrimaryContent.POLL
     voicePart != null -> PrimaryContent.VOICE
     contactPart != null -> PrimaryContent.CONTACT
     locationPart != null -> PrimaryContent.LOCATION
@@ -271,10 +282,13 @@ private fun BubbleBody(
     onContactClick: (SharedContact) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
     onLongPress: () -> Unit = {},
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
-        message.voicePart == null &&
+        message.pollPart == null &&
+            message.voicePart == null &&
             message.locationPart == null &&
             message.contactPart == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
@@ -288,6 +302,30 @@ private fun BubbleBody(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
+        message.pollPart?.let { pollPart ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.POLL),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
+            ) {
+                PollMessageContent(
+                    part = pollPart,
+                    color = state.bubbleColor,
+                    onVoteSubmit = { selectedOptionIds ->
+                        onPollVoteSubmit(message.id, pollPart.id, selectedOptionIds)
+                    },
+                    onClosePoll = {
+                        onPollClose(message.id, pollPart.id)
+                    },
+                    onMediaClick = { index ->
+                        pollPart.images.getOrNull(index)?.let { onAttachmentClick(it.id) }
+                    }
+                )
+            }
+        }
         message.voicePart?.let { voicePart ->
             MessageBubbleSurface(
                 message = message,
@@ -297,14 +335,7 @@ private fun BubbleBody(
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
-                VoiceMessageContent(
-                    target =
-                        VoiceMessageTarget(
-                            attachmentId = voicePart.id,
-                            durationMilliseconds = voicePart.durationMilliseconds,
-                            source = voicePart.attachmentSource
-                        )
-                )
+                VoiceMessageContent(part = voicePart)
             }
         }
 
@@ -386,7 +417,8 @@ private fun BubbleBody(
                 TextMessageBubbleBody(
                     textPart =
                         message.textPart
-                            ?: MessagePartUi.Text(
+                            ?: TextUi(
+                                id = message.id,
                                 text = state.text,
                                 isContentFailed = state.isContentFailed
                             ),
@@ -813,7 +845,8 @@ private fun MessageBubblePreview() {
                             MessageReactionUi(emoji = "🔥", count = 1, reactedByMe = false)
                         ),
                     textPart =
-                        MessagePartUi.Text(
+                        TextUi(
+                            id = "preview-text",
                             text = "Encrypted message",
                             isContentFailed = false
                         )
@@ -837,7 +870,7 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
                     fileParts = listOf(
-                        MessagePartUi.File(
+                        FileUi(
                             id = "preview-file",
                             mimeType = "application/pdf",
                             byteSize = 0,
@@ -845,21 +878,20 @@ private fun MessageBubbleWithAttachmentsPreview() {
                         )
                     ),
                     imageVideoParts = listOf(
-                        MessagePartUi.ImageVideo(
+                        ImageUi(
                             id = "preview-image-1",
-                            type = ImageVideoTypeUi.IMAGE,
                             mimeType = "image/jpeg",
                             byteSize = 0
                         ),
-                        MessagePartUi.ImageVideo(
+                        VideoUi(
                             id = "preview-video",
-                            type = ImageVideoTypeUi.VIDEO,
                             mimeType = "video/mp4",
                             byteSize = 0
                         )
                     ),
                     locationPart = null,
-                    textPart = MessagePartUi.Text(
+                    textPart = TextUi(
+                        id = "preview-text",
                         text = "Test message",
                         isContentFailed = false
                     )

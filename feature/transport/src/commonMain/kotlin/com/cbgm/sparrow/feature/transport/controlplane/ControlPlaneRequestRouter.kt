@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import kotlinx.coroutines.CancellationException
 
 class ControlPlaneRequestRouter(

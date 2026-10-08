@@ -25,21 +25,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberLocalFileUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toAttachmentTarget
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.device.FileOpener
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 @Composable
 internal fun FileMessageBubbleBody(
-    fileParts: List<MessagePartUi.File>
+    fileParts: List<FileUi>
 ) {
     val opener = rememberFileOpener()
     var openingFileId by remember { mutableStateOf<String?>(null) }
@@ -61,22 +59,19 @@ internal fun FileMessageBubbleBody(
 
 @Composable
 private fun MessageFileItem(
-    attachment: MessagePartUi.File,
+    attachment: FileUi,
     opener: FileOpener,
     isOpening: Boolean,
     onClick: () -> Unit,
     onOpened: () -> Unit
 ) {
     val attachmentState =
-        rememberAttachmentUiState(
-            target = attachment.toAttachmentTarget(),
+        rememberLocalFileUiState(
+            part = attachment,
             load = isOpening
         )
     val localFilePath =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.LocalFile }
-            ?.localFilePath
+        (attachmentState as? AttachmentUiState.Ready)?.value
 
     LaunchedEffect(isOpening, localFilePath) {
         if (!isOpening || localFilePath == null) return@LaunchedEffect
@@ -145,13 +140,13 @@ private fun FileMessageBubbleBodyPreview() {
         FileMessageBubbleBody(
             fileParts =
                 listOf(
-                    MessagePartUi.File(
+                    FileUi(
                         id = "preview-file",
                         mimeType = "application/pdf",
                         byteSize = 1_048_576,
                         fileName = "document.pdf"
                     ),
-                    MessagePartUi.File(
+                    FileUi(
                         id = "preview-file-2",
                         mimeType = "text/plain",
                         byteSize = 42_000,

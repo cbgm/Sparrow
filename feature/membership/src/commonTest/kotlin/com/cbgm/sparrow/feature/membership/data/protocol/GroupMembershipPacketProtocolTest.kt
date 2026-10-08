@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.membership.data.protocol
 
-import com.cbgm.sparrow.core.crypto.group.GroupCiphertext
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

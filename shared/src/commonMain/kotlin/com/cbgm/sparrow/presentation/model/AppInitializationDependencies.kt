@@ -1,10 +1,6 @@
 package com.cbgm.sparrow.presentation.model
 
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsPermissionRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.ApprovedIdentityReconnectionObserver
@@ -13,13 +9,27 @@ import com.cbgm.sparrow.feature.conversationorchestration.runtime.IdentityResult
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.InvitationResultObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.MembershipResultObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.MessagingTransportResultObserver
+import com.cbgm.sparrow.feature.embedding.domain.usecase.InitializeLocalEmbeddingUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
-import com.cbgm.sparrow.notification.device.PlatformNotificationRuntime
-import com.cbgm.sparrow.notification.presentation.ConversationNotificationCoordinator
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
+import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationCoordinator
+import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
+import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
 data class AppInitializationDependencies(
     val initializeCryptoRuntime: InitializeCryptoRuntime,
+    val getIdentityStatus: GetIdentityStatusUseCase,
+    val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase,
+    val initializeLocalEmbedding: InitializeLocalEmbeddingUseCase,
+    val initializeSemanticSearch: InitializeSemanticSearchUseCase,
+    val initializeMessageSafety: InitializeMessageSafetyUseCase,
     val platformNotificationRuntime: PlatformNotificationRuntime,
     val conversationNotificationCoordinator: ConversationNotificationCoordinator,
     val attachmentConversationNameObserver: AttachmentConversationNameObserver,

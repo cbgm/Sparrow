@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
-import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
@@ -11,6 +8,9 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingFeature
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
+import com.cbgm.sparrow.feature.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase

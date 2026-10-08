@@ -61,9 +61,13 @@ actual fun rememberGalleryPickerLauncher(
                 val configuration = PHPickerConfiguration()
                 configuration.selectionLimit = config.maxItems.toLong()
                 configuration.filter =
-                    PHPickerFilter.anyFilterMatchingSubfilters(
-                        listOf(PHPickerFilter.imagesFilter, PHPickerFilter.videosFilter)
-                    )
+                    if (config.imagesOnly) {
+                        PHPickerFilter.imagesFilter
+                    } else {
+                        PHPickerFilter.anyFilterMatchingSubfilters(
+                            listOf(PHPickerFilter.imagesFilter, PHPickerFilter.videosFilter)
+                        )
+                    }
 
                 val picker = PHPickerViewController(configuration = configuration)
                 picker.setDelegate(delegate)

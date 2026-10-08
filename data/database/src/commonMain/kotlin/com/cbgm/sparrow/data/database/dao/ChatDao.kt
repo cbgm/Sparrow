@@ -7,7 +7,9 @@ import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
+import com.cbgm.sparrow.data.database.entity.MessageTextEntity
 import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.data.database.model.MessageCursorDto
@@ -89,8 +91,8 @@ interface ChatDao {
     }
 
     @Transaction
-    suspend fun applyLocalGroupRemoval(message: MessageEntity) {
-        upsertMessage(message)
+    suspend fun applyLocalGroupRemoval(message: MessageEntity, text: String) {
+        upsertMessageWithText(message, text)
         deleteConversationParticipants(message.conversationId)
         updateConversationTimestamp(
             conversationId = message.conversationId,
@@ -271,6 +273,76 @@ interface ChatDao {
     @Upsert
     suspend fun upsertMessage(message: MessageEntity)
 
+    @Upsert
+    suspend fun upsertMessagePart(part: MessagePartEntity)
+
+    @Upsert
+    suspend fun upsertMessageText(text: MessageTextEntity)
+
+    @Query("DELETE FROM message_parts WHERE id = :messageId AND type = 'TEXT'")
+    suspend fun deleteMessageTextPart(messageId: String)
+
+    @Transaction
+    suspend fun replaceMessageText(messageId: String, text: String) {
+        deleteMessageTextPart(messageId)
+        if (text.isBlank()) return
+        upsertMessagePart(
+            MessagePartEntity(
+                id = messageId,
+                messageId = messageId,
+                position = 0,
+                type = "TEXT"
+            )
+        )
+        upsertMessageText(
+            MessageTextEntity(
+                partId = messageId,
+                text = text
+            )
+        )
+    }
+
+    @Transaction
+    suspend fun upsertMessageWithText(message: MessageEntity, text: String) {
+        upsertMessage(message)
+        replaceMessageText(message.id, text)
+    }
+
+    @Query(
+        """
+        SELECT message_text.text
+        FROM message_parts
+        INNER JOIN message_text ON message_text.partId = message_parts.id
+        WHERE message_parts.messageId = :messageId
+          AND message_parts.type = 'TEXT'
+        LIMIT 1
+        """
+    )
+    suspend fun findMessageText(messageId: String): String?
+
+    @Query(
+        """
+        SELECT message_parts.*
+        FROM message_parts
+        INNER JOIN message_text ON message_text.partId = message_parts.id
+        WHERE message_parts.messageId IN (:messageIds)
+          AND message_parts.type = 'TEXT'
+        ORDER BY message_parts.messageId ASC, message_parts.position ASC
+        """
+    )
+    fun observeTextPartEntitiesByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
+
+    @Query(
+        """
+        SELECT message_text.*
+        FROM message_text
+        INNER JOIN message_parts ON message_parts.id = message_text.partId
+        WHERE message_parts.messageId IN (:messageIds)
+          AND message_parts.type = 'TEXT'
+        """
+    )
+    fun observeTextEntitiesByMessageIds(messageIds: List<String>): Flow<List<MessageTextEntity>>
+
     @Query(
         """
         SELECT messages.*
@@ -337,10 +409,11 @@ interface ChatDao {
     @Transaction
     suspend fun upsertOutgoingGroupMessage(
         message: MessageEntity,
+        text: String,
         recipientStates: List<MessageRecipientStateEntity>,
         timestamp: Long
     ) {
-        upsertMessage(message)
+        upsertMessageWithText(message, text)
         upsertMessageRecipientStates(recipientStates)
         updateConversationTimestamp(message.conversationId, timestamp)
     }
@@ -354,6 +427,7 @@ interface ChatDao {
     suspend fun upsertIncomingChatMessage(
         conversation: ConversationEntity,
         message: MessageEntity,
+        text: String,
         timestamp: Long,
         participant: ConversationParticipantEntity? = null
     ) {
@@ -363,8 +437,9 @@ interface ChatDao {
 
         participant?.let { upsertConversationParticipant(it) }
 
-        upsertMessage(
-            message = message
+        upsertMessageWithText(
+            message = message,
+            text = text
         )
 
         updateConversationTimestamp(
@@ -422,17 +497,21 @@ interface ChatDao {
             WHERE conversation_participants.conversationId = conversations.id
         ) AS participantCount,
         (
-            SELECT messages.text
-            FROM messages
-            WHERE messages.conversationId = conversations.id
-              AND messages.transportMode != :localMembershipStartedTransportMode
-            ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
+            SELECT message_text.text
+            FROM messages AS latest_message
+            INNER JOIN message_parts
+                ON message_parts.messageId = latest_message.id
+                AND message_parts.type = 'TEXT'
+            INNER JOIN message_text ON message_text.partId = message_parts.id
+            WHERE latest_message.conversationId = conversations.id
+              AND latest_message.transportMode != :localMembershipStartedTransportMode
+            ORDER BY latest_message.createdAtEpochMilliseconds DESC, latest_message.id DESC
             LIMIT 1
         ) AS lastMessageText,
         (
-            SELECT message_attachments.type
-            FROM message_attachments
-            WHERE message_attachments.messageId = (
+            SELECT message_parts.type
+            FROM message_parts
+            WHERE message_parts.messageId = (
                 SELECT messages.id
                 FROM messages
                 WHERE messages.conversationId = conversations.id
@@ -440,7 +519,8 @@ interface ChatDao {
                 ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
                 LIMIT 1
             )
-            ORDER BY message_attachments.position ASC
+              AND message_parts.type != 'TEXT'
+            ORDER BY message_parts.position ASC
             LIMIT 1
         ) AS lastMessageAttachmentType,
         (
@@ -510,10 +590,10 @@ interface ChatDao {
     suspend fun deleteConversationMessages(conversationId: String)
 
     @Transaction
-    suspend fun hideGroupConversation(marker: MessageEntity) {
+    suspend fun hideGroupConversation(marker: MessageEntity, text: String) {
         deleteConversationMessages(marker.conversationId)
         deleteConversationParticipants(marker.conversationId)
-        upsertMessage(marker)
+        upsertMessageWithText(marker, text)
         updateConversationTimestamp(
             conversationId = marker.conversationId,
             timestamp = marker.createdAtEpochMilliseconds

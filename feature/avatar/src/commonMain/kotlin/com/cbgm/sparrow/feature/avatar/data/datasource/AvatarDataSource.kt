@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.avatar.data.datasource
 
-import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarProvider
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureProvider
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.feature.avatar.domain.model.Avatar
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

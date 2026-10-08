@@ -8546,763 +8546,763 @@
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/attachment/MessageAttachment.kt",
-        "package": "com.cbgm.sparrow.core.protocol.attachment"
+        "package": "com.cbgm.sparrow.protocol.attachment"
       },
       {
         "name": "GroupPinnedAttachmentProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/attachment/GroupPinnedAttachmentProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.attachment"
+        "package": "com.cbgm.sparrow.protocol.attachment"
       },
       {
         "name": "MessageAttachment",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/attachment/MessageAttachment.kt",
-        "package": "com.cbgm.sparrow.core.protocol.attachment"
+        "package": "com.cbgm.sparrow.protocol.attachment"
       },
       {
         "name": "MessageAttachmentConstraints",
         "kind": "object",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/attachment/MessageAttachmentConstraints.kt",
-        "package": "com.cbgm.sparrow.core.protocol.attachment"
+        "package": "com.cbgm.sparrow.protocol.attachment"
       },
       {
         "name": "MessageAttachmentType",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/attachment/MessageAttachment.kt",
-        "package": "com.cbgm.sparrow.core.protocol.attachment"
+        "package": "com.cbgm.sparrow.protocol.attachment"
       },
       {
         "name": "DirectChatAuthorizationRevocationProtocol",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/authorization/DirectChatAuthorizationRevocationProtocol.kt",
-        "package": "com.cbgm.sparrow.core.protocol.authorization"
+        "package": "com.cbgm.sparrow.protocol.authorization"
       },
       {
         "name": "DirectChatAuthorizationRevocationSender",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/authorization/DirectChatAuthorizationRevocationSender.kt",
-        "package": "com.cbgm.sparrow.core.protocol.authorization"
+        "package": "com.cbgm.sparrow.protocol.authorization"
       },
       {
         "name": "GroupAvatarMetadata",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/avatar/GroupAvatarMetadata.kt",
-        "package": "com.cbgm.sparrow.core.protocol.avatar"
+        "package": "com.cbgm.sparrow.protocol.avatar"
       },
       {
         "name": "GroupAvatarPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/avatar/GroupAvatarMetadata.kt",
-        "package": "com.cbgm.sparrow.core.protocol.avatar"
+        "package": "com.cbgm.sparrow.protocol.avatar"
       },
       {
         "name": "GroupAvatarProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/avatar/GroupAvatarProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.avatar"
+        "package": "com.cbgm.sparrow.protocol.avatar"
       },
       {
         "name": "GroupAvatarSnapshot",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/avatar/GroupAvatarProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.avatar"
+        "package": "com.cbgm.sparrow.protocol.avatar"
       },
       {
         "name": "KotlinxPacketCodec",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/codec/KotlinxPacketCodec.kt",
-        "package": "com.cbgm.sparrow.core.protocol.codec"
+        "package": "com.cbgm.sparrow.protocol.codec"
       },
       {
         "name": "PacketCodec",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/codec/PacketCodec.kt",
-        "package": "com.cbgm.sparrow.core.protocol.codec"
+        "package": "com.cbgm.sparrow.protocol.codec"
       },
       {
         "name": "DefaultProtocolPacketHandler",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/DefaultProtocolPacketHandler.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "IncomingMessageHandler",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/IncomingMessageHandler.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "IncomingMessageRejectedException",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/IncomingMessageRejectedException.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "IncomingPacketContext",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/IncomingPacketContext.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "ProtocolPacketHandler",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/ProtocolPacketHandler.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "TypedProtocolPacketHandler",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/handler/TypeProtocolHandler.kt",
-        "package": "com.cbgm.sparrow.core.protocol.handler"
+        "package": "com.cbgm.sparrow.protocol.handler"
       },
       {
         "name": "LocalEncryptionKeyPair",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalEncryptionKeyPair.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalEncryptionKeyPairProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalEncryptionKeyPairProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalIdentityChangeHandler",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalIdentityChangeHandler.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalIdentityUnavailableException",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalIdentityUnavailableException.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalPublicIdentity",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalPublicIdentity.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalPublicIdentityProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalPublicIdentityProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalSigningKeyPair",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalSigningKeyPair.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalSigningKeyPairProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalSigningKeyPairProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "LocalSigningPublicKeyProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/identity/LocalSigningPublicKeyProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.identity"
+        "package": "com.cbgm.sparrow.protocol.identity"
       },
       {
         "name": "ContactInvitationDeclineProtocol",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/invitation/ContactInvitationDeclineProtocol.kt",
-        "package": "com.cbgm.sparrow.core.protocol.invitation"
+        "package": "com.cbgm.sparrow.protocol.invitation"
       },
       {
         "name": "ContactInvitationHandshakeProtocol",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/invitation/ContactInvitationHandshakeProtocol.kt",
-        "package": "com.cbgm.sparrow.core.protocol.invitation"
+        "package": "com.cbgm.sparrow.protocol.invitation"
       },
       {
         "name": "ContactInvitationPayloadEncoder",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/invitation/ContactInvitationPayloadEncoder.kt",
-        "package": "com.cbgm.sparrow.core.protocol.invitation"
+        "package": "com.cbgm.sparrow.protocol.invitation"
       },
       {
         "name": "ContactInvitationRequestProtocol",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/invitation/ContactInvitationRequestProtocol.kt",
-        "package": "com.cbgm.sparrow.core.protocol.invitation"
+        "package": "com.cbgm.sparrow.protocol.invitation"
       },
       {
         "name": "LocalMailboxCredential",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/mailbox/MailboxModels.kt",
-        "package": "com.cbgm.sparrow.core.protocol.mailbox"
+        "package": "com.cbgm.sparrow.protocol.mailbox"
       },
       {
         "name": "MailboxCapabilityLifecycle",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/mailbox/MailboxModels.kt",
-        "package": "com.cbgm.sparrow.core.protocol.mailbox"
+        "package": "com.cbgm.sparrow.protocol.mailbox"
       },
       {
         "name": "MailboxDeliveryRoute",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/mailbox/MailboxModels.kt",
-        "package": "com.cbgm.sparrow.core.protocol.mailbox"
+        "package": "com.cbgm.sparrow.protocol.mailbox"
       },
       {
         "name": "MailboxRouteRepository",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/mailbox/MailboxModels.kt",
-        "package": "com.cbgm.sparrow.core.protocol.mailbox"
+        "package": "com.cbgm.sparrow.protocol.mailbox"
       },
       {
         "name": "NoOpMailboxCapabilityLifecycle",
         "kind": "object",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/mailbox/MailboxModels.kt",
-        "package": "com.cbgm.sparrow.core.protocol.mailbox"
+        "package": "com.cbgm.sparrow.protocol.mailbox"
       },
       {
         "name": "GroupMessageContent",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/GroupMessageContent.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "GroupMessageContentCodec",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/GroupMessageContent.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "MessageDeletionPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/MessageDeletionPayload.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "MessageDeletionPayloadCodec",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/MessageDeletionPayloadCodec.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "MessageEditPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/MessageEditPayload.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "MessageEditPayloadCodec",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/MessageEditPayloadCodec.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "MessageReactionPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/message/MessageReactionPayload.kt",
-        "package": "com.cbgm.sparrow.core.protocol.message"
+        "package": "com.cbgm.sparrow.protocol.message"
       },
       {
         "name": "OutboxDeliveryStateListener",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxDeliveryStateListener.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxEvent",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxEvent.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxProcessingResult",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxProcessor.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxProcessor",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxProcessor.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxRunner",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxRunner.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxStateMachine",
         "kind": "object",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxStateMachine.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "OutboxStatus",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/OutboxStatus.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "ProtocolOutbox",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/ProtocolOutbox.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "ProtocolOutboxFailureEvent",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/ProtocolOutboxFailureEvent.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "ProtocolOutboxItem",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/outbox/ProtocolOutboxItem.kt",
-        "package": "com.cbgm.sparrow.core.protocol.outbox"
+        "package": "com.cbgm.sparrow.protocol.outbox"
       },
       {
         "name": "ChatMessagePacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ChatMessagePacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ContactInviteAcceptedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ContactInviteDeclinedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ContactInvitePacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ContactReadyPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ContactVerificationReceiptPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "DeliveryReceiptPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/DeliveryReceiptPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "DirectChatAuthorizationRevokedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ContactInvitationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupAvatarUpdatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupAvatarUpdatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupChatMessagePacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupChatMessagePacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupConversationDeletedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupConversationDeletedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupCreatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupCreatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupDescriptionUpdatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupDescriptionUpdatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupInviteDeclinedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupInviteDeclinedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupInvitePacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupInvitePacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupInviteReceivedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupInviteReceivedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupJoinRequestPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupJoinRequestPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupLeaveRequestPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupLeaveRequestPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMemberActivatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMemberActivatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMemberActivationAcknowledgementPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMemberActivationAcknowledgementPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMemberPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMemberPayload.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMemberRemovedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMemberRemovedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMembershipChangePayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupCreatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMessageDeletionPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMessageDeletionPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupMessageEditPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupMessageEditPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupPinUpdatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupPinUpdatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupProtocolPayloadEncoder",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupProtocolPayloadEncoder.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupReadyAcknowledgementPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupReadyAcknowledgementPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupTitleUpdatedPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupTitleUpdatedPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupVerificationMemberPayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupVerificationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupVerificationReceiptPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupVerificationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupVerificationSnapshotPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupVerificationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "GroupVerificationSnapshotRequestPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/GroupVerificationPackets.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "IdentityAcknowledgementPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/IdentityAcknowledgementPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "IdentityPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/IdentityPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "MailboxRoutePacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/MailboxRoutePacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "MessageDeletionPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/MessageDeletionPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "MessageEditPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/MessageEditPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "ReadReceiptPacket",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/ReadReceiptPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "SparrowPacket",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/packet/SparrowPacket.kt",
-        "package": "com.cbgm.sparrow.core.protocol.packet"
+        "package": "com.cbgm.sparrow.protocol.packet"
       },
       {
         "name": "DefaultPhoneNumberNormalizer",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/phone/DefaultPhoneNumberNormalizer.kt",
-        "package": "com.cbgm.sparrow.core.protocol.phone"
+        "package": "com.cbgm.sparrow.protocol.phone"
       },
       {
         "name": "LocalPhoneNumberProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/phone/LocalPhoneNumberProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.phone"
+        "package": "com.cbgm.sparrow.protocol.phone"
       },
       {
         "name": "PhoneNumberNormalizer",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/phone/PhoneNumberNormalizer.kt",
-        "package": "com.cbgm.sparrow.core.protocol.phone"
+        "package": "com.cbgm.sparrow.protocol.phone"
       },
       {
         "name": "LocalProfilePictureMetadataProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/LocalProfilePictureMetadataProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "LocalProfilePictureProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/LocalProfilePictureProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "LocalProfilePictureSnapshot",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/LocalProfilePictureProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "ProfilePictureMetadata",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/ProfilePictureMetadata.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "ProfilePicturePayload",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/ProfilePictureMetadata.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "RemoteProfilePictureMetadataProcessor",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/RemoteProfilePictureMetadataProcessor.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "RemoteProfilePictureProvider",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/RemoteProfilePictureProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "RemoteProfilePictureSnapshot",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/profile/RemoteProfilePictureProvider.kt",
-        "package": "com.cbgm.sparrow.core.protocol.profile"
+        "package": "com.cbgm.sparrow.protocol.profile"
       },
       {
         "name": "ByteArrayAsBase64Serializer",
         "kind": "object",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/serializer/ByteArrayAsBase64Serializer.kt",
-        "package": "com.cbgm.sparrow.core.protocol.serializer"
+        "package": "com.cbgm.sparrow.protocol.serializer"
       },
       {
         "name": "OutgoingWireAcceptance",
         "kind": "class",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/transport/OutgoingWireSender.kt",
-        "package": "com.cbgm.sparrow.core.protocol.transport"
+        "package": "com.cbgm.sparrow.protocol.transport"
       },
       {
         "name": "OutgoingWireSender",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/transport/OutgoingWireSender.kt",
-        "package": "com.cbgm.sparrow.core.protocol.transport"
+        "package": "com.cbgm.sparrow.protocol.transport"
       },
       {
         "name": "ProtocolVersion",
         "kind": "object",
         "source_set": "commonMain",
         "path": "core/protocol/src/commonMain/kotlin/com/cbgm/sparrow/core/protocol/version/ProtocolVersion.kt",
-        "package": "com.cbgm.sparrow.core.protocol.version"
+        "package": "com.cbgm.sparrow.protocol.version"
       }
     ]
   },
@@ -10316,175 +10316,175 @@
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/AndroidNotificationRuntime.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "BackgroundDeliveryReceiptSender",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/BackgroundDeliveryReceiptSender.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "PendingMessageSyncScheduler",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PendingMessageSyncScheduler.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "PendingMessageSyncWorker",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PendingMessageSyncWorker.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "PushTokenRegistrationScheduler",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PushTokenRegistrationScheduler.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "PushTokenRegistrationWorker",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/PushTokenRegistrationWorker.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "SparrowDeepLink",
         "kind": "object",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowDeepLink.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "SparrowFirebaseMessagingService",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowFirebaseMessagingService.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "SparrowNotificationIntentFactory",
         "kind": "object",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationIntentFactory.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "SparrowNotificationIntentHandler",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationIntentHandler.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "SparrowNotificationManager",
         "kind": "class",
         "source_set": "androidMain",
         "path": "notification/src/androidMain/kotlin/com/cbgm/sparrow/notification/device/SparrowNotificationManager.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "PlatformNotificationRuntime",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/device/PlatformNotificationRuntime.kt",
-        "package": "com.cbgm.sparrow.notification.device"
+        "package": "com.cbgm.sparrow.feature.notification.device"
       },
       {
         "name": "AppVisibilityState",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/AppVisibilityState.kt",
-        "package": "com.cbgm.sparrow.notification.domain.model"
+        "package": "com.cbgm.sparrow.feature.notification.domain.model"
       },
       {
         "name": "ConversationNotification",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/ConversationNotification.kt",
-        "package": "com.cbgm.sparrow.notification.domain.model"
+        "package": "com.cbgm.sparrow.feature.notification.domain.model"
       },
       {
         "name": "ConversationNotificationEvent",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/ConversationNotificationEvent.kt",
-        "package": "com.cbgm.sparrow.notification.domain.model"
+        "package": "com.cbgm.sparrow.feature.notification.domain.model"
       },
       {
         "name": "NotificationConversationTarget",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/NotificationConversationTarget.kt",
-        "package": "com.cbgm.sparrow.notification.domain.model"
+        "package": "com.cbgm.sparrow.feature.notification.domain.model"
       },
       {
         "name": "PendingMessageSyncResult",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/model/PendingMessageSyncResult.kt",
-        "package": "com.cbgm.sparrow.notification.domain.model"
+        "package": "com.cbgm.sparrow.feature.notification.domain.model"
       },
       {
         "name": "ObserveConversationNotificationEventsUseCase",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/ObserveConversationNotificationEventsUseCase.kt",
-        "package": "com.cbgm.sparrow.notification.domain.usecase"
+        "package": "com.cbgm.sparrow.feature.notification.domain.usecase"
       },
       {
         "name": "RegisterPushTokenUseCase",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/RegisterPushTokenUseCase.kt",
-        "package": "com.cbgm.sparrow.notification.domain.usecase"
+        "package": "com.cbgm.sparrow.feature.notification.domain.usecase"
       },
       {
         "name": "ResolveNotificationConversationUseCase",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/ResolveNotificationConversationUseCase.kt",
-        "package": "com.cbgm.sparrow.notification.domain.usecase"
+        "package": "com.cbgm.sparrow.feature.notification.domain.usecase"
       },
       {
         "name": "SynchronizePendingMessagesUseCase",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/domain/usecase/SynchronizePendingMessagesUseCase.kt",
-        "package": "com.cbgm.sparrow.notification.domain.usecase"
+        "package": "com.cbgm.sparrow.feature.notification.domain.usecase"
       },
       {
         "name": "ConversationNotificationCoordinator",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/ConversationNotificationCoordinator.kt",
-        "package": "com.cbgm.sparrow.notification.presentation"
+        "package": "com.cbgm.sparrow.feature.notification.presentation"
       },
       {
         "name": "ConversationNotificationPresenter",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/ConversationNotificationPresenter.kt",
-        "package": "com.cbgm.sparrow.notification.presentation"
+        "package": "com.cbgm.sparrow.feature.notification.presentation"
       },
       {
         "name": "NotificationNavigationController",
         "kind": "class",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/navigation/NotificationNavigationController.kt",
-        "package": "com.cbgm.sparrow.notification.presentation.navigation"
+        "package": "com.cbgm.sparrow.feature.notification.presentation.navigation"
       },
       {
         "name": "NotificationNavigationTarget",
         "kind": "interface",
         "source_set": "commonMain",
         "path": "notification/src/commonMain/kotlin/com/cbgm/sparrow/notification/presentation/navigation/NotificationNavigationTarget.kt",
-        "package": "com.cbgm.sparrow.notification.presentation.navigation"
+        "package": "com.cbgm.sparrow.feature.notification.presentation.navigation"
       }
     ]
   },

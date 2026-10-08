@@ -22,22 +22,22 @@ class GroupLocalMembershipTimelineTest {
                             invitationId = "invite-1",
                             epoch = 2,
                             createdAtEpochMilliseconds = 200L
-                        ),
+                        ).message,
                         userMessage("absent", 300L),
                         GroupMembershipMessageFactory.localMembershipStarted(
                             conversationId = GROUP_ID,
                             referenceId = "invite-2",
                             epoch = 4,
                             createdAtEpochMilliseconds = 400L
-                        ),
+                        ).message,
                         userMessage("after", 500L)
                     ),
                 memberships = emptyList()
             )
 
         assertEquals(
-            listOf("before", "You left this group", "after"),
-            timeline.visibleMessages.map(MessageEntity::text)
+            listOf("before", "group-local-membership-left-invite-1-2", "after"),
+            timeline.visibleMessages.map(MessageEntity::id)
         )
         assertFalse(timeline.isLocallyInactive)
     }
@@ -54,7 +54,7 @@ class GroupLocalMembershipTimelineTest {
                             invitationId = "invite-1",
                             epoch = 2,
                             createdAtEpochMilliseconds = 200L
-                        ),
+                        ).message,
                         userMessage("absent", 250L)
                     ),
                 memberships =
@@ -69,7 +69,7 @@ class GroupLocalMembershipTimelineTest {
             )
 
         assertFalse(timeline.isLocallyInactive)
-        assertEquals(listOf("before", "You left this group"), timeline.visibleMessages.map(MessageEntity::text))
+        assertEquals(listOf("before", "group-local-membership-left-invite-1-2"), timeline.visibleMessages.map(MessageEntity::id))
         assertEquals(listOf("invite-2"), timeline.currentMemberships.map(GroupMemberLifecycleSnapshot::sourceInvitationId))
     }
 
@@ -85,7 +85,7 @@ class GroupLocalMembershipTimelineTest {
                             invitationId = "invite-1",
                             epoch = 2,
                             createdAtEpochMilliseconds = 200L
-                        )
+                        ).message
                     ),
                 memberships = emptyList()
             )
@@ -93,12 +93,11 @@ class GroupLocalMembershipTimelineTest {
         assertTrue(timeline.isLocallyInactive)
     }
 
-    private fun userMessage(text: String, timestamp: Long): MessageEntity =
+    private fun userMessage(id: String, timestamp: Long): MessageEntity =
         MessageEntity(
-            id = text,
+            id = id,
             conversationId = GROUP_ID,
-            packetId = "packet-$text",
-            text = text,
+            packetId = "packet-$id",
             transportPayload = null,
             transportMode = "GROUP_E2EE",
             contentStatus = MessageContentStatus.READABLE.name,

@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 
 /** Chats-owned side of membership cleanup; Membership never invokes this datasource directly. */
 internal class GroupLocalCleanupDataSource(
@@ -21,25 +21,25 @@ internal class GroupLocalCleanupDataSource(
         epoch: Int,
         endedAtEpochMilliseconds: Long
     ) {
-        chatDao.applyLocalGroupRemoval(
+        val message =
             GroupMembershipMessageFactory.localMembershipLeft(
                 conversationId = groupId,
                 invitationId = referenceId,
                 epoch = epoch,
                 createdAtEpochMilliseconds = endedAtEpochMilliseconds
             )
-        )
+        chatDao.applyLocalGroupRemoval(message.message, message.text)
         groupKeyDataSource.deleteGroup(groupId)
         groupVerificationDao.deleteByGroupId(groupId)
     }
 
     suspend fun deleteConversationHistory(groupId: String, deletedAtEpochMilliseconds: Long) {
-        chatDao.hideGroupConversation(
+        val marker =
             GroupMembershipMessageFactory.localConversationDeletedMarker(
                 conversationId = groupId,
                 createdAtEpochMilliseconds = deletedAtEpochMilliseconds
             )
-        )
+        chatDao.hideGroupConversation(marker.message, marker.text)
         groupKeyDataSource.deleteGroup(groupId)
         groupVerificationDao.deleteByGroupId(groupId)
         groupAvatarDataSource.deleteLocal(groupId)

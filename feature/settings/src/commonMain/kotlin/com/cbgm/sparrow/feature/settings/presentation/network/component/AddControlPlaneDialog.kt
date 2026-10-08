@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,6 +18,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneAddSource
@@ -46,7 +49,9 @@ fun AddControlPlaneDialog(
     error: ControlPlaneSettingsError?,
     onValueChanged: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    failureDetail: String? = null,
+    isLoading: Boolean = false
 ) {
     SparrowAlertDialog(
         isVisible = isVisible,
@@ -104,20 +109,41 @@ fun AddControlPlaneDialog(
                     isSingleLine = true,
                     errorText = error?.let { addErrorText(it) } ?: ""
                 )
+                if (error == ControlPlaneSettingsError.SAVE_FAILED && !failureDetail.isNullOrBlank()) {
+                    Text(
+                        text = failureDetail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
                 SparrowApprovalButton(
                     onClick = onConfirm,
+                    enabled = !isLoading,
                     modifier = Modifier.weight(1f),
-                    text = stringResource(
-                        if (editingDirectory) {
-                            Res.string.feature_settings_control_plane_directory_apply
-                        } else {
-                            Res.string.feature_settings_control_plane_add
+                    text = if (isLoading) {
+                        ""
+                    } else {
+                        stringResource(
+                            if (editingDirectory) {
+                                Res.string.feature_settings_control_plane_directory_apply
+                            } else {
+                                Res.string.feature_settings_control_plane_add
+                            }
+                        )
+                    },
+                    content = {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(Dimens.Base.progressButtonIndicatorSize),
+                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
-                    )
+                    }
                 )
                 SparrowOutlinedButton(
                     onClick = onDismiss,

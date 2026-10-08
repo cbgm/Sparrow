@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.search.data.datasource
 
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
-import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
+import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
+import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
+import com.cbgm.sparrow.feature.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.search.data.mapper.EmbeddingCodecMapper
 import com.cbgm.sparrow.feature.search.data.mapper.toEmbeddingText
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig

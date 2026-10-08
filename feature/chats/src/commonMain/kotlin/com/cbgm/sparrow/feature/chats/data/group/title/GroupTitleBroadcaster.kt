@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.group.title
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupTitleDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 
 internal class GroupTitleBroadcaster(
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,

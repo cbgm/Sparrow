@@ -8,22 +8,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.ui.navigation.AppNavigator
-import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintLauncher
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintResult
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
-import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
-import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberReader
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
@@ -34,73 +25,28 @@ import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_identity_backup_password
 import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
 import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
-import kotlinx.coroutines.CancellationException
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun OnboardingRoute(
     onComplete: () -> Unit,
     viewModel: OnboardingViewModel = koinViewModel(),
-    identityViewModel: IdentityViewModel = koinViewModel(),
-    navigator: AppNavigator = koinInject(),
-    filePicker: FilePickerLauncher = koinInject(),
-    selectedFiles: MediaSelectionFileRepository = koinInject()
+    identityViewModel: IdentityViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val identityState by identityViewModel.uiState.collectAsStateWithLifecycle()
     val backupState by identityViewModel.backupState.collectAsStateWithLifecycle()
-    var importDocument by remember { mutableStateOf<ByteArray?>(null) }
-    var backupPassword by remember { mutableStateOf("") }
-    val filePickerResults by filePicker.results.collectAsStateWithLifecycle()
-    // The existing in-app Sparrow file browser owns folder access, navigation,
-    // selection and bounded file reads. No separate Android OpenDocument picker.
-    LaunchedEffect(filePickerResults) {
-        when (val result = filePicker.consumeResult()) {
-            is FilePickerSessionResult.Completed -> {
-                result.media.forEach { file ->
-                    try {
-                        require(file.byteSize in 1..16_384) { "Identity backup is too large or empty" }
-                        val document = selectedFiles.read(file.localFilePath)
-                        require(document.size in 1..16_384) { "Identity backup is too large or empty" }
-                        importDocument = document
-                        backupPassword = ""
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (error: Exception) {
-                        identityViewModel.showBackupError(error.message ?: "Could not read identity backup")
-                    } finally {
-                        // Picker keeps a private temporary copy: no backup should
-                        // linger in attachment storage after the restore dialog opens.
-                        try {
-                            selectedFiles.delete(file.localFilePath)
-                            file.thumbnailFilePath?.let { selectedFiles.delete(it) }
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (error: Exception) {
-                            identityViewModel.showBackupError(error.message ?: "Could not remove temporary backup")
-                        }
-                    }
-                }
-            }
-            is FilePickerSessionResult.Failed -> identityViewModel.showBackupError(result.message)
-            is FilePickerSessionResult.Dismissed, null -> Unit
-        }
-    }
-    if (importDocument != null && identityState is IdentityUiState.NoIdentity) {
+    if (state.isBackupRestoreVisible && identityState is IdentityUiState.NoIdentity) {
         AlertDialog(
-            onDismissRequest = {
-                importDocument = null
-                backupPassword = ""
-            },
+            onDismissRequest = viewModel::dismissBackupRestore,
             title = { Text(stringResource(Res.string.feature_identity_backup_restore_action)) },
             text = {
                 androidx.compose.foundation.layout.Column {
                     Text(stringResource(Res.string.feature_identity_backup_restore_hint))
                     OutlinedTextField(
-                        value = backupPassword,
-                        onValueChange = { backupPassword = it },
+                        value = state.backupPassword,
+                        onValueChange = viewModel::onBackupPasswordChanged,
                         label = { Text(stringResource(Res.string.feature_identity_backup_password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true
@@ -109,27 +55,19 @@ fun OnboardingRoute(
             },
             confirmButton = {
                 Button(
-                    enabled = backupPassword.isNotEmpty() && !backupState.busy,
+                    enabled = state.backupPassword.isNotEmpty() && !backupState.busy,
                     onClick = {
-                        val password = backupPassword.toCharArray()
-                        backupPassword = ""
-                        identityViewModel.restoreBackup(importDocument!!, password)
-                        importDocument = null
+                        viewModel.confirmBackupRestore(identityViewModel::restoreBackup)
                     }
                 ) { Text(stringResource(Res.string.feature_identity_backup_restore_action)) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    importDocument = null
-                    backupPassword = ""
-                }) {
+                TextButton(onClick = viewModel::dismissBackupRestore) {
                     Text(stringResource(Res.string.base_cancel))
                 }
             }
         )
     }
-    var hintRequestId by remember { mutableIntStateOf(0) }
-
     OnboardingPermissionRequester(
         requestId = state.permissionRequestId,
         onResult = viewModel::onPermissionsResult
@@ -144,7 +82,7 @@ fun OnboardingRoute(
     )
 
     PhoneNumberHintLauncher(
-        requestId = hintRequestId,
+        requestId = state.phoneNumberHintRequestId,
         enabled = state.page == OnboardingPage.PHONE,
         onResult = { result ->
             handlePhoneNumberHintResult(result, identityViewModel)
@@ -162,19 +100,14 @@ fun OnboardingRoute(
     OnboardingScreen(
         state = state,
         identityState = identityState,
-        backupError = backupState.message?.takeIf { backupState.error },
+        backupError = state.backupImportError ?: backupState.message?.takeIf { backupState.error },
         isRestoring = backupState.busy,
-        onRestoreIdentity = {
-            // Only one file is accepted; the picker limits it to a 16-KiB encrypted backup.
-            val sessionId = filePicker.launch(maxItems = 1, maxFileBytes = 16_384L, blockedSourceReferences = emptySet())
-            navigator.navigateTo(AppRoute.FilePicker(sessionId))
-        },
+        onRestoreIdentity = viewModel::openBackupRestorePicker,
         onUiEvent = { event ->
             handleOnboardingUiEvent(
                 event = event,
                 viewModel = viewModel,
-                identityViewModel = identityViewModel,
-                onChooseAnotherNumber = { hintRequestId += 1 }
+                identityViewModel = identityViewModel
             )
         }
     )
@@ -183,11 +116,10 @@ fun OnboardingRoute(
 private fun handleOnboardingUiEvent(
     event: OnboardingUiEvent,
     viewModel: OnboardingViewModel,
-    identityViewModel: IdentityViewModel,
-    onChooseAnotherNumber: () -> Unit
+    identityViewModel: IdentityViewModel
 ) {
     when (event) {
-        OnboardingUiEvent.ChooseAnotherNumberClicked -> onChooseAnotherNumber()
+        OnboardingUiEvent.ChooseAnotherNumberClicked -> viewModel.onUiEvent(event)
         is OnboardingUiEvent.PhoneNumberChanged ->
             identityViewModel.onUiEvent(IdentityUiEvent.PhoneNumberChanged(event.value))
         is OnboardingUiEvent.NameChanged ->

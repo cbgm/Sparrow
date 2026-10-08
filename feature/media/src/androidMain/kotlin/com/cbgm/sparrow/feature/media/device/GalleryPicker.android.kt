@@ -116,6 +116,7 @@ actual fun rememberGalleryPickerLauncher(
     if (isEmbeddedPickerVisible && supportsEmbeddedPhotoPicker()) {
         EmbeddedGalleryPickerDialog(
             maxItems = config.maxItems,
+            imagesOnly = config.imagesOnly,
             selectedSourceReferences = selectedSourceReferences,
             strings = strings,
             onSelectionComplete = { uris ->
@@ -133,14 +134,20 @@ actual fun rememberGalleryPickerLauncher(
         )
     }
 
-    return remember(singleLauncher, multipleLauncher, config.maxItems) {
+    return remember(singleLauncher, multipleLauncher, config.maxItems, config.imagesOnly) {
         GalleryPickerLauncher(
             launch = {
                 if (supportsEmbeddedPhotoPicker()) {
                     isEmbeddedPickerVisible = true
                 } else {
                     val request =
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                        PickVisualMediaRequest(
+                            if (config.imagesOnly) {
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            } else {
+                                ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                            }
+                        )
                     if (config.maxItems == 1) {
                         singleLauncher.launch(request)
                     } else {
@@ -159,6 +166,7 @@ actual fun rememberGalleryPickerLauncher(
 @Composable
 private fun EmbeddedGalleryPickerDialog(
     maxItems: Int,
+    imagesOnly: Boolean,
     selectedSourceReferences: List<String>,
     strings: GalleryPickerStrings,
     onSelectionComplete: (List<Uri>) -> Unit,
@@ -192,10 +200,10 @@ private fun EmbeddedGalleryPickerDialog(
         )
 
     val featureInfo =
-        remember(maxItems) {
+        remember(maxItems, imagesOnly) {
             EmbeddedPhotoPickerFeatureInfo.Builder()
                 .setMaxSelectionLimit(maxItems)
-                .setMimeTypes(mutableListOf("image/*", "video/*"))
+                .setMimeTypes(if (imagesOnly) mutableListOf("image/*") else mutableListOf("image/*", "video/*"))
                 .setOrderedSelection(true)
                 .build()
         }

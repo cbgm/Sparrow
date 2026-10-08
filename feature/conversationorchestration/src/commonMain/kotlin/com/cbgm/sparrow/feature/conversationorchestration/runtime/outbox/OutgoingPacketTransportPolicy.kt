@@ -1,31 +1,30 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupDescriptionUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupTitleUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
-import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.ContactInviteAcceptedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
+import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.GroupAvatarUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupDescriptionUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.sparrow.protocol.packet.GroupJoinRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
+import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class OutgoingPacketTransportPolicy {
     fun resolve(
@@ -65,23 +64,10 @@ class OutgoingPacketTransportPolicy {
                     )
                 }
 
-                is MessageDeletionPacket ->
+                is ChatMessagePacket,
+                is OperationMessagePacket ->
                     OutgoingTransportRequirement(
-                        requiresEncryption = true,
-                        encryptionUnavailableMessage =
-                            "Direct message deletion requires an encrypted Sparrow transport"
-                    )
-
-                is MessageEditPacket ->
-                    OutgoingTransportRequirement(
-                        requiresEncryption = true,
-                        encryptionUnavailableMessage =
-                            "Direct message edit requires an encrypted Sparrow transport"
-                    )
-
-                is ChatMessagePacket ->
-                    OutgoingTransportRequirement(
-                        // Text, reactions and attachments must all remain encrypted,
+                        // Direct messages and operations must remain encrypted,
                         // including when a remote installation loses its old identity.
                         requiresEncryption = true,
                         encryptionUnavailableMessage =

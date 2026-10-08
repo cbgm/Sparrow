@@ -20,7 +20,7 @@ class GroupMembershipMessageFactoryTest {
         assertEquals("Alex was added to the group", message.text)
         assertEquals(
             ChatMessageType.GROUP_MEMBER_ADDED,
-            GroupMembershipMessageFactory.typeOf(message.transportMode)
+            GroupMembershipMessageFactory.typeOf(message.message.transportMode)
         )
     }
 
@@ -45,10 +45,10 @@ class GroupMembershipMessageFactoryTest {
                 eventId = "invitation-2"
             )
 
-        assertNotEquals(first.id, second.id)
+        assertNotEquals(first.message.id, second.message.id)
         assertEquals(
             ChatMessageType.GROUP_MEMBER_REMOVED,
-            GroupMembershipMessageFactory.typeOf(first.transportMode)
+            GroupMembershipMessageFactory.typeOf(first.message.transportMode)
         )
     }
 
@@ -64,7 +64,7 @@ class GroupMembershipMessageFactoryTest {
 
         assertEquals(
             ChatMessageType.LOCAL_GROUP_MEMBERSHIP_REMOVED,
-            GroupMembershipMessageFactory.typeOf(message.transportMode)
+            GroupMembershipMessageFactory.typeOf(message.message.transportMode)
         )
     }
 
@@ -88,11 +88,11 @@ class GroupMembershipMessageFactoryTest {
 
         assertEquals(
             ChatMessageType.GROUP_MEMBER_LEFT,
-            GroupMembershipMessageFactory.typeOf(ownerMessage.transportMode)
+            GroupMembershipMessageFactory.typeOf(ownerMessage.message.transportMode)
         )
         assertEquals(
             ChatMessageType.LOCAL_GROUP_MEMBERSHIP_LEFT,
-            GroupMembershipMessageFactory.typeOf(localMessage.transportMode)
+            GroupMembershipMessageFactory.typeOf(localMessage.message.transportMode)
         )
     }
 
@@ -109,7 +109,7 @@ class GroupMembershipMessageFactoryTest {
         assertEquals("", marker.text)
         assertEquals(
             GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE,
-            marker.transportMode
+            marker.message.transportMode
         )
     }
 
@@ -124,7 +124,7 @@ class GroupMembershipMessageFactoryTest {
         assertEquals("", marker.text)
         assertEquals(
             GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE,
-            marker.transportMode
+            marker.message.transportMode
         )
     }
 }

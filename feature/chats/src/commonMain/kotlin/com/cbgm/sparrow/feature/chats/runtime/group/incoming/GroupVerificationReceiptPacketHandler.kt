@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.runtime.group.incoming
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupPacketHandler
 import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationCoordinator
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupVerificationReceiptPacketHandler(
     private val coordinator: GroupVerificationCoordinator

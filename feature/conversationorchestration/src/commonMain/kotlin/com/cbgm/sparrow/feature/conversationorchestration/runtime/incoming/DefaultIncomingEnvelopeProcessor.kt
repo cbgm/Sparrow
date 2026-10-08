@@ -1,15 +1,15 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.incoming
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
-import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ReconcileContactTransportRoutingUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactIdByRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.routing.GroupRoutingResolver
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
+import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 
 class DefaultIncomingEnvelopeProcessor(
     private val resolveContactIdByRoutingId: ResolveContactIdByRoutingIdUseCase,

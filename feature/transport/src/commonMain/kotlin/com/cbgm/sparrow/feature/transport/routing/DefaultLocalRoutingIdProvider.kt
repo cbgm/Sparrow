@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.routing
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 
 class DefaultLocalRoutingIdProvider(
     private val localSigningPublicKeyProvider: LocalSigningPublicKeyProvider,

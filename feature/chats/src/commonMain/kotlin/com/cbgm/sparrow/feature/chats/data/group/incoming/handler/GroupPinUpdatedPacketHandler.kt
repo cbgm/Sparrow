@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toEntity
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinPacketProtocol
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupPinUpdatedPacketHandler internal constructor(
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,

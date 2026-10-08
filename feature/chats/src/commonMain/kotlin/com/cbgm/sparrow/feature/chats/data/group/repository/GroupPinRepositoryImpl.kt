@@ -1,8 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
@@ -16,11 +18,13 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPinTarget
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 internal class GroupPinRepositoryImpl(
     private val attachmentDataSource: MessageAttachmentOperationsRepository,
@@ -80,11 +84,16 @@ internal class GroupPinRepositoryImpl(
                 require(senderSigningPublicKey.isNotEmpty()) { "Pinned message sender identity was not found" }
                 val senderKey = senderSigningPublicKey.copyOf()
 
-                val attachments = attachmentDataSource.protocolAttachments(messageId)
+                val attachmentParts = attachmentDataSource.messageParts(messageId).getOrThrow()
                 val content =
                     GroupMessageContent(
-                        text = message.text,
-                        attachments = attachments,
+                        parts =
+                            buildList {
+                                dataSource.findMessageText(messageId)
+                                    ?.takeIf(String::isNotBlank)
+                                    ?.let { text -> add(TextDto(id = messageId, text = text)) }
+                                addAll(attachmentParts.map { it.toDto() })
+                            },
                         replyToMessageId = message.replyToMessageId
                     )
                 val changedAt =
@@ -117,25 +126,30 @@ internal class GroupPinRepositoryImpl(
         groupId: String,
         attachmentId: String
     ): Result<ByteArray> =
-        safeSuspendCall {
-            attachmentDataSource.loadDetachedBytes(
-                findPinnedAttachment(groupId, attachmentId)
-            )
-        }
+        attachmentDataSource.loadDetachedBytes(
+            findPinnedAttachment(groupId, attachmentId).toMessagePart()
+        )
 
     private suspend fun findPinnedAttachment(
         groupId: String,
         attachmentId: String
-    ): ProtocolMessageAttachment {
+    ): MessagePartDto {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
 
         val state = dataSource.get(groupId) ?: error("Group pin was not found")
         val encodedContent = state.messageContent ?: error("Group pin has no message content")
         val content = groupMessageContentCodec.decode(encodedContent)
-        return content.attachments.firstOrNull { item -> item.attachmentId == attachmentId }
+        return content.parts.firstOrNull { part -> part.id == attachmentId }
+            ?: content.parts
+                .filterIsInstance<PollDto>()
+                .flatMap(PollDto::images)
+                .firstOrNull { image -> image.id == attachmentId }
             ?: error("Pinned message attachment was not found")
     }
+
+    override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
+        broadcaster.sendCurrentTo(groupId, peerId)
 
     override suspend fun unpin(groupId: String): Result<Unit> =
         safeSuspendCall {

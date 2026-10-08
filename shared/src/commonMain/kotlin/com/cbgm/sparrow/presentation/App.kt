@@ -12,16 +12,16 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun App(
-    onStartupContentReady: () -> Unit = {},
+    onReleaseNativeSplash: () -> Unit = {},
     appViewModel: AppViewModel = koinViewModel()
 ) {
     ObserveAppLifecycle(appViewModel = appViewModel)
 
-    if (appViewModel.isLanguageInitialized) {
-        AppLocaleEnvironment {
-            SparrowTheme {
-                AppNavigation(onStartupContentReady = onStartupContentReady)
-            }
+    AppLocaleEnvironment {
+        SparrowTheme {
+            AppNavigation(
+                onStartupContentReady = onReleaseNativeSplash
+            )
         }
     }
 }

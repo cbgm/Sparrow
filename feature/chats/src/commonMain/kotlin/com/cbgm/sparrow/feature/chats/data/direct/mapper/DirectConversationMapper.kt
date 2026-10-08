@@ -1,10 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.direct.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
@@ -13,7 +12,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 
 internal fun ConversationWithMessagesDto.toDirectConversation(
-    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
+    partsByMessageId: Map<String, List<MessagePart>> = emptyMap(),
     reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap()
 ): DirectConversation =
     DirectConversation(
@@ -25,7 +24,7 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
                 .map { message ->
                     message.toDirectMessage(
                         contactId = requireNotNull(conversation.contactId),
-                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        messageParts = partsByMessageId[message.id].orEmpty(),
                         reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
@@ -39,7 +38,7 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
 
 private fun MessageEntity.toDirectMessage(
     contactId: String,
-    attachmentParts: List<MessagePartDto>,
+    messageParts: List<MessagePart>,
     reactions: List<MessageReaction>
 ): DirectMessage =
     DirectMessage(
@@ -57,13 +56,7 @@ private fun MessageEntity.toDirectMessage(
             },
         replyToMessageId = replyToMessageId,
         reactions = reactions,
-        parts =
-            buildList {
-                text
-                    .takeIf(String::isNotBlank)
-                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
-                addAll(attachmentParts)
-            }.map { part -> part.toMessagePart() }
+        parts = messageParts
     )
 
 private fun String.toMessageSecurity(): MessageSecurity =

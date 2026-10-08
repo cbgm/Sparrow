@@ -92,6 +92,7 @@ fun ControlPlaneSettingsScreen(
                     jsonDirectoryUrl = uiState.jsonDirectoryUrl,
                     directoryError = uiState.directoryError,
                     directoryFailureDetail = uiState.directoryFailureDetail,
+                    isSyncing = uiState.isDirectorySyncing,
                     onEditDirectory = { onUiEvent(ControlPlaneSettingsUiEvent.EditDirectoryClicked) },
                     onRemoveDirectory = { onUiEvent(ControlPlaneSettingsUiEvent.RemoveDirectory) }
                 )
@@ -135,6 +136,8 @@ fun ControlPlaneSettingsScreen(
         editingDirectory = uiState.isEditingDirectory,
         onSourceChanged = { onUiEvent(ControlPlaneSettingsUiEvent.AddSourceChanged(it)) },
         error = uiState.addError,
+        failureDetail = uiState.directoryFailureDetail,
+        isLoading = uiState.isAdding,
         onValueChanged = { onUiEvent(ControlPlaneSettingsUiEvent.NewUrlChanged(it)) },
         onConfirm = { onUiEvent(ControlPlaneSettingsUiEvent.AddConfirmed) },
         onDismiss = { onUiEvent(ControlPlaneSettingsUiEvent.AddDismissed) }

@@ -6,7 +6,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.request
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -46,7 +46,7 @@ internal class ControlPlaneDirectoryRemoteSource(
         require(origin.host.isNotBlank() && !address.contains('@') && !address.contains('#')) {
             "JSON list URL contains unsupported components"
         }
-        val body = withTimeout(REQUEST_TIMEOUT.milliseconds) {
+        val body = withRequestTimeout("JSON list request") {
             val response = httpClient.get(address)
             check(response.status.isSuccess()) { "JSON list returned HTTP ${response.status.value}" }
             response.bodyAsText()
@@ -64,7 +64,7 @@ internal class ControlPlaneDirectoryRemoteSource(
     }
 
     private suspend fun getText(url: String, maxBytes: Int): String =
-        withTimeout(REQUEST_TIMEOUT.milliseconds) {
+        withRequestTimeout("Directory request to $url") {
             val response = httpClient.get(url)
             check(response.status.isSuccess() && response.request.url.toString() == url) {
                 "Directory response must be retrieved directly from the configured HTTPS origin"
@@ -73,6 +73,15 @@ internal class ControlPlaneDirectoryRemoteSource(
                 require(body.encodeToByteArray().size <= maxBytes) { "Directory response is too large" }
             }
         }
+
+    /**
+     * withTimeout throws a CancellationException subclass. Callers treat those as
+     * cooperative cancellation and end silently, so an unreachable server would
+     * look like "nothing happened". Report a timeout as a normal failure instead.
+     */
+    private suspend fun <T : Any> withRequestTimeout(what: String, block: suspend () -> T): T =
+        withTimeoutOrNull(REQUEST_TIMEOUT.milliseconds) { block() }
+            ?: throw IllegalStateException("$what timed out after ${REQUEST_TIMEOUT / 1000} s")
 
     private fun normalizeDirectoryOrigin(url: String): String {
         val normalized = url.trim().trimEnd('/')

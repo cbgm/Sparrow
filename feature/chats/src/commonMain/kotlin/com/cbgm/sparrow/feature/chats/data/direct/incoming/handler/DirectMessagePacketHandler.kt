@@ -1,32 +1,33 @@
 package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
+import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ClaimAutoReplyForContactUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ReleaseAutoReplyRecipientUseCase
-import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(
     private val conversationDataSource: DirectConversationDataSource,
     private val contactRepository: ContactRepository,
-    private val messageReactionDataSource: MessageReactionDataSource,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val attachmentTransfer: MessageAttachmentOperationsRepository,
@@ -41,18 +42,6 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
-            packet.reaction?.let { reaction ->
-                val target = conversationDataSource.findMessageById(reaction.messageId) ?: return@runCatching
-                check(target.conversationId == context.conversationId) { "Reaction target belongs to another conversation" }
-                if (reaction.removed) {
-                    messageReactionDataSource.delete(reaction.messageId, context.contactId, reaction.emoji)
-                } else {
-                    messageReactionDataSource.upsert(
-                        MessageReactionEntity(reaction.messageId, context.conversationId, context.contactId, reaction.emoji)
-                    )
-                }
-                return@runCatching
-            }
             validateMessage(context, packet)
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)
@@ -65,7 +54,7 @@ class DirectMessagePacketHandler(
             storeMessage(conversation, context, packet)
             attachmentTransfer.persistIncoming(
                 messageId = packet.messageId,
-                attachments = packet.attachments,
+                parts = packet.parts.filterNot { part -> part is TextDto }.map { it.toMessagePart() },
                 context = AttachmentMessageContext(
                     conversationId = conversation.id,
                     createdAtEpochMilliseconds = conversationDataSource.findMessageById(packet.messageId)
@@ -88,11 +77,11 @@ class DirectMessagePacketHandler(
         context: IncomingPacketContext,
         packet: ChatMessagePacket
     ) {
-        require(packet.text.isNotBlank() || packet.attachments.isNotEmpty()) {
-            "Incoming chat message must contain text or attachments"
+        require(packet.parts.isNotEmpty()) {
+            "Incoming chat message must contain message parts"
         }
         require(
-            packet.attachments.isEmpty() ||
+            packet.parts.all { part -> part is TextDto } ||
                 context.transportMode == TransportEncryptionMode.SEALED_BOX.name
         ) {
             "Direct message attachments require an encrypted Sparrow transport"
@@ -126,6 +115,7 @@ class DirectMessagePacketHandler(
         conversationDataSource.upsertIncomingChatMessage(
             conversation = conversation,
             message = packet.toMessageEntity(conversation.id, context),
+            text = packet.parts.filterIsInstance<TextDto>().singleOrNull()?.text.orEmpty(),
             timestamp = context.receivedAtEpochMilliseconds
         )
     }
@@ -138,7 +128,6 @@ class DirectMessagePacketHandler(
             id = messageId,
             conversationId = conversationId,
             packetId = packetId,
-            text = text,
             replyToMessageId = replyToMessageId,
             transportPayload = context.encodedTransportPayload,
             transportMode = context.transportMode,
@@ -160,8 +149,13 @@ class DirectMessagePacketHandler(
         val sendResult =
             outgoingMessageProcessor.send(
                 conversationId = conversationId,
-                text = claimedReply.text,
-                attachments = emptyList(),
+                parts =
+                    listOf(
+                        Text(
+                            id = IdGenerator.generate(prefix = "text"),
+                            text = claimedReply.text
+                        )
+                    ),
                 replyToMessageId = null
             )
 

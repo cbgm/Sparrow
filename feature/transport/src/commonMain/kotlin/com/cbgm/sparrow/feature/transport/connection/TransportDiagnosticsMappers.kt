@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.connection
 
-import com.cbgm.sparrow.core.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 
 internal fun NodeEndpoint.diagnosticState(

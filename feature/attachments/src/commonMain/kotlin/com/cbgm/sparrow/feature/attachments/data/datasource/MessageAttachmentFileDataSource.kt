@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -39,6 +38,13 @@ class MessageAttachmentFileDataSource(
         }
     }
 
+    fun readLocalFile(localFilePath: String): ByteArray {
+        require(localFilePath.isNotBlank()) { "Local file path must not be blank" }
+        val path = localFilePath.toPath()
+        check(fileSystem.exists(path)) { "Local message-part source file does not exist" }
+        return fileSystem.read(path) { readByteArray() }
+    }
+
     fun resolveCacheFilePath(fileName: String): String? {
         val path = fileName.toSafeCachePath()
         return path.toString().takeIf { fileSystem.exists(path) }
@@ -52,25 +58,17 @@ class MessageAttachmentFileDataSource(
         conversationId: String,
         displayName: String,
         attachmentId: String,
-        type: MessageAttachmentType,
+        isMedia: Boolean,
         mimeType: String,
         bytes: ByteArray
     ): String {
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
         require(bytes.isNotEmpty()) { "Attachment bytes must not be empty" }
-        require(
-            type != MessageAttachmentType.LOCATION &&
-                type != MessageAttachmentType.CONTACT &&
-                type != MessageAttachmentType.VOICE
-        ) {
-            "Location, contact and voice attachments are not saved as files"
-        }
-
         val conversationDirectory = resolveConversationDirectory(conversationId, displayName)
         val targetDirectory =
             conversationDirectory /
-                if (type == MessageAttachmentType.IMAGE || type == MessageAttachmentType.VIDEO) {
+                if (isMedia) {
                     MEDIA_DIRECTORY_NAME
                 } else {
                     FILES_DIRECTORY_NAME
@@ -148,30 +146,6 @@ class MessageAttachmentFileDataSource(
             fileSystem.deleteRecursively(directory, mustExist = false)
         }
     }
-
-    fun deleteLegacyContactAttachment(
-        contactId: String,
-        attachmentId: String
-    ) {
-        val contactDirectory = findLegacyContactDirectory(contactId) ?: return
-        val suffix = attachmentId.filter(Char::isLetterOrDigit).takeLast(LEGACY_ATTACHMENT_ID_SUFFIX_LENGTH)
-        if (suffix.isBlank()) return
-        listOf(MEDIA_DIRECTORY_NAME, FILES_DIRECTORY_NAME).forEach { child ->
-            val directory = contactDirectory / child
-            if (!fileSystem.exists(directory)) return@forEach
-            fileSystem.list(directory)
-                .filter { candidate ->
-                    candidate.name.substringBeforeLast('.', candidate.name).endsWith("-$suffix")
-                }.forEach { candidate -> fileSystem.delete(candidate, mustExist = false) }
-        }
-    }
-
-    private fun findLegacyContactDirectory(contactId: String): Path? =
-        fileSystem.list(savedDirectory).firstOrNull { candidate ->
-            val marker = candidate / LEGACY_CONTACT_ID_MARKER
-            fileSystem.exists(marker) &&
-                readUtf8OrNull(marker) == contactId
-        }
 
     private fun resolveConversationDirectory(
         conversationId: String,
@@ -271,8 +245,6 @@ class MessageAttachmentFileDataSource(
         const val FILES_DIRECTORY_NAME = "files"
         const val CONVERSATION_ID_MARKER = ".sparrow-conversation-id"
         const val CONVERSATION_ID_SUFFIX_LENGTH = 8
-        const val LEGACY_CONTACT_ID_MARKER = ".sparrow-contact-id"
-        const val LEGACY_ATTACHMENT_ID_SUFFIX_LENGTH = 8
         const val MAX_DIRECTORY_NAME_LENGTH = 80
         const val MAX_FILE_NAME_LENGTH = 120
         val DIRECTORY_SAFE_CHARACTERS = setOf(' ', '-', '_', '(', ')')

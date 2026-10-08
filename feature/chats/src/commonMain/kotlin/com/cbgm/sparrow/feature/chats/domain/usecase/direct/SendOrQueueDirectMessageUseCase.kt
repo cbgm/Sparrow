@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDispatchResult
 import com.cbgm.sparrow.feature.conversationorchestration.domain.model.ConversationMessagePlan
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PrepareConversationMessageUseCase
@@ -14,8 +14,7 @@ class SendOrQueueDirectMessageUseCase(
 ) {
     suspend operator fun invoke(
         contactId: String,
-        text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null,
         conversationId: String? = null
     ): Result<DirectMessageDispatchResult> =
@@ -34,8 +33,7 @@ class SendOrQueueDirectMessageUseCase(
                 ConversationMessagePlan.Send -> {
                     sendDirectMessage(
                         conversationId = resolvedConversationId,
-                        text = text,
-                        attachments = attachments,
+                        parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()
                     DirectMessageDispatchResult.Sent
@@ -44,8 +42,7 @@ class SendOrQueueDirectMessageUseCase(
                 ConversationMessagePlan.Queue -> {
                     queueDirectMessageUntilAuthorized(
                         conversationId = resolvedConversationId,
-                        text = text,
-                        attachments = attachments,
+                        parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()
                     DirectMessageDispatchResult.Queued
@@ -54,8 +51,7 @@ class SendOrQueueDirectMessageUseCase(
                 is ConversationMessagePlan.QueueWithAuthorizationFailure -> {
                     queueDirectMessageUntilAuthorized(
                         conversationId = resolvedConversationId,
-                        text = text,
-                        attachments = attachments,
+                        parts = parts,
                         replyToMessageId = replyToMessageId
                     ).getOrThrow()
                     DirectMessageDispatchResult.QueuedWithIdentityExchangeFailure(plan.throwable)

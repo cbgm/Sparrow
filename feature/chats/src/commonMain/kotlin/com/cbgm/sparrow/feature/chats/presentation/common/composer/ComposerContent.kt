@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.chats.presentation.common.composer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.device.rememberCurrentLocationLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerPreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toMessageInputState
@@ -12,9 +12,9 @@ import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.Compose
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageInputActions
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
 
 @Composable
@@ -26,12 +26,13 @@ fun ComposerContent(
     onSendClick: () -> Unit,
     onCancelReply: () -> Unit,
     onCancelEdit: () -> Unit,
-    onMediaSelected: (List<MediaSelection>) -> Unit,
+    onMediaSelected: (List<MediaSelectionUi>) -> Unit,
     onOpenFilePicker: (String) -> Unit,
     onContactAttachmentClick: () -> Unit,
     onLocationCaptureStarted: () -> Unit,
     onLocationCaptured: (CurrentLocation) -> Unit,
     onLocationCaptureFailed: (String) -> Unit,
+    onPollAttachmentClick: (() -> Unit)? = null,
     onAttachmentError: (String) -> Unit,
     onVoiceSendClick: () -> Unit
 ) {
@@ -51,9 +52,9 @@ fun ComposerContent(
             selectedMedia = composerState.selectedMedia,
             onResult = { result ->
                 when (result) {
-                    is MediaSelectionResult.Selected -> onMediaSelected(result.media)
-                    is MediaSelectionResult.Error -> onAttachmentError(result.message)
-                    MediaSelectionResult.Dismissed -> Unit
+                    is MediaSelectionResultUi.Selected -> onMediaSelected(result.media)
+                    is MediaSelectionResultUi.Error -> onAttachmentError(result.message)
+                    MediaSelectionResultUi.Dismissed -> Unit
                 }
             },
             onFilePickerSessionStarted = onOpenFilePicker
@@ -79,14 +80,15 @@ fun ComposerContent(
                 onMediaRemove = { mediaId ->
                     onMediaSelected(composerState.selectedMedia.filterNot { it.id == mediaId })
                 },
-                onClickGallery = { mediaPicker.launch(MediaSelectionSource.GALLERY) },
-                onClickCamera = { mediaPicker.launch(MediaSelectionSource.CAMERA) },
-                onClickFile = { mediaPicker.launch(MediaSelectionSource.FILE_PICKER) },
+                onClickGallery = { mediaPicker.launch(MediaSourceUi.GALLERY) },
+                onClickCamera = { mediaPicker.launch(MediaSourceUi.CAMERA) },
+                onClickFile = { mediaPicker.launch(MediaSourceUi.FILE_PICKER) },
                 onClickContact = onContactAttachmentClick,
                 onClickLocation = {
                     onLocationCaptureStarted()
                     currentLocationLauncher.launch()
                 },
+                onClickPoll = onPollAttachmentClick,
                 onVoiceSendClick = onVoiceSendClick
             )
     )

@@ -10,9 +10,10 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.core.crypto)
-            implementation(projects.core.protocol)
+            implementation(libs.libsodium)
+            implementation(projects.protocol)
             implementation(projects.data.database)
             implementation(projects.data.datastore)
             implementation(libs.bundles.coroutines)

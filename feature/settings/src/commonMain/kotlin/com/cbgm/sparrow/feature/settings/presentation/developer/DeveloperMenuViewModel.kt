@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.transport.TransportDiagnosticsProvider
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
@@ -11,6 +10,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCa
 import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDeveloperMenuUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow

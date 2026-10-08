@@ -2,7 +2,7 @@ package com.cbgm.sparrow.device
 
 import android.content.Intent
 import com.cbgm.sparrow.di.androidApplicationKoin
-import com.cbgm.sparrow.notification.device.SparrowNotificationIntentHandler
+import com.cbgm.sparrow.feature.notification.device.SparrowNotificationIntentHandler
 
 fun consumeAndroidAppIntent(intent: Intent?) {
     val handled =

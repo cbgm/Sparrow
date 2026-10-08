@@ -1,11 +1,5 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
@@ -20,6 +14,12 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMetadataSendContext
 import com.cbgm.sparrow.feature.membership.domain.model.GroupTransportRoutingMember
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import kotlinx.coroutines.flow.Flow
 
 interface GroupMembershipRepository {

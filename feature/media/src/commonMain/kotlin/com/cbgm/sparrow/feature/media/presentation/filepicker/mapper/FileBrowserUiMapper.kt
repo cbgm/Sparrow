@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker.mapper
 
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserEntry
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryKind
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryKindUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
@@ -9,24 +9,24 @@ internal fun FileBrowserEntry.toFileBrowserEntryUi(blockedSourceReferences: Set<
     FileBrowserEntryUi(
         reference = reference,
         displayName = displayName,
-        kind = toFileBrowserEntryKind(),
+        kind = toFileBrowserEntryKindUi(),
         sizeText = byteSize?.toReadableByteSize(),
         typeText = toTypeText(),
         isBlocked = !isDirectory && sourceReference != null && sourceReference in blockedSourceReferences
     )
 
-private fun FileBrowserEntry.toFileBrowserEntryKind(): FileBrowserEntryKind {
-    if (isDirectory) return FileBrowserEntryKind.DIRECTORY
+private fun FileBrowserEntry.toFileBrowserEntryKindUi(): FileBrowserEntryKindUi {
+    if (isDirectory) return FileBrowserEntryKindUi.DIRECTORY
     val mime = mimeType.orEmpty().lowercase()
     val extension = displayName.substringAfterLast('.', "").lowercase()
     return when {
-        mime.startsWith("image/") -> FileBrowserEntryKind.IMAGE
-        mime.startsWith("video/") -> FileBrowserEntryKind.VIDEO
-        mime.startsWith("audio/") -> FileBrowserEntryKind.AUDIO
-        mime == "application/pdf" || extension == "pdf" -> FileBrowserEntryKind.PDF
-        mime.startsWith("text/") || extension in TEXT_EXTENSIONS -> FileBrowserEntryKind.TEXT
-        extension in ARCHIVE_EXTENSIONS -> FileBrowserEntryKind.ARCHIVE
-        else -> FileBrowserEntryKind.OTHER
+        mime.startsWith("image/") -> FileBrowserEntryKindUi.IMAGE
+        mime.startsWith("video/") -> FileBrowserEntryKindUi.VIDEO
+        mime.startsWith("audio/") -> FileBrowserEntryKindUi.AUDIO
+        mime == "application/pdf" || extension == "pdf" -> FileBrowserEntryKindUi.PDF
+        mime.startsWith("text/") || extension in TEXT_EXTENSIONS -> FileBrowserEntryKindUi.TEXT
+        extension in ARCHIVE_EXTENSIONS -> FileBrowserEntryKindUi.ARCHIVE
+        else -> FileBrowserEntryKindUi.OTHER
     }
 }
 

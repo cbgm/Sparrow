@@ -22,13 +22,13 @@ import coil3.request.ImageRequest
 import coil3.video.VideoFrameDecoder
 import coil3.video.videoFrameMillis
 import com.cbgm.sparrow.core.ui.component.rememberSparrowFallbackPainter
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaUi
 import java.io.File
 
 @Composable
-internal actual fun VideoThumbnail(media: MediaItem, modifier: Modifier, contentScale: ContentScale) {
+internal actual fun VideoThumbnail(media: VisualMediaUi, localFilePath: String?, modifier: Modifier, contentScale: ContentScale) {
     val context = LocalContext.current
-    val path = media.localFilePath
+    val path = localFilePath
     val fallback = rememberSparrowFallbackPainter()
     val request = remember(path, media.id) {
         path?.let {
@@ -53,8 +53,8 @@ internal actual fun VideoThumbnail(media: MediaItem, modifier: Modifier, content
 }
 
 @Composable
-internal actual fun VideoPlayer(media: MediaItem, isActive: Boolean, modifier: Modifier) {
-    val path = media.localFilePath
+internal actual fun VideoPlayer(media: VisualMediaUi, localFilePath: String?, isActive: Boolean, modifier: Modifier) {
+    val path = localFilePath
     if (path != null) {
         VideoView(media = media, path = path, isActive = isActive, modifier = modifier)
     } else {
@@ -64,7 +64,7 @@ internal actual fun VideoPlayer(media: MediaItem, isActive: Boolean, modifier: M
 
 @Composable
 private fun VideoView(
-    media: MediaItem,
+    media: VisualMediaUi,
     path: String,
     isActive: Boolean,
     modifier: Modifier = Modifier

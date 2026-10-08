@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.data.database.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 
 data class ConversationSummaryDto(
     val conversationId: String,

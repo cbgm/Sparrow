@@ -29,16 +29,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.presentation.component.rememberAttachmentUiState
+import com.cbgm.sparrow.feature.attachments.presentation.component.rememberLocationUiState
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toAttachmentTarget
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.fake_location_map
 import com.cbgm.sparrow.resources.feature_chats_location
@@ -47,15 +45,12 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun LocationMessageBubbleBody(
-    locationPart: MessagePartUi.Location,
+    locationPart: LocationUi,
     onAttachmentClick: (String) -> Unit
 ) {
-    val attachmentState = rememberAttachmentUiState(locationPart.toAttachmentTarget())
+    val attachmentState = rememberLocationUiState(locationPart)
     val location =
-        (attachmentState as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Location }
-            ?.location
+        (attachmentState as? AttachmentUiState.Ready)?.value
 
     Content(
         location = location,
@@ -197,7 +192,7 @@ private fun CurrentLocation.coordinateText(): String =
 private fun LocationMessageBubbleBodyPreview() {
     SparrowTheme {
         LocationMessageBubbleBody(
-            locationPart = MessagePartUi.Location(id = "location-preview"),
+            locationPart = LocationUi(id = "location-preview"),
             onAttachmentClick = {}
         )
     }

@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.viewinterop.UIKitView
 import com.cbgm.sparrow.feature.media.device.MediaImage
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaUi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.readValue
@@ -24,7 +24,7 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIView
 
 @Composable
-internal actual fun VideoThumbnail(media: MediaItem, modifier: Modifier, contentScale: ContentScale) {
+internal actual fun VideoThumbnail(media: VisualMediaUi, localFilePath: String?, modifier: Modifier, contentScale: ContentScale) {
     MediaImage(
         data = null,
         localFilePath = media.thumbnailFilePath,
@@ -37,8 +37,8 @@ internal actual fun VideoThumbnail(media: MediaItem, modifier: Modifier, content
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
-internal actual fun VideoPlayer(media: MediaItem, isActive: Boolean, modifier: Modifier) {
-    val path = media.localFilePath
+internal actual fun VideoPlayer(media: VisualMediaUi, localFilePath: String?, isActive: Boolean, modifier: Modifier) {
+    val path = localFilePath
     if (path != null) {
         VideoPlayerContent(media, NSURL.fileURLWithPath(path), isActive, modifier)
     } else {
@@ -49,7 +49,7 @@ internal actual fun VideoPlayer(media: MediaItem, isActive: Boolean, modifier: M
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 private fun VideoPlayerContent(
-    media: MediaItem,
+    media: VisualMediaUi,
     url: NSURL,
     isActive: Boolean,
     modifier: Modifier

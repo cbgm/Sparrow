@@ -26,6 +26,7 @@ import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
+import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
 import com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyEntity
@@ -45,16 +46,19 @@ import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.data.database.entity.InvitationEntity
 import com.cbgm.sparrow.data.database.entity.LinkPreviewEntity
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
-import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
+import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
+import com.cbgm.sparrow.data.database.entity.MessageTextEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxFailureEventEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
+import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
 import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
 
 @Database(
@@ -77,7 +81,10 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         GroupVerificationPairEntity::class,
         IdentityExchangeEntity::class,
         MessageEntity::class,
-        MessageAttachmentEntity::class,
+        MessagePartEntity::class,
+        MessageTextEntity::class,
+        MessageBlobEntity::class,
+        VoiceTranscriptEntity::class,
         AttachmentMessageContextEntity::class,
         MessageSearchEmbeddingEntity::class,
         MessageSafetyAssessmentEntity::class,
@@ -89,7 +96,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 53,
+    version = 54,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -151,6 +158,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun messageSearchDao(): MessageSearchDao
 
     abstract fun messageSafetyDao(): MessageSafetyDao
+
+    abstract fun voiceTranscriptDao(): VoiceTranscriptDao
 
     abstract fun mailboxRouteDao(): MailboxRouteDao
 

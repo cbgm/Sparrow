@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.presentation.management.model
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
 
 data class AttachmentManagementUiState(
-    val attachments: List<MessageAttachmentUi> = emptyList(),
+    val attachments: List<MessagePartUi> = emptyList(),
     val selectedTab: AttachmentManagementTab = AttachmentManagementTab.MEDIA,
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),

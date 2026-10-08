@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.safety.domain.usecase
 
 import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
-import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
+import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.safety.domain.repository.MessageSafetyRepository
 import kotlinx.coroutines.CancellationException

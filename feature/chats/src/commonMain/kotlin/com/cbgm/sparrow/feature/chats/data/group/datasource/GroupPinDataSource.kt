@@ -14,6 +14,8 @@ internal class GroupPinDataSource(
 
     suspend fun findMessage(messageId: String): MessageEntity? = chatDao.findMessageById(messageId)
 
+    suspend fun findMessageText(messageId: String): String? = chatDao.findMessageText(messageId)
+
     suspend fun get(groupId: String): GroupPinEntity? = groupPinDao.get(groupId)
 
     suspend fun save(entity: GroupPinEntity) {

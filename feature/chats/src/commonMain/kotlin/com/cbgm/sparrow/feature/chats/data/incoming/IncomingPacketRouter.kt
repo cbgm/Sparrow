@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.chats.data.incoming
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.handler.ProtocolPacketHandler
 
 /**
  * Routes a decoded protocol packet to exactly one feature path.

@@ -37,7 +37,9 @@ internal fun HistoryContent(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
-    onContactClick: (SharedContact) -> Unit
+    onContactClick: (SharedContact) -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> }
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
     val dissolvingListState =
@@ -80,6 +82,8 @@ internal fun HistoryContent(
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
+            onPollVoteSubmit = onPollVoteSubmit,
+            onPollClose = onPollClose,
             contentPadding = innerPadding,
             historyState = historyState,
             onLoadOlderMessages = onLoadOlderMessages,

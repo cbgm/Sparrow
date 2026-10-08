@@ -5,6 +5,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 
+internal data class GroupSystemMessage(
+    val message: MessageEntity,
+    val text: String
+)
+
 internal object GroupMembershipMessageFactory {
     const val MEMBER_ADDED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_ADDED"
     const val MEMBER_REMOVED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_REMOVED"
@@ -21,7 +26,7 @@ internal object GroupMembershipMessageFactory {
         contactName: String,
         createdAtEpochMilliseconds: Long,
         eventId: String = "$epoch-$contactId"
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-member-added-$conversationId-$eventId",
             conversationId = conversationId,
@@ -38,7 +43,7 @@ internal object GroupMembershipMessageFactory {
         contactName: String,
         createdAtEpochMilliseconds: Long,
         eventId: String = "$epoch-$contactId"
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-member-removed-$conversationId-$eventId",
             conversationId = conversationId,
@@ -53,7 +58,7 @@ internal object GroupMembershipMessageFactory {
         invitationId: String,
         epoch: Int,
         createdAtEpochMilliseconds: Long
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-local-membership-removed-$invitationId-$epoch",
             conversationId = conversationId,
@@ -68,7 +73,7 @@ internal object GroupMembershipMessageFactory {
         referenceId: String,
         epoch: Int,
         createdAtEpochMilliseconds: Long
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-local-membership-started-$referenceId-$epoch",
             conversationId = conversationId,
@@ -85,7 +90,7 @@ internal object GroupMembershipMessageFactory {
         contactName: String,
         createdAtEpochMilliseconds: Long,
         eventId: String = "$epoch-$contactId"
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-member-left-$conversationId-$eventId",
             conversationId = conversationId,
@@ -100,7 +105,7 @@ internal object GroupMembershipMessageFactory {
         invitationId: String,
         epoch: Int,
         createdAtEpochMilliseconds: Long
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "group-local-membership-left-$invitationId-$epoch",
             conversationId = conversationId,
@@ -113,7 +118,7 @@ internal object GroupMembershipMessageFactory {
     fun localConversationDeletedMarker(
         conversationId: String,
         createdAtEpochMilliseconds: Long
-    ): MessageEntity =
+    ): GroupSystemMessage =
         systemMessage(
             id = "local-conversation-deleted-$conversationId",
             conversationId = conversationId,
@@ -151,18 +156,20 @@ internal object GroupMembershipMessageFactory {
         transportMode: String,
         senderContactId: String?,
         createdAtEpochMilliseconds: Long
-    ): MessageEntity =
-        MessageEntity(
-            id = id,
-            conversationId = conversationId,
-            packetId = null,
-            text = text,
-            transportPayload = null,
-            transportMode = transportMode,
-            contentStatus = MessageContentStatus.READABLE.name,
-            deliveryStatus = MessageDeliveryStatus.NOT_APPLICABLE.name,
-            senderContactId = senderContactId,
-            isMine = true,
-            createdAtEpochMilliseconds = createdAtEpochMilliseconds
+    ): GroupSystemMessage =
+        GroupSystemMessage(
+            message = MessageEntity(
+                id = id,
+                conversationId = conversationId,
+                packetId = null,
+                transportPayload = null,
+                transportMode = transportMode,
+                contentStatus = MessageContentStatus.READABLE.name,
+                deliveryStatus = MessageDeliveryStatus.NOT_APPLICABLE.name,
+                senderContactId = senderContactId,
+                isMine = true,
+                createdAtEpochMilliseconds = createdAtEpochMilliseconds
+            ),
+            text = text
         )
 }

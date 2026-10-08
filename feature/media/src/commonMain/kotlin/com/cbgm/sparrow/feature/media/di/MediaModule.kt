@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileReposi
 import com.cbgm.sparrow.feature.media.domain.usecase.BrowseFileDirectoryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
+import com.cbgm.sparrow.feature.media.domain.usecase.PrepareMediaSelectionUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.ReadFileBrowserEntryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.SetFileBrowserRootUseCase
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
@@ -28,6 +29,7 @@ val mediaModule =
         factory { GetFileBrowserRootUseCase(repository = get()) }
         factory { BrowseFileDirectoryUseCase(repository = get()) }
         factory { ReadFileBrowserEntryUseCase(repository = get()) }
+        factory { PrepareMediaSelectionUseCase(files = get()) }
 
         singleOf(::FilePickerSessionController)
         singleOf(::FilePickerLauncher)
@@ -40,7 +42,8 @@ val mediaModule =
                 getRoot = get(),
                 browseDirectory = get(),
                 readFile = get(),
-                mediaFiles = get()
+                mediaFiles = get(),
+                prepareMediaSelection = get()
             )
         }
     }

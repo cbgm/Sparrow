@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.model
 
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 data class DecodedIncomingPacketDto(
     val contactId: String,

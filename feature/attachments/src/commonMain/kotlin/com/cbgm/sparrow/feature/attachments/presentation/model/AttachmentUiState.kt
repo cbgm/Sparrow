@@ -1,17 +1,15 @@
 package com.cbgm.sparrow.feature.attachments.presentation.model
 
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
+sealed interface AttachmentUiState<out T> {
+    data object Idle : AttachmentUiState<Nothing>
 
-sealed interface AttachmentUiState {
-    data object Idle : AttachmentUiState
+    data object Loading : AttachmentUiState<Nothing>
 
-    data object Loading : AttachmentUiState
-
-    data class Ready(
-        val content: AttachmentContent
-    ) : AttachmentUiState
+    data class Ready<T>(
+        val value: T
+    ) : AttachmentUiState<T>
 
     data class Error(
         val throwable: Throwable
-    ) : AttachmentUiState
+    ) : AttachmentUiState<Nothing>
 }

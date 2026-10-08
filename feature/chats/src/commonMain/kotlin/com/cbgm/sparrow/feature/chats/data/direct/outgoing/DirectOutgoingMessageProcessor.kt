@@ -3,26 +3,19 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
-import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
-import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
@@ -40,7 +33,19 @@ import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryption
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import com.cbgm.sparrow.protocol.message.MessageOperation
+import com.cbgm.sparrow.protocol.message.OperationMessage
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
+import com.cbgm.sparrow.protocol.packet.ReadReceiptPacket
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Owns every outgoing direct-message operation.
@@ -66,24 +71,24 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun send(
         conversationId: String,
-        text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, attachments)
+            val normalizedParts = requireMessageContent(parts)
+            val text = normalizedParts.filterIsInstance<Text>().singleOrNull()?.text.orEmpty()
+            val attachmentParts = normalizedParts.filterNot { part -> part is Text }
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
-            val prepared = attachmentTransfer.prepareAttachments(attachments)
-            persistPreparedMessage(
+            val messageParts = persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = messageId,
-                text = normalizedText,
-                prepared = prepared,
+                text = text,
+                parts = attachmentParts,
                 deliveryStatus = MessageDeliveryStatus.QUEUED,
                 replyToMessageId = replyToMessageId
             )
@@ -91,8 +96,8 @@ class DirectOutgoingMessageProcessor(
                 try {
                     createPacket(
                         messageId = messageId,
-                        text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachment::attachment),
+                        text = text,
+                        parts = messageParts,
                         replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
@@ -125,16 +130,20 @@ class DirectOutgoingMessageProcessor(
                 )
             }
 
-            val packet = ChatMessagePacket(
-                packetId = IdGenerator.generate(prefix = "reaction-packet"),
-                messageId = IdGenerator.generate(prefix = "reaction"),
-                sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                text = "",
-                reaction = MessageReactionPayload(messageId = messageId, emoji = emoji, removed = removed),
-                senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
-                profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
-            )
-            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            protocolOutbox.enqueue(
+                target.contactId,
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Reaction(
+                                messageId = messageId,
+                                emoji = emoji,
+                                removed = removed
+                            )
+                        )
+                )
+            ).getOrThrow()
         }
 
     suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> =
@@ -152,13 +161,19 @@ class DirectOutgoingMessageProcessor(
 
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
-            val packet =
-                MessageDeletionPacket(
-                    packetId = IdGenerator.generate(prefix = "delete-packet"),
-                    messageId = messageId,
-                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            protocolOutbox.enqueue(
+                target.contactId,
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Delete(
+                                messageId = messageId,
+                                deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                            )
+                        )
                 )
-            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            ).getOrThrow()
             discardMessages(listOf(message))
         }
 
@@ -173,46 +188,51 @@ class DirectOutgoingMessageProcessor(
             check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
             check(message.isMine) { "Only your own messages can be edited" }
             check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
-            check(message.text.isNotBlank()) { "Only text messages can be edited" }
-            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+            check(!conversationDataSource.findMessageText(messageId).isNullOrBlank()) { "Only text messages can be edited" }
+            check(attachmentTransfer.messageParts(messageId).getOrThrow().isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
 
             if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
-                conversationDataSource.upsertMessage(message.copy(text = normalizedText))
+                conversationDataSource.replaceMessageText(messageId, normalizedText)
                 return@runCatching
             }
 
             requireDirectChatAuthorization(target.contactId).getOrThrow()
             protocolOutbox.enqueue(
                 target.contactId,
-                MessageEditPacket(
-                    packetId = IdGenerator.generate(prefix = "edit-packet"),
-                    messageId = messageId,
-                    editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                    text = normalizedText
+                OperationMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "operation-packet"),
+                    message =
+                        OperationMessage(
+                            MessageOperation.Edit(
+                                messageId = messageId,
+                                text = normalizedText,
+                                editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                            )
+                        )
                 )
             ).getOrThrow()
-            conversationDataSource.upsertMessage(message.copy(text = normalizedText))
+            conversationDataSource.replaceMessageText(messageId, normalizedText)
         }
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
-        text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        parts: List<MessagePart>,
         replyToMessageId: String? = null
     ): Result<Unit> =
         safeSuspendCall {
-            val normalizedText = requireMessageContent(text, attachments)
+            val normalizedParts = requireMessageContent(parts)
+            val text = normalizedParts.filterIsInstance<Text>().singleOrNull()?.text.orEmpty()
+            val attachmentParts = normalizedParts.filterNot { part -> part is Text }
             val target = loadTarget(conversationId)
             val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val prepared = attachmentTransfer.prepareAttachments(attachments)
-            persistPreparedMessage(
+            persistOutgoingMessage(
                 target = target,
                 contact = contact,
                 messageId = IdGenerator.generate(prefix = "message"),
-                text = normalizedText,
-                prepared = prepared,
+                text = text,
+                parts = attachmentParts,
                 deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
                 replyToMessageId = replyToMessageId
             )
@@ -252,6 +272,46 @@ class DirectOutgoingMessageProcessor(
         safeSuspendCall {
             discardMessages(findWaitingMessages(contactId))
         }
+
+    suspend fun runPendingAuthorizationCleanup() {
+        conversationDataSource
+            .observeDirectMessagesByDeliveryStatus(MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name)
+            .collectLatest { messages ->
+                if (messages.isEmpty()) return@collectLatest
+
+                deleteExpiredPendingAuthorizationMessages(messages)
+
+                val remaining = messages.filterNot { message ->
+                    DirectPendingAuthorizationMessagePolicy.isExpired(
+                        createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                        nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    )
+                }
+                val nextMessage = remaining.minByOrNull { message -> message.createdAtEpochMilliseconds }
+                    ?: return@collectLatest
+                val delayMilliseconds =
+                    DirectPendingAuthorizationMessagePolicy
+                        .expiresAtEpochMilliseconds(nextMessage.createdAtEpochMilliseconds)
+                        .minus(SystemClock.nowEpochMilliseconds())
+                        .coerceAtLeast(0L)
+
+                delay(delayMilliseconds.milliseconds)
+                deleteExpiredPendingAuthorizationMessages(remaining)
+            }
+    }
+
+    private suspend fun deleteExpiredPendingAuthorizationMessages(messages: List<MessageEntity>) {
+        val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+        val expired = messages.filter { message ->
+            DirectPendingAuthorizationMessagePolicy.isExpired(
+                createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                nowEpochMilliseconds = nowEpochMilliseconds
+            )
+        }
+        if (expired.isEmpty()) return
+        attachmentTransfer.deleteForMessages(expired.map(MessageEntity::id))
+        conversationDataSource.deleteMessages(expired)
+    }
 
     suspend fun retry(messageId: String): Result<Unit> =
         safeSuspendCall {
@@ -346,8 +406,8 @@ class DirectOutgoingMessageProcessor(
         val packet =
             createPacket(
                 messageId = message.id,
-                text = message.text,
-                attachments = attachmentTransfer.protocolAttachments(message.id),
+                text = conversationDataSource.findMessageText(message.id).orEmpty(),
+                parts = attachmentTransfer.messageParts(message.id).getOrThrow(),
                 replyToMessageId = message.replyToMessageId
             )
         conversationDataSource.upsertMessage(
@@ -394,26 +454,23 @@ class DirectOutgoingMessageProcessor(
             }
     }
 
-    private suspend fun persistPreparedMessage(
+    private suspend fun persistOutgoingMessage(
         target: DirectTargetDto,
         contact: Contact,
         messageId: String,
         text: String,
-        prepared: List<PreparedMessageAttachment>,
+        parts: List<MessagePart>,
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
-    ) {
+    ): List<MessagePart> {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
             MessageEntity(
                 id = messageId,
                 conversationId = target.conversationId,
                 packetId = null,
-                text = text,
                 replyToMessageId = replyToMessageId,
                 transportPayload = null,
-                // A waiting message has no transport packet yet. Recording the
-                // intended mode must not require keys that are still being exchanged.
                 transportMode = if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
                     TransportEncryptionMode.SEALED_BOX.name
                 } else {
@@ -427,10 +484,10 @@ class DirectOutgoingMessageProcessor(
             )
 
         try {
-            conversationDataSource.upsertMessage(message)
-            attachmentTransfer.persistOutgoing(
+            conversationDataSource.upsertMessageWithText(message, text)
+            return attachmentTransfer.persistOutgoing(
                 messageId = messageId,
-                prepared = prepared,
+                parts = parts,
                 context = AttachmentMessageContext(
                     conversationId = target.conversationId,
                     createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
@@ -440,10 +497,9 @@ class DirectOutgoingMessageProcessor(
                     isMine = true,
                     senderContactId = null
                 )
-            )
+            ).getOrThrow()
         } catch (error: Throwable) {
             runCatching { conversationDataSource.deleteMessages(listOf(message)) }
-            attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
     }
@@ -482,15 +538,19 @@ class DirectOutgoingMessageProcessor(
     private suspend fun createPacket(
         messageId: String,
         text: String,
-        attachments: List<MessageAttachment>,
+        parts: List<MessagePart>,
         replyToMessageId: String?
     ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
             messageId = messageId,
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-            text = text,
-            attachments = attachments,
+            parts =
+                buildList {
+                    text.takeIf(String::isNotBlank)
+                        ?.let { value -> add(TextDto(id = messageId, text = value)) }
+                    addAll(parts.map { it.toDto() })
+                },
             replyToMessageId = replyToMessageId,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
             profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
@@ -525,18 +585,33 @@ class DirectOutgoingMessageProcessor(
         ).getOrThrow()
     }
 
-    private fun requireMessageContent(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>
-    ): String {
+    private fun requireMessageContent(parts: List<MessagePart>): List<MessagePart> {
+        require(parts.isNotEmpty()) { "Message must contain message parts" }
+        require(parts.map(MessagePart::id).distinct().size == parts.size) {
+            "Message part IDs must be unique"
+        }
+
+        val textParts = parts.filterIsInstance<Text>()
+        require(textParts.size <= 1) { "A message can contain at most one text part" }
+        val normalizedText = textParts.singleOrNull()?.text?.trim().orEmpty()
+        require(textParts.isEmpty() || normalizedText.isNotEmpty()) {
+            "Message text must not be blank"
+        }
+
+        val attachments = parts.filterNot { part -> part is Text }
+        require(attachments.none { part -> part is Poll }) {
+            "Polls are only supported in group conversations"
+        }
         MessageAttachmentPolicy.requireValid(attachments)
-        return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
-                "Message must contain text or attachments"
+        require(attachments.none { it is Voice } || normalizedText.isEmpty()) {
+            "A voice message cannot contain text"
+        }
+
+        return buildList {
+            textParts.singleOrNull()?.let { textPart ->
+                add(textPart.copy(text = normalizedText))
             }
-            require(attachments.none { it.type == MessageAttachmentType.VOICE } || normalizedText.isEmpty()) {
-                "A voice message cannot contain text"
-            }
+            addAll(attachments)
         }
     }
 

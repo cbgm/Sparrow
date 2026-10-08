@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.safety.data.datasource
 
-import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
-import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
+import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
+import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
+import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
+import com.cbgm.sparrow.feature.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.safety.data.model.GeneratedMessageSafetyMlpModel
 
 class MessageSafetyEmbeddingDataSource(

@@ -1,13 +1,14 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.mapper
 
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneAddSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
 
 /**
  * A Control Plane may be independently configured by the user AND discovered
@@ -43,7 +44,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
     showAddDialog: Boolean,
     isEditingDirectory: Boolean,
     newUrl: String,
-    addSource: com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneAddSource,
+    addSource: ControlPlaneAddSource,
     jsonDirectoryUrl: String,
     addError: ControlPlaneSettingsError?,
     directoryUrl: String,
@@ -51,6 +52,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
     directoryError: ControlPlaneDirectoryError?,
     directoryFailureDetail: String?,
     isRefreshing: Boolean,
+    isAdding: Boolean,
     isDirectorySyncing: Boolean,
     lastDirectoryCount: Int?,
     manualRemovalError: String?
@@ -68,6 +70,7 @@ internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
         directoryError = directoryError,
         directoryFailureDetail = directoryFailureDetail,
         isRefreshing = isRefreshing,
+        isAdding = isAdding,
         isDirectorySyncing = isDirectorySyncing,
         lastDirectoryCount = lastDirectoryCount,
         manualRemovalError = manualRemovalError

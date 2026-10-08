@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker
 
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResultUi
 import kotlinx.coroutines.flow.StateFlow
 
 class FilePickerLauncher(
@@ -8,7 +8,7 @@ class FilePickerLauncher(
 ) {
     private var activeSessionId: String? = null
 
-    val results: StateFlow<Map<String, FilePickerSessionResult>> = sessions.results
+    val results: StateFlow<Map<String, FilePickerSessionResultUi>> = sessions.results
 
     fun launch(
         maxItems: Int,
@@ -28,10 +28,10 @@ class FilePickerLauncher(
         return sessionId
     }
 
-    fun consumeResult(): FilePickerSessionResult? {
+    fun consumeResult(): FilePickerSessionResultUi? {
         val sessionId = activeSessionId ?: return null
         val result = sessions.consumeResult(sessionId) ?: return null
-        if (result is FilePickerSessionResult.Completed || result is FilePickerSessionResult.Dismissed) {
+        if (result is FilePickerSessionResultUi.Completed || result is FilePickerSessionResultUi.Dismissed) {
             activeSessionId = null
         }
         return result

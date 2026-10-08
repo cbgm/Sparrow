@@ -6,5 +6,10 @@ import org.koin.dsl.module
 
 val onboardingModule =
     module {
-        viewModel { OnboardingViewModel() }
+        viewModel {
+            OnboardingViewModel(
+                filePicker = get(),
+                selectedFiles = get()
+            )
+        }
     }

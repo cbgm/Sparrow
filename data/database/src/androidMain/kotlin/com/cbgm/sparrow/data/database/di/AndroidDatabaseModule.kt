@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.data.database.di
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.data.database.SparrowDatabase
-import com.cbgm.sparrow.data.database.factory.buildSparrowDatabase
+import com.cbgm.sparrow.data.database.device.buildSparrowDatabase
 import com.cbgm.sparrow.data.database.factory.createAndroidDatabaseBuilder
 import com.cbgm.sparrow.data.database.identity.LocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.identity.RoomLocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.mailbox.RoomMailboxRouteRepository
 import com.cbgm.sparrow.data.database.outbox.DefaultProtocolOutbox
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -104,6 +104,10 @@ val androidDatabaseModule =
 
         single {
             get<SparrowDatabase>().messageSafetyDao()
+        }
+
+        single {
+            get<SparrowDatabase>().voiceTranscriptDao()
         }
 
         single {

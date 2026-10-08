@@ -1,9 +1,5 @@
 package com.cbgm.sparrow.feature.messaging.di
 
-import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
-import com.cbgm.sparrow.core.protocol.outbox.OutboxRunner
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
 import com.cbgm.sparrow.feature.messaging.domain.usecase.AcknowledgeMessagingFailureUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingFailureEventsUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingIndicatorsUseCase
@@ -16,6 +12,10 @@ import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProce
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeRunner
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxRunner
+import com.cbgm.sparrow.protocol.outbox.OutboxProcessor
+import com.cbgm.sparrow.protocol.outbox.OutboxRunner
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import org.koin.dsl.module
 
 val messagingModule =

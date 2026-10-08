@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.model
 
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 
 data class MessageComposerAvailability(
     val isInputEnabled: Boolean,

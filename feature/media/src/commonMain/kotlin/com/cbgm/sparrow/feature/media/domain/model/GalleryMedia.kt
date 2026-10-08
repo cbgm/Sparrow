@@ -4,7 +4,8 @@ data class GalleryPickerConfig(
     val maxItems: Int,
     val maxImageDimension: Int? = null,
     val maxImageBytes: Int? = null,
-    val maxVideoBytes: Long? = null
+    val maxVideoBytes: Long? = null,
+    val imagesOnly: Boolean = false
 ) {
     init {
         require(maxItems > 0) { "Maximum gallery item count must be positive" }

@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.di
 
 import android.app.Application
-import com.cbgm.sparrow.core.embedding.di.androidEmbeddingModule
 import com.cbgm.sparrow.data.database.di.androidDatabaseModule
 import com.cbgm.sparrow.data.datastore.di.androidDataStoreModule
 import com.cbgm.sparrow.feature.attachments.di.androidAttachmentsModule
 import com.cbgm.sparrow.feature.chats.di.androidChatsModule
 import com.cbgm.sparrow.feature.contacts.di.androidContactsModule
+import com.cbgm.sparrow.feature.embedding.di.androidEmbeddingModule
 import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule
 import com.cbgm.sparrow.feature.media.di.platformMediaModule
 import com.cbgm.sparrow.feature.membership.di.androidMembershipModule
+import com.cbgm.sparrow.feature.notification.di.notificationAndroidModule
 import com.cbgm.sparrow.feature.settings.di.androidSettingsModule
 import com.cbgm.sparrow.feature.voice.di.platformVoiceModule
-import com.cbgm.sparrow.notification.di.notificationAndroidModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.androidx.workmanager.koin.workManagerFactory

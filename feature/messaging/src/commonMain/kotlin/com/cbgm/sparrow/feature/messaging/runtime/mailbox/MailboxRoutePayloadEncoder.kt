@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.runtime.mailbox
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxDeliveryRoute
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 
 class MailboxRoutePayloadEncoder {
     fun encode(route: MailboxDeliveryRoute): ByteArray =

@@ -5,10 +5,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.startup.presentation.start.StartupRoute
-import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 
 fun NavGraphBuilder.startupNavGraph(
-    onStartupReady: (StartupConnection) -> Unit,
+    onStartupReady: () -> Unit,
     onStartupContentReady: () -> Unit
 ) {
     composable<AppRoute.Startup>(exitTransition = { ExitTransition.None }) {

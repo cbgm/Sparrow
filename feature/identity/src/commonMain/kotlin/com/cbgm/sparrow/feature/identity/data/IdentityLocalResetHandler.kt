@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.data
 
-import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.data.database.identity.LocalIdentityDataResetter
+import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 
 /** The identity owner coordinates capability revocation before resetting persisted state. */
 internal class IdentityLocalResetHandler(

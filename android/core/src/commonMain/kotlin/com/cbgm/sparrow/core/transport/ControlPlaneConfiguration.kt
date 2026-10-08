@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.transport
+package com.cbgm.sparrow.feature.transport
 
 import kotlinx.coroutines.flow.StateFlow
 
