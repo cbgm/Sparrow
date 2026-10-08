@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.chats.domain.model
 
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -41,6 +43,8 @@ private fun List<MessagePart>.hasEditableTextOnlyContent(): Boolean {
             part is Location ||
             part is Contact ||
             part is Voice ||
-            part is Poll
+            part is Poll ||
+            part is Expense ||
+            part is ExpenseBoard
     }
 }

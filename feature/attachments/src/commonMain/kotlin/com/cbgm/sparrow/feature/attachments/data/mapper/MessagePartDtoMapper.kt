@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.attachments.data.mapper
 
 import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
@@ -38,6 +40,14 @@ internal fun MessagePartEntity.toDto(
     resolveLocalFilePath: (String) -> String?
 ): MessagePartDto =
     when (MessageAttachmentType.valueOf(type)) {
+        MessageAttachmentType.EXPENSE_BOARD -> {
+            val json = requireNotNull(payload) { "Expense board $id is missing payload" }
+            Json.decodeFromString(ExpenseBoardDto.serializer(), json).also { require(it.id == id) }
+        }
+        MessageAttachmentType.EXPENSE -> {
+            val json = requireNotNull(payload) { "Expense $id is missing payload" }
+            Json.decodeFromString(ExpenseDto.serializer(), json).also { require(it.id == id) }
+        }
         MessageAttachmentType.POLL -> {
             val json = requireNotNull(payload) { "Poll message part $id is missing payload" }
             Json.decodeFromString(PollDto.serializer(), json).also { poll ->
@@ -130,11 +140,18 @@ internal fun MessagePartEntity.toDto(
 private fun MessagePartDto.nestedPartIds(): List<String> =
     when (this) {
         is PollDto -> images.map(ImageDto::id)
+        is ExpenseDto -> listOfNotNull(receipt?.id)
         else -> emptyList()
     }
 
 private fun MessagePartDto.withNestedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
     when (this) {
+        is ExpenseDto -> copy(
+            receipt = receipt?.let { image ->
+                partsById[image.id] as? ImageDto
+                    ?: error("Expense receipt ${image.id} was not found")
+            }
+        )
         is PollDto -> copy(
             images = images.map { image ->
                 partsById[image.id] as? ImageDto

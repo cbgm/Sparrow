@@ -100,3 +100,29 @@ sealed interface MessagePartSource {
         }
     }
 }
+
+/** One board is a standalone group attachment and owns the lifetime of its expenses. */
+data class ExpenseBoard(
+    override val id: String,
+    val currencyCode: String,
+    val activatedAtEpochMilliseconds: Long,
+    val closedAtEpochMilliseconds: Long? = null
+) : MessagePart
+
+/** A standalone group attachment associated with an existing expense board. */
+data class Expense(
+    override val id: String,
+    val boardId: String,
+    val description: String,
+    val amountMinor: Long,
+    val currencyCode: String,
+    val paidByMemberId: String,
+    val allocations: List<ExpenseAllocation>,
+    val occurredAtEpochMilliseconds: Long,
+    val receipt: Image? = null
+) : MessagePart
+
+data class ExpenseAllocation(
+    val memberId: String,
+    val amountMinor: Long
+)

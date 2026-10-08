@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
@@ -20,6 +22,7 @@ internal fun List<MessagePartDto>.flattenForPersistence(): List<MessagePartDto> 
 private fun MessagePartDto.flattenForPersistence(): List<MessagePartDto> =
     when (this) {
         is PollDto -> listOf(this) + images
+        is ExpenseDto -> listOfNotNull(this, receipt)
         else -> listOf(this)
     }
 
@@ -30,6 +33,12 @@ internal fun List<MessagePartDto>.withPersistedParts(parts: List<MessagePartDto>
 
 private fun MessagePartDto.withPersistedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
     when (this) {
+        is ExpenseDto -> copy(
+            receipt = receipt?.let { image ->
+                partsById[image.id] as? ImageDto
+                    ?: error("Expense receipt ${image.id} was not persisted")
+            }
+        )
         is PollDto -> copy(
             images = images.map { image ->
                 partsById[image.id] as? ImageDto
@@ -55,6 +64,8 @@ internal fun MessagePartDto.toMessagePartEntity(
 private fun MessagePartDto.persistencePayload(): String? =
     when (this) {
         is PollDto -> Json.encodeToString(PollDto.serializer(), this)
+        is ExpenseBoardDto -> Json.encodeToString(ExpenseBoardDto.serializer(), this)
+        is ExpenseDto -> Json.encodeToString(ExpenseDto.serializer(), this)
         else -> null
     }
 
@@ -63,7 +74,7 @@ internal fun MessagePartDto.toMessageBlobEntityOrNull(
     localFilePath: String?
 ): MessageBlobEntity? =
     when (this) {
-        is TextDto, is PollDto -> null
+        is TextDto, is PollDto, is ExpenseDto, is ExpenseBoardDto -> null
         else -> toMessageBlobEntity(deleteCapability, localFilePath)
     }
 
@@ -120,7 +131,7 @@ internal fun MessagePartDto.requireBlobReference() =
             is LocationDto -> blob
             is ContactDto -> blob
             is TextDto -> null
-            is PollDto -> null
+            is PollDto, is ExpenseDto, is ExpenseBoardDto -> null
         }
     ) { "Message part $id has no blob reference" }
 
@@ -134,6 +145,8 @@ private fun MessagePartDto.persistenceType(): String =
         is ContactDto -> MessageAttachmentType.CONTACT.name
         is TextDto -> error("Text is not persisted as an attachment message part")
         is PollDto -> MessageAttachmentType.POLL.name
+        is ExpenseDto -> MessageAttachmentType.EXPENSE.name
+        is ExpenseBoardDto -> MessageAttachmentType.EXPENSE_BOARD.name
     }
 
 private fun MessagePartDto.mimeType(): String =
@@ -146,6 +159,7 @@ private fun MessagePartDto.mimeType(): String =
         is ContactDto -> mimeType
         is TextDto -> error("Text has no attachment MIME type")
         is PollDto -> error("Poll has no attachment MIME type")
+        is ExpenseDto, is ExpenseBoardDto -> error("Structured expenses have no attachment MIME type")
     }
 
 private fun MessagePartDto.byteSize(): Long =
@@ -158,4 +172,5 @@ private fun MessagePartDto.byteSize(): Long =
         is ContactDto -> byteSize
         is TextDto -> error("Text has no attachment byte size")
         is PollDto -> error("Poll has no attachment byte size")
+        is ExpenseDto, is ExpenseBoardDto -> error("Structured expenses have no attachment byte size")
     }

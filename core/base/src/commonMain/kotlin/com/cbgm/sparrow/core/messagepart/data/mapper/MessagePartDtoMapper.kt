@@ -2,6 +2,9 @@ package com.cbgm.sparrow.core.messagepart.data.mapper
 
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
@@ -13,6 +16,9 @@ import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -37,6 +43,8 @@ fun MessagePartDto.toMessagePart(): MessagePart {
         is LocationDto -> toLocation()
         is ContactDto -> toContact()
         is PollDto -> toPoll()
+        is ExpenseBoardDto -> toExpenseBoard()
+        is ExpenseDto -> toExpense()
     }
 }
 
@@ -112,6 +120,23 @@ fun MessagePart.toDto(): MessagePartDto {
         is Contact -> (cached as? ContactDto)?.copy(
             mimeType = CONTACT_MIME_TYPE
         ) ?: ContactDto(id = id, mimeType = CONTACT_MIME_TYPE, byteSize = 0L)
+        is ExpenseBoard -> ExpenseBoardDto(
+            id = id,
+            currencyCode = currencyCode,
+            activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+            closedAtEpochMilliseconds = closedAtEpochMilliseconds
+        )
+        is Expense -> ExpenseDto(
+            id = id,
+            boardId = boardId,
+            description = description,
+            amountMinor = amountMinor,
+            currencyCode = currencyCode,
+            paidByMemberId = paidByMemberId,
+            allocations = allocations.map { ExpenseAllocationDto(it.memberId, it.amountMinor) },
+            occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
+            receipt = receipt?.toDto() as? ImageDto
+        )
         is Poll -> PollDto(
             id = id,
             question = question,
@@ -194,4 +219,25 @@ private fun PollDto.toPoll(): Poll =
         isAnonymous = isAnonymous,
         expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
         closedAtEpochMilliseconds = closedAtEpochMilliseconds
+    )
+
+private fun ExpenseBoardDto.toExpenseBoard(): ExpenseBoard =
+    ExpenseBoard(
+        id = id,
+        currencyCode = currencyCode,
+        activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds
+    )
+
+private fun ExpenseDto.toExpense(): Expense =
+    Expense(
+        id = id,
+        boardId = boardId,
+        description = description,
+        amountMinor = amountMinor,
+        currencyCode = currencyCode,
+        paidByMemberId = paidByMemberId,
+        allocations = allocations.map { ExpenseAllocation(it.memberId, it.amountMinor) },
+        occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
+        receipt = receipt?.toMessagePart() as? Image
     )

@@ -6,6 +6,8 @@ import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
@@ -15,6 +17,8 @@ import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -57,7 +61,9 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     ): Result<List<MessagePart>> = safeSuspendCall {
         if (parts.isEmpty()) return@safeSuspendCall emptyList()
         MessageAttachmentPolicy.requireValid(parts)
-        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
+        require(parts.none { it is Poll || it is Expense || it is ExpenseBoard } || context.isGroup) {
+            "Polls and expenses are only supported in groups"
+        }
 
         val preparedParts = parts.map { part -> createOutgoingDto(part) }
         val uploadableParts = preparedParts
@@ -129,7 +135,9 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         parts: List<MessagePart>,
         context: AttachmentMessageContext
     ) {
-        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
+        require(parts.none { it is Poll || it is Expense || it is ExpenseBoard } || context.isGroup) {
+            "Polls and expenses are only supported in groups"
+        }
         val dtos = parts.map { it.toDto() }
         dataSource.persistIncoming(messageId, dtos, context.toDto())
     }
@@ -276,6 +284,10 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             }
 
             is Text -> error("Text is not uploaded as an attachment message part")
+            is ExpenseBoard -> part.toDto() as ExpenseBoardDto
+            is Expense -> (part.toDto() as ExpenseDto).copy(
+                receipt = part.receipt?.let { createOutgoingDto(it) as ImageDto }
+            )
             is Poll -> (part.toDto() as PollDto).copy(
                 images = part.images.map { image -> createOutgoingDto(image) as ImageDto }
             )

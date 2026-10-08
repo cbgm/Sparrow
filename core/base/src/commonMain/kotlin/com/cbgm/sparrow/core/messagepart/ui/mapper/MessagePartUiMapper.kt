@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.core.messagepart.ui.mapper
 
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -11,6 +13,9 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseAllocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
@@ -32,6 +37,8 @@ fun MessagePart.toMessagePartUi(source: MessagePartSource = MessagePartSource.Me
         is Location -> toLocationUi(source)
         is Contact -> toContactUi(source)
         is Poll -> toPollUi(source)
+        is ExpenseBoard -> toExpenseBoardUi(source)
+        is Expense -> toExpenseUi(source)
     }
 
 fun MessagePartSource.toMessagePartSourceUi(): MessagePartSourceUi =
@@ -117,5 +124,28 @@ private fun Poll.toPollUi(source: MessagePartSource): PollUi =
         isAnonymous = isAnonymous,
         expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
         closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun ExpenseBoard.toExpenseBoardUi(source: MessagePartSource): ExpenseBoardUi =
+    ExpenseBoardUi(
+        id = id,
+        currencyCode = currencyCode,
+        activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Expense.toExpenseUi(source: MessagePartSource): ExpenseUi =
+    ExpenseUi(
+        id = id,
+        boardId = boardId,
+        description = description,
+        amountMinor = amountMinor,
+        currencyCode = currencyCode,
+        paidByMemberId = paidByMemberId,
+        allocations = allocations.map { ExpenseAllocationUi(it.memberId, it.amountMinor) },
+        occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
+        receipt = receipt?.toImageUi(source),
         source = source.toMessagePartSourceUi()
     )

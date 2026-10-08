@@ -4,6 +4,8 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
@@ -693,8 +695,8 @@ class GroupOutgoingMessageProcessor(
         }
 
         val attachments = parts.filterNot { part -> part is Text }
-        require(attachments.none { part -> part is Poll } || normalizedText.isEmpty()) {
-            "A poll must be sent without a separate text part"
+        require(attachments.none { part -> part is Poll || part is Expense || part is ExpenseBoard } || normalizedText.isEmpty()) {
+            "Polls and expenses must be sent without a separate text part"
         }
         MessageAttachmentPolicy.requireValid(attachments)
         require(attachments.none { it is Voice } || normalizedText.isEmpty()) {

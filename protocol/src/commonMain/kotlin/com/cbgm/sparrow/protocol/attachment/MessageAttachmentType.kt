@@ -7,5 +7,7 @@ enum class MessageAttachmentType {
     VOICE,
     LOCATION,
     CONTACT,
-    POLL
+    POLL,
+    EXPENSE_BOARD,
+    EXPENSE
 }

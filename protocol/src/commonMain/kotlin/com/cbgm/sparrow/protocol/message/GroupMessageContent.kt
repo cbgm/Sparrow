@@ -17,7 +17,7 @@ data class GroupMessageContent(
     val replyToMessageId: String? = null
 ) {
     init {
-        parts.requireValidWireMessageParts(allowPolls = true)
+        parts.requireValidWireMessageParts(allowPolls = true, allowExpenses = true)
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"
         }
