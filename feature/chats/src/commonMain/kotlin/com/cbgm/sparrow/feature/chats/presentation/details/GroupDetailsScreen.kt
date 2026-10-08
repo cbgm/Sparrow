@@ -1201,40 +1201,43 @@ private fun AdminVerificationCard(
         admin.displayName.takeIf(String::isNotBlank)
             ?: stringResource(Res.string.feature_chats_group_admin)
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaterialTheme.spacing.small)
-    ) {
-        Text(
-            text = stringResource(Res.string.feature_chats_group_verify_admin_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = stringResource(Res.string.feature_chats_group_verify_admin_description),
-            modifier = Modifier.padding(top = MaterialTheme.spacing.base),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = admin.verificationStatusText(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(MaterialTheme.spacing.small)
-        )
-
-        if (admin.canVerify && admin.contactId != null) {
-            SparrowApprovalButton(
-                onClick = onVerify,
-                fillMaxWidth = false,
-                text = stringResource(Res.string.base_verify_contact, adminName)
+    SparrowCardNoAnimation {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MaterialTheme.spacing.small),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(Res.string.feature_chats_group_verify_admin_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            Text(
+                text = stringResource(Res.string.feature_chats_group_verify_admin_description),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.base),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = admin.verificationStatusText(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(MaterialTheme.spacing.small)
+            )
+
+            if (admin.canVerify && admin.contactId != null) {
+                SparrowApprovalButton(
+                    onClick = onVerify,
+                    fillMaxWidth = false,
+                    text = stringResource(Res.string.base_verify_contact, adminName)
+                )
+            }
         }
     }
 }
