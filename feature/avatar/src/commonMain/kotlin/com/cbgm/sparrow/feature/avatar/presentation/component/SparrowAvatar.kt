@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +33,8 @@ fun SparrowAvatar(
     name: String,
     target: AvatarTarget?,
     modifier: Modifier = Modifier,
-    size: Dp = Dimens.Avatar.defaultSize
+    size: Dp = Dimens.Avatar.defaultSize,
+    fallbackPainter: Painter? = null
 ) {
     val uiState =
         if (target == null || LocalInspectionMode.current) {
@@ -49,7 +52,8 @@ fun SparrowAvatar(
         name = name,
         uiState = uiState,
         modifier = modifier,
-        size = size
+        size = size,
+        fallbackPainter = fallbackPainter
     )
 }
 
@@ -58,7 +62,8 @@ private fun Content(
     name: String,
     uiState: AvatarUiState,
     modifier: Modifier = Modifier,
-    size: Dp = Dimens.Avatar.defaultSize
+    size: Dp = Dimens.Avatar.defaultSize,
+    fallbackPainter: Painter? = null
 ) {
     Surface(
         modifier = modifier.size(size),
@@ -66,19 +71,26 @@ private fun Content(
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = name.toInitials(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-
             if (uiState is AvatarUiState.Ready) {
                 Image(
                     bitmap = uiState.image,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
+                )
+            } else if (fallbackPainter != null) {
+                Icon(
+                    painter = fallbackPainter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.fillMaxSize(0.5f)
+                )
+            } else {
+                Text(
+                    text = name.toInitials(),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }
