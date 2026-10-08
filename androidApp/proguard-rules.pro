@@ -5,3 +5,7 @@
 -keep class com.sun.jna.* {  *;}
 -keep class * extends com.sun.jna.* {  *;}
 -keepclassmembers class * extends com.sun.jna.* { public *;}
+
+# Google MediaPipe LiteRT LM missing class warnings
+-dontwarn com.google.ai.edge.litertlm.**
+

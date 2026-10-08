@@ -34,6 +34,7 @@ jobs:
       control_plane_package: ${{ steps.changes.outputs.control_plane_package }}
       community_node_package: ${{ steps.changes.outputs.community_node_package }}
       any_artifacts: ${{ steps.changes.outputs.any_artifacts }}
+      server: ${{ steps.server.outputs.changed }}
 
     steps:
       - name: Checkout exact commit
@@ -54,6 +55,42 @@ jobs:
             "${GITHUB_SHA}" \
             "${FORCE_FULL}"
 
+
+      - name: Resolve server build flag
+        id: server
+        shell: bash
+        env:
+          FULL_BUILD: ${{ steps.changes.outputs.full_build }}
+          NODE_REGISTRY: ${{ steps.changes.outputs.node_registry }}
+          PRESENCE_DIRECTORY: ${{ steps.changes.outputs.presence_directory }}
+          PUSH: ${{ steps.changes.outputs.push }}
+          MAILBOX: ${{ steps.changes.outputs.mailbox }}
+          FEDERATION: ${{ steps.changes.outputs.federation }}
+          GATEWAY: ${{ steps.changes.outputs.gateway }}
+          CONTROL_PLANE_PACKAGE: ${{ steps.changes.outputs.control_plane_package }}
+          COMMUNITY_NODE_PACKAGE: ${{ steps.changes.outputs.community_node_package }}
+        run: |
+          set -euo pipefail
+
+          changed=false
+          for value in \
+            "${FULL_BUILD}" \
+            "${NODE_REGISTRY}" \
+            "${PRESENCE_DIRECTORY}" \
+            "${PUSH}" \
+            "${MAILBOX}" \
+            "${FEDERATION}" \
+            "${GATEWAY}" \
+            "${CONTROL_PLANE_PACKAGE}" \
+            "${COMMUNITY_NODE_PACKAGE}"; do
+            if [[ "${value}" == "true" ]]; then
+              changed=true
+              break
+            fi
+          done
+
+          echo "changed=${changed}" >> "${GITHUB_OUTPUT}"
+          echo "Server artifacts changed: ${changed}"
   metadata:
     name: Resolve release metadata
     needs: changes
@@ -134,10 +171,50 @@ jobs:
           echo "Release-line image tag: ${release_line_tag}"
 
   validate:
-    name: Validate release commit
+    name: Validate release metadata
     needs:
       - changes
       - metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify tagged commit belongs to a release branch
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin '+refs/heads/release/*:refs/remotes/origin/release/*'
+          if ! git branch --remotes --contains "${GITHUB_SHA}" | grep -Eq 'origin/release/'; then
+            echo "::error::Release tags must point to a commit from a release/* branch."
+            exit 1
+          fi
+
+      - name: Validate release configuration
+        env:
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
+            exit 1
+          fi
+
+          echo "Release metadata and repository configuration are valid."
+  android-artifacts:
+    name: Build Android packages
+    needs:
+      - changes
+      - metadata
+      - validate
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -155,22 +232,14 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref_type == 'tag' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Verify tagged commit belongs to a release branch
-        if: github.ref_type == 'tag'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin '+refs/heads/release/*:refs/remotes/origin/release/*'
-          if ! git branch --remotes --contains "${GITHUB_SHA}" | grep -Eq 'origin/release/'; then
-            echo "::error::Release tags must point to a commit from a release/* branch."
-            exit 1
-          fi
-
-      - name: Create validation local.properties
+      - name: Create Android local.properties
         env:
           CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
         shell: bash
@@ -182,150 +251,10 @@ jobs:
             exit 1
           fi
 
-          printf 'CONTROL_PLANE_RELEASE_DIRECTORY_URL=%s\n' \
-            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
-            > local.properties
-
-      - name: Run quality checks
-        run: ./gradlew qualityCheck -x verifyArchitectureReport --no-daemon --stacktrace --console=plain
-
-      - name: Run host and multiplatform tests
-        run: ./gradlew allTests --no-daemon --stacktrace --console=plain
-
-      - name: Upload validation reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-validation-${{ needs.metadata.outputs.artifact_version }}
-          if-no-files-found: ignore
-          retention-days: 30
-          path: |
-            **/build/reports/tests/**
-            **/build/test-results/**
-            **/build/reports/detekt/**
-            **/build/reports/ktlint/**
-
-  android-debug-package:
-    name: Build debug APK
-    needs:
-      - changes
-      - metadata
-      - validate
-    if: needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-
-      - name: Create debug local.properties
-        env:
-          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
-            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
-            exit 1
-          fi
-
-          printf 'CONTROL_PLANE_DIRECTORY_URL=%s\n' \
-            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
-            > local.properties
-
-      - name: Build debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./gradlew \
-            :androidApp:assembleDebug \
-            -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
-            -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
-            --no-daemon \
-            --stacktrace \
-            --console=plain
-
-      - name: Name debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ needs.metadata.outputs.artifact_version }}"
-          debug_apk="$(find androidApp/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f | head -n 1)"
-          if [[ -z "${debug_apk}" ]]; then
-            echo "::error::Android debug APK output is missing."
-            exit 1
-          fi
-          mkdir -p dist/android-debug
-          cp "${debug_apk}" "dist/android-debug/sparrow-${version}-debug.apk"
-          (cd dist/android-debug && sha256sum sparrow-*.apk > SHA256SUMS.txt)
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
-          path: dist/android-debug
-          if-no-files-found: error
-          retention-days: 30
-
-  android-release-package:
-    name: Build signed release APK
-    needs:
-      - changes
-      - metadata
-      - validate
-    if: needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-
-      - name: Create release local.properties
-        env:
-          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
-            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
-            exit 1
-          fi
-
-          printf 'CONTROL_PLANE_RELEASE_DIRECTORY_URL=%s\n' \
-            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
-            > local.properties
+          {
+            echo "CONTROL_PLANE_DIRECTORY_URL=${CONTROL_PLANE_RELEASE_DIRECTORY_URL}"
+            echo "CONTROL_PLANE_RELEASE_DIRECTORY_URL=${CONTROL_PLANE_RELEASE_DIRECTORY_URL}"
+          } > local.properties
 
       - name: Prepare release signing key
         env:
@@ -363,7 +292,6 @@ jobs:
           fi
 
           echo "Validating decoded release keystore..."
-
           if ! keytool -list \
             -keystore "${keystore}" \
             -storepass "${KEY_STORE_PASSWORD}" \
@@ -373,7 +301,6 @@ jobs:
           fi
 
           echo "Validating release key alias..."
-
           if ! keytool -list \
             -keystore "${keystore}" \
             -storepass "${KEY_STORE_PASSWORD}" \
@@ -390,16 +317,29 @@ jobs:
             echo "KEY_PASSWORD=${KEY_PASSWORD}"
           } >> local.properties
 
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew \
+            :androidApp:assembleDebug \
+            -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
+            -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
+            --build-cache \
+            --no-daemon \
+            --stacktrace \
+            --console=plain
+
       - name: Build signed release APK
         shell: bash
         run: |
           set -euo pipefail
-
           ./gradlew \
             :androidApp:assembleRelease \
             -Pbuildkonfig.flavor=release \
             -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
             -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
+            --build-cache \
             --no-daemon \
             --stacktrace \
             --console=plain
@@ -424,11 +364,18 @@ jobs:
 
           echo "Release Control Plane directory URL is present in generated BuildKonfig."
 
-      - name: Verify and name release APK
+      - name: Name Android packages
         shell: bash
         run: |
           set -euo pipefail
           version="${{ needs.metadata.outputs.artifact_version }}"
+
+          debug_apk="$(find androidApp/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          if [[ -z "${debug_apk}" ]]; then
+            echo "::error::Android debug APK output is missing."
+            exit 1
+          fi
+
           release_apk="$(find androidApp/build/outputs/apk/release -maxdepth 1 -name '*.apk' -type f | head -n 1)"
           if [[ -z "${release_apk}" ]]; then
             echo "::error::Android release APK output is missing."
@@ -442,8 +389,10 @@ jobs:
           fi
           "${apksigner}" verify --verbose --print-certs "${release_apk}"
 
-          mkdir -p dist/android-release
+          mkdir -p dist/android-debug dist/android-release dist/android-mapping
+          cp "${debug_apk}" "dist/android-debug/sparrow-${version}-debug.apk"
           cp "${release_apk}" "dist/android-release/sparrow-${version}-release.apk"
+          (cd dist/android-debug && sha256sum sparrow-*.apk > SHA256SUMS.txt)
           (cd dist/android-release && sha256sum sparrow-*.apk > SHA256SUMS.txt)
 
           mapping_file="androidApp/build/outputs/mapping/release/mapping.txt"
@@ -451,8 +400,15 @@ jobs:
             echo "::error::R8 mapping output is missing for the minified release build."
             exit 1
           fi
-          mkdir -p dist/android-mapping
           cp "${mapping_file}" "dist/android-mapping/mapping-${version}.txt"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/android-debug
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload R8 mapping
         uses: actions/upload-artifact@v4
@@ -469,13 +425,13 @@ jobs:
           path: dist/android-release
           if-no-files-found: error
           retention-days: 30
-
   server-artifacts:
     name: Build server images and bundles
     needs:
       - changes
       - metadata
       - validate
+    if: needs.changes.outputs.server == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
 
@@ -493,6 +449,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref_type == 'tag' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
@@ -585,8 +544,8 @@ jobs:
 
           ./gradlew \
             "${tasks[@]}" \
+            --build-cache \
             --no-daemon \
-            --no-configuration-cache \
             --max-workers=2 \
             --console=plain
 
@@ -633,6 +592,8 @@ jobs:
               --label "org.opencontainers.image.version=${VERSION_NAME}" \
               --label "org.opencontainers.image.created=${created_at}" \
               --provenance=false \
+              --cache-from "type=gha,scope=sparrow-${service}" \
+              --cache-to "type=gha,mode=max,scope=sparrow-${service}" \
               --push \
               --tag "${image}:${IMAGE_TAG}" \
               --tag "${image}:${RELEASE_LINE_TAG}" \
@@ -770,8 +731,7 @@ jobs:
       - changes
       - metadata
       - validate
-      - android-debug-package
-      - android-release-package
+      - android-artifacts
       - server-artifacts
     if: always() && needs.validate.result == 'success' && github.ref_type != 'tag'
     runs-on: ubuntu-latest
@@ -787,6 +747,8 @@ jobs:
             echo
             echo "Unified public server installer packaged for Windows and Linux (Control Plane + Community Node; internal Directory server excluded)."
             echo "Only changed server images were rebuilt; unchanged images were reused or aliased to the immutable candidate tag."
+            echo "Android job: ${{ needs.android-artifacts.result }}"
+            echo "Server job: ${{ needs.server-artifacts.result }}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   publish-release:
@@ -795,15 +757,13 @@ jobs:
       - changes
       - metadata
       - validate
-      - android-debug-package
-      - android-release-package
+      - android-artifacts
       - server-artifacts
     if: >-
       always() &&
       needs.metadata.outputs.publish_release == 'true' &&
       needs.validate.result == 'success' &&
-      needs.android-debug-package.result == 'success' &&
-      needs.android-release-package.result == 'success' &&
+      needs.android-artifacts.result == 'success' &&
       needs.server-artifacts.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -902,4 +862,5 @@ jobs:
             --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"
+
 
