@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.overview.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewPreview
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,7 +16,8 @@ class ConversationOverviewMapperTest {
             MessageAttachmentType.FILE to ConversationOverviewPreview.MEDIA,
             MessageAttachmentType.LOCATION to ConversationOverviewPreview.LOCATION,
             MessageAttachmentType.CONTACT to ConversationOverviewPreview.CONTACT_CARD,
-            MessageAttachmentType.VOICE to ConversationOverviewPreview.VOICE
+            MessageAttachmentType.VOICE to ConversationOverviewPreview.VOICE,
+            MessageAttachmentType.POLL to ConversationOverviewPreview.POLL
         )
         cases.forEach { (type, expected) ->
             assertEquals(expected, summary(type).toConversationOverview().lastMessagePreview)

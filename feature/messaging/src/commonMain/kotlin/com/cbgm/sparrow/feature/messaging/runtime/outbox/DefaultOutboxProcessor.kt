@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
-import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessingResult
-import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
+import com.cbgm.sparrow.protocol.outbox.OutboxProcessingResult
+import com.cbgm.sparrow.protocol.outbox.OutboxProcessor
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
 import com.cbgm.sparrow.feature.identity.data.model.RemoteIdentityImportOriginDto
 import com.cbgm.sparrow.feature.identity.data.model.StoredKeyExchangeStatusDto
 import com.cbgm.sparrow.feature.identity.data.model.StoredVerificationStatusDto
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import kotlinx.coroutines.flow.Flow
 
 internal class RemoteIdentityDataSource(

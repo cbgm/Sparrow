@@ -18,6 +18,9 @@ internal class GroupDescriptionRepositoryImpl(
 
     override fun observe(groupId: String): Flow<GroupDescription> = dataSource.observe(groupId)
 
+    override suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit> =
+        broadcaster.sendCurrentTo(groupId, peerId)
+
     override suspend fun set(
         groupId: String,
         description: String

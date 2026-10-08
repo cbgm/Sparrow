@@ -10,8 +10,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
-            implementation(projects.core.protocol)
+            implementation(projects.core.util)
+            implementation(projects.protocol)
 
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)

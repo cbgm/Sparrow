@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.runtime.group.verification
 
-import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 
 internal fun requireMatchingSigningKey(
     identity: LocalPublicIdentity,

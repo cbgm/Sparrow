@@ -14,9 +14,10 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
+            implementation(projects.core.util)
             implementation(projects.core.ui)
             implementation(projects.data.database)
+            implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

@@ -13,14 +13,18 @@ interface MessageSafetyDao {
         """
         SELECT
             messages.id AS messageId,
-            messages.text AS text
+            message_text.text AS text
         FROM messages
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         LEFT JOIN message_safety_assessments
             ON message_safety_assessments.messageId = messages.id
             AND message_safety_assessments.analyzerVersion = :analyzerVersion
         WHERE messages.isMine = 0
           AND messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
+          AND TRIM(message_text.text) != ''
           AND messages.transportMode NOT LIKE 'SYSTEM_%'
           AND message_safety_assessments.messageId IS NULL
         ORDER BY messages.createdAtEpochMilliseconds ASC
@@ -36,12 +40,16 @@ interface MessageSafetyDao {
         """
         SELECT COUNT(*)
         FROM messages
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         LEFT JOIN message_safety_assessments
             ON message_safety_assessments.messageId = messages.id
             AND message_safety_assessments.analyzerVersion = :analyzerVersion
         WHERE messages.isMine = 0
           AND messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
+          AND TRIM(message_text.text) != ''
           AND messages.transportMode NOT LIKE 'SYSTEM_%'
           AND message_safety_assessments.messageId IS NULL
         """
@@ -52,12 +60,16 @@ interface MessageSafetyDao {
         """
         SELECT COUNT(*)
         FROM messages
+        INNER JOIN message_parts
+            ON message_parts.messageId = messages.id
+            AND message_parts.type = 'TEXT'
+        INNER JOIN message_text ON message_text.partId = message_parts.id
         LEFT JOIN message_safety_assessments
             ON message_safety_assessments.messageId = messages.id
             AND message_safety_assessments.analyzerVersion = :analyzerVersion
         WHERE messages.isMine = 0
           AND messages.contentStatus = 'READABLE'
-          AND TRIM(messages.text) != ''
+          AND TRIM(message_text.text) != ''
           AND messages.transportMode NOT LIKE 'SYSTEM_%'
           AND message_safety_assessments.messageId IS NULL
         """

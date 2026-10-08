@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
 
 class ReceiveGroupLeaveRequestUseCase(
     private val repository: GroupMembershipRepository

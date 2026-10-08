@@ -24,5 +24,6 @@ enum class ConversationOverviewPreview {
     LOCATION,
     CONTACT_CARD,
     VOICE,
+    POLL,
     ATTACHMENT
 }

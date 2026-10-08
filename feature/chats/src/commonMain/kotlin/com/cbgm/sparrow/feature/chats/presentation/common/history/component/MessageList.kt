@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -34,7 +35,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
@@ -54,6 +54,8 @@ internal fun MessageList(
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     onContactClick: (SharedContact) -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
+    onPollClose: (String, String) -> Unit = { _, _ -> },
     contentPadding: PaddingValues,
     historyState: MessageHistoryUiState,
     onLoadOlderMessages: () -> Unit,
@@ -149,6 +151,8 @@ internal fun MessageList(
                                     )
                                 )
                             },
+                            onPollVoteSubmit = onPollVoteSubmit,
+                            onPollClose = onPollClose,
                             isContextSelected = selectedContextMessageId == message.id,
                             isSearchHighlighted =
                                 message.id == searchTargetState.highlightedMessageId ||
@@ -269,7 +273,8 @@ private fun MessageListPreview() {
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.READ,
                         textPart =
-                            MessagePartUi.Text(
+                            TextUi(
+                                id = "preview-text",
                                 text = "Yes, that sounds good 👍",
                                 isContentFailed = false
                             )
@@ -282,8 +287,9 @@ private fun MessageListPreview() {
                         deliveryStatus = MessageDeliveryStatus.READ,
                         senderName = "Chris",
                         textPart =
-                            MessagePartUi.Text(
-                                text = "Should we meet around 18:00?",
+                            TextUi(
+                                id = "preview-text",
+                                text = "Should we meet around 18:00? Or do we not? Tell me",
                                 isContentFailed = false
                             )
                     ),
@@ -294,7 +300,8 @@ private fun MessageListPreview() {
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.DELIVERED,
                         textPart =
-                            MessagePartUi.Text(
+                            TextUi(
+                                id = "preview-text",
                                 text = "I'm free this evening.",
                                 isContentFailed = false
                             )
@@ -315,7 +322,8 @@ private fun MessageListPreview() {
                                 )
                             ),
                         textPart =
-                            MessagePartUi.Text(
+                            TextUi(
+                                id = "preview-text",
                                 text = "Hey! How are you?",
                                 isContentFailed = false
                             )

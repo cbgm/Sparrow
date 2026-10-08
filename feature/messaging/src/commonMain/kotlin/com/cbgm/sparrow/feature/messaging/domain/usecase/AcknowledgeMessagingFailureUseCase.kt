@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 
 class AcknowledgeMessagingFailureUseCase(
     private val outbox: ProtocolOutbox

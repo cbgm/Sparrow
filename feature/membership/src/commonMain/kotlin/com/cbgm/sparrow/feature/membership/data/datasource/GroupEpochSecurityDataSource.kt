@@ -1,19 +1,19 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
-import com.cbgm.sparrow.core.crypto.group.GroupKeyConfirmation
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
 
 /** Group epoch changes are Membership-owned. No Chats-implemented datasource or callback. */
 internal class GroupEpochSecurityDataSource(

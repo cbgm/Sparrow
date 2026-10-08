@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.search.data.model
 
-import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
+import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
 
 internal object SemanticSearchIndexConfig {
     /**

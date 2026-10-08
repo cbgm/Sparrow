@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 
 class GroupKeyRepositoryImpl(
     private val dataSource: GroupKeyStore

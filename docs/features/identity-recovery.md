@@ -121,11 +121,11 @@ Database migrations `PendingRemoteIdentityChangeMigration49To50`, `PendingRemote
 
 ## App-lifetime retry
 
-`AppViewModel` starts `ApprovedIdentityReconnectionObserver` after local identity readiness. The observer keeps one worker per approved peer and starts `ApprovedReconnectionRetryWorker`.
+`StartApprovedIdentityReconnectionObserverStartupTask` starts `ApprovedIdentityReconnectionObserver` after local identity readiness as part of the task-based application runtime. The observer keeps one worker per approved peer and starts `ApprovedReconnectionRetryWorker`.
 
 ```mermaid
 sequenceDiagram
-    participant APP as AppViewModel
+    participant APP as Startup runtime
     participant OBS as ApprovedIdentityReconnectionObserver
     participant DB as approved reconnection repository
     participant WORK as ApprovedReconnectionRetryWorker

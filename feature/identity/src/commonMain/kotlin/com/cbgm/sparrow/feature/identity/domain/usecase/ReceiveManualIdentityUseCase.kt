@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
+import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.packet.IdentityPacket
 
 class ReceiveManualIdentityUseCase(
     private val repository: IdentityExchangeRepository

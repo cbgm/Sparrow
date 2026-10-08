@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.membership.data.protocol
 
-import com.cbgm.sparrow.core.crypto.util.ByteArrays
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.sparrow.protocol.packet.GroupJoinRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 internal class GroupMembershipPayloadEncoder {
     fun encodeConversationDeleted(packet: GroupConversationDeletedPacket): ByteArray =

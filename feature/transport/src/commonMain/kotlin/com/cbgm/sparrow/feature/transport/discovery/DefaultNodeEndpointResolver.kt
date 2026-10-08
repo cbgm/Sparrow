@@ -2,9 +2,10 @@ package com.cbgm.sparrow.feature.transport.discovery
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -23,10 +24,12 @@ class DefaultNodeEndpointResolver(
     private val controlPlaneConfiguration: ControlPlaneConfiguration,
     private val controlPlaneStatusStore: ControlPlaneStatusStore,
     private val endpointSelector: NodeEndpointSelector,
+    private val controlPlaneDirectorySynchronizer: ControlPlaneDirectorySynchronizer? = null,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) : NodeEndpointResolver {
     private val logger = SparrowLog.withTag("DefaultNodeEndpointResolver")
     private val resolutionMutex = Mutex()
+    private var lastDirectoryRecoveryAttemptEpochMilliseconds = 0L
 
     override suspend fun resolve(
         localRoutingId: String,
@@ -93,6 +96,41 @@ class DefaultNodeEndpointResolver(
     }
 
     private suspend fun fetchConfiguredDirectory(
+        cached: CachedNodeDirectory?,
+        currentTime: Long
+    ): Result<SignedNodeDirectory> {
+        val beforeRefresh = controlPlaneConfiguration.endpoints.value.map { it.baseUrl }
+        val initialResult = fetchFromCurrentControlPlanes(cached, currentTime)
+        if (initialResult.isSuccess) return initialResult
+
+        val synchronizer = controlPlaneDirectorySynchronizer ?: return initialResult
+        if (controlPlaneConfiguration.directoryUrl.value == null) return initialResult
+        if (currentTime - lastDirectoryRecoveryAttemptEpochMilliseconds < DIRECTORY_RECOVERY_RETRY_MILLISECONDS) {
+            return initialResult
+        }
+
+        lastDirectoryRecoveryAttemptEpochMilliseconds = currentTime
+        val refreshResult = synchronizer.refresh()
+        if (refreshResult.isFailure) {
+            val error = refreshResult.exceptionOrNull()
+            if (error is CancellationException && error !is TimeoutCancellationException) throw error
+            logger.debug {
+                "Signed Control Plane directory refresh did not recover node discovery: " +
+                    (error?.message ?: error?.let { it::class.simpleName } ?: "unknown error")
+            }
+            return initialResult
+        }
+
+        val afterRefresh = controlPlaneConfiguration.endpoints.value.map { it.baseUrl }
+        if (afterRefresh == beforeRefresh) return initialResult
+
+        logger.info {
+            "Signed Control Plane directory replaced stale discovery endpoints; retrying node discovery"
+        }
+        return fetchFromCurrentControlPlanes(cached, now())
+    }
+
+    private suspend fun fetchFromCurrentControlPlanes(
         cached: CachedNodeDirectory?,
         currentTime: Long
     ): Result<SignedNodeDirectory> {
@@ -306,6 +344,7 @@ class DefaultNodeEndpointResolver(
 
     private companion object {
         const val CONTROL_PLANE_FETCH_TIMEOUT_MILLISECONDS = 5_000L
+        const val DIRECTORY_RECOVERY_RETRY_MILLISECONDS = 10_000L
     }
 
     private fun CachedNodeDirectory.decode(): SignedNodeDirectory? =

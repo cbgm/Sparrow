@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SaveAlt
@@ -16,16 +15,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItemUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.AttachmentUiState
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
@@ -34,7 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageAttachmentViewer(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessagePartUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -46,30 +47,33 @@ fun MessageAttachmentViewer(
         } ?: return
 
     when (selectedAttachment) {
-        is MessageAttachmentUi.ImageVideoAttachmentUi ->
+        is ImageUi,
+        is VideoUi ->
             MessageMediaViewer(
-                attachments = attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>(),
+                attachments = attachments.filter { part -> part is ImageUi || part is VideoUi },
                 selectedAttachmentId = selectedAttachmentId,
                 canSaveToCameraRoll = canSaveToCameraRoll,
                 onDismiss = onDismiss,
                 onError = onError
             )
 
-        is MessageAttachmentUi.LocationAttachmentUi ->
+        is LocationUi ->
             MessageLocationViewer(
                 attachment = selectedAttachment,
                 onDismiss = onDismiss,
                 onError = onError
             )
 
-        is MessageAttachmentUi.FileAttachmentUi,
-        is MessageAttachmentUi.ContactAttachmentUi -> Unit
+        is FileUi,
+        is ContactUi -> Unit
+
+        else -> Unit
     }
 }
 
 @Composable
 private fun MessageMediaViewer(
-    attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
+    attachments: List<MessagePartUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -88,12 +92,9 @@ private fun MessageMediaViewer(
 
     val loadedMedia =
         attachments.map { attachment ->
-            val state = rememberAttachmentUiState(attachment.target)
+            val state = rememberLocalFileUiState(attachment)
             val localFilePath =
-                (state as? AttachmentUiState.Ready)
-                    ?.content
-                    ?.let { content -> content as? AttachmentContent.LocalFile }
-                    ?.localFilePath
+                (state as? AttachmentUiState.Ready)?.value
             attachment to localFilePath
         }
 
@@ -113,11 +114,11 @@ private fun MessageMediaViewer(
         savePending = false
     }
 
+    val localFilePaths = loadedMedia.associate { (attachment, localFilePath) -> attachment.id to localFilePath }
+
     MediaViewer(
-        media =
-            loadedMedia.map { (attachment, localFilePath) ->
-                attachment.toMediaItem(localFilePath)
-            },
+        media = attachments.map { attachment -> attachment.toMediaItemUi() },
+        localFilePathProvider = { media -> localFilePaths[media.id] },
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         title = { currentIndex, total ->
@@ -127,23 +128,18 @@ private fun MessageMediaViewer(
             if (canSaveToCameraRoll) {
                 IconButton(
                     onClick = { savePending = true },
-                    enabled = !savePending,
-                    modifier = Modifier.background(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f),
-                        shape = MaterialTheme.shapes.circle
-                    )
+                    enabled = !savePending
                 ) {
                     if (savePending) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
                             strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.SaveAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            contentDescription = null
                         )
                     }
                 }
@@ -154,17 +150,14 @@ private fun MessageMediaViewer(
 
 @Composable
 private fun MessageLocationViewer(
-    attachment: MessageAttachmentUi.LocationAttachmentUi,
+    attachment: LocationUi,
     onDismiss: () -> Unit,
     onError: (String) -> Unit
 ) {
     val locationOpener = rememberLocationOpener()
-    val state = rememberAttachmentUiState(attachment.target)
+    val state = rememberLocationUiState(attachment)
     val location =
-        (state as? AttachmentUiState.Ready)
-            ?.content
-            ?.let { content -> content as? AttachmentContent.Location }
-            ?.location
+        (state as? AttachmentUiState.Ready)?.value
 
     LaunchedEffect(attachment.id, location) {
         val loadedLocation = location ?: return@LaunchedEffect
@@ -186,15 +179,13 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageAttachmentUi.ImageVideoAttachmentUi(
+                    ImageUi(
                         id = "preview-image",
-                        type = MessageAttachmentType.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.ImageVideoAttachmentUi(
+                    VideoUi(
                         id = "preview-video",
-                        type = MessageAttachmentType.VIDEO,
                         mimeType = "video/mp4",
                         byteSize = 0
                     )

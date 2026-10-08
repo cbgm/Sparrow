@@ -3,17 +3,18 @@ package com.cbgm.sparrow.startup.presentation.start
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.feature.applock.presentation.AppLockRoute
 import com.cbgm.sparrow.feature.onboarding.presentation.OnboardingRoute
-import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiState
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun StartupRoute(
-    onStartupReady: (StartupConnection) -> Unit,
+    onStartupReady: () -> Unit,
     onStartupContentReady: () -> Unit,
     startupViewModel: StartupViewModel = koinViewModel()
 ) {
@@ -21,27 +22,8 @@ fun StartupRoute(
 
     LaunchedEffect(startupUiState) {
         StartupTrace.event(
-            "StartupRoute observed state=${when (startupUiState) {
-                StartupUiState.Loading -> "Loading"
-                is StartupUiState.Ready -> "Ready"
-                StartupUiState.IdentityRequired -> "IdentityRequired"
-                is StartupUiState.Error -> "Error"
-            }}"
+            "StartupRoute observed state=${startupUiState.traceName()}"
         )
-        when (val state = startupUiState) {
-            is StartupUiState.Ready -> {
-                // Keep the native Android splash over navigation to Main;
-                // MainRoute releases it independently of network and overview loading.
-                startupViewModel.completeStartup()
-                onStartupReady(state.connection)
-            }
-            StartupUiState.IdentityRequired, is StartupUiState.Error -> {
-                // These are actual destinations; release the native splash so
-                // onboarding or a recoverable error can be displayed.
-                onStartupContentReady()
-            }
-            StartupUiState.Loading -> Unit
-        }
     }
 
     when (val state = startupUiState) {
@@ -51,15 +33,50 @@ fun StartupRoute(
                     startupViewModel.onUiEvent(StartupUiEvent.IdentityCreated)
                 }
             )
+
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                StartupTrace.event("onboarding content ready; releasing native splash")
+                onStartupContentReady()
+            }
         }
+
+        StartupUiState.Ready -> {
+            AppLockRoute(
+                onUnlocked = {
+                    startupViewModel.completeStartup()
+                    onStartupReady()
+                }
+            )
+
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                StartupTrace.event("startup ready frame; releasing native splash")
+                onStartupContentReady()
+            }
+        }
+
         is StartupUiState.Error -> {
             StartupErrorScreen(
                 message = state.message,
                 onRetry = { startupViewModel.onUiEvent(StartupUiEvent.RetryClicked) }
             )
+
+            LaunchedEffect(state) {
+                withFrameNanos { }
+                StartupTrace.event("startup error content ready; releasing native splash")
+                onStartupContentReady()
+            }
         }
-        // No Compose startup loading UI: required initialization continues in
-        // the shared StartupViewModel; the platform handles its own launch UI.
-        StartupUiState.Loading, is StartupUiState.Ready -> Unit
+
+        StartupUiState.Loading -> Unit
     }
 }
+
+private fun StartupUiState.traceName(): String =
+    when (this) {
+        StartupUiState.Loading -> "Loading"
+        StartupUiState.Ready -> "Ready"
+        StartupUiState.IdentityRequired -> "IdentityRequired"
+        is StartupUiState.Error -> "Error"
+    }

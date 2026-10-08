@@ -1,11 +1,32 @@
 # `:resources`
 
-Source directory: `resources`
+Generated automatically by `./gradlew architectureReport`.
 
-## Direct project dependencies
+## Module information
 
-None detected.
+| Property | Value |
+|---|---|
+| Name | `resources` |
+| Group | `resources` |
+| Directory | `resources` |
+| Build file | `resources/build.gradle.kts` |
+| Kotlin files | 0 |
+| Production Kotlin files | 0 |
+| Test Kotlin files | 0 |
+| Resource files | 22 |
+| Direct dependencies | 0 |
+| Direct dependents | 2 |
 
-## Production top-level Kotlin declarations
+## Source sets
 
-No production top-level Kotlin declarations detected.
+- `androidMain`
+- `commonMain`
+
+## Dependencies
+
+None.
+
+## Dependents
+
+- [`:core:ui`](../modules/core-ui.md)
+- [`:feature:notification`](../modules/feature-notification.md)

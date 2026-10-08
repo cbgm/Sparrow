@@ -37,19 +37,20 @@ import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.device.MediaImage
 import com.cbgm.sparrow.feature.media.device.VideoPlayer
-import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
-import com.cbgm.sparrow.feature.media.presentation.model.MediaType
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 
 /**
  * Reusable full-screen media viewer. A one-item list is the single-photo case.
  */
 @Composable
 fun MediaViewer(
-    media: List<MediaItem>,
+    media: List<MediaItemUi>,
     modifier: Modifier = Modifier,
     initialIndex: Int = 0,
     onDismiss: () -> Unit,
     onEnsureMediaLoaded: (String) -> Unit = {},
+    localFilePathProvider: (MediaItemUi) -> String? = MediaItemUi::localFilePath,
     title: (currentIndex: Int, total: Int) -> String = { currentIndex, total ->
         "${currentIndex + 1}/$total"
     },
@@ -100,6 +101,7 @@ fun MediaViewer(
                     media = media[page],
                     isActive = page == pagerState.currentPage,
                     onEnsureMediaLoaded = onEnsureMediaLoaded,
+                    localFilePath = localFilePathProvider(media[page]),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -143,14 +145,15 @@ private fun MediaViewerTopBar(
 
 @Composable
 private fun MediaViewerPage(
-    media: MediaItem,
+    media: MediaItemUi,
     isActive: Boolean,
     onEnsureMediaLoaded: (String) -> Unit,
+    localFilePath: String?,
     modifier: Modifier = Modifier
 ) {
-    val isLoaded = media.localFilePath != null
+    val isLoaded = localFilePath != null
 
-    LaunchedEffect(media.id, media.localFilePath) {
+    LaunchedEffect(media.id, localFilePath) {
         if (!isLoaded) {
             onEnsureMediaLoaded(media.id)
         }
@@ -166,19 +169,20 @@ private fun MediaViewerPage(
     }
 
     when (media.type) {
-        MediaType.IMAGE ->
+        MediaTypeUi.IMAGE ->
             MediaImage(
                 data = null,
-                localFilePath = media.localFilePath,
+                localFilePath = localFilePath,
                 cacheKey = "media-full:${media.id}",
                 contentDescription = null,
                 modifier = modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit
             )
 
-        MediaType.VIDEO ->
+        MediaTypeUi.VIDEO ->
             VideoPage(
                 media = media,
+                localFilePath = localFilePath,
                 isActive = isActive,
                 modifier = modifier
             )
@@ -187,7 +191,8 @@ private fun MediaViewerPage(
 
 @Composable
 private fun VideoPage(
-    media: MediaItem,
+    media: MediaItemUi,
+    localFilePath: String?,
     isActive: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -200,6 +205,7 @@ private fun VideoPage(
     if (isActive && playRequested) {
         VideoPlayer(
             media = media,
+            localFilePath = localFilePath,
             isActive = true,
             modifier = modifier
         )
@@ -214,6 +220,7 @@ private fun VideoPage(
     ) {
         MediaThumbnail(
             media = media,
+            localFilePath = localFilePath,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
@@ -232,9 +239,9 @@ private fun MediaViewerPreview() {
         MediaViewer(
             media =
                 listOf(
-                    MediaItem(
+                    MediaItemUi(
                         id = "preview-image",
-                        type = MediaType.IMAGE,
+                        type = MediaTypeUi.IMAGE,
                         mimeType = "image/jpeg",
                         localFilePath = "/preview/image.jpg"
                     )

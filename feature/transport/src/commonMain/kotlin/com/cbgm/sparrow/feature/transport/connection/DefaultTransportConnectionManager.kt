@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.transport.connection
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.TransportDiagnostics
-import com.cbgm.sparrow.core.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.discovery.FailedNodeTracker

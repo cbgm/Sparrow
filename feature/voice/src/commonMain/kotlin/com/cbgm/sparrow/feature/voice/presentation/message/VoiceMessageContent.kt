@@ -42,11 +42,11 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptCue
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
@@ -66,17 +66,17 @@ import kotlin.math.roundToInt
 
 @Composable
 fun VoiceMessageContent(
-    target: VoiceMessageTarget,
+    part: VoiceUi,
     modifier: Modifier = Modifier
 ) {
     val viewModel =
-        koinViewModel<VoiceMessageViewModel>(key = target.stableKey) {
-            parametersOf(target)
+        koinViewModel<VoiceMessageViewModel>(key = part.instanceKey) {
+            parametersOf(part)
         }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     VoiceMessageContentBody(
-        durationMilliseconds = target.durationMilliseconds,
+        durationMilliseconds = part.durationMilliseconds,
         playbackPositionMilliseconds = uiState.playbackPositionMilliseconds,
         isPlaying = uiState.isPlaying,
         waveform = emptyList(),
@@ -547,8 +547,10 @@ private fun calculateTranscriptTargetScroll(
 private fun VoiceMessageContentPreview() {
     SparrowTheme {
         VoiceMessageContent(
-            target = VoiceMessageTarget(
-                attachmentId = "1",
+            part = VoiceUi(
+                id = "1",
+                mimeType = "audio/wav",
+                byteSize = 0L,
                 durationMilliseconds = 10000L
             ),
             modifier = Modifier.fillMaxWidth()

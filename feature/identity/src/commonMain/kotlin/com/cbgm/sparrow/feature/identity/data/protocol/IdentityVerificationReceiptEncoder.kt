@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.protocol
 
-import com.cbgm.sparrow.core.crypto.util.ByteArrays
+import com.cbgm.sparrow.core.bytes.ByteArrays
 
 internal class IdentityVerificationReceiptEncoder {
     fun encodeReceipt(

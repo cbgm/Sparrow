@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.search.data.datasource
 
-import com.cbgm.sparrow.core.embedding.data.model.cosineSimilarity
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
-import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
+import com.cbgm.sparrow.feature.embedding.data.model.cosineSimilarity
+import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
+import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
+import com.cbgm.sparrow.feature.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.search.data.mapper.EmbeddingCodecMapper
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 

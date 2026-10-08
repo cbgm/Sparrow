@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import kotlinx.coroutines.flow.MutableStateFlow

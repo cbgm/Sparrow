@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscriptCue
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadAttachmentBytesUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.SaveMessageAttachmentTranscriptUseCase
-import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -26,12 +25,12 @@ class TranscribeVoiceMessageUseCase(
 ) {
     private val logger = SparrowLog.withTag("VoiceTranscription")
 
-    operator fun invoke(target: VoiceMessageTarget): Flow<VoiceTranscriptionState> = channelFlow {
+    operator fun invoke(partId: String, groupId: String? = null): Flow<VoiceTranscriptionState> = channelFlow {
         var phase = VoiceTranscriptionPhase.DOWNLOADING
         try {
             send(VoiceTranscriptionState.Downloading)
             val bytes = runPhase(phase, DOWNLOAD_TIMEOUT_MILLISECONDS) {
-                loadAttachmentBytes(target.attachmentTarget).getOrThrow()
+                loadAttachmentBytes(partId, groupId).getOrThrow()
             }
 
             phase = VoiceTranscriptionPhase.PREPARING
@@ -94,7 +93,7 @@ class TranscribeVoiceMessageUseCase(
 
             check(transcript.text.isNotBlank()) { "No speech could be transcribed" }
             saveTranscript(
-                attachmentId = target.attachmentId,
+                attachmentId = partId,
                 transcription =
                     AttachmentTranscript(
                         text = transcript.text,

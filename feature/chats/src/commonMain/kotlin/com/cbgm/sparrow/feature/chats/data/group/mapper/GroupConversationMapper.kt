@@ -1,13 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
-import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
@@ -25,7 +24,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     memberships: List<GroupMemberLifecycleSnapshot>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
+    partsByMessageId: Map<String, List<MessagePart>> = emptyMap(),
     reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap(),
     localMembershipHistory: List<MessageEntity> = messages
 ): GroupConversation {
@@ -50,7 +49,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        messageParts = partsByMessageId[message.id].orEmpty(),
                         reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
@@ -77,7 +76,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachmentParts: List<MessagePartDto>,
+    messageParts: List<MessagePart>,
     reactions: List<MessageReaction>
 ): GroupMessage {
     val deliveryStatus =
@@ -101,13 +100,7 @@ private fun MessageEntity.toGroupMessage(
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),
-        parts =
-            buildList {
-                text
-                    .takeIf(String::isNotBlank)
-                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
-                addAll(attachmentParts)
-            }.map { part -> part.toMessagePart() }
+        parts = messageParts
     )
 }
 

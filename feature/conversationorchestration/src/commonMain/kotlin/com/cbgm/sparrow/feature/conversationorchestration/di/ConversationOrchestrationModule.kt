@@ -1,9 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.di
 
-import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.feature.conversationorchestration.data.datasource.WebSocketIncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.AddConversationMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.CreateConversationGroupUseCase
@@ -57,6 +53,10 @@ import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.protocol.outbox.OutboxProcessor
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
 

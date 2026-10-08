@@ -20,12 +20,11 @@ class UnreadableTransportMessageDataSource(
         receivedAtEpochMilliseconds: Long
     ) {
         val conversation = conversationDataSource.getOrCreate(contactId)
-        chatDao.upsertMessage(
+        chatDao.upsertMessageWithText(
             MessageEntity(
                 id = IdGenerator.generate(prefix = "failed-message"),
                 conversationId = conversation.id,
                 packetId = null,
-                text = text,
                 transportPayload = encodedTransportPayload,
                 transportMode = transportMode,
                 contentStatus = contentStatus.name,
@@ -33,7 +32,8 @@ class UnreadableTransportMessageDataSource(
                 senderContactId = conversation.contactId,
                 isMine = false,
                 createdAtEpochMilliseconds = receivedAtEpochMilliseconds
-            )
+            ),
+            text
         )
         chatDao.updateConversationTimestamp(conversation.id, receivedAtEpochMilliseconds)
     }

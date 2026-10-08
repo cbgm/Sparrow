@@ -61,10 +61,10 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryKind
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryKindUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerBreadcrumbUi
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortMode
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortModeUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiEvent
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiState
 import com.cbgm.sparrow.resources.Res
@@ -433,26 +433,26 @@ private fun FilePickerTopBar(
                     ) {
                         SortItem(
                             title = stringResource(Res.string.feature_media_file_picker_sort_name),
-                            selected = uiState.sortMode == FilePickerSortMode.NAME,
+                            selected = uiState.sortMode == FilePickerSortModeUi.NAME,
                             onClick = {
                                 showSortMenu = false
-                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortMode.NAME))
+                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortModeUi.NAME))
                             }
                         )
                         SortItem(
                             title = stringResource(Res.string.feature_media_file_picker_sort_size),
-                            selected = uiState.sortMode == FilePickerSortMode.SIZE,
+                            selected = uiState.sortMode == FilePickerSortModeUi.SIZE,
                             onClick = {
                                 showSortMenu = false
-                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortMode.SIZE))
+                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortModeUi.SIZE))
                             }
                         )
                         SortItem(
                             title = stringResource(Res.string.feature_media_file_picker_sort_type),
-                            selected = uiState.sortMode == FilePickerSortMode.TYPE,
+                            selected = uiState.sortMode == FilePickerSortModeUi.TYPE,
                             onClick = {
                                 showSortMenu = false
-                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortMode.TYPE))
+                                onUiEvent(FilePickerUiEvent.SortSelected(FilePickerSortModeUi.TYPE))
                             }
                         )
                     }
@@ -529,14 +529,14 @@ private fun FilePickerBottomBar(
     }
 }
 
-private fun FileBrowserEntryKind.icon(): ImageVector =
+private fun FileBrowserEntryKindUi.icon(): ImageVector =
     when (this) {
-        FileBrowserEntryKind.DIRECTORY -> Icons.Default.Folder
-        FileBrowserEntryKind.IMAGE -> Icons.Default.Image
-        FileBrowserEntryKind.VIDEO -> Icons.Default.Movie
-        FileBrowserEntryKind.AUDIO -> Icons.Default.AudioFile
-        FileBrowserEntryKind.PDF -> Icons.Default.PictureAsPdf
-        FileBrowserEntryKind.TEXT -> Icons.Default.Description
-        FileBrowserEntryKind.ARCHIVE -> Icons.Default.Archive
-        FileBrowserEntryKind.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
+        FileBrowserEntryKindUi.DIRECTORY -> Icons.Default.Folder
+        FileBrowserEntryKindUi.IMAGE -> Icons.Default.Image
+        FileBrowserEntryKindUi.VIDEO -> Icons.Default.Movie
+        FileBrowserEntryKindUi.AUDIO -> Icons.Default.AudioFile
+        FileBrowserEntryKindUi.PDF -> Icons.Default.PictureAsPdf
+        FileBrowserEntryKindUi.TEXT -> Icons.Default.Description
+        FileBrowserEntryKindUi.ARCHIVE -> Icons.Default.Archive
+        FileBrowserEntryKindUi.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
     }

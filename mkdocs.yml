@@ -61,16 +61,19 @@ nav:
       - Module Types: architecture/module-types.md
       - Messaging Boundary: architecture/messaging-boundary.md
       - Runtime Flows: architecture/runtime-flows.md
+      - Startup Architecture: architecture/startup.md
       - Persistence: architecture/persistence.md
       - "Chats: Direct & Group": architecture/chats.md
   - Features:
       - Current Feature Status: features/current-features.md
       - Chats: features/chats.md
+      - Polls: features/polls.md
       - Attachments: features/attachments.md
       - Contacts: features/contacts.md
       - Message Search: features/search.md
       - Message Safety: features/message-safety.md
       - Settings & Diagnostics: features/settings.md
+      - App Lock: features/app-lock.md
       - Identity: features/identity.md
       - Identity Recovery: features/identity-recovery.md
       - Invitations: features/invitations.md
@@ -103,6 +106,7 @@ nav:
       - Testing: development/testing.md
       - Contributing: development/contributing.md
       - Release Process: development/release-process.md
+      - 2026-10-08 Release Audit: development/release-2026-10-08.md
   - Generated Reference:
       - Overview: generated/index.md
       - Architecture: generated/architecture.md

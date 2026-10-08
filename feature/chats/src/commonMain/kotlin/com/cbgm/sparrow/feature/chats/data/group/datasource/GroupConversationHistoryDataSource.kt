@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
+import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
@@ -10,6 +12,7 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 /** Chats-owned group conversation, history, receipt, reaction and verification persistence. */
 internal class GroupConversationHistoryDataSource(
@@ -34,6 +37,21 @@ internal class GroupConversationHistoryDataSource(
         fromMessageId: String
     ): Flow<List<MessageEntity>> =
         chatDao.observeMessagesFromCursor(conversationId, fromTimestamp, fromMessageId)
+
+    fun observeTextPartsByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePartDto>>> =
+        combine(
+            chatDao.observeTextPartEntitiesByMessageIds(messageIds),
+            chatDao.observeTextEntitiesByMessageIds(messageIds)
+        ) { parts, texts ->
+            val textByPartId = texts.associateBy { text -> text.partId }
+            parts.groupBy { part -> part.messageId }
+                .mapValues { (_, messageParts) ->
+                    messageParts.sortedBy { part -> part.position }
+                        .mapNotNull { part ->
+                            textByPartId[part.id]?.let { text -> TextDto(id = part.id, text = text.text) }
+                        }
+                }
+        }
 
     fun observeMessagesByTransportModes(
         groupId: String,

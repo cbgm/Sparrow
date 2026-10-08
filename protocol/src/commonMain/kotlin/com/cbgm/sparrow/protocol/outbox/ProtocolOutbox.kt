@@ -1,0 +1,71 @@
+package com.cbgm.sparrow.protocol.outbox
+
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
+import kotlinx.coroutines.flow.Flow
+
+interface ProtocolOutbox {
+    /**
+     * Adds a protocol packet to the persistent outgoing queue.
+     *
+     * Re-enqueuing the same packetId must not create a duplicate.
+     */
+    suspend fun enqueue(
+        contactId: String,
+        packet: SparrowPacket
+    ): Result<ProtocolOutboxItem>
+
+    fun observePending(): Flow<List<ProtocolOutboxItem>>
+
+    /** Persistent outbox snapshots for packets accepted by the relay, failed, or expired. */
+    fun observeTransportStates(): Flow<List<ProtocolOutboxItem>>
+
+    /** Journaled attempts survive retries and app restarts until an application observer acknowledges them. */
+    fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>>
+
+    /** Acknowledge only after orchestration has processed the immutable failure event. */
+    suspend fun acknowledgeFailure(eventId: String): Result<Unit>
+
+    suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>>
+
+    suspend fun markProcessing(itemId: String): Result<Unit>
+
+    suspend fun markSent(itemId: String): Result<Unit>
+
+    suspend fun markSent(
+        itemId: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<Unit> = markSent(itemId)
+
+    fun observeNextSentExpiry(): Flow<Long?> = kotlinx.coroutines.flow.flowOf(null)
+
+    suspend fun expireSent(nowEpochMilliseconds: Long): Result<List<ProtocolOutboxItem>> =
+        Result.success(emptyList())
+
+    suspend fun markFailed(
+        itemId: String,
+        errorMessage: String
+    ): Result<Unit>
+
+    suspend fun retry(itemId: String): Result<Unit>
+
+    /**
+     * Re-queues an already persisted packet for delivery without creating a duplicate row.
+     *
+     * Pending or currently processing packets are left untouched.
+     */
+    suspend fun resend(packetId: String): Result<Unit>
+
+    suspend fun requeueInterrupted(): Result<Unit>
+
+    /** Requeue only retryable wire failures when the sender reconnects, not permanent errors. */
+    suspend fun retryFailed(): Result<Unit>
+
+    /**
+     * Requeue only due wire-send failures; never requeue quarantined old-key
+     * packets or permanent preparation/authorization failures. Existing fake
+     * outboxes can retain their no-op behavior.
+     */
+    suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> = Result.success(Unit)
+
+    suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?>
+}

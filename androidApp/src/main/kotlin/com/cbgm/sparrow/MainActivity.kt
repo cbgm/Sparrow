@@ -10,20 +10,19 @@ import com.cbgm.sparrow.device.consumeAndroidAppIntent
 import com.cbgm.sparrow.presentation.App
 
 class MainActivity : ComponentActivity() {
-    // Read by Android's splash pre-draw callback on the UI thread.
-    private var startupContentReady = false
+    private var nativeSplashReleased = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashStartedAt = SystemClock.uptimeMillis()
         installSplashScreen().setKeepOnScreenCondition {
-            !startupContentReady &&
+            !nativeSplashReleased &&
                 SystemClock.uptimeMillis() - splashStartedAt < 5_000L
         }
         super.onCreate(savedInstanceState)
 
         consumeAndroidAppIntent(intent)
         setContent {
-            App(onStartupContentReady = { startupContentReady = true })
+            App(onReleaseNativeSplash = { nativeSplashReleased = true })
         }
     }
 

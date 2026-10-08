@@ -70,6 +70,32 @@ function Refresh-PublicControlPlaneDirectory {
     }
 }
 
+function New-RegistrationComposeCopy([string]$ComposeFile,[string]$IdentityFile) {
+    $composeDirectory = Split-Path -Parent $ComposeFile
+    $stageDirectory = Join-Path $composeDirectory '.sparrow-registration'
+    $stageIdentity = Join-Path $stageDirectory 'registry-root.identity'
+    $stageCompose = Join-Path $composeDirectory '.sparrow-directory-registration.compose.yml'
+    New-Item -ItemType Directory -Path $stageDirectory -Force | Out-Null
+    [IO.File]::WriteAllBytes($stageIdentity,[IO.File]::ReadAllBytes($IdentityFile))
+    $source = [IO.File]::ReadAllText($ComposeFile)
+    $pattern = '(?m)^(?<prefix>\s*-\s*)[^\r\n]+:/run/control-plane/registry-root\.identity:ro\s*$'
+    $matches = [regex]::Matches($source,$pattern)
+    if ($matches.Count -ne 1) {
+        Remove-Item -LiteralPath $stageIdentity -Force -ErrorAction SilentlyContinue
+        throw 'Cannot safely stage the Control Plane identity: registration mount was not found exactly once.'
+    }
+    $replacement = '${prefix}.sparrow-registration/registry-root.identity:/run/control-plane/registry-root.identity:ro'
+    $mountRegex = [regex]::new($pattern)
+    [IO.File]::WriteAllText($stageCompose,$mountRegex.Replace($source,$replacement,1),[Text.UTF8Encoding]::new($false))
+    return [pscustomobject]@{ ComposeFile = $stageCompose; StageDirectory = $stageDirectory; IdentityFile = $stageIdentity }
+}
+function Remove-RegistrationComposeCopy($Stage) {
+    if ($null -eq $Stage) { return }
+    Remove-Item -LiteralPath $Stage.ComposeFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Stage.IdentityFile -Force -ErrorAction SilentlyContinue
+    try { Remove-Item -LiteralPath $Stage.StageDirectory -Force -ErrorAction Stop } catch { }
+}
+
 function Register-PublicControlPlaneInDirectory {
     # This is an opt-in, best-effort registration attempt. Admin approval
     # remains central and directory failure never prevents chat delivery.
@@ -89,8 +115,11 @@ function Register-PublicControlPlaneInDirectory {
     # The registration job is one-shot, with no admin credential, Docker socket,
     # or access to any secret other than this existing single-file identity.
     $composeFile = Join-Path $proxyRoot 'docker-compose.yml'
+    $registrationStage = $null
     try {
-        $buildOutput = @(& docker compose -f $composeFile --profile registration build directory-register 2>&1)
+        $registrationStage = New-RegistrationComposeCopy -ComposeFile $composeFile -IdentityFile $identity
+        $registrationCompose = [string]$registrationStage.ComposeFile
+        $buildOutput = @(& docker compose -f $registrationCompose --profile registration build directory-register 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Host 'Directory registration deferred: client image could not be built. Local server remains online.'
             return
@@ -98,7 +127,7 @@ function Register-PublicControlPlaneInDirectory {
         $directoryArgument = 'CONTROL_PLANE_DIRECTORY_URL=' + [string]$settings['CONTROL_PLANE_DIRECTORY_URL']
         $pinArgument = 'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=' + [string]$settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']
         $planeArgument = 'SPARROW_REGISTRATION_PLANE_URL=https://' + [string]$settings['PUBLIC_DOMAIN']
-        $result = @(& docker compose -f $composeFile --profile registration run --rm --no-deps `
+        $result = @(& docker compose -f $registrationCompose --profile registration run --rm --no-deps `
             -e $directoryArgument -e $pinArgument -e $planeArgument directory-register 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Host 'Directory registration deferred; local Control Plane continues operating.'
@@ -108,6 +137,8 @@ function Register-PublicControlPlaneInDirectory {
         [System.IO.File]::WriteAllText($marker, (Get-Date).ToUniversalTime().ToString('o'))
     } catch {
         Write-Host "Directory registration deferred; local Control Plane remains available: $($_.Exception.Message)"
+    } finally {
+        Remove-RegistrationComposeCopy $registrationStage
     }
 }
 

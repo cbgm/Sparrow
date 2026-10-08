@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class GroupIncomingPacketPolicy(
     private val incomingConversationDataSource: GroupIncomingConversationDataSource,

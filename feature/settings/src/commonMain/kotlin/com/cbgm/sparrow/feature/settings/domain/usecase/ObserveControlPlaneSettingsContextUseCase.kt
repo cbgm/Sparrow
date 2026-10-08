@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.domain.usecase
 
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.settings.domain.model.ControlPlaneSettingsContext
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 

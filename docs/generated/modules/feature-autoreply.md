@@ -1,33 +1,35 @@
 # `:feature:autoreply`
 
-Source directory: `feature/autoreply`
+Generated automatically by `./gradlew architectureReport`.
 
-## Direct project dependencies
+## Module information
 
-- `:core`
-- `:core:ui`
-- `:data:database`
+| Property | Value |
+|---|---|
+| Name | `autoreply` |
+| Group | `feature` |
+| Directory | `feature/autoreply` |
+| Build file | `feature/autoreply/build.gradle.kts` |
+| Kotlin files | 21 |
+| Production Kotlin files | 21 |
+| Test Kotlin files | 0 |
+| Resource files | 0 |
+| Direct dependencies | 3 |
+| Direct dependents | 4 |
 
-## Production top-level Kotlin declarations
+## Source sets
 
-| Type | Kind | Source set | Source file |
-|---|---|---|---|
-| `AutoReplyDataSource` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/data/datasource/AutoReplyDataSource.kt` |
-| `AutoReplyRepositoryImpl` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/data/repository/AutoReplyRepositoryImpl.kt` |
-| `AutoReply` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/model/AutoReply.kt` |
-| `AutoReplyRepository` | `interface` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/repository/AutoReplyRepository.kt` |
-| `ActivateAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/ActivateAutoReplyUseCase.kt` |
-| `ClaimAutoReplyForContactUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/ClaimAutoReplyForContactUseCase.kt` |
-| `CreateAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/CreateAutoReplyUseCase.kt` |
-| `DeactivateAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/DeactivateAutoReplyUseCase.kt` |
-| `DeleteAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/DeleteAutoReplyUseCase.kt` |
-| `ObserveActiveAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/ObserveActiveAutoReplyUseCase.kt` |
-| `ObserveAutoRepliesUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/ObserveAutoRepliesUseCase.kt` |
-| `ReleaseAutoReplyRecipientUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/ReleaseAutoReplyRecipientUseCase.kt` |
-| `UpdateAutoReplyUseCase` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/domain/usecase/UpdateAutoReplyUseCase.kt` |
-| `AutoReplyViewModel` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/AutoReplyViewModel.kt` |
-| `AutoReplyEditorUiState` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
-| `AutoReplyEffect` | `interface` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiEvent.kt` |
-| `AutoReplyUiEvent` | `interface` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiEvent.kt` |
-| `AutoReplyUiItem` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
-| `AutoReplyUiState` | `class` | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
+- `commonMain`
+
+## Dependencies
+
+- [`:core:ui`](../modules/core-ui.md)
+- [`:core:util`](../modules/core-util.md)
+- [`:data:database`](../modules/data-database.md)
+
+## Dependents
+
+- [`:feature:chats`](../modules/feature-chats.md)
+- [`:feature:settings`](../modules/feature-settings.md)
+- [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)

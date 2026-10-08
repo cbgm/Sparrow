@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 
 /** A generic transport operation. Routing, packet policy and key selection belong to orchestration. */
 class SendEncodedTransportUseCase(

@@ -20,6 +20,10 @@ sealed interface SettingsUiEvent {
         val enabled: Boolean
     ) : SettingsUiEvent
 
+    data class AppLockEnabledChanged(
+        val enabled: Boolean
+    ) : SettingsUiEvent
+
     data class SemanticSearchEnabledChanged(
         val enabled: Boolean
     ) : SettingsUiEvent

@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
 class DefaultMailboxCapabilityLifecycle(
     private val repository: MailboxRouteRepository,

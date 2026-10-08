@@ -86,7 +86,7 @@ The application does not treat “invite accepted in the UI” as “message can
 
 ## Outgoing Direct invitation
 
-`ConversationFlowHandler.startDirectInvitation(peerId)` decides whether an existing established exchange/conversation already satisfies the request or whether an explicit fresh invitation/identity flow is required. The actual pending invitation row belongs to `:feature:invite`; identity packets belong to `:feature:identity`/`:core:protocol`.
+`ConversationFlowHandler.startDirectInvitation(peerId)` decides whether an existing established exchange/conversation already satisfies the request or whether an explicit fresh invitation/identity flow is required. The actual pending invitation row belongs to `:feature:invite`; identity packets belong to `:feature:identity`/`:protocol`.
 
 ## Group invitation
 

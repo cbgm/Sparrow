@@ -1,31 +1,38 @@
 # `:feature:contactimport`
 
-Source directory: `feature/contactimport`
+Generated automatically by `./gradlew architectureReport`.
 
-## Direct project dependencies
+## Module information
 
-- `:core`
-- `:core:ui`
-- `:feature:contacts`
-- `:feature:identity`
-- `:feature:invite`
-- `:data:database`
-- `:core:protocol`
+| Property | Value |
+|---|---|
+| Name | `contactimport` |
+| Group | `feature` |
+| Directory | `feature/contactimport` |
+| Build file | `feature/contactimport/build.gradle.kts` |
+| Kotlin files | 29 |
+| Production Kotlin files | 28 |
+| Test Kotlin files | 1 |
+| Resource files | 1 |
+| Direct dependencies | 5 |
+| Direct dependents | 3 |
 
-## Production top-level Kotlin declarations
+## Source sets
 
-| Type | Kind | Source set | Source file |
-|---|---|---|---|
-| `RotatedLuminance` | `class` | `androidMain` | `feature/contactimport/src/androidMain/kotlin/com/cbgm/sparrow/feature/contactimport/device/QrScanner.android.kt` |
-| `ImportSharedIdentityUseCase` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/domain/usecase/ImportSharedIdentityUseCase.kt` |
-| `VerifyContactByQrUseCase` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/domain/usecase/VerifyContactByQrUseCase.kt` |
-| `ImportIdentityViewModel` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/importing/ImportIdentityViewModel.kt` |
-| `IdentityImportTrustUi` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/importing/model/IdentityImportTrustUi.kt` |
-| `ImportIdentityUiEvent` | `interface` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/importing/model/ImportIdentityUiEvent.kt` |
-| `ImportIdentityUiState` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/importing/model/ImportIdentityUiState.kt` |
-| `ScanIdentityNavigationViewModel` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/scan/ScanIdentityNavigationViewModel.kt` |
-| `ScanIdentityUiEvent` | `interface` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/scan/model/ScanIdentityUiEvent.kt` |
-| `ScannedIdentityPreview` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/scan/model/ScannedIdentityPreview.kt` |
-| `VerifyContactQrViewModel` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/verify/VerifyContactQrViewModel.kt` |
-| `VerifyContactQrUiEvent` | `interface` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/verify/model/VerifyContactQrUiEvent.kt` |
-| `VerifyContactQrUiState` | `class` | `commonMain` | `feature/contactimport/src/commonMain/kotlin/com/cbgm/sparrow/feature/contactimport/presentation/verify/model/VerifyContactQrUiState.kt` |
+- `androidDeviceTest`
+- `androidMain`
+- `commonMain`
+
+## Dependencies
+
+- [`:core:ui`](../modules/core-ui.md)
+- [`:core:util`](../modules/core-util.md)
+- [`:feature:contacts`](../modules/feature-contacts.md)
+- [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:invite`](../modules/feature-invite.md)
+
+## Dependents
+
+- [`:feature:chats`](../modules/feature-chats.md)
+- [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)

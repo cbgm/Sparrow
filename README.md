@@ -5,7 +5,7 @@
 **End-to-end encrypted messaging built with Kotlin Multiplatform and a federated Kotlin server stack.**
 
 [![Documentation](https://github.com/cbgm/Sparrow/actions/workflows/docs.yml/badge.svg?branch=master)](https://cbgm.github.io/Sparrow/)
-![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?logo=kotlin&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&logoColor=white)
 ![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4)
 ![Android](https://img.shields.io/badge/Android-API%2029+-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-Not%20usable%20yet-lightgrey?logo=apple)
@@ -31,6 +31,10 @@ https://github.com/user-attachments/assets/cb4918f3-c53d-4353-aae0-15d689c7b85f
 ## New design update
 
 https://github.com/user-attachments/assets/73a1d095-f11c-44ed-91a1-d02b783e4cd4
+
+## Polls and App-lock
+
+https://github.com/user-attachments/assets/daae9719-3445-472b-9257-8d2403dd3f4d
 
 ## What makes Sparrow different?
 
@@ -63,18 +67,23 @@ The current source tree includes:
 - Group conversations with dedicated `:feature:membership` handshakes, welcome/activation, epoch security, admin promotion/removal/transfer/leave/delete and member routing;
 - `:feature:conversationorchestration` as the explicit cross-feature workflow boundary (`ConversationFlowHandler`, result observers, recovery workers);
 - `:feature:messaging` as generic durable protocol-outbox/incoming-envelope execution rather than business-feature orchestration;
+- the shared `:core:base` `MessagePartDto` / `MessagePart` / `MessagePartUi` hierarchy for text, image, video, file, voice, location, contact and poll content;
 - encrypted attachments for images, video, files, location, contacts and voice; attachment management/viewers and media/file export;
+- Group polls in `:feature:polls` with 2–6 options, optional images/anonymity/multi-select/vote changes, minute-based expiry countdown, manual close, voter details and pinned-message rendering;
+- unified `OperationMessage` transport for edit/delete/reaction and Group poll vote/close operations;
 - voice recording/playback plus local Whisper-backed transcription and persisted attachment transcripts;
 - link previews with client DB caching/prefetch and the `:server:link-preview` fetch/parse/validation service;
 - one pinned Group message with admin-controlled pin/unpin and attachment-aware pinned-message rendering;
 - auto-reply rules with active-rule and recipient-claim persistence;
 - target-aware avatar observation plus reusable profile-picture selection/cropping in `:feature:avatar`;
 - exact/optional on-device semantic message search and local message-safety analysis;
+- device-owner app locking in `:feature:applock`;
+- task-based application startup through `ApplicationStartupRunner` / `StartupTask`, with post-navigation runtime observers separated from the startup gate;
 - signed Control Plane discovery, multiple Control Planes, node failover, WebSocket foreground delivery, mailbox-backed offline delivery and Android FCM wake-ups;
 - unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
 - Docker/Ktor server services, persistent registry/mailbox/federation/push state, observability and deployment tooling.
 
-See [Current feature status](docs/features/current-features.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/generated/current-code-inventory.md).
+See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/generated/current-code-inventory.md).
 
 ## The system in one picture
 
@@ -146,7 +155,7 @@ its JSON content. The document format is:
 ```
 
 The value is compiled into common KMP code as `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`, so Android and future
-future iOS builds use the same common build-time configuration path once the iOS runtime is completed.
+iOS builds use the same common build-time configuration path once the iOS runtime is completed.
 
 ### 3. Build the Android app
 
@@ -186,9 +195,10 @@ A LAN Control Plane normally exposes `/index` on port `8390`; a LAN Community No
 
 ### 6. Run the app
 
-Use an Android emulator/device. The app loads the Control Plane directory in `AppViewModel`, verifies signed
-node descriptors, selects a compatible node, establishes `/v1/gateway`, and automatically fails over when the
-current node becomes unavailable.
+Use an Android emulator/device. `ApplicationStartupRunner` executes the registered startup tasks, restores and
+verifies the signed Control Plane directory, resolves identity readiness, and starts the post-navigation runtime.
+Transport discovery then selects a compatible node, establishes `/v1/gateway`, and automatically fails over when
+the current node becomes unavailable.
 
 ## Project structure
 
@@ -197,10 +207,11 @@ androidApp/                       Android application entry point/release config
 shared/                           Compose app shell, AppViewModel and common DI
 startup/                          startup UI/model
 navigation/                       navigation graphs, inbox/recovery routing
-core/                             cross-cutting utilities
+core/base/                        shared base/message-part domain + data/UI models
+core/util/                        cross-cutting utilities
 core/crypto/                      libsodium crypto implementations
-core/embedding/                   local embedding runtime/model lifecycle
-core/protocol/                    packets, codec, protocol outbox contracts
+feature/embedding/               local embedding runtime/model lifecycle
+protocol/                        packets/codecs/operation-message contracts
 core/ui/                          reusable Compose UI/navigation primitives
 data/database/                    Room DB, DAOs/entities, protocol outbox, migrations
 data/datastore/                   settings/key-value persistence
@@ -217,13 +228,15 @@ feature/membership/               Group membership, welcome/activation, roles/se
 feature/attachments/              encrypted attachment transfer/cache/storage/UI models
 feature/media/                    gallery/camera/file access, media viewers/export
 feature/voice/                    recording/playback/transcription
+feature/polls/                    poll creation/message presentation
+feature/applock/                  device-owner application lock
 feature/messaging/                generic durable outbox + incoming envelope runners
 feature/transport/                discovery/WebSocket/routing/mailbox/push gateways
 feature/onboarding/               onboarding flows
 feature/settings/                 settings/network/diagnostics UI
 feature/search/                   exact + local semantic search
 feature/safety/                   local message-safety analysis/UI
-notification/                     Android notifications/background integration
+feature/notification/             Android notifications/background integration
 server/                           Ktor server modules + Compose/operator tooling
 server/control-plane-directory/   separate private operator directory service
 quality/detekt-rules/             project-specific Detekt rules

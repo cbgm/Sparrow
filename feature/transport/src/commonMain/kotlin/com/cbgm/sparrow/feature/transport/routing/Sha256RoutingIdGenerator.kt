@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.routing
 
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
 import okio.ByteString.Companion.toByteString
 
 class Sha256RoutingIdGenerator(

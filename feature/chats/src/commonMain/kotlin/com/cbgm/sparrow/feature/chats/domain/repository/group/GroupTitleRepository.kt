@@ -5,4 +5,6 @@ interface GroupTitleRepository {
         groupId: String,
         title: String
     ): Result<Unit>
+
+    suspend fun sendCurrentTo(groupId: String, peerId: String): Result<Unit>
 }

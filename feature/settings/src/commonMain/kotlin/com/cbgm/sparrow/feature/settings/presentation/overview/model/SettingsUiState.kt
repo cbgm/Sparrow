@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -12,6 +12,7 @@ data class SettingsUiState(
     val activeAutoReplyName: String? = null,
     val directIdentitySetupMode: DirectIdentitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
     val blockUnknownContactInvites: Boolean = false,
+    val appLockEnabled: Boolean = false,
     val blockedContactCount: Int = 0,
     val localEmbeddingState: LocalEmbeddingState = LocalEmbeddingState(),
     val semanticSearchState: SemanticSearchState = SemanticSearchState.Disabled,

@@ -6,7 +6,11 @@ data class OnboardingUiState(
     val page: OnboardingPage = OnboardingPage.WELCOME,
     val permissionRequestId: Int = 0,
     val automaticPhoneRequestId: Int = 0,
+    val phoneNumberHintRequestId: Int = 0,
     val permissionsRequested: Boolean = false,
     val phonePermissionGranted: Boolean = false,
-    val isCreatingIdentity: Boolean = false
+    val isCreatingIdentity: Boolean = false,
+    val isBackupRestoreVisible: Boolean = false,
+    val backupPassword: String = "",
+    val backupImportError: String? = null
 )

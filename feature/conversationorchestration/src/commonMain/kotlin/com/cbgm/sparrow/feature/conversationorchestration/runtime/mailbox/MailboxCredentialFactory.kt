@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 
 class MailboxCredentialFactory(
     private val mailboxGateway: MailboxGateway,

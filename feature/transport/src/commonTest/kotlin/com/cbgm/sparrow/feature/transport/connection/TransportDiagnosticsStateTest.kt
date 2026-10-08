@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.connection
 
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import kotlin.test.Test
 import kotlin.test.assertEquals

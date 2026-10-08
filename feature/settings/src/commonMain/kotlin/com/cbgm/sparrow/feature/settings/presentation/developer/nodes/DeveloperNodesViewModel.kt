@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
-import com.cbgm.sparrow.core.transport.TransportDiagnosticsProvider
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive

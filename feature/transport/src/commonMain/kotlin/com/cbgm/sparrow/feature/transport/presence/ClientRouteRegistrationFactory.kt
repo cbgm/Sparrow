@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.transport.presence
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRoute
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.UnsignedClientRoute
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import kotlinx.serialization.json.Json
 
 class ClientRouteRegistrationFactory(

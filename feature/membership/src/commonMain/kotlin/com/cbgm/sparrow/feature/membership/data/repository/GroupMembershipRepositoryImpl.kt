@@ -1,12 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
@@ -44,6 +38,13 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationSecurityState
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -347,7 +348,7 @@ internal class GroupMembershipRepositoryImpl(
     private suspend fun recoverPendingOwnerEpoch(
         groupId: String,
         localSigningPublicKey: ByteArray
-    ): com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity =
+    ): GroupSecurityStateEntity =
         membershipLock.withLock {
             securityStore.findState(groupId)?.let { return@withLock it }
             val rows = membershipStore.findByGroupId(groupId)

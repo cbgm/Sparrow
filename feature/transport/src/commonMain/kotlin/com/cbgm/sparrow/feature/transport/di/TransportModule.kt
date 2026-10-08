@@ -2,15 +2,12 @@ package com.cbgm.sparrow.feature.transport.di
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
-import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
-import com.cbgm.sparrow.core.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
@@ -53,6 +50,9 @@ import com.cbgm.sparrow.feature.transport.websocket.DefaultWebSocketTransportCli
 import com.cbgm.sparrow.feature.transport.websocket.GatewayPendingRequestRegistry
 import com.cbgm.sparrow.feature.transport.websocket.GatewayServerMessageHandler
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import org.koin.core.qualifier.named
@@ -188,7 +188,8 @@ val transportModule =
                 config = get<TransportConfig>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneStatusStore = get<ControlPlaneStatusStore>(),
-                endpointSelector = get<NodeEndpointSelector>()
+                endpointSelector = get<NodeEndpointSelector>(),
+                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>()
             )
         }
 

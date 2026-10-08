@@ -1,19 +1,16 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
-import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
+import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
-import com.cbgm.sparrow.feature.chats.domain.model.ImageVideoType
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
+import com.cbgm.sparrow.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 
 internal fun GroupPinEntity.toDomain(
     groupMessageContentCodec: GroupMessageContentCodec
@@ -32,13 +29,7 @@ internal fun GroupPinEntity.toDomain(
                 replyToMessageId = content.replyToMessageId,
                 type = ChatMessageType.USER,
                 senderContactId = senderContactId,
-                parts =
-                    buildList {
-                        content.text
-                            .takeIf(String::isNotBlank)
-                            ?.let { text -> add(MessagePart.Text(text)) }
-                        addAll(content.attachments.map(MessageAttachment::toMessagePart))
-                    }
+                parts = content.parts.map { part -> part.toMessagePart() }
             ),
         pinnedAtEpochMilliseconds = requireNotNull(pinnedAtEpochMilliseconds)
     )
@@ -110,42 +101,3 @@ internal fun unpinnedGroupPinEntity(
         pinnedAtEpochMilliseconds = null,
         changedAtEpochMilliseconds = changedAtEpochMilliseconds
     )
-
-private fun MessageAttachment.toMessagePart(): MessagePart =
-    when (type) {
-        MessageAttachmentType.IMAGE,
-        MessageAttachmentType.VIDEO ->
-            MessagePart.ImageVideo(
-                id = attachmentId,
-                type =
-                    if (type == MessageAttachmentType.IMAGE) {
-                        ImageVideoType.IMAGE
-                    } else {
-                        ImageVideoType.VIDEO
-                    },
-                mimeType = mimeType,
-                byteSize = byteSize,
-                fileName = fileName,
-                width = width,
-                height = height,
-                durationMilliseconds = durationMilliseconds
-            )
-
-        MessageAttachmentType.FILE ->
-            MessagePart.File(
-                id = attachmentId,
-                mimeType = mimeType,
-                byteSize = byteSize,
-                fileName = fileName ?: attachmentId
-            )
-
-        MessageAttachmentType.LOCATION -> MessagePart.Location(id = attachmentId)
-        MessageAttachmentType.CONTACT -> MessagePart.Contact(id = attachmentId)
-        MessageAttachmentType.VOICE ->
-            MessagePart.Voice(
-                id = attachmentId,
-                mimeType = mimeType,
-                byteSize = byteSize,
-                durationMilliseconds = requireNotNull(durationMilliseconds)
-            )
-    }

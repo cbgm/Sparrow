@@ -8,6 +8,12 @@ object Dimens {
         val progressIndicatorStrokeWidth = 2.dp
         val dividerThickness = 0.5.dp
         val borderStrokeWidth = 1.dp
+        val progressButtonIndicatorSize = 18.dp
+    }
+
+    object Poll {
+        val previewMediaSelectionSize = 80.dp
+        val buttonSize = 22.dp
     }
 
     object ActionMenu {
@@ -103,9 +109,10 @@ object Dimens {
 
     object MessageInput {
         val sendButtonWidth = 42.dp
+        val messageFieldHeight = 30.dp
         val messageFieldHeightMax = 300.dp
-        val buttonHeight = 32.dp
-        val composerHeight = 34.dp
+        val buttonHeight = 29.dp
+        val composerHeight = 30.5.dp
         val overlap = 10.dp
         val iconSize = 16.dp
     }
@@ -161,9 +168,8 @@ object Dimens {
         val navigationIconSize = 28.dp
     }
 
-    object StartupScreen {
-        val animationSize = 200.dp
-        val contentMaxWidth = 520.dp
+    object AppLockScreen {
+        val iconSize = 72.dp
     }
 
     object OverviewScreen {

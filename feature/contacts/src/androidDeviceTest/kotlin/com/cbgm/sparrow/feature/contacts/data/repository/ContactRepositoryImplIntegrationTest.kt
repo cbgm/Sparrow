@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -1181,7 +1182,7 @@ class ContactRepositoryImplIntegrationTest {
             verificationStatus = ContactVerificationStatus.valueOf(row.verificationStatus),
             verifiedByContact = row.verifiedByContact,
             locallyImported = row.locallyImported,
-            keyExchangeStatus = com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus.valueOf(row.keyExchangeStatus),
+            keyExchangeStatus = KeyExchangeStatus.valueOf(row.keyExchangeStatus),
             updatedAtEpochMilliseconds = row.updatedAtEpochMilliseconds
         )
     }

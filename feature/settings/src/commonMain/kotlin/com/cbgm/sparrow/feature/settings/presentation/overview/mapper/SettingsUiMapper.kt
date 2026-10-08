@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -13,6 +13,7 @@ internal fun BuildInfo.toSettingsUiState(
     activeAutoReplyName: String?,
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,
+    appLockEnabled: Boolean,
     blockedContactCount: Int,
     localEmbeddingState: LocalEmbeddingState,
     semanticSearchState: SemanticSearchState,
@@ -27,6 +28,7 @@ internal fun BuildInfo.toSettingsUiState(
         activeAutoReplyName = activeAutoReplyName,
         directIdentitySetupMode = identitySetupMode,
         blockUnknownContactInvites = blockUnknownContactInvites,
+        appLockEnabled = appLockEnabled,
         blockedContactCount = blockedContactCount,
         localEmbeddingState = localEmbeddingState,
         semanticSearchState = semanticSearchState,

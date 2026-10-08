@@ -9,8 +9,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core)
-            implementation(projects.core.embedding)
+            implementation(projects.core.util)
+            implementation(projects.feature.embedding)
             implementation(projects.core.ui)
             implementation(projects.data.database)
             implementation(libs.bundles.compose)

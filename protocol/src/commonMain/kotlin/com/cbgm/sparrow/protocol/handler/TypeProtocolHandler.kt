@@ -1,0 +1,26 @@
+package com.cbgm.sparrow.protocol.handler
+
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
+
+/**
+ * Handles one or more concrete Sparrow packet types.
+ *
+ * Implementations belong to feature modules:
+ *
+ * feature:chats
+ * -> ChatMessagePacketHandler
+ *
+ * feature:invite
+ * -> IncomingInvitationPacketHandler
+ *
+ * feature:contacts
+ * -> ContactReadyPacketHandler
+ */
+interface TypedProtocolPacketHandler {
+    fun canHandle(packet: SparrowPacket): Boolean
+
+    suspend fun handle(
+        context: IncomingPacketContext,
+        packet: SparrowPacket
+    ): Result<Unit>
+}

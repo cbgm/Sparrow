@@ -63,6 +63,7 @@ import com.cbgm.sparrow.resources.feature_chats_no_conversations_hint
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_yet
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
 import com.cbgm.sparrow.resources.feature_chats_voice_message
+import com.cbgm.sparrow.resources.feature_polls_label
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
@@ -294,6 +295,8 @@ private fun ConversationItem(
                 Text(
                     text =
                         when {
+                            conversation.lastMessagePreview == LastMessagePreviewUi.POLL ->
+                                stringResource(Res.string.feature_polls_label)
                             conversation.lastMessage.isNotBlank() -> conversation.lastMessage
                             conversation.lastMessagePreview == LastMessagePreviewUi.MEDIA ->
                                 stringResource(Res.string.feature_attachments_media)

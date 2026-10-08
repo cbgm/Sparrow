@@ -2,11 +2,11 @@ package com.cbgm.sparrow.feature.transport.discovery
 
 import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import kotlinx.coroutines.flow.MutableStateFlow

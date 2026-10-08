@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingFailureEvent
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

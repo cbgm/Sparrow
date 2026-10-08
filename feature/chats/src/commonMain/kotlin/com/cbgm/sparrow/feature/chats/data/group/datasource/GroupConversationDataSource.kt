@@ -79,12 +79,12 @@ internal class GroupConversationDataSource(
         updatedAtEpochMilliseconds: Long
     ) {
         if (chatDao.hasMessages(groupId)) return
-        chatDao.hideGroupConversation(
+        val marker =
             GroupMembershipMessageFactory.localConversationDeletedMarker(
                 conversationId = groupId,
                 createdAtEpochMilliseconds = updatedAtEpochMilliseconds
             )
-        )
+        chatDao.hideGroupConversation(marker.message, marker.text)
     }
 
     suspend fun addParticipant(
@@ -110,7 +110,7 @@ internal class GroupConversationDataSource(
                 joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
             )
         )
-        chatDao.upsertMessage(
+        val message =
             GroupMembershipMessageFactory.memberAdded(
                 conversationId = groupId,
                 epoch = epoch,
@@ -119,7 +119,7 @@ internal class GroupConversationDataSource(
                 createdAtEpochMilliseconds = joinedAtEpochMilliseconds,
                 eventId = eventId
             )
-        )
+        chatDao.upsertMessageWithText(message.message, message.text)
         chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
     }
 
@@ -145,8 +145,8 @@ internal class GroupConversationDataSource(
         )
         // Deduplicate by the verified activation itself, not by an old participant
         // row that can survive a leave/removal on another emulator.
-        if (chatDao.findMessageById(event.id) == null) {
-            chatDao.upsertMessage(event)
+        if (chatDao.findMessageById(event.message.id) == null) {
+            chatDao.upsertMessageWithText(event.message, event.text)
             chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
         }
     }
@@ -184,8 +184,8 @@ internal class GroupConversationDataSource(
             )
             // DISCOVERY may already have logged this signed activation. FINAL
             // must not rewrite its timestamp or duplicate the system event.
-            if (chatDao.findMessageById(event.id) == null) {
-                chatDao.upsertMessage(event)
+            if (chatDao.findMessageById(event.message.id) == null) {
+                chatDao.upsertMessageWithText(event.message, event.text)
                 chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
             }
         }
@@ -246,7 +246,7 @@ internal class GroupConversationDataSource(
                     eventId = eventId
                 )
             }
-        chatDao.upsertMessage(message)
+        chatDao.upsertMessageWithText(message.message, message.text)
         chatDao.updateConversationTimestamp(groupId, updatedAtEpochMilliseconds)
     }
 

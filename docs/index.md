@@ -13,24 +13,16 @@ federated Kotlin/Docker server stack.
 ## New here? Read these in order
 
 1. [Introduction](getting-started/introduction.md)
-2. [What makes Sparrow different?](why-sparrow.md)
-3. [Installation](getting-started/installation.md)
-4. [First build](getting-started/first-build.md)
-5. [Using the Android app](getting-started/using-app.md)
-6. [Local development on Windows/macOS](development/local-development.md)
-7. [Current feature status](features/current-features.md)
-8. [Runtime orchestration and protocol flows](architecture/runtime-flows.md)
-9. [Identity backup, recovery and reconnection](features/identity-recovery.md)
-10. [Invitations](features/invitations.md)
-11. [Group membership](features/group-membership.md)
-12. [Attachments](features/attachments.md)
-9. [Message search](features/search.md)
-10. [Message safety](features/message-safety.md)
-11. [Settings and diagnostics](features/settings.md)
-12. [Server overview](server/overview.md)
-13. [Architecture overview](architecture/overview.md)
-14. [Conversation, messaging and delivery flow](features/message-transport-flow.md)
-15. [Security overview](security/overview.md)
+2. [Current feature status](features/current-features.md)
+3. [Project structure](getting-started/project-structure.md)
+4. [Architecture overview](architecture/overview.md)
+5. [Startup architecture](architecture/startup.md)
+6. [Chats](features/chats.md) and [message transport flow](features/message-transport-flow.md)
+7. [Attachments](features/attachments.md) and [Polls](features/polls.md)
+8. [Identity recovery](features/identity-recovery.md), [Invitations](features/invitations.md) and [Group membership](features/group-membership.md)
+9. [App lock](features/app-lock.md) and [Settings](features/settings.md)
+10. [Server overview](server/overview.md)
+11. [2026-10-08 release documentation audit](development/release-2026-10-08.md)
 
 ## Operator shortcuts
 
@@ -61,10 +53,11 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 There are two types of architecture docs:
 
-- `docs/generated/` is generated from Gradle project structure and dependencies.
+- `docs/generated/` is normally generated from Gradle project structure and dependencies.
 - hand-written pages explain intent and runtime behavior.
+- for this 2026-10-08 package, the generated reference was regenerated directly from `settings.gradle.kts`, module build files and Kotlin sources because Gradle 9.6.1 was unavailable in the isolated audit environment.
 
-When module dependencies change, run:
+When the normal build environment is available, run:
 
 ```bash
 ./gradlew architectureReport

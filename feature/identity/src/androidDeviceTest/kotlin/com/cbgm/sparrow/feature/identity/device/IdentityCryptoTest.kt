@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.device
 
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
-import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
+import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityKeyGenerator
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test

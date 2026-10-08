@@ -21,6 +21,8 @@ import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_profile_picture
+import com.cbgm.sparrow.resources.ic_identity
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /** Same avatar + camera affordance used in Group Details, editing the local identity's picture. */
@@ -38,7 +40,8 @@ fun IdentityProfilePictureSection(
                 name = "",
                 target = AvatarTarget.LocalUser,
                 size = Dimens.GroupDetailsScreen.avatarSize,
-                modifier = Modifier.padding(MaterialTheme.spacing.base)
+                modifier = Modifier.padding(MaterialTheme.spacing.base),
+                fallbackPainter = painterResource(Res.drawable.ic_identity)
             )
 
             Surface(

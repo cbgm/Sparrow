@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.mapper
 
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
+import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 

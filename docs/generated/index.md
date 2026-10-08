@@ -1,11 +1,26 @@
-# Generated reference
+# Generated Project Documentation
 
-This reference was refreshed from the current `settings.gradle.kts`, module build files and production Kotlin source tree.
+Generated automatically by `./gradlew architectureReport`.
 
-- [Architecture](architecture.md)
-- [Module catalog](modules.md)
-- [Dependency matrix](dependency-matrix.md)
-- [Statistics](statistics.md)
-- [Current code inventory](current-code-inventory.md)
+| Document | Description |
+|---|---|
+| [Architecture](architecture.md) | Module graph and grouped overview |
+| [Modules](modules.md) | Catalog and generated module detail pages |
+| [Dependency matrix](dependency-matrix.md) | Matrix of direct project dependencies |
+| [Statistics](statistics.md) | Project graph and source statistics |
 
-Individual module pages are stored under `generated/modules/`.
+## Machine-readable output
+
+- [`modules.json`](modules.json)
+- [`dependencies.json`](dependencies.json)
+- [`statistics.json`](statistics.json)
+- [`architecture.mmd`](architecture.mmd)
+
+## Summary
+
+- Modules: **52**
+- Module groups: **11**
+- Project dependency edges: **230**
+- Kotlin files: **2041**
+- Test Kotlin files: **147**
+- Resource files: **57**

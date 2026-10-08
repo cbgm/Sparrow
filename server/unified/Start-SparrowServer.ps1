@@ -45,8 +45,24 @@ function Read-Settings([string]$Path) {
     }
     return $values
 }
+function Test-GeneratedSslipHostname([string]$Hostname, [string]$Prefix) {
+    if ([string]::IsNullOrWhiteSpace($Hostname)) { return $false }
+    $escaped = [regex]::Escape($Prefix)
+    return $Hostname.ToLowerInvariant() -match "^$escaped-(\d{1,3}-){3}\d{1,3}\.sslip\.io$"
+}
+function Test-AutomaticPublicSettings([hashtable]$Settings, [string]$Prefix) {
+    if (-not $Settings) { return $false }
+    if ([string]$Settings['PUBLIC_HOSTNAME_MODE'] -eq 'CaddyAutomatic') { return $true }
+    foreach ($key in @('PUBLIC_DOMAIN','COMMUNITY_NODE_DOMAIN','CONTROL_PLANE_DOMAIN','COMMUNITY_NODE_SITE_ADDRESS','CONTROL_PLANE_SITE_ADDRESS')) {
+        $value = [string]$Settings[$key]
+        if (Test-GeneratedSslipHostname $value $Prefix) { return $true }
+    }
+    return $false
+}
 $nodeSettings = Read-Settings (Join-Path $root 'community-node\sparrow.conf')
 $cpSettings = Read-Settings (Join-Path $root 'control-plane\sparrow.conf')
+$nodeRuntimeSettings = Read-Settings (Join-Path $root 'community-node\.env.runtime')
+$cpRuntimeSettings = Read-Settings (Join-Path $root 'control-plane\.env.runtime')
 
 $heading = New-Label 'Sparrow Server — Control Plane + Community Node' 22 12 780
 $heading.Font = [System.Drawing.Font]::new('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
@@ -62,14 +78,19 @@ New-Label 'Reachability' 22 88 | Out-Null
 $mode = [System.Windows.Forms.ComboBox]::new()
 $mode.Location = [System.Drawing.Point]::new(245, 84); $mode.Size = [System.Drawing.Size]::new(535, 28)
 $mode.DropDownStyle = 'DropDownList'; [void]$mode.Items.AddRange([object[]]@('LAN', 'Public'))
-$mode.SelectedIndex = if ($nodeSettings['MODE'] -eq 'public' -or $cpSettings['MODE'] -eq 'public') { 1 } else { 0 }
+$installedNodeDomain = if ($nodeSettings['PUBLIC_DOMAIN']) { [string]$nodeSettings['PUBLIC_DOMAIN'] } else { [string]$nodeRuntimeSettings['COMMUNITY_NODE_DOMAIN'] }
+$installedControlPlaneDomain = if ($cpSettings['PUBLIC_DOMAIN']) { [string]$cpSettings['PUBLIC_DOMAIN'] } else { [string]$cpRuntimeSettings['CONTROL_PLANE_DOMAIN'] }
+$installedPublic = ($nodeSettings['MODE'] -eq 'public' -or $cpSettings['MODE'] -eq 'public' -or
+    (Test-GeneratedSslipHostname $installedNodeDomain 'node') -or
+    (Test-GeneratedSslipHostname $installedControlPlaneDomain 'control'))
+$mode.SelectedIndex = if ($installedPublic) { 1 } else { 0 }
 $form.Controls.Add($mode)
 $nodeLabel = New-Label 'Community Node hostname (Public)' 22 124
 $nodeDomain = New-Input 245 120 535
-$nodeDomain.Text = [string]$nodeSettings['PUBLIC_DOMAIN']
+$nodeDomain.Text = $installedNodeDomain
 $cpLabel = New-Label 'Control Plane hostname (Public)' 22 160
 $cpDomain = New-Input 245 156 535
-$cpDomain.Text = [string]$cpSettings['PUBLIC_DOMAIN']
+$cpDomain.Text = $installedControlPlaneDomain
 $directoryLabel = New-Label 'Directory Server URL (HTTPS)' 22 196
 $directoryUrl = New-Input 245 192 535
 $directoryUrl.Text = if ($nodeSettings['CONTROL_PLANE_DIRECTORY_URL']) { [string]$nodeSettings['CONTROL_PLANE_DIRECTORY_URL'] } elseif ($cpSettings['CONTROL_PLANE_DIRECTORY_URL']) { [string]$cpSettings['CONTROL_PLANE_DIRECTORY_URL'] } else { [string]$env:CONTROL_PLANE_DIRECTORY_URL }
@@ -101,7 +122,18 @@ $autoDns = [System.Windows.Forms.CheckBox]::new()
 $autoDns.Text = 'Caddy + automatic free public hostnames (no domain purchase; sslip.io DNS)'
 $autoDns.Location = [System.Drawing.Point]::new(245, 382)
 $autoDns.Size = [System.Drawing.Size]::new(550, 23)
-$autoDns.Checked = (-not $nodeSettings['PUBLIC_DOMAIN'] -and -not $cpSettings['PUBLIC_DOMAIN'])
+$installedAutomaticNode = ((Test-AutomaticPublicSettings $nodeSettings 'node') -or
+    (Test-AutomaticPublicSettings $nodeRuntimeSettings 'node'))
+$installedAutomaticControlPlane = ((Test-AutomaticPublicSettings $cpSettings 'control') -or
+    (Test-AutomaticPublicSettings $cpRuntimeSettings 'control'))
+$nodeAutomaticCompatible = ([string]::IsNullOrWhiteSpace($installedNodeDomain) -or
+    (Test-GeneratedSslipHostname $installedNodeDomain 'node') -or $installedAutomaticNode)
+$controlPlaneAutomaticCompatible = ([string]::IsNullOrWhiteSpace($installedControlPlaneDomain) -or
+    (Test-GeneratedSslipHostname $installedControlPlaneDomain 'control') -or $installedAutomaticControlPlane)
+# Fresh installs default to automatic sslip.io. Existing generated sslip.io installs
+# are also detected from .env.runtime, so an older sparrow.conf cannot make the
+# checkbox appear unchecked after a WAN-IP change.
+$autoDns.Checked = ($nodeAutomaticCompatible -and $controlPlaneAutomaticCompatible)
 $form.Controls.Add($autoDns)
 $reinstallPublic = New-Button 'Reinstall Public from scratch (ERASE existing TEST server)' 22 410 755
 $reinstallPublic.Enabled = $false

@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
-import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureSnapshot
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex

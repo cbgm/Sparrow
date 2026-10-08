@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 53,
-    "identityHash": "12900c41c76c0bb19e54f163ab10c99e",
+    "identityHash": "180fcf7b15adf350fc23ca542b3c66c5",
     "entities": [
       {
         "tableName": "auto_replies",
@@ -1537,7 +1537,7 @@
       },
       {
         "tableName": "messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `conversationId` TEXT NOT NULL, `packetId` TEXT, `text` TEXT NOT NULL, `replyToMessageId` TEXT, `transportPayload` TEXT, `transportMode` TEXT NOT NULL, `contentStatus` TEXT NOT NULL, `deliveryStatus` TEXT NOT NULL, `senderContactId` TEXT, `readReceiptSent` INTEGER NOT NULL, `isMine` INTEGER NOT NULL, `createdAtEpochMilliseconds` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `conversationId` TEXT NOT NULL, `packetId` TEXT, `replyToMessageId` TEXT, `transportPayload` TEXT, `transportMode` TEXT NOT NULL, `contentStatus` TEXT NOT NULL, `deliveryStatus` TEXT NOT NULL, `senderContactId` TEXT, `readReceiptSent` INTEGER NOT NULL, `isMine` INTEGER NOT NULL, `createdAtEpochMilliseconds` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -1555,12 +1555,6 @@
             "fieldPath": "packetId",
             "columnName": "packetId",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "text",
-            "columnName": "text",
-            "affinity": "TEXT",
-            "notNull": true
           },
           {
             "fieldPath": "replyToMessageId",
@@ -1665,8 +1659,8 @@
         ]
       },
       {
-        "tableName": "message_attachments",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `messageId` TEXT NOT NULL, `position` INTEGER NOT NULL, `type` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `byteSize` INTEGER NOT NULL, `fileName` TEXT, `width` INTEGER, `height` INTEGER, `durationMilliseconds` INTEGER, `nodeId` TEXT NOT NULL, `blobId` TEXT NOT NULL, `readCapability` TEXT NOT NULL, `ciphertextByteSize` INTEGER NOT NULL, `blobExpiresAtEpochMilliseconds` INTEGER NOT NULL, `encryptionKey` BLOB NOT NULL, `nonce` BLOB NOT NULL, `ciphertextSha256` BLOB NOT NULL, `deleteCapability` TEXT, `localFileName` TEXT, `payloadBytes` BLOB, `transcript` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`messageId`) REFERENCES `messages`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "tableName": "message_parts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `messageId` TEXT NOT NULL, `position` INTEGER NOT NULL, `type` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`messageId`) REFERENCES `messages`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -1689,6 +1683,132 @@
           {
             "fieldPath": "type",
             "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_message_parts_messageId",
+            "unique": false,
+            "columnNames": [
+              "messageId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_message_parts_messageId` ON `${TABLE_NAME}` (`messageId`)"
+          },
+          {
+            "name": "index_message_parts_messageId_position",
+            "unique": true,
+            "columnNames": [
+              "messageId",
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_message_parts_messageId_position` ON `${TABLE_NAME}` (`messageId`, `position`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "messages",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "messageId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "message_text",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`partId` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`partId`), FOREIGN KEY(`partId`) REFERENCES `message_parts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "partId",
+            "columnName": "partId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "partId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "message_parts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "partId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "message_structured",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`partId` TEXT NOT NULL, `json` TEXT NOT NULL, PRIMARY KEY(`partId`), FOREIGN KEY(`partId`) REFERENCES `message_parts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "partId",
+            "columnName": "partId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "json",
+            "columnName": "json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "partId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "message_parts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "partId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "message_blobs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`partId` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `byteSize` INTEGER NOT NULL, `fileName` TEXT, `width` INTEGER, `height` INTEGER, `durationMilliseconds` INTEGER, `nodeId` TEXT NOT NULL, `blobId` TEXT NOT NULL, `readCapability` TEXT NOT NULL, `ciphertextByteSize` INTEGER NOT NULL, `blobExpiresAtEpochMilliseconds` INTEGER NOT NULL, `encryptionKey` BLOB NOT NULL, `nonce` BLOB NOT NULL, `ciphertextSha256` BLOB NOT NULL, `deleteCapability` TEXT, `localFilePath` TEXT, PRIMARY KEY(`partId`), FOREIGN KEY(`partId`) REFERENCES `message_parts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "partId",
+            "columnName": "partId",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -1778,64 +1898,72 @@
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "localFileName",
-            "columnName": "localFileName",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "payloadBytes",
-            "columnName": "payloadBytes",
-            "affinity": "BLOB"
-          },
-          {
-            "fieldPath": "transcript",
-            "columnName": "transcript",
+            "fieldPath": "localFilePath",
+            "columnName": "localFilePath",
             "affinity": "TEXT"
           }
         ],
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "id"
+            "partId"
           ]
         },
         "indices": [
           {
-            "name": "index_message_attachments_messageId",
-            "unique": false,
-            "columnNames": [
-              "messageId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_message_attachments_messageId` ON `${TABLE_NAME}` (`messageId`)"
-          },
-          {
-            "name": "index_message_attachments_messageId_position",
-            "unique": true,
-            "columnNames": [
-              "messageId",
-              "position"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_message_attachments_messageId_position` ON `${TABLE_NAME}` (`messageId`, `position`)"
-          },
-          {
-            "name": "index_message_attachments_blobId",
+            "name": "index_message_blobs_blobId",
             "unique": true,
             "columnNames": [
               "blobId"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_message_attachments_blobId` ON `${TABLE_NAME}` (`blobId`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_message_blobs_blobId` ON `${TABLE_NAME}` (`blobId`)"
           }
         ],
         "foreignKeys": [
           {
-            "table": "messages",
+            "table": "message_parts",
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "messageId"
+              "partId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "voice_transcripts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`partId` TEXT NOT NULL, `transcript` TEXT NOT NULL, PRIMARY KEY(`partId`), FOREIGN KEY(`partId`) REFERENCES `message_parts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "partId",
+            "columnName": "partId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transcript",
+            "columnName": "transcript",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "partId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "message_parts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "partId"
             ],
             "referencedColumns": [
               "id"
@@ -2619,7 +2747,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '12900c41c76c0bb19e54f163ab10c99e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '180fcf7b15adf350fc23ca542b3c66c5')"
     ]
   }
 }

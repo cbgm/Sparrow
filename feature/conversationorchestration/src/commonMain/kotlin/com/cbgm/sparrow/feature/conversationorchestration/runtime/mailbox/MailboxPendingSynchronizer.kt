@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
 class MailboxPendingSynchronizer(
     private val mailboxGateway: MailboxGateway,

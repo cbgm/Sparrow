@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
 import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
-import com.cbgm.sparrow.core.protocol.codec.PacketCodec
-import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
+import com.cbgm.sparrow.protocol.codec.PacketCodec
+import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import kotlinx.coroutines.flow.first
 
 class OutgoingPacketSender(

@@ -1,8 +1,19 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
+import com.cbgm.sparrow.core.messagepart.domain.model.File
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
+import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
+import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
@@ -12,7 +23,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.isEditable
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.DeliveryProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
@@ -35,22 +45,40 @@ internal fun toGroupConversationUiState(
     isLoading: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     administration: GroupAdministrationState = GroupAdministrationState(),
-    pin: GroupPin? = null
+    pin: GroupPin? = null,
+    localVoterDisplayName: String? = null
 ): GroupConversationUiState {
     val contactsById = contacts.associateBy(Contact::id)
+    val pollVoterDisplayNames =
+        buildMap {
+            putAll(contactsById.toPollVoterDisplayNames())
+            localVoterDisplayName?.takeIf(String::isNotBlank)?.let { displayName ->
+                put(PollPolicy.LOCAL_VOTER_ID, displayName)
+            }
+        }
     val pinnedMessage =
-        pin?.message?.let { message ->
+        pin?.message?.let { pinnedSnapshot ->
+            val liveMessage =
+                conversation?.messages?.firstOrNull { message -> message.id == pinnedSnapshot.id }
+            val message = liveMessage ?: pinnedSnapshot
             val sender = message.senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
             message.toMessageBubbleUi(
                 senderName = sender.displayNameForChat(senderIsInContacts),
                 senderIsInContacts = senderIsInContacts,
                 safetyAssessments = safetyAssessments,
-                attachmentSource = AttachmentSource.GroupPin(groupId),
+                source =
+                    if (liveMessage == null) {
+                        MessagePartSource.GroupPin(groupId)
+                    } else {
+                        MessagePartSource.Message
+                    },
                 reply = message.replyToMessageId.toGroupReplyPreview(
                     conversation?.messages.orEmpty().associateBy(GroupMessage::id),
                     contactsById
-                )
+                ),
+                canClosePoll = message.isMine || administration.isLocalAdmin,
+                pollVoterDisplayNames = pollVoterDisplayNames
             )
         }
 
@@ -62,7 +90,9 @@ internal fun toGroupConversationUiState(
         isLocalAdmin = administration.isLocalAdmin,
         messages = conversation.toMessageBubbleUi(
             contactsById = contactsById,
-            safetyAssessments = safetyAssessments
+            safetyAssessments = safetyAssessments,
+            isLocalAdmin = administration.isLocalAdmin,
+            pollVoterDisplayNames = pollVoterDisplayNames
         ),
         isLoading = isLoading,
         state = conversation?.state ?: GroupConversationState.READY,
@@ -90,12 +120,14 @@ internal fun GroupMessage.toMessageBubbleUi(
     senderName: String?,
     senderIsInContacts: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentSource: AttachmentSource = AttachmentSource.Message,
-    reply: MessageReplyUi? = null
+    source: MessagePartSource = MessagePartSource.Message,
+    reply: MessageReplyUi? = null,
+    canClosePoll: Boolean = false,
+    pollVoterDisplayNames: Map<String, String> = emptyMap()
 ): MessageBubbleUi {
     val partsUi =
         parts.toMessagePartsUi(
-            attachmentSource = attachmentSource
+            source = source
         )
 
     return MessageBubbleUi(
@@ -131,18 +163,29 @@ internal fun GroupMessage.toMessageBubbleUi(
                 reactedByMe = values.any { it.isMine }
             )
         },
-        imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
-        fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
-        locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
-        contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
-        voicePart = partsUi.filterIsInstance<MessagePartUi.Voice>().firstOrNull(),
-        textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull(),
+        imageVideoParts = partsUi.filterIsInstance<ImageVideoUi>(),
+        fileParts = partsUi.filterIsInstance<FileUi>(),
+        locationPart = partsUi.filterIsInstance<LocationUi>().firstOrNull(),
+        contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
+        voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
+        textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
+        pollPart =
+            partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
+                canClose = canClosePoll,
+                voterDisplayNames = pollVoterDisplayNames
+            ),
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId
         )
     )
 }
+
+private fun Map<String, Contact>.toPollVoterDisplayNames(): Map<String, String> =
+    mapValues { (_, contact) ->
+        val isInContacts = contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
+        contact.displayNameForChat(isInContacts)
+    }
 
 internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     if (this == null) return "Unknown contact"
@@ -172,7 +215,9 @@ internal fun Set<String>.toIndicatorDisplayName(contacts: List<Contact>): String
 
 private fun GroupConversation?.toMessageBubbleUi(
     contactsById: Map<String, Contact>,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    isLocalAdmin: Boolean,
+    pollVoterDisplayNames: Map<String, String>
 ): List<MessageBubbleUi> {
     val messages = this?.messages.orEmpty()
     val messagesById = messages.associateBy(GroupMessage::id)
@@ -188,7 +233,9 @@ private fun GroupConversation?.toMessageBubbleUi(
                     senderName = sender.displayNameForChat(senderIsInContacts),
                     senderIsInContacts = senderIsInContacts,
                     safetyAssessments = safetyAssessments,
-                    reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById)
+                    reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById),
+                    canClosePoll = message.isMine || isLocalAdmin,
+                    pollVoterDisplayNames = pollVoterDisplayNames
                 )
             )
         }
@@ -218,12 +265,13 @@ private fun String?.toGroupReplyPreview(
 
 private fun List<MessagePart>?.toReplyPreviewText(): String? =
     this
-        ?.filterIsInstance<MessagePart.Text>()
+        ?.filterIsInstance<Text>()
         ?.firstOrNull()
         ?.text
         ?.takeIf(String::isNotBlank)
+        ?: this?.filterIsInstance<Poll>()?.firstOrNull()?.question
         ?: this
-            ?.filterIsInstance<MessagePart.File>()
+            ?.filterIsInstance<File>()
             ?.firstOrNull()
             ?.fileName
             ?.takeIf(String::isNotBlank)

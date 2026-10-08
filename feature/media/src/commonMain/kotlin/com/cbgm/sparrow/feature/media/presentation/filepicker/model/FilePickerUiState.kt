@@ -5,7 +5,7 @@ data class FilePickerUiState(
     val breadcrumbs: List<FilePickerBreadcrumbUi> = emptyList(),
     val entries: List<FileBrowserEntryUi> = emptyList(),
     val searchQuery: String = "",
-    val sortMode: FilePickerSortMode = FilePickerSortMode.NAME,
+    val sortMode: FilePickerSortModeUi = FilePickerSortModeUi.NAME,
     val sortAscending: Boolean = true,
     val selectedReferences: Set<String> = emptySet(),
     val selectedCount: Int = 0,
@@ -27,16 +27,16 @@ data class FilePickerBreadcrumbUi(
 data class FileBrowserEntryUi(
     val reference: String,
     val displayName: String,
-    val kind: FileBrowserEntryKind,
+    val kind: FileBrowserEntryKindUi,
     val sizeText: String?,
     val typeText: String?,
     val isBlocked: Boolean
 ) {
     val isDirectory: Boolean
-        get() = kind == FileBrowserEntryKind.DIRECTORY
+        get() = kind == FileBrowserEntryKindUi.DIRECTORY
 }
 
-enum class FileBrowserEntryKind {
+enum class FileBrowserEntryKindUi {
     DIRECTORY,
     IMAGE,
     VIDEO,
@@ -47,7 +47,7 @@ enum class FileBrowserEntryKind {
     OTHER
 }
 
-enum class FilePickerSortMode {
+enum class FilePickerSortModeUi {
     NAME,
     SIZE,
     TYPE

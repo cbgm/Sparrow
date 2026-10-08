@@ -1,138 +1,118 @@
 # Current feature status
 
-This page describes what is implemented in the current codebase. It is deliberately conservative: roadmap items are not listed as working features.
+This page describes the implemented behavior in the supplied 2026-10-08 release source tree. Roadmap-only ideas are not listed as working features.
 
 ## Platform status
 
 | Area | Status |
 |---|---|
-| Android client | Current usable development/product target |
-| iOS client | KMP/Xcode structure exists, but major runtime/platform functionality is incomplete; not usable/supported |
-| Control Plane | Implemented as Docker/Ktor services + Windows launcher bundle |
-| Community Node | Implemented as Docker/Ktor services + Windows and macOS/Linux launcher bundles |
-| Official tagged release | **Not published yet**; workflow/package format is implemented |
+| Android client | Current usable target |
+| iOS client | KMP/Xcode/source-set structure exists, but important runtime/platform functionality is incomplete |
+| Control Plane | Implemented as Docker/Ktor services + operator tooling |
+| Community Node | Implemented as Docker/Ktor services + operator tooling |
 
-## Android application
+## Identity, onboarding and trust
 
-### Onboarding and identity
+- onboarding, phone entry/hint, permission flow and identity creation;
+- local signing/encryption identity and encrypted backup/restore;
+- public identity exchange, acknowledgement and manual/QR import;
+- durable pending remote-identity-change review and approved reconnection retry;
+- safety-number/QR verification;
+- device-contact import, contact merge/routing projection and blocking;
+- invitation inbox for Direct/Group flows;
+- explicit conversation orchestration in `:feature:conversationorchestration`.
 
-- welcome/privacy/phone/permission onboarding;
-- local encryption + signing identity creation;
-- Android-protected private-key persistence;
-- public identity sharing;
-- QR/manual identity import paths.
-
-### Contacts and trust
-
-- device-contact import/linking;
-- phone normalization/merge behavior;
-- contact invitations inbox;
-- accept/decline/decline+block;
-- block/unblock management;
-- public identity exchange/acknowledgement;
-- contact details/security state;
-- safety-number and QR verification flows.
-
-### Direct chats
+## Direct chats
 
 - persistent conversations/messages;
-- encrypted transport payload path;
-- persistent outgoing outbox and retry;
-- sent/delivered/read state;
-- unread/read handling;
-- typing indicator;
-- identity/security-state handling;
-- conversation deletion/authorization-revocation behavior;
-- messages queued during automatic re-invitation are released on acceptance, discarded on decline, and expire after two days;
-- text plus typed image/video/file/location/contact message parts.
+- encrypted direct transport and authorization gates;
+- durable outbox/retry and queued-until-authorized messages;
+- sent/delivered/read state and typing indicators;
+- edit/delete/reaction operations through `OperationMessage`;
+- text, image, video, file, voice, location and contact message parts;
+- poll operations are explicitly rejected in Direct chats.
 
-### Group chats
+## Group chats
 
-- group creation and invitation flows;
-- membership activation and security key distribution;
-- add/remove members;
-- multiple admins/member promotion;
-- leave/admin-transfer requirements;
-- group verification snapshots/receipts;
-- epoch-based group encryption state;
-- one outgoing packet per current active recipient;
+- group creation/invitation/join/welcome/activation flows;
+- epoch/group security state and member key distribution;
+- multiple admins, promotion/removal/leave/admin transfer;
 - per-recipient delivery/read aggregation;
-- group typing indicators;
-- re-invitation through a new active membership period;
-- the same typed text/image/video/file/location/contact message content used by Direct chats.
+- typing indicators;
+- edit/delete/reaction operations;
+- one current pinned message;
+- group polls including images, voting, anonymity, optional expiry and manual creator/admin close.
 
-There is no orphaned-group mode in the current architecture.
+## Polls
 
-### Attachments and media
+`:feature:polls` is implemented and wired as a group message-part feature:
 
-Sparrow currently supports attachment types `IMAGE`, `VIDEO`, `FILE`, `LOCATION`, and `CONTACT`. All five use the encrypted blob attachment transport.
+- 2–6 options;
+- optional description;
+- images from gallery only;
+- optional multiple selection;
+- optional vote changes;
+- anonymous/non-anonymous voter presentation;
+- duration entered as minutes and converted to an absolute expiry timestamp;
+- live `Open for …` countdown while visible with lifecycle resync on resume;
+- one effective `isClosed` state derived by `PollPolicy.isClosedAt(...)`;
+- option tap submits a vote immediately;
+- creator/admin manual close sends `MessageOperation.PollClose`;
+- elapsed expiry does not broadcast an automatic close operation;
+- voter detail overlay grouped by option;
+- polls can be pinned and remain interactive.
 
-- up to 8 selected attachments per normal media/file message; location/contact actions are single-shot attachment messages;
-- image limit: 4 MiB per image;
-- video limit: 64 MiB per video;
-- file limit: 96 MiB per file;
-- total selected attachment payload limit: 96 MiB per message;
-- gallery image/video selection and camera capture;
-- file browser/file selection and opening of sent/received files;
-- image/video bubble previews with at most three visible media tiles and a `+N` overflow tile;
-- swipeable media viewer; videos do not autoplay;
-- current-location sharing sends immediately after location acquisition;
-- contact sharing reuses the existing Contacts selection UI and sends the selected contact immediately;
-- contact bubbles show the available display name and phone number; tapping can add the contact to device contacts after confirmation;
-- incoming image/video/file data is saved into the conversation attachment storage; location/contact blobs are not copied into the media/files storage tree;
-- attachment storage overview/management and media export are available from Settings.
+See [Polls](polls.md).
 
-See [Attachments](attachments.md).
+## Attachments/media/voice
 
-### Search and local AI
+The shared `:core:base` message-part hierarchy supports `Text`, `Image`, `Video`, `File`, `Voice`, `Location`, `Contact` and `Poll`.
 
-- normal local message search;
-- optional semantic search;
-- a shared on-device text-embedding model is downloaded/prepared only when a feature needs it;
-- the downloaded model is integrity-checked before use;
-- semantic indexing is built locally;
-- search combines exact results with semantic results and falls back to exact results if semantic search is unavailable;
-- search results navigate back to the matching Direct or Group message.
+`:feature:attachments` owns encrypted blob transfer/cache/storage; `:feature:media` owns selection/viewers/export; `:feature:voice` owns recording/playback/transcription.
 
-See [Message search](search.md).
+- media/file management screens and per-conversation storage summaries;
+- image/video bubble previews and media viewer;
+- saved file opening/export;
+- local voice transcription with persisted transcripts;
+- receiver-side cache paths are persisted in `MessageBlobEntity.localFilePath` and mapped back into UI models.
 
-### Message safety
+See [Attachments](attachments.md) and [Voice](voice.md).
 
-- optional local message-safety analysis;
-- structural checks for suspicious links/domains and high-risk request patterns;
-- local embedding-based classification when the shared model is available;
-- warning indicator in message presentation;
-- details screen explaining detected reasons;
-- block action from the safety details flow.
+## App lock
 
-The analysis is local; it is not a cloud moderation service. See [Message safety](message-safety.md).
+`:feature:applock` is wired into Settings and application navigation. It uses persisted enabled state plus platform device-owner authentication through `AppLockAuthenticationLauncher`. Cancelling authentication leaves the app locked and allows a new request.
 
-### Settings and diagnostics
+See [App lock](app-lock.md).
 
-- semantic-search and message-safety feature toggles with model/download/index state;
-- attachment-storage entry and per-conversation attachment management;
-- developer/network diagnostics;
-- persisted developer error log with visible timestamps and a clear-log action.
+## Startup/runtime
 
-See [Settings and diagnostics](settings.md).
+Application startup is task-based through `ApplicationStartupRunner` and concrete `StartupTask` instances. Only waiting tasks block navigation. Non-waiting observers/runtime work starts after `AppRoute.Main` through `startPostNavigationRuntime()` and `ForegroundRuntimeCoordinator`.
 
-### Network/operations UI
+See [Startup architecture](../architecture/startup.md).
 
-- configurable Control Plane directory loaded by `AppViewModel`;
-- Settings Add field accepts a directory URL or one plane URL;
-- multiple planes and health state;
-- signed/verified node discovery;
-- node failover/cooldown;
-- current node and connection-count diagnostics;
-- cooldown nodes shown with zero active connections.
+## Search, safety, links, auto reply and avatars
 
-### Offline/background
+- exact local message search and optional local semantic search;
+- local message-safety analysis;
+- cached/prefetched link previews plus server link-preview service;
+- persisted auto-reply rules/recipient claims;
+- reusable avatar observation/editing/cropping pipeline.
 
-- WebSocket foreground delivery;
-- recipient-selected mailbox delivery;
+## Settings and diagnostics
+
+- app-lock toggle with device authentication;
+- semantic search and message-safety settings;
+- attachment storage/management;
+- network/developer diagnostics and persisted error log;
+- Control Plane/node state and connection diagnostics.
+
+## Offline/background transport
+
+- foreground WebSocket delivery;
+- durable protocol outbox;
+- recipient mailbox delivery;
 - Android FCM wake-up path;
-- pending mailbox/envelope synchronization workers;
-- conversation notifications/deep links.
+- synchronization workers and conversation notifications/deep links.
 
 ## Server
 
@@ -207,7 +187,7 @@ Group admins can synchronize current pin state through `GroupPinRepositoryImpl`,
 
 ### Persistence
 
-The current Room database is schema **53** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
+The current Room database is schema **54** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
 
 
 ## Avatars and profile-picture editing

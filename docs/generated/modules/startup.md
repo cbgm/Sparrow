@@ -1,28 +1,40 @@
 # `:startup`
 
-Source directory: `startup`
+Generated automatically by `./gradlew architectureReport`.
 
-## Direct project dependencies
+## Module information
 
-- `:core`
-- `:core:ui`
-- `:core:embedding`
-- `:feature:identity`
-- `:feature:onboarding`
-- `:feature:search`
-- `:feature:safety`
-- `:feature:transport`
+| Property | Value |
+|---|---|
+| Name | `startup` |
+| Group | `startup` |
+| Directory | `startup` |
+| Build file | `startup/build.gradle.kts` |
+| Kotlin files | 10 |
+| Production Kotlin files | 10 |
+| Test Kotlin files | 0 |
+| Resource files | 1 |
+| Direct dependencies | 9 |
+| Direct dependents | 2 |
 
-## Production top-level Kotlin declarations
+## Source sets
 
-| Type | Kind | Source set | Source file |
-|---|---|---|---|
-| `AppConnectionAvailability` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/domain/model/AppConnectionAvailability.kt` |
-| `ObserveAppConnectionAvailabilityUseCase` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/domain/usecase/ObserveAppConnectionAvailabilityUseCase.kt` |
-| `StartupViewModel` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/presentation/start/StartupViewModel.kt` |
-| `AppInitializationResult` | `interface` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/presentation/start/model/AppInitializationResult.kt` |
-| `StartupConnection` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/presentation/start/model/StartupUiState.kt` |
-| `StartupUiEvent` | `interface` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/presentation/start/model/StartupUiEvent.kt` |
-| `StartupUiState` | `interface` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/presentation/start/model/StartupUiState.kt` |
-| `AppInitializer` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/util/AppInitializer.kt` |
-| `StartupRuntimeReadiness` | `class` | `commonMain` | `startup/src/commonMain/kotlin/com/cbgm/sparrow/startup/util/StartupRuntimeReadiness.kt` |
+- `androidMain`
+- `commonMain`
+
+## Dependencies
+
+- [`:core:ui`](../modules/core-ui.md)
+- [`:core:util`](../modules/core-util.md)
+- [`:feature:applock`](../modules/feature-applock.md)
+- [`:feature:embedding`](../modules/feature-embedding.md)
+- [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:onboarding`](../modules/feature-onboarding.md)
+- [`:feature:safety`](../modules/feature-safety.md)
+- [`:feature:search`](../modules/feature-search.md)
+- [`:feature:transport`](../modules/feature-transport.md)
+
+## Dependents
+
+- [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)

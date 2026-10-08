@@ -1,82 +1,46 @@
 # Glossary
 
-**Control Plane**  
-The discovery/control deployment containing node registry, presence directory and push service behind Caddy.
-
-**Control Plane directory**  
-External JSON document containing a `controlPlanes` array. It is the configurable source of Control Plane URLs for app builds and Community Nodes.
-
 **Community Node**  
-The message-routing deployment containing gateway, federation and mailbox services behind Caddy.
+A transport node that accepts client WebSocket connections, federates encrypted traffic, hosts blobs and participates in mailbox/offline delivery.
 
-**Caddy**  
-Reverse proxy/edge server that exposes friendly HTTP(S)/WSS paths and forwards them to Docker-internal services.
+**Control Plane**  
+Discovery/control infrastructure for node registration, health, presence and push registration/wake-up.
 
-**Docker image**  
-Packaged filesystem/runtime for one server service.
+**Conversation orchestration**  
+The explicit `:feature:conversationorchestration` boundary that coordinates identity, invitations, membership and conversation workflows without hiding repository-to-repository dependencies.
 
-**Docker Compose**  
-Configuration/tool used to run multiple images, networks, volumes and dependencies as one deployment.
+**MessagePartDto / MessagePart / MessagePartUi**  
+The shared data/domain/presentation hierarchy in `:core:base`. Current variants are text, image, video, file, voice, location, contact and poll.
 
-**PostgreSQL**  
-Durable relational database used by registry, push, federation queue and mailbox services.
+**MessageBlobEntity**  
+Room row containing blob metadata/capabilities/crypto fields and the resolved local cache path for a blob-backed message part.
 
-**Redis**  
-Fast in-memory datastore used for short-lived presence routes.
+**MessagePartEntity**  
+Room structural row for a message part (`id`, message, position, type and optional structured payload).
 
-**Routing ID**  
-Protocol identifier used to locate a client route without using a human contact name/phone number directly as the wire destination.
+**OperationMessage**  
+Protocol wrapper for an operation on an existing message. Its `MessageOperation` can edit, delete, react, vote in a poll or close a poll.
 
-**Presence route**  
-Short-lived signed mapping from a client routing identity to its current Community Node/connection.
+**Poll**  
+A group-only `MessagePart` with 2–6 options, optional nested images, multiple-selection/vote-change/anonymity flags and optional expiry/close timestamps.
 
-**ProtocolOutbox**  
-Persistent client boundary where feature-owned packets are queued before final transport preparation/sending.
+**Effective poll close**  
+`PollPolicy.isClosedAt(now)` is true when a manual close timestamp exists or when the absolute expiry timestamp has elapsed. Only manual close is synchronized as `PollClose`.
 
-**Federation**  
-Signed Community Node-to-Community Node forwarding path when sender and recipient are not on the same gateway.
+**Pinned message**  
+A group-admin-controlled snapshot of one group user message, stored as encoded `GroupMessageContent`. Pinned content can include attachments, voice, links and polls.
 
-**Mailbox**  
-Recipient-selected capability-protected offline store containing opaque encrypted envelopes.
+**Protocol outbox**  
+Durable client storage for outbound protocol work, processed independently from a screen by `:feature:messaging` runtime.
 
-**FCM**  
-Firebase Cloud Messaging; used on Android as a wake-up mechanism for pending/offline delivery.
+**StartupTask**  
+One application initialization/runtime-registration step consumed by `ApplicationStartupRunner`. Only tasks marked `waitForCompletion` block main navigation.
 
-**Safety number**  
-Human-comparable value derived from both parties' current public identity keys by `SafetyNumberGenerator`.
+**App lock**  
+Local device-owner authentication gate implemented by `:feature:applock`.
 
-**Security epoch**  
-Group membership/key version used to determine current active members and the group encryption state for Group traffic.
+**Local voter ID**  
+`PollPolicy.LOCAL_VOTER_ID`, an internal marker used in the locally stored poll until presentation maps it to the real local identity display name.
 
-**Cooldown**  
-Temporary client diagnostic/selection state for a failed node. Cooldown nodes are not routing candidates and display zero live connections.
-
-**BuildKonfig**  
-KMP Gradle plugin used to expose build-time configuration such as `CONTROL_PLANE_DIRECTORY_URL` to common code.
-
-**R8**  
-Android release optimizer/minifier. Release builds also shrink resources; mapping files are retained privately in CI for de-obfuscation.
-
-**Release candidate**  
-Artifacts created from a `release/**` branch push. They are change-aware and are not automatically the official GitHub Release.
-
-**Full release**  
-A `v*` tagged build that rebuilds/publishes the complete APK + server image + launcher package set and combined full ZIP.
-
-**DTO (`...Dto`)**  
-A data-layer representation model. DTO naming is used for data models crossing/mapping within feature/data boundaries; Room persistence classes remain `...Entity`.
-
-**UI model (`...Ui`)**  
-A presentation-layer representation consumed by Compose/ViewModel UI state. Presentation mapping functions are named `toNameUi()`.
-
-**MessagePart**  
-Chats-domain typed representation of message content. The current hierarchy mirrors `MessagePartDto` in data and `MessagePartUi` in presentation and includes text, image/video, file, location and contact variants.
-
-**Attachment blob**  
-Encrypted attachment payload stored/transferred separately from the normal chat packet. Message packets carry attachment metadata and an encrypted blob reference.
-
-**Semantic search**  
-Optional local message search mode that supplements exact local matches with on-device embedding similarity results.
-
-**Message safety**  
-Optional on-device risk-warning analysis combining structural checks and local embedding-based classification.
+**DTO**  
+A data-layer representation with a `Dto` suffix. Room persistence types remain `Entity`; presentation types use `Ui`; domain models are unsuffixed.

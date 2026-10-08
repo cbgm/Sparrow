@@ -1,10 +1,11 @@
 package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.protocol.outbox.OutboxStatus
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -107,7 +108,7 @@ class GroupPacketBroadcasterTest {
                 contactId = contactId,
                 packetId = packetId,
                 encodedPacket = byteArrayOf(1),
-                status = com.cbgm.sparrow.core.protocol.outbox.OutboxStatus.PENDING,
+                status = OutboxStatus.PENDING,
                 attemptCount = 0,
                 lastError = null,
                 createdAtEpochMilliseconds = 1L,

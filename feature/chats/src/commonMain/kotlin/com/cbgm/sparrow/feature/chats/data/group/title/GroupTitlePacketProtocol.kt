@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.group.title
 
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
-import com.cbgm.sparrow.core.protocol.packet.GroupTitleUpdatedPacket
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
 
 internal class GroupTitlePacketProtocol(
     private val groupCrypto: GroupCrypto,

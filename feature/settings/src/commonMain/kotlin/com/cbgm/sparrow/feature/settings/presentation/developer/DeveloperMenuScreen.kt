@@ -28,10 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.core.transport.TransportDiagnostics
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
@@ -43,6 +39,10 @@ import com.cbgm.sparrow.feature.settings.presentation.developer.components.Devel
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NetworkDiagnosticsCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
+import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_build_type
 import com.cbgm.sparrow.resources.base_clear_local_data

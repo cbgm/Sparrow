@@ -1,11 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
-import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
@@ -14,6 +9,11 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
+import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import kotlinx.coroutines.CancellationException
 
 class MailboxRouteProvisioner(

@@ -56,11 +56,11 @@ For a realistic local setup, run one Control Plane and at least one Community No
 
 Run `androidApp` from Android Studio. On startup:
 
-1. `SparrowApplication` starts Android Koin wiring.
-2. shared `App()` creates `AppViewModel`.
-3. `AppViewModel.initializeApplication()` initializes crypto, language, notifications and Control Plane discovery.
-4. after identity is ready and the app is foregrounded, `TransportConnectionManager` starts.
-5. the selected Community Node is connected through `/v1/gateway`.
+1. `SparrowApplication` starts Android Koin wiring and the shared `App()` shell.
+2. `StartupRoute` / `StartupViewModel` invokes `ApplicationStartupRunner.run()`.
+3. registered waiting `StartupTask`s initialize language/crypto, load Control Plane configuration, resolve identity status and complete the other startup gates concurrently.
+4. `StartupViewModel.completeStartup()` navigates to `AppRoute.Main` and calls `ApplicationStartupRunner.startPostNavigationRuntime()`.
+5. non-waiting startup tasks, `ForegroundRuntimeCoordinator` and the transport/runtime observers continue after navigation; a compatible Community Node is then connected through `/v1/gateway`.
 
 ## iOS note
 

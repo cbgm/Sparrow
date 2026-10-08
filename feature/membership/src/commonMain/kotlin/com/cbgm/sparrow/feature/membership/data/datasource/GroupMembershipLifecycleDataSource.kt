@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.feature.membership.data.model.GroupLocalMembershipEndDto
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
+import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
+import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 
 /**
  * Transitional facade for established group-membership lifecycle operations.

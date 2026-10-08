@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipDeclineResult
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
+import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
 
 class ReceiveGroupMembershipDeclineUseCase(
     private val repository: MembershipRepository

@@ -16,7 +16,7 @@ The current implementation combines structural analysis with the shared local te
 - payment request;
 - private-key request.
 
-The embedding-based classifier runs locally through the shared `core:embedding` runtime when available.
+The embedding-based classifier runs locally through the shared `feature:embedding` runtime when available.
 
 ## UI behavior
 

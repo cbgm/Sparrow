@@ -1,24 +1,13 @@
 package com.cbgm.sparrow.feature.membership.data.security
 
-import com.cbgm.sparrow.core.crypto.group.GroupCiphertext
-import com.cbgm.sparrow.core.crypto.group.GroupCrypto
-import com.cbgm.sparrow.core.crypto.group.GroupKeyConfirmation
-import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
-import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
+import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
@@ -29,6 +18,15 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupWelcomeMemberKey
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedGroupWelcomeDto
 import com.cbgm.sparrow.feature.membership.domain.model.SecuredGroupMessageDto
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
+import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.protocol.version.ProtocolVersion
 
 internal class GroupSecurityManager internal constructor(
     private val groupCrypto: GroupCrypto,
@@ -79,30 +77,30 @@ internal class GroupSecurityManager internal constructor(
         groupId: String,
         createdAtEpochMilliseconds: Long,
         localSigningKeyPair: LocalSigningKeyPair
-    ): Result<Unit> = safeSuspendCall {
-        require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        val state = groupSecurityStore.findState(groupId)
-        if (state != null) {
-            check(
-                state.localRole.isGroupAdminRole() &&
-                    state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
-                    groupKeyDataSource.load(groupId, state.currentEpoch) != null
-            ) { "Existing group security state is not a usable local owner epoch" }
-            return@safeSuspendCall
-        }
-        // No remote member is admitted at creation; an empty recipient set creates
-        // the persisted owner epoch/key without transmitting a welcome to invitees.
-        createOwnedGroup(
-            groupId = groupId,
-            title = "",
-            createdAtEpochMilliseconds = createdAtEpochMilliseconds,
-            memberPayloads = emptyList(),
-            memberKeys = emptyList(),
-            recipients = emptyList(),
-            localSigningKeyPair = localSigningKeyPair
-        ).getOrThrow()
-        Unit
-    }
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            val state = groupSecurityStore.findState(groupId)
+            if (state != null) {
+                check(
+                    state.localRole.isGroupAdminRole() &&
+                        state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
+                        groupKeyDataSource.load(groupId, state.currentEpoch) != null
+                ) { "Existing group security state is not a usable local owner epoch" }
+                return@safeSuspendCall
+            }
+            // No remote member is admitted at creation; an empty recipient set creates
+            // the persisted owner epoch/key without transmitting a welcome to invitees.
+            createOwnedGroup(
+                groupId = groupId,
+                title = "",
+                createdAtEpochMilliseconds = createdAtEpochMilliseconds,
+                memberPayloads = emptyList(),
+                memberKeys = emptyList(),
+                recipients = emptyList(),
+                localSigningKeyPair = localSigningKeyPair
+            ).getOrThrow()
+        }.map { }
 
     suspend fun createOwnedGroup(
         groupId: String,
@@ -384,110 +382,6 @@ internal class GroupSecurityManager internal constructor(
             )
         }
 
-    override suspend fun encryptMessageDeletion(
-        groupId: String,
-        deletionId: String,
-        deletedAtEpochMilliseconds: Long,
-        plaintext: String,
-        localSigningKeyPair: LocalSigningKeyPair
-    ): Result<SecuredGroupMessageDto> =
-        safeSuspendCall {
-            val state = groupSecurityStore.findState(groupId) ?: error("Group security state was not found")
-            check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
-                "Local signing identity is not a member of the current group epoch"
-            }
-            val groupKey =
-                groupKeyDataSource
-                    .load(groupId, state.currentEpoch)
-                    ?: error("Group key was not found")
-            val associatedData =
-                payloadEncoder.encodeMessageDeletionAssociatedData(
-                    version = ProtocolVersion.CURRENT,
-                    groupId = groupId,
-                    epoch = state.currentEpoch,
-                    deletionId = deletionId,
-                    deletedAtEpochMilliseconds = deletedAtEpochMilliseconds
-                )
-            val encrypted =
-                groupCrypto
-                    .encryptMessage(
-                        plaintext = plaintext.encodeToByteArray(),
-                        associatedData = associatedData,
-                        groupKey = groupKey
-                    ).getOrThrow()
-            val signaturePayload =
-                payloadEncoder.encodeMessageDeletionSignature(
-                    associatedData = associatedData,
-                    nonce = encrypted.nonce,
-                    ciphertext = encrypted.ciphertext
-                )
-            val signature =
-                groupCrypto
-                    .sign(
-                        payload = signaturePayload,
-                        signingPrivateKey = localSigningKeyPair.privateKey
-                    ).getOrThrow()
-
-            SecuredGroupMessageDto(
-                epoch = state.currentEpoch,
-                nonce = encrypted.nonce,
-                ciphertext = encrypted.ciphertext,
-                senderSignature = signature
-            )
-        }
-
-    override suspend fun encryptMessageEdit(
-        groupId: String,
-        editId: String,
-        editedAtEpochMilliseconds: Long,
-        plaintext: String,
-        localSigningKeyPair: LocalSigningKeyPair
-    ): Result<SecuredGroupMessageDto> =
-        safeSuspendCall {
-            val state = groupSecurityStore.findState(groupId) ?: error("Group security state was not found")
-            check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
-                "Local signing identity is not a member of the current group epoch"
-            }
-            val groupKey =
-                groupKeyDataSource
-                    .load(groupId, state.currentEpoch)
-                    ?: error("Group key was not found")
-            val associatedData =
-                payloadEncoder.encodeMessageEditAssociatedData(
-                    version = ProtocolVersion.CURRENT,
-                    groupId = groupId,
-                    epoch = state.currentEpoch,
-                    editId = editId,
-                    editedAtEpochMilliseconds = editedAtEpochMilliseconds
-                )
-            val encrypted =
-                groupCrypto
-                    .encryptMessage(
-                        plaintext = plaintext.encodeToByteArray(),
-                        associatedData = associatedData,
-                        groupKey = groupKey
-                    ).getOrThrow()
-            val signaturePayload =
-                payloadEncoder.encodeMessageEditSignature(
-                    associatedData = associatedData,
-                    nonce = encrypted.nonce,
-                    ciphertext = encrypted.ciphertext
-                )
-            val signature =
-                groupCrypto
-                    .sign(
-                        payload = signaturePayload,
-                        signingPrivateKey = localSigningKeyPair.privateKey
-                    ).getOrThrow()
-
-            SecuredGroupMessageDto(
-                epoch = state.currentEpoch,
-                nonce = encrypted.nonce,
-                ciphertext = encrypted.ciphertext,
-                senderSignature = signature
-            )
-        }
-
     override suspend fun decryptMessage(
         packet: GroupChatMessagePacket,
         senderContactId: String
@@ -546,122 +440,6 @@ internal class GroupSecurityManager internal constructor(
                     .decodeToString(throwOnInvalidSequence = true)
 
             require(plaintext.isNotBlank()) { "Decrypted group message must not be blank" }
-            plaintext
-        }
-
-    override suspend fun decryptMessageDeletion(
-        packet: GroupMessageDeletionPacket,
-        senderContactId: String
-    ): Result<String> =
-        safeSuspendCall {
-            val state =
-                groupSecurityStore.findState(packet.groupId)
-                    ?: error("Group security state was not found")
-            check(packet.epoch == state.currentEpoch) {
-                "Group message deletion uses epoch ${packet.epoch}, expected ${state.currentEpoch}"
-            }
-            val memberKey =
-                groupSecurityStore.findMemberKey(
-                    groupId = packet.groupId,
-                    epoch = packet.epoch,
-                    contactId = senderContactId
-                ) ?: error("Sender is not a member of the current group epoch")
-            val associatedData =
-                payloadEncoder.encodeMessageDeletionAssociatedData(
-                    version = packet.version,
-                    groupId = packet.groupId,
-                    epoch = packet.epoch,
-                    deletionId = packet.deletionId,
-                    deletedAtEpochMilliseconds = packet.deletedAtEpochMilliseconds
-                )
-            val signaturePayload =
-                payloadEncoder.encodeMessageDeletionSignature(
-                    associatedData = associatedData,
-                    nonce = packet.nonce,
-                    ciphertext = packet.ciphertext
-                )
-
-            groupCrypto
-                .verify(
-                    payload = signaturePayload,
-                    signature = packet.senderSignature,
-                    signingPublicKey = memberKey.signingPublicKey
-                ).getOrThrow()
-
-            val groupKey =
-                groupKeyDataSource
-                    .load(packet.groupId, packet.epoch)
-                    ?: error("Group key was not found")
-            val plaintext =
-                groupCrypto
-                    .decryptMessage(
-                        ciphertext =
-                            GroupCiphertext(
-                                nonce = packet.nonce,
-                                ciphertext = packet.ciphertext
-                            ),
-                        associatedData = associatedData,
-                        groupKey = groupKey
-                    ).getOrThrow()
-                    .decodeToString(throwOnInvalidSequence = true)
-
-            require(plaintext.isNotBlank()) { "Decrypted group message deletion must not be blank" }
-            plaintext
-        }
-
-    override suspend fun decryptMessageEdit(
-        packet: GroupMessageEditPacket,
-        senderContactId: String
-    ): Result<String> =
-        safeSuspendCall {
-            val state =
-                groupSecurityStore.findState(packet.groupId)
-                    ?: error("Group security state was not found")
-            check(packet.epoch == state.currentEpoch) {
-                "Group message edit uses epoch ${packet.epoch}, expected ${state.currentEpoch}"
-            }
-            val memberKey =
-                groupSecurityStore.findMemberKey(
-                    groupId = packet.groupId,
-                    epoch = packet.epoch,
-                    contactId = senderContactId
-                ) ?: error("Sender is not a member of the current group epoch")
-            val associatedData =
-                payloadEncoder.encodeMessageEditAssociatedData(
-                    version = packet.version,
-                    groupId = packet.groupId,
-                    epoch = packet.epoch,
-                    editId = packet.editId,
-                    editedAtEpochMilliseconds = packet.editedAtEpochMilliseconds
-                )
-            val signaturePayload =
-                payloadEncoder.encodeMessageEditSignature(
-                    associatedData = associatedData,
-                    nonce = packet.nonce,
-                    ciphertext = packet.ciphertext
-                )
-
-            groupCrypto
-                .verify(
-                    payload = signaturePayload,
-                    signature = packet.senderSignature,
-                    signingPublicKey = memberKey.signingPublicKey
-                ).getOrThrow()
-
-            val groupKey =
-                groupKeyDataSource
-                    .load(packet.groupId, packet.epoch)
-                    ?: error("Group key was not found")
-            val plaintext =
-                groupCrypto
-                    .decryptMessage(
-                        ciphertext = GroupCiphertext(packet.nonce, packet.ciphertext),
-                        associatedData = associatedData,
-                        groupKey = groupKey
-                    ).getOrThrow()
-                    .decodeToString(throwOnInvalidSequence = true)
-
-            require(plaintext.isNotBlank()) { "Decrypted group message edit must not be blank" }
             plaintext
         }
 
