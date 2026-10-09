@@ -122,7 +122,7 @@ fun AppNavigation(
             mainNavGraph(onContentReady = onStartupContentReady)
 
             chatsNavGraph()
-            attachmentsNavGraph()
+            attachmentsNavGraph(navController)
             mediaNavGraph()
             contactsNavGraph()
             inviteNavGraph()

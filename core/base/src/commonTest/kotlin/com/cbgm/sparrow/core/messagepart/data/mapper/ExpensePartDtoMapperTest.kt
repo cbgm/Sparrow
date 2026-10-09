@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -17,7 +18,7 @@ class ExpensePartDtoMapperTest {
         assertEquals(42L, assertIs<ExpenseBoardDto>(board.toDto()).activatedAtEpochMilliseconds)
     }
 
-    @Test fun expenseRoundTripPreservesReceipt() {
+    @Test fun expenseRoundTripPreservesReceiptAndCategory() {
         val dto = ExpenseDto(
             id = "expense",
             boardId = "board",
@@ -27,13 +28,30 @@ class ExpensePartDtoMapperTest {
             paidByMemberId = "alex",
             allocations = listOf(ExpenseAllocationDto("alex", 500L), ExpenseAllocationDto("mia", 501L)),
             occurredAtEpochMilliseconds = 43L,
-            receipt = ImageDto("receipt", mimeType = "image/jpeg", byteSize = 100L, width = 20, height = 10)
+            receipt = ImageDto("receipt", mimeType = "image/jpeg", byteSize = 100L, width = 20, height = 10),
+            category = "ACTIVITY"
         )
         val expense = assertIs<Expense>(dto.toMessagePart())
         assertEquals("Museum tickets", expense.description)
         assertEquals("receipt", expense.receipt?.id)
+        assertEquals(ExpenseCategory.ACTIVITY, expense.category)
         val roundTrip = assertIs<ExpenseDto>(expense.toDto())
         assertEquals(dto.allocations, roundTrip.allocations)
         assertEquals(dto.receipt, roundTrip.receipt)
+        assertEquals("ACTIVITY", roundTrip.category)
+    }
+
+    @Test fun oldExpenseWithoutCategoryUsesOther() {
+        val dto = ExpenseDto(
+            id = "legacy",
+            boardId = "board",
+            description = "Old expense",
+            amountMinor = 100L,
+            currencyCode = "EUR",
+            paidByMemberId = "alex",
+            allocations = listOf(ExpenseAllocationDto("alex", 100L)),
+            occurredAtEpochMilliseconds = 1L
+        )
+        assertEquals(ExpenseCategory.OTHER, assertIs<Expense>(dto.toMessagePart()).category)
     }
 }

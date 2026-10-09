@@ -19,6 +19,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Contact
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -135,7 +136,8 @@ fun MessagePart.toDto(): MessagePartDto {
             paidByMemberId = paidByMemberId,
             allocations = allocations.map { ExpenseAllocationDto(it.memberId, it.amountMinor) },
             occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
-            receipt = receipt?.toDto() as? ImageDto
+            receipt = receipt?.toDto() as? ImageDto,
+            category = category.name
         )
         is Poll -> PollDto(
             id = id,
@@ -239,5 +241,6 @@ private fun ExpenseDto.toExpense(): Expense =
         paidByMemberId = paidByMemberId,
         allocations = allocations.map { ExpenseAllocation(it.memberId, it.amountMinor) },
         occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
-        receipt = receipt?.toMessagePart() as? Image
+        receipt = receipt?.toMessagePart() as? Image,
+        category = ExpenseCategory.entries.firstOrNull { it.name == category } ?: ExpenseCategory.OTHER
     )

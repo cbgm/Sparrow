@@ -119,8 +119,20 @@ data class Expense(
     val paidByMemberId: String,
     val allocations: List<ExpenseAllocation>,
     val occurredAtEpochMilliseconds: Long,
-    val receipt: Image? = null
+    val receipt: Image? = null,
+    val category: ExpenseCategory = ExpenseCategory.OTHER
 ) : MessagePart
+
+enum class ExpenseCategory {
+    FLIGHT,
+    FOOD,
+    ACTIVITY,
+    PARKING,
+    ACCOMMODATION,
+    TRANSPORT,
+    SHOPPING,
+    OTHER
+}
 
 data class ExpenseAllocation(
     val memberId: String,

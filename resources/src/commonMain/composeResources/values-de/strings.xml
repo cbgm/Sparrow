@@ -752,5 +752,27 @@
     <string name="feature_expenses_paid_by">Bezahlt von</string>
     <string name="feature_expenses_participants">Teilnehmer</string>
     <string name="feature_expenses_equal_split">Gleichmäßig aufteilen</string>
+    <string name="feature_expenses_split_between">Aufteilen auf</string>
+    <string name="feature_expenses_split_all_members">Alle %1$d Mitglieder (gleichmäßig)</string>
+    <string name="feature_expenses_split_selected_members">%1$d Mitglieder (gleichmäßig)</string>
     <string name="feature_expenses_you">Du</string>
+    <string name="feature_expenses_add_multiple">Ausgaben hinzufügen</string>
+    <string name="feature_expenses_send_all">Ausgaben senden</string>
+    <string name="feature_expenses_queued">Hinzugefügte Ausgaben (%1$d)</string>
+    <string name="feature_expenses_add_another">Weitere Ausgabe hinzufügen</string>
+    <string name="feature_expenses_remove">Ausgabe entfernen</string>
+    <string name="feature_expenses_load_failed">Gruppenausgaben konnten nicht geladen werden.</string>
+    <string name="feature_expenses_send_failed">Ausgaben konnten nicht gesendet werden.</string>
+    <string name="feature_expenses_invalid_amount">Ungültiger Ausgabenbetrag</string>
+    <string name="feature_expenses_incomplete_draft">Zuerst Beschreibung, Betrag und Teilnehmer vervollständigen</string>
+    <string name="feature_expenses_category">Kategorie</string>
+    <string name="feature_expenses_category_flight">Flug</string>
+    <string name="feature_expenses_category_food">Essen</string>
+    <string name="feature_expenses_category_activity">Aktivität</string>
+    <string name="feature_expenses_category_parking">Parken</string>
+    <string name="feature_expenses_category_accommodation">Unterkunft</string>
+    <string name="feature_expenses_category_transport">Transport</string>
+    <string name="feature_expenses_category_shopping">Einkaufen</string>
+    <string name="feature_expenses_category_other">Sonstiges</string>
+    <string name="feature_expenses_paid_by_participants">Bezahlt von %1$s · %2$d Teilnehmer</string>
 </resources>

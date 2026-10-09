@@ -125,6 +125,7 @@ data class ExpenseUi(
     val allocations: List<ExpenseAllocationUi>,
     val occurredAtEpochMilliseconds: Long,
     val receipt: ImageUi? = null,
+    val category: String = "OTHER",
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 

@@ -748,5 +748,27 @@
     <string name="feature_expenses_paid_by">Paid by</string>
     <string name="feature_expenses_participants">Participants</string>
     <string name="feature_expenses_equal_split">Split equally</string>
+    <string name="feature_expenses_split_between">Split between</string>
+    <string name="feature_expenses_split_all_members">All %1$d members (equal split)</string>
+    <string name="feature_expenses_split_selected_members">%1$d members (equal split)</string>
     <string name="feature_expenses_you">You</string>
+    <string name="feature_expenses_add_multiple">Add expenses</string>
+    <string name="feature_expenses_send_all">Send expenses</string>
+    <string name="feature_expenses_queued">Added expenses (%1$d)</string>
+    <string name="feature_expenses_add_another">Add another expense</string>
+    <string name="feature_expenses_remove">Remove expense</string>
+    <string name="feature_expenses_load_failed">Could not load group expenses.</string>
+    <string name="feature_expenses_send_failed">Could not send expenses.</string>
+    <string name="feature_expenses_invalid_amount">Invalid expense amount</string>
+    <string name="feature_expenses_incomplete_draft">Complete the description, amount and participants first</string>
+    <string name="feature_expenses_category">Category</string>
+    <string name="feature_expenses_category_flight">Flight</string>
+    <string name="feature_expenses_category_food">Food</string>
+    <string name="feature_expenses_category_activity">Activity</string>
+    <string name="feature_expenses_category_parking">Parking</string>
+    <string name="feature_expenses_category_accommodation">Accommodation</string>
+    <string name="feature_expenses_category_transport">Transport</string>
+    <string name="feature_expenses_category_shopping">Shopping</string>
+    <string name="feature_expenses_category_other">Other</string>
+    <string name="feature_expenses_paid_by_participants">Paid by %1$s · %2$d participants</string>
 </resources>

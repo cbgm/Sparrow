@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.group
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
@@ -19,7 +20,8 @@ class CreateGroupExpenseUseCase(
         description: String,
         amountMinor: Long,
         paidByMemberId: String,
-        participantIds: Set<String>
+        participantIds: Set<String>,
+        category: ExpenseCategory = ExpenseCategory.OTHER
     ): Result<String> = safeSuspendCall {
         val current = context(groupId).getOrThrow()
         check(current.board.id == boardId) { "Expense board has changed" }
@@ -37,7 +39,8 @@ class CreateGroupExpenseUseCase(
             currencyCode = current.board.currencyCode,
             paidByMemberId = paidByMemberId,
             allocations = allocations,
-            occurredAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            occurredAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+            category = category
         )
         ExpensePolicy.requireValid(expense)
         sendGroupMessage(groupId, listOf(expense)).getOrThrow()

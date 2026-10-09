@@ -327,7 +327,8 @@ data class ExpenseDto(
     val paidByMemberId: String,
     val allocations: List<ExpenseAllocationDto>,
     val occurredAtEpochMilliseconds: Long,
-    val receipt: ImageDto? = null
+    val receipt: ImageDto? = null,
+    val category: String = "OTHER"
 ) : MessagePartDto
 
 @Serializable

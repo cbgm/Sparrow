@@ -147,5 +147,6 @@ private fun Expense.toExpenseUi(source: MessagePartSource): ExpenseUi =
         allocations = allocations.map { ExpenseAllocationUi(it.memberId, it.amountMinor) },
         occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
         receipt = receipt?.toImageUi(source),
+        category = category.name,
         source = source.toMessagePartSourceUi()
     )

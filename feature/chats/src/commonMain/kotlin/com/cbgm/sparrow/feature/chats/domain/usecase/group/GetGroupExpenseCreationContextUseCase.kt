@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepo
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 import kotlinx.coroutines.flow.first
 
-/** Resolves group members to stable public signing-key identifiers, never device-local contact IDs. */
+/** Group membership's installed keys identify participants; contact verification is not required. */
 class GetGroupExpenseCreationContextUseCase(
     private val pins: GroupPinRepository,
     private val membership: GroupMembershipRepository,
@@ -25,25 +25,30 @@ class GetGroupExpenseCreationContextUseCase(
             ?.filterIsInstance<ExpenseBoard>()
             ?.singleOrNull { it.closedAtEpochMilliseconds == null }
             ?: error("Group expenses are not active")
+
         val administration = membership.observeAdministration(groupId).first { it.activeMemberCount > 0 }
+        val routingMembers = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
+            .associateBy { it.contactId }
         val contactsById = contacts.observeContacts().first().associateBy { it.id }
-        val localKey = localIdentity.getLocalPublicIdentity().getOrThrow().signingPublicKey
-        val localId = localKey.toExpenseMemberId()
-        val ownName = getLocalIdentityName().getOrNull().orEmpty()
-        val otherMembers = administration.currentMemberContactIds.sorted().map { contactId ->
-            val contact = contactsById[contactId] ?: error("A group member has no contact record")
-            val signingKey = contact.sparrowIdentity?.signingPublicKey
-                ?: error("A group member has no verified public identity")
-            GroupExpenseMember(signingKey.toExpenseMemberId(), contact.displayName?.takeIf(String::isNotBlank) ?: contactId, false)
+        val localId = localIdentity.getLocalPublicIdentity().getOrThrow().signingPublicKey.toExpenseMemberId()
+        val localName = getLocalIdentityName().getOrNull().orEmpty()
+        val members = buildList {
+            add(GroupExpenseMember(localId, localName, true))
+            administration.currentMemberContactIds.sorted().forEach { contactId ->
+                // A group member does not need to have a manually verified Contact identity.
+                // Only membership's current epoch keys are safe to persist in expense attachments.
+                val signingKey = routingMembers[contactId]?.signingPublicKey ?: return@forEach
+                val name = contactsById[contactId]?.displayName?.takeIf(String::isNotBlank) ?: contactId
+                val id = signingKey.toExpenseMemberId()
+                if (id != localId && none { it.id == id }) add(GroupExpenseMember(id, name, false, contactId))
+            }
         }
-        val members = listOf(GroupExpenseMember(localId, ownName, true)) + otherMembers
-        check(members.map { it.id }.distinct().size == members.size) { "Duplicate group member identity" }
         GroupExpenseCreationContext(board, localId, members)
     }
 }
 
 private fun ByteArray.toExpenseMemberId(): String {
-    require(isNotEmpty()) { "Missing signing key" }
+    require(isNotEmpty()) { "Missing group signing key" }
     val hex = "0123456789abcdef"
     return buildString(size * 2) {
         for (byte in this@toExpenseMemberId) {

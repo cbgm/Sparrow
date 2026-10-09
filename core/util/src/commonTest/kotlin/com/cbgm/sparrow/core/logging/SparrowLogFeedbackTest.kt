@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.logging
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -29,6 +30,17 @@ class SparrowLogFeedbackTest {
             if (tag == "LateLogTest") saved.complete(message)
         }
         assertEquals("before sink installation", withTimeout(5_000.milliseconds) { saved.await() })
+    }
+
+    @Test
+    fun globalDisplayOnlyErrorsHaveNoSourcePrefix() = runBlocking {
+        SparrowLog.showError("Invalid expense amount")
+        assertEquals(
+            "Invalid expense amount",
+            withTimeout(5_000.milliseconds) {
+                SparrowLog.errors.first { it == "Invalid expense amount" }
+            }
+        )
     }
 
     @Test

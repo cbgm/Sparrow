@@ -116,6 +116,11 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
+    data class ExpenseSplit(
+        val groupId: String
+    ) : AppRoute
+
+    @Serializable
     data class AttachmentManagement(
         val conversationId: String
     ) : AppRoute

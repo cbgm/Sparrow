@@ -11,5 +11,7 @@ data class GroupExpenseCreationContext(
 data class GroupExpenseMember(
     val id: String,
     val displayName: String,
-    val isLocal: Boolean
+    val isLocal: Boolean,
+    // UI-only local lookup; never serialized into an expense attachment.
+    val avatarContactId: String? = null
 )

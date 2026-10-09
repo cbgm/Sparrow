@@ -16,6 +16,11 @@ object Dimens {
         val buttonSize = 22.dp
     }
 
+    object Expense {
+        val numberBadgeSize = 25.dp
+        val categoryBadgeSize = 40.dp
+    }
+
     object ActionMenu {
         val shadowElevation = 8.dp
         val actionItemHeight = 36.dp
