@@ -50,7 +50,6 @@ import com.cbgm.sparrow.feature.chats.data.group.repository.GroupConversationPro
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupConversationRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupDescriptionRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupIncomingConversationRepositoryImpl
-import com.cbgm.sparrow.feature.chats.data.group.repository.GroupKeyRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupLocalConversationRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupMessageRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupPinRepositoryImpl
@@ -80,7 +79,6 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationR
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupIncomingConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupIndicatorRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupLocalConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
@@ -308,9 +306,6 @@ private fun org.koin.core.module.Module.registerRepositories() {
     singleOf(::GroupPinRepositoryImpl) {
         bind<GroupPinRepository>()
         bind<GroupPinnedAttachmentProvider>()
-    }
-    singleOf(::GroupKeyRepositoryImpl) {
-        bind<GroupKeyRepository>()
     }
     singleOf(::GroupMessageRepositoryImpl) {
         bind<GroupMessageRepository>()

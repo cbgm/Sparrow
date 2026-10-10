@@ -30,11 +30,10 @@ kotlin {
             implementation(projects.feature.media)
             implementation(projects.feature.polls)
             implementation(projects.feature.expenses)
-            api(projects.feature.membership)
+            implementation(projects.feature.membership)
             implementation(projects.feature.voice)
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.safety)
-            implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
