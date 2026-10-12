@@ -42,7 +42,8 @@ internal fun ConversationSummaryDto.toConversationOverview(): ConversationOvervi
                 MessageAttachmentType.VOICE -> ConversationOverviewPreview.VOICE
                 MessageAttachmentType.POLL -> ConversationOverviewPreview.POLL
                 MessageAttachmentType.EXPENSE_BOARD,
-                MessageAttachmentType.EXPENSE -> ConversationOverviewPreview.ATTACHMENT
+                MessageAttachmentType.EXPENSE_BOARD_CLOSED,
+                MessageAttachmentType.EXPENSE -> ConversationOverviewPreview.EXPENSE
             }
     )
 }

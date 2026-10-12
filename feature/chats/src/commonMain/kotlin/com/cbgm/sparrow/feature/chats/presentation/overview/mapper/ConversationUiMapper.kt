@@ -43,6 +43,7 @@ internal fun ConversationOverview.toConversationListItem(): ConversationListItem
                 ConversationOverviewPreview.VOICE -> LastMessagePreviewUi.VOICE
                 ConversationOverviewPreview.POLL -> LastMessagePreviewUi.POLL
                 ConversationOverviewPreview.ATTACHMENT -> LastMessagePreviewUi.ATTACHMENT
+                ConversationOverviewPreview.EXPENSE -> LastMessagePreviewUi.EXPENSE
                 null -> null
             }
     )
