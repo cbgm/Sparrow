@@ -37,6 +37,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseActivityMessage
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import kotlinx.coroutines.flow.first
 
@@ -118,51 +119,68 @@ internal fun MessageList(
                     state = dissolvingListState
                 ) {
                     val systemType = message.groupExtension?.type
-                    if (systemType != null && systemType != ChatMessageType.USER) {
-                        MembershipSystemMessage(
-                            type = systemType,
-                            memberName = message.senderName
-                        )
-                    } else {
-                        MessageBubble(
-                            message = message,
-                            onRetryClick = { onRetryMessage(message.id) },
-                            onSafetyDetailsClick = { warning ->
-                                onSafetyWarningClick(
-                                    message.id,
-                                    message.groupExtension?.senderContactId,
-                                    warning
-                                )
-                            },
-                            onAttachmentClick = { attachmentId ->
-                                onAttachmentClick(
-                                    message.id,
-                                    attachmentId
-                                )
-                            },
-                            onContactClick = onContactClick,
-                            onReplyPreviewClick = replyJumpState.jumpTo,
-                            onContextMessageRequested = onContextMessageRequested,
-                            onReactionsClick = { anchor ->
-                                onReactionBurstRequested(
-                                    MessageReactionBurst(
-                                        reactions = message.reactions,
-                                        anchor = anchor
+                    val expensePart = message.expenseBoardPart ?: message.expenseBoardClosedPart
+                        ?: message.expensePart
+
+                    when {
+                        systemType != null && systemType != ChatMessageType.USER -> {
+                            MembershipSystemMessage(
+                                type = systemType,
+                                memberName = message.senderName
+                            )
+                        }
+
+                        expensePart != null -> {
+                            ExpenseActivityMessage(
+                                part = expensePart,
+                                senderName = message.senderName,
+                                isMine = message.isMine,
+                                isFailed = message.deliveryStatus == MessageDeliveryStatus.FAILED,
+                                onRetry = { onRetryMessage(message.id) }
+                            )
+                        }
+
+                        else -> {
+                            MessageBubble(
+                                message = message,
+                                onRetryClick = { onRetryMessage(message.id) },
+                                onSafetyDetailsClick = { warning ->
+                                    onSafetyWarningClick(
+                                        message.id,
+                                        message.groupExtension?.senderContactId,
+                                        warning
                                     )
-                                )
-                            },
-                            onPollVoteSubmit = onPollVoteSubmit,
-                            onPollClose = onPollClose,
-                            isContextSelected = selectedContextMessageId == message.id,
-                            isSearchHighlighted =
-                                message.id == searchTargetState.highlightedMessageId ||
-                                    message.id == replyJumpState.highlightedMessageId,
-                            leadingContent = {
-                                if (!message.isMine) {
-                                    itemLeadingContent?.invoke(message)
+                                },
+                                onAttachmentClick = { attachmentId ->
+                                    onAttachmentClick(
+                                        message.id,
+                                        attachmentId
+                                    )
+                                },
+                                onContactClick = onContactClick,
+                                onReplyPreviewClick = replyJumpState.jumpTo,
+                                onContextMessageRequested = onContextMessageRequested,
+                                onReactionsClick = { anchor ->
+                                    onReactionBurstRequested(
+                                        MessageReactionBurst(
+                                            reactions = message.reactions,
+                                            anchor = anchor
+                                        )
+                                    )
+                                },
+                                onPollVoteSubmit = onPollVoteSubmit,
+                                onPollClose = onPollClose,
+                                isContextSelected = selectedContextMessageId == message.id,
+                                isSearchHighlighted =
+                                    message.id == searchTargetState.highlightedMessageId ||
+                                        message.id == replyJumpState.highlightedMessageId,
+                                leadingContent = {
+                                    if (!message.isMine) {
+                                        itemLeadingContent?.invoke(message)
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

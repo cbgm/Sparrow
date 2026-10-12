@@ -3,6 +3,7 @@ package com.cbgm.sparrow.core.messagepart.data.mapper
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
@@ -19,6 +20,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Contact
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
@@ -45,6 +47,7 @@ fun MessagePartDto.toMessagePart(): MessagePart {
         is ContactDto -> toContact()
         is PollDto -> toPoll()
         is ExpenseBoardDto -> toExpenseBoard()
+        is ExpenseBoardClosedDto -> toExpenseBoardClosed()
         is ExpenseDto -> toExpense()
     }
 }
@@ -121,6 +124,11 @@ fun MessagePart.toDto(): MessagePartDto {
         is Contact -> (cached as? ContactDto)?.copy(
             mimeType = CONTACT_MIME_TYPE
         ) ?: ContactDto(id = id, mimeType = CONTACT_MIME_TYPE, byteSize = 0L)
+        is ExpenseBoardClosed -> ExpenseBoardClosedDto(
+            id = id,
+            boardId = boardId,
+            closedAtEpochMilliseconds = closedAtEpochMilliseconds
+        )
         is ExpenseBoard -> ExpenseBoardDto(
             id = id,
             currencyCode = currencyCode,
@@ -228,6 +236,13 @@ private fun ExpenseBoardDto.toExpenseBoard(): ExpenseBoard =
         id = id,
         currencyCode = currencyCode,
         activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds
+    )
+
+private fun ExpenseBoardClosedDto.toExpenseBoardClosed(): ExpenseBoardClosed =
+    ExpenseBoardClosed(
+        id = id,
+        boardId = boardId,
         closedAtEpochMilliseconds = closedAtEpochMilliseconds
     )
 

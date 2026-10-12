@@ -9,5 +9,6 @@ enum class MessageAttachmentType {
     CONTACT,
     POLL,
     EXPENSE_BOARD,
+    EXPENSE_BOARD_CLOSED,
     EXPENSE
 }

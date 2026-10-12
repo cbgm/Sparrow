@@ -317,6 +317,14 @@ data class ExpenseBoardDto(
 ) : MessagePartDto
 
 @Serializable
+@SerialName("EXPENSE_BOARD_CLOSED")
+data class ExpenseBoardClosedDto(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long
+) : MessagePartDto
+
+@Serializable
 @SerialName("EXPENSE")
 data class ExpenseDto(
     override val id: String,

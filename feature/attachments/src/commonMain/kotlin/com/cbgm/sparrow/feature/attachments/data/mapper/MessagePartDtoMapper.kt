@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.attachments.data.mapper
 
 import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
@@ -43,6 +44,10 @@ internal fun MessagePartEntity.toDto(
         MessageAttachmentType.EXPENSE_BOARD -> {
             val json = requireNotNull(payload) { "Expense board $id is missing payload" }
             Json.decodeFromString(ExpenseBoardDto.serializer(), json).also { require(it.id == id) }
+        }
+        MessageAttachmentType.EXPENSE_BOARD_CLOSED -> {
+            val json = requireNotNull(payload) { "Expense closure $id is missing payload" }
+            Json.decodeFromString(ExpenseBoardClosedDto.serializer(), json).also { require(it.id == id) }
         }
         MessageAttachmentType.EXPENSE -> {
             val json = requireNotNull(payload) { "Expense $id is missing payload" }

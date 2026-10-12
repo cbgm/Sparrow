@@ -775,4 +775,10 @@
     <string name="feature_expenses_category_shopping">Einkaufen</string>
     <string name="feature_expenses_category_other">Sonstiges</string>
     <string name="feature_expenses_paid_by_participants">Bezahlt von %1$s · %2$d Teilnehmer</string>
+    <string name="feature_expenses_activity_you">Du</string>
+    <string name="feature_expenses_activity_activated">%1$s hat Ausgaben aktiviert</string>
+    <string name="feature_expenses_activity_closed">%1$s hat Ausgaben geschlossen</string>
+    <string name="feature_expenses_activity_added">%1$s hat eine Ausgabe hinzugefügt</string>
+    <string name="feature_expenses_activity_participants">Aufgeteilt auf %1$d Personen</string>
+    <string name="feature_expenses_activity_retry">Erneut versuchen</string>
 </resources>

@@ -13,6 +13,12 @@ object ExpensePolicy {
         }
     }
 
+    fun requireValid(event: ExpenseBoardClosed) {
+        require(event.id.isNotBlank()) { "Expense closure ID must not be blank" }
+        require(event.boardId.isNotBlank() && event.boardId != event.id) { "Invalid closed board ID" }
+        require(event.closedAtEpochMilliseconds > 0L) { "Invalid closing time" }
+    }
+
     fun requireValid(expense: Expense) {
         require(expense.id.isNotBlank()) { "Expense ID must not be blank" }
         require(expense.boardId.isNotBlank() && expense.boardId != expense.id) { "Invalid expense board reference" }

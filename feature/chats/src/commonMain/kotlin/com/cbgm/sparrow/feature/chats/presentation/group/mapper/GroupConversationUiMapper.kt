@@ -7,7 +7,9 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
@@ -172,6 +174,8 @@ internal fun GroupMessage.toMessageBubbleUi(
         voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
         textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
         expenseBoardPart = partsUi.filterIsInstance<ExpenseBoardUi>().firstOrNull(),
+        expenseBoardClosedPart = partsUi.filterIsInstance<ExpenseBoardClosedUi>().firstOrNull(),
+        expensePart = partsUi.filterIsInstance<ExpenseUi>().firstOrNull(),
         pollPart =
             partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
                 canClose = canClosePoll,

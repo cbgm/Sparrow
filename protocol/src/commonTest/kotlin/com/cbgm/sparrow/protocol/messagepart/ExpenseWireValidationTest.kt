@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.protocol.messagepart
 
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.protocol.message.GroupMessageContent
@@ -23,11 +24,13 @@ class ExpenseWireValidationTest {
     @Test fun allowsStandaloneGroupExpenses() {
         GroupMessageContent(parts = listOf(board))
         GroupMessageContent(parts = listOf(expense))
+        GroupMessageContent(parts = listOf(ExpenseBoardClosedDto("close-1", "board", 3L)))
     }
 
     @Test fun rejectsExpensesInDirectMessages() {
         assertFailsWith<IllegalArgumentException> { listOf(board).requireValidWireMessageParts() }
         assertFailsWith<IllegalArgumentException> { listOf(expense).requireValidWireMessageParts() }
+        assertFailsWith<IllegalArgumentException> { listOf(ExpenseBoardClosedDto("close-1", "board", 3L)).requireValidWireMessageParts() }
     }
 
     @Test fun rejectsMixedExpenseMessages() {

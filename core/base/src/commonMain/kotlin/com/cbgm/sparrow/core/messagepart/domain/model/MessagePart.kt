@@ -109,6 +109,13 @@ data class ExpenseBoard(
     val closedAtEpochMilliseconds: Long? = null
 ) : MessagePart
 
+/** A historical event for closing an existing board, with its own message-part ID. */
+data class ExpenseBoardClosed(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long
+) : MessagePart
+
 /** A standalone group attachment associated with an existing expense board. */
 data class Expense(
     override val id: String,

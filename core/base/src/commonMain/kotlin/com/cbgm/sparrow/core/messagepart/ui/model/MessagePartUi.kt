@@ -115,6 +115,13 @@ data class ExpenseBoardUi(
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 
+data class ExpenseBoardClosedUi(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long,
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
+
 data class ExpenseUi(
     override val id: String,
     val boardId: String,

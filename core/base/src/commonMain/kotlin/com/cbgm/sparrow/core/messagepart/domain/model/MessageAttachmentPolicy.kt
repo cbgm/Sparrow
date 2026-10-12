@@ -20,7 +20,7 @@ object MessageAttachmentPolicy {
         require(parts.none { it is Poll } || (parts.size == 1 && parts.single() is Poll)) {
             "A poll cannot contain other attachment parts"
         }
-        require(parts.none { it is Expense || it is ExpenseBoard } || parts.size == 1) {
+        require(parts.none { it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || parts.size == 1) {
             "An expense or expense board must be a standalone group message"
         }
         val voiceCount = parts.count { it is Voice }
@@ -67,6 +67,7 @@ object MessageAttachmentPolicy {
                 is Poll -> PollPolicy.requireValid(part)
                 is Expense -> ExpensePolicy.requireValid(part)
                 is ExpenseBoard -> ExpensePolicy.requireValid(part)
+                is ExpenseBoardClosed -> ExpensePolicy.requireValid(part)
             }
         }
     }
@@ -82,7 +83,7 @@ object MessageAttachmentPolicy {
             is Contact -> Unit
             is Text -> error("Text is not an attachment payload")
             is Poll -> error("Poll is a structured message part")
-            is Expense, is ExpenseBoard -> error("Expenses are structured message parts")
+            is Expense, is ExpenseBoard, is ExpenseBoardClosed -> error("Expenses are structured message parts")
         }
     }
 

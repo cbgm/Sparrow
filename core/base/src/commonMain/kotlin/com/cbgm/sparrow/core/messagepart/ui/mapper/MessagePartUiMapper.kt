@@ -3,6 +3,7 @@ package com.cbgm.sparrow.core.messagepart.ui.mapper
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -14,6 +15,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseAllocationUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
@@ -38,6 +40,7 @@ fun MessagePart.toMessagePartUi(source: MessagePartSource = MessagePartSource.Me
         is Contact -> toContactUi(source)
         is Poll -> toPollUi(source)
         is ExpenseBoard -> toExpenseBoardUi(source)
+        is ExpenseBoardClosed -> toExpenseBoardClosedUi(source)
         is Expense -> toExpenseUi(source)
     }
 
@@ -132,6 +135,14 @@ private fun ExpenseBoard.toExpenseBoardUi(source: MessagePartSource): ExpenseBoa
         id = id,
         currencyCode = currencyCode,
         activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun ExpenseBoardClosed.toExpenseBoardClosedUi(source: MessagePartSource): ExpenseBoardClosedUi =
+    ExpenseBoardClosedUi(
+        id = id,
+        boardId = boardId,
         closedAtEpochMilliseconds = closedAtEpochMilliseconds,
         source = source.toMessagePartSourceUi()
     )

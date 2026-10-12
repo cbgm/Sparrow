@@ -771,4 +771,10 @@
     <string name="feature_expenses_category_shopping">Shopping</string>
     <string name="feature_expenses_category_other">Other</string>
     <string name="feature_expenses_paid_by_participants">Paid by %1$s · %2$d participants</string>
+    <string name="feature_expenses_activity_you">You</string>
+    <string name="feature_expenses_activity_activated">%1$s activated expenses</string>
+    <string name="feature_expenses_activity_closed">%1$s closed expenses</string>
+    <string name="feature_expenses_activity_added">%1$s added an expense</string>
+    <string name="feature_expenses_activity_participants">Split between %1$d participants</string>
+    <string name="feature_expenses_activity_retry">Retry</string>
 </resources>

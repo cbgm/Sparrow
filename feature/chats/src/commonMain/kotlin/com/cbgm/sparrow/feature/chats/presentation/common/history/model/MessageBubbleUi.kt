@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.model
 
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
@@ -35,7 +37,9 @@ data class MessageBubbleUi(
     val voicePart: VoiceUi? = null,
     val textPart: TextUi? = null,
     val pollPart: PollUi? = null,
-    val expenseBoardPart: ExpenseBoardUi? = null
+    val expenseBoardPart: ExpenseBoardUi? = null,
+    val expenseBoardClosedPart: ExpenseBoardClosedUi? = null,
+    val expensePart: ExpenseUi? = null
 )
 
 data class DeliveryProgressUi(
