@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.result.HandleDirectInvitationResultWorkflow
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection

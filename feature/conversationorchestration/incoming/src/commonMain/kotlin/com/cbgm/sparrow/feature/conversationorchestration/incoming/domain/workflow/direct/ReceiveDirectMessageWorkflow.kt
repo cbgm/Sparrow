@@ -25,7 +25,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecas
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.SendDirectMessageWorkflow
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import kotlin.reflect.KClass
 

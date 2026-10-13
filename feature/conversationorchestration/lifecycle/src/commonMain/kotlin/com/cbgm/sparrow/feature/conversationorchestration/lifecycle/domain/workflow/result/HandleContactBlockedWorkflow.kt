@@ -6,7 +6,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct.RevokePeerExchangeWorkflow
 import kotlin.reflect.KClass
 
 /** CheckStillBlocked -> RevokeExchange. An unblocked contact keeps its authorization. */

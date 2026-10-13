@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.result.HandleContactBlockedWorkflow
 
 /** Watches persisted Contact state; only the internal workflow handler performs cross-feature actions. */
 class ContactBlockObserver internal constructor(

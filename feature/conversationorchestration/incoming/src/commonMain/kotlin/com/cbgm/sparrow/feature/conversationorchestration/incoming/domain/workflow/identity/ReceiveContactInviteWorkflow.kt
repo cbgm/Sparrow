@@ -15,7 +15,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.result.RecordIncomingDirectInvitationWorkflow
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeDirection
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
@@ -25,7 +24,6 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationRequestProtocol
-import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
 import kotlin.reflect.KClass
 
 /**

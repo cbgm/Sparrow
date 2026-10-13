@@ -7,8 +7,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.ActivateAuthorizedConversationWorkflow
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.DiscardWaitingDirectMessagesWorkflow
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection

@@ -17,7 +17,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.SendGroupMessageWorkflow
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import kotlin.reflect.KClass
 

@@ -9,7 +9,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.comm
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.SendCurrentGroupPinWorkflow
 import kotlin.reflect.KClass
 
 /**

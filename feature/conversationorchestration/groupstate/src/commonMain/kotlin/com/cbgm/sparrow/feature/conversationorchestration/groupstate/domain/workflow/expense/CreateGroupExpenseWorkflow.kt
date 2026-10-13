@@ -13,7 +13,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.SendGroupMessageWorkflow
 import kotlin.reflect.KClass
 
 /** FindExpenseMembers -> CreateExpense -> SendExpense. */

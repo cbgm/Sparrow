@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.Workflow
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.ActivateAuthorizedConversationWorkflow
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase

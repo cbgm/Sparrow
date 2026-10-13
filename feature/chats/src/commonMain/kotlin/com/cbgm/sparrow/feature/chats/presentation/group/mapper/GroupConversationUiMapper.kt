@@ -38,8 +38,6 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 internal fun toGroupConversationUiState(
     groupId: String,

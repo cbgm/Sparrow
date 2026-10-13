@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.verification.RefreshOwnedGroupVerificationWorkflow
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.PromoteGroupMemberUseCase

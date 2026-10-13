@@ -6,9 +6,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct.RequestReauthorizationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
-import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.join.ResumeApprovedGroupJoinWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake

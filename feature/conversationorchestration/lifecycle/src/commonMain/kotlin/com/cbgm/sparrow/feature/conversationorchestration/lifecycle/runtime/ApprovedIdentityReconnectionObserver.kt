@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.recovery.StartRecoveryInvitationWorkflow
 import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcknowledgeQueuedRecoveryInvitationUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetApprovedIdentityReconnectionUseCase
