@@ -45,6 +45,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpense
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
+import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_expenses_amount
 import com.cbgm.sparrow.resources.feature_expenses_category
@@ -53,6 +54,7 @@ import com.cbgm.sparrow.resources.feature_expenses_description_hint
 import com.cbgm.sparrow.resources.feature_expenses_paid_by
 import com.cbgm.sparrow.resources.feature_expenses_split_all_members
 import com.cbgm.sparrow.resources.feature_expenses_split_between
+import com.cbgm.sparrow.resources.feature_expenses_split_custom_members
 import com.cbgm.sparrow.resources.feature_expenses_split_selected_members
 import org.jetbrains.compose.resources.stringResource
 
@@ -132,13 +134,16 @@ private fun MemberSelection(
 ) {
     val allMembersSelected = participants.isNotEmpty() &&
         draft.participantIds.size == participants.size
-    val splitSummary = if (allMembersSelected) {
-        stringResource(
+    val splitSummary = when {
+        draft.splitMode == ExpenseSplitModeUi.CUSTOM -> stringResource(
+            Res.string.feature_expenses_split_custom_members,
+            draft.participantIds.size
+        )
+        allMembersSelected -> stringResource(
             Res.string.feature_expenses_split_all_members,
             draft.participantIds.size
         )
-    } else {
-        stringResource(
+        else -> stringResource(
             Res.string.feature_expenses_split_selected_members,
             draft.participantIds.size
         )

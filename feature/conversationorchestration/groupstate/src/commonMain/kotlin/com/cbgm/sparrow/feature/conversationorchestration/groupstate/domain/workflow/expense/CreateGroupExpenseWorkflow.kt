@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.wor
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseSplit
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
@@ -53,7 +52,7 @@ class CreateGroupExpenseWorkflow internal constructor(
     private fun createExpense(members: GroupExpenseMembers, command: GroupMessageCommand.CreateExpense): Expense {
         check(members.board.id == command.boardId) { "Expense board has changed" }
         check(command.paidByMemberId in members.memberIds) { "Payer is no longer a group member" }
-        check(command.participantIds.all { it in members.memberIds }) { "Expense includes a former group member" }
+        check(command.allocations.all { it.memberId in members.memberIds }) { "Expense includes a former group member" }
         check(members.board.currencyCode == SUPPORTED_CURRENCY) { "Unsupported expense currency" }
         val expense =
             Expense(
@@ -63,7 +62,7 @@ class CreateGroupExpenseWorkflow internal constructor(
                 amountMinor = command.amountMinor,
                 currencyCode = members.board.currencyCode,
                 paidByMemberId = command.paidByMemberId,
-                allocations = ExpenseSplit.evenly(command.amountMinor, command.participantIds),
+                allocations = command.allocations.sortedBy { it.memberId },
                 occurredAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 category = command.category
             )

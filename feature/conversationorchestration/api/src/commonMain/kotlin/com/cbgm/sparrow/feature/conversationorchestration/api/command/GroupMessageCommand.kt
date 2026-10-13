@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.api.command
 
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
@@ -81,7 +82,7 @@ sealed interface GroupMessageCommand : ConversationCommand {
         val description: String,
         val amountMinor: Long,
         val paidByMemberId: String,
-        val participantIds: Set<String>,
+        val allocations: List<ExpenseAllocation>,
         val category: ExpenseCategory
     ) : GroupMessageCommand
 }

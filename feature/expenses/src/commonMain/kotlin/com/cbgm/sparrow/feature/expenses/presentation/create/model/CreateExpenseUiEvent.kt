@@ -21,11 +21,22 @@ sealed interface CreateExpenseUiEvent {
         val id: String
     ) : CreateExpenseUiEvent
 
+    data class SplitModeSelected(
+        val mode: ExpenseSplitModeUi
+    ) : CreateExpenseUiEvent
+
+    data class CustomAmountChanged(
+        val id: String,
+        val text: String
+    ) : CreateExpenseUiEvent
+
     data class RemoveQueuedClicked(
         val index: Int
     ) : CreateExpenseUiEvent
 
     data object SplitPickerClicked : CreateExpenseUiEvent
+
+    data object SplitDoneClicked : CreateExpenseUiEvent
 
     data object AddAnotherClicked : CreateExpenseUiEvent
 

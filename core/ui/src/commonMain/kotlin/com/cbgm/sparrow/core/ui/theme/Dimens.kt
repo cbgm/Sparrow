@@ -20,6 +20,7 @@ object Dimens {
         val numberBadgeSize = 25.dp
         val categoryBadgeSize = 40.dp
         val pinIconTileSize = 36.dp
+        val customAmountFieldWidth = 112.dp
     }
 
     object ActionMenu {

@@ -789,4 +789,20 @@
     <string name="feature_expenses_pin_you_owe">Du schuldest</string>
     <string name="feature_expenses_pin_you_are_owed">Du bekommst</string>
     <string name="feature_expenses_pin_settled">Ausgeglichen</string>
+    <string name="feature_expenses_split_custom_members">%1$d Mitglieder (individuell)</string>
+    <string name="feature_expenses_split_subtitle">Wähle aus, wer sich diese Ausgabe teilt.</string>
+    <string name="feature_expenses_split_equal_title">Gleich aufteilen</string>
+    <string name="feature_expenses_split_equal_description">Alle zahlen gleich viel</string>
+    <string name="feature_expenses_split_custom_title">Individuell</string>
+    <string name="feature_expenses_split_custom_description">Beträge selbst festlegen</string>
+    <plurals name="feature_expenses_split_participant_count">
+        <item quantity="one">%1$d Teilnehmer</item>
+        <item quantity="other">%1$d Teilnehmer</item>
+    </plurals>
+    <string name="feature_expenses_split_equal_summary">Gesamtbetrag %1$s · je %2$s</string>
+    <string name="feature_expenses_split_custom_summary">%1$s von %2$s verteilt</string>
+    <string name="feature_expenses_split_remaining">Noch %1$s offen</string>
+    <string name="feature_expenses_split_exceeded">%1$s zu viel</string>
+    <string name="feature_expenses_split_balanced">Alles verteilt</string>
+    <string name="feature_expenses_split_done">Fertig</string>
 </resources>

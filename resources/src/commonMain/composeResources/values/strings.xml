@@ -785,4 +785,20 @@
     <string name="feature_expenses_pin_you_owe">You owe</string>
     <string name="feature_expenses_pin_you_are_owed">You're owed</string>
     <string name="feature_expenses_pin_settled">Settled up</string>
+    <string name="feature_expenses_split_custom_members">%1$d members (custom split)</string>
+    <string name="feature_expenses_split_subtitle">Select who should share this expense.</string>
+    <string name="feature_expenses_split_equal_title">Equal split</string>
+    <string name="feature_expenses_split_equal_description">Everyone pays the same</string>
+    <string name="feature_expenses_split_custom_title">Custom split</string>
+    <string name="feature_expenses_split_custom_description">Set individual amounts</string>
+    <plurals name="feature_expenses_split_participant_count">
+        <item quantity="one">%1$d participant</item>
+        <item quantity="other">%1$d participants</item>
+    </plurals>
+    <string name="feature_expenses_split_equal_summary">Total amount %1$s · %2$s each</string>
+    <string name="feature_expenses_split_custom_summary">%1$s of %2$s assigned</string>
+    <string name="feature_expenses_split_remaining">%1$s left to assign</string>
+    <string name="feature_expenses_split_exceeded">%1$s too much</string>
+    <string name="feature_expenses_split_balanced">Everything assigned</string>
+    <string name="feature_expenses_split_done">Done</string>
 </resources>

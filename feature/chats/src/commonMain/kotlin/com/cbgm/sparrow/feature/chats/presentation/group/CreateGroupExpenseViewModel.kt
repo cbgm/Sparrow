@@ -7,12 +7,15 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupExpenseCreationContextUseCase
+import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.nextDraft
+import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toAmountInput
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toCreateExpenseUiState
+import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toExpenseAllocations
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toExpenseCategory
+import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.withSplitMode
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
-import com.cbgm.sparrow.feature.expenses.domain.ExpenseMoney
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
@@ -58,20 +61,25 @@ class CreateGroupExpenseViewModel(
         when (event) {
             is CreateExpenseUiEvent.DescriptionChanged -> updateDraft { copy(description = event.text.take(500)) }
             is CreateExpenseUiEvent.CategorySelected -> updateDraft { copy(category = event.category) }
-            is CreateExpenseUiEvent.AmountChanged -> updateDraft {
-                copy(amount = event.text.filter { it.isDigit() || it == '.' || it == ',' }.take(24))
-            }
+            is CreateExpenseUiEvent.AmountChanged -> updateDraft { copy(amount = event.text.toAmountInput()) }
             is CreateExpenseUiEvent.PayerSelected -> updateDraft {
                 if (state.participants.any { it.id == event.id }) copy(payerId = event.id) else this
             }
             is CreateExpenseUiEvent.ParticipantToggled -> updateDraft {
                 if (state.participants.none { it.id == event.id }) {
                     this
+                } else if (event.id in participantIds) {
+                    copy(participantIds = participantIds - event.id, customAmounts = customAmounts - event.id)
                 } else {
-                    copy(
-                        participantIds =
-                            if (event.id in participantIds) participantIds - event.id else participantIds + event.id
-                    )
+                    copy(participantIds = participantIds + event.id)
+                }
+            }
+            is CreateExpenseUiEvent.SplitModeSelected -> updateDraft { withSplitMode(event.mode) }
+            is CreateExpenseUiEvent.CustomAmountChanged -> updateDraft {
+                if (event.id !in participantIds) {
+                    this
+                } else {
+                    copy(customAmounts = customAmounts + (event.id to event.text.toAmountInput()))
                 }
             }
             is CreateExpenseUiEvent.RemoveQueuedClicked -> _uiState.update { current ->
@@ -82,6 +90,7 @@ class CreateGroupExpenseViewModel(
                 }
             }
             CreateExpenseUiEvent.SplitPickerClicked -> navigator.navigateTo(AppRoute.ExpenseSplit(groupId))
+            CreateExpenseUiEvent.SplitDoneClicked -> navigator.popBackStack()
             CreateExpenseUiEvent.AddAnotherClicked -> queueDraft()
             CreateExpenseUiEvent.SendClicked -> sendAll()
             CreateExpenseUiEvent.BackClicked -> navigator.popBackStack()
@@ -101,21 +110,14 @@ class CreateGroupExpenseViewModel(
         _uiState.update {
             it.copy(
                 queued = it.queued + state.draft,
-                draft = ExpenseDraftUi(
-                    payerId = state.draft.payerId,
-                    participantIds = state.draft.participantIds,
-                    category = state.draft.category
-                )
+                draft = state.draft.nextDraft()
             )
         }
     }
 
     private fun reportDraftError(draft: ExpenseDraftUi) {
         viewModelScope.launch {
-            val amount = ExpenseMoney.parseEuroCents(draft.amount)
-            val message = if (draft.amount.isNotBlank() &&
-                (amount == null || amount < draft.participantIds.size)
-            ) {
+            val message = if (draft.amount.isNotBlank() && draft.allocationsMinor() == null) {
                 getString(Res.string.feature_expenses_invalid_amount)
             } else {
                 getString(Res.string.feature_expenses_incomplete_draft)
@@ -134,11 +136,7 @@ class CreateGroupExpenseViewModel(
         _uiState.update {
             it.copy(
                 queued = pending,
-                draft = ExpenseDraftUi(
-                    payerId = state.draft.payerId,
-                    participantIds = state.draft.participantIds,
-                    category = state.draft.category
-                ),
+                draft = state.draft.nextDraft(),
                 isSending = true
             )
         }
@@ -146,8 +144,9 @@ class CreateGroupExpenseViewModel(
             while (_uiState.value.queued.isNotEmpty()) {
                 val current = _uiState.value
                 val next = current.queued.first()
-                val amount = ExpenseMoney.parseEuroCents(next.amount)
-                if (amount == null) {
+                val amount = next.totalMinor
+                val allocations = next.toExpenseAllocations()
+                if (amount == null || allocations == null) {
                     _uiState.update { it.copy(isSending = false) }
                     SparrowLog.showError(getString(Res.string.feature_expenses_invalid_amount))
                     return@launch
@@ -160,7 +159,7 @@ class CreateGroupExpenseViewModel(
                             description = next.description,
                             amountMinor = amount,
                             paidByMemberId = next.payerId,
-                            participantIds = next.participantIds,
+                            allocations = allocations,
                             category = next.category.toExpenseCategory()
                         )
                     )
