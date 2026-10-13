@@ -42,6 +42,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddS
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -150,7 +151,7 @@ fun DirectConversationScreen(
                 }
             },
             onCopyClick = {
-                contextState.message?.textPart?.text?.takeIf(String::isNotBlank)
+                contextState.message?.textOrNull()?.takeIf(String::isNotBlank)
                     ?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { contextAnchor ->
                     feedbackOverlay =

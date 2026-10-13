@@ -32,6 +32,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.expenseActivityPartOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
@@ -119,8 +120,7 @@ internal fun MessageList(
                     state = dissolvingListState
                 ) {
                     val systemType = message.groupExtension?.type
-                    val expensePart = message.expenseBoardPart ?: message.expenseBoardClosedPart
-                        ?: message.expensePart
+                    val expensePart = message.expenseActivityPartOrNull()
 
                     when {
                         systemType != null && systemType != ChatMessageType.USER -> {
@@ -290,12 +290,13 @@ private fun MessageListPreview() {
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.READ,
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Yes, that sounds good 👍",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "3",
@@ -304,12 +305,13 @@ private fun MessageListPreview() {
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.READ,
                         senderName = "Chris",
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Should we meet around 18:00? Or do we not? Tell me",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "2",
@@ -317,12 +319,13 @@ private fun MessageListPreview() {
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.DELIVERED,
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "I'm free this evening.",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "1",
@@ -339,12 +342,13 @@ private fun MessageListPreview() {
                                     reactedByMe = false
                                 )
                             ),
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Hey! How are you?",
                                 isContentFailed = false
                             )
+                        )
                     )
                 )
             }

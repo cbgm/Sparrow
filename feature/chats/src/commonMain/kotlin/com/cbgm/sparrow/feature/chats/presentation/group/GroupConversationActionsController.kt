@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
@@ -232,7 +233,7 @@ class GroupConversationActionsController(
     fun startEdit(messageId: String) {
         val message = conversationState.value.messages.firstOrNull { it.id == messageId } ?: return
         if (!message.canEdit) return
-        val text = message.textPart?.text?.takeIf(String::isNotBlank) ?: return
+        val text = message.textOrNull()?.takeIf(String::isNotBlank) ?: return
         composerController.edit(messageId, text)
         errors.clear()
     }

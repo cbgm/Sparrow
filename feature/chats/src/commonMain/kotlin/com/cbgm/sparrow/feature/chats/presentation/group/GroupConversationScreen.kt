@@ -41,6 +41,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Hist
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -52,10 +53,9 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedCont
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
-import com.cbgm.sparrow.feature.expenses.presentation.pin.ExpensePinnedBar
-import com.cbgm.sparrow.feature.expenses.presentation.pin.model.ExpensePinUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
@@ -79,7 +79,7 @@ fun GroupConversationScreen(
     indicatorState: IndicatorUiState,
     membershipState: GroupMembershipUiState,
     historyState: MessageHistoryUiState,
-    expensePin: ExpensePinUi?,
+    pin: GroupPinUi?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -149,7 +149,7 @@ fun GroupConversationScreen(
                 contextMessage?.id?.let { onUiEvent(GroupConversationUiEvent.EditMessage(it)) }
             },
             onCopyClick = {
-                contextMessage?.textPart?.text?.takeIf(String::isNotBlank)
+                contextMessage?.textOrNull()?.takeIf(String::isNotBlank)
                     ?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { anchor ->
                     feedbackOverlay =
@@ -204,17 +204,9 @@ fun GroupConversationScreen(
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
                         }
-                        val pinnedMessage = uiState.pinnedMessage
-                        if (pinnedMessage?.expenseBoardPart != null && expensePin != null) {
-                            ExpensePinnedBar(
-                                pin = expensePin,
-                                onClick = { showPinnedMessage = true }
-                            )
-                        } else if (pinnedMessage != null) {
+                        pin?.let { pin ->
                             GroupPinnedMessageBar(
-                                message = pinnedMessage,
-                                pinnedAtEpochMilliseconds = uiState.pinnedAtEpochMilliseconds,
-                                canUnpin = uiState.isLocalAdmin && !uiState.expensesActive,
+                                pin = pin,
                                 onClick = { showPinnedMessage = true },
                                 onUnpinClick = { onUiEvent(GroupConversationUiEvent.UnpinMessage) }
                             )

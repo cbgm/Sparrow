@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseSummary
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
@@ -18,12 +19,14 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toExpensePinUi
+import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupPinUi
+import com.cbgm.sparrow.feature.chats.presentation.group.model.ExpenseSummaryLoadUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
-import com.cbgm.sparrow.feature.expenses.presentation.pin.model.ExpensePinUi
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
@@ -33,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -137,17 +141,28 @@ class GroupConversationViewModel(
     val indicatorState = state.indicatorState
     val historyState = state.historyState
     val errorMessage = state.errorMessage
-    val expensePinState: StateFlow<ExpensePinUi?> =
+
+    private val expenseSummary: StateFlow<ExpenseSummaryLoadUi> =
         observeExpenseSummary(groupId)
-            .map { summary -> summary?.toExpensePinUi() }
-            .catch { error ->
+            .map<GroupExpenseSummary?, ExpenseSummaryLoadUi> { summary ->
+                ExpenseSummaryLoadUi.Loaded(summary?.toExpensePinUi())
+            }.catch { error ->
                 logger.error(error) { "Expense summary could not be observed" }
-                emit(null)
+                emit(ExpenseSummaryLoadUi.Failed)
             }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = null
+                started = SharingStarted.Eagerly,
+                initialValue = ExpenseSummaryLoadUi.Loading
             )
+
+    val pinState: StateFlow<GroupPinUi?> =
+        combine(conversationState, expenseSummary) { conversation, summary ->
+            conversation.toGroupPinUi(summary)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
 
     init {
         // Context-load failures are not guaranteed to pass through setError().

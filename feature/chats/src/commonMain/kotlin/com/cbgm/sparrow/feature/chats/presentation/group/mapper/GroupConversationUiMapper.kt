@@ -7,22 +7,14 @@ import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
-import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
-import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
-import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
 import com.cbgm.sparrow.feature.chats.domain.model.group.resolveComposerState
 import com.cbgm.sparrow.feature.chats.domain.model.isEditable
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.activeExpenseBoard
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.DeliveryProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -87,7 +79,7 @@ internal fun toGroupConversationUiState(
         groupId = groupId,
         title = conversation?.title.orEmpty(),
         pinnedMessage = pinnedMessage,
-        expensesActive = pinnedMessage?.expenseBoardPart?.let { it.closedAtEpochMilliseconds == null } ?: false,
+        expensesActive = pinnedMessage?.activeExpenseBoard != null,
         pinnedAtEpochMilliseconds = pin?.pinnedAtEpochMilliseconds ?: 0L,
         isLocalAdmin = administration.isLocalAdmin,
         messages = conversation.toMessageBubbleUi(
@@ -165,20 +157,9 @@ internal fun GroupMessage.toMessageBubbleUi(
                 reactedByMe = values.any { it.isMine }
             )
         },
-        imageVideoParts = partsUi.filterIsInstance<ImageVideoUi>(),
-        fileParts = partsUi.filterIsInstance<FileUi>(),
-        locationPart = partsUi.filterIsInstance<LocationUi>().firstOrNull(),
-        contactPart = partsUi.filterIsInstance<ContactUi>().firstOrNull(),
-        voicePart = partsUi.filterIsInstance<VoiceUi>().firstOrNull(),
-        textPart = partsUi.filterIsInstance<TextUi>().firstOrNull(),
-        expenseBoardPart = partsUi.filterIsInstance<ExpenseBoardUi>().firstOrNull(),
-        expenseBoardClosedPart = partsUi.filterIsInstance<ExpenseBoardClosedUi>().firstOrNull(),
-        expensePart = partsUi.filterIsInstance<ExpenseUi>().firstOrNull(),
-        pollPart =
-            partsUi.filterIsInstance<PollUi>().firstOrNull()?.copy(
-                canClose = canClosePoll,
-                voterDisplayNames = pollVoterDisplayNames
-            ),
+        parts = partsUi.map { part ->
+            if (part is PollUi) part.copy(canClose = canClosePoll, voterDisplayNames = pollVoterDisplayNames) else part
+        },
         groupExtension = GroupMessageUi(
             type = type,
             senderContactId = senderContactId

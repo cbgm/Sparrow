@@ -1,13 +1,10 @@
 package com.cbgm.sparrow.feature.expenses.presentation.pin
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -18,7 +15,6 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -43,81 +38,63 @@ import com.cbgm.sparrow.resources.feature_expenses_pin_you_owe
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Pinned summary of the active expense board; tapping it opens the expense overview. */
 @Composable
-fun ExpensePinnedBar(
+fun ExpensePinContent(
     pin: ExpensePinUi,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val title = stringResource(Res.string.feature_expenses_board)
     val count = pluralStringResource(Res.plurals.feature_expenses_pin_count, pin.expenseCount, pin.expenseCount)
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.base
-            )
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(
-            Dimens.Base.borderStrokeWidth,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+    Row(
+        modifier = modifier.padding(
+            start = MaterialTheme.spacing.small,
+            end = MaterialTheme.spacing.base,
+            top = MaterialTheme.spacing.base,
+            bottom = MaterialTheme.spacing.base
         ),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.OpaqueBar)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
-        Row(
-            modifier = Modifier.padding(
-                start = MaterialTheme.spacing.small,
-                end = MaterialTheme.spacing.base,
-                top = MaterialTheme.spacing.base,
-                bottom = MaterialTheme.spacing.base
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        Box(
+            modifier = Modifier
+                .size(Dimens.Expense.pinIconTileSize)
+                .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(Dimens.Expense.pinIconTileSize)
-                    .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountBalanceWallet,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "$title · $count".uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = stringResource(Res.string.feature_expenses_pin_total, pin.totalLabel),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            ExpensePinBalance(pin.balance)
-
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = Icons.Default.AccountBalanceWallet,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.primary
             )
         }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "$title \u00B7 $count".uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = stringResource(Res.string.feature_expenses_pin_total, pin.totalLabel),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        ExpensePinBalance(pin.balance)
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -168,45 +145,42 @@ private fun BalanceBadge(
 
 @Preview
 @Composable
-private fun ExpensePinnedBarOwesPreview() {
+private fun ExpensePinContentOwesPreview() {
     SparrowTheme {
-        ExpensePinnedBar(
+        ExpensePinContent(
             pin = ExpensePinUi(
                 expenseCount = 5,
                 totalLabel = "€1,086.50",
                 balance = ExpensePinBalanceUi.Owes("€168.80")
-            ),
-            onClick = {}
+            )
         )
     }
 }
 
 @Preview
 @Composable
-private fun ExpensePinnedBarOwedPreview() {
+private fun ExpensePinContentOwedPreview() {
     SparrowTheme {
-        ExpensePinnedBar(
+        ExpensePinContent(
             pin = ExpensePinUi(
                 expenseCount = 1,
                 totalLabel = "€650.00",
                 balance = ExpensePinBalanceUi.Owed("€432.70")
-            ),
-            onClick = {}
+            )
         )
     }
 }
 
 @Preview
 @Composable
-private fun ExpensePinnedBarSettledPreview() {
+private fun ExpensePinContentSettledPreview() {
     SparrowTheme {
-        ExpensePinnedBar(
+        ExpensePinContent(
             pin = ExpensePinUi(
                 expenseCount = 0,
                 totalLabel = "€0.00",
                 balance = ExpensePinBalanceUi.Settled
-            ),
-            onClick = {}
+            )
         )
     }
 }
