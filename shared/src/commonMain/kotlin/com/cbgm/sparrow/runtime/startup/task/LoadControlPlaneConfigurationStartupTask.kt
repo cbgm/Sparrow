@@ -12,6 +12,7 @@ class LoadControlPlaneConfigurationStartupTask(
     private val logger = SparrowLog.withTag("LoadControlPlaneConfigurationStartupTask")
 
     override val name = "load saved control-plane configuration"
+    override val requiredForTransport = true
     override val waitForCompletion = true
 
     override suspend fun run(): StartupTaskResult {

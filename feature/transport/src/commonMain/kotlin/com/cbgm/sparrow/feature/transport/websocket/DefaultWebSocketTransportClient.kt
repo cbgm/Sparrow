@@ -53,7 +53,9 @@ class DefaultWebSocketTransportClient internal constructor(
     private val pendingRequestRegistry: GatewayPendingRequestRegistry
 ) : WebSocketTransportClient {
     private val logger = SparrowLog.withTag("DefaultWebSocketTransportClient")
-    private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // IO, not Default: the many CPU-heavy startup tasks share Default and would delay the session.
+    private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val mutableConnectionState =
         MutableStateFlow<TransportConnectionState>(TransportConnectionState.Disconnected)
@@ -238,6 +240,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
         val connectionId = IdGenerator.generate()
         val generation = SystemClock.nowEpochMilliseconds()
+        val gatewayInformation = presenceRouteCoordinator.prefetchGatewayInformation(clientScope, serverUrl)
 
         try {
             httpClient.webSocket(urlString = serverUrl) {
@@ -273,6 +276,7 @@ class DefaultWebSocketTransportClient internal constructor(
                             mutableConnectionState.value =
                                 TransportConnectionState.Connected(routingId = localRoutingId)
                         },
+                        prefetchedGatewayInformation = gatewayInformation,
                         onFailure = { error ->
                             mutableRegisteredRoutingAliases.value = emptySet()
                             mutableConnectionState.value =
@@ -331,6 +335,7 @@ class DefaultWebSocketTransportClient internal constructor(
                     message = error.message ?: "WebSocket connection failed"
                 )
         } finally {
+            gatewayInformation.cancel()
             mutableRegisteredRoutingAliases.value = emptySet()
             sessionMutex.withLock {
                 session = null

@@ -8,6 +8,7 @@ class InitializeCryptoRuntimeStartupTask(
     private val initialization: AppInitializationDependencies
 ) : StartupTask {
     override val name = "crypto runtime"
+    override val requiredForTransport = true
     override val waitForCompletion = true
 
     override suspend fun run(): StartupTaskResult {

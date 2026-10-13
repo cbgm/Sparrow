@@ -40,8 +40,11 @@ class DefaultTransportConnectionManager(
 ) : TransportConnectionManager,
     TransportDiagnosticsProvider {
     private val logger = SparrowLog.withTag("DefaultTransportConnectionManager")
-    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // IO, not Default: the many CPU-heavy startup tasks share Default and would delay connecting.
+    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var connectionLoopJob: Job? = null
+    private var directoryRefreshJob: Job? = null
     private var resolvedEndpoints: List<NodeEndpoint> = emptyList()
 
     private val failedNodeTracker =
@@ -108,6 +111,7 @@ class DefaultTransportConnectionManager(
         val activeJob = connectionLoopJob
 
         connectionLoopJob = null
+        directoryRefreshJob?.cancel()
         activeJob?.cancelAndJoin()
         webSocketTransportClient.disconnect()
         mutableConnectionState.value = TransportConnectionState.Disconnected
@@ -119,9 +123,13 @@ class DefaultTransportConnectionManager(
 
     private suspend fun runConnectionLoop() {
         var reconnectDelay = INITIAL_RECONNECT_DELAY_MILLISECONDS
+        // Connect from the cached directory first; after a failed attempt wait for a fresh one,
+        // so a removed or changed node is not retried from stale data.
+        var useCachedDirectory = true
 
         while (connectionScope.isActive) {
-            val connected = runConnectionAttempt()
+            val connected = runConnectionAttempt(useCachedDirectory)
+            useCachedDirectory = connected
 
             runCatching {
                 webSocketTransportClient.disconnect()
@@ -140,7 +148,7 @@ class DefaultTransportConnectionManager(
         }
     }
 
-    private suspend fun runConnectionAttempt(): Boolean {
+    private suspend fun runConnectionAttempt(useCachedDirectory: Boolean): Boolean {
         var selectedEndpoint: NodeEndpoint? = null
 
         return try {
@@ -148,7 +156,7 @@ class DefaultTransportConnectionManager(
             diagnosticsState.connecting()
 
             val routingId = localRoutingIdProvider.getLocalRoutingId().getOrThrow()
-            val endpoint = resolveEndpoint(routingId)
+            val endpoint = resolveEndpoint(routingId, useCachedDirectory)
             selectedEndpoint = endpoint
 
             connect(endpoint = endpoint, routingId = routingId)
@@ -197,18 +205,25 @@ class DefaultTransportConnectionManager(
         }
     }
 
-    private suspend fun resolveEndpoint(routingId: String): NodeEndpoint {
-        val endpoints = nodeEndpointResolver.resolve(routingId).getOrThrow()
+    // With a usable cache the connection starts right away and the directory is refreshed in
+    // parallel; otherwise the fresh directory is fetched before connecting.
+    private suspend fun resolveEndpoint(
+        routingId: String,
+        useCachedDirectory: Boolean
+    ): NodeEndpoint {
+        val cachedEndpoints =
+            if (useCachedDirectory) nodeEndpointResolver.resolveCached(routingId).getOrNull() else null
+        val endpoints =
+            if (cachedEndpoints != null) {
+                refreshDirectoryInBackground(routingId)
+                cachedEndpoints
+            } else {
+                // resolveCached already rejected the cache, so skip checking it again and fetch.
+                nodeEndpointResolver.resolve(routingId, forceRefresh = useCachedDirectory).getOrThrow()
+            }
         val availableEndpoints = failedNodeTracker.available(endpoints)
 
-        resolvedEndpoints = endpoints
-        diagnosticsState.resolved(
-            endpoints = endpoints,
-            cooldownUntilEpochMillisecondsByNodeId =
-                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
-            registryAuthorityVerified = true,
-            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
-        )
+        publishResolvedEndpoints(endpoints)
 
         availableEndpoints.firstOrNull()?.let { return it }
 
@@ -219,6 +234,33 @@ class DefaultTransportConnectionManager(
                 "Every discovered gateway node is cooling down; probing ${endpoint.nodeId}"
             }
         }
+    }
+
+    // Fetches the fresh directory without blocking the connection and updates the known nodes.
+    // The fetched directory is cached, so a retry after a failed attempt already uses it.
+    private fun refreshDirectoryInBackground(routingId: String) {
+        if (directoryRefreshJob?.isActive == true) return
+        directoryRefreshJob =
+            connectionScope.launch {
+                nodeEndpointResolver.resolve(routingId).fold(
+                    onSuccess = ::publishResolvedEndpoints,
+                    onFailure = { error ->
+                        if (error is CancellationException) throw error
+                        logger.debug { "Node directory refresh failed: ${error.message}" }
+                    }
+                )
+            }
+    }
+
+    private fun publishResolvedEndpoints(endpoints: List<NodeEndpoint>) {
+        resolvedEndpoints = endpoints
+        diagnosticsState.resolved(
+            endpoints = endpoints,
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
+            registryAuthorityVerified = true,
+            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
+        )
     }
 
     private fun connect(

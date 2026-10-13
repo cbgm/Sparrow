@@ -49,10 +49,8 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.TimeSource
 
 private const val OFFLINE_HINT_DELAY_MILLIS = 5_000L
-private const val STARTUP_OFFLINE_HINT_DELAY_MILLIS = 5_000L
 
 private enum class FeedbackKind { ERROR, HINT }
 
@@ -197,7 +195,6 @@ private fun ObserveConnectionSnackbar(
     ) {
         if (!startupComplete) return@LaunchedEffect
 
-        val startedAt = TimeSource.Monotonic.markNow()
         var connectionUnavailable = false
         var offlineHintWasShown = false
 
@@ -208,8 +205,7 @@ private fun ObserveConnectionSnackbar(
 
             pendingOfflineHintJob = launch {
                 // Do not report a transient Connecting state as offline.
-                val startupGrace = STARTUP_OFFLINE_HINT_DELAY_MILLIS.milliseconds - startedAt.elapsedNow()
-                delay(maxOf(OFFLINE_HINT_DELAY_MILLIS.milliseconds, startupGrace))
+                delay(OFFLINE_HINT_DELAY_MILLIS.milliseconds)
 
                 offlineHintWasShown = true
 
