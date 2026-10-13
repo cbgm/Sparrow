@@ -126,28 +126,18 @@ fun AttachmentBar(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    val hasCloseAction = onClickCloseExpenses != null
-
-                    FilledButton(
-                        imageVector = if (isExpensesActive && hasCloseAction) {
-                            Icons.Filled.Close
-                        } else {
-                            Icons.Filled.AccountBalanceWallet
-                        },
-                        onClick = if (isExpensesActive) {
-                            (onClickCloseExpenses ?: {})
-                        } else {
-                            (onClickActivateExpenses ?: {})
-                        },
-                        tint = if (isExpensesActive && hasCloseAction) {
-                            MaterialTheme.colorScheme.error
-                        } else if (isExpensesActive) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
-                        enabled = !isExpensesActive || hasCloseAction
-                    )
+                    val onClickToggleExpenses = if (isExpensesActive) onClickCloseExpenses else onClickActivateExpenses
+                    onClickToggleExpenses?.let { onClick ->
+                        FilledButton(
+                            imageVector = if (isExpensesActive) Icons.Filled.Close else Icons.Filled.AccountBalanceWallet,
+                            onClick = onClick,
+                            tint = if (isExpensesActive) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
 
                     if (isExpensesActive && onClickAddExpense != null) {
                         FilledButton(
