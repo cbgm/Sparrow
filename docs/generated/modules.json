@@ -152,8 +152,8 @@
     "group": "core",
     "directory": "core/util",
     "buildFile": "core/util/build.gradle.kts",
-    "kotlinSourceFileCount": 25,
-    "productionKotlinFileCount": 23,
+    "kotlinSourceFileCount": 28,
+    "productionKotlinFileCount": 26,
     "testKotlinFileCount": 2,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -181,6 +181,7 @@
       ":feature:conversationorchestration:membership",
       ":feature:conversationorchestration:message",
       ":feature:embedding",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
       ":feature:linkpreview",
@@ -434,9 +435,9 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 228,
-    "productionKotlinFileCount": 217,
-    "testKotlinFileCount": 11,
+    "kotlinSourceFileCount": 225,
+    "productionKotlinFileCount": 213,
+    "testKotlinFileCount": 12,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -642,8 +643,8 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/groupstate",
     "buildFile": "feature/conversationorchestration/groupstate/build.gradle.kts",
-    "kotlinSourceFileCount": 56,
-    "productionKotlinFileCount": 56,
+    "kotlinSourceFileCount": 58,
+    "productionKotlinFileCount": 58,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -674,9 +675,9 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/incoming",
     "buildFile": "feature/conversationorchestration/incoming/build.gradle.kts",
-    "kotlinSourceFileCount": 55,
-    "productionKotlinFileCount": 52,
-    "testKotlinFileCount": 3,
+    "kotlinSourceFileCount": 58,
+    "productionKotlinFileCount": 54,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -833,9 +834,9 @@
     "group": "feature",
     "directory": "feature/expenses",
     "buildFile": "feature/expenses/build.gradle.kts",
-    "kotlinSourceFileCount": 23,
-    "productionKotlinFileCount": 18,
-    "testKotlinFileCount": 5,
+    "kotlinSourceFileCount": 62,
+    "productionKotlinFileCount": 52,
+    "testKotlinFileCount": 10,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -844,10 +845,12 @@
     "dependencies": [
       ":core:base",
       ":core:ui",
+      ":core:util",
       ":feature:avatar"
     ],
     "dependents": [
       ":feature:chats",
+      ":navigation",
       ":shared"
     ]
   },
@@ -1305,6 +1308,7 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
       ":feature:media",

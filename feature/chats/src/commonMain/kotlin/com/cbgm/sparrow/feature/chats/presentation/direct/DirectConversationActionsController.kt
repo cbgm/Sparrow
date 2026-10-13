@@ -35,7 +35,7 @@ class DirectConversationActionsController(
     private lateinit var scope: CoroutineScope
     private lateinit var conversationState: StateFlow<DirectConversationUiState>
     private lateinit var composerState: StateFlow<MessageComposerUiState>
-    private lateinit var indicatorController: IndicatorController
+    private lateinit var indicatorController: DirectIndicatorController
     private lateinit var errors: ConversationErrors
     private lateinit var lookupForwardMessage: suspend (String) -> DirectMessage?
     private lateinit var conversationId: String
@@ -53,7 +53,7 @@ class DirectConversationActionsController(
         scope: CoroutineScope,
         conversationState: StateFlow<DirectConversationUiState>,
         composerState: StateFlow<MessageComposerUiState>,
-        indicatorController: IndicatorController,
+        indicatorController: DirectIndicatorController,
         errors: ConversationErrors,
         lookupForwardMessage: suspend (String) -> DirectMessage?
     ) {

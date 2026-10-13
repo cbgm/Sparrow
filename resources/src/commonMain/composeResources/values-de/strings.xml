@@ -845,4 +845,9 @@
     <string name="feature_expenses_delete_message">„%1$s“ wird für alle in der Gruppe entfernt.</string>
     <string name="feature_expenses_delete_confirm">Löschen</string>
     <string name="feature_expenses_delete_failed">Die Ausgabe konnte nicht gelöscht werden.</string>
+    <string name="feature_expenses_detail_title">Ausgabe</string>
+    <string name="feature_expenses_receipt">Beleg</string>
+    <string name="feature_expenses_receipt_missing">Noch kein Beleg</string>
+    <string name="feature_expenses_detail_split_between">Aufgeteilt auf %1$d</string>
+    <string name="feature_expenses_detail_equal_each">Gleich aufgeteilt · je %1$s</string>
 </resources>

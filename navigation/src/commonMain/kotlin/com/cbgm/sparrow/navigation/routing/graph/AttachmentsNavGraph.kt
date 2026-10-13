@@ -7,9 +7,10 @@ import androidx.navigation.toRoute
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.attachments.presentation.management.AttachmentManagementRoute
 import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStorageRoute
-import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseRoute
-import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseSplitRoute
-import com.cbgm.sparrow.feature.chats.presentation.group.GroupExpenseOverviewRoute
+import com.cbgm.sparrow.feature.expenses.presentation.create.CreateExpenseRoute
+import com.cbgm.sparrow.feature.expenses.presentation.create.ExpenseSplitRoute
+import com.cbgm.sparrow.feature.expenses.presentation.detail.ExpenseDetailRoute
+import com.cbgm.sparrow.feature.expenses.presentation.overview.ExpenseOverviewRoute
 import com.cbgm.sparrow.feature.polls.presentation.create.CreatePollRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
@@ -33,7 +34,7 @@ fun NavGraphBuilder.attachmentsNavGraph(navController: NavHostController) {
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
     ) {
-        CreateGroupExpenseRoute()
+        CreateExpenseRoute()
     }
 
     composable<AppRoute.ExpenseSplit>(
@@ -42,14 +43,21 @@ fun NavGraphBuilder.attachmentsNavGraph(navController: NavHostController) {
     ) { entry ->
         val destination = entry.toRoute<AppRoute.ExpenseSplit>()
         val parentEntry = navController.getBackStackEntry(AppRoute.CreateExpense(destination.groupId, destination.expenseId))
-        CreateGroupExpenseSplitRoute(viewModelStoreOwner = parentEntry)
+        ExpenseSplitRoute(viewModelStoreOwner = parentEntry)
     }
 
     composable<AppRoute.ExpenseOverview>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
     ) {
-        GroupExpenseOverviewRoute()
+        ExpenseOverviewRoute()
+    }
+
+    composable<AppRoute.ExpenseDetail>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        ExpenseDetailRoute()
     }
 
     composable<AppRoute.CreatePoll>(

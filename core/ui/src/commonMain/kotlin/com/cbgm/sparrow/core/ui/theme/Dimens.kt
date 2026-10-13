@@ -22,6 +22,7 @@ object Dimens {
         val pinIconTileSize = 36.dp
         val customAmountFieldWidth = 112.dp
         val balanceBarHeight = 8.dp
+        val detailIconSize = 64.dp
     }
 
     object ActionMenu {

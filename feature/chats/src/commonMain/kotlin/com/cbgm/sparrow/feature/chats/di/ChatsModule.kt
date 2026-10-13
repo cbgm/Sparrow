@@ -30,13 +30,11 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSha
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveConversationQueueAvailabilityUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupExpenseCreationContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LoadGroupPinnedAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseOverviewUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpensesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
@@ -51,12 +49,15 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedConta
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationActionsController
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationStateController
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectIndicatorController
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionViewModel
-import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationActionsController
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationStateController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
-import com.cbgm.sparrow.feature.chats.presentation.group.GroupExpenseOverviewViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupExpenseController
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupIndicatorController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupPinController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupPollController
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
@@ -64,10 +65,14 @@ import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVer
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
 import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import org.koin.core.annotation.KoinExperimentalAPI
+import org.koin.core.annotation.KoinViewModelScopeApi
 import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.scopedOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import org.koin.viewmodel.scope.viewModelScope
 
 val chatsModule =
     module {
@@ -75,7 +80,7 @@ val chatsModule =
         registerGroupData()
         registerRepositories()
         registerUseCases()
-        registerViewModels()
+        registerViewModelControllers()
     }
 
 private fun org.koin.core.module.Module.registerDirectData() {
@@ -129,11 +134,9 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveConversationQueueAvailabilityUseCase)
 
     singleOf(::ObserveGroupConversationUseCase)
+    singleOf(::ObserveGroupExpensesUseCase)
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
-    singleOf(::GetGroupExpenseCreationContextUseCase)
-    singleOf(::ObserveGroupExpenseSummaryUseCase)
-    singleOf(::ObserveGroupExpenseOverviewUseCase)
     singleOf(::LoadGroupPinnedAttachmentUseCase)
     singleOf(::ObserveGroupVerificationContextUseCase)
     singleOf(::ObserveGroupVerificationUseCase)
@@ -142,13 +145,25 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveConversationOverviewContextUseCase)
 }
 
-private fun org.koin.core.module.Module.registerViewModels() {
-    viewModel { CreateGroupExpenseViewModel(savedStateHandle = get(), getContext = get(), orchestrator = get()) }
-    viewModel { GroupExpenseOverviewViewModel(savedStateHandle = get(), observeOverview = get(), orchestrator = get()) }
-    factory { ConversationHistoryController(get(), get()) }
-    factory { ConversationMediaController(get()) }
-    factory { SharedContactController(get()) }
-    factory { DirectIdentityController(get(), get()) }
+@OptIn(KoinExperimentalAPI::class, KoinViewModelScopeApi::class)
+private fun org.koin.core.module.Module.registerViewModelControllers() {
+    viewModelScope {
+        scopedOf(::ConversationMediaController)
+        scopedOf(::ConversationComposerController)
+        scopedOf(::ConversationHistoryController)
+        scopedOf(::ConversationVoiceController)
+        scopedOf(::SharedContactController)
+        scopedOf(::DirectIdentityController)
+        scopedOf(::DirectIndicatorController)
+        scopedOf(::DirectConversationStateController)
+        scopedOf(::DirectConversationActionsController)
+        scopedOf(::GroupIndicatorController)
+        scopedOf(::GroupConversationStateController)
+        scopedOf(::GroupConversationActionsController)
+        scopedOf(::GroupPollController)
+        scopedOf(::GroupPinController)
+        scopedOf(::GroupExpenseController)
+    }
 
     viewModel {
         ContactsFlowViewModel(orchestrator = get())
@@ -179,33 +194,21 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel {
-        val savedStateHandle = get<SavedStateHandle>()
-        val media = get<ConversationMediaController>()
-        val composer = ConversationComposerController(savedStateHandle, media)
-        val actions = GroupConversationActionsController(
-            orchestrator = get(),
-            composerController = composer,
-            mediaController = media,
-            voiceController = ConversationVoiceController(get(), get(), media),
-            sharedContactController = get()
-        )
-        val pollController = GroupPollController(get(), get(), get(), media)
-        val pinController = GroupPinController(get())
         GroupConversationViewModel(
-            savedStateHandle = savedStateHandle,
+            savedStateHandle = get(),
             observeChatContext = get(),
             observeExpenseSummary = get(),
-            indicatorObserver = get(),
-            orchestrator = get(),
-            observeMessageSafetyAssessments = get(),
             observeVoiceRecordingActive = get(),
             getLocalIdentityName = get(),
             historyController = get(),
-            mediaController = media,
-            composerController = composer,
-            actionsController = actions,
-            pollController = pollController,
-            pinController = pinController
+            mediaController = get(),
+            composerController = get(),
+            indicatorController = get(),
+            stateController = get(),
+            actionsController = get(),
+            pollController = get(),
+            pinController = get(),
+            expenseController = get()
         )
     }
 
@@ -231,27 +234,18 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel { (savedStateHandle: SavedStateHandle) ->
-        val media = get<ConversationMediaController>()
-        val composer = ConversationComposerController(savedStateHandle, media)
-        val actions = DirectConversationActionsController(
-            orchestrator = get(),
-            composerController = composer,
-            mediaController = media,
-            voiceController = ConversationVoiceController(get(), get(), media),
-            sharedContactController = get()
-        )
         DirectConversationViewModel(
             savedStateHandle = savedStateHandle,
             observeChatContext = get(),
             orchestrator = get(),
-            indicatorObserver = get(),
-            observeMessageSafetyAssessments = get(),
             observeVoiceRecordingActive = get(),
             historyController = get(),
-            mediaController = media,
-            composerController = composer,
+            mediaController = get(),
+            composerController = get(),
             identityController = get(),
-            actionsController = actions
+            indicatorController = get(),
+            stateController = get(),
+            actionsController = get()
         )
     }
 }

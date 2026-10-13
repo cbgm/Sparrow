@@ -30,139 +30,163 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlin.time.TimeSource
 
-internal class GroupConversationStateController(
-    private val groupId: String,
-    private val scope: CoroutineScope,
-    presentationContext: StateFlow<GroupContextObservation>,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
-    private val localVoterDisplayName: StateFlow<String?>,
+class GroupConversationStateController(
+    private val observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     composerController: ConversationComposerController,
-    indicatorController: IndicatorController,
-    contextMessageId: StateFlow<String?>,
-    historyController: ConversationHistoryController,
-    errors: ConversationErrors
+    private val indicatorController: GroupIndicatorController,
+    private val historyController: ConversationHistoryController
 ) {
     private val composerDraft = composerController.draft
     private val composerRuntime = composerController.runtime
 
-    val conversationState: StateFlow<GroupConversationUiState> =
-        combine(
-            presentationContext,
-            observeMessageSafetyAssessments(),
-            localVoterDisplayName
-        ) { presentation, safetyAssessments, localDisplayName ->
-            val mappingStarted = TimeSource.Monotonic.markNow()
-            val mapped = toGroupConversationUiState(
-                groupId = groupId,
-                conversation = presentation.context?.conversation,
-                contacts = presentation.context?.contacts.orEmpty(),
-                isLoading = presentation is GroupContextObservation.Loading,
-                safetyAssessments = safetyAssessments,
-                administration = presentation.context?.administration ?: GroupAdministrationState(),
-                pin = presentation.context?.pin,
-                localVoterDisplayName = localDisplayName
-            )
-            ChatOpenTrace.event(
-                "group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}"
-            )
-            mapped
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = GroupConversationUiState()
-        )
+    lateinit var conversationState: StateFlow<GroupConversationUiState>
+        private set
 
-    val membershipState: StateFlow<GroupMembershipUiState> =
-        presentationContext
-            .map { presentation ->
-                toGroupMembershipUiState(
+    lateinit var membershipState: StateFlow<GroupMembershipUiState>
+        private set
+
+    lateinit var composerState: StateFlow<MessageComposerUiState>
+        private set
+
+    lateinit var contextState: StateFlow<MessageContextUiState<MessageBubbleUi>>
+        private set
+
+    lateinit var indicatorState: StateFlow<IndicatorUiState>
+        private set
+
+    lateinit var historyState: StateFlow<MessageHistoryUiState>
+        private set
+
+    lateinit var errorMessage: StateFlow<String?>
+        private set
+
+    internal fun bind(
+        groupId: String,
+        scope: CoroutineScope,
+        presentationContext: StateFlow<GroupContextObservation>,
+        localVoterDisplayName: StateFlow<String?>,
+        contextMessageId: StateFlow<String?>,
+        errors: ConversationErrors
+    ) {
+        conversationState =
+            combine(
+                presentationContext,
+                observeMessageSafetyAssessments(),
+                localVoterDisplayName
+            ) { presentation, safetyAssessments, localDisplayName ->
+                val mappingStarted = TimeSource.Monotonic.markNow()
+                val mapped = toGroupConversationUiState(
+                    groupId = groupId,
                     conversation = presentation.context?.conversation,
-                    administration = presentation.context?.administration
-                        ?: GroupAdministrationState(),
-                    contacts = presentation.context?.contacts.orEmpty()
+                    contacts = presentation.context?.contacts.orEmpty(),
+                    isLoading = presentation is GroupContextObservation.Loading,
+                    safetyAssessments = safetyAssessments,
+                    administration = presentation.context?.administration ?: GroupAdministrationState(),
+                    pin = presentation.context?.pin,
+                    localVoterDisplayName = localDisplayName
+                )
+                ChatOpenTrace.event(
+                    "group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}"
+                )
+                mapped
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = GroupConversationUiState()
+            )
+
+        membershipState =
+            presentationContext
+                .map { presentation ->
+                    toGroupMembershipUiState(
+                        conversation = presentation.context?.conversation,
+                        administration = presentation.context?.administration
+                            ?: GroupAdministrationState(),
+                        contacts = presentation.context?.contacts.orEmpty()
+                    )
+                }.stateIn(
+                    scope = scope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = GroupMembershipUiState()
+                )
+
+        composerState =
+            combine(
+                conversationState,
+                presentationContext,
+                composerDraft,
+                composerRuntime
+            ) { conversation, presentation, draft, runtime ->
+                val availability =
+                    MessageComposerPolicy.resolve(
+                        isInputAllowed = !conversation.isLoading && conversation.composerState.isInputEnabled,
+                        isSendAllowed = !conversation.isLoading && conversation.composerState.isSendActionEnabled,
+                        isSending = runtime.isSending,
+                        isEditing = draft.editingMessageId != null,
+                        selectedAttachmentCount = runtime.media.size,
+                        locationShareState = runtime.locationShareState
+                    )
+
+                MessageComposerUiState(
+                    messageText = draft.text,
+                    replyTo =
+                        draft.replyToMessageId.toGroupReplyPreview(
+                            conversation = presentation.context?.conversation,
+                            contacts = presentation.context?.contacts.orEmpty()
+                        ),
+                    editingMessageId = draft.editingMessageId,
+                    selectedMedia = runtime.media,
+                    isSending = runtime.isSending,
+                    isLocationInProgress = runtime.locationShareState.isInProgress,
+                    availability = availability.toComposerAvailabilityUi()
                 )
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = GroupMembershipUiState()
+                initialValue = MessageComposerUiState()
             )
 
-    val composerState: StateFlow<MessageComposerUiState> =
-        combine(
-            conversationState,
-            presentationContext,
-            composerDraft,
-            composerRuntime
-        ) { conversation, presentation, draft, runtime ->
-            val availability =
-                MessageComposerPolicy.resolve(
-                    isInputAllowed = !conversation.isLoading && conversation.composerState.isInputEnabled,
-                    isSendAllowed = !conversation.isLoading && conversation.composerState.isSendActionEnabled,
-                    isSending = runtime.isSending,
-                    isEditing = draft.editingMessageId != null,
-                    selectedAttachmentCount = runtime.media.size,
-                    locationShareState = runtime.locationShareState
+        contextState =
+            combine(conversationState, contextMessageId) { conversation, selectedMessageId ->
+                val message = conversation.messages.firstOrNull { it.id == selectedMessageId }
+                MessageContextUiState(
+                    message = message,
+                    canEdit = message?.canEdit == true
                 )
-
-            MessageComposerUiState(
-                messageText = draft.text,
-                replyTo =
-                    draft.replyToMessageId.toGroupReplyPreview(
-                        conversation = presentation.context?.conversation,
-                        contacts = presentation.context?.contacts.orEmpty()
-                    ),
-                editingMessageId = draft.editingMessageId,
-                selectedMedia = runtime.media,
-                isSending = runtime.isSending,
-                isLocationInProgress = runtime.locationShareState.isInProgress,
-                availability = availability.toComposerAvailabilityUi()
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = MessageContextUiState()
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = MessageComposerUiState()
-        )
 
-    val contextState: StateFlow<MessageContextUiState<MessageBubbleUi>> =
-        combine(conversationState, contextMessageId) { conversation, selectedMessageId ->
-            val message = conversation.messages.firstOrNull { it.id == selectedMessageId }
-            MessageContextUiState(
-                message = message,
-                canEdit = message?.canEdit == true
+        indicatorState =
+            combine(
+                indicatorController.memberIndicators,
+                presentationContext
+            ) { indicators, presentation ->
+                val indicatorType = indicators.preferredIndicatorType()
+                val indicatorContactIds = indicators.filterValues { it == indicatorType }.keys
+                IndicatorUiState(
+                    type = indicatorType.toIndicatorUiType(),
+                    displayName = indicatorContactIds.toIndicatorDisplayName(presentation.context?.contacts.orEmpty())
+                )
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = IndicatorUiState()
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = MessageContextUiState()
-        )
 
-    val indicatorState: StateFlow<IndicatorUiState> =
-        combine(
-            indicatorController.memberIndicators,
-            presentationContext
-        ) { indicators, presentation ->
-            val indicatorType = indicators.preferredIndicatorType()
-            val indicatorContactIds = indicators.filterValues { it == indicatorType }.keys
-            IndicatorUiState(
-                type = indicatorType.toIndicatorUiType(),
-                displayName = indicatorContactIds.toIndicatorDisplayName(presentation.context?.contacts.orEmpty())
+        historyState = historyController.historyState
+
+        errorMessage =
+            combine(errors.messages, presentationContext) { currentError, presentation ->
+                currentError ?: presentation.errorMessage
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = IndicatorUiState()
-        )
-
-    val historyState: StateFlow<MessageHistoryUiState> = historyController.observe(scope)
-
-    val errorMessage: StateFlow<String?> =
-        combine(errors.messages, presentationContext) { currentError, presentation ->
-            currentError ?: presentation.errorMessage
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
+    }
 }
 
 internal sealed interface GroupContextObservation {

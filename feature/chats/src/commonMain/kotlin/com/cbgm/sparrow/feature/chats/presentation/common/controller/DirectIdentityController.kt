@@ -14,9 +14,15 @@ class DirectIdentityController(
     private val recoverIdentity: RecoverManualIdentityExchangeUseCase,
     private val recordShared: RecordLocalIdentitySharedUseCase
 ) {
+    private lateinit var scope: CoroutineScope
+    private lateinit var contactId: String
+
+    internal fun bind(scope: CoroutineScope, contactId: String) {
+        this.scope = scope
+        this.contactId = contactId
+    }
+
     fun recoverAfterManualImport(
-        scope: CoroutineScope,
-        contactId: String,
         conversationContext: Flow<DirectChatContext>,
         onFailure: (Throwable) -> Unit
     ) {
@@ -34,8 +40,6 @@ class DirectIdentityController(
     }
 
     fun shareIdentity(
-        scope: CoroutineScope,
-        contactId: String,
         onSuccess: () -> Unit,
         onFailure: (Throwable) -> Unit
     ) {

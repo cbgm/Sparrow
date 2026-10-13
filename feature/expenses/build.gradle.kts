@@ -15,6 +15,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.base)
             implementation(projects.core.ui)
+            implementation(projects.core.util)
             implementation(projects.feature.avatar)
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

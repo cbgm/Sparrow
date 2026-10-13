@@ -11,24 +11,19 @@ import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseSummary
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
-import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toExpensePinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupPinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.ExpenseSummaryLoadUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
-import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
-import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
-import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
-import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
+import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseSummary
+import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExpenseSummaryUseCase
+import com.cbgm.sparrow.feature.expenses.presentation.pin.mapper.toExpensePinUi
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
-import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,18 +45,18 @@ import kotlinx.coroutines.launch
 class GroupConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveGroupChatContextUseCase,
-    observeExpenseSummary: ObserveGroupExpenseSummaryUseCase,
-    indicatorObserver: ConversationIndicatorObserver,
-    orchestrator: ConversationOrchestrator,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
+    observeExpenseSummary: ObserveExpenseSummaryUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
     getLocalIdentityName: GetLocalIdentityNameUseCase,
     private val historyController: ConversationHistoryController,
     private val mediaController: ConversationMediaController,
     composerController: ConversationComposerController,
+    private val indicatorController: GroupIndicatorController,
+    stateController: GroupConversationStateController,
     private val actionsController: GroupConversationActionsController,
     private val pollController: GroupPollController,
-    private val pinController: GroupPinController
+    private val pinController: GroupPinController,
+    private val expenseController: GroupExpenseController
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -80,16 +75,6 @@ class GroupConversationViewModel(
 
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val historyCursor = historyController.cursor
-    private val indicatorController =
-        IndicatorController(
-            scope = viewModelScope,
-            observeMemberIndicator = { contactId -> indicatorObserver.observeGroupMember(groupId, contactId) },
-            sendIndicatorState = { indicator ->
-                orchestrator.awaitResult(GroupMessageCommand.SendIndicator(groupId, indicator)).map { }
-            },
-            logTag = "GroupConversationViewModel"
-        )
-
     private val groupContext =
         historyCursor.flatMapLatest { cursor ->
             observeChatContext(
@@ -122,29 +107,37 @@ class GroupConversationViewModel(
                 initialValue = GroupContextObservation.Loading
             )
 
-    private val state = GroupConversationStateController(
-        groupId,
-        viewModelScope,
-        presentationContext,
-        observeMessageSafetyAssessments,
-        localVoterDisplayName,
-        composerController,
-        indicatorController,
-        contextMessageId,
-        historyController,
-        errors
-    )
-    val conversationState = state.conversationState
-    val membershipState = state.membershipState
-    val composerState = state.composerState
-    val contextState = state.contextState
-    val indicatorState = state.indicatorState
-    val historyState = state.historyState
-    val errorMessage = state.errorMessage
+    init {
+        composerController.bind(savedStateHandle)
+        historyController.bind(viewModelScope, groupId)
+        indicatorController.bind(
+            scope = viewModelScope,
+            groupId = groupId,
+            memberContactIds = presentationContext.map { observation ->
+                observation.context?.administration?.currentMemberContactIds.orEmpty()
+            }
+        )
+        stateController.bind(
+            groupId = groupId,
+            scope = viewModelScope,
+            presentationContext = presentationContext,
+            localVoterDisplayName = localVoterDisplayName,
+            contextMessageId = contextMessageId,
+            errors = errors
+        )
+    }
+
+    val conversationState = stateController.conversationState
+    val membershipState = stateController.membershipState
+    val composerState = stateController.composerState
+    val contextState = stateController.contextState
+    val indicatorState = stateController.indicatorState
+    val historyState = stateController.historyState
+    val errorMessage = stateController.errorMessage
 
     private val expenseSummary: StateFlow<ExpenseSummaryLoadUi> =
         observeExpenseSummary(groupId)
-            .map<GroupExpenseSummary?, ExpenseSummaryLoadUi> { summary ->
+            .map<ExpenseSummary?, ExpenseSummaryLoadUi> { summary ->
                 ExpenseSummaryLoadUi.Loaded(summary?.toExpensePinUi())
             }.catch { error ->
                 logger.error(error) { "Expense summary could not be observed" }
@@ -174,11 +167,6 @@ class GroupConversationViewModel(
                     if (message != null) SparrowLog.error("GroupConversationViewModel", message)
                 }
         }
-        indicatorController.start(
-            presentationContext.map { observation ->
-                observation.context?.administration?.currentMemberContactIds.orEmpty()
-            }
-        )
         viewModelScope.launch {
             observeVoiceRecordingActive().collect { isRecording ->
                 indicatorController.onLocalVoiceRecordingChanged(
@@ -203,9 +191,8 @@ class GroupConversationViewModel(
         )
         pollController.bind(viewModelScope, groupId, actionsController, errors)
         pinController.bind(viewModelScope, groupId, errors)
+        expenseController.bind(viewModelScope, groupId, errors)
         historyController.ensureTargetMessageLoaded(
-            scope = viewModelScope,
-            conversationId = groupId,
             messageId = targetMessageId,
             ready = conversationState.map { !it.isLoading },
             containsMessage = { conversationState.value.messages.any { it.id == targetMessageId } },
@@ -221,14 +208,9 @@ class GroupConversationViewModel(
 
             GroupConversationUiEvent.SendClicked -> actionsController.sendCurrentMessage()
             GroupConversationUiEvent.VoiceSendClicked -> actionsController.sendVoiceMessage()
-            GroupConversationUiEvent.LoadOlderMessages -> historyController.loadOlder(
-                viewModelScope,
-                groupId
-            ) { logger.error(it) { "Could not load older messages" } }
+            GroupConversationUiEvent.LoadOlderMessages -> historyController.loadOlder { logger.error(it) { "Could not load older messages" } }
 
             is GroupConversationUiEvent.MessageHistoryTargetRequested -> historyController.requestTarget(
-                viewModelScope,
-                groupId,
                 event.messageId
             ) { logger.error(it) { "History target could not be found" } }
 
@@ -299,8 +281,8 @@ class GroupConversationViewModel(
             )
 
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
-            GroupConversationUiEvent.ActivateExpensesClicked -> pinController.activateExpenseBoard()
-            GroupConversationUiEvent.CloseExpensesClicked -> pinController.closeExpenseBoard()
+            GroupConversationUiEvent.ActivateExpensesClicked -> expenseController.activateBoard()
+            GroupConversationUiEvent.CloseExpensesClicked -> expenseController.closeBoard()
             GroupConversationUiEvent.ExpenseOverviewClicked -> navigator.navigateTo(AppRoute.ExpenseOverview(groupId))
             GroupConversationUiEvent.AddExpenseClicked -> navigator.navigateTo(
                 AppRoute.CreateExpense(

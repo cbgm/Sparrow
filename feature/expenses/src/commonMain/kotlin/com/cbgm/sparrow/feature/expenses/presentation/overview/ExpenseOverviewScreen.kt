@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.presentation.overview
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,9 +47,9 @@ import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.expenses.presentation.common.component.ExpenseMemberAvatar
+import com.cbgm.sparrow.feature.expenses.presentation.common.component.label
 import com.cbgm.sparrow.feature.expenses.presentation.create.icon
-import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toAvatarTarget
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.component.ExpenseOverviewSection
@@ -64,7 +64,6 @@ import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseYour
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.feature_chats_group_unknown_member
 import com.cbgm.sparrow.resources.feature_expenses_board
 import com.cbgm.sparrow.resources.feature_expenses_delete
 import com.cbgm.sparrow.resources.feature_expenses_delete_confirm
@@ -93,7 +92,6 @@ import com.cbgm.sparrow.resources.feature_expenses_overview_you_paid_on
 import com.cbgm.sparrow.resources.feature_expenses_overview_you_pay
 import com.cbgm.sparrow.resources.feature_expenses_overview_your_balance
 import com.cbgm.sparrow.resources.feature_expenses_overview_your_share
-import com.cbgm.sparrow.resources.feature_expenses_you
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -137,6 +135,13 @@ fun ExpenseOverviewScreen(
             item(key = "expenses") {
                 ExpensesSection(
                     expenses = uiState.expenses,
+                    onOpen = { expense ->
+                        onUiEvent(
+                            ExpenseOverviewUiEvent.ExpenseClicked(
+                                expense.id
+                            )
+                        )
+                    },
                     onEdit = { expense ->
                         onUiEvent(
                             ExpenseOverviewUiEvent.EditExpenseClicked(
@@ -354,14 +359,14 @@ private fun SettlementRow(settlement: ExpenseSettlementUi) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        MemberAvatar(settlement.from)
+        ExpenseMemberAvatar(settlement.from)
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(Dimens.MessageBubble.iconSize)
         )
-        MemberAvatar(settlement.to)
+        ExpenseMemberAvatar(settlement.to)
         Text(
             text = when {
                 settlement.from.isLocal -> stringResource(
@@ -422,7 +427,7 @@ private fun MemberBalanceRow(balance: ExpenseMemberBalanceUi) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
-        MemberAvatar(balance.member)
+        ExpenseMemberAvatar(balance.member)
         Text(
             text = balance.member.label(),
             style = MaterialTheme.typography.bodyMedium,
@@ -484,6 +489,7 @@ private fun BalanceBar(
 @Composable
 private fun ExpensesSection(
     expenses: List<ExpenseListItemUi>,
+    onOpen: (ExpenseListItemUi) -> Unit,
     onEdit: (ExpenseListItemUi) -> Unit,
     onDelete: (ExpenseListItemUi) -> Unit
 ) {
@@ -526,7 +532,10 @@ private fun ExpensesSection(
                             )
                         }
                     ) {
-                        ExpenseRow(expense)
+                        ExpenseRow(
+                            expense = expense,
+                            onClick = { onOpen(expense) }
+                        )
                     }
                 }
             }
@@ -535,10 +544,14 @@ private fun ExpensesSection(
 }
 
 @Composable
-private fun ExpenseRow(expense: ExpenseListItemUi) {
+private fun ExpenseRow(
+    expense: ExpenseListItemUi,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(
                 horizontal = MaterialTheme.spacing.small,
                 vertical = MaterialTheme.spacing.base
@@ -620,15 +633,6 @@ private fun ExpenseRow(expense: ExpenseListItemUi) {
 }
 
 @Composable
-private fun MemberAvatar(member: ExpenseParticipantUi) {
-    SparrowAvatar(
-        name = member.label(),
-        target = if (LocalInspectionMode.current) null else member.toAvatarTarget(),
-        size = Dimens.GroupConversationScreen.avatarSize
-    )
-}
-
-@Composable
 private fun RowDivider() {
     HorizontalDivider(
         color = MaterialTheme.colorScheme.outlineVariant,
@@ -644,14 +648,6 @@ private fun EmptyHint(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
-
-@Composable
-private fun ExpenseParticipantUi.label(): String =
-    when {
-        isLocal -> stringResource(Res.string.feature_expenses_you)
-        displayName.isNotBlank() -> displayName
-        else -> stringResource(Res.string.feature_chats_group_unknown_member)
-    }
 
 private fun ExpenseAmountUi.signedLabel(): String =
     when (this) {

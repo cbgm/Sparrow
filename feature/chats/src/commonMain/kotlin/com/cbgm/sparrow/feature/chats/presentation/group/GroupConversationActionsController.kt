@@ -33,7 +33,7 @@ class GroupConversationActionsController(
     private lateinit var scope: CoroutineScope
     private lateinit var conversationState: StateFlow<GroupConversationUiState>
     private lateinit var composerState: StateFlow<MessageComposerUiState>
-    private lateinit var indicatorController: IndicatorController
+    private lateinit var indicatorController: GroupIndicatorController
     private lateinit var errors: ConversationErrors
     private lateinit var lookupForwardMessage: suspend (String) -> GroupMessage?
     private lateinit var groupId: String
@@ -49,7 +49,7 @@ class GroupConversationActionsController(
         scope: CoroutineScope,
         conversationState: StateFlow<GroupConversationUiState>,
         composerState: StateFlow<MessageComposerUiState>,
-        indicatorController: IndicatorController,
+        indicatorController: GroupIndicatorController,
         errors: ConversationErrors,
         lookupForwardMessage: suspend (String) -> GroupMessage?
     ) {

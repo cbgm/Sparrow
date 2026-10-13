@@ -26,117 +26,138 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlin.time.TimeSource
 
-internal class DirectConversationStateController(
-    private val contactId: String,
-    private val fallbackContactName: String,
-    private val scope: CoroutineScope,
-    conversationContext: Flow<DirectChatContext>,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
+class DirectConversationStateController(
+    private val observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     composerController: ConversationComposerController,
-    indicatorController: IndicatorController,
-    contextMessageId: StateFlow<String?>,
-    historyController: ConversationHistoryController,
-    errors: ConversationErrors
+    private val indicatorController: DirectIndicatorController,
+    private val historyController: ConversationHistoryController
 ) {
     private val composerDraft = composerController.draft
     private val composerRuntime = composerController.runtime
 
-    val conversationState: StateFlow<DirectConversationUiState> =
-        combine(
-            conversationContext,
-            observeMessageSafetyAssessments()
-        ) { context, safetyAssessments ->
-            val mappingStarted = TimeSource.Monotonic.markNow()
-            val mapped = toDirectConversationUiState(
-                contactId = contactId,
-                fallbackContactName = fallbackContactName,
-                conversation = context.conversation,
-                contact = context.contact,
-                remoteIdentity = context.remoteIdentity,
-                handshake = context.handshake,
-                canQueueMessages = context.canQueueMessages,
-                setupMode = context.setupMode,
-                localIdentityShared = context.localIdentityShared,
-                safetyAssessments = safetyAssessments
-            )
-            ChatOpenTrace.event("direct UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
-            mapped
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
-            initialValue =
-                DirectConversationUiState(
+    lateinit var conversationState: StateFlow<DirectConversationUiState>
+        private set
+
+    lateinit var composerState: StateFlow<MessageComposerUiState>
+        private set
+
+    lateinit var contextState: StateFlow<MessageContextUiState<MessageBubbleUi>>
+        private set
+
+    lateinit var indicatorState: StateFlow<IndicatorUiState>
+        private set
+
+    lateinit var historyState: StateFlow<MessageHistoryUiState>
+        private set
+
+    lateinit var errorMessage: StateFlow<String?>
+        private set
+
+    internal fun bind(
+        contactId: String,
+        fallbackContactName: String,
+        scope: CoroutineScope,
+        conversationContext: Flow<DirectChatContext>,
+        contextMessageId: StateFlow<String?>,
+        errors: ConversationErrors
+    ) {
+        conversationState =
+            combine(
+                conversationContext,
+                observeMessageSafetyAssessments()
+            ) { context, safetyAssessments ->
+                val mappingStarted = TimeSource.Monotonic.markNow()
+                val mapped = toDirectConversationUiState(
                     contactId = contactId,
-                    contactName = fallbackContactName,
-                    composerState = DirectComposerState.DISABLED
+                    fallbackContactName = fallbackContactName,
+                    conversation = context.conversation,
+                    contact = context.contact,
+                    remoteIdentity = context.remoteIdentity,
+                    handshake = context.handshake,
+                    canQueueMessages = context.canQueueMessages,
+                    setupMode = context.setupMode,
+                    localIdentityShared = context.localIdentityShared,
+                    safetyAssessments = safetyAssessments
                 )
-        )
+                ChatOpenTrace.event("direct UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
+                mapped
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+                initialValue =
+                    DirectConversationUiState(
+                        contactId = contactId,
+                        contactName = fallbackContactName,
+                        composerState = DirectComposerState.DISABLED
+                    )
+            )
 
-    val composerState: StateFlow<MessageComposerUiState> =
-        combine(
-            conversationState,
-            conversationContext,
-            composerDraft,
-            composerRuntime
-        ) { conversation, context, draft, runtime ->
-            val availability =
-                MessageComposerPolicy.resolve(
-                    isInputAllowed = !conversation.isLoading && conversation.composerState.isInputEnabled,
-                    isSendAllowed = !conversation.isLoading && conversation.composerState.isSendActionEnabled,
+        composerState =
+            combine(
+                conversationState,
+                conversationContext,
+                composerDraft,
+                composerRuntime
+            ) { conversation, context, draft, runtime ->
+                val availability =
+                    MessageComposerPolicy.resolve(
+                        isInputAllowed = !conversation.isLoading && conversation.composerState.isInputEnabled,
+                        isSendAllowed = !conversation.isLoading && conversation.composerState.isSendActionEnabled,
+                        isSending = runtime.isSending,
+                        isEditing = draft.editingMessageId != null,
+                        selectedAttachmentCount = runtime.media.size,
+                        locationShareState = runtime.locationShareState
+                    )
+
+                MessageComposerUiState(
+                    messageText = draft.text,
+                    replyTo =
+                        draft.replyToMessageId.toDirectReplyPreview(
+                            conversation = context.conversation,
+                            contactName = conversation.contactName
+                        ),
+                    editingMessageId = draft.editingMessageId,
+                    selectedMedia = runtime.media,
                     isSending = runtime.isSending,
-                    isEditing = draft.editingMessageId != null,
-                    selectedAttachmentCount = runtime.media.size,
-                    locationShareState = runtime.locationShareState
+                    isLocationInProgress = runtime.locationShareState.isInProgress,
+                    availability = availability.toComposerAvailabilityUi()
                 )
-
-            MessageComposerUiState(
-                messageText = draft.text,
-                replyTo =
-                    draft.replyToMessageId.toDirectReplyPreview(
-                        conversation = context.conversation,
-                        contactName = conversation.contactName
-                    ),
-                editingMessageId = draft.editingMessageId,
-                selectedMedia = runtime.media,
-                isSending = runtime.isSending,
-                isLocationInProgress = runtime.locationShareState.isInProgress,
-                availability = availability.toComposerAvailabilityUi()
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+                initialValue = MessageComposerUiState()
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
-            initialValue = MessageComposerUiState()
-        )
 
-    val contextState: StateFlow<MessageContextUiState<MessageBubbleUi>> =
-        combine(conversationState, contextMessageId) { conversation, selectedMessageId ->
-            val message = conversation.messages.firstOrNull { it.id == selectedMessageId }
-            MessageContextUiState(
-                message = message,
-                canEdit = message?.canEdit == true
+        contextState =
+            combine(conversationState, contextMessageId) { conversation, selectedMessageId ->
+                val message = conversation.messages.firstOrNull { it.id == selectedMessageId }
+                MessageContextUiState(
+                    message = message,
+                    canEdit = message?.canEdit == true
+                )
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+                initialValue = MessageContextUiState()
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
-            initialValue = MessageContextUiState()
-        )
 
-    val indicatorState: StateFlow<IndicatorUiState> =
-        combine(
-            indicatorController.remoteIndicatorType,
-            conversationState
-        ) { indicatorType, conversation ->
-            IndicatorUiState(
-                type = indicatorType.toIndicatorUiType(),
-                displayName = conversation.contactName
+        indicatorState =
+            combine(
+                indicatorController.remoteIndicatorType,
+                conversationState
+            ) { indicatorType, conversation ->
+                IndicatorUiState(
+                    type = indicatorType.toIndicatorUiType(),
+                    displayName = conversation.contactName
+                )
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+                initialValue = IndicatorUiState(displayName = fallbackContactName)
             )
-        }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
-            initialValue = IndicatorUiState(displayName = fallbackContactName)
-        )
 
-    val historyState: StateFlow<MessageHistoryUiState> = historyController.observe(scope)
+        historyState = historyController.historyState
 
-    val errorMessage: StateFlow<String?> = errors.messages
+        errorMessage = errors.messages
+    }
 }

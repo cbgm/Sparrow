@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
+import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
@@ -8,22 +9,18 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ConversationMediaController(
-    private val mediaFiles: MediaSelectionFileRepository
+    private val mediaFiles: MediaSelectionFileRepository,
+    private val applicationScope: ApplicationCoroutineScope
 ) {
     private val _selected = MutableStateFlow<List<MediaSelectionUi>>(emptyList())
     val selected: StateFlow<List<MediaSelectionUi>> = _selected.asStateFlow()
 
-    // Cleanup must outlive the ViewModel scope when its composer is discarded.
-    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val logger = SparrowLog.withTag("ConversationMediaController")
 
     fun select(media: List<MediaSelectionUi>): Result<Unit> = runCatching {
@@ -45,7 +42,7 @@ class ConversationMediaController(
 
     fun deleteLocalCopies(media: List<MediaSelectionUi>) {
         if (media.isEmpty()) return
-        cleanupScope.launch {
+        applicationScope.launch {
             for (item in media) {
                 for (path in item.localFilePaths) {
                     runCatching { mediaFiles.delete(path) }
@@ -57,7 +54,7 @@ class ConversationMediaController(
 
     fun deleteLocalPaths(paths: List<String>) {
         if (paths.isEmpty()) return
-        cleanupScope.launch {
+        applicationScope.launch {
             for (path in paths.distinct()) {
                 runCatching { mediaFiles.delete(path) }
                     .onFailure { logger.error(it) { "Could not clean up attachment media" } }

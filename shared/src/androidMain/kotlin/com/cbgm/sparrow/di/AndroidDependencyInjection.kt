@@ -16,8 +16,10 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.Koin
+import org.koin.core.annotation.KoinViewModelScopeApi
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
+import org.koin.core.option.viewModelScopeFactory
 
 private lateinit var applicationKoin: Koin
 
@@ -36,9 +38,11 @@ private val androidApplicationModules: List<Module> =
         androidSettingsModule
     )
 
+@OptIn(KoinViewModelScopeApi::class)
 fun initializeAndroidDependencyInjection(application: Application) {
     applicationKoin =
         startKoin {
+            options(viewModelScopeFactory())
             androidLogger()
             androidContext(application)
             workManagerFactory()

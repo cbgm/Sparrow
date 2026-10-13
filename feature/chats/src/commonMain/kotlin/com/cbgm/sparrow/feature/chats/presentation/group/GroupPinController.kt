@@ -28,19 +28,7 @@ class GroupPinController(
         orchestrator.awaitResult(GroupMessageCommand.UnpinMessage(groupId))
     }
 
-    fun activateExpenseBoard() = execute("Could not activate group expenses") {
-        orchestrator.awaitResult(GroupMessageCommand.ActivateExpenses(groupId, EXPENSE_CURRENCY))
-    }
-
-    fun closeExpenseBoard() = execute("Could not close group expenses") {
-        orchestrator.awaitResult(GroupMessageCommand.CloseExpenses(groupId))
-    }
-
     private fun execute(fallback: String, action: suspend () -> Result<*>) {
         scope.launch { action().onFailure { errors.report(it.message ?: fallback) } }
-    }
-
-    private companion object {
-        const val EXPENSE_CURRENCY = "EUR"
     }
 }

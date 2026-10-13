@@ -15,12 +15,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 
 class ConversationComposerController(
-    state: SavedStateHandle,
     private val media: ConversationMediaController
 ) {
-    private val _messageText = state.getMutableStateFlow("messageText", "")
-    private val _replyToMessageId = state.getMutableStateFlow("replyToMessageId", "")
-    private val _editingMessageId = state.getMutableStateFlow("editingMessageId", "")
+    private lateinit var state: SavedStateHandle
+    private val _messageText = MutableStateFlow("")
+    private val _replyToMessageId = MutableStateFlow("")
+    private val _editingMessageId = MutableStateFlow("")
     private val _isSending = MutableStateFlow(false)
     private val _locationShareState = MutableStateFlow(LocationShareState.IDLE)
     val messageText: StateFlow<String> = _messageText.asStateFlow()
@@ -29,6 +29,13 @@ class ConversationComposerController(
     val selectedMedia = media.selected
     val isSending: StateFlow<Boolean> = _isSending.asStateFlow()
     val locationShareState: StateFlow<LocationShareState> = _locationShareState.asStateFlow()
+
+    internal fun bind(state: SavedStateHandle) {
+        this.state = state
+        _messageText.value = state[MESSAGE_TEXT_KEY] ?: ""
+        _replyToMessageId.value = state[REPLY_TO_MESSAGE_ID_KEY] ?: ""
+        _editingMessageId.value = state[EDITING_MESSAGE_ID_KEY] ?: ""
+    }
 
     fun setSending(sending: Boolean) {
         _isSending.value = sending
@@ -43,35 +50,50 @@ class ConversationComposerController(
         }
 
     fun textChanged(text: String) {
-        _messageText.value = text
+        setMessageText(text)
     }
 
     fun reply(messageId: String) {
-        _editingMessageId.value = ""
-        _replyToMessageId.value = messageId
+        setEditingMessageId("")
+        setReplyToMessageId(messageId)
     }
 
     fun clearReply() {
-        _replyToMessageId.value = ""
+        setReplyToMessageId("")
     }
 
     fun edit(messageId: String, text: String) {
-        _replyToMessageId.value = ""
+        setReplyToMessageId("")
         media.discardSelection()
-        _editingMessageId.value = messageId
-        _messageText.value = text
+        setEditingMessageId(messageId)
+        setMessageText(text)
     }
 
     fun cancelEdit() {
-        _editingMessageId.value = ""
-        _messageText.value = ""
+        setEditingMessageId("")
+        setMessageText("")
     }
 
     fun clear() {
-        _messageText.value = ""
-        _replyToMessageId.value = ""
-        _editingMessageId.value = ""
+        setMessageText("")
+        setReplyToMessageId("")
+        setEditingMessageId("")
         media.discardSelection()
+    }
+
+    private fun setMessageText(text: String) {
+        _messageText.value = text
+        state[MESSAGE_TEXT_KEY] = text
+    }
+
+    private fun setReplyToMessageId(messageId: String) {
+        _replyToMessageId.value = messageId
+        state[REPLY_TO_MESSAGE_ID_KEY] = messageId
+    }
+
+    private fun setEditingMessageId(messageId: String) {
+        _editingMessageId.value = messageId
+        state[EDITING_MESSAGE_ID_KEY] = messageId
     }
 
     fun transitionLocation(event: LocationShareEvent) {
@@ -95,6 +117,12 @@ class ConversationComposerController(
             }
             addAll(selected.map { it.toMessagePart() })
         }
+    }
+
+    private companion object {
+        const val MESSAGE_TEXT_KEY = "messageText"
+        const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
+        const val EDITING_MESSAGE_ID_KEY = "editingMessageId"
     }
 }
 

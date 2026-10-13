@@ -30,13 +30,22 @@ class ConversationHistoryController(
 
     private val isLoading = MutableStateFlow(false)
     private val hasMore = MutableStateFlow(true)
+    private lateinit var scope: CoroutineScope
+    private lateinit var conversationId: String
 
-    fun observe(scope: CoroutineScope): StateFlow<MessageHistoryUiState> =
-        combine(isLoading, hasMore, observedCursor) { loading, more, observed ->
-            MessageHistoryUiState(loading, more, observed?.messageId)
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), MessageHistoryUiState())
+    lateinit var historyState: StateFlow<MessageHistoryUiState>
+        private set
 
-    fun loadOlder(scope: CoroutineScope, conversationId: String, onError: (Throwable) -> Unit) {
+    internal fun bind(scope: CoroutineScope, conversationId: String) {
+        this.scope = scope
+        this.conversationId = conversationId
+        historyState =
+            combine(isLoading, hasMore, observedCursor) { loading, more, observed ->
+                MessageHistoryUiState(loading, more, observed?.messageId)
+            }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), MessageHistoryUiState())
+    }
+
+    fun loadOlder(onError: (Throwable) -> Unit) {
         if (isLoading.value || !hasMore.value) return
         isLoading.value = true
         scope.launch {
@@ -57,8 +66,6 @@ class ConversationHistoryController(
     }
 
     fun requestTarget(
-        scope: CoroutineScope,
-        conversationId: String,
         messageId: String,
         onError: (Throwable) -> Unit
     ) {
@@ -73,8 +80,6 @@ class ConversationHistoryController(
     }
 
     fun ensureTargetMessageLoaded(
-        scope: CoroutineScope,
-        conversationId: String,
         messageId: String?,
         ready: Flow<Boolean>,
         containsMessage: () -> Boolean,

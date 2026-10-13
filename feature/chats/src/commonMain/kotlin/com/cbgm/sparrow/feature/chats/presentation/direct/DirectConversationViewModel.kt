@@ -19,8 +19,6 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversati
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
-import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
-import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,13 +37,13 @@ class DirectConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveDirectChatContextUseCase,
     private val orchestrator: ConversationOrchestrator,
-    private val indicatorObserver: ConversationIndicatorObserver,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
     private val historyController: ConversationHistoryController,
     private val mediaController: ConversationMediaController,
     composerController: ConversationComposerController,
     private val identityController: DirectIdentityController,
+    private val indicatorController: DirectIndicatorController,
+    stateController: DirectConversationStateController,
     private val actionsController: DirectConversationActionsController
 ) : BaseViewModel() {
     private val conversationId =
@@ -85,47 +83,31 @@ class DirectConversationViewModel(
         )
 
     init {
-        identityController.recoverAfterManualImport(
-            viewModelScope,
-            contactId,
-            conversationContext
-        ) {
+        composerController.bind(savedStateHandle)
+        historyController.bind(viewModelScope, conversationId)
+        identityController.bind(viewModelScope, contactId)
+        indicatorController.bind(viewModelScope, contactId)
+        stateController.bind(
+            contactId = contactId,
+            fallbackContactName = fallbackContactName,
+            scope = viewModelScope,
+            conversationContext = conversationContext,
+            contextMessageId = contextMessageId,
+            errors = errors
+        )
+        identityController.recoverAfterManualImport(conversationContext) {
             logger.error(it) { "Manual identity exchange recovery failed" }
         }
     }
 
-    private val indicatorController =
-        IndicatorController(
-            scope = viewModelScope,
-            sendIndicatorState = { indicator ->
-                orchestrator.awaitResult(DirectConversationCommand.SendIndicator(contactId, indicator)).map { }
-            },
-            logTag = "DirectConversationViewModel"
-        )
-
-    private val state = DirectConversationStateController(
-        contactId,
-        fallbackContactName,
-        viewModelScope,
-        conversationContext,
-        observeMessageSafetyAssessments,
-        composerController,
-        indicatorController,
-        contextMessageId,
-        historyController,
-        errors
-    )
-    val conversationState = state.conversationState
-    val composerState = state.composerState
-    val contextState = state.contextState
-    val indicatorState = state.indicatorState
-    val historyState = state.historyState
-    val errorMessage = state.errorMessage
+    val conversationState = stateController.conversationState
+    val composerState = stateController.composerState
+    val contextState = stateController.contextState
+    val indicatorState = stateController.indicatorState
+    val historyState = stateController.historyState
+    val errorMessage = stateController.errorMessage
 
     init {
-        viewModelScope.launch {
-            indicatorObserver.observeContact(contactId).collect(indicatorController::onIncomingIndicatorChanged)
-        }
         viewModelScope.launch {
             observeVoiceRecordingActive().collect { isRecording ->
                 indicatorController.onLocalVoiceRecordingChanged(
@@ -147,8 +129,6 @@ class DirectConversationViewModel(
             }
         )
         historyController.ensureTargetMessageLoaded(
-            scope = viewModelScope,
-            conversationId = conversationId,
             messageId = targetMessageId,
             ready = conversationState.map { !it.isLoading },
             containsMessage = { conversationState.value.messages.any { it.id == targetMessageId } },
@@ -164,14 +144,9 @@ class DirectConversationViewModel(
 
             DirectConversationUiEvent.SendClicked -> actionsController.sendCurrentMessage()
             DirectConversationUiEvent.VoiceSendClicked -> actionsController.sendVoiceMessage()
-            DirectConversationUiEvent.LoadOlderMessages -> historyController.loadOlder(
-                viewModelScope,
-                conversationId
-            ) { logger.error(it) { "Could not load older messages" } }
+            DirectConversationUiEvent.LoadOlderMessages -> historyController.loadOlder { logger.error(it) { "Could not load older messages" } }
 
             is DirectConversationUiEvent.MessageHistoryTargetRequested -> historyController.requestTarget(
-                viewModelScope,
-                conversationId,
                 event.messageId
             ) { logger.error(it) { "History target could not be found" } }
 
@@ -251,8 +226,6 @@ class DirectConversationViewModel(
 
             DirectConversationUiEvent.ShareIdentityClicked ->
                 identityController.shareIdentity(
-                    scope = viewModelScope,
-                    contactId = contactId,
                     onSuccess = { navigator.navigateTo(AppRoute.ShareIdentity) },
                     onFailure = {
                         errors.report(
