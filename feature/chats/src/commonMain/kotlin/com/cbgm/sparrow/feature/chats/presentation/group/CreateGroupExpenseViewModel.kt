@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -10,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupExpenseCreati
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.nextDraft
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toAmountInput
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toCreateExpenseUiState
+import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toEditedExpense
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toExpenseAllocations
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toExpenseCategory
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.withSplitMode
@@ -37,13 +39,18 @@ class CreateGroupExpenseViewModel(
     private val orchestrator: ConversationOrchestrator
 ) : BaseViewModel() {
     private val groupId = savedStateHandle.requireRouteArgument<String>(AppRoute.CreateExpense::groupId.name)
+    private val expenseId = savedStateHandle.get<String>(AppRoute.CreateExpense::expenseId.name)
+    private var editedExpense: Expense? = null
     private val _uiState = MutableStateFlow(CreateExpenseUiState())
     val uiState: StateFlow<CreateExpenseUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            getContext(groupId)
-                .onSuccess { context -> _uiState.value = context.toCreateExpenseUiState() }
+            getContext(groupId, expenseId)
+                .onSuccess { context ->
+                    editedExpense = context.expense
+                    _uiState.value = context.toCreateExpenseUiState()
+                }
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false) }
                     SparrowLog.showError(getString(Res.string.feature_expenses_load_failed))
@@ -89,7 +96,7 @@ class CreateGroupExpenseViewModel(
                     current.copy(queued = current.queued.filterIndexed { index, _ -> index != event.index })
                 }
             }
-            CreateExpenseUiEvent.SplitPickerClicked -> navigator.navigateTo(AppRoute.ExpenseSplit(groupId))
+            CreateExpenseUiEvent.SplitPickerClicked -> navigator.navigateTo(AppRoute.ExpenseSplit(groupId, expenseId))
             CreateExpenseUiEvent.SplitDoneClicked -> navigator.popBackStack()
             CreateExpenseUiEvent.AddAnotherClicked -> queueDraft()
             CreateExpenseUiEvent.SendClicked -> sendAll()
@@ -132,6 +139,10 @@ class CreateGroupExpenseViewModel(
             reportDraftError(state.draft)
             return
         }
+        editedExpense?.let { original ->
+            saveEdit(original, state.draft)
+            return
+        }
         val pending = if (state.canAdd) state.queued + state.draft else state.queued
         _uiState.update {
             it.copy(
@@ -171,6 +182,22 @@ class CreateGroupExpenseViewModel(
                 _uiState.update { it.copy(queued = it.queued.drop(1)) }
             }
             navigator.popBackStack()
+        }
+    }
+
+    private fun saveEdit(original: Expense, draft: ExpenseDraftUi) {
+        val expense = draft.toEditedExpense(original) ?: run {
+            reportDraftError(draft)
+            return
+        }
+        _uiState.update { it.copy(isSending = true) }
+        viewModelScope.launch {
+            orchestrator.awaitResult(GroupMessageCommand.EditExpense(groupId, expense))
+                .onSuccess { navigator.popBackStack() }
+                .onFailure {
+                    _uiState.update { it.copy(isSending = false) }
+                    SparrowLog.showError(getString(Res.string.feature_expenses_send_failed))
+                }
         }
     }
 }

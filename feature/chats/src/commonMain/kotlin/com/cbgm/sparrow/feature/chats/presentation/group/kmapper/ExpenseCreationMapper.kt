@@ -1,8 +1,11 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.kmapper
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseSplit
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseCreationContext
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseMember
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
@@ -10,20 +13,48 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpensePartic
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
 
 internal fun GroupExpenseCreationContext.toCreateExpenseUiState(): CreateExpenseUiState {
-    val participants = members.map { member ->
-        ExpenseParticipantUi(member.id, member.displayName, member.isLocal, member.avatarContactId)
-    }
+    val participants = members.map { member -> member.toExpenseParticipantUi() }
     return CreateExpenseUiState(
         boardId = board.id,
         currencyCode = board.currencyCode,
         participants = participants,
-        draft = ExpenseDraftUi(
+        draft = expense?.toExpenseDraftUi() ?: ExpenseDraftUi(
             payerId = localMemberId,
             participantIds = participants.mapTo(mutableSetOf()) { it.id }
         ),
-        isLoading = false
+        isLoading = false,
+        isEditing = expense != null
     )
 }
+
+private fun Expense.toExpenseDraftUi(): ExpenseDraftUi {
+    val participantIds = allocations.mapTo(mutableSetOf(), ExpenseAllocation::memberId)
+    val isEqualSplit = ExpenseSplit.evenly(amountMinor, participantIds) == allocations.sortedBy(ExpenseAllocation::memberId)
+    return ExpenseDraftUi(
+        description = description,
+        amount = amountMinor.toAmountText('.'),
+        payerId = paidByMemberId,
+        participantIds = participantIds,
+        category = ExpenseCategoryUi.valueOf(category.name),
+        splitMode = if (isEqualSplit) ExpenseSplitModeUi.EQUAL else ExpenseSplitModeUi.CUSTOM,
+        customAmounts = if (isEqualSplit) emptyMap() else allocations.associate { it.memberId to it.amountMinor.toAmountText('.') }
+    )
+}
+
+internal fun ExpenseDraftUi.toEditedExpense(original: Expense): Expense? {
+    val amount = totalMinor ?: return null
+    val allocations = toExpenseAllocations() ?: return null
+    return original.copy(
+        description = description.trim(),
+        amountMinor = amount,
+        paidByMemberId = payerId,
+        allocations = allocations,
+        category = category.toExpenseCategory()
+    )
+}
+
+internal fun GroupExpenseMember.toExpenseParticipantUi(): ExpenseParticipantUi =
+    ExpenseParticipantUi(id, displayName, isLocal, avatarContactId)
 
 internal fun ExpenseCategoryUi.toExpenseCategory(): ExpenseCategory = ExpenseCategory.valueOf(name)
 

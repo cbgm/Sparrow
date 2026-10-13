@@ -127,8 +127,14 @@ data class Expense(
     val allocations: List<ExpenseAllocation>,
     val occurredAtEpochMilliseconds: Long,
     val receipt: Image? = null,
-    val category: ExpenseCategory = ExpenseCategory.OTHER
+    val category: ExpenseCategory = ExpenseCategory.OTHER,
+    val editedAtEpochMilliseconds: Long? = null,
+    val deletedAtEpochMilliseconds: Long? = null,
+    val createdByMemberId: String? = null,
+    val revisionOf: String? = null
 ) : MessagePart
+
+val Expense.expenseId: String get() = revisionOf ?: id
 
 enum class ExpenseCategory {
     FLIGHT,

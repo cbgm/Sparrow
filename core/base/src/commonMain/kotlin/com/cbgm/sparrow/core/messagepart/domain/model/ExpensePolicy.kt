@@ -29,6 +29,17 @@ object ExpensePolicy {
         requireCurrency(expense.currencyCode)
         require(expense.paidByMemberId.isNotBlank()) { "Expense payer is missing" }
         require(expense.occurredAtEpochMilliseconds > 0L) { "Invalid expense date" }
+        require(expense.editedAtEpochMilliseconds == null || expense.editedAtEpochMilliseconds > 0L) {
+            "Invalid expense edit time"
+        }
+        require(expense.deletedAtEpochMilliseconds == null || expense.deletedAtEpochMilliseconds > 0L) {
+            "Invalid expense deletion time"
+        }
+        require(expense.revisionOf != expense.id) { "An expense cannot revise itself" }
+        require(
+            (expense.revisionOf != null) ==
+                (expense.editedAtEpochMilliseconds != null || expense.deletedAtEpochMilliseconds != null)
+        ) { "Only expense revisions are edited or deleted" }
         require(expense.allocations.size in 1..MAX_ALLOCATIONS) { "Invalid number of expense participants" }
         require(expense.allocations.map(ExpenseAllocation::memberId).distinct().size == expense.allocations.size) {
             "Expense participants must be unique"

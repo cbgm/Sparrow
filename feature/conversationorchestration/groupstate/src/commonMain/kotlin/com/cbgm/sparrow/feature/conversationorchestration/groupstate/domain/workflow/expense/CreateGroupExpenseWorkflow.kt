@@ -64,7 +64,8 @@ class CreateGroupExpenseWorkflow internal constructor(
                 paidByMemberId = command.paidByMemberId,
                 allocations = command.allocations.sortedBy { it.memberId },
                 occurredAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                category = command.category
+                category = command.category,
+                createdByMemberId = members.localMemberId
             )
         ExpensePolicy.requireValid(expense)
         return expense

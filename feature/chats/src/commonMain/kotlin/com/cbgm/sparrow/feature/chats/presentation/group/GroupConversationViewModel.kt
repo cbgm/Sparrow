@@ -301,6 +301,7 @@ class GroupConversationViewModel(
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             GroupConversationUiEvent.ActivateExpensesClicked -> pinController.activateExpenseBoard()
             GroupConversationUiEvent.CloseExpensesClicked -> pinController.closeExpenseBoard()
+            GroupConversationUiEvent.ExpenseOverviewClicked -> navigator.navigateTo(AppRoute.ExpenseOverview(groupId))
             GroupConversationUiEvent.AddExpenseClicked -> navigator.navigateTo(
                 AppRoute.CreateExpense(
                     groupId

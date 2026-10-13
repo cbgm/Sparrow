@@ -801,4 +801,44 @@
     <string name="feature_expenses_split_exceeded">%1$s too much</string>
     <string name="feature_expenses_split_balanced">Everything assigned</string>
     <string name="feature_expenses_split_done">Done</string>
+    <string name="feature_expenses_overview_subtitle">%1$s · since %2$s</string>
+    <string name="feature_expenses_overview_your_balance">Your balance</string>
+    <plurals name="feature_expenses_overview_you_owe_people">
+        <item quantity="one">You owe %1$d person</item>
+        <item quantity="other">You owe %1$d people</item>
+    </plurals>
+    <plurals name="feature_expenses_overview_people_owe_you">
+        <item quantity="one">%1$d person owes you</item>
+        <item quantity="other">%1$d people owe you</item>
+    </plurals>
+    <string name="feature_expenses_overview_settled">You're settled up</string>
+    <string name="feature_expenses_overview_group_total">Group total</string>
+    <string name="feature_expenses_overview_your_share">Your share</string>
+    <string name="feature_expenses_overview_you_paid">You paid</string>
+    <string name="feature_expenses_overview_settle_up">Settle up</string>
+    <plurals name="feature_expenses_overview_transfers">
+        <item quantity="one">%1$d transfer</item>
+        <item quantity="other">%1$d transfers</item>
+    </plurals>
+    <string name="feature_expenses_overview_pays">%1$s pays %2$s</string>
+    <string name="feature_expenses_overview_you_pay">You pay %1$s</string>
+    <string name="feature_expenses_overview_pays_you">%1$s pays you</string>
+    <string name="feature_expenses_overview_all_settled">Everyone is settled up</string>
+    <string name="feature_expenses_overview_settle_hint">Suggested with the fewest transfers. Payments happen outside Sparrow.</string>
+    <string name="feature_expenses_overview_balances">Balances</string>
+    <string name="feature_expenses_overview_expenses">Expenses</string>
+    <string name="feature_expenses_overview_no_expenses">No expenses yet</string>
+    <string name="feature_expenses_overview_paid_on">%1$s paid · %2$s</string>
+    <string name="feature_expenses_overview_you_paid_on">You paid · %1$s</string>
+    <string name="feature_expenses_overview_you_lent">you lent %1$s</string>
+    <string name="feature_expenses_overview_you_borrowed">you owe %1$s</string>
+    <string name="feature_expenses_activity_edited">%1$s edited an expense</string>
+    <string name="feature_expenses_activity_deleted">%1$s deleted an expense</string>
+    <string name="feature_expenses_edit">Edit expense</string>
+    <string name="feature_expenses_save">Save expense</string>
+    <string name="feature_expenses_delete">Delete expense</string>
+    <string name="feature_expenses_delete_title">Delete expense?</string>
+    <string name="feature_expenses_delete_message">“%1$s” will be removed for everyone in the group.</string>
+    <string name="feature_expenses_delete_confirm">Delete</string>
+    <string name="feature_expenses_delete_failed">Could not delete the expense.</string>
 </resources>

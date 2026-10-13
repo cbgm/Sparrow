@@ -133,6 +133,10 @@ data class ExpenseUi(
     val occurredAtEpochMilliseconds: Long,
     val receipt: ImageUi? = null,
     val category: String = "OTHER",
+    val editedAtEpochMilliseconds: Long? = null,
+    val deletedAtEpochMilliseconds: Long? = null,
+    val createdByMemberId: String? = null,
+    val revisionOf: String? = null,
     override val source: MessagePartSourceUi = MessagePartSourceUi.Message
 ) : MessagePartUi
 

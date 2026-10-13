@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
@@ -43,6 +44,8 @@ import com.cbgm.sparrow.resources.feature_chats_group_unknown_member
 import com.cbgm.sparrow.resources.feature_expenses_activity_activated
 import com.cbgm.sparrow.resources.feature_expenses_activity_added
 import com.cbgm.sparrow.resources.feature_expenses_activity_closed
+import com.cbgm.sparrow.resources.feature_expenses_activity_deleted
+import com.cbgm.sparrow.resources.feature_expenses_activity_edited
 import com.cbgm.sparrow.resources.feature_expenses_activity_participants
 import com.cbgm.sparrow.resources.feature_expenses_activity_retry
 import com.cbgm.sparrow.resources.feature_expenses_activity_you
@@ -135,7 +138,11 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
         ?: ExpenseCategoryUi.OTHER
     Surface(
         modifier = modifier.fillMaxWidth().clickable { expanded = !expanded },
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = if (expense.deletedAtEpochMilliseconds == null) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            MaterialTheme.colorScheme.errorContainer
+        },
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
@@ -153,7 +160,14 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        stringResource(Res.string.feature_expenses_activity_added, actor),
+                        stringResource(
+                            when {
+                                expense.deletedAtEpochMilliseconds != null -> Res.string.feature_expenses_activity_deleted
+                                expense.editedAtEpochMilliseconds != null -> Res.string.feature_expenses_activity_edited
+                                else -> Res.string.feature_expenses_activity_added
+                            },
+                            actor
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -161,6 +175,7 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
                         expense.description,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
+                        textDecoration = if (expense.deletedAtEpochMilliseconds != null) TextDecoration.LineThrough else null,
                         maxLines = if (expanded) Int.MAX_VALUE else 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -168,7 +183,8 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
                 Text(
                     expense.amountMinor.toExpenseAmountLabel(expense.currencyCode),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    textDecoration = if (expense.deletedAtEpochMilliseconds != null) TextDecoration.LineThrough else null
                 )
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,

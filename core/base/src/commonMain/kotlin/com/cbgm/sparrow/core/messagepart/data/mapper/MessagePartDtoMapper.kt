@@ -145,7 +145,11 @@ fun MessagePart.toDto(): MessagePartDto {
             allocations = allocations.map { ExpenseAllocationDto(it.memberId, it.amountMinor) },
             occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
             receipt = receipt?.toDto() as? ImageDto,
-            category = category.name
+            category = category.name,
+            editedAtEpochMilliseconds = editedAtEpochMilliseconds,
+            deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
+            createdByMemberId = createdByMemberId,
+            revisionOf = revisionOf
         )
         is Poll -> PollDto(
             id = id,
@@ -257,5 +261,9 @@ private fun ExpenseDto.toExpense(): Expense =
         allocations = allocations.map { ExpenseAllocation(it.memberId, it.amountMinor) },
         occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
         receipt = receipt?.toMessagePart() as? Image,
-        category = ExpenseCategory.entries.firstOrNull { it.name == category } ?: ExpenseCategory.OTHER
+        category = ExpenseCategory.entries.firstOrNull { it.name == category } ?: ExpenseCategory.OTHER,
+        editedAtEpochMilliseconds = editedAtEpochMilliseconds,
+        deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
+        createdByMemberId = createdByMemberId,
+        revisionOf = revisionOf
     )

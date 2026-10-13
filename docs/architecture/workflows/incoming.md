@@ -78,11 +78,11 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/group/ReceiveGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`
 
 ```text
 FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
-FindConversation -> DecryptMessage -> FindExisting -> [ApplyProfilePicture -> StoreMessage]
+FindConversation -> DecryptMessage -> FindExisting -> [AuthorizeExpenses -> ApplyProfilePicture -> StoreMessage]
   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
 
 A redelivered message keeps its row; only attachments and the receipt are repeated.
@@ -96,7 +96,8 @@ stateDiagram-v2
     DecryptMessage --> ApplyOperation : OperationDecrypted
     ApplyOperation --> [*] : Done
     FindExisting --> PrefetchLinkPreviews : MessageStored
-    FindExisting --> ApplyProfilePicture : NewMessage
+    FindExisting --> AuthorizeExpenses : NewMessage
+    AuthorizeExpenses --> ApplyProfilePicture : ExpensesAuthorized
     ApplyProfilePicture --> StoreMessage : ProfilePictureApplied
     StoreMessage --> PrefetchLinkPreviews : MessageStored
     PrefetchLinkPreviews --> StoreAttachments : LinkPreviewsRequested

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.api.command
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
@@ -84,5 +85,15 @@ sealed interface GroupMessageCommand : ConversationCommand {
         val paidByMemberId: String,
         val allocations: List<ExpenseAllocation>,
         val category: ExpenseCategory
+    ) : GroupMessageCommand
+
+    data class EditExpense(
+        override val groupId: String,
+        val expense: Expense
+    ) : GroupMessageCommand
+
+    data class DeleteExpense(
+        override val groupId: String,
+        val expense: Expense
     ) : GroupMessageCommand
 }

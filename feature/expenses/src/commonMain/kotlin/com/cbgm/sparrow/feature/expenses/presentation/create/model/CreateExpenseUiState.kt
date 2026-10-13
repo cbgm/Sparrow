@@ -78,7 +78,8 @@ data class CreateExpenseUiState(
     val draft: ExpenseDraftUi = ExpenseDraftUi(),
     val queued: List<ExpenseDraftUi> = emptyList(),
     val isLoading: Boolean = true,
-    val isSending: Boolean = false
+    val isSending: Boolean = false,
+    val isEditing: Boolean = false
 ) {
     val canAdd: Boolean get() = !isLoading && !isSending && draft.isValid(participants.mapTo(mutableSetOf()) { it.id })
     val canSend: Boolean get() = !isLoading && !isSending &&

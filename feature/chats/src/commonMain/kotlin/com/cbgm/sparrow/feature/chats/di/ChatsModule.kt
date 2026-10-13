@@ -35,6 +35,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.LoadGroupPinnedAttach
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseOverviewUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
@@ -55,6 +56,7 @@ import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectio
 import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationActionsController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupExpenseOverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupPinController
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupPollController
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
@@ -131,6 +133,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::GetGroupExpenseCreationContextUseCase)
     singleOf(::ObserveGroupExpenseSummaryUseCase)
+    singleOf(::ObserveGroupExpenseOverviewUseCase)
     singleOf(::LoadGroupPinnedAttachmentUseCase)
     singleOf(::ObserveGroupVerificationContextUseCase)
     singleOf(::ObserveGroupVerificationUseCase)
@@ -141,6 +144,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
 
 private fun org.koin.core.module.Module.registerViewModels() {
     viewModel { CreateGroupExpenseViewModel(savedStateHandle = get(), getContext = get(), orchestrator = get()) }
+    viewModel { GroupExpenseOverviewViewModel(savedStateHandle = get(), observeOverview = get(), orchestrator = get()) }
     factory { ConversationHistoryController(get(), get()) }
     factory { ConversationMediaController(get()) }
     factory { SharedContactController(get()) }

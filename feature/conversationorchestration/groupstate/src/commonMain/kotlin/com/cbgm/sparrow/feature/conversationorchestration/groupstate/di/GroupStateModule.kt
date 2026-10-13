@@ -33,6 +33,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.ActivateGroupExpensesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.CreateGroupExpenseWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.DeleteGroupExpenseWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.EditGroupExpenseWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.ChangeGroupAvatarWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.ChangeGroupDescriptionWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.ChangeGroupTitleWorkflow
@@ -98,6 +100,8 @@ private fun Module.registerPublicWorkflows() {
     singleOf(::ChangeGroupTitleWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CloseGroupExpensesWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CreateGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::EditGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::DeleteGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::PinGroupMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::RemoveGroupAvatarWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::UnpinGroupMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }

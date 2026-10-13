@@ -104,6 +104,8 @@ sealed interface GroupConversationUiEvent {
 
     data object CreatePollClicked : GroupConversationUiEvent
 
+    data object ExpenseOverviewClicked : GroupConversationUiEvent
+
     data object ActivateExpensesClicked : GroupConversationUiEvent
 
     data object CloseExpensesClicked : GroupConversationUiEvent

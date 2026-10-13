@@ -207,7 +207,12 @@ fun GroupConversationScreen(
                         pin?.let { pin ->
                             GroupPinnedMessageBar(
                                 pin = pin,
-                                onClick = { showPinnedMessage = true },
+                                onClick = {
+                                    when (pin) {
+                                        is GroupPinUi.Expenses -> onUiEvent(GroupConversationUiEvent.ExpenseOverviewClicked)
+                                        is GroupPinUi.Message -> showPinnedMessage = true
+                                    }
+                                },
                                 onUnpinClick = { onUiEvent(GroupConversationUiEvent.UnpinMessage) }
                             )
                         }

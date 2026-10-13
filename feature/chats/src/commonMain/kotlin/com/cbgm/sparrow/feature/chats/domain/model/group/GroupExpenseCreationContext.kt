@@ -1,11 +1,14 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 
 data class GroupExpenseCreationContext(
     val board: ExpenseBoard,
     val localMemberId: String,
-    val members: List<GroupExpenseMember>
+    val members: List<GroupExpenseMember>,
+    val expense: Expense? = null,
+    val isLocalAdmin: Boolean = false
 )
 
 data class GroupExpenseMember(

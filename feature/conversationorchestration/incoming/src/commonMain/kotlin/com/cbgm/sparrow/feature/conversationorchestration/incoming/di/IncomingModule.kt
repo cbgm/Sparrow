@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.D
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.ControlPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.GroupPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.packet.DirectMessagePacketReader
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketAcceptedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveIncomingIdentityPeerUseCase
@@ -66,6 +67,7 @@ private fun Module.registerData() {
 }
 
 private fun Module.registerUseCases() {
+    singleOf(::AuthorizeIncomingExpensesUseCase)
     singleOf(::CheckGroupPacketAcceptedUseCase)
     singleOf(::FindOperationTargetUseCase)
     singleOf(::ResolveIncomingIdentityPeerUseCase)

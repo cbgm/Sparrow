@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.management.AttachmentMa
 import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStorageRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.CreateGroupExpenseSplitRoute
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupExpenseOverviewRoute
 import com.cbgm.sparrow.feature.polls.presentation.create.CreatePollRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
@@ -40,8 +41,15 @@ fun NavGraphBuilder.attachmentsNavGraph(navController: NavHostController) {
         exitTransition = { slideOutToRight() }
     ) { entry ->
         val destination = entry.toRoute<AppRoute.ExpenseSplit>()
-        val parentEntry = navController.getBackStackEntry(AppRoute.CreateExpense(destination.groupId))
+        val parentEntry = navController.getBackStackEntry(AppRoute.CreateExpense(destination.groupId, destination.expenseId))
         CreateGroupExpenseSplitRoute(viewModelStoreOwner = parentEntry)
+    }
+
+    composable<AppRoute.ExpenseOverview>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        GroupExpenseOverviewRoute()
     }
 
     composable<AppRoute.CreatePoll>(

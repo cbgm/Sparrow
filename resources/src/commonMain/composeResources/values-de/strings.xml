@@ -805,4 +805,44 @@
     <string name="feature_expenses_split_exceeded">%1$s zu viel</string>
     <string name="feature_expenses_split_balanced">Alles verteilt</string>
     <string name="feature_expenses_split_done">Fertig</string>
+    <string name="feature_expenses_overview_subtitle">%1$s · seit %2$s</string>
+    <string name="feature_expenses_overview_your_balance">Dein Saldo</string>
+    <plurals name="feature_expenses_overview_you_owe_people">
+        <item quantity="one">Du schuldest %1$d Person</item>
+        <item quantity="other">Du schuldest %1$d Personen</item>
+    </plurals>
+    <plurals name="feature_expenses_overview_people_owe_you">
+        <item quantity="one">%1$d Person schuldet dir</item>
+        <item quantity="other">%1$d Personen schulden dir</item>
+    </plurals>
+    <string name="feature_expenses_overview_settled">Du bist ausgeglichen</string>
+    <string name="feature_expenses_overview_group_total">Gruppe gesamt</string>
+    <string name="feature_expenses_overview_your_share">Dein Anteil</string>
+    <string name="feature_expenses_overview_you_paid">Du hast bezahlt</string>
+    <string name="feature_expenses_overview_settle_up">Ausgleichen</string>
+    <plurals name="feature_expenses_overview_transfers">
+        <item quantity="one">%1$d Überweisung</item>
+        <item quantity="other">%1$d Überweisungen</item>
+    </plurals>
+    <string name="feature_expenses_overview_pays">%1$s zahlt an %2$s</string>
+    <string name="feature_expenses_overview_you_pay">Du zahlst an %1$s</string>
+    <string name="feature_expenses_overview_pays_you">%1$s zahlt an dich</string>
+    <string name="feature_expenses_overview_all_settled">Alle sind ausgeglichen</string>
+    <string name="feature_expenses_overview_settle_hint">Vorschlag mit möglichst wenigen Überweisungen. Bezahlt wird außerhalb von Sparrow.</string>
+    <string name="feature_expenses_overview_balances">Salden</string>
+    <string name="feature_expenses_overview_expenses">Ausgaben</string>
+    <string name="feature_expenses_overview_no_expenses">Noch keine Ausgaben</string>
+    <string name="feature_expenses_overview_paid_on">%1$s hat bezahlt · %2$s</string>
+    <string name="feature_expenses_overview_you_paid_on">Du hast bezahlt · %1$s</string>
+    <string name="feature_expenses_overview_you_lent">du hast %1$s ausgelegt</string>
+    <string name="feature_expenses_overview_you_borrowed">du schuldest %1$s</string>
+    <string name="feature_expenses_activity_edited">%1$s hat eine Ausgabe bearbeitet</string>
+    <string name="feature_expenses_activity_deleted">%1$s hat eine Ausgabe gelöscht</string>
+    <string name="feature_expenses_edit">Ausgabe bearbeiten</string>
+    <string name="feature_expenses_save">Ausgabe speichern</string>
+    <string name="feature_expenses_delete">Ausgabe löschen</string>
+    <string name="feature_expenses_delete_title">Ausgabe löschen?</string>
+    <string name="feature_expenses_delete_message">„%1$s“ wird für alle in der Gruppe entfernt.</string>
+    <string name="feature_expenses_delete_confirm">Löschen</string>
+    <string name="feature_expenses_delete_failed">Die Ausgabe konnte nicht gelöscht werden.</string>
 </resources>

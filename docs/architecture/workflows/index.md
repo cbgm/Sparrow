@@ -8,7 +8,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 |---|---|---|---|
 | [Delivery workflows](delivery.md) | 2 | 0 | 2 |
 | [Message workflows](message.md) | 22 | 17 | 5 |
-| [Group state workflows](groupstate.md) | 12 | 9 | 3 |
+| [Group state workflows](groupstate.md) | 14 | 11 | 3 |
 | [Membership workflows](membership.md) | 14 | 9 | 5 |
 | [Direct chat lifecycle workflows](lifecycle.md) | 14 | 3 | 11 |
 | [Incoming packet workflows](incoming.md) | 30 | 0 | 30 |
@@ -45,7 +45,9 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupMessageCommand.CloseExpenses` | [`CloseGroupExpensesWorkflow`](groupstate.md#closegroupexpensesworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |
 | `GroupMessageCommand.ClosePoll` | [`CloseGroupPollWorkflow`](message.md#closegrouppollworkflow) | `message` | — |
 | `GroupMessageCommand.CreateExpense` | [`CreateGroupExpenseWorkflow`](groupstate.md#creategroupexpenseworkflow) | `groupstate` | — |
+| `GroupMessageCommand.DeleteExpense` | [`DeleteGroupExpenseWorkflow`](groupstate.md#deletegroupexpenseworkflow) | `groupstate` | — |
 | `GroupMessageCommand.DeleteMessage` | [`DeleteGroupMessageWorkflow`](message.md#deletegroupmessageworkflow) | `message` | — |
+| `GroupMessageCommand.EditExpense` | [`EditGroupExpenseWorkflow`](groupstate.md#editgroupexpenseworkflow) | `groupstate` | — |
 | `GroupMessageCommand.EditMessage` | [`EditGroupMessageWorkflow`](message.md#editgroupmessageworkflow) | `message` | — |
 | `GroupMessageCommand.MarkConversationRead` | [`MarkGroupConversationReadWorkflow`](message.md#markgroupconversationreadworkflow) | `message` | — |
 | `GroupMessageCommand.PinMessage` | [`PinGroupMessageWorkflow`](groupstate.md#pingroupmessageworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |

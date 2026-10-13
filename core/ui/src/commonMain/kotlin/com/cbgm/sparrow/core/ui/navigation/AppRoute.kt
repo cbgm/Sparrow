@@ -112,11 +112,18 @@ sealed interface AppRoute {
 
     @Serializable
     data class CreateExpense(
-        val groupId: String
+        val groupId: String,
+        val expenseId: String? = null
     ) : AppRoute
 
     @Serializable
     data class ExpenseSplit(
+        val groupId: String,
+        val expenseId: String? = null
+    ) : AppRoute
+
+    @Serializable
+    data class ExpenseOverview(
         val groupId: String
     ) : AppRoute
 

@@ -1,0 +1,35 @@
+package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
+
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
+import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.IncomingExpensePolicy
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import kotlinx.coroutines.flow.first
+
+class AuthorizeIncomingExpensesUseCase(
+    private val membership: GroupMembershipRepository,
+    private val attachments: MessageAttachmentOperationsRepository
+) {
+    suspend operator fun invoke(
+        groupId: String,
+        senderContactId: String,
+        parts: List<MessagePart>
+    ): Result<Unit> = runCatching {
+        val expenses = parts.filterIsInstance<Expense>()
+        if (expenses.isEmpty()) return@runCatching
+
+        val senderKey = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
+            .firstOrNull { it.contactId == senderContactId }
+            ?.signingPublicKey
+            ?: error("Expense sender is not a group member")
+        val senderId = ExpenseMemberId.fromSigningPublicKey(senderKey)
+        val senderIsAdmin = senderContactId in membership.observeAdministration(groupId).first().adminContactIds
+        val stored = attachments.observeExpenses(groupId).first()
+
+        expenses.forEach { expense ->
+            IncomingExpensePolicy.requireAuthorized(expense, stored, senderId, senderIsAdmin)
+        }
+    }
+}

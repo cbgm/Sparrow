@@ -10,6 +10,8 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 |---|---|---|---|
 | [`ActivateGroupExpensesWorkflow`](#activategroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ActivateExpenses` | — |
 | [`CreateGroupExpenseWorkflow`](#creategroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CreateExpense` | — |
+| [`DeleteGroupExpenseWorkflow`](#deletegroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteExpense` | — |
+| [`EditGroupExpenseWorkflow`](#editgroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.EditExpense` | — |
 | [`ChangeGroupAvatarWorkflow`](#changegroupavatarworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeAvatar` | — |
 | [`ChangeGroupDescriptionWorkflow`](#changegroupdescriptionworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeDescription` | `groupMetadataLockKey(command.groupId)` |
 | [`ChangeGroupTitleWorkflow`](#changegrouptitleworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeTitle` | `groupMetadataLockKey(command.groupId)` |
@@ -62,6 +64,44 @@ stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> CreateExpense : ExpenseMembersFound
     CreateExpense --> SendExpense : ExpenseCreated
+    SendExpense --> [*] : ExpenseSent
+```
+
+### DeleteGroupExpenseWorkflow
+
+- **Kind:** public — Chats submits `GroupMessageCommand.DeleteExpense`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/DeleteGroupExpenseWorkflow.kt`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+
+```text
+FindExpenseMembers -> MarkExpenseDeleted -> SendExpense.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindExpenseMembers
+    FindExpenseMembers --> MarkExpenseDeleted : ExpenseMembersFound
+    MarkExpenseDeleted --> SendExpense : ExpenseMarkedDeleted
+    SendExpense --> [*] : ExpenseSent
+```
+
+### EditGroupExpenseWorkflow
+
+- **Kind:** public — Chats submits `GroupMessageCommand.EditExpense`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/EditGroupExpenseWorkflow.kt`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+
+```text
+FindExpenseMembers -> ReviseExpense -> SendExpense.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindExpenseMembers
+    FindExpenseMembers --> ReviseExpense : ExpenseMembersFound
+    ReviseExpense --> SendExpense : ExpenseRevised
     SendExpense --> [*] : ExpenseSent
 ```
 

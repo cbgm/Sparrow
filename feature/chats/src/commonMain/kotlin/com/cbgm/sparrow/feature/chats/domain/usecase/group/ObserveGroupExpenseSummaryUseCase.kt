@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseSummary
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
+import com.cbgm.sparrow.feature.expenses.domain.ExpenseRevisions
 import com.cbgm.sparrow.feature.expenses.domain.usecase.CalculateExpenseBalancesUseCase
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,8 +52,7 @@ class ObserveGroupExpenseSummaryUseCase(
         expenses: List<Expense>,
         localMemberId: String?
     ): GroupExpenseSummary {
-        // A later version of the same expense replaces the earlier one.
-        val current = expenses.associateBy(Expense::id).values.toList()
+        val current = ExpenseRevisions.current(expenses)
         val localBalance = localMemberId?.let { memberId ->
             calculateBalances(board, current).getOrNull()?.let { balances ->
                 balances.firstOrNull { it.memberId == memberId }?.amountMinor ?: 0L

@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.chats.presentation.group.kmapper
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseCreationContext
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseMember
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.usecase.CalculateExpenseBalancesUseCase
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
@@ -26,5 +28,40 @@ class ExpenseCreationMapperTest {
         val balances = CalculateExpenseBalancesUseCase()(board, listOf(dinner, taxi)).getOrThrow()
 
         assertEquals(listOf(ExpenseBalance("bob", -150L), ExpenseBalance("chris", 150L)), balances)
+    }
+
+    @Test
+    fun editingPrefillsDraftAndKeepsExpenseIdentity() {
+        val board = ExpenseBoard("board", "EUR", 1L)
+        val taxi = Expense(
+            "taxi",
+            "board",
+            "Taxi",
+            500L,
+            "EUR",
+            "bob",
+            listOf(ExpenseAllocation("bob", 50L), ExpenseAllocation("chris", 450L)),
+            3L
+        )
+        val context = GroupExpenseCreationContext(
+            board = board,
+            localMemberId = "chris",
+            members = listOf(GroupExpenseMember("chris", "Chris", true), GroupExpenseMember("bob", "Bob", false)),
+            expense = taxi
+        )
+
+        val state = context.toCreateExpenseUiState()
+
+        assertEquals(true, state.isEditing)
+        assertEquals(ExpenseSplitModeUi.CUSTOM, state.draft.splitMode)
+        assertEquals(mapOf("bob" to "0.50", "chris" to "4.50"), state.draft.customAmounts)
+
+        val edited = state.draft.copy(description = "Taxi home", customAmounts = mapOf("bob" to "1.00", "chris" to "4.00"))
+            .toEditedExpense(taxi)!!
+
+        assertEquals("taxi", edited.id)
+        assertEquals(3L, edited.occurredAtEpochMilliseconds)
+        assertEquals("Taxi home", edited.description)
+        assertEquals(listOf(ExpenseAllocation("bob", 100L), ExpenseAllocation("chris", 400L)), edited.allocations)
     }
 }

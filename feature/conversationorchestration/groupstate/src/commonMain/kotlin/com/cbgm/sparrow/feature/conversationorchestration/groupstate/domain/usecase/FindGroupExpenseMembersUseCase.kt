@@ -31,6 +31,11 @@ class FindGroupExpenseMembersUseCase(
             val remoteIds = administration.currentMemberContactIds.mapNotNull { contactId ->
                 routingMembers[contactId]?.signingPublicKey?.let(ExpenseMemberId::fromSigningPublicKey)
             }
-            GroupExpenseMembers(board = board, memberIds = setOf(localId) + remoteIds)
+            GroupExpenseMembers(
+                board = board,
+                memberIds = setOf(localId) + remoteIds,
+                localMemberId = localId,
+                isLocalAdmin = administration.isLocalAdmin
+            )
         }
 }

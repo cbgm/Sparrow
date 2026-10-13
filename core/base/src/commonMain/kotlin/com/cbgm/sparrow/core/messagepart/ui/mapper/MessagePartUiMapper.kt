@@ -159,5 +159,9 @@ private fun Expense.toExpenseUi(source: MessagePartSource): ExpenseUi =
         occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
         receipt = receipt?.toImageUi(source),
         category = category.name,
+        editedAtEpochMilliseconds = editedAtEpochMilliseconds,
+        deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
+        createdByMemberId = createdByMemberId,
+        revisionOf = revisionOf,
         source = source.toMessagePartSourceUi()
     )

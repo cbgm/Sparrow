@@ -39,7 +39,9 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.feature_expenses_add_another
 import com.cbgm.sparrow.resources.feature_expenses_add_multiple
+import com.cbgm.sparrow.resources.feature_expenses_edit
 import com.cbgm.sparrow.resources.feature_expenses_queued
+import com.cbgm.sparrow.resources.feature_expenses_save
 import com.cbgm.sparrow.resources.feature_expenses_send_all
 import org.jetbrains.compose.resources.stringResource
 
@@ -62,7 +64,7 @@ fun CreateExpenseScreen(
             )
         },
         floatingActionButton = {
-            if (!uiState.isLoading && !uiState.isSending) {
+            if (!uiState.isLoading && !uiState.isSending && !uiState.isEditing) {
                 FloatingActionButton(
                     onClick = {
                         focusManager.clearFocus()
@@ -150,7 +152,9 @@ private fun TopBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
         title = {
             Text(
-                stringResource(Res.string.feature_expenses_add_multiple),
+                stringResource(
+                    if (uiState.isEditing) Res.string.feature_expenses_edit else Res.string.feature_expenses_add_multiple
+                ),
                 style = MaterialTheme.typography.titleSmall
             )
         },
@@ -175,7 +179,9 @@ private fun TopBar(
                 ) {
                     Icon(
                         Icons.Default.Check,
-                        contentDescription = stringResource(Res.string.feature_expenses_send_all)
+                        contentDescription = stringResource(
+                            if (uiState.isEditing) Res.string.feature_expenses_save else Res.string.feature_expenses_send_all
+                        )
                     )
                 }
             }

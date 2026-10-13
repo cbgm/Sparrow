@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.SendDeliveryReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.ConversationInfo
@@ -25,7 +26,7 @@ import kotlin.reflect.KClass
 
 /**
  * FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
- * FindConversation -> DecryptMessage -> FindExisting -> [ApplyProfilePicture -> StoreMessage]
+ * FindConversation -> DecryptMessage -> FindExisting -> [AuthorizeExpenses -> ApplyProfilePicture -> StoreMessage]
  *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
  *
  * A redelivered message keeps its row; only attachments and the receipt are repeated.
@@ -38,7 +39,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
     private val applyPeerProfilePicture: ApplyPeerProfilePictureUseCase,
     private val prefetchLinkPreviews: PrefetchLinkPreviewsUseCase,
     private val attachmentRepository: MessageAttachmentOperationsRepository,
-    private val sendDeliveryReceipt: SendDeliveryReceiptUseCase
+    private val sendDeliveryReceipt: SendDeliveryReceiptUseCase,
+    private val authorizeExpenses: AuthorizeIncomingExpensesUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupMessage,
         ReceiveGroupMessageWorkflow.Step,
@@ -93,6 +95,10 @@ class ReceiveGroupMessageWorkflow internal constructor(
                     Outcome.MessageStored(step.message.withCreatedAt(existing.createdAtEpochMilliseconds))
                 }
             }
+            is Step.AuthorizeExpenses -> {
+                authorizeExpenses(packet.groupId, context.contactId, step.message.content.attachments).getOrThrow()
+                Outcome.ExpensesAuthorized(step.message)
+            }
             is Step.ApplyProfilePicture -> {
                 applyPeerProfilePicture(context.contactId, packet.profilePicture)
                 Outcome.ProfilePictureApplied(step.message)
@@ -145,7 +151,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
             is Outcome.ConversationFound -> Transition.Next(Step.DecryptMessage(outcome.conversation, step.command))
             is Outcome.OperationDecrypted -> Transition.Next(Step.ApplyOperation(outcome.message, step.command))
             is Outcome.MessageDecrypted -> Transition.Next(Step.FindExisting(outcome.message, step.command))
-            is Outcome.NewMessage -> Transition.Next(Step.ApplyProfilePicture(outcome.message, step.command))
+            is Outcome.NewMessage -> Transition.Next(Step.AuthorizeExpenses(outcome.message, step.command))
+            is Outcome.ExpensesAuthorized -> Transition.Next(Step.ApplyProfilePicture(outcome.message, step.command))
             is Outcome.ProfilePictureApplied -> Transition.Next(Step.StoreMessage(outcome.message, step.command))
             is Outcome.MessageStored -> Transition.Next(Step.PrefetchLinkPreviews(outcome.message, step.command))
             is Outcome.LinkPreviewsRequested -> Transition.Next(Step.StoreAttachments(outcome.message, step.command))
@@ -202,6 +209,11 @@ class ReceiveGroupMessageWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupMessage
         ) : Step
 
+        data class AuthorizeExpenses(
+            val message: ReceivedGroupMessage,
+            override val command: IncomingCommand.ReceiveGroupMessage
+        ) : Step
+
         data class ApplyProfilePicture(
             val message: ReceivedGroupMessage,
             override val command: IncomingCommand.ReceiveGroupMessage
@@ -245,6 +257,10 @@ class ReceiveGroupMessageWorkflow internal constructor(
         ) : Outcome
 
         data class NewMessage(
+            val message: ReceivedGroupMessage
+        ) : Outcome
+
+        data class ExpensesAuthorized(
             val message: ReceivedGroupMessage
         ) : Outcome
 
