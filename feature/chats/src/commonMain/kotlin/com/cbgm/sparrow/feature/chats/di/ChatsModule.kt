@@ -35,6 +35,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.LoadGroupPinnedAttach
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
@@ -129,6 +130,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::GetGroupExpenseCreationContextUseCase)
+    singleOf(::ObserveGroupExpenseSummaryUseCase)
     singleOf(::LoadGroupPinnedAttachmentUseCase)
     singleOf(::ObserveGroupVerificationContextUseCase)
     singleOf(::ObserveGroupVerificationUseCase)
@@ -188,6 +190,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
         GroupConversationViewModel(
             savedStateHandle = savedStateHandle,
             observeChatContext = get(),
+            observeExpenseSummary = get(),
             indicatorObserver = get(),
             orchestrator = get(),
             observeMessageSafetyAssessments = get(),

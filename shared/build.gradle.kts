@@ -77,6 +77,7 @@ kotlin {
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.messaging)
             implementation(projects.feature.onboarding)
+            implementation(projects.feature.expenses)
             implementation(projects.feature.polls)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)

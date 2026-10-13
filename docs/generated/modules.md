@@ -20,7 +20,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:attachments`](modules/feature-attachments.md) | `feature` | 64 | 3 | 1 | 8 | 9 |
 | [`:feature:autoreply`](modules/feature-autoreply.md) | `feature` | 21 | 0 | 0 | 3 | 5 |
 | [`:feature:avatar`](modules/feature-avatar.md) | `feature` | 36 | 0 | 0 | 4 | 8 |
-| [`:feature:chats`](modules/feature-chats.md) | `feature` | 223 | 9 | 1 | 22 | 3 |
+| [`:feature:chats`](modules/feature-chats.md) | `feature` | 228 | 11 | 1 | 22 | 3 |
 | [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 29 | 1 | 1 | 5 | 3 |
 | [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 124 | 3 | 1 | 8 | 12 |
 | [`:feature:conversationorchestration`](modules/feature-conversationorchestration.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
@@ -33,7 +33,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 63 | 1 | 0 | 13 | 2 |
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 82 | 1 | 0 | 11 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
-| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 18 | 4 | 0 | 3 | 1 |
+| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 23 | 5 | 0 | 3 | 2 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 181 | 12 | 1 | 7 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |
@@ -65,5 +65,5 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:server:protocol`](modules/server-protocol.md) | `server` | 7 | 1 | 0 | 0 | 9 |
 | [`:server:push`](modules/server-push.md) | `server` | 17 | 4 | 0 | 4 | 0 |
 | [`:server:security`](modules/server-security.md) | `server` | 19 | 4 | 0 | 1 | 6 |
-| [`:shared`](modules/shared.md) | `shared` | 40 | 0 | 0 | 38 | 1 |
+| [`:shared`](modules/shared.md) | `shared` | 40 | 0 | 0 | 39 | 1 |
 | [`:startup`](modules/startup.md) | `startup` | 10 | 0 | 1 | 9 | 2 |

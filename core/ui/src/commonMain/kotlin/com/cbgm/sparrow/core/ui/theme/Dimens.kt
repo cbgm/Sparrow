@@ -19,6 +19,7 @@ object Dimens {
     object Expense {
         val numberBadgeSize = 25.dp
         val categoryBadgeSize = 40.dp
+        val pinIconTileSize = 36.dp
     }
 
     object ActionMenu {

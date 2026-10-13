@@ -54,6 +54,8 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversation
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
+import com.cbgm.sparrow.feature.expenses.presentation.pin.ExpensePinnedBar
+import com.cbgm.sparrow.feature.expenses.presentation.pin.model.ExpensePinUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
@@ -77,6 +79,7 @@ fun GroupConversationScreen(
     indicatorState: IndicatorUiState,
     membershipState: GroupMembershipUiState,
     historyState: MessageHistoryUiState,
+    expensePin: ExpensePinUi?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -201,7 +204,13 @@ fun GroupConversationScreen(
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
                         }
-                        uiState.pinnedMessage?.let { pinnedMessage ->
+                        val pinnedMessage = uiState.pinnedMessage
+                        if (pinnedMessage?.expenseBoardPart != null && expensePin != null) {
+                            ExpensePinnedBar(
+                                pin = expensePin,
+                                onClick = { showPinnedMessage = true }
+                            )
+                        } else if (pinnedMessage != null) {
                             GroupPinnedMessageBar(
                                 message = pinnedMessage,
                                 pinnedAtEpochMilliseconds = uiState.pinnedAtEpochMilliseconds,

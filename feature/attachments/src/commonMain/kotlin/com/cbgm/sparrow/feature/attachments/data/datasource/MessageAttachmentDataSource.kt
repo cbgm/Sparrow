@@ -205,6 +205,21 @@ internal class MessageAttachmentDataSource(
                 }
             }
 
+    fun observeByConversationIdAndType(
+        conversationId: String,
+        type: MessageAttachmentType
+    ): Flow<Map<String, List<MessagePartDto>>> =
+        attachmentDao.observeMessagePartsByConversationIdAndType(conversationId, type.name)
+            .map { parts ->
+                val blobs = loadBlobs(parts)
+                parts.groupBy(MessagePartEntity::messageId).mapValues { (_, messageParts) ->
+                    messageParts.toDtos(
+                        blobs = blobs,
+                        resolveLocalFilePath = fileDataSource::resolveCacheFilePath
+                    )
+                }
+            }
+
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         val parts = attachmentDao.findBlobPartsByMessageIds(messageIds)

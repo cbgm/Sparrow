@@ -434,9 +434,9 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 223,
-    "productionKotlinFileCount": 214,
-    "testKotlinFileCount": 9,
+    "kotlinSourceFileCount": 228,
+    "productionKotlinFileCount": 217,
+    "testKotlinFileCount": 11,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -833,9 +833,9 @@
     "group": "feature",
     "directory": "feature/expenses",
     "buildFile": "feature/expenses/build.gradle.kts",
-    "kotlinSourceFileCount": 18,
-    "productionKotlinFileCount": 14,
-    "testKotlinFileCount": 4,
+    "kotlinSourceFileCount": 23,
+    "productionKotlinFileCount": 18,
+    "testKotlinFileCount": 5,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -847,7 +847,8 @@
       ":feature:avatar"
     ],
     "dependents": [
-      ":feature:chats"
+      ":feature:chats",
+      ":shared"
     ]
   },
   {
@@ -1737,6 +1738,7 @@
       ":feature:conversationorchestration:membership",
       ":feature:conversationorchestration:message",
       ":feature:embedding",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
       ":feature:linkpreview",

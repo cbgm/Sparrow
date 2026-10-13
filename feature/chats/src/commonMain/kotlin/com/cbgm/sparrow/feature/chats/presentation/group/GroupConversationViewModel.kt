@@ -12,15 +12,18 @@ import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupExpenseSummaryUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
+import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toExpensePinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
+import com.cbgm.sparrow.feature.expenses.presentation.pin.model.ExpensePinUi
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
@@ -43,6 +46,7 @@ import kotlinx.coroutines.launch
 class GroupConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveGroupChatContextUseCase,
+    observeExpenseSummary: ObserveGroupExpenseSummaryUseCase,
     indicatorObserver: ConversationIndicatorObserver,
     orchestrator: ConversationOrchestrator,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
@@ -133,6 +137,17 @@ class GroupConversationViewModel(
     val indicatorState = state.indicatorState
     val historyState = state.historyState
     val errorMessage = state.errorMessage
+    val expensePinState: StateFlow<ExpensePinUi?> =
+        observeExpenseSummary(groupId)
+            .map { summary -> summary?.toExpensePinUi() }
+            .catch { error ->
+                logger.error(error) { "Expense summary could not be observed" }
+                emit(null)
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
 
     init {
         // Context-load failures are not guaranteed to pass through setError().

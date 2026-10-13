@@ -8,15 +8,15 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 61 |
 | Module groups | 11 |
-| Dependency edges | 307 |
+| Dependency edges | 308 |
 | Modules without project dependencies | 13 |
 | Modules without dependents | 14 |
-| Maximum direct dependencies | 38 |
+| Maximum direct dependencies | 39 |
 | Maximum direct dependents | 33 |
 | Distinct source sets | 8 |
-| Kotlin files | 2254 |
-| Production Kotlin files | 2098 |
-| Test Kotlin files | 156 |
+| Kotlin files | 2264 |
+| Production Kotlin files | 2105 |
+| Test Kotlin files | 159 |
 | Resource files | 57 |
 
 ## Modules by group

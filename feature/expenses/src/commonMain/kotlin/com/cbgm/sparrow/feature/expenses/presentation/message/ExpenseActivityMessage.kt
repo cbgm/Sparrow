@@ -34,6 +34,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.expenses.presentation.common.mapper.toExpenseAmountLabel
 import com.cbgm.sparrow.feature.expenses.presentation.create.icon
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
 import com.cbgm.sparrow.resources.Res
@@ -165,7 +166,7 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
                     )
                 }
                 Text(
-                    formatExpenseAmount(expense.amountMinor, expense.currencyCode),
+                    expense.amountMinor.toExpenseAmountLabel(expense.currencyCode),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -187,12 +188,6 @@ private fun ExpenseAddedMessage(expense: ExpenseUi, actor: String, modifier: Mod
             }
         }
     }
-}
-
-private fun formatExpenseAmount(amountMinor: Long, currencyCode: String): String {
-    val whole = amountMinor / 100L
-    val fractional = (amountMinor % 100L).toString().padStart(2, '0')
-    return if (currencyCode == "EUR") "€$whole.$fractional" else "$whole.$fractional $currencyCode"
 }
 
 @Preview

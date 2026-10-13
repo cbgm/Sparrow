@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/expenses` |
 | Build file | `feature/expenses/build.gradle.kts` |
-| Kotlin files | 18 |
-| Production Kotlin files | 14 |
-| Test Kotlin files | 4 |
+| Kotlin files | 23 |
+| Production Kotlin files | 18 |
+| Test Kotlin files | 5 |
 | Resource files | 0 |
 | Direct dependencies | 3 |
-| Direct dependents | 1 |
+| Direct dependents | 2 |
 
 ## Source sets
 
@@ -31,3 +31,4 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependents
 
 - [`:feature:chats`](../modules/feature-chats.md)
+- [`:shared`](../modules/shared.md)

@@ -38,6 +38,7 @@ fun GroupConversationRoute(
     val indicatorState by viewModel.indicatorState.collectAsStateWithLifecycle()
     val membershipState by viewModel.membershipState.collectAsStateWithLifecycle()
     val historyState by viewModel.historyState.collectAsStateWithLifecycle()
+    val expensePin by viewModel.expensePinState.collectAsStateWithLifecycle()
 
     val newestMessageId = conversationState.messages.firstOrNull()?.id
     LaunchedEffect(conversationId, newestMessageId) {
@@ -58,6 +59,7 @@ fun GroupConversationRoute(
             indicatorState = indicatorState,
             membershipState = membershipState,
             historyState = historyState,
+            expensePin = expensePin,
             onUiEvent = viewModel::onUiEvent,
             onForwardMessageRequested = { messageId -> forwardingMessageId = messageId },
             targetMessageId = targetMessageId,

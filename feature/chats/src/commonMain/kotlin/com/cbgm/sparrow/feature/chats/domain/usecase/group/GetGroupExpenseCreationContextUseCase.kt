@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseCreationContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseMember
@@ -30,7 +31,7 @@ class GetGroupExpenseCreationContextUseCase(
         val routingMembers = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
             .associateBy { it.contactId }
         val contactsById = contacts.observeContacts().first().associateBy { it.id }
-        val localId = localIdentity.getLocalPublicIdentity().getOrThrow().signingPublicKey.toExpenseMemberId()
+        val localId = localIdentity.getLocalPublicIdentity().getOrThrow().signingPublicKey.let(ExpenseMemberId::fromSigningPublicKey)
         val localName = getLocalIdentityName().getOrNull().orEmpty()
         val members = buildList {
             add(GroupExpenseMember(localId, localName, true))
@@ -39,22 +40,10 @@ class GetGroupExpenseCreationContextUseCase(
                 // Only membership's current epoch keys are safe to persist in expense attachments.
                 val signingKey = routingMembers[contactId]?.signingPublicKey ?: return@forEach
                 val name = contactsById[contactId]?.displayName?.takeIf(String::isNotBlank) ?: contactId
-                val id = signingKey.toExpenseMemberId()
+                val id = ExpenseMemberId.fromSigningPublicKey(signingKey)
                 if (id != localId && none { it.id == id }) add(GroupExpenseMember(id, name, false, contactId))
             }
         }
         GroupExpenseCreationContext(board, localId, members)
-    }
-}
-
-private fun ByteArray.toExpenseMemberId(): String {
-    require(isNotEmpty()) { "Missing group signing key" }
-    val hex = "0123456789abcdef"
-    return buildString(size * 2) {
-        for (byte in this@toExpenseMemberId) {
-            val value = byte.toInt() and 0xff
-            append(hex[value ushr 4])
-            append(hex[value and 15])
-        }
     }
 }

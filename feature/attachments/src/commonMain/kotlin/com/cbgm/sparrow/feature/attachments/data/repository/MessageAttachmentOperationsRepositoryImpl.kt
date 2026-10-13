@@ -45,6 +45,7 @@ import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentO
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -185,6 +186,14 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             .map { partsByMessageId ->
                 partsByMessageId.mapValues { (_, parts) ->
                     parts.map { part -> part.toMessagePart() }
+                }
+            }
+
+    override fun observeExpenses(conversationId: String): Flow<List<Expense>> =
+        dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE)
+            .map { partsByMessageId ->
+                partsByMessageId.values.flatMap { parts ->
+                    parts.map { part -> part.toMessagePart() }.filterIsInstance<Expense>()
                 }
             }
 

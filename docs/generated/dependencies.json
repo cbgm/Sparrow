@@ -280,6 +280,7 @@
   {"source": ":shared", "target": ":feature:conversationorchestration:membership"},
   {"source": ":shared", "target": ":feature:conversationorchestration:message"},
   {"source": ":shared", "target": ":feature:embedding"},
+  {"source": ":shared", "target": ":feature:expenses"},
   {"source": ":shared", "target": ":feature:identity"},
   {"source": ":shared", "target": ":feature:invite"},
   {"source": ":shared", "target": ":feature:linkpreview"},

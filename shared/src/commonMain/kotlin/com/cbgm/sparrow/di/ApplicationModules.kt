@@ -17,6 +17,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.di.conversat
 import com.cbgm.sparrow.feature.conversationorchestration.membership.di.conversationMembershipModule
 import com.cbgm.sparrow.feature.conversationorchestration.message.di.conversationMessageModule
 import com.cbgm.sparrow.feature.embedding.di.embeddingModule
+import com.cbgm.sparrow.feature.expenses.di.expensesModule
 import com.cbgm.sparrow.feature.identity.di.identityModule
 import com.cbgm.sparrow.feature.invite.di.inviteModule
 import com.cbgm.sparrow.feature.linkpreview.di.linkPreviewModule
@@ -46,6 +47,7 @@ internal val commonApplicationModules: List<Module> =
         identityModule,
         onboardingModule,
         pollsModule,
+        expensesModule,
         contactsModule,
         inviteModule,
         conversationEngineModule,

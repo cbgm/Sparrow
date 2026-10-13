@@ -781,4 +781,12 @@
     <string name="feature_expenses_activity_added">%1$s hat eine Ausgabe hinzugefügt</string>
     <string name="feature_expenses_activity_participants">Aufgeteilt auf %1$d Personen</string>
     <string name="feature_expenses_activity_retry">Erneut versuchen</string>
+    <plurals name="feature_expenses_pin_count">
+        <item quantity="one">%1$d Ausgabe</item>
+        <item quantity="other">%1$d Ausgaben</item>
+    </plurals>
+    <string name="feature_expenses_pin_total">%1$s gesamt</string>
+    <string name="feature_expenses_pin_you_owe">Du schuldest</string>
+    <string name="feature_expenses_pin_you_are_owed">Du bekommst</string>
+    <string name="feature_expenses_pin_settled">Ausgeglichen</string>
 </resources>

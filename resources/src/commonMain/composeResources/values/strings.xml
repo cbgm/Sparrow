@@ -777,4 +777,12 @@
     <string name="feature_expenses_activity_added">%1$s added an expense</string>
     <string name="feature_expenses_activity_participants">Split between %1$d participants</string>
     <string name="feature_expenses_activity_retry">Retry</string>
+    <plurals name="feature_expenses_pin_count">
+        <item quantity="one">%1$d expense</item>
+        <item quantity="other">%1$d expenses</item>
+    </plurals>
+    <string name="feature_expenses_pin_total">%1$s total</string>
+    <string name="feature_expenses_pin_you_owe">You owe</string>
+    <string name="feature_expenses_pin_you_are_owed">You're owed</string>
+    <string name="feature_expenses_pin_settled">Settled up</string>
 </resources>
