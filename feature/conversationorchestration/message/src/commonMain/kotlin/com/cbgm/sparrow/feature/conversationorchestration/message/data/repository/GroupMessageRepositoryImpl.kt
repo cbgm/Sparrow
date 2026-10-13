@@ -20,7 +20,9 @@ internal class GroupMessageRepositoryImpl(
     private val conversationDataSource: ConversationDataSource
 ) : GroupMessageRepository {
     override suspend fun findConversation(conversationId: String): Result<ConversationInfo?> =
-        safeSuspendCall { dataSource.findConversation(conversationId)?.toConversationInfo() }
+        safeSuspendCall {
+            dataSource.findConversation(conversationId)?.toConversationInfo(dataSource.findTitle(conversationId))
+        }
 
     override suspend fun findParticipantIds(groupId: String): Result<List<String>> =
         safeSuspendCall { conversationDataSource.findParticipantIds(groupId).distinct() }

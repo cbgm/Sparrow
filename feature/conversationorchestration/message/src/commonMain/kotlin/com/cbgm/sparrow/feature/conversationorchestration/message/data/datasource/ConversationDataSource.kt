@@ -22,7 +22,6 @@ internal class ConversationDataSource(
                 id = IdGenerator.generate(prefix = "conversation"),
                 contactId = contactId,
                 type = ConversationType.DIRECT.name,
-                title = null,
                 createdAtEpochMilliseconds = now,
                 updatedAtEpochMilliseconds = now
             )

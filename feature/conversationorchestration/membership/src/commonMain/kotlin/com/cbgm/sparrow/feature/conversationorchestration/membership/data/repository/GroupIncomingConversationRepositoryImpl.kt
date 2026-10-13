@@ -85,11 +85,11 @@ internal class GroupIncomingConversationRepositoryImpl(
                 id = packet.groupId,
                 contactId = null,
                 type = GROUP_CONVERSATION_TYPE,
-                title = packet.title,
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                 updatedAtEpochMilliseconds = persistedAt,
                 isVisible = true
-            )
+            ),
+            title = packet.title
         )
         removed
     }

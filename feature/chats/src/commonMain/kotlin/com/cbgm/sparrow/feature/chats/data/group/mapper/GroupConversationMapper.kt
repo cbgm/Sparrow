@@ -20,6 +20,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
+    title: String,
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
     memberships: List<GroupMemberLifecycleSnapshot>,
@@ -43,7 +44,7 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
 
     return GroupConversation(
         id = conversation.id,
-        title = conversation.title.orEmpty(),
+        title = title,
         messages =
             visibleMessages
                 .map { message ->

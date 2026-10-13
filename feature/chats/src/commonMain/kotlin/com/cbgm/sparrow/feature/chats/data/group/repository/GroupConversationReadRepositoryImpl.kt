@@ -108,14 +108,16 @@ internal class GroupConversationReadRepositoryImpl(
             combine(
                 messageSnapshot,
                 groupStateSnapshot,
-                historyDataSource.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES)
-            ) { snapshot, groupState, membershipHistory ->
+                historyDataSource.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES),
+                historyDataSource.observeTitle(groupId)
+            ) { snapshot, groupState, membershipHistory, title ->
                 val mappingStarted = TimeSource.Monotonic.markNow()
                 ChatOpenTrace.event("group repo joined snapshot messages=${snapshot.messages.size}")
                 val mapped = snapshot.conversation
                     ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
                     ?.let { ConversationWithMessagesDto(it, snapshot.messages) }
                     ?.toGroupConversation(
+                        title = title,
                         participantContactIds = groupState.participantContactIds,
                         recipientStates = groupState.recipientStates,
                         memberships = groupState.memberships,

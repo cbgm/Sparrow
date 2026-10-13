@@ -22,7 +22,7 @@ interface MessageSearchDao {
                     THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)
                 ELSE NULL
             END AS senderName,
-            conversations.title AS conversationTitle,
+            group_metadata.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
             message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
@@ -32,6 +32,7 @@ interface MessageSearchDao {
             AND message_parts.type = 'TEXT'
         INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
         LEFT JOIN contacts AS sender_contacts
@@ -90,7 +91,7 @@ interface MessageSearchDao {
             messages.conversationId AS conversationId,
             conversations.type AS conversationType,
             conversations.contactId AS contactId,
-            conversations.title AS conversationTitle,
+            group_metadata.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
             message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
@@ -100,6 +101,7 @@ interface MessageSearchDao {
             AND message_parts.type = 'TEXT'
         INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
         WHERE messages.contentStatus = 'READABLE'
@@ -126,7 +128,7 @@ interface MessageSearchDao {
                     THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)
                 ELSE NULL
             END AS senderName,
-            conversations.title AS conversationTitle,
+            group_metadata.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
             message_text.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
@@ -138,6 +140,7 @@ interface MessageSearchDao {
             AND message_parts.type = 'TEXT'
         INNER JOIN message_text ON message_text.partId = message_parts.id
         INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id
         LEFT JOIN contacts AS conversation_contacts
             ON conversation_contacts.id = conversations.contactId
         LEFT JOIN contacts AS sender_contacts

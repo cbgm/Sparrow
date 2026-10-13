@@ -2,16 +2,22 @@ package com.cbgm.sparrow.feature.conversationorchestration.membership.data.datas
 
 import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.GroupSystemMessageFactory
 
 internal class GroupConversationDataSource(
-    private val chatDao: ChatDao
+    private val chatDao: ChatDao,
+    private val groupMetadataDao: GroupMetadataDao
 ) {
-    suspend fun create(conversation: ConversationEntity) {
+    suspend fun create(conversation: ConversationEntity, title: String) {
         chatDao.upsertConversation(conversation)
+        groupMetadataDao.upsertTitleValue(conversation.id, title)
     }
+
+    suspend fun getTitle(groupId: String): String =
+        requireNotNull(groupMetadataDao.get(groupId)) { "Group title was not found" }.title
 
     suspend fun getGroupConversation(groupId: String): ConversationEntity {
         val conversation =
@@ -49,13 +55,13 @@ internal class GroupConversationDataSource(
                 id = groupId,
                 contactId = null,
                 type = GROUP_CONVERSATION_TYPE,
-                title = title,
                 createdAtEpochMilliseconds = createdAtEpochMilliseconds,
                 updatedAtEpochMilliseconds = maxOf(createdAtEpochMilliseconds, updatedAtEpochMilliseconds),
                 unseenLocalMessageCount = existing?.unseenLocalMessageCount ?: 0,
                 isVisible = existing?.isVisible == true && hasHistory
             )
         )
+        groupMetadataDao.upsertTitleValue(groupId, title)
         return true
     }
 

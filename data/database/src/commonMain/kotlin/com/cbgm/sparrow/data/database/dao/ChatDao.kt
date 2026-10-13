@@ -460,18 +460,6 @@ interface ChatDao {
         timestamp: Long
     )
 
-    @Query(
-        """
-        UPDATE conversations
-        SET title = :title
-        WHERE id = :conversationId
-        """
-    )
-    suspend fun updateConversationTitle(
-        conversationId: String,
-        title: String
-    ): Int
-
     @Transaction
     @Query(
         """
@@ -490,7 +478,7 @@ interface ChatDao {
         conversations.contactId AS contactId,
         contacts.displayName AS contactName,
         conversations.type AS conversationType,
-        conversations.title AS conversationTitle,
+        group_metadata.title AS conversationTitle,
         (
             SELECT COUNT(*)
             FROM conversation_participants
@@ -544,6 +532,7 @@ interface ChatDao {
         conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds
     FROM conversations
     LEFT JOIN contacts ON contacts.id = conversations.contactId
+    LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id
     WHERE (
         conversations.type = 'GROUP'
         OR conversations.type = 'DIRECT'

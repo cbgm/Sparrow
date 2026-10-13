@@ -22,17 +22,20 @@ internal class GroupConversationRepositoryImpl(
         safeSuspendCall {
             val groupId = IdGenerator.generate(prefix = "group")
             conversationDataSource.create(
-                toGroupConversationEntity(
+                conversation = toGroupConversationEntity(
                     groupId = groupId,
-                    title = title,
                     createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                )
+                ),
+                title = title
             )
             groupId
         }
 
     override suspend fun getMembershipContext(groupId: String): Result<GroupMembershipContext> =
-        safeSuspendCall { conversationDataSource.getGroupConversation(groupId).toGroupMembershipContext() }
+        safeSuspendCall {
+            conversationDataSource.getGroupConversation(groupId)
+                .toGroupMembershipContext(conversationDataSource.getTitle(groupId))
+        }
 
     override suspend fun stageIncoming(
         groupId: String,

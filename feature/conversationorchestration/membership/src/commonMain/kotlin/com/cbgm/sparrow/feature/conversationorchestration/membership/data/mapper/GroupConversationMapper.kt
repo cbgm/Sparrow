@@ -7,20 +7,18 @@ private const val GROUP_CONVERSATION_TYPE = "GROUP"
 
 internal fun toGroupConversationEntity(
     groupId: String,
-    title: String,
     createdAtEpochMilliseconds: Long
 ): ConversationEntity =
     ConversationEntity(
         id = groupId,
         contactId = null,
         type = GROUP_CONVERSATION_TYPE,
-        title = title,
         createdAtEpochMilliseconds = createdAtEpochMilliseconds,
         updatedAtEpochMilliseconds = createdAtEpochMilliseconds
     )
 
-internal fun ConversationEntity.toGroupMembershipContext(): GroupMembershipContext =
+internal fun ConversationEntity.toGroupMembershipContext(title: String): GroupMembershipContext =
     GroupMembershipContext(
-        title = requireNotNull(title) { "Group title was not found" },
+        title = title,
         createdAtEpochMilliseconds = createdAtEpochMilliseconds
     )

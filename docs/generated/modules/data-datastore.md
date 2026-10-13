@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `data` |
 | Directory | `data/datastore` |
 | Build file | `data/datastore/build.gradle.kts` |
-| Kotlin files | 6 |
-| Production Kotlin files | 6 |
+| Kotlin files | 5 |
+| Production Kotlin files | 5 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 1 |

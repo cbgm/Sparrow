@@ -231,7 +231,7 @@ val identityModule =
 
         single {
             RemoteProfilePictureDataSource(
-                dataStore = get(),
+                profilePictureDao = get(),
                 fileDataSource = get(),
                 cryptoHash = get()
             )

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
@@ -9,7 +10,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.data.model.
 /** Persists the group conversation state changed by incoming group lifecycle packets. */
 internal class GroupIncomingConversationDataSource(
     private val chatDao: ChatDao,
-    private val groupVerificationDao: GroupVerificationDao
+    private val groupVerificationDao: GroupVerificationDao,
+    private val groupMetadataDao: GroupMetadataDao
 ) {
     suspend fun hasMessageWithTransportMode(conversationId: String, transportMode: String): Boolean =
         chatDao.hasMessageWithTransportMode(conversationId, transportMode)
@@ -20,8 +22,9 @@ internal class GroupIncomingConversationDataSource(
     suspend fun findConversationParticipants(groupId: String): List<ConversationParticipantEntity> =
         chatDao.findConversationParticipants(groupId)
 
-    suspend fun upsertConversation(conversation: ConversationEntity) {
+    suspend fun upsertConversation(conversation: ConversationEntity, title: String) {
         chatDao.upsertConversation(conversation)
+        groupMetadataDao.upsertTitleValue(conversation.id, title)
     }
 
     suspend fun upsertMessage(message: GroupSystemMessageDto) {

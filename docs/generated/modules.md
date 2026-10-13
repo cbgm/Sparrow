@@ -13,8 +13,8 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:core:ui`](modules/core-ui.md) | `core` | 50 | 1 | 0 | 1 | 21 |
 | [`:core:util`](modules/core-util.md) | `core` | 28 | 2 | 1 | 0 | 34 |
 | [`:data`](modules/data.md) | `data` | 0 | 0 | 0 | 0 | 0 |
-| [`:data:database`](modules/data-database.md) | `data` | 89 | 1 | 1 | 2 | 17 |
-| [`:data:datastore`](modules/data-datastore.md) | `data` | 6 | 0 | 1 | 1 | 11 |
+| [`:data:database`](modules/data-database.md) | `data` | 93 | 1 | 1 | 2 | 17 |
+| [`:data:datastore`](modules/data-datastore.md) | `data` | 5 | 0 | 1 | 1 | 11 |
 | [`:feature`](modules/feature.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
 | [`:feature:applock`](modules/feature-applock.md) | `feature` | 13 | 0 | 1 | 3 | 3 |
 | [`:feature:attachments`](modules/feature-attachments.md) | `feature` | 64 | 3 | 1 | 8 | 9 |
