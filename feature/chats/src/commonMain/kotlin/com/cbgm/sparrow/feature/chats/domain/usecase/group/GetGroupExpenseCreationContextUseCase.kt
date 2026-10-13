@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseCreationContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupExpenseMember
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.first
 
 /** Group membership's installed keys identify participants; contact verification is not required. */
 class GetGroupExpenseCreationContextUseCase(
-    private val pins: GroupPinRepository,
+    private val pins: GroupPinReadRepository,
     private val membership: GroupMembershipRepository,
     private val contacts: ContactRepository,
     private val localIdentity: LocalPublicIdentityProvider,

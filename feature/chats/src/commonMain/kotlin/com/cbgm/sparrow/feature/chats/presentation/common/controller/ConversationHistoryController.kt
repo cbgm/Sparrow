@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow

@@ -15,7 +15,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Test Kotlin files | 12 |
 | Resource files | 1 |
 | Direct dependencies | 7 |
-| Direct dependents | 9 |
+| Direct dependents | 14 |
 
 ## Source sets
 
@@ -40,7 +40,12 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)
+- [`:feature:conversationorchestration:groupstate`](../modules/feature-conversationorchestration-groupstate.md)
+- [`:feature:conversationorchestration:incoming`](../modules/feature-conversationorchestration-incoming.md)
+- [`:feature:conversationorchestration:lifecycle`](../modules/feature-conversationorchestration-lifecycle.md)
+- [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
+- [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:settings`](../modules/feature-settings.md)
 - [`:navigation`](../modules/navigation.md)

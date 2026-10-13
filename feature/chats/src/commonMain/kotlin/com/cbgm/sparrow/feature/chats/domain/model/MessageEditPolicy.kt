@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.model
 
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard

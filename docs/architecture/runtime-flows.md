@@ -23,15 +23,19 @@ flowchart LR
     ROUTE --> NODE[Community Node]
 ```
 
-Direct and Group feature processors own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery/routing/WebSocket/mailbox/push transport.
+Direct and Group workflows in `:feature:conversationorchestration:message` own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery/routing/WebSocket/mailbox/push transport.
 
 ## Message operations
 
-Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. Direct incoming handling accepts edit/delete/reaction and rejects poll operations. Group outgoing/incoming handling additionally supports `PollVote` and `PollClose`.
+Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. `ApplyRemoteMessageOperationWorkflow` accepts edit/delete/reaction for Direct chats and rejects poll operations there. Group workflows additionally support `PollVote` and `PollClose`.
 
 ## Poll composer handoff
 
-`CreatePollViewModel` finishes a `Poll` into `PollComposerRepository`. `GroupConversationViewModel` observes it, sends it as an ordinary group `MessagePart`, cleans temporary poll media after success and clears the finished poll handoff.
+`CreatePollViewModel` finishes a `Poll` into `PollComposerRepository`. `GroupPollController` observes it, submits it as an ordinary group `MessagePart` (`GroupMessageCommand.SendMessage`), cleans temporary poll media after success and clears the finished poll handoff.
+
+## Conversation workflows and observers
+
+Every conversation write and incoming packet runs as a workflow state machine through `WorkflowEngine`. Chats submits commands through `ConversationOrchestrator`; incoming envelopes enter through `IncomingTransportMessageHandler` → `RouteIncomingPacketWorkflow`; startup tasks start the runtime observers in `:feature:conversationorchestration:lifecycle` (`ContactBlockObserver`, `IdentityResultObserver`, `InvitationResultObserver`, `MembershipResultObserver`, `MessagingTransportResultObserver`, `ApprovedIdentityReconnectionObserver`), which run the matching workflows. See [Conversation orchestration](conversation-orchestration.md).
 
 ## Identity recovery
 

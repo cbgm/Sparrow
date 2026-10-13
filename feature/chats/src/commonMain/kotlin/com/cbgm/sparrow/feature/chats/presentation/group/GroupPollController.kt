@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.chats.presentation.group
 
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.CloseGroupPollUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.VoteInGroupPollUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.polls.domain.usecase.ClearFinishedPollUseCase
 import com.cbgm.sparrow.feature.polls.domain.usecase.ObserveFinishedPollUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class GroupPollController(
-    private val voteInPoll: VoteInGroupPollUseCase,
-    private val closePoll: CloseGroupPollUseCase,
+    private val orchestrator: ConversationOrchestrator,
     private val observeFinishedPoll: ObserveFinishedPollUseCase,
     private val clearFinishedPoll: ClearFinishedPollUseCase,
     private val media: ConversationMediaController
@@ -37,14 +37,14 @@ class GroupPollController(
 
     fun vote(messageId: String, pollId: String, selectedOptionIds: Set<String>) {
         scope.launch {
-            voteInPoll(groupId, messageId, pollId, selectedOptionIds)
+            orchestrator.awaitResult(GroupMessageCommand.VotePoll(groupId, messageId, pollId, selectedOptionIds))
                 .onFailure { errors.report(it.message ?: "Poll vote could not be sent") }
         }
     }
 
     fun close(messageId: String, pollId: String) {
         scope.launch {
-            closePoll(groupId, messageId, pollId)
+            orchestrator.awaitResult(GroupMessageCommand.ClosePoll(groupId, messageId, pollId))
                 .onFailure { errors.report(it.message ?: "Poll could not be closed") }
         }
     }

@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.forwarding.model
 
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
 
 sealed interface ForwardingSelectionEffect {
     data class TargetSelected(
-        val target: ForwardingTarget
+        val target: ForwardTarget
     ) : ForwardingSelectionEffect
 }

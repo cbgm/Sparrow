@@ -6,10 +6,12 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupExpenseUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupExpenseCreationContextUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toCreateExpenseUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.kmapper.toExpenseCategory
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.expenses.domain.ExpenseMoney
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
@@ -29,7 +31,7 @@ import org.jetbrains.compose.resources.getString
 class CreateGroupExpenseViewModel(
     savedStateHandle: SavedStateHandle,
     private val getContext: GetGroupExpenseCreationContextUseCase,
-    private val createExpense: CreateGroupExpenseUseCase
+    private val orchestrator: ConversationOrchestrator
 ) : BaseViewModel() {
     private val groupId = savedStateHandle.requireRouteArgument<String>(AppRoute.CreateExpense::groupId.name)
     private val _uiState = MutableStateFlow(CreateExpenseUiState())
@@ -66,7 +68,10 @@ class CreateGroupExpenseViewModel(
                 if (state.participants.none { it.id == event.id }) {
                     this
                 } else {
-                    copy(participantIds = if (event.id in participantIds) participantIds - event.id else participantIds + event.id)
+                    copy(
+                        participantIds =
+                            if (event.id in participantIds) participantIds - event.id else participantIds + event.id
+                    )
                 }
             }
             is CreateExpenseUiEvent.RemoveQueuedClicked -> _uiState.update { current ->
@@ -147,7 +152,18 @@ class CreateGroupExpenseViewModel(
                     SparrowLog.showError(getString(Res.string.feature_expenses_invalid_amount))
                     return@launch
                 }
-                val result = createExpense(groupId, current.boardId, next.description, amount, next.payerId, next.participantIds, next.category.toExpenseCategory())
+                val result =
+                    orchestrator.awaitResult(
+                        GroupMessageCommand.CreateExpense(
+                            groupId = groupId,
+                            boardId = current.boardId,
+                            description = next.description,
+                            amountMinor = amount,
+                            paidByMemberId = next.payerId,
+                            participantIds = next.participantIds,
+                            category = next.category.toExpenseCategory()
+                        )
+                    )
                 if (result.isFailure) {
                     _uiState.update { it.copy(isSending = false) }
                     SparrowLog.showError(getString(Res.string.feature_expenses_send_failed))

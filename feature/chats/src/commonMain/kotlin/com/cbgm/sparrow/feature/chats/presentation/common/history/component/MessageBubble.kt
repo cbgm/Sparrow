@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
@@ -56,8 +58,6 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor

@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.domain
 
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseSplit
+
 /** Exact two-decimal amount parsing for EUR boards. Never converts money through floating point. */
 object ExpenseMoney {
     fun parseEuroCents(text: String): Long? {
@@ -16,12 +18,6 @@ object ExpenseMoney {
     }
 
     /** Every selected participant receives at least one cent; ties use stable member IDs. */
-    fun splitEvenly(amountMinor: Long, memberIds: Set<String>): Map<String, Long> {
-        require(memberIds.isNotEmpty() && memberIds.none(String::isBlank)) { "Select participants" }
-        val ids = memberIds.sorted()
-        require(amountMinor >= ids.size.toLong()) { "Amount is too small to split" }
-        val base = amountMinor / ids.size
-        val remainder = (amountMinor % ids.size).toInt()
-        return ids.mapIndexed { index, id -> id to (base + if (index < remainder) 1L else 0L) }.toMap()
-    }
+    fun splitEvenly(amountMinor: Long, memberIds: Set<String>): Map<String, Long> =
+        ExpenseSplit.evenly(amountMinor, memberIds).associate { it.memberId to it.amountMinor }
 }

@@ -34,7 +34,6 @@ fun DirectConversationRoute(
     modifier: Modifier = Modifier,
     targetMessageId: String? = null,
     savedStateHandle: SavedStateHandle,
-    onRequestReconnect: suspend (String) -> Result<Unit>,
     viewModel: DirectConversationViewModel = koinViewModel(
         parameters = { parametersOf(savedStateHandle) }
     )
@@ -86,9 +85,11 @@ fun DirectConversationRoute(
                     reconnectBusy = true
                     scope.launch {
                         try {
-                            onRequestReconnect(contactId).fold(
+                            viewModel.requestReconnect().fold(
                                 onSuccess = { SparrowLog.hint(reconnectSuccessText) },
-                                onFailure = { SparrowLog.error("DirectConversationRoute", "Could not queue a new invitation", it) }
+                                onFailure = {
+                                    SparrowLog.error("DirectConversationRoute", "Could not queue a new invitation", it)
+                                }
                             )
                         } catch (cancelled: CancellationException) {
                             throw cancelled

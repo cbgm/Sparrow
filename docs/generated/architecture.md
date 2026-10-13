@@ -6,11 +6,11 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 52 |
+| Modules | 61 |
 | Module groups | 11 |
-| Project dependencies | 230 |
-| Kotlin files | 2041 |
-| Test Kotlin files | 147 |
+| Project dependencies | 307 |
+| Kotlin files | 2254 |
+| Test Kotlin files | 156 |
 | Resource files | 57 |
 
 ## Module groups
@@ -44,7 +44,16 @@ Generated automatically by `./gradlew architectureReport`.
 - [**contactimport** (`:feature:contactimport`)](modules/feature-contactimport.md)
 - [**contacts** (`:feature:contacts`)](modules/feature-contacts.md)
 - [**conversationorchestration** (`:feature:conversationorchestration`)](modules/feature-conversationorchestration.md)
+- [**api** (`:feature:conversationorchestration:api`)](modules/feature-conversationorchestration-api.md)
+- [**delivery** (`:feature:conversationorchestration:delivery`)](modules/feature-conversationorchestration-delivery.md)
+- [**engine** (`:feature:conversationorchestration:engine`)](modules/feature-conversationorchestration-engine.md)
+- [**groupstate** (`:feature:conversationorchestration:groupstate`)](modules/feature-conversationorchestration-groupstate.md)
+- [**incoming** (`:feature:conversationorchestration:incoming`)](modules/feature-conversationorchestration-incoming.md)
+- [**lifecycle** (`:feature:conversationorchestration:lifecycle`)](modules/feature-conversationorchestration-lifecycle.md)
+- [**membership** (`:feature:conversationorchestration:membership`)](modules/feature-conversationorchestration-membership.md)
+- [**message** (`:feature:conversationorchestration:message`)](modules/feature-conversationorchestration-message.md)
 - [**embedding** (`:feature:embedding`)](modules/feature-embedding.md)
+- [**expenses** (`:feature:expenses`)](modules/feature-expenses.md)
 - [**identity** (`:feature:identity`)](modules/feature-identity.md)
 - [**invite** (`:feature:invite`)](modules/feature-invite.md)
 - [**linkpreview** (`:feature:linkpreview`)](modules/feature-linkpreview.md)
@@ -133,7 +142,16 @@ graph TD
         module_feature_contactimport[":feature:contactimport"]
         module_feature_contacts[":feature:contacts"]
         module_feature_conversationorchestration[":feature:conversationorchestration"]
+        module_feature_conversationorchestration_api[":feature:conversationorchestration:api"]
+        module_feature_conversationorchestration_delivery[":feature:conversationorchestration:delivery"]
+        module_feature_conversationorchestration_engine[":feature:conversationorchestration:engine"]
+        module_feature_conversationorchestration_groupstate[":feature:conversationorchestration:groupstate"]
+        module_feature_conversationorchestration_incoming[":feature:conversationorchestration:incoming"]
+        module_feature_conversationorchestration_lifecycle[":feature:conversationorchestration:lifecycle"]
+        module_feature_conversationorchestration_membership[":feature:conversationorchestration:membership"]
+        module_feature_conversationorchestration_message[":feature:conversationorchestration:message"]
         module_feature_embedding[":feature:embedding"]
+        module_feature_expenses[":feature:expenses"]
         module_feature_identity[":feature:identity"]
         module_feature_invite[":feature:invite"]
         module_feature_linkpreview[":feature:linkpreview"]
@@ -194,6 +212,7 @@ graph TD
     module_core_ui --> module_resources
     module_data_database --> module_core_util
     module_data_database --> module_protocol
+    module_data_datastore --> module_core_crypto
     module_feature_applock --> module_core_ui
     module_feature_applock --> module_core_util
     module_feature_applock --> module_data_datastore
@@ -223,14 +242,15 @@ graph TD
     module_feature_chats --> module_feature_avatar
     module_feature_chats --> module_feature_contactimport
     module_feature_chats --> module_feature_contacts
-    module_feature_chats --> module_feature_conversationorchestration
+    module_feature_chats --> module_feature_conversationorchestration_api
+    module_feature_chats --> module_feature_expenses
     module_feature_chats --> module_feature_identity
+    module_feature_chats --> module_feature_invite
     module_feature_chats --> module_feature_linkpreview
     module_feature_chats --> module_feature_media
     module_feature_chats --> module_feature_membership
     module_feature_chats --> module_feature_polls
     module_feature_chats --> module_feature_safety
-    module_feature_chats --> module_feature_transport
     module_feature_chats --> module_feature_voice
     module_feature_chats --> module_protocol
     module_feature_contactimport --> module_core_ui
@@ -246,17 +266,86 @@ graph TD
     module_feature_contacts --> module_feature_identity
     module_feature_contacts --> module_feature_transport
     module_feature_contacts --> module_protocol
-    module_feature_conversationorchestration --> module_core_crypto
-    module_feature_conversationorchestration --> module_core_util
-    module_feature_conversationorchestration --> module_feature_contacts
-    module_feature_conversationorchestration --> module_feature_identity
-    module_feature_conversationorchestration --> module_feature_invite
-    module_feature_conversationorchestration --> module_feature_membership
-    module_feature_conversationorchestration --> module_feature_messaging
-    module_feature_conversationorchestration --> module_feature_transport
-    module_feature_conversationorchestration --> module_protocol
+    module_feature_conversationorchestration_api --> module_core_base
+    module_feature_conversationorchestration_delivery --> module_core_base
+    module_feature_conversationorchestration_delivery --> module_core_crypto
+    module_feature_conversationorchestration_delivery --> module_core_util
+    module_feature_conversationorchestration_delivery --> module_data_database
+    module_feature_conversationorchestration_delivery --> module_feature_contacts
+    module_feature_conversationorchestration_delivery --> module_feature_conversationorchestration_engine
+    module_feature_conversationorchestration_delivery --> module_feature_identity
+    module_feature_conversationorchestration_delivery --> module_feature_membership
+    module_feature_conversationorchestration_delivery --> module_feature_messaging
+    module_feature_conversationorchestration_delivery --> module_feature_transport
+    module_feature_conversationorchestration_delivery --> module_protocol
+    module_feature_conversationorchestration_engine --> module_core_util
+    module_feature_conversationorchestration_engine --> module_feature_conversationorchestration_api
+    module_feature_conversationorchestration_groupstate --> module_core_base
+    module_feature_conversationorchestration_groupstate --> module_core_crypto
+    module_feature_conversationorchestration_groupstate --> module_core_util
+    module_feature_conversationorchestration_groupstate --> module_data_database
+    module_feature_conversationorchestration_groupstate --> module_data_datastore
+    module_feature_conversationorchestration_groupstate --> module_feature_attachments
+    module_feature_conversationorchestration_groupstate --> module_feature_contacts
+    module_feature_conversationorchestration_groupstate --> module_feature_conversationorchestration_message
+    module_feature_conversationorchestration_groupstate --> module_feature_identity
+    module_feature_conversationorchestration_groupstate --> module_feature_invite
+    module_feature_conversationorchestration_groupstate --> module_feature_membership
+    module_feature_conversationorchestration_groupstate --> module_protocol
+    module_feature_conversationorchestration_incoming --> module_core_base
+    module_feature_conversationorchestration_incoming --> module_core_crypto
+    module_feature_conversationorchestration_incoming --> module_core_util
+    module_feature_conversationorchestration_incoming --> module_data_database
+    module_feature_conversationorchestration_incoming --> module_feature_attachments
+    module_feature_conversationorchestration_incoming --> module_feature_autoreply
+    module_feature_conversationorchestration_incoming --> module_feature_contacts
+    module_feature_conversationorchestration_incoming --> module_feature_conversationorchestration_lifecycle
+    module_feature_conversationorchestration_incoming --> module_feature_identity
+    module_feature_conversationorchestration_incoming --> module_feature_invite
+    module_feature_conversationorchestration_incoming --> module_feature_linkpreview
+    module_feature_conversationorchestration_incoming --> module_feature_membership
+    module_feature_conversationorchestration_incoming --> module_feature_messaging
+    module_feature_conversationorchestration_incoming --> module_protocol
+    module_feature_conversationorchestration_lifecycle --> module_core_base
+    module_feature_conversationorchestration_lifecycle --> module_core_crypto
+    module_feature_conversationorchestration_lifecycle --> module_core_util
+    module_feature_conversationorchestration_lifecycle --> module_data_database
+    module_feature_conversationorchestration_lifecycle --> module_feature_contacts
+    module_feature_conversationorchestration_lifecycle --> module_feature_conversationorchestration_membership
+    module_feature_conversationorchestration_lifecycle --> module_feature_identity
+    module_feature_conversationorchestration_lifecycle --> module_feature_invite
+    module_feature_conversationorchestration_lifecycle --> module_feature_membership
+    module_feature_conversationorchestration_lifecycle --> module_feature_messaging
+    module_feature_conversationorchestration_lifecycle --> module_protocol
+    module_feature_conversationorchestration_membership --> module_core_base
+    module_feature_conversationorchestration_membership --> module_core_crypto
+    module_feature_conversationorchestration_membership --> module_core_util
+    module_feature_conversationorchestration_membership --> module_data_database
+    module_feature_conversationorchestration_membership --> module_data_datastore
+    module_feature_conversationorchestration_membership --> module_feature_attachments
+    module_feature_conversationorchestration_membership --> module_feature_contacts
+    module_feature_conversationorchestration_membership --> module_feature_conversationorchestration_groupstate
+    module_feature_conversationorchestration_membership --> module_feature_identity
+    module_feature_conversationorchestration_membership --> module_feature_invite
+    module_feature_conversationorchestration_membership --> module_feature_membership
+    module_feature_conversationorchestration_membership --> module_feature_messaging
+    module_feature_conversationorchestration_membership --> module_protocol
+    module_feature_conversationorchestration_message --> module_core_base
+    module_feature_conversationorchestration_message --> module_core_crypto
+    module_feature_conversationorchestration_message --> module_core_util
+    module_feature_conversationorchestration_message --> module_data_database
+    module_feature_conversationorchestration_message --> module_feature_attachments
+    module_feature_conversationorchestration_message --> module_feature_contacts
+    module_feature_conversationorchestration_message --> module_feature_conversationorchestration_delivery
+    module_feature_conversationorchestration_message --> module_feature_identity
+    module_feature_conversationorchestration_message --> module_feature_invite
+    module_feature_conversationorchestration_message --> module_feature_membership
+    module_feature_conversationorchestration_message --> module_protocol
     module_feature_embedding --> module_core_util
     module_feature_embedding --> module_data_datastore
+    module_feature_expenses --> module_core_base
+    module_feature_expenses --> module_core_ui
+    module_feature_expenses --> module_feature_avatar
     module_feature_identity --> module_core_crypto
     module_feature_identity --> module_core_ui
     module_feature_identity --> module_core_util
@@ -337,7 +426,6 @@ graph TD
     module_navigation --> module_feature_chats
     module_navigation --> module_feature_contactimport
     module_navigation --> module_feature_contacts
-    module_navigation --> module_feature_conversationorchestration
     module_navigation --> module_feature_identity
     module_navigation --> module_feature_invite
     module_navigation --> module_feature_media
@@ -392,7 +480,14 @@ graph TD
     module_shared --> module_feature_chats
     module_shared --> module_feature_contactimport
     module_shared --> module_feature_contacts
-    module_shared --> module_feature_conversationorchestration
+    module_shared --> module_feature_conversationorchestration_api
+    module_shared --> module_feature_conversationorchestration_delivery
+    module_shared --> module_feature_conversationorchestration_engine
+    module_shared --> module_feature_conversationorchestration_groupstate
+    module_shared --> module_feature_conversationorchestration_incoming
+    module_shared --> module_feature_conversationorchestration_lifecycle
+    module_shared --> module_feature_conversationorchestration_membership
+    module_shared --> module_feature_conversationorchestration_message
     module_shared --> module_feature_embedding
     module_shared --> module_feature_identity
     module_shared --> module_feature_invite

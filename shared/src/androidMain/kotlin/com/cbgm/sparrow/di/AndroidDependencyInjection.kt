@@ -4,7 +4,6 @@ import android.app.Application
 import com.cbgm.sparrow.data.database.di.androidDatabaseModule
 import com.cbgm.sparrow.data.datastore.di.androidDataStoreModule
 import com.cbgm.sparrow.feature.attachments.di.androidAttachmentsModule
-import com.cbgm.sparrow.feature.chats.di.androidChatsModule
 import com.cbgm.sparrow.feature.contacts.di.androidContactsModule
 import com.cbgm.sparrow.feature.embedding.di.androidEmbeddingModule
 import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule
@@ -30,7 +29,6 @@ private val androidApplicationModules: List<Module> =
         androidIdentityStorageModule,
         androidContactsModule,
         androidAttachmentsModule,
-        androidChatsModule,
         platformMediaModule,
         platformVoiceModule,
         androidMembershipModule,

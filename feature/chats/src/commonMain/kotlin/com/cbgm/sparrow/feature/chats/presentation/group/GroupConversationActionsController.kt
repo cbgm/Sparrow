@@ -3,15 +3,8 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
-import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
@@ -19,30 +12,29 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardMessage
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class GroupConversationActionsController(
-    private val markRead: MarkGroupConversationReadUseCase,
+    private val orchestrator: ConversationOrchestrator,
     private val composerController: ConversationComposerController,
     private val mediaController: ConversationMediaController,
     private val voiceController: ConversationVoiceController,
-    private val sharedContactController: SharedContactController,
-    private val forwardMessageUseCase: ForwardMessageUseCase,
-    private val sendMessage: SendGroupMessageUseCase,
-    private val retryMessage: RetryGroupMessageUseCase,
-    private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
-    private val deleteMessageUseCase: DeleteGroupMessageUseCase,
-    private val editMessageUseCase: EditGroupMessageUseCase
+    private val sharedContactController: SharedContactController
 ) {
     private lateinit var scope: CoroutineScope
     private lateinit var conversationState: StateFlow<GroupConversationUiState>
     private lateinit var composerState: StateFlow<MessageComposerUiState>
     private lateinit var indicatorController: IndicatorController
     private lateinit var errors: ConversationErrors
-    private lateinit var lookupForwardMessage: suspend (String) -> com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage?
+    private lateinit var lookupForwardMessage: suspend (String) -> GroupMessage?
     private lateinit var groupId: String
     private val logger = SparrowLog.withTag("GroupConversationActionsController")
 
@@ -58,7 +50,7 @@ class GroupConversationActionsController(
         composerState: StateFlow<MessageComposerUiState>,
         indicatorController: IndicatorController,
         errors: ConversationErrors,
-        lookupForwardMessage: suspend (String) -> com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage?
+        lookupForwardMessage: suspend (String) -> GroupMessage?
     ) {
         this.groupId = groupId
         this.scope = scope
@@ -71,21 +63,20 @@ class GroupConversationActionsController(
 
     fun markConversationRead() {
         scope.launch {
-            markRead(groupId).onFailure { logger.error(it) { "Could not mark group conversation as read" } }
+            orchestrator.awaitResult(GroupMessageCommand.MarkConversationRead(groupId)).onFailure {
+                logger.error(it) { "Could not mark group conversation as read" }
+            }
         }
     }
 
     fun forwardMessage(
         messageId: String,
-        target: ForwardingTarget
+        target: ForwardTarget
     ) {
         scope.launch {
             val message = lookupForwardMessage(messageId) ?: return@launch
 
-            forwardMessageUseCase(
-                parts = message.parts,
-                target = target
-            ).onFailure { error ->
+            orchestrator.awaitResult(ForwardMessage(parts = message.parts, target = target)).onFailure { error ->
                 errors.report(error.message ?: "Message could not be forwarded")
             }
         }
@@ -190,7 +181,7 @@ class GroupConversationActionsController(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             composerController.setSending(true)
             try {
-                sendMessage(groupId, parts, replyTo)
+                orchestrator.awaitResult(GroupMessageCommand.SendMessage(groupId, parts, replyTo))
                     .onSuccess {
                         when {
                             clearComposerOnSuccess -> clearComposer()
@@ -257,7 +248,7 @@ class GroupConversationActionsController(
             errors.clear()
             composerController.setSending(true)
             try {
-                editMessageUseCase(groupId, messageId, text)
+                orchestrator.awaitResult(GroupMessageCommand.EditMessage(groupId, messageId, text))
                     .onSuccess { clearComposer() }
                     .onFailure { errors.report(it.message ?: "Message could not be edited") }
             } finally {
@@ -268,15 +259,15 @@ class GroupConversationActionsController(
 
     fun toggleReaction(messageId: String, emoji: String) =
         executeAction("Reaction could not be sent") {
-            toggleMessageReaction(groupId, messageId, emoji)
+            orchestrator.awaitResult(GroupMessageCommand.ToggleReaction(groupId, messageId, emoji))
         }
 
     fun deleteMessage(messageId: String) = executeAction("Message could not be deleted") {
-        deleteMessageUseCase(groupId, messageId)
+        orchestrator.awaitResult(GroupMessageCommand.DeleteMessage(groupId, messageId))
     }
 
     fun retryFailedMessage(messageId: String) = executeAction("Message could not be queued again") {
-        retryMessage(messageId)
+        orchestrator.awaitResult(GroupMessageCommand.RetryMessage(groupId, messageId))
     }
 
     private fun executeAction(message: String, action: suspend () -> Result<*>) {

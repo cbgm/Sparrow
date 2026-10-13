@@ -1,19 +1,19 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
+import com.cbgm.sparrow.core.message.domain.model.GroupDeliveryStatusAggregation
+import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipProjector
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
@@ -83,7 +83,7 @@ private fun MessageEntity.toGroupMessage(
         if (recipientStates.isEmpty()) {
             deliveryStatus.toMessageDeliveryStatus()
         } else {
-            GroupMessageDeliveryStateMachine.aggregate(
+            GroupDeliveryStatusAggregation.aggregate(
                 recipientStates.map { it.deliveryStatus.toMessageDeliveryStatus() }
             )
         }
@@ -97,7 +97,7 @@ private fun MessageEntity.toGroupMessage(
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
         replyToMessageId = replyToMessageId,
         reactions = reactions,
-        type = GroupMembershipMessageFactory.typeOf(transportMode),
+        type = transportMode.toChatMessageType(),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),
         parts = messageParts
@@ -107,12 +107,13 @@ private fun MessageEntity.toGroupMessage(
 private fun List<MessageRecipientStateEntity>.toMessageDeliveryProgress(): MessageDeliveryProgress =
     MessageDeliveryProgress(
         recipientCount = size,
-        deliveredCount = count { it.deliveryStatus == MessageDeliveryStatus.DELIVERED.name || it.deliveryStatus == MessageDeliveryStatus.READ.name },
+        deliveredCount =
+            count { it.deliveryStatus == MessageDeliveryStatus.DELIVERED.name || it.deliveryStatus == MessageDeliveryStatus.READ.name },
         readCount = count { it.deliveryStatus == MessageDeliveryStatus.READ.name }
     )
 
 private fun String.toMessageSecurity(): MessageSecurity =
-    if (this == TransportEncryptionMode.SEALED_BOX.name || this == GROUP_END_TO_END_ENCRYPTED_MODE) {
+    if (this == TransportEncryptionMode.SEALED_BOX.name || this == MessageTransportMode.GROUP_END_TO_END_ENCRYPTED) {
         MessageSecurity.END_TO_END_ENCRYPTED
     } else {
         MessageSecurity.INSECURE

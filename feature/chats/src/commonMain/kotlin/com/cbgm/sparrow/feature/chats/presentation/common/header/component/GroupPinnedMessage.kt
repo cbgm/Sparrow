@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.time.formatMessageTimestamp
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
@@ -36,8 +38,6 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ContactMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.FileMessageBubbleBody

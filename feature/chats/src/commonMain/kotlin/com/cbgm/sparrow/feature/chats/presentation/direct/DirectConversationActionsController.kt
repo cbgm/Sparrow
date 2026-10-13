@@ -3,17 +3,9 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
-import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDispatchResult
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.EditDirectMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendOrQueueDirectMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
@@ -21,30 +13,30 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardMessage
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
+import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class DirectConversationActionsController(
-    private val markRead: MarkDirectConversationReadUseCase,
+    private val orchestrator: ConversationOrchestrator,
     private val composerController: ConversationComposerController,
     private val mediaController: ConversationMediaController,
     private val voiceController: ConversationVoiceController,
-    private val sharedContactController: SharedContactController,
-    private val forwardMessageUseCase: ForwardMessageUseCase,
-    private val sendOrQueueDirectMessage: SendOrQueueDirectMessageUseCase,
-    private val retryMessage: RetryDirectMessageUseCase,
-    private val toggleMessageReaction: ToggleDirectMessageReactionUseCase,
-    private val deleteMessageUseCase: DeleteDirectMessageUseCase,
-    private val editMessageUseCase: EditDirectMessageUseCase
+    private val sharedContactController: SharedContactController
 ) {
     private lateinit var scope: CoroutineScope
     private lateinit var conversationState: StateFlow<DirectConversationUiState>
     private lateinit var composerState: StateFlow<MessageComposerUiState>
     private lateinit var indicatorController: IndicatorController
     private lateinit var errors: ConversationErrors
-    private lateinit var lookupForwardMessage: suspend (String) -> com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage?
+    private lateinit var lookupForwardMessage: suspend (String) -> DirectMessage?
     private lateinit var conversationId: String
     private lateinit var contactId: String
     private val logger = SparrowLog.withTag("DirectConversationActionsController")
@@ -62,7 +54,7 @@ class DirectConversationActionsController(
         composerState: StateFlow<MessageComposerUiState>,
         indicatorController: IndicatorController,
         errors: ConversationErrors,
-        lookupForwardMessage: suspend (String) -> com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage?
+        lookupForwardMessage: suspend (String) -> DirectMessage?
     ) {
         this.conversationId = conversationId
         this.contactId = contactId
@@ -75,22 +67,22 @@ class DirectConversationActionsController(
     }
 
     fun markConversationRead() {
-        scope.launch { markRead(conversationId).onFailure { logger.error(it) { "Could not mark direct conversation as read" } } }
+        scope.launch {
+            orchestrator.awaitResult(DirectConversationCommand.MarkConversationRead(conversationId))
+                .onFailure { logger.error(it) { "Could not mark direct conversation as read" } }
+        }
     }
 
     fun forwardMessage(
         messageId: String,
-        target: ForwardingTarget
+        target: ForwardTarget
     ) {
         scope.launch {
             val message =
                 lookupForwardMessage(messageId)
                     ?: return@launch
 
-            forwardMessageUseCase(
-                parts = message.parts,
-                target = target
-            ).onFailure { error ->
+            orchestrator.awaitResult(ForwardMessage(parts = message.parts, target = target)).onFailure { error ->
                 errors.report(error.message ?: "Message could not be forwarded")
             }
         }
@@ -183,11 +175,13 @@ class DirectConversationActionsController(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             composerController.setSending(true)
             try {
-                sendOrQueueDirectMessage(
-                    contactId = contactId,
-                    conversationId = conversationId,
-                    parts = parts,
-                    replyToMessageId = replyTo
+                orchestrator.awaitResult(
+                    DirectConversationCommand.SendMessage(
+                        contactId = contactId,
+                        parts = parts,
+                        replyToMessageId = replyTo,
+                        conversationId = conversationId
+                    )
                 ).onSuccess { result ->
                     when {
                         clearComposerOnSuccess -> clearComposer()
@@ -198,11 +192,9 @@ class DirectConversationActionsController(
 
                         else -> clearReply()
                     }
-                    if (result is DirectMessageDispatchResult.QueuedWithIdentityExchangeFailure) {
-                        errors.report(
-                            result.throwable.message
-                                ?: "Conversation authorization could not be started"
-                        )
+                    val authorizationFailure = (result as? ConversationResult.DirectMessageQueued)?.authorizationFailure
+                    if (authorizationFailure != null) {
+                        errors.report(authorizationFailure.message)
                     }
                 }.onFailure { error ->
                     val fallbackMessage =
@@ -266,7 +258,7 @@ class DirectConversationActionsController(
             errors.clear()
             composerController.setSending(true)
             try {
-                editMessageUseCase(conversationId, messageId, text)
+                orchestrator.awaitResult(DirectConversationCommand.EditMessage(conversationId, messageId, text))
                     .onSuccess { clearComposer() }
                     .onFailure { errors.report(it.message ?: "Message could not be edited") }
             } finally {
@@ -277,15 +269,15 @@ class DirectConversationActionsController(
 
     fun toggleReaction(messageId: String, emoji: String) =
         executeAction("Reaction could not be sent") {
-            toggleMessageReaction(conversationId, messageId, emoji)
+            orchestrator.awaitResult(DirectConversationCommand.ToggleReaction(conversationId, messageId, emoji))
         }
 
     fun deleteMessage(messageId: String) = executeAction("Message could not be deleted") {
-        deleteMessageUseCase(conversationId, messageId)
+        orchestrator.awaitResult(DirectConversationCommand.DeleteMessage(conversationId, messageId))
     }
 
     fun retryFailedMessage(messageId: String) = executeAction("Message could not be queued again") {
-        retryMessage(messageId)
+        orchestrator.awaitResult(DirectConversationCommand.RetryMessage(messageId))
     }
 
     private fun executeAction(message: String, action: suspend () -> Result<*>) {

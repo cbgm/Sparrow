@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `shared` |
 | Directory | `shared` |
 | Build file | `shared/build.gradle.kts` |
-| Kotlin files | 38 |
-| Production Kotlin files | 38 |
+| Kotlin files | 40 |
+| Production Kotlin files | 40 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 31 |
+| Direct dependencies | 38 |
 | Direct dependents | 1 |
 
 ## Source sets
@@ -37,7 +37,14 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:conversationorchestration:api`](../modules/feature-conversationorchestration-api.md)
+- [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)
+- [`:feature:conversationorchestration:engine`](../modules/feature-conversationorchestration-engine.md)
+- [`:feature:conversationorchestration:groupstate`](../modules/feature-conversationorchestration-groupstate.md)
+- [`:feature:conversationorchestration:incoming`](../modules/feature-conversationorchestration-incoming.md)
+- [`:feature:conversationorchestration:lifecycle`](../modules/feature-conversationorchestration-lifecycle.md)
+- [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
+- [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:feature:embedding`](../modules/feature-embedding.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:invite`](../modules/feature-invite.md)

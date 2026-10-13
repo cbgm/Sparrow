@@ -5,6 +5,8 @@ import com.cbgm.sparrow.buildlogic.architecture.serialization.ArchitectureModule
 import com.cbgm.sparrow.buildlogic.architecture.task.GenerateArchitectureReportTask
 import com.cbgm.sparrow.buildlogic.architecture.task.ValidateArchitectureTask
 import com.cbgm.sparrow.buildlogic.architecture.task.VerifyArchitectureReportTask
+import com.cbgm.sparrow.buildlogic.workflow.task.GenerateWorkflowCatalogTask
+import com.cbgm.sparrow.buildlogic.workflow.task.VerifyWorkflowCatalogTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.register
@@ -62,6 +64,48 @@ class SparrowArchitecturePlugin : Plugin<Project> {
                     )
                 }
 
+            val orchestrationDirectory =
+                layout.projectDirectory.dir(
+                    ORCHESTRATION_DIRECTORY,
+                )
+
+            val workflowSources =
+                fileTree(orchestrationDirectory) {
+                    include("*/src/commonMain/kotlin/**/*Workflow.kt")
+                }
+
+            val workflowCatalogDirectory =
+                layout.projectDirectory.dir(
+                    WORKFLOW_CATALOG_DIRECTORY,
+                )
+
+            tasks.register<GenerateWorkflowCatalogTask>(
+                WORKFLOW_CATALOG_TASK_NAME,
+            ) {
+                group = "documentation"
+                description =
+                    "Generates the conversation orchestration workflow catalog."
+
+                this.workflowSources.from(workflowSources)
+                rootDirectory.set(layout.projectDirectory)
+                this.orchestrationDirectory.set(orchestrationDirectory)
+                outputDirectory.set(workflowCatalogDirectory)
+            }
+
+            val verifyWorkflowCatalogTask =
+                tasks.register<VerifyWorkflowCatalogTask>(
+                    VERIFY_WORKFLOW_CATALOG_TASK_NAME,
+                ) {
+                    group = "verification"
+                    description =
+                        "Verifies that the workflow catalog matches the workflow sources."
+
+                    this.workflowSources.from(workflowSources)
+                    rootDirectory.set(layout.projectDirectory)
+                    this.orchestrationDirectory.set(orchestrationDirectory)
+                    catalogDirectory.set(workflowCatalogDirectory)
+                }
+
             gradle.projectsEvaluated {
                 val encodedModules =
                     discoverArchitectureModules()
@@ -93,11 +137,26 @@ class SparrowArchitecturePlugin : Plugin<Project> {
                 dependsOn(
                     verificationTask,
                 )
+                dependsOn(
+                    verifyWorkflowCatalogTask,
+                )
             }
         }
     }
 
     private companion object {
+
+        const val ORCHESTRATION_DIRECTORY =
+            "feature/conversationorchestration"
+
+        const val WORKFLOW_CATALOG_DIRECTORY =
+            "docs/architecture/workflows"
+
+        const val WORKFLOW_CATALOG_TASK_NAME =
+            "workflowCatalog"
+
+        const val VERIFY_WORKFLOW_CATALOG_TASK_NAME =
+            "verifyWorkflowCatalog"
 
         const val VALIDATE_TASK_NAME =
             "validateArchitecture"

@@ -8,14 +8,7 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
 import com.cbgm.sparrow.feature.avatar.domain.usecase.ConsumeAvatarEditResultUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupAvatarUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupAvatarUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupDescriptionUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTitleUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupVerificationUiState
@@ -30,12 +23,11 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificati
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.GetConversationGroupLeaveRequirementUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.LeaveConversationGroupUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PromoteConversationGroupMemberUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.RemoveConversationGroupMemberUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.TransferConversationGroupAdminAndLeaveUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -47,21 +39,11 @@ import kotlinx.coroutines.launch
 class GroupVerificationViewModel(
     private val savedStateHandle: SavedStateHandle,
     observeGroupDetailsContext: ObserveGroupDetailsContextUseCase,
-    private val synchronizeGroupVerification: SynchronizeGroupVerificationUseCase,
-    private val verifyGroupMember: VerifyGroupMemberUseCase,
+    private val orchestrator: ConversationOrchestrator,
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
     observeContacts: ObserveContactsUseCase,
-    private val addGroupMembers: AddGroupMembersUseCase,
-    private val removeGroupMember: RemoveConversationGroupMemberUseCase,
-    private val promoteGroupMember: PromoteConversationGroupMemberUseCase,
-    private val transferGroupAdminAndLeave: TransferConversationGroupAdminAndLeaveUseCase,
     private val consumeAvatarEditResult: ConsumeAvatarEditResultUseCase,
-    private val setGroupAvatar: SetGroupAvatarUseCase,
-    private val removeGroupAvatar: RemoveGroupAvatarUseCase,
-    private val setGroupTitle: SetGroupTitleUseCase,
-    private val setGroupDescription: SetGroupDescriptionUseCase,
-    private val getGroupLeaveRequirement: GetConversationGroupLeaveRequirementUseCase,
-    private val leaveGroup: LeaveConversationGroupUseCase
+    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupDetails::conversationId.name)
@@ -229,7 +211,8 @@ class GroupVerificationViewModel(
         viewModelScope.launch {
             consumeAvatarEditResult(result)
                 .fold(
-                    onSuccess = { bytes -> setGroupAvatar(conversationId, bytes) },
+                    onSuccess =
+                        { bytes -> orchestrator.awaitResult(GroupAdministrationCommand.ChangeAvatar(conversationId, bytes)) },
                     onFailure = { error -> Result.failure(error) }
                 ).onSuccess {
                     avatarActionState.value = GroupAvatarActionState()
@@ -248,7 +231,7 @@ class GroupVerificationViewModel(
 
         avatarActionState.value = GroupAvatarActionState(isSaving = true)
         viewModelScope.launch {
-            removeGroupAvatar(conversationId)
+            orchestrator.awaitResult(GroupAdministrationCommand.RemoveAvatar(conversationId))
                 .onSuccess { avatarActionState.value = GroupAvatarActionState() }
                 .onFailure { error ->
                     SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
@@ -268,7 +251,7 @@ class GroupVerificationViewModel(
 
         titleActionState.value = GroupTitleActionState(isSaving = true)
         viewModelScope.launch {
-            setGroupTitle(conversationId, normalizedTitle)
+            orchestrator.awaitResult(GroupAdministrationCommand.ChangeTitle(conversationId, normalizedTitle))
                 .onSuccess { titleActionState.value = GroupTitleActionState() }
                 .onFailure { error ->
                     SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
@@ -285,7 +268,7 @@ class GroupVerificationViewModel(
 
         descriptionActionState.value = GroupDescriptionActionState(isSaving = true)
         viewModelScope.launch {
-            setGroupDescription(conversationId, description)
+            orchestrator.awaitResult(GroupAdministrationCommand.ChangeDescription(conversationId, description))
                 .onSuccess { descriptionActionState.value = GroupDescriptionActionState() }
                 .onFailure { error ->
                     SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
@@ -317,7 +300,7 @@ class GroupVerificationViewModel(
 
     private fun synchronize() {
         viewModelScope.launch {
-            synchronizeGroupVerification(conversationId)
+            orchestrator.awaitResult(GroupAdministrationCommand.SynchronizeVerification(conversationId))
                 .onFailure { error ->
                     SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     verificationState.update { state ->
@@ -408,9 +391,8 @@ class GroupVerificationViewModel(
         }
 
         viewModelScope.launch {
-            verifyGroupMember(
-                groupId = conversationId,
-                contactId = contactId
+            orchestrator.awaitResult(
+                GroupAdministrationCommand.VerifyMember(groupId = conversationId, contactId = contactId)
             ).onSuccess {
                 clearVerificationSelection()
             }.onFailure { error ->
@@ -472,7 +454,7 @@ class GroupVerificationViewModel(
             state.copy(isUpdating = true, errorMessage = null)
         }
         viewModelScope.launch {
-            addGroupMembers(conversationId, selectedContactIds)
+            orchestrator.awaitResult(GroupAdministrationCommand.AddMembers(conversationId, selectedContactIds))
                 .onSuccess {
                     memberManagementState.update { state ->
                         state.copy(
@@ -527,7 +509,7 @@ class GroupVerificationViewModel(
             state.copy(isUpdating = true, errorMessage = null)
         }
         viewModelScope.launch {
-            removeGroupMember(conversationId, contactId)
+            orchestrator.awaitResult(GroupAdministrationCommand.RemoveMember(conversationId, contactId))
                 .onSuccess {
                     memberManagementState.update { state ->
                         state.copy(
@@ -550,7 +532,9 @@ class GroupVerificationViewModel(
 
     private fun requestMemberPromotion(contactId: String) {
         val summary = uiState.value.summary
-        if (!summary.isLocalAdmin || contactId !in summary.promotableContactIds || memberManagementState.value.isUpdating) {
+        if (
+            !summary.isLocalAdmin || contactId !in summary.promotableContactIds || memberManagementState.value.isUpdating
+        ) {
             return
         }
         memberManagementState.update { state ->
@@ -571,7 +555,7 @@ class GroupVerificationViewModel(
         if (memberManagementState.value.isUpdating) return
         memberManagementState.update { state -> state.copy(isUpdating = true, errorMessage = null) }
         viewModelScope.launch {
-            promoteGroupMember(conversationId, contactId)
+            orchestrator.awaitResult(GroupAdministrationCommand.PromoteMember(conversationId, contactId))
                 .onSuccess {
                     memberManagementState.update { state ->
                         state.copy(
@@ -583,7 +567,10 @@ class GroupVerificationViewModel(
                 }.onFailure { error ->
                     SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     memberManagementState.update { state ->
-                        state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
+                        state.copy(
+                            isUpdating = false,
+                            errorMessage = error.message ?: "Group member could not be promoted"
+                        )
                     }
                 }
         }
@@ -594,7 +581,7 @@ class GroupVerificationViewModel(
         memberManagementState.update { state -> state.copy(isUpdating = true, errorMessage = null) }
         leaveState.update { state -> state.copy(isLeaving = true, errorMessage = null) }
         viewModelScope.launch {
-            transferGroupAdminAndLeave(conversationId, contactId)
+            orchestrator.awaitResult(GroupAdministrationCommand.TransferAdminAndLeave(conversationId, contactId))
                 .onSuccess {
                     memberManagementState.update { state -> state.copy(isUpdating = false) }
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
@@ -608,7 +595,10 @@ class GroupVerificationViewModel(
                         )
                     }
                     memberManagementState.update { state ->
-                        state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
+                        state.copy(
+                            isUpdating = false,
+                            errorMessage = error.message ?: "Group member could not be promoted"
+                        )
                     }
                 }
         }
@@ -652,7 +642,7 @@ class GroupVerificationViewModel(
             )
         }
         viewModelScope.launch {
-            leaveGroup(conversationId)
+            orchestrator.awaitResult(GroupAdministrationCommand.LeaveGroup(conversationId))
                 .onSuccess {
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
                     navigator.popBackStackTo(AppRoute.Main)

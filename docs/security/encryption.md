@@ -38,12 +38,12 @@ Do not move this decision into the WebSocket layer. The WebSocket layer should r
 
 ```mermaid
 sequenceDiagram
-    participant G as GroupOutgoingMessageProcessor
+    participant G as SendGroupMessageWorkflow
     participant SM as GroupSecurityManager
     participant C as SodiumGroupCrypto
     participant O as ProtocolOutbox
 
-    G->>SM: encryptMessage(groupId, messageId, timestamp, plaintext, signing key)
+    G->>SM: EncryptMessage step: GroupSecurityRepository.encryptMessage(groupId, messageId, timestamp, plaintext, signing key)
     SM->>C: XChaCha20-Poly1305 encrypt + sign
     C-->>SM: epoch + nonce + ciphertext + signature
     SM-->>G: secured message

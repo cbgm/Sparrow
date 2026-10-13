@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationContext
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationReadRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 /** Domain-level composition: Chats owns verification rows; Membership owns membership/security state. */
 class ObserveGroupVerificationContextUseCase(
-    private val verificationRepository: GroupVerificationRepository,
+    private val verificationRepository: GroupVerificationReadRepository,
     private val membershipRepository: GroupMembershipRepository
 ) {
     operator fun invoke(groupId: String): Flow<GroupVerificationContext> =

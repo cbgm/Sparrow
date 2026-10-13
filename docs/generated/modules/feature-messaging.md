@@ -15,7 +15,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Test Kotlin files | 7 |
 | Resource files | 1 |
 | Direct dependencies | 2 |
-| Direct dependents | 3 |
+| Direct dependents | 6 |
 
 ## Source sets
 
@@ -30,6 +30,9 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)
+- [`:feature:conversationorchestration:incoming`](../modules/feature-conversationorchestration-incoming.md)
+- [`:feature:conversationorchestration:lifecycle`](../modules/feature-conversationorchestration-lifecycle.md)
+- [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
 - [`:feature:notification`](../modules/feature-notification.md)
 - [`:shared`](../modules/shared.md)

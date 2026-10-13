@@ -43,7 +43,7 @@ flowchart TD
 - cross-feature workflows belong in an explicit orchestration/runtime boundary;
 - use cases should stay focused; do not hide broad orchestration in chains of unrelated use cases.
 
-`:feature:conversationorchestration` is the explicit boundary for invitation/identity/membership/chat workflows. `:feature:messaging` is the generic durable outbox/incoming-envelope executor. Shared application startup orchestration lives under `shared/runtime/startup` and is exposed to `:startup` through the `StartupRunner` contract.
+The `:feature:conversationorchestration:*` modules are the explicit boundary for every conversation write and incoming packet; each workflow is a state machine executed by `WorkflowEngine` (see [Conversation orchestration](conversation-orchestration.md)). `:feature:chats` only reads/observes data and submits `ConversationCommand`s. `:feature:messaging` is the generic durable outbox/incoming-envelope executor. Shared application startup orchestration lives under `shared/runtime/startup` and is exposed to `:startup` through the `StartupRunner` contract.
 
 ## Presentation rules
 

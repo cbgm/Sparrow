@@ -10,14 +10,16 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectIndicatorUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectIndicatorUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.DirectIdentityController
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
+import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
@@ -36,8 +38,8 @@ import kotlinx.coroutines.launch
 class DirectConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveDirectChatContextUseCase,
-    private val observeIndicator: ObserveDirectIndicatorUseCase,
-    private val setIndicator: SetDirectIndicatorUseCase,
+    private val orchestrator: ConversationOrchestrator,
+    private val indicatorObserver: ConversationIndicatorObserver,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
     private val historyController: ConversationHistoryController,
@@ -95,7 +97,9 @@ class DirectConversationViewModel(
     private val indicatorController =
         IndicatorController(
             scope = viewModelScope,
-            sendIndicatorState = { indicatorType -> setIndicator(contactId, indicatorType) },
+            sendIndicatorState = { indicator ->
+                orchestrator.awaitResult(DirectConversationCommand.SendIndicator(contactId, indicator)).map { }
+            },
             logTag = "DirectConversationViewModel"
         )
 
@@ -120,7 +124,7 @@ class DirectConversationViewModel(
 
     init {
         viewModelScope.launch {
-            observeIndicator(contactId).collect(indicatorController::onIncomingIndicatorChanged)
+            indicatorObserver.observeContact(contactId).collect(indicatorController::onIncomingIndicatorChanged)
         }
         viewModelScope.launch {
             observeVoiceRecordingActive().collect { isRecording ->
@@ -275,6 +279,10 @@ class DirectConversationViewModel(
     fun stopIndicator() = indicatorController.stopLocalIndicator()
 
     fun markConversationRead() = actionsController.markConversationRead()
+
+    /** Asks the contact for a fresh invitation while this chat and its history stay. */
+    suspend fun requestReconnect(): Result<Unit> =
+        orchestrator.awaitResult(DirectConversationCommand.ReconnectConversation(contactId)).map { }
 
     override fun onCleared() {
         mediaController.discardSelection()

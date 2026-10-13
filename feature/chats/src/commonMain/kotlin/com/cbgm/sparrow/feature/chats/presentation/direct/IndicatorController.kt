@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.feature.chats.domain.model.IndicatorType
+import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,7 +14,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 internal class IndicatorController(
     private val scope: CoroutineScope,
-    private val sendIndicatorState: suspend (IndicatorType) -> Result<Unit>,
+    private val sendIndicatorState: suspend (ConversationIndicator) -> Result<Unit>,
     logTag: String,
     private val indicatorTimeout: Duration = 1500.milliseconds,
     private val heartbeatInterval: Duration = 1500.milliseconds,
@@ -22,21 +22,21 @@ internal class IndicatorController(
 ) {
     private val logger = SparrowLog.withTag(logTag)
 
-    private val _remoteIndicatorType = MutableStateFlow(IndicatorType.NONE)
-    val remoteIndicatorType: StateFlow<IndicatorType> = _remoteIndicatorType.asStateFlow()
+    private val _remoteIndicatorType = MutableStateFlow(ConversationIndicator.NONE)
+    val remoteIndicatorType: StateFlow<ConversationIndicator> = _remoteIndicatorType.asStateFlow()
 
-    private var localIndicatorType = IndicatorType.NONE
+    private var localIndicatorType = ConversationIndicator.NONE
     private var indicatorStopJob: Job? = null
     private var heartbeatJob: Job? = null
     private var remoteTimeoutJob: Job? = null
 
-    fun onIncomingIndicatorChanged(indicatorType: IndicatorType) {
+    fun onIncomingIndicatorChanged(indicatorType: ConversationIndicator) {
         remoteTimeoutJob?.cancel()
         _remoteIndicatorType.value = indicatorType
-        if (indicatorType != IndicatorType.NONE) {
+        if (indicatorType != ConversationIndicator.NONE) {
             remoteTimeoutJob = scope.launch {
                 delay(remoteTimeout)
-                _remoteIndicatorType.value = IndicatorType.NONE
+                _remoteIndicatorType.value = ConversationIndicator.NONE
             }
         }
     }
@@ -52,11 +52,11 @@ internal class IndicatorController(
             return
         }
 
-        if (!sendsIndicators || localIndicatorType == IndicatorType.VOICE) {
+        if (!sendsIndicators || localIndicatorType == ConversationIndicator.VOICE) {
             return
         }
 
-        setLocalIndicator(IndicatorType.TYPING)
+        setLocalIndicator(ConversationIndicator.TYPING)
         indicatorStopJob = scope.launch {
             delay(indicatorTimeout)
             stopLocalIndicator()
@@ -69,38 +69,38 @@ internal class IndicatorController(
     ) {
         if (isRecording) {
             if (sendsIndicators) {
-                setLocalIndicator(IndicatorType.VOICE)
+                setLocalIndicator(ConversationIndicator.VOICE)
             }
-        } else if (localIndicatorType == IndicatorType.VOICE) {
-            setLocalIndicator(IndicatorType.NONE)
+        } else if (localIndicatorType == ConversationIndicator.VOICE) {
+            setLocalIndicator(ConversationIndicator.NONE)
         }
     }
 
     fun stopLocalTyping() {
         indicatorStopJob?.cancel()
         indicatorStopJob = null
-        if (localIndicatorType != IndicatorType.TYPING) return
-        setLocalIndicator(IndicatorType.NONE)
+        if (localIndicatorType != ConversationIndicator.TYPING) return
+        setLocalIndicator(ConversationIndicator.NONE)
     }
 
     fun stopLocalIndicator() {
         indicatorStopJob?.cancel()
         indicatorStopJob = null
-        if (localIndicatorType == IndicatorType.NONE) return
-        setLocalIndicator(IndicatorType.NONE)
+        if (localIndicatorType == ConversationIndicator.NONE) return
+        setLocalIndicator(ConversationIndicator.NONE)
     }
 
-    private fun setLocalIndicator(indicatorType: IndicatorType) {
+    private fun setLocalIndicator(indicatorType: ConversationIndicator) {
         if (localIndicatorType == indicatorType) return
         localIndicatorType = indicatorType
         restartHeartbeat(indicatorType)
         scope.launch { sendNow(indicatorType) }
     }
 
-    private fun restartHeartbeat(indicatorType: IndicatorType) {
+    private fun restartHeartbeat(indicatorType: ConversationIndicator) {
         heartbeatJob?.cancel()
         heartbeatJob = null
-        if (indicatorType == IndicatorType.NONE) return
+        if (indicatorType == ConversationIndicator.NONE) return
 
         heartbeatJob = scope.launch {
             while (true) {
@@ -110,7 +110,7 @@ internal class IndicatorController(
         }
     }
 
-    private suspend fun sendNow(indicatorType: IndicatorType) {
+    private suspend fun sendNow(indicatorType: ConversationIndicator) {
         sendIndicatorState(indicatorType)
             .onFailure { error -> logger.error(error) { "Could not send indicator state" } }
     }

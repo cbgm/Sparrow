@@ -21,7 +21,6 @@ kotlin {
             implementation(projects.feature.chats)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
-            implementation(projects.feature.conversationorchestration)
             implementation(projects.feature.identity)
             implementation(projects.feature.invite)
             implementation(projects.feature.membership)

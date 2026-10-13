@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/membership` |
 | Build file | `feature/membership/build.gradle.kts` |
-| Kotlin files | 122 |
+| Kotlin files | 123 |
 | Production Kotlin files | 115 |
-| Test Kotlin files | 7 |
+| Test Kotlin files | 8 |
 | Resource files | 0 |
 | Direct dependencies | 5 |
-| Direct dependents | 4 |
+| Direct dependents | 9 |
 
 ## Source sets
 
@@ -35,6 +35,11 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependents
 
 - [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)
+- [`:feature:conversationorchestration:groupstate`](../modules/feature-conversationorchestration-groupstate.md)
+- [`:feature:conversationorchestration:incoming`](../modules/feature-conversationorchestration-incoming.md)
+- [`:feature:conversationorchestration:lifecycle`](../modules/feature-conversationorchestration-lifecycle.md)
+- [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
+- [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)

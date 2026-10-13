@@ -1,8 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
+import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,19 +18,9 @@ class GroupLocalMembershipTimelineTest {
                 messages =
                     listOf(
                         userMessage("before", 100L),
-                        GroupMembershipMessageFactory.localMembershipLeft(
-                            conversationId = GROUP_ID,
-                            invitationId = "invite-1",
-                            epoch = 2,
-                            createdAtEpochMilliseconds = 200L
-                        ).message,
+                        localMembershipLeft(invitationId = "invite-1", epoch = 2, createdAtEpochMilliseconds = 200L),
                         userMessage("absent", 300L),
-                        GroupMembershipMessageFactory.localMembershipStarted(
-                            conversationId = GROUP_ID,
-                            referenceId = "invite-2",
-                            epoch = 4,
-                            createdAtEpochMilliseconds = 400L
-                        ).message,
+                        localMembershipStarted(referenceId = "invite-2", epoch = 4, createdAtEpochMilliseconds = 400L),
                         userMessage("after", 500L)
                     ),
                 memberships = emptyList()
@@ -49,12 +40,7 @@ class GroupLocalMembershipTimelineTest {
                 messages =
                     listOf(
                         userMessage("before", 100L),
-                        GroupMembershipMessageFactory.localMembershipLeft(
-                            conversationId = GROUP_ID,
-                            invitationId = "invite-1",
-                            epoch = 2,
-                            createdAtEpochMilliseconds = 200L
-                        ).message,
+                        localMembershipLeft(invitationId = "invite-1", epoch = 2, createdAtEpochMilliseconds = 200L),
                         userMessage("absent", 250L)
                     ),
                 memberships =
@@ -69,8 +55,14 @@ class GroupLocalMembershipTimelineTest {
             )
 
         assertFalse(timeline.isLocallyInactive)
-        assertEquals(listOf("before", "group-local-membership-left-invite-1-2"), timeline.visibleMessages.map(MessageEntity::id))
-        assertEquals(listOf("invite-2"), timeline.currentMemberships.map(GroupMemberLifecycleSnapshot::sourceInvitationId))
+        assertEquals(
+            listOf("before", "group-local-membership-left-invite-1-2"),
+            timeline.visibleMessages.map(MessageEntity::id)
+        )
+        assertEquals(
+            listOf("invite-2"),
+            timeline.currentMemberships.map(GroupMemberLifecycleSnapshot::sourceInvitationId)
+        )
     }
 
     @Test
@@ -80,12 +72,7 @@ class GroupLocalMembershipTimelineTest {
                 messages =
                     listOf(
                         userMessage("before", 100L),
-                        GroupMembershipMessageFactory.localMembershipLeft(
-                            conversationId = GROUP_ID,
-                            invitationId = "invite-1",
-                            epoch = 2,
-                            createdAtEpochMilliseconds = 200L
-                        ).message
+                        localMembershipLeft(invitationId = "invite-1", epoch = 2, createdAtEpochMilliseconds = 200L)
                     ),
                 memberships = emptyList()
             )
@@ -105,6 +92,36 @@ class GroupLocalMembershipTimelineTest {
             senderContactId = "contact-1",
             isMine = false,
             createdAtEpochMilliseconds = timestamp
+        )
+
+    private fun localMembershipLeft(
+        invitationId: String,
+        epoch: Int,
+        createdAtEpochMilliseconds: Long
+    ): MessageEntity =
+        localMarker(
+            id = "group-local-membership-left-$invitationId-$epoch",
+            transportMode = MessageTransportMode.LOCAL_GROUP_MEMBERSHIP_LEFT,
+            timestamp = createdAtEpochMilliseconds
+        )
+
+    private fun localMembershipStarted(
+        referenceId: String,
+        epoch: Int,
+        createdAtEpochMilliseconds: Long
+    ): MessageEntity =
+        localMarker(
+            id = "group-local-membership-started-$referenceId-$epoch",
+            transportMode = MessageTransportMode.LOCAL_GROUP_MEMBERSHIP_STARTED,
+            timestamp = createdAtEpochMilliseconds
+        )
+
+    private fun localMarker(id: String, transportMode: String, timestamp: Long): MessageEntity =
+        userMessage(id, timestamp).copy(
+            packetId = null,
+            transportMode = transportMode,
+            senderContactId = null,
+            isMine = true
         )
 
     private companion object {

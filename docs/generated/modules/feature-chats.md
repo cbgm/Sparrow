@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/chats` |
 | Build file | `feature/chats/build.gradle.kts` |
-| Kotlin files | 339 |
-| Production Kotlin files | 323 |
-| Test Kotlin files | 16 |
+| Kotlin files | 223 |
+| Production Kotlin files | 214 |
+| Test Kotlin files | 9 |
 | Resource files | 1 |
-| Direct dependencies | 21 |
+| Direct dependencies | 22 |
 | Direct dependents | 3 |
 
 ## Source sets
@@ -22,7 +22,6 @@ Generated automatically by `./gradlew architectureReport`.
 - `androidMain`
 - `commonMain`
 - `commonTest`
-- `iosMain`
 
 ## Dependencies
 
@@ -37,14 +36,15 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:conversationorchestration:api`](../modules/feature-conversationorchestration-api.md)
+- [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:invite`](../modules/feature-invite.md)
 - [`:feature:linkpreview`](../modules/feature-linkpreview.md)
 - [`:feature:media`](../modules/feature-media.md)
 - [`:feature:membership`](../modules/feature-membership.md)
 - [`:feature:polls`](../modules/feature-polls.md)
 - [`:feature:safety`](../modules/feature-safety.md)
-- [`:feature:transport`](../modules/feature-transport.md)
 - [`:feature:voice`](../modules/feature-voice.md)
 - [`:protocol`](../modules/protocol.md)
 

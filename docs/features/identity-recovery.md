@@ -97,7 +97,7 @@ Relevant types:
 - `ObservePendingRemoteIdentityChangesUseCase`
 - `RemoteIdentityReplacementRequiredException`
 
-When a packet would replace the key material bound to an existing peer, orchestration stages a `PendingRemoteIdentityChange` instead of silently accepting the replacement. This creates an explicit review point.
+When a packet would replace the key material bound to an existing peer, the incoming workflows (for example `ReceiveContactInviteWorkflow`, `ReceiveGroupInviteWorkflow`, `ReceiveGroupJoinRequestWorkflow`) stage a `PendingRemoteIdentityChange` instead of silently accepting the replacement. This creates an explicit review point.
 
 ## Recovery inbox
 
@@ -129,8 +129,8 @@ sequenceDiagram
     participant OBS as ApprovedIdentityReconnectionObserver
     participant DB as approved reconnection repository
     participant WORK as ApprovedReconnectionRetryWorker
-    participant START as StartRecoveryInvitationUseCase
-    participant FLOW as ConversationFlowHandler
+    participant START as StartRecoveryInvitationWorkflow
+    participant FLOW as AcceptApprovedIdentityChangeWorkflow / RequestReauthorizationWorkflow / ResumeApprovedGroupJoinWorkflow
 
     APP->>OBS: run()
     OBS->>DB: observe approvals
@@ -138,7 +138,7 @@ sequenceDiagram
     OBS->>WORK: run(approval)
     loop until completed / superseded
         WORK->>DB: approval still current?
-        WORK->>START: enqueue/resume recovery
+        WORK->>START: enqueue/resume recovery (WorkflowEngine)
         START->>FLOW: original approval or reauthorization path
         WORK->>DB: acknowledge when fresh authorization exists
     end
@@ -146,29 +146,29 @@ sequenceDiagram
 
 A transient Room observation failure is retried with capped exponential delay. The approved row remains until the recovery invitation has been queued/authorization becomes fresh, allowing recovery to survive process restart.
 
-## `StartRecoveryInvitationUseCase`
+## `StartRecoveryInvitationWorkflow`
 
-This use case carefully distinguishes Direct recovery from Group membership recovery:
+This workflow (`:feature:conversationorchestration:lifecycle`, step chain `FindGroupMembership -> ResumeGroupJoin | EnsureConversation -> AcceptOriginalInvitation | RequestReauthorization`) carefully distinguishes Direct recovery from Group membership recovery:
 
 - If the approval maps to a `MembershipHandshake`, it resumes the Group path.
 - A member-side Group offer remains in the mailbox for normal Group acceptance; it does not create a Direct invitation.
-- An owner-side changed-key Group JOIN resumes through `ConversationFlowHandler.resumeApprovedGroupJoin()`.
+- An owner-side changed-key Group JOIN resumes through `ResumeApprovedGroupJoinWorkflow`.
 - IDs with the `group-membership-` prefix are never converted into Direct recovery merely because the handshake disappeared.
-- Direct recovery can create a conversation shell via `ConversationPort.getOrCreateConversation(peerId)`, but that shell alone does **not** grant transport authorization or flush queued messages.
-- If the original invitation challenge/keys/timestamps are still complete and unexpired, `acceptApprovedOriginalIdentityChange()` resumes that exact flow.
-- Otherwise `requestReauthorization(peerId)` starts a fresh authorization request.
+- Direct recovery can create a conversation shell via `DirectConversationRepository.getOrCreate(peerId)` (`EnsureConversation` step), but that shell alone does **not** grant transport authorization or flush queued messages.
+- If the original invitation challenge/keys/timestamps are still complete and unexpired, `AcceptApprovedIdentityChangeWorkflow` resumes that exact flow.
+- Otherwise `RequestReauthorizationWorkflow` starts a fresh authorization request.
 
 ## Explicit reconnection from an existing conversation
 
-`ReconnectExistingConversationUseCase` delegates to `ConversationFlowHandler.startExplicitReconnection(peerId)`. This is the explicit “reconnect contact” path: the existing conversation can survive locally while authorization is renewed.
+`DirectConversationViewModel` submits `DirectConversationCommand.ReconnectConversation(contactId)`, executed by `ReconnectDirectConversationWorkflow` (`CheckReconnectable -> PreflightRouting -> LoadAuthorization -> [RevokeExchange] -> StartInvitation`). This is the explicit “reconnect contact” path: the existing conversation can survive locally while authorization is renewed.
 
 ## Outgoing safety gate
 
-Recovery approval does not bypass normal encryption requirements. `IdentityRecoveryOutboundGate`/the outgoing policy and `RequireDirectChatAuthorizationUseCase` prevent Direct application messages from being released until the required established identity/authorization state exists. `DirectOutgoingMessageProcessor` keeps waiting messages persisted until authorization is valid.
+Recovery approval does not bypass normal encryption requirements. The outgoing identity-review gate in `OutgoingPacketSender` (`blocksDirectPacketDuringIdentityReview`) and `RequireDirectChatAuthorizationUseCase` prevent Direct application messages from being released until the required established identity/authorization state exists. `SendDirectMessageWorkflow` keeps messages persisted as `WAITING_FOR_AUTHORIZATION` while an identity change is pending or authorization is missing; `ReleaseWaitingDirectMessagesWorkflow` releases them once authorization is valid.
 
 ## Why a second normal invitation is a bug
 
-An approved key replacement is supposed to resume the approved original identity/reconnection workflow. It is **not** supposed to generate an unrelated ordinary invitation after the conversation has already been established. The code therefore carries original invitation challenge/timestamps/key material in `ApprovedIdentityReconnection` and has explicit Group-vs-Direct guards in `StartRecoveryInvitationUseCase`.
+An approved key replacement is supposed to resume the approved original identity/reconnection workflow. It is **not** supposed to generate an unrelated ordinary invitation after the conversation has already been established. The code therefore carries original invitation challenge/timestamps/key material in `ApprovedIdentityReconnection` and has explicit Group-vs-Direct guards in `StartRecoveryInvitationWorkflow`.
 
 ## Local phone number
 

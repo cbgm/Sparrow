@@ -12,13 +12,15 @@ import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberIndicatorUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupIndicatorUseCase
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationComposerController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationHistoryController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
+import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
@@ -41,8 +43,8 @@ import kotlinx.coroutines.launch
 class GroupConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveGroupChatContextUseCase,
-    observeMemberIndicator: ObserveGroupMemberIndicatorUseCase,
-    setGroupIndicator: SetGroupIndicatorUseCase,
+    indicatorObserver: ConversationIndicatorObserver,
+    orchestrator: ConversationOrchestrator,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
     getLocalIdentityName: GetLocalIdentityNameUseCase,
@@ -73,8 +75,10 @@ class GroupConversationViewModel(
     private val indicatorController =
         IndicatorController(
             scope = viewModelScope,
-            observeMemberIndicator = { contactId -> observeMemberIndicator(groupId, contactId) },
-            sendIndicatorState = { indicatorType -> setGroupIndicator(groupId, indicatorType) },
+            observeMemberIndicator = { contactId -> indicatorObserver.observeGroupMember(groupId, contactId) },
+            sendIndicatorState = { indicator ->
+                orchestrator.awaitResult(GroupMessageCommand.SendIndicator(groupId, indicator)).map { }
+            },
             logTag = "GroupConversationViewModel"
         )
 

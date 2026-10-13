@@ -65,7 +65,7 @@ The current source tree includes:
 - the generic `:feature:invite` lifecycle for Direct and Group invitations, separated from identity and membership state;
 - Direct conversations with encryption/authorization gates, durable queued-until-authorized messages, retry, edit/delete/reactions, typing and delivery/read state;
 - Group conversations with dedicated `:feature:membership` handshakes, welcome/activation, epoch security, admin promotion/removal/transfer/leave/delete and member routing;
-- `:feature:conversationorchestration` as the explicit cross-feature workflow boundary (`ConversationFlowHandler`, result observers, recovery workers);
+- `:feature:conversationorchestration:*` (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) as the explicit workflow boundary: every conversation write and incoming packet runs as a state machine, plus result observers and recovery workers; Chats only reads data and submits commands;
 - `:feature:messaging` as generic durable protocol-outbox/incoming-envelope execution rather than business-feature orchestration;
 - the shared `:core:base` `MessagePartDto` / `MessagePart` / `MessagePartUi` hierarchy for text, image, video, file, voice, location, contact and poll content;
 - encrypted attachments for images, video, files, location, contacts and voice; attachment management/viewers and media/file export;
@@ -222,8 +222,8 @@ feature/contactimport/            device/QR contact and identity import
 feature/autoreply/                auto-reply rules and recipient claims
 feature/avatar/                   avatar observation/cache and picture editing
 feature/linkpreview/              link extraction/cache/prefetch/UI
-feature/chats/                    Direct + Group conversation/message semantics/UI
-feature/conversationorchestration/ cross-feature invite/identity/membership/chat workflows
+feature/chats/                    Direct + Group chat UI and read-only conversation data
+feature/conversationorchestration/ api/engine/delivery/message/membership/invite/incoming workflow modules
 feature/membership/               Group membership, welcome/activation, roles/security
 feature/attachments/              encrypted attachment transfer/cache/storage/UI models
 feature/media/                    gallery/camera/file access, media viewers/export

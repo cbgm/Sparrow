@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group
 
 import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.feature.chats.domain.model.IndicatorType
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi
@@ -20,6 +19,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupReplyPrev
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toIndicatorDisplayName
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
+import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -62,7 +62,9 @@ internal class GroupConversationStateController(
                 pin = presentation.context?.pin,
                 localVoterDisplayName = localDisplayName
             )
-            ChatOpenTrace.event("group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
+            ChatOpenTrace.event(
+                "group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}"
+            )
             mapped
         }.stateIn(
             scope = scope,
@@ -187,9 +189,9 @@ internal sealed interface GroupContextObservation {
     }
 }
 
-private fun Map<String, IndicatorType>.preferredIndicatorType(): IndicatorType =
+private fun Map<String, ConversationIndicator>.preferredIndicatorType(): ConversationIndicator =
     when {
-        values.any { it == IndicatorType.VOICE } -> IndicatorType.VOICE
-        values.any { it == IndicatorType.TYPING } -> IndicatorType.TYPING
-        else -> IndicatorType.NONE
+        values.any { it == ConversationIndicator.VOICE } -> ConversationIndicator.VOICE
+        values.any { it == ConversationIndicator.TYPING } -> ConversationIndicator.TYPING
+        else -> ConversationIndicator.NONE
     }

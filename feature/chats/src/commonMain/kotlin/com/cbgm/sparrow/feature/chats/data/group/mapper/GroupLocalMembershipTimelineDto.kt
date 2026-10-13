@@ -21,12 +21,10 @@ internal fun buildGroupLocalMembershipTimeline(
             .filter { message -> message.isLocalMembershipBoundary() }
             .maxWithOrNull(MESSAGE_ORDER)
     val locallyInactive =
-        latestBoundary?.let { message ->
-            GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode)
-        } == true
+        latestBoundary?.transportMode?.isLocalMembershipEnd() == true
     val latestEndAt =
         orderedMembershipHistory
-            .filter { message -> GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode) }
+            .filter { message -> message.transportMode.isLocalMembershipEnd() }
             .maxWithOrNull(MESSAGE_ORDER)
             ?.createdAtEpochMilliseconds
 
@@ -49,7 +47,7 @@ internal fun buildGroupLocalMembershipTimeline(
                     .filter { message -> MESSAGE_ORDER.compare(message, firstLoadedMessage) < 0 }
                     .maxWithOrNull(MESSAGE_ORDER)
                     ?.let { previousBoundary ->
-                        !GroupMembershipMessageFactory.isLocalMembershipEnd(previousBoundary.transportMode)
+                        !previousBoundary.transportMode.isLocalMembershipEnd()
                     }
             } ?: true
 
@@ -65,16 +63,16 @@ private fun List<MessageEntity>.visibleDuringMembershipPeriods(initiallyActive: 
     return buildList {
         this@visibleDuringMembershipPeriods.forEach { message ->
             when {
-                GroupMembershipMessageFactory.isLocalMembershipStart(message.transportMode) -> {
+                message.transportMode.isLocalMembershipStart() -> {
                     active = true
                 }
 
-                GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode) -> {
+                message.transportMode.isLocalMembershipEnd() -> {
                     if (active) add(message)
                     active = false
                 }
 
-                GroupMembershipMessageFactory.isHiddenControlMessage(message.transportMode) -> Unit
+                message.transportMode.isHiddenControlMessage() -> Unit
                 active -> add(message)
             }
         }
@@ -82,8 +80,8 @@ private fun List<MessageEntity>.visibleDuringMembershipPeriods(initiallyActive: 
 }
 
 private fun MessageEntity.isLocalMembershipBoundary(): Boolean =
-    GroupMembershipMessageFactory.isLocalMembershipStart(transportMode) ||
-        GroupMembershipMessageFactory.isLocalMembershipEnd(transportMode)
+    transportMode.isLocalMembershipStart() ||
+        transportMode.isLocalMembershipEnd()
 
 private val MESSAGE_ORDER =
     compareBy<MessageEntity>(MessageEntity::createdAtEpochMilliseconds)

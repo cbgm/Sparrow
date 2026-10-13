@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/notification` |
 | Build file | `feature/notification/build.gradle.kts` |
-| Kotlin files | 28 |
-| Production Kotlin files | 27 |
+| Kotlin files | 29 |
+| Production Kotlin files | 28 |
 | Test Kotlin files | 1 |
 | Resource files | 1 |
 | Direct dependencies | 7 |

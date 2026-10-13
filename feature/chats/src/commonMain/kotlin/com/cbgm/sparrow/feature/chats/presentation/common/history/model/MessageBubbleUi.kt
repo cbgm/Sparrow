@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.model
 
+import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
@@ -10,8 +12,6 @@ import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi

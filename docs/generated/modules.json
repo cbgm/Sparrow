@@ -41,9 +41,9 @@
     "group": "core",
     "directory": "core/base",
     "buildFile": "core/base/build.gradle.kts",
-    "kotlinSourceFileCount": 13,
-    "productionKotlinFileCount": 9,
-    "testKotlinFileCount": 4,
+    "kotlinSourceFileCount": 25,
+    "productionKotlinFileCount": 17,
+    "testKotlinFileCount": 8,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -54,6 +54,14 @@
     "dependents": [
       ":feature:attachments",
       ":feature:chats",
+      ":feature:conversationorchestration:api",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
+      ":feature:expenses",
       ":feature:voice",
       ":protocol"
     ]
@@ -77,10 +85,16 @@
     "dependencies": [
     ],
     "dependents": [
+      ":data:datastore",
       ":feature:attachments",
       ":feature:chats",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:identity",
       ":feature:membership",
       ":feature:notification",
@@ -116,6 +130,7 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
       ":feature:linkpreview",
@@ -158,7 +173,13 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:engine",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:embedding",
       ":feature:identity",
       ":feature:invite",
@@ -209,8 +230,7 @@
     "sourceSets": [
       "androidDeviceTest",
       "androidMain",
-      "commonMain",
-      "commonTest"
+      "commonMain"
     ],
     "dependencies": [
       ":core:util",
@@ -221,6 +241,12 @@
       ":feature:autoreply",
       ":feature:chats",
       ":feature:contacts",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:identity",
       ":feature:invite",
       ":feature:linkpreview",
@@ -236,8 +262,8 @@
     "group": "data",
     "directory": "data/datastore",
     "buildFile": "data/datastore/build.gradle.kts",
-    "kotlinSourceFileCount": 4,
-    "productionKotlinFileCount": 4,
+    "kotlinSourceFileCount": 6,
+    "productionKotlinFileCount": 6,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -246,10 +272,13 @@
       "iosMain"
     ],
     "dependencies": [
+      ":core:crypto"
     ],
     "dependents": [
       ":feature:applock",
       ":feature:chats",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:membership",
       ":feature:embedding",
       ":feature:identity",
       ":feature:membership",
@@ -331,6 +360,10 @@
     ],
     "dependents": [
       ":feature:chats",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:polls",
       ":feature:voice",
       ":navigation",
@@ -357,6 +390,7 @@
     ],
     "dependents": [
       ":feature:chats",
+      ":feature:conversationorchestration:incoming",
       ":feature:settings",
       ":navigation",
       ":shared"
@@ -386,6 +420,7 @@
     "dependents": [
       ":feature:chats",
       ":feature:contacts",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
       ":feature:polls",
@@ -399,15 +434,14 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 339,
-    "productionKotlinFileCount": 323,
-    "testKotlinFileCount": 16,
+    "kotlinSourceFileCount": 223,
+    "productionKotlinFileCount": 214,
+    "testKotlinFileCount": 9,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
       "commonMain",
-      "commonTest",
-      "iosMain"
+      "commonTest"
     ],
     "dependencies": [
       ":core:base",
@@ -421,14 +455,15 @@
       ":feature:avatar",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:api",
+      ":feature:expenses",
       ":feature:identity",
+      ":feature:invite",
       ":feature:linkpreview",
       ":feature:media",
       ":feature:membership",
       ":feature:polls",
       ":feature:safety",
-      ":feature:transport",
       ":feature:voice",
       ":protocol"
     ],
@@ -495,7 +530,12 @@
     "dependents": [
       ":feature:chats",
       ":feature:contactimport",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:safety",
       ":feature:settings",
       ":navigation",
@@ -507,29 +547,256 @@
     "path": ":feature:conversationorchestration",
     "group": "feature",
     "directory": "feature/conversationorchestration",
-    "buildFile": "feature/conversationorchestration/build.gradle.kts",
-    "kotlinSourceFileCount": 64,
-    "productionKotlinFileCount": 56,
-    "testKotlinFileCount": 8,
+    "buildFile": "feature/conversationorchestration/build.gradle",
+    "kotlinSourceFileCount": 0,
+    "productionKotlinFileCount": 0,
+    "testKotlinFileCount": 0,
+    "resourceFileCount": 0,
+    "sourceSets": [
+    ],
+    "dependencies": [
+    ],
+    "dependents": [
+    ]
+  },
+  {
+    "name": "api",
+    "path": ":feature:conversationorchestration:api",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/api",
+    "buildFile": "feature/conversationorchestration/api/build.gradle.kts",
+    "kotlinSourceFileCount": 12,
+    "productionKotlinFileCount": 12,
+    "testKotlinFileCount": 0,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain"
+    ],
+    "dependencies": [
+      ":core:base"
+    ],
+    "dependents": [
+      ":feature:chats",
+      ":feature:conversationorchestration:engine",
+      ":shared"
+    ]
+  },
+  {
+    "name": "delivery",
+    "path": ":feature:conversationorchestration:delivery",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/delivery",
+    "buildFile": "feature/conversationorchestration/delivery/build.gradle.kts",
+    "kotlinSourceFileCount": 45,
+    "productionKotlinFileCount": 39,
+    "testKotlinFileCount": 6,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
       "commonTest"
     ],
     "dependencies": [
+      ":core:base",
       ":core:crypto",
       ":core:util",
+      ":data:database",
       ":feature:contacts",
+      ":feature:conversationorchestration:engine",
       ":feature:identity",
-      ":feature:invite",
       ":feature:membership",
       ":feature:messaging",
       ":feature:transport",
       ":protocol"
     ],
     "dependents": [
-      ":feature:chats",
-      ":navigation",
+      ":feature:conversationorchestration:message",
+      ":shared"
+    ]
+  },
+  {
+    "name": "engine",
+    "path": ":feature:conversationorchestration:engine",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/engine",
+    "buildFile": "feature/conversationorchestration/engine/build.gradle.kts",
+    "kotlinSourceFileCount": 14,
+    "productionKotlinFileCount": 12,
+    "testKotlinFileCount": 2,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:util",
+      ":feature:conversationorchestration:api"
+    ],
+    "dependents": [
+      ":feature:conversationorchestration:delivery",
+      ":shared"
+    ]
+  },
+  {
+    "name": "groupstate",
+    "path": ":feature:conversationorchestration:groupstate",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/groupstate",
+    "buildFile": "feature/conversationorchestration/groupstate/build.gradle.kts",
+    "kotlinSourceFileCount": 56,
+    "productionKotlinFileCount": 56,
+    "testKotlinFileCount": 0,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:crypto",
+      ":core:util",
+      ":data:database",
+      ":data:datastore",
+      ":feature:attachments",
+      ":feature:contacts",
+      ":feature:conversationorchestration:message",
+      ":feature:identity",
+      ":feature:invite",
+      ":feature:membership",
+      ":protocol"
+    ],
+    "dependents": [
+      ":feature:conversationorchestration:membership",
+      ":shared"
+    ]
+  },
+  {
+    "name": "incoming",
+    "path": ":feature:conversationorchestration:incoming",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/incoming",
+    "buildFile": "feature/conversationorchestration/incoming/build.gradle.kts",
+    "kotlinSourceFileCount": 55,
+    "productionKotlinFileCount": 52,
+    "testKotlinFileCount": 3,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:crypto",
+      ":core:util",
+      ":data:database",
+      ":feature:attachments",
+      ":feature:autoreply",
+      ":feature:contacts",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:identity",
+      ":feature:invite",
+      ":feature:linkpreview",
+      ":feature:membership",
+      ":feature:messaging",
+      ":protocol"
+    ],
+    "dependents": [
+      ":shared"
+    ]
+  },
+  {
+    "name": "lifecycle",
+    "path": ":feature:conversationorchestration:lifecycle",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/lifecycle",
+    "buildFile": "feature/conversationorchestration/lifecycle/build.gradle.kts",
+    "kotlinSourceFileCount": 29,
+    "productionKotlinFileCount": 28,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:crypto",
+      ":core:util",
+      ":data:database",
+      ":feature:contacts",
+      ":feature:conversationorchestration:membership",
+      ":feature:identity",
+      ":feature:invite",
+      ":feature:membership",
+      ":feature:messaging",
+      ":protocol"
+    ],
+    "dependents": [
+      ":feature:conversationorchestration:incoming",
+      ":shared"
+    ]
+  },
+  {
+    "name": "membership",
+    "path": ":feature:conversationorchestration:membership",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/membership",
+    "buildFile": "feature/conversationorchestration/membership/build.gradle.kts",
+    "kotlinSourceFileCount": 63,
+    "productionKotlinFileCount": 62,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:crypto",
+      ":core:util",
+      ":data:database",
+      ":data:datastore",
+      ":feature:attachments",
+      ":feature:contacts",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:identity",
+      ":feature:invite",
+      ":feature:membership",
+      ":feature:messaging",
+      ":protocol"
+    ],
+    "dependents": [
+      ":feature:conversationorchestration:lifecycle",
+      ":shared"
+    ]
+  },
+  {
+    "name": "message",
+    "path": ":feature:conversationorchestration:message",
+    "group": "feature",
+    "directory": "feature/conversationorchestration/message",
+    "buildFile": "feature/conversationorchestration/message/build.gradle.kts",
+    "kotlinSourceFileCount": 82,
+    "productionKotlinFileCount": 81,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:crypto",
+      ":core:util",
+      ":data:database",
+      ":feature:attachments",
+      ":feature:contacts",
+      ":feature:conversationorchestration:delivery",
+      ":feature:identity",
+      ":feature:invite",
+      ":feature:membership",
+      ":protocol"
+    ],
+    "dependents": [
+      ":feature:conversationorchestration:groupstate",
       ":shared"
     ]
   },
@@ -546,8 +813,7 @@
     "sourceSets": [
       "androidHostTest",
       "androidMain",
-      "commonMain",
-      "commonTest"
+      "commonMain"
     ],
     "dependencies": [
       ":core:util",
@@ -559,6 +825,29 @@
       ":feature:settings",
       ":shared",
       ":startup"
+    ]
+  },
+  {
+    "name": "expenses",
+    "path": ":feature:expenses",
+    "group": "feature",
+    "directory": "feature/expenses",
+    "buildFile": "feature/expenses/build.gradle.kts",
+    "kotlinSourceFileCount": 18,
+    "productionKotlinFileCount": 14,
+    "testKotlinFileCount": 4,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:ui",
+      ":feature:avatar"
+    ],
+    "dependents": [
+      ":feature:chats"
     ]
   },
   {
@@ -591,7 +880,12 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:onboarding",
       ":feature:settings",
       ":navigation",
@@ -610,8 +904,7 @@
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
-      "commonMain",
-      "commonTest"
+      "commonMain"
     ],
     "dependencies": [
       ":core:ui",
@@ -620,8 +913,13 @@
       ":feature:avatar"
     ],
     "dependents": [
+      ":feature:chats",
       ":feature:contactimport",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":navigation",
       ":shared"
     ]
@@ -648,6 +946,7 @@
     ],
     "dependents": [
       ":feature:chats",
+      ":feature:conversationorchestration:incoming",
       ":shared"
     ]
   },
@@ -688,9 +987,9 @@
     "group": "feature",
     "directory": "feature/membership",
     "buildFile": "feature/membership/build.gradle.kts",
-    "kotlinSourceFileCount": 122,
+    "kotlinSourceFileCount": 123,
     "productionKotlinFileCount": 115,
-    "testKotlinFileCount": 7,
+    "testKotlinFileCount": 8,
     "resourceFileCount": 0,
     "sourceSets": [
       "androidDeviceTest",
@@ -707,7 +1006,12 @@
     ],
     "dependents": [
       ":feature:chats",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":navigation",
       ":shared"
     ]
@@ -732,7 +1036,10 @@
       ":protocol"
     ],
     "dependents": [
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
       ":feature:notification",
       ":shared"
     ]
@@ -743,8 +1050,8 @@
     "group": "feature",
     "directory": "feature/notification",
     "buildFile": "feature/notification/build.gradle.kts",
-    "kotlinSourceFileCount": 28,
-    "productionKotlinFileCount": 27,
+    "kotlinSourceFileCount": 29,
+    "productionKotlinFileCount": 28,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -803,8 +1110,7 @@
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
-      "commonMain",
-      "commonTest"
+      "commonMain"
     ],
     "dependencies": [
       ":core:ui",
@@ -937,9 +1243,8 @@
     ],
     "dependents": [
       ":feature:attachments",
-      ":feature:chats",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
       ":feature:linkpreview",
       ":feature:notification",
       ":feature:settings",
@@ -999,7 +1304,6 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:conversationorchestration",
       ":feature:identity",
       ":feature:invite",
       ":feature:media",
@@ -1022,9 +1326,9 @@
     "group": "protocol",
     "directory": "protocol",
     "buildFile": "protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 96,
+    "kotlinSourceFileCount": 97,
     "productionKotlinFileCount": 77,
-    "testKotlinFileCount": 19,
+    "testKotlinFileCount": 20,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -1042,7 +1346,12 @@
       ":feature:avatar",
       ":feature:chats",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:identity",
       ":feature:membership",
       ":feature:messaging",
@@ -1397,8 +1706,8 @@
     "group": "shared",
     "directory": "shared",
     "buildFile": "shared/build.gradle.kts",
-    "kotlinSourceFileCount": 38,
-    "productionKotlinFileCount": 38,
+    "kotlinSourceFileCount": 40,
+    "productionKotlinFileCount": 40,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -1419,7 +1728,14 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:conversationorchestration",
+      ":feature:conversationorchestration:api",
+      ":feature:conversationorchestration:delivery",
+      ":feature:conversationorchestration:engine",
+      ":feature:conversationorchestration:groupstate",
+      ":feature:conversationorchestration:incoming",
+      ":feature:conversationorchestration:lifecycle",
+      ":feature:conversationorchestration:membership",
+      ":feature:conversationorchestration:message",
       ":feature:embedding",
       ":feature:identity",
       ":feature:invite",
