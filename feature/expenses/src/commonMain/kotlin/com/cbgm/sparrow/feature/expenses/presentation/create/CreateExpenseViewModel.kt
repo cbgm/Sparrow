@@ -95,11 +95,16 @@ class CreateExpenseViewModel(
                     current.copy(queued = current.queued.filterIndexed { index, _ -> index != event.index })
                 }
             }
-            CreateExpenseUiEvent.SplitPickerClicked -> navigator.navigateTo(AppRoute.ExpenseSplit(groupId, expenseId))
-            CreateExpenseUiEvent.SplitDoneClicked -> navigator.popBackStack()
+            CreateExpenseUiEvent.SplitPickerClicked -> _uiState.update { it.copy(isSplitOpen = true) }
+            CreateExpenseUiEvent.SplitDoneClicked -> _uiState.update { it.copy(isSplitOpen = false) }
             CreateExpenseUiEvent.AddAnotherClicked -> queueDraft()
             CreateExpenseUiEvent.SendClicked -> sendAll()
-            CreateExpenseUiEvent.BackClicked -> navigator.popBackStack()
+            CreateExpenseUiEvent.BackClicked ->
+                if (state.isSplitOpen) {
+                    _uiState.update { it.copy(isSplitOpen = false) }
+                } else {
+                    navigator.popBackStack()
+                }
         }
     }
 

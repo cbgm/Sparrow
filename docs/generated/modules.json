@@ -834,8 +834,8 @@
     "group": "feature",
     "directory": "feature/expenses",
     "buildFile": "feature/expenses/build.gradle.kts",
-    "kotlinSourceFileCount": 62,
-    "productionKotlinFileCount": 52,
+    "kotlinSourceFileCount": 61,
+    "productionKotlinFileCount": 51,
     "testKotlinFileCount": 10,
     "resourceFileCount": 0,
     "sourceSets": [

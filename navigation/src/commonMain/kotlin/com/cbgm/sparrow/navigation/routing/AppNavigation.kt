@@ -49,8 +49,10 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 private const val OFFLINE_HINT_DELAY_MILLIS = 5_000L
+private const val STARTUP_OFFLINE_HINT_DELAY_MILLIS = 5_000L
 
 private enum class FeedbackKind { ERROR, HINT }
 
@@ -63,7 +65,7 @@ private data class FeedbackSnackbarVisuals(
     override val withDismissAction: Boolean = false
 ) : SnackbarVisuals
 
-private val ErrorSnackbarColor = Color(0xFFB3261E)
+private val errorSnackbarColor = Color(0xFFB3261E)
 
 @Composable
 fun AppNavigation(
@@ -122,7 +124,7 @@ fun AppNavigation(
             mainNavGraph(onContentReady = onStartupContentReady)
 
             chatsNavGraph()
-            attachmentsNavGraph(navController)
+            attachmentsNavGraph()
             mediaNavGraph()
             contactsNavGraph()
             inviteNavGraph()
@@ -137,7 +139,7 @@ fun AppNavigation(
             val isError = (data.visuals as? FeedbackSnackbarVisuals)?.kind == FeedbackKind.ERROR
             Snackbar(
                 snackbarData = data,
-                containerColor = if (isError) ErrorSnackbarColor else Color.White,
+                containerColor = if (isError) errorSnackbarColor else Color.White,
                 contentColor = if (isError) Color.White else Color.Black
             )
         }
@@ -195,6 +197,7 @@ private fun ObserveConnectionSnackbar(
     ) {
         if (!startupComplete) return@LaunchedEffect
 
+        val startedAt = TimeSource.Monotonic.markNow()
         var connectionUnavailable = false
         var offlineHintWasShown = false
 
@@ -205,7 +208,8 @@ private fun ObserveConnectionSnackbar(
 
             pendingOfflineHintJob = launch {
                 // Do not report a transient Connecting state as offline.
-                delay(OFFLINE_HINT_DELAY_MILLIS.milliseconds)
+                val startupGrace = STARTUP_OFFLINE_HINT_DELAY_MILLIS.milliseconds - startedAt.elapsedNow()
+                delay(maxOf(OFFLINE_HINT_DELAY_MILLIS.milliseconds, startupGrace))
 
                 offlineHintWasShown = true
 

@@ -33,7 +33,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 63 | 1 | 0 | 13 | 2 |
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 82 | 1 | 0 | 11 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
-| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 62 | 10 | 0 | 4 | 3 |
+| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 61 | 10 | 0 | 4 | 3 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 181 | 12 | 1 | 7 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |

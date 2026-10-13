@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/expenses` |
 | Build file | `feature/expenses/build.gradle.kts` |
-| Kotlin files | 62 |
-| Production Kotlin files | 52 |
+| Kotlin files | 61 |
+| Production Kotlin files | 51 |
 | Test Kotlin files | 10 |
 | Resource files | 0 |
 | Direct dependencies | 4 |

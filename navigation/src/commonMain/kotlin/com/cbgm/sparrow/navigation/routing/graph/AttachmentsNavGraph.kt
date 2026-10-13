@@ -1,21 +1,18 @@
 package com.cbgm.sparrow.navigation.routing.graph
 
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.attachments.presentation.management.AttachmentManagementRoute
 import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStorageRoute
 import com.cbgm.sparrow.feature.expenses.presentation.create.CreateExpenseRoute
-import com.cbgm.sparrow.feature.expenses.presentation.create.ExpenseSplitRoute
 import com.cbgm.sparrow.feature.expenses.presentation.detail.ExpenseDetailRoute
 import com.cbgm.sparrow.feature.expenses.presentation.overview.ExpenseOverviewRoute
 import com.cbgm.sparrow.feature.polls.presentation.create.CreatePollRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
 
-fun NavGraphBuilder.attachmentsNavGraph(navController: NavHostController) {
+fun NavGraphBuilder.attachmentsNavGraph() {
     composable<AppRoute.AttachmentStorage>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
@@ -35,15 +32,6 @@ fun NavGraphBuilder.attachmentsNavGraph(navController: NavHostController) {
         exitTransition = { slideOutToRight() }
     ) {
         CreateExpenseRoute()
-    }
-
-    composable<AppRoute.ExpenseSplit>(
-        enterTransition = { slideInFromRight() },
-        exitTransition = { slideOutToRight() }
-    ) { entry ->
-        val destination = entry.toRoute<AppRoute.ExpenseSplit>()
-        val parentEntry = navController.getBackStackEntry(AppRoute.CreateExpense(destination.groupId, destination.expenseId))
-        ExpenseSplitRoute(viewModelStoreOwner = parentEntry)
     }
 
     composable<AppRoute.ExpenseOverview>(
