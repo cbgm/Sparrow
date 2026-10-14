@@ -47,6 +47,7 @@ import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 internal class MessageAttachmentOperationsRepositoryImpl(
@@ -205,6 +206,15 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 }
             }
 
+    override suspend fun findExpenseMessageIds(conversationId: String, boardId: String): Result<List<String>> =
+        safeSuspendCall {
+            dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE)
+                .first()
+                .filterValues { parts -> parts.any { part -> part is ExpenseDto && part.boardId == boardId } }
+                .keys
+                .toList()
+        }
+
     override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
@@ -305,7 +315,9 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             is Text -> error("Text is not uploaded as an attachment message part")
             is ExpenseBoard -> part.toDto() as ExpenseBoardDto
             is ExpenseBoardClosed -> part.toDto() as ExpenseBoardClosedDto
-            is Expense -> part.toDto() as ExpenseDto
+            is Expense -> (part.toDto() as ExpenseDto).copy(
+                receipt = part.receipt?.let { createOutgoingDto(it) as ImageDto }
+            )
             is Poll -> (part.toDto() as PollDto).copy(
                 images = part.images.map { image -> createOutgoingDto(image) as ImageDto }
             )

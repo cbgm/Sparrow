@@ -12,6 +12,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | [`CreateGroupExpenseWorkflow`](#creategroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CreateExpense` | — |
 | [`DeleteGroupExpenseWorkflow`](#deletegroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteExpense` | — |
 | [`EditGroupExpenseWorkflow`](#editgroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.EditExpense` | — |
+| [`SendCurrentGroupExpensesWorkflow`](#sendcurrentgroupexpensesworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupExpenses` | — |
 | [`ChangeGroupAvatarWorkflow`](#changegroupavatarworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeAvatar` | — |
 | [`ChangeGroupDescriptionWorkflow`](#changegroupdescriptionworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeDescription` | `groupMetadataLockKey(command.groupId)` |
 | [`ChangeGroupTitleWorkflow`](#changegrouptitleworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeTitle` | `groupMetadataLockKey(command.groupId)` |
@@ -53,18 +54,17 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CreateExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/CreateGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `StoreExpenseReceiptUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
 
 ```text
-FindExpenseMembers -> CreateExpense -> StoreReceipt -> SendExpense.
+FindExpenseMembers -> CreateExpense -> SendExpense.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> CreateExpense : ExpenseMembersFound
-    CreateExpense --> StoreReceipt : ExpenseCreated
-    StoreReceipt --> SendExpense : ReceiptStored
+    CreateExpense --> SendExpense : ExpenseCreated
     SendExpense --> [*] : ExpenseSent
 ```
 
@@ -73,10 +73,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/DeleteGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipt.
+FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipts.
 ```
 
 ```mermaid
@@ -84,8 +84,8 @@ stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> MarkExpenseDeleted : ExpenseMembersFound
     MarkExpenseDeleted --> SendExpense : ExpenseMarkedDeleted
-    SendExpense --> DeleteReceipt : ExpenseSent
-    DeleteReceipt --> [*] : ReceiptDeleted
+    SendExpense --> DeleteReceipts : ExpenseSent
+    DeleteReceipts --> [*] : ReceiptsDeleted
 ```
 
 ### EditGroupExpenseWorkflow
@@ -93,20 +93,39 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/EditGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `FindCurrentExpenseRevisionUseCase`, `StoreExpenseReceiptUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `MessageAttachmentOperationsRepository`, `MessageAttachmentRepository`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> ReviseExpense -> StoreReceipt -> SendExpense -> DeleteReplacedReceipt.
+FindExpenseMembers -> ReviseExpense -> SendExpense -> DeleteReplacedReceipts.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> ReviseExpense : ExpenseMembersFound
-    ReviseExpense --> StoreReceipt : ExpenseRevised
-    StoreReceipt --> SendExpense : ReceiptStored
-    SendExpense --> DeleteReplacedReceipt : ExpenseSent
-    DeleteReplacedReceipt --> [*] : ReplacedReceiptDeleted
+    ReviseExpense --> SendExpense : ExpenseRevised
+    SendExpense --> DeleteReplacedReceipts : ExpenseSent
+    DeleteReplacedReceipts --> [*] : ReplacedReceiptsDeleted
+```
+
+### SendCurrentGroupExpensesWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.SendCurrentGroupExpenses`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/SendCurrentGroupExpensesWorkflow.kt`
+- **Lock:** none
+- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `MessageAttachmentOperationsRepository`, `GroupMessageRepository`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+
+```text
+FindBoard -> LoadExpenseMessages -> EnqueueExpenseMessages.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindBoard
+    FindBoard --> LoadExpenseMessages : BoardFound
+    FindBoard --> [*] : NoOpenBoard
+    LoadExpenseMessages --> EnqueueExpenseMessages : ExpenseMessagesLoaded
+    EnqueueExpenseMessages --> [*] : ExpenseMessagesEnqueued
 ```
 
 ## `metadata`
@@ -219,7 +238,7 @@ stateDiagram-v2
 - **Uses:** `WorkflowEngine`, `SendCurrentGroupTitleUseCase`, `SendCurrentGroupDescriptionUseCase`, `SendCurrentGroupAvatarUseCase`
 
 ```text
-SendTitle -> SendDescription -> SendAvatar -> SendPin.
+SendTitle -> SendDescription -> SendAvatar -> SendPin -> SendExpenses.
 
 Every item is replayed independently: a failed item is logged and the next one is still sent.
 ```
@@ -230,7 +249,8 @@ stateDiagram-v2
     SendTitle --> SendDescription : ItemHandled
     SendDescription --> SendAvatar : ItemHandled
     SendAvatar --> SendPin : ItemHandled
-    SendPin --> [*] : ItemHandled
+    SendPin --> SendExpenses : ItemHandled
+    SendExpenses --> [*] : ItemHandled
 ```
 
 ## `pin`
@@ -240,7 +260,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CloseExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/CloseGroupExpensesWorkflow.kt`
 - **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
 Closes the open expense board: announces the closing as an ordinary encrypted group message,

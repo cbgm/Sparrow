@@ -3,7 +3,6 @@
 package com.cbgm.sparrow.core.messagepart.data.model
 
 import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.serialization.ByteArrayAsBase64Serializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -337,8 +336,6 @@ data class ExpenseDto(
     val allocations: List<ExpenseAllocationDto>,
     val occurredAtEpochMilliseconds: Long,
     val receipt: ImageDto? = null,
-    @Serializable(with = ByteArrayAsBase64Serializer::class)
-    val receiptBytes: ByteArray? = null,
     val category: String = "OTHER",
     val editedAtEpochMilliseconds: Long? = null,
     val deletedAtEpochMilliseconds: Long? = null,

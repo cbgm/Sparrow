@@ -11,8 +11,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ApplyIncomingExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.DeleteReplacedExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.SendDeliveryReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.ConversationInfo
@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 /**
  * FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
  * FindConversation -> DecryptMessage -> FindExisting
- *   -> [AuthorizeExpenses -> ApplyExpenseReceipts -> ApplyProfilePicture -> StoreMessage]
+ *   -> [AuthorizeExpenses -> DeleteReplacedReceipts -> ApplyProfilePicture -> StoreMessage]
  *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
  *
  * A redelivered message keeps its row; only attachments and the receipt are repeated.
@@ -43,7 +43,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
     private val attachmentRepository: MessageAttachmentOperationsRepository,
     private val sendDeliveryReceipt: SendDeliveryReceiptUseCase,
     private val authorizeExpenses: AuthorizeIncomingExpensesUseCase,
-    private val applyExpenseReceipts: ApplyIncomingExpenseReceiptsUseCase
+    private val deleteReplacedExpenseReceipts: DeleteReplacedExpenseReceiptsUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupMessage,
         ReceiveGroupMessageWorkflow.Step,
@@ -102,9 +102,9 @@ class ReceiveGroupMessageWorkflow internal constructor(
                 authorizeExpenses(packet.groupId, context.contactId, step.message.content.attachments).getOrThrow()
                 Outcome.ExpensesAuthorized(step.message)
             }
-            is Step.ApplyExpenseReceipts -> {
-                applyExpenseReceipts(packet.groupId, step.message.content.attachments).getOrThrow()
-                Outcome.ExpenseReceiptsApplied(step.message)
+            is Step.DeleteReplacedReceipts -> {
+                deleteReplacedExpenseReceipts(packet.groupId, step.message.content.attachments).getOrThrow()
+                Outcome.ReplacedReceiptsDeleted(step.message)
             }
             is Step.ApplyProfilePicture -> {
                 applyPeerProfilePicture(context.contactId, packet.profilePicture)
@@ -160,8 +160,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
             is Outcome.MessageDecrypted -> Transition.Next(Step.FindExisting(outcome.message, step.command))
             is Outcome.NewMessage -> Transition.Next(Step.AuthorizeExpenses(outcome.message, step.command))
             is Outcome.ExpensesAuthorized ->
-                Transition.Next(Step.ApplyExpenseReceipts(outcome.message, step.command))
-            is Outcome.ExpenseReceiptsApplied ->
+                Transition.Next(Step.DeleteReplacedReceipts(outcome.message, step.command))
+            is Outcome.ReplacedReceiptsDeleted ->
                 Transition.Next(Step.ApplyProfilePicture(outcome.message, step.command))
             is Outcome.ProfilePictureApplied -> Transition.Next(Step.StoreMessage(outcome.message, step.command))
             is Outcome.MessageStored -> Transition.Next(Step.PrefetchLinkPreviews(outcome.message, step.command))
@@ -224,7 +224,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupMessage
         ) : Step
 
-        data class ApplyExpenseReceipts(
+        data class DeleteReplacedReceipts(
             val message: ReceivedGroupMessage,
             override val command: IncomingCommand.ReceiveGroupMessage
         ) : Step
@@ -279,7 +279,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
             val message: ReceivedGroupMessage
         ) : Outcome
 
-        data class ExpenseReceiptsApplied(
+        data class ReplacedReceiptsDeleted(
             val message: ReceivedGroupMessage
         ) : Outcome
 

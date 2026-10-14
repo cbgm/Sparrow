@@ -12,7 +12,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usec
 import kotlin.reflect.KClass
 
 /**
- * SendTitle -> SendDescription -> SendAvatar -> SendPin.
+ * SendTitle -> SendDescription -> SendAvatar -> SendPin -> SendExpenses.
  *
  * Every item is replayed independently: a failed item is logged and the next one is still sent.
  */
@@ -42,6 +42,8 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
                 is Step.SendDescription -> sendCurrentGroupDescription(groupId, contactId)
                 is Step.SendAvatar -> sendCurrentGroupAvatar(groupId, contactId)
                 is Step.SendPin -> engine.run(GroupStateCommand.SendCurrentGroupPin(groupId, contactId)).map { }
+                is Step.SendExpenses ->
+                    engine.run(GroupStateCommand.SendCurrentGroupExpenses(groupId, contactId)).map { }
             }
         result.onFailure { error -> logger.warn(error) { "Could not queue current group ${step.item} for $contactId" } }
         return Outcome.ItemHandled
@@ -52,7 +54,8 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
             is Step.SendTitle -> Transition.Next(Step.SendDescription(step.command))
             is Step.SendDescription -> Transition.Next(Step.SendAvatar(step.command))
             is Step.SendAvatar -> Transition.Next(Step.SendPin(step.command))
-            is Step.SendPin -> Transition.Complete()
+            is Step.SendPin -> Transition.Next(Step.SendExpenses(step.command))
+            is Step.SendExpenses -> Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {
@@ -81,6 +84,12 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
             override val command: GroupStateCommand.SendCurrentGroupMetadata
         ) : Step {
             override val item: String get() = "pin"
+        }
+
+        data class SendExpenses(
+            override val command: GroupStateCommand.SendCurrentGroupMetadata
+        ) : Step {
+            override val item: String get() = "expenses"
         }
     }
 

@@ -8,7 +8,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 |---|---|---|---|
 | [Delivery workflows](delivery.md) | 2 | 0 | 2 |
 | [Message workflows](message.md) | 22 | 17 | 5 |
-| [Group state workflows](groupstate.md) | 14 | 11 | 3 |
+| [Group state workflows](groupstate.md) | 15 | 11 | 4 |
 | [Membership workflows](membership.md) | 14 | 9 | 5 |
 | [Direct chat lifecycle workflows](lifecycle.md) | 14 | 3 | 11 |
 | [Incoming packet workflows](incoming.md) | 30 | 0 | 30 |
@@ -65,6 +65,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `DeliveryCommand.ApplyDeliveryEvent` | [`ApplyDeliveryEventWorkflow`](delivery.md#applydeliveryeventworkflow) | `delivery` | `DELIVERY_LOCK_KEY` |
 | `DeliveryCommand.RecordPreparedTransport` | [`RecordPreparedTransportWorkflow`](delivery.md#recordpreparedtransportworkflow) | `delivery` | — |
 | `GroupStateCommand.PublishGroupAvatar` | [`PublishGroupAvatarWorkflow`](groupstate.md#publishgroupavatarworkflow) | `groupstate` | `groupMetadataLockKey(command.groupId)` |
+| `GroupStateCommand.SendCurrentGroupExpenses` | [`SendCurrentGroupExpensesWorkflow`](groupstate.md#sendcurrentgroupexpensesworkflow) | `groupstate` | — |
 | `GroupStateCommand.SendCurrentGroupMetadata` | [`SendCurrentGroupMetadataWorkflow`](groupstate.md#sendcurrentgroupmetadataworkflow) | `groupstate` | — |
 | `GroupStateCommand.SendCurrentGroupPin` | [`SendCurrentGroupPinWorkflow`](groupstate.md#sendcurrentgrouppinworkflow) | `groupstate` | — |
 | `IncomingCommand.ApplyRemoteMessageOperation` | [`ApplyRemoteMessageOperationWorkflow`](incoming.md#applyremotemessageoperationworkflow) | `incoming` | — |

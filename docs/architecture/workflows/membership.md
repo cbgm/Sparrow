@@ -97,7 +97,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.LeaveGroup`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/LeaveGroupWorkflow.kt`
 - **Lock:** `groupAdministrationLockKey(command.groupId)`
-- **Uses:** `GroupConversationRepository`, `LeaveGroupUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `GroupConversationRepository`, `LeaveGroupUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
 LoadContext -> LeaveGroup -> EndLocalMembership -> DeleteExpenseReceipts.
@@ -158,7 +158,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.TransferAdminAndLeave`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/TransferGroupAdminAndLeaveWorkflow.kt`
 - **Lock:** `groupAdministrationLockKey(command.groupId)`
-- **Uses:** `GroupConversationRepository`, `TransferGroupAdminAndLeaveUseCase`, `ExpenseReceiptRepository`
+- **Uses:** `GroupConversationRepository`, `TransferGroupAdminAndLeaveUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
 LoadContext -> TransferAdminAndLeave -> EndLocalMembership -> DeleteExpenseReceipts.

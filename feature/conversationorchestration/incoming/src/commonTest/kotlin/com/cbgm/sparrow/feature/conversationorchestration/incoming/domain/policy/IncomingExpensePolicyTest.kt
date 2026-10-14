@@ -21,10 +21,11 @@ class IncomingExpensePolicyTest {
     private val deleted = taxi.copy(id = "taxi-3", revisionOf = "taxi", deletedAtEpochMilliseconds = 3L)
 
     @Test
-    fun newExpenseMustBeCreatedBySender() {
+    fun newExpenseMustBeCreatedBySenderOrReplayedByAnAdmin() {
         IncomingExpensePolicy.requireAuthorized(taxi, emptyList(), senderMemberId = "bob", senderIsAdmin = false)
+        IncomingExpensePolicy.requireAuthorized(taxi, emptyList(), senderMemberId = "mia", senderIsAdmin = true)
         assertFailsWith<IllegalArgumentException> {
-            IncomingExpensePolicy.requireAuthorized(taxi, emptyList(), senderMemberId = "mia", senderIsAdmin = true)
+            IncomingExpensePolicy.requireAuthorized(taxi, emptyList(), senderMemberId = "mia", senderIsAdmin = false)
         }
         assertFailsWith<IllegalArgumentException> {
             IncomingExpensePolicy.requireAuthorized(edited, emptyList(), senderMemberId = "bob", senderIsAdmin = false)

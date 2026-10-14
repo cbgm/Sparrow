@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.mode
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import kotlin.reflect.KClass
@@ -36,7 +36,7 @@ class CloseGroupExpensesWorkflow internal constructor(
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
     private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
-    private val expenseReceipts: ExpenseReceiptRepository
+    private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.CloseExpenses,
         CloseGroupExpensesWorkflow.Step,
@@ -71,7 +71,7 @@ class CloseGroupExpensesWorkflow internal constructor(
                 Outcome.BoardClosedMessageSent(step.pin, step.board, step.context)
             }
             is Step.DeleteReceipts -> {
-                expenseReceipts.deleteGroup(step.command.groupId).getOrThrow()
+                deleteLocalExpenseReceipts.forBoard(step.command.groupId, step.board.id).getOrThrow()
                 Outcome.ReceiptsDeleted(step.pin, step.context)
             }
             is Step.SaveEmptyPin -> {
@@ -104,9 +104,7 @@ class CloseGroupExpensesWorkflow internal constructor(
             is Outcome.ExpenseBoardFound ->
                 Transition.Next(Step.SendBoardClosedMessage(outcome.pin, outcome.board, outcome.context, step.command))
             is Outcome.BoardClosedMessageSent ->
-                Transition.Next(
-                    Step.DeleteReceipts(outcome.pin, outcome.board, outcome.context, step.command)
-                )
+                Transition.Next(Step.DeleteReceipts(outcome.pin, outcome.board, outcome.context, step.command))
             is Outcome.ReceiptsDeleted ->
                 Transition.Next(Step.SaveEmptyPin(outcome.pin, outcome.context, step.command))
             is Outcome.EmptyPinSaved ->

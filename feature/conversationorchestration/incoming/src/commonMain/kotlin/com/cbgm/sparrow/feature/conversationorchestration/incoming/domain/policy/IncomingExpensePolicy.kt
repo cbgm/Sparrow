@@ -13,7 +13,9 @@ object IncomingExpensePolicy {
         require(storedRevisions.none { it.id == expense.id }) { "Expense part ID already exists" }
         val original = storedRevisions.firstOrNull { it.id == expense.expenseId }
         if (expense.revisionOf == null) {
-            require(expense.createdByMemberId == senderMemberId) { "Expense creator does not match its sender" }
+            require(senderIsAdmin || expense.createdByMemberId == senderMemberId) {
+                "Expense creator does not match its sender"
+            }
         } else {
             requireNotNull(original) { "Expense revision has no original" }
             require(expense.createdByMemberId == original.createdByMemberId) { "Expense creator cannot change" }

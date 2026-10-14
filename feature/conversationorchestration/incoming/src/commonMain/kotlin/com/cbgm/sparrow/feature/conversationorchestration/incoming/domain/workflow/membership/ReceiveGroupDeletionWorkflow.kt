@@ -6,23 +6,18 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupIncomingConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupDeletionUseCase
 import kotlin.reflect.KClass
 
-/**
- * LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> DeleteExpenseReceipts -> PrepareDeletion
- *   -> CompleteDeletion -> FinishDeletion.
- */
+/** LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> PrepareDeletion -> CompleteDeletion -> FinishDeletion. */
 class ReceiveGroupDeletionWorkflow internal constructor(
     private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val authorizeIncomingGroupDeletion: AuthorizeIncomingGroupDeletionUseCase,
     private val attachmentRepository: MessageAttachmentRepository,
     private val incomingConversationRepository: GroupIncomingConversationRepository,
-    private val completeIncomingGroupDeletion: CompleteIncomingGroupDeletionUseCase,
-    private val expenseReceipts: ExpenseReceiptRepository
+    private val completeIncomingGroupDeletion: CompleteIncomingGroupDeletionUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupDeletion,
         ReceiveGroupDeletionWorkflow.Step,
@@ -50,10 +45,6 @@ class ReceiveGroupDeletionWorkflow internal constructor(
                 attachmentRepository.deleteLocalAttachmentsForConversation(packet.groupId).getOrThrow()
                 Outcome.AttachmentsDeleted
             }
-            is Step.DeleteExpenseReceipts -> {
-                expenseReceipts.deleteGroup(packet.groupId).getOrThrow()
-                Outcome.ExpenseReceiptsDeleted
-            }
             is Step.PrepareDeletion -> {
                 incomingConversationRepository.prepareDeletion(packet.groupId).getOrThrow()
                 Outcome.DeletionPrepared
@@ -76,8 +67,7 @@ class ReceiveGroupDeletionWorkflow internal constructor(
         when (outcome) {
             is Outcome.OwnerKeyLoaded -> Transition.Next(Step.AuthorizeDeletion(outcome.signingPublicKey, step.command))
             Outcome.DeletionAuthorized -> Transition.Next(Step.DeleteAttachments(step.command))
-            Outcome.AttachmentsDeleted -> Transition.Next(Step.DeleteExpenseReceipts(step.command))
-            Outcome.ExpenseReceiptsDeleted -> Transition.Next(Step.PrepareDeletion(step.command))
+            Outcome.AttachmentsDeleted -> Transition.Next(Step.PrepareDeletion(step.command))
             Outcome.DeletionPrepared -> Transition.Next(Step.CompleteDeletion(step.command))
             Outcome.MembershipDeleted -> Transition.Next(Step.FinishDeletion(step.command))
             Outcome.Finished -> Transition.Complete()
@@ -96,10 +86,6 @@ class ReceiveGroupDeletionWorkflow internal constructor(
         ) : Step
 
         data class DeleteAttachments(
-            override val command: IncomingCommand.ReceiveGroupDeletion
-        ) : Step
-
-        data class DeleteExpenseReceipts(
             override val command: IncomingCommand.ReceiveGroupDeletion
         ) : Step
 
@@ -124,8 +110,6 @@ class ReceiveGroupDeletionWorkflow internal constructor(
         data object DeletionAuthorized : Outcome
 
         data object AttachmentsDeleted : Outcome
-
-        data object ExpenseReceiptsDeleted : Outcome
 
         data object DeletionPrepared : Outcome
 

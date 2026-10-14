@@ -23,6 +23,7 @@ internal fun List<MessagePartDto>.flattenForPersistence(): List<MessagePartDto> 
 private fun MessagePartDto.flattenForPersistence(): List<MessagePartDto> =
     when (this) {
         is PollDto -> listOf(this) + images
+        is ExpenseDto -> listOfNotNull(this, receipt)
         else -> listOf(this)
     }
 
@@ -33,7 +34,12 @@ internal fun List<MessagePartDto>.withPersistedParts(parts: List<MessagePartDto>
 
 private fun MessagePartDto.withPersistedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
     when (this) {
-        is ExpenseDto -> copy(receiptBytes = null)
+        is ExpenseDto -> copy(
+            receipt = receipt?.let { image ->
+                partsById[image.id] as? ImageDto
+                    ?: error("Expense receipt ${image.id} was not persisted")
+            }
+        )
         is PollDto -> copy(
             images = images.map { image ->
                 partsById[image.id] as? ImageDto
@@ -61,7 +67,7 @@ private fun MessagePartDto.persistencePayload(): String? =
         is PollDto -> Json.encodeToString(PollDto.serializer(), this)
         is ExpenseBoardDto -> Json.encodeToString(ExpenseBoardDto.serializer(), this)
         is ExpenseBoardClosedDto -> Json.encodeToString(ExpenseBoardClosedDto.serializer(), this)
-        is ExpenseDto -> Json.encodeToString(ExpenseDto.serializer(), copy(receiptBytes = null))
+        is ExpenseDto -> Json.encodeToString(ExpenseDto.serializer(), this)
         else -> null
     }
 

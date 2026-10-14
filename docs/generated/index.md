@@ -20,7 +20,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - Modules: **61**
 - Module groups: **11**
-- Project dependency edges: **313**
-- Kotlin files: **2329**
-- Test Kotlin files: **168**
+- Project dependency edges: **312**
+- Kotlin files: **2321**
+- Test Kotlin files: **167**
 - Resource files: **57**

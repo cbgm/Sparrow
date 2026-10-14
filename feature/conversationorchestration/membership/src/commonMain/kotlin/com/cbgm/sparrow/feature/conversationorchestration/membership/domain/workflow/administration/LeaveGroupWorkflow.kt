@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
 class LeaveGroupWorkflow internal constructor(
     private val conversationRepository: GroupConversationRepository,
     private val leaveGroup: LeaveGroupUseCase,
-    private val expenseReceipts: ExpenseReceiptRepository
+    private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) : ConversationWorkflow<GroupAdministrationCommand.LeaveGroup, LeaveGroupWorkflow.Step, LeaveGroupWorkflow.Outcome> {
     override val commandType: KClass<GroupAdministrationCommand.LeaveGroup> =
         GroupAdministrationCommand.LeaveGroup::class
@@ -35,7 +35,7 @@ class LeaveGroupWorkflow internal constructor(
                 Outcome.LocalMembershipEnded
             }
             is Step.DeleteExpenseReceipts -> {
-                expenseReceipts.deleteGroup(step.command.groupId).getOrThrow()
+                deleteLocalExpenseReceipts.forGroup(step.command.groupId).getOrThrow()
                 Outcome.ExpenseReceiptsDeleted
             }
         }

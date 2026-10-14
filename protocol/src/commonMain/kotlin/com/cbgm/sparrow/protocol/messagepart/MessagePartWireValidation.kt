@@ -124,11 +124,7 @@ internal fun List<MessagePartDto>.requireValidWireMessageParts(
             is ExpenseDto -> {
                 require(allowExpenses && size == 1) { "Expenses require standalone group messages" }
                 ExpensePolicy.requireValid(part.toMessagePart() as Expense)
-                part.receiptBytes?.let { bytes ->
-                    require(bytes.size.toLong() == part.receipt?.byteSize) {
-                        "Expense receipt size does not match"
-                    }
-                }
+                part.receipt?.let { listOf(it).requireValidWireMessageParts() }
             }
             is PollDto -> {
                 require(allowPolls && size == 1) { "Polls require a standalone group message" }

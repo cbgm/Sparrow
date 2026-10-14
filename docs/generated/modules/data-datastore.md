@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `data` |
 | Directory | `data/datastore` |
 | Build file | `data/datastore/build.gradle.kts` |
-| Kotlin files | 6 |
-| Production Kotlin files | 6 |
+| Kotlin files | 5 |
+| Production Kotlin files | 5 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 1 |
-| Direct dependents | 12 |
+| Direct dependents | 11 |
 
 ## Source sets
 
@@ -33,7 +33,6 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:conversationorchestration:groupstate`](../modules/feature-conversationorchestration-groupstate.md)
 - [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
-- [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:feature:embedding`](../modules/feature-embedding.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:membership`](../modules/feature-membership.md)

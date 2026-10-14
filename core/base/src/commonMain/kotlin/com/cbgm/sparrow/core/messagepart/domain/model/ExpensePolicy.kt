@@ -3,8 +3,6 @@ package com.cbgm.sparrow.core.messagepart.domain.model
 object ExpensePolicy {
     const val MAX_DESCRIPTION_LENGTH = 500
     const val MAX_ALLOCATIONS = 256
-    const val MAX_RECEIPT_BYTES = 1_048_576
-    const val MAX_RECEIPT_DIMENSION = 2_048
 
     fun requireValid(board: ExpenseBoard) {
         require(board.id.isNotBlank()) { "Expense board ID must not be blank" }
@@ -55,18 +53,11 @@ object ExpensePolicy {
             allocated += share.amountMinor
         }
         require(allocated == expense.amountMinor) { "Expense allocations must equal the full amount" }
-        expense.receipt?.let { receipt ->
-            require(receipt.id.isNotBlank()) { "Expense receipt ID must not be blank" }
-            require(receipt.id != expense.id && receipt.id != expense.boardId) {
-                "Receipt and expense IDs must differ"
-            }
-            require(receipt.mimeType.startsWith("image/")) { "Expense receipt must be an image" }
-            require((receipt.width ?: 1) > 0 && (receipt.height ?: 1) > 0) {
-                "Invalid expense receipt dimensions"
-            }
-            require(receipt.byteSize in 1L..MAX_RECEIPT_BYTES.toLong()) { "Invalid expense receipt size" }
-            require(receipt.bytes == null || receipt.bytes.size.toLong() == receipt.byteSize) {
-                "Expense receipt size does not match"
+        expense.receipt?.let { image ->
+            require(image.id != expense.id && image.id != expense.boardId) { "Receipt and expense IDs must differ" }
+            MessageAttachmentPolicy.requireValid(listOf(image))
+            require(image.byteSize in 1L..MessageAttachmentPolicy.MAX_IMAGE_BYTES.toLong()) {
+                "Invalid expense receipt size"
             }
         }
     }

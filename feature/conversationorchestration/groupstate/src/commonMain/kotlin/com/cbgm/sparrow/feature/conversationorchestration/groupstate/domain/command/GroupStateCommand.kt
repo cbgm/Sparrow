@@ -13,7 +13,7 @@ sealed interface GroupStateCommand : WorkflowCommand {
         val bytes: ByteArray?
     ) : GroupStateCommand
 
-    /** Replays title, description, avatar and pin to a member that just became ready. */
+    /** Replays title, description, avatar, pin and open expenses to a member that just became ready. */
     data class SendCurrentGroupMetadata(
         val groupId: String,
         val contactId: String
@@ -21,6 +21,12 @@ sealed interface GroupStateCommand : WorkflowCommand {
 
     /** Replays the group's current pin to one member that just became ready. */
     data class SendCurrentGroupPin(
+        val groupId: String,
+        val contactId: String
+    ) : GroupStateCommand
+
+    /** Replays the expense messages of the open expense board to one member that just became ready. */
+    data class SendCurrentGroupExpenses(
         val groupId: String,
         val contactId: String
     ) : GroupStateCommand

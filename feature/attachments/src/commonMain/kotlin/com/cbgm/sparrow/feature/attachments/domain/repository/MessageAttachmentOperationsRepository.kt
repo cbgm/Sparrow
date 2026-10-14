@@ -42,6 +42,8 @@ interface MessageAttachmentOperationsRepository {
 
     fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>>
 
+    suspend fun findExpenseMessageIds(conversationId: String, boardId: String): Result<List<String>>
+
     /** Non-blocking, deduplicated, best-effort caching after a message is received. */
     fun cacheIncoming(messageId: String)
 }

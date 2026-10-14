@@ -3,8 +3,11 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.wor
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
@@ -12,19 +15,18 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindCurrentExpenseRevisionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.StoreExpenseReceiptUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
+import kotlinx.coroutines.flow.first
 import kotlin.reflect.KClass
 
-/** FindExpenseMembers -> ReviseExpense -> StoreReceipt -> SendExpense -> DeleteReplacedReceipt. */
+/** FindExpenseMembers -> ReviseExpense -> SendExpense -> DeleteReplacedReceipts. */
 class EditGroupExpenseWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase,
-    private val findCurrentExpenseRevision: FindCurrentExpenseRevisionUseCase,
-    private val storeExpenseReceipt: StoreExpenseReceiptUseCase,
-    private val expenseReceipts: ExpenseReceiptRepository
+    private val attachmentOperations: MessageAttachmentOperationsRepository,
+    private val attachmentRepository: MessageAttachmentRepository,
+    private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.EditExpense,
         EditGroupExpenseWorkflow.Step,
@@ -38,61 +40,38 @@ class EditGroupExpenseWorkflow internal constructor(
         when (step) {
             is Step.FindExpenseMembers ->
                 Outcome.ExpenseMembersFound(findGroupExpenseMembers(step.command.groupId).getOrThrow())
-            is Step.ReviseExpense -> {
-                val expense = step.command.expense
-                val current = findCurrentExpenseRevision(step.command.groupId, expense.expenseId).getOrThrow()
-                Outcome.ExpenseRevised(
-                    expense = reviseExpense(step.members, expense),
-                    previousReceiptId = current?.receipt?.id
-                )
-            }
-            is Step.StoreReceipt -> {
-                val receipt = step.expense.receipt
-                val stored =
-                    if (receipt != null && receipt.id != step.previousReceiptId) {
-                        storeExpenseReceipt(step.command.groupId, step.expense).getOrThrow()
-                    } else {
-                        step.expense
-                    }
-                Outcome.ReceiptStored(stored, step.previousReceiptId)
-            }
+            is Step.ReviseExpense ->
+                Outcome.ExpenseRevised(reviseExpense(step.members, step.command.groupId, step.command.expense))
             is Step.SendExpense -> {
                 val result =
                     engine.run(GroupMessageCommand.SendMessage(step.command.groupId, listOf(step.expense)))
                         .getOrThrow()
-                Outcome.ExpenseSent(
-                    result = result as ConversationResult.GroupMessageSent,
-                    expense = step.expense,
-                    previousReceiptId = step.previousReceiptId
-                )
+                Outcome.ExpenseSent(result as ConversationResult.GroupMessageSent, step.expense)
             }
-            is Step.DeleteReplacedReceipt -> {
-                val replaced = step.previousReceiptId?.takeIf { it != step.expense.receipt?.id }
-                expenseReceipts.delete(step.command.groupId, listOfNotNull(replaced)).getOrThrow()
-                Outcome.ReplacedReceiptDeleted(step.result)
+            is Step.DeleteReplacedReceipts -> {
+                deleteLocalExpenseReceipts.forExpense(
+                    groupId = step.command.groupId,
+                    expenseId = step.expense.expenseId,
+                    keepReceiptId = step.expense.receipt?.id
+                ).getOrThrow()
+                Outcome.ReplacedReceiptsDeleted(step.result)
             }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ExpenseMembersFound -> Transition.Next(Step.ReviseExpense(outcome.members, step.command))
-            is Outcome.ExpenseRevised ->
-                Transition.Next(Step.StoreReceipt(outcome.expense, outcome.previousReceiptId, step.command))
-            is Outcome.ReceiptStored ->
-                Transition.Next(Step.SendExpense(outcome.expense, outcome.previousReceiptId, step.command))
+            is Outcome.ExpenseRevised -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
             is Outcome.ExpenseSent ->
-                Transition.Next(
-                    Step.DeleteReplacedReceipt(
-                        result = outcome.result,
-                        expense = outcome.expense,
-                        previousReceiptId = outcome.previousReceiptId,
-                        command = step.command
-                    )
-                )
-            is Outcome.ReplacedReceiptDeleted -> Transition.Complete(outcome.result)
+                Transition.Next(Step.DeleteReplacedReceipts(outcome.result, outcome.expense, step.command))
+            is Outcome.ReplacedReceiptsDeleted -> Transition.Complete(outcome.result)
         }
 
-    private fun reviseExpense(members: GroupExpenseMembers, expense: Expense): Expense {
+    private suspend fun reviseExpense(
+        members: GroupExpenseMembers,
+        groupId: String,
+        expense: Expense
+    ): Expense {
         check(members.board.id == expense.boardId) { "Expense board has changed" }
         check(expense.deletedAtEpochMilliseconds == null) { "A deleted expense cannot be edited" }
         check(members.isLocalAdmin || expense.createdByMemberId == members.localMemberId) {
@@ -104,10 +83,19 @@ class EditGroupExpenseWorkflow internal constructor(
             id = IdGenerator.generate(prefix = "expense"),
             revisionOf = expense.expenseId,
             allocations = expense.allocations.sortedBy { it.memberId },
+            receipt = expense.receipt?.let { receipt -> receiptForRevision(groupId, receipt) },
             editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
         ExpensePolicy.requireValid(revised)
         return revised
+    }
+
+    private suspend fun receiptForRevision(groupId: String, receipt: Image): Image {
+        val stored = attachmentOperations.observeExpenses(groupId).first()
+        if (stored.none { it.receipt?.id == receipt.id }) return receipt
+        val localFilePath =
+            receipt.localFilePath ?: attachmentRepository.loadLocalFile(receipt.id, groupId).getOrThrow()
+        return receipt.copy(id = IdGenerator.generate(prefix = RECEIPT_ID_PREFIX), localFilePath = localFilePath)
     }
 
     sealed interface Step : WorkflowStep {
@@ -122,22 +110,14 @@ class EditGroupExpenseWorkflow internal constructor(
             override val command: GroupMessageCommand.EditExpense
         ) : Step
 
-        data class StoreReceipt(
-            val expense: Expense,
-            val previousReceiptId: String?,
-            override val command: GroupMessageCommand.EditExpense
-        ) : Step
-
         data class SendExpense(
             val expense: Expense,
-            val previousReceiptId: String?,
             override val command: GroupMessageCommand.EditExpense
         ) : Step
 
-        data class DeleteReplacedReceipt(
+        data class DeleteReplacedReceipts(
             val result: ConversationResult.GroupMessageSent,
             val expense: Expense,
-            val previousReceiptId: String?,
             override val command: GroupMessageCommand.EditExpense
         ) : Step
     }
@@ -148,23 +128,20 @@ class EditGroupExpenseWorkflow internal constructor(
         ) : Outcome
 
         data class ExpenseRevised(
-            val expense: Expense,
-            val previousReceiptId: String?
-        ) : Outcome
-
-        data class ReceiptStored(
-            val expense: Expense,
-            val previousReceiptId: String?
+            val expense: Expense
         ) : Outcome
 
         data class ExpenseSent(
             val result: ConversationResult.GroupMessageSent,
-            val expense: Expense,
-            val previousReceiptId: String?
+            val expense: Expense
         ) : Outcome
 
-        data class ReplacedReceiptDeleted(
+        data class ReplacedReceiptsDeleted(
             val result: ConversationResult.GroupMessageSent
         ) : Outcome
+    }
+
+    private companion object {
+        const val RECEIPT_ID_PREFIX = "expense-receipt"
     }
 }
