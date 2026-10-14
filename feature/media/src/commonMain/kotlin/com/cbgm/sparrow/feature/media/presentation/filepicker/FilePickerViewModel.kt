@@ -249,6 +249,7 @@ class FilePickerViewModel(
                     selectedReferences.forEach { reference ->
                         prepared += prepareMediaSelection
                             .fromFileBrowserContent(readFile(reference, currentSession.maxFileBytes).getOrThrow())
+                            .getOrThrow()
                             .toUi()
                     }
                 } catch (error: Exception) {

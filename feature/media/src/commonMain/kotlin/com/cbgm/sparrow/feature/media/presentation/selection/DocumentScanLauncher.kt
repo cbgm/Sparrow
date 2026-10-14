@@ -33,7 +33,7 @@ fun rememberDocumentScanLauncher(
                 val captured =
                     (result as? CameraScanResult.Document)?.media ?: return@rememberCameraScannerLauncher
                 scope.launch {
-                    runCatching { prepareMediaSelection.fromCapturedMedia(captured).toUi() }
+                    prepareMediaSelection.fromCapturedMedia(captured).map { it.toUi() }
                         .onSuccess { selection ->
                             currentResult.value(MediaSelectionResultUi.Selected(listOf(selection)))
                         }.onFailure { error ->

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.presentation.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,9 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpensePartic
 import com.cbgm.sparrow.feature.expenses.presentation.detail.model.ExpenseDetailUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.detail.model.ExpenseDetailUiState
 import com.cbgm.sparrow.feature.expenses.presentation.detail.model.ExpenseShareUi
+import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
+import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.base_cancel
@@ -81,6 +85,7 @@ fun ExpenseDetailScreen(
     modifier: Modifier = Modifier
 ) {
     var confirmDeletion by remember { mutableStateOf(false) }
+    var showReceipt by remember { mutableStateOf(false) }
 
     SparrowLazyScaffold(
         modifier = modifier,
@@ -112,9 +117,25 @@ fun ExpenseDetailScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)
         ) {
             item(key = "header") { DetailHeader(uiState) }
-            item(key = "payment") { PaymentCard(uiState) }
+            item(key = "payment") { PaymentCard(uiState, onReceiptClick = { showReceipt = true }) }
             item(key = "split") { SplitSection(uiState) }
         }
+    }
+
+    val receiptPath = uiState.receiptPath
+    if (showReceipt && receiptPath != null) {
+        MediaViewer(
+            media = listOf(
+                MediaItemUi(
+                    id = receiptPath,
+                    type = MediaTypeUi.IMAGE,
+                    mimeType = RECEIPT_MIME_TYPE,
+                    localFilePath = receiptPath
+                )
+            ),
+            onDismiss = { showReceipt = false },
+            title = { _, _ -> uiState.description }
+        )
     }
 
     SparrowAlertDialog(
@@ -231,7 +252,10 @@ private fun DetailHeader(uiState: ExpenseDetailUiState) {
 }
 
 @Composable
-private fun PaymentCard(uiState: ExpenseDetailUiState) {
+private fun PaymentCard(
+    uiState: ExpenseDetailUiState,
+    onReceiptClick: () -> Unit
+) {
     SparrowCardNoAnimation {
         Column {
             Row(
@@ -265,7 +289,10 @@ private fun PaymentCard(uiState: ExpenseDetailUiState) {
                 thickness = Dimens.Base.dividerThickness
             )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = uiState.receiptPath != null, onClick = onReceiptClick)
+                    .padding(MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
@@ -415,3 +442,5 @@ private fun ExpenseDetailScreenPreview() {
         )
     }
 }
+
+private const val RECEIPT_MIME_TYPE = "image/jpeg"

@@ -64,6 +64,7 @@ interface MessageAttachmentDao {
         SELECT message_parts.*
         FROM message_parts
         INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
+        LEFT JOIN message_blobs ON message_blobs.partId = message_parts.id
         WHERE ctx.conversationId = :conversationId
           AND message_parts.type != 'TEXT'
           AND message_parts.messageId IN (

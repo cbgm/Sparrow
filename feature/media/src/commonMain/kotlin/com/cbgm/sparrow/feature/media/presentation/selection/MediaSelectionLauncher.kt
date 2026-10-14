@@ -179,6 +179,7 @@ private fun rememberSubGalleryLauncher(
                                     media = item,
                                     existing = item.sourceReference?.let(previousByReference::get)?.toDomain()
                                 )
+                                .getOrThrow()
                                 .toUi()
                     }
                 } catch (error: Exception) {
@@ -220,7 +221,7 @@ private fun rememberSubCameraLauncher(
     ),
     onCaptured = { captured ->
         scope.launch {
-            runCatching { prepareMediaSelection.fromCapturedMedia(captured).toUi() }
+            prepareMediaSelection.fromCapturedMedia(captured).map { it.toUi() }
                 .onSuccess { tryAdd(listOf(it)) }
                 .onFailure { error ->
                     SparrowLog.error("MediaSelectionLauncher", "Camera media could not be stored", error)
