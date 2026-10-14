@@ -45,7 +45,7 @@ class ConversationMediaController(
         applicationScope.launch {
             for (item in media) {
                 for (path in item.localFilePaths) {
-                    runCatching { mediaFiles.delete(path) }
+                    mediaFiles.delete(path)
                         .onFailure { logger.error(it) { "Could not clean up pending media" } }
                 }
             }
@@ -56,7 +56,7 @@ class ConversationMediaController(
         if (paths.isEmpty()) return
         applicationScope.launch {
             for (path in paths.distinct()) {
-                runCatching { mediaFiles.delete(path) }
+                mediaFiles.delete(path)
                     .onFailure { logger.error(it) { "Could not clean up attachment media" } }
             }
         }

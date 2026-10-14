@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationStatus
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupVerificationRepository
 
@@ -10,9 +11,10 @@ class BroadcastGroupVerificationSnapshotUseCase(
     private val sendGroupVerificationSnapshot: SendGroupVerificationSnapshotUseCase
 ) {
     suspend operator fun invoke(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val currentMemberIds =
-                verificationInputs.membershipContext(groupId).memberKeys.mapTo(mutableSetOf()) { it.contactId }
+                verificationInputs.membershipContext(groupId).getOrThrow()
+                    .memberKeys.mapTo(mutableSetOf()) { it.contactId }
             verificationRepository.findRows(groupId).getOrThrow()
                 .filter { row -> row.status == GroupVerificationStatus.ACTIVE }
                 .mapNotNull { row -> row.contactId }

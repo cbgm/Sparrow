@@ -187,7 +187,7 @@ private fun rememberSubGalleryLauncher(
                     val previousIds = latest.mapTo(mutableSetOf(), MediaSelectionUi::id)
                     mapped.filterNot { it.id in previousIds }.forEach { selection ->
                         selection.localFilePaths.forEach { path ->
-                            runCatching { mediaFiles.delete(path) }
+                            mediaFiles.delete(path)
                         }
                     }
                     throw error

@@ -12,13 +12,13 @@ class SendConversationIndicatorUseCase(
     private val sendIndicator: SendMessagingIndicatorUseCase
 ) {
     suspend fun toContact(contactId: String, indicatorType: String): Result<Unit> =
-        safeSuspendCall {
-            val routingId = resolveContactRoutingId(contactId)
+        safeSuspendCall(logFailure = false) {
+            val routingId = resolveContactRoutingId(contactId).getOrThrow()
             sendIndicator(routingId, indicatorType).getOrThrow()
         }
 
     suspend fun toGroup(groupId: String, indicatorType: String): Result<Unit> =
-        safeSuspendCall {
+        safeSuspendCall(logFailure = false) {
             val recipientRoutingIds = groupRoutingResolver.resolveIndicatorMembers(groupId).values
             var firstFailure: Throwable? = null
             recipientRoutingIds.forEach { routingId ->

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectInvitationState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
@@ -17,7 +18,7 @@ class InspectDirectInvitationUseCase(
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     suspend operator fun invoke(contactId: String): Result<DirectInvitationState> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val invitationStatus =
                 observeInvitationLifecycleStatus(
                     payloadType = InvitationPayloadType.DIRECT,
@@ -25,9 +26,11 @@ class InspectDirectInvitationUseCase(
                     peerId = contactId,
                     direction = InvitationDirection.OUTGOING
                 ).first()
-            if (invitationStatus == InvitationLifecycleStatus.PENDING) return@runCatching DirectInvitationState.PENDING
+            if (invitationStatus == InvitationLifecycleStatus.PENDING) {
+                return@safeSuspendCall DirectInvitationState.PENDING
+            }
 
-            when (identitySetupModeRepository.getMode()) {
+            when (identitySetupModeRepository.getMode().getOrThrow()) {
                 DirectIdentitySetupMode.AUTOMATIC_INVITATION -> {
                     val handshake = observeIdentityHandshakeState(contactId).first()
                     if (invitationStatus in RETRYABLE_INVITATION_STATUSES ||

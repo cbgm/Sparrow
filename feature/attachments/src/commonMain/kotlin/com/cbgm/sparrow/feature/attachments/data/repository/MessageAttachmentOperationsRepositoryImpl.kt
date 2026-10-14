@@ -30,6 +30,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
@@ -138,16 +139,23 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ) {
-        require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
-            "Polls and expenses are only supported in groups"
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
+                "Polls and expenses are only supported in groups"
+            }
+            val dtos = parts.map { it.toDto() }
+            dataSource.persistIncoming(messageId, dtos, context.toDto())
         }
-        val dtos = parts.map { it.toDto() }
-        dataSource.persistIncoming(messageId, dtos, context.toDto())
-    }
 
-    override suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) =
-        dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
+    override suspend fun updateConversationDisplayName(
+        conversationId: String,
+        displayName: String,
+        isGroup: Boolean
+    ): Result<Unit> =
+        safeSuspendCall {
+            dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
+        }
 
     override suspend fun updateMessagePart(messageId: String, part: MessagePart): Result<Unit> =
         safeSuspendCall {
@@ -180,7 +188,8 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             dataSource.loadDetachedBytes(part.id)
         }
 
-    override suspend fun deleteForMessages(messageIds: List<String>) = dataSource.deleteForMessages(messageIds)
+    override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> =
+        safeSuspendCall { dataSource.deleteForMessages(messageIds) }
 
     override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
         dataSource.observeByMessageIds(messageIds)
@@ -215,7 +224,8 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 .toList()
         }
 
-    override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
+    override fun cacheIncoming(messageId: String): Result<Unit> =
+        safeCall { cacheCoordinator.cache(messageId) }
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
         when (part) {

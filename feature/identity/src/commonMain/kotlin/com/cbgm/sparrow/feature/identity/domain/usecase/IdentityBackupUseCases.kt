@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
@@ -11,7 +12,9 @@ class PrepareIdentityBackupUseCase(
     private val identityRepository: IdentityRepository,
     private val backupRepository: IdentityBackupRepository
 ) {
-    suspend operator fun invoke(password: CharArray): Result<ByteArray> = runCatching {
+    suspend operator fun invoke(
+        password: CharArray
+    ): Result<ByteArray> = safeSuspendCall(logFailure = false) {
         require(password.size >= 12) { "Use an identity backup password with at least 12 characters" }
         check(identityRepository.getStatus().getOrThrow() == IdentityStatus.READY) { "Identity is not ready" }
         val public = requireNotNull(identityRepository.getIdentity().getOrThrow())
@@ -31,7 +34,10 @@ class MarkIdentityBackupExportedUseCase(
     private val backupRepository: IdentityBackupRepository
 ) {
     /** Called only after SAF has successfully closed the written backup document. */
-    suspend operator fun invoke(expectedSigningPublicKey: ByteArray, expectedEncryptionPublicKey: ByteArray): Result<Unit> = runCatching {
+    suspend operator fun invoke(
+        expectedSigningPublicKey: ByteArray,
+        expectedEncryptionPublicKey: ByteArray
+    ): Result<Unit> = safeSuspendCall(logFailure = false) {
         check(identityRepository.getStatus().getOrThrow() == IdentityStatus.READY)
         val current = requireNotNull(identityRepository.getIdentity().getOrThrow())
         check(
@@ -54,7 +60,7 @@ class RestoreIdentityBackupUseCase(
         password: CharArray,
         phoneNumber: String,
         name: String
-    ): Result<PublicIdentity> = runCatching {
+    ): Result<PublicIdentity> = safeSuspendCall(logFailure = false) {
         check(identityRepository.getStatus().getOrThrow() == IdentityStatus.NOT_CREATED) {
             "An identity already exists. Import cannot overwrite existing keys."
         }
@@ -80,8 +86,10 @@ class GetIdentityBackupStatusUseCase(
     private val identityRepository: IdentityRepository,
     private val backupRepository: IdentityBackupRepository
 ) {
-    suspend operator fun invoke(): Result<IdentityBackupStatus> = runCatching {
-        val identity = identityRepository.getIdentity().getOrThrow() ?: return@runCatching IdentityBackupStatus.NOT_BACKED_UP
+    suspend operator fun invoke(): Result<IdentityBackupStatus> = safeSuspendCall(logFailure = false) {
+        val identity =
+            identityRepository.getIdentity().getOrThrow()
+                ?: return@safeSuspendCall IdentityBackupStatus.NOT_BACKED_UP
         backupRepository.getStatus(identity).getOrThrow()
     }
 }

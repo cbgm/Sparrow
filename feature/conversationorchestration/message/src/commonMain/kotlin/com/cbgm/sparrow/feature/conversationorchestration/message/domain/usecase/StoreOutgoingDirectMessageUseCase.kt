@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
@@ -24,7 +25,7 @@ class StoreOutgoingDirectMessageUseCase(
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
     ): Result<StoredOutgoingMessage> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val message =
                 StoredMessage(
                     id = IdGenerator.generate(prefix = "message"),

@@ -3,12 +3,13 @@ package com.cbgm.sparrow.feature.expenses.domain.usecase
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 
 /** Each member's balance is the amount they paid minus their share of expenses. */
 class CalculateExpenseBalancesUseCase {
     operator fun invoke(board: ExpenseBoard, expenses: List<Expense>): Result<List<ExpenseBalance>> =
-        runCatching { calculateBalances(board, expenses) }
+        safeCall(logFailure = false) { calculateBalances(board, expenses) }
 
     private fun calculateBalances(board: ExpenseBoard, expenses: List<Expense>): List<ExpenseBalance> {
         ExpensePolicy.requireValid(board)

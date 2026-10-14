@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.use
 
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
@@ -15,7 +16,7 @@ class FindGroupExpenseMembersUseCase(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider
 ) {
     suspend operator fun invoke(groupId: String): Result<GroupExpenseMembers> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(groupId.isNotBlank()) { "Group ID is missing" }
             val board = pinRepository.find(groupId).getOrThrow()?.parts
                 ?.filterIsInstance<ExpenseBoard>()

@@ -10,13 +10,13 @@ class InitializeLocalIntelligenceStartupTask(
 
     override suspend fun runAfterIdentityReady() {
         StartupTrace.measure("background local embedding") {
-            initialization.initializeLocalEmbedding()
+            initialization.initializeLocalEmbedding().getOrThrow()
         }
         StartupTrace.measure("background semantic search") {
-            initialization.initializeSemanticSearch()
+            initialization.initializeSemanticSearch().getOrThrow()
         }
         StartupTrace.measure("background message safety") {
-            initialization.initializeMessageSafety()
+            initialization.initializeMessageSafety().getOrThrow()
         }
         StartupTrace.event("background local intelligence complete")
     }

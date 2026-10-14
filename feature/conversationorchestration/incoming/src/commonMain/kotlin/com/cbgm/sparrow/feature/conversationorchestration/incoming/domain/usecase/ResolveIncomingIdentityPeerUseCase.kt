@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
@@ -19,11 +20,27 @@ class ResolveIncomingIdentityPeerUseCase(
         remotePhoneNumber: String?,
         remoteEncryptionPublicKey: ByteArray,
         remoteSigningPublicKey: ByteArray
+    ): Result<IdentityPeerResolution> =
+        safeSuspendCall(logFailure = false) {
+            resolve(
+                resolvedPeerId = resolvedPeerId,
+                remotePhoneNumber = remotePhoneNumber,
+                remoteEncryptionPublicKey = remoteEncryptionPublicKey,
+                remoteSigningPublicKey = remoteSigningPublicKey
+            )
+        }
+
+    private suspend fun resolve(
+        resolvedPeerId: String,
+        remotePhoneNumber: String?,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
     ): IdentityPeerResolution {
-        val phonePeerId = remotePhoneNumber?.let { inspectContactPeer.findEquivalentPhonePeerId(it) }
+        val phonePeerId =
+            remotePhoneNumber?.let { inspectContactPeer.findEquivalentPhonePeerId(it).getOrThrow() }
         // An orphaned Identity record must not be selected as a nonexistent Contacts peer.
         val identityPeerId = findRemoteIdentityPeerId(remoteSigningPublicKey).getOrThrow()
-            ?.takeIf { inspectContactPeer.containsPeer(it) }
+            ?.takeIf { inspectContactPeer.containsPeer(it).getOrThrow() }
         val targetPeerId = phonePeerId ?: identityPeerId ?: resolvedPeerId
         val identities = setOfNotNull(resolvedPeerId, identityPeerId, targetPeerId).mapNotNull { peerId ->
             getRemoteIdentity(peerId).getOrThrow()?.let { identity -> peerId to identity }
@@ -46,7 +63,7 @@ class ResolveIncomingIdentityPeerUseCase(
         }
 
         suspend fun mayMerge(peerId: String): Boolean =
-            inspectContactPeer.canMergeRoutingDuplicate(peerId, remotePhoneNumber) &&
+            inspectContactPeer.canMergeRoutingDuplicate(peerId, remotePhoneNumber).getOrThrow() &&
                 (identities[peerId]?.matches(remoteEncryptionPublicKey, remoteSigningPublicKey) != false)
 
         val canMergeResolved = targetPeerId != resolvedPeerId && mayMerge(resolvedPeerId)
@@ -62,7 +79,7 @@ class ResolveIncomingIdentityPeerUseCase(
         }
         return IdentityPeerResolution(
             peerId = targetPeerId,
-            wasKnownPeer = inspectContactPeer.isKnownContact(targetPeerId) ||
+            wasKnownPeer = inspectContactPeer.isKnownContact(targetPeerId).getOrThrow() ||
                 identities[targetPeerId]?.locallyImported == true,
             merges = merges
         )

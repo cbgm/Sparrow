@@ -46,10 +46,10 @@ class MailboxRouteProvisioner(
                         SparrowLog.diagnostic("MailboxRouteProvisioner", "Retrying mailbox revocations failed", failure)
                     }
                 }
-            val blockedContactIds = contactBlocklistRepository.getBlockedContactIds()
+            val blockedContactIds = contactBlocklistRepository.getBlockedContactIds().getOrThrow()
             var provisioned = 0
 
-            getMailboxContactStates().forEach { contactState ->
+            getMailboxContactStates().getOrThrow().forEach { contactState ->
                 val contactId = contactState.contactId
                 if (contactId in blockedContactIds) {
                     mailboxCapabilityLifecycle.revokeForContact(contactId)

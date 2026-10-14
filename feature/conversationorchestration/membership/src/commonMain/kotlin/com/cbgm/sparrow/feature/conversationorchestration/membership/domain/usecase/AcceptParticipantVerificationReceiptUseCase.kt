@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.packet.GroupVerificationPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.policy.GroupVerificationPacketPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupVerificationRepository
@@ -16,7 +17,7 @@ class AcceptParticipantVerificationReceiptUseCase(
     private val packetCodec: GroupVerificationPacketCodec
 ) {
     suspend operator fun invoke(context: IncomingPacketContext, packet: GroupVerificationReceiptPacket): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             GroupVerificationPacketPolicy.requireEncryptedTransport(context)
             GroupVerificationPacketPolicy.requireFreshTimestamp(
                 packet.verifiedAtEpochMilliseconds,
@@ -26,7 +27,7 @@ class AcceptParticipantVerificationReceiptUseCase(
                 "Group verification receipt packet ID is invalid"
             }
 
-            val membership = verificationInputs.membershipContext(packet.groupId)
+            val membership = verificationInputs.membershipContext(packet.groupId).getOrThrow()
             val security = membership.security ?: error("Group security state was not found")
             check(security.isLocalAdmin) { "Only a group admin may receive participant verification receipts" }
             val participantKey = membership.requireCurrentParticipant(context.contactId)

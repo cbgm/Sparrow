@@ -44,24 +44,24 @@ class OutgoingRecipientRoutingResolver(
             is ContactInvitePacket,
             is ContactInviteAcceptedPacket,
             is ContactInviteDeclinedPacket ->
-                resolveContactInvitationRoutingId(contactId)
+                resolveContactInvitationRoutingId(contactId).getOrThrow()
 
             is GroupInvitePacket,
             is GroupInviteReceivedPacket,
             is GroupJoinRequestPacket,
             is GroupInviteDeclinedPacket ->
-                resolveContactBootstrapRoutingId(contactId)
+                resolveContactBootstrapRoutingId(contactId).getOrThrow()
 
             is GroupConversationDeletedPacket ->
                 if (packet.epoch == GroupConversationDeletedPacket.PENDING_GROUP_EPOCH) {
-                    resolveContactBootstrapRoutingId(contactId)
+                    resolveContactBootstrapRoutingId(contactId).getOrThrow()
                 } else {
                     groupRoutingResolver.resolve(packet.groupId, contactId)
                 }
 
             is GroupMemberRemovedPacket ->
                 if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-                    resolveContactBootstrapRoutingId(contactId)
+                    resolveContactBootstrapRoutingId(contactId).getOrThrow()
                 } else {
                     groupRoutingResolver
                         .resolveRemovedMember(packet.removedMemberSigningPublicKey)
@@ -73,7 +73,7 @@ class OutgoingRecipientRoutingResolver(
             else ->
                 packet.groupIdForRouting()
                     ?.let { groupId -> groupRoutingResolver.resolve(groupId, contactId) }
-                    ?: resolveContactRoutingId(contactId)
+                    ?: resolveContactRoutingId(contactId).getOrThrow()
         }
 
     private suspend fun resolveReceipt(
@@ -82,7 +82,7 @@ class OutgoingRecipientRoutingResolver(
     ): String =
         groupRoutingResolver
             .resolveForMessage(messageId, contactId)
-            ?: resolveContactRoutingId(contactId)
+            ?: resolveContactRoutingId(contactId).getOrThrow()
 
     private fun SparrowPacket.groupIdForRouting(): String? =
         when (this) {

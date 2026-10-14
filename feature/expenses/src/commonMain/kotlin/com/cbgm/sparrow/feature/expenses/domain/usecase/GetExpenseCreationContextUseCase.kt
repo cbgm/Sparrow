@@ -13,7 +13,7 @@ class GetExpenseCreationContextUseCase(
     suspend operator fun invoke(
         groupId: String,
         expenseId: String? = null
-    ): Result<ExpenseCreationContext> = safeSuspendCall {
+    ): Result<ExpenseCreationContext> = safeSuspendCall(logFailure = false) {
         require(groupId.isNotBlank()) { "Group ID is missing" }
         val group = repository.observeGroup(groupId).first() ?: error("Group expenses are not active")
         val localMemberId = group.localMemberId ?: error("Local expense member is missing")

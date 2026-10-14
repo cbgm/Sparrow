@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
 import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupMessageMembershipAccessUseCase
@@ -11,7 +12,7 @@ class CheckGroupMessageAccessUseCase(
     private val getMessageMembershipAccess: GetGroupMessageMembershipAccessUseCase
 ) {
     suspend operator fun invoke(groupId: String): Result<GroupMessageAccess> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val conversation = groupMessageRepository.findConversation(groupId).getOrThrow()
                 ?: error("Group conversation was not found")
             check(conversation.isGroup) { "Conversation is not a group" }

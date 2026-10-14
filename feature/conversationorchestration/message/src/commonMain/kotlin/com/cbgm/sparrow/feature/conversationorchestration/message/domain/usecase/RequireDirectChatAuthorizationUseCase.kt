@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.DirectChatAuthorizationRequiredException
 
@@ -9,9 +10,9 @@ class RequireDirectChatAuthorizationUseCase(
     private val findDirectAuthorizationBlock: FindDirectAuthorizationBlockUseCase
 ) {
     suspend operator fun invoke(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            if (contactBlocklistRepository.isBlocked(contactId)) {
+            if (contactBlocklistRepository.isBlocked(contactId).getOrThrow()) {
                 throw DirectChatAuthorizationRequiredException(BLOCKED_CONTACT)
             }
             findDirectAuthorizationBlock(contactId).getOrThrow()?.let { reason ->

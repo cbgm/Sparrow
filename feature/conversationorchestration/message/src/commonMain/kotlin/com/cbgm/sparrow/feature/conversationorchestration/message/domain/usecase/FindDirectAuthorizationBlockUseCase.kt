@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryptionKeys
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
@@ -13,17 +14,17 @@ class FindDirectAuthorizationBlockUseCase(
     private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase
 ) {
     suspend operator fun invoke(contactId: String): Result<String?> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             // A prior MUTUAL exchange can remain in the database while a new
             // identity-change request awaits explicit verification.
             if (observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }) {
-                return@runCatching PENDING_IDENTITY_CHANGE
+                return@safeSuspendCall PENDING_IDENTITY_CHANGE
             }
             val state = getIdentityPeerState(contactId).getOrThrow()
             if (!state.hasEstablishedExchange ||
                 !getRemoteIdentity(contactId).getOrThrow().hasDirectMessageEncryptionKeys()
             ) {
-                return@runCatching MISSING_AUTHORIZATION
+                return@safeSuspendCall MISSING_AUTHORIZATION
             }
             null
         }

@@ -11,5 +11,5 @@ internal interface AvatarEditorRepository {
 
     suspend fun consumeResult(result: AvatarEditResult): Result<ByteArray>
 
-    fun clear()
+    fun clear(): Result<Unit>
 }

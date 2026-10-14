@@ -18,10 +18,14 @@ interface MessageAttachmentOperationsRepository {
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    )
+    ): Result<Unit>
 
     /** Synchronizes owner-provided names without exposing Chats or Contacts DAOs. */
-    suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean)
+    suspend fun updateConversationDisplayName(
+        conversationId: String,
+        displayName: String,
+        isGroup: Boolean
+    ): Result<Unit>
 
     suspend fun updateMessagePart(messageId: String, part: MessagePart): Result<Unit>
 
@@ -32,7 +36,7 @@ interface MessageAttachmentOperationsRepository {
 
     suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray>
 
-    suspend fun deleteForMessages(messageIds: List<String>)
+    suspend fun deleteForMessages(messageIds: List<String>): Result<Unit>
 
     /** Chats owns paging and supplies the visible message IDs. */
     fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>>
@@ -45,5 +49,5 @@ interface MessageAttachmentOperationsRepository {
     suspend fun findExpenseMessageIds(conversationId: String, boardId: String): Result<List<String>>
 
     /** Non-blocking, deduplicated, best-effort caching after a message is received. */
-    fun cacheIncoming(messageId: String)
+    fun cacheIncoming(messageId: String): Result<Unit>
 }

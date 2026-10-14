@@ -27,7 +27,7 @@ class MailboxRoutePacketHandler(
             val route = (packet as MailboxRoutePacket).deliveryRoute
             validateRoute(route)
             val signingPublicKey =
-                getMutualContactSigningPublicKey(context.contactId)
+                getMutualContactSigningPublicKey(context.contactId).getOrThrow()
                     ?: error("Contact identity is unavailable or identity exchange is incomplete")
             signatureCrypto
                 .verify(

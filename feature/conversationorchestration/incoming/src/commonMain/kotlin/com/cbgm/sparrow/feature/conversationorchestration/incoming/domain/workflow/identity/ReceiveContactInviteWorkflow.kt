@@ -78,14 +78,14 @@ class ReceiveContactInviteWorkflow internal constructor(
                             remotePhoneNumber = step.remotePhoneNumber,
                             remoteEncryptionPublicKey = packet.encryptionPublicKey,
                             remoteSigningPublicKey = packet.signingPublicKey
-                        ),
+                        ).getOrThrow(),
                         step.remotePhoneNumber
                     )
                 } catch (conflict: RemoteIdentityReplacementRequiredException) {
                     Outcome.ReplacementRequired(conflict.peerId)
                 }
             is Step.StageReplacementReview -> {
-                if (!blocklistRepository.isBlocked(step.peerId)) {
+                if (!blocklistRepository.isBlocked(step.peerId).getOrThrow()) {
                     stagePendingRemoteIdentityChange(
                         PendingRemoteIdentityChange(
                             peerId = step.peerId,
@@ -106,7 +106,7 @@ class ReceiveContactInviteWorkflow internal constructor(
             is Step.MergePeers -> {
                 step.resolution.merges.forEach { merge ->
                     reassignIdentityExchangePeer(merge.fromPeerId, merge.toPeerId).getOrThrow()
-                    applyIdentityPeerMerge(merge)
+                    applyIdentityPeerMerge(merge).getOrThrow()
                 }
                 Outcome.PeersMerged(step.resolution, step.remotePhoneNumber)
             }
@@ -115,7 +115,7 @@ class ReceiveContactInviteWorkflow internal constructor(
                     step.resolution.peerId,
                     step.phoneNumber,
                     context.receivedAtEpochMilliseconds
-                )
+                ).getOrThrow()
                 Outcome.PeerUpdated(step.resolution)
             }
             is Step.ReceiveExchange -> {
@@ -142,9 +142,8 @@ class ReceiveContactInviteWorkflow internal constructor(
             is Step.ResolveDisplayName ->
                 Outcome.DisplayNameResolved(
                     step.resolution,
-                    getIdentityPeerDisplayName(step.resolution.peerId) ?: packet.displayName?.trim()?.takeIf(
-                        String::isNotBlank
-                    )
+                    getIdentityPeerDisplayName(step.resolution.peerId).getOrThrow()
+                        ?: packet.displayName?.trim()?.takeIf(String::isNotBlank)
                 )
             is Step.RecordInvitation -> {
                 engine.run(

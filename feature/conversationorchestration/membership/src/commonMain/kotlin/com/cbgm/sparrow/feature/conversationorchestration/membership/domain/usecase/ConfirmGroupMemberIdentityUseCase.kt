@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.ConfirmGroupMembershipIdentityUseCase
 
@@ -18,7 +19,7 @@ class ConfirmGroupMemberIdentityUseCase(
         memberSigningPublicKey: ByteArray,
         updatedAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             confirmGroupMembershipIdentity(
                 sourceId = sourceId,
                 updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,

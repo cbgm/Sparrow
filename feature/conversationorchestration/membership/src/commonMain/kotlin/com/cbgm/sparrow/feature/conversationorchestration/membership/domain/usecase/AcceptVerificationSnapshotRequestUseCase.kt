@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.packet.GroupVerificationPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.policy.GroupVerificationPacketPolicy
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
@@ -14,7 +15,7 @@ class AcceptVerificationSnapshotRequestUseCase(
         context: IncomingPacketContext,
         packet: GroupVerificationSnapshotRequestPacket
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             GroupVerificationPacketPolicy.requireEncryptedTransport(context)
             GroupVerificationPacketPolicy.requireFreshTimestamp(
                 packet.requestedAtEpochMilliseconds,
@@ -24,7 +25,7 @@ class AcceptVerificationSnapshotRequestUseCase(
                 "Group verification snapshot request packet ID is invalid"
             }
 
-            val membership = verificationInputs.membershipContext(packet.groupId)
+            val membership = verificationInputs.membershipContext(packet.groupId).getOrThrow()
             val security = membership.security ?: error("Group security state was not found")
             check(security.isLocalAdmin) { "Only a group admin may answer verification snapshot requests" }
             val participantKey = membership.requireCurrentParticipant(context.contactId)

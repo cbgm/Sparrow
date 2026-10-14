@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.Flow
 interface ExpenseComposerRepository {
     fun observeGroup(groupId: String): Flow<ExpenseGroup?>
 
-    fun publishGroup(groupId: String, group: ExpenseGroup?)
+    fun publishGroup(groupId: String, group: ExpenseGroup?): Result<Unit>
 
-    fun clearGroup(groupId: String)
+    fun clearGroup(groupId: String): Result<Unit>
 
     fun observeRequests(): Flow<ExpenseRequest>
 

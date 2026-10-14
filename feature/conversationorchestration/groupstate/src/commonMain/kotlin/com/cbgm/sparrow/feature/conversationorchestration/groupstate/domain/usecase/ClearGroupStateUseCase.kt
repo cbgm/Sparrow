@@ -14,7 +14,7 @@ class ClearGroupStateUseCase(
     private val pinRepository: GroupPinRepository
 ) {
     suspend operator fun invoke(groupId: String): Result<Unit> =
-        safeSuspendCall {
+        safeSuspendCall(logFailure = false) {
             avatarRepository.deleteLocal(groupId).getOrThrow()
             titleRepository.deleteLocal(groupId).getOrThrow()
             descriptionRepository.deleteLocal(groupId).getOrThrow()

@@ -17,7 +17,10 @@ class DeclinePendingRemoteIdentityChangeUseCase(
     private val protocol: ContactInvitationDeclineProtocol,
     private val outbox: ProtocolOutbox
 ) {
-    suspend operator fun invoke(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
+    suspend operator fun invoke(
+        peerId: String,
+        invitationId: String
+    ): Result<Unit> = safeSuspendCall(logFailure = false) {
         val candidate = observePending().first().firstOrNull {
             it.peerId == peerId && it.invitationId == invitationId
         } ?: return@safeSuspendCall

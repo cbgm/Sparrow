@@ -18,7 +18,7 @@ interface GroupSecurityRepository {
         localSigningKeyPair: LocalSigningKeyPair
     ): Result<Unit>
 
-    fun createKeyConfirmation(groupId: String, epoch: Int, groupKey: ByteArray): ByteArray
+    fun createKeyConfirmation(groupId: String, epoch: Int, groupKey: ByteArray): Result<ByteArray>
 
     suspend fun openWelcome(
         packet: GroupCreatedPacket,

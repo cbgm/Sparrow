@@ -35,7 +35,8 @@ class RefreshOwnedGroupVerificationWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.LoadSecurity -> {
-                val security = verificationInputs.membershipContext(step.command.groupId).security
+                val security =
+                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
                 when {
                     security == null -> Outcome.NoSecurityState
                     security.isLocalAdmin -> Outcome.LocalAdmin

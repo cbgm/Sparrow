@@ -108,7 +108,7 @@ class ReceiveDirectMessageWorkflow internal constructor(
                             isMine = false,
                             senderContactId = context.contactId
                         )
-                )
+                ).getOrThrow()
                 Outcome.AttachmentsStored
             }
             is Step.SendDeliveryReceipt -> {
@@ -134,7 +134,7 @@ class ReceiveDirectMessageWorkflow internal constructor(
                 Outcome.AutoReplyHandled
             }
             is Step.CacheAttachments -> {
-                attachmentRepository.cacheIncoming(packet.messageId)
+                attachmentRepository.cacheIncoming(packet.messageId).getOrThrow()
                 Outcome.AttachmentsCached
             }
         }

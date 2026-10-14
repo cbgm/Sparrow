@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
 import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
@@ -15,7 +16,7 @@ class CheckGroupPacketAcceptedUseCase(
     private val wasGroupMembershipDeleted: WasGroupMembershipDeletedUseCase
 ) {
     suspend operator fun invoke(groupId: String, packet: SparrowPacket): Result<Boolean> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             when {
                 messageRepository.hasMessageWithTransportMode(
                     groupId,

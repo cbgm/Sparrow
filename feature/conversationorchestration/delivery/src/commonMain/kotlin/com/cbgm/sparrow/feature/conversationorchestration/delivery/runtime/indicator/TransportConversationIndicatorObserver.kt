@@ -19,7 +19,7 @@ internal class TransportConversationIndicatorObserver(
     private val logger = SparrowLog.withTag("TransportConversationIndicatorObserver")
 
     override fun observeContact(contactId: String): Flow<ConversationIndicator> =
-        observeForSender { resolveContactRoutingId(contactId) }
+        observeForSender { resolveContactRoutingId(contactId).getOrThrow() }
 
     override fun observeGroupMember(groupId: String, contactId: String): Flow<ConversationIndicator> =
         observeForSender { groupRoutingResolver.resolve(groupId, contactId) }

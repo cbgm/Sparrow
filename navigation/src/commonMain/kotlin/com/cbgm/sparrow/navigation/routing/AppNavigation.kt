@@ -263,7 +263,9 @@ private fun HandlePendingNotificationNavigation(
                 when (
                     val conversation = resolveNotificationConversation(
                         conversationId = target.conversationId
-                    )
+                    ).onFailure { error ->
+                        SparrowLog.error("AppNavigation", "Notification target not resolved", error)
+                    }.getOrNull()
                 ) {
                     is NotificationConversationTarget.Direct -> {
                         navigator.navigateTo(

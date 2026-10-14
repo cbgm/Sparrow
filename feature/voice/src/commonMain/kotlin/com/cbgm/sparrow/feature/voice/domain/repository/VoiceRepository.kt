@@ -16,11 +16,11 @@ interface VoiceRepository {
 
     fun togglePreview(): Result<Unit>
 
-    suspend fun cancelRecording()
+    suspend fun cancelRecording(): Result<Unit>
 
-    fun resetComposer()
+    fun resetComposer(): Result<Unit>
 
-    fun currentRecording(): VoiceRecording?
+    fun currentRecording(): Result<VoiceRecording?>
 
     fun toggleMessagePlayback(
         attachmentId: String,
@@ -28,7 +28,7 @@ interface VoiceRepository {
         durationMilliseconds: Long
     ): Result<Unit>
 
-    fun startMessageScrub(attachmentId: String)
+    fun startMessageScrub(attachmentId: String): Result<Unit>
 
     fun finishMessageScrub(
         attachmentId: String,

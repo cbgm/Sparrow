@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.expenses.domain.repository.ExpenseComposerReposi
 class ClearExpenseGroupUseCase(
     private val repository: ExpenseComposerRepository
 ) {
-    operator fun invoke(groupId: String) = repository.clearGroup(groupId)
+    operator fun invoke(groupId: String): Result<Unit> = repository.clearGroup(groupId)
 }

@@ -67,7 +67,8 @@ internal class IdentityExchangeDataSource(
     // It is not a manual identity import or acknowledgement: only the explicit
     // IdentityPacket/IdentityAcknowledgementPacket flow may establish manual keys.
     private suspend fun sharesIdentityAutomatically(): Boolean =
-        identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION
+        identitySetupModeRepository.getMode().getOrThrow() ==
+            DirectIdentitySetupMode.AUTOMATIC_INVITATION
 
     suspend fun start(contactId: String, invitationSenderLabel: String): Result<IdentityExchange?> =
         safeSuspendCall {

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationStatus
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.packet.GroupVerificationPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.policy.GroupVerificationPacketPolicy
@@ -17,7 +18,7 @@ class ApplyVerificationSnapshotUseCase(
     private val packetCodec: GroupVerificationPacketCodec
 ) {
     suspend operator fun invoke(context: IncomingPacketContext, packet: GroupVerificationSnapshotPacket): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             GroupVerificationPacketPolicy.requireEncryptedTransport(context)
             GroupVerificationPacketPolicy.requireFreshTimestamp(
                 packet.generatedAtEpochMilliseconds,
@@ -27,7 +28,7 @@ class ApplyVerificationSnapshotUseCase(
                 "Group verification snapshot packet ID is invalid"
             }
 
-            val membership = verificationInputs.membershipContext(packet.groupId)
+            val membership = verificationInputs.membershipContext(packet.groupId).getOrThrow()
             val security = membership.security ?: error("Group security state was not found")
             val adminKey = membership.requireCurrentRemoteAdmin(context.contactId)
             check(adminKey.encryptionPublicKey.contentEquals(packet.ownerEncryptionPublicKey)) {
@@ -39,7 +40,9 @@ class ApplyVerificationSnapshotUseCase(
             packetCodec.verifySnapshot(packet, adminKey.signingPublicKey).getOrThrow()
 
             val latest = verificationRepository.findLatestUpdatedAt(packet.groupId).getOrThrow()
-            if (latest != null && packet.generatedAtEpochMilliseconds < latest) return@runCatching
+            if (latest != null && packet.generatedAtEpochMilliseconds < latest) {
+                return@safeSuspendCall
+            }
 
             val snapshotRows = packetCodec.readSnapshotRows(packet)
             val rows =

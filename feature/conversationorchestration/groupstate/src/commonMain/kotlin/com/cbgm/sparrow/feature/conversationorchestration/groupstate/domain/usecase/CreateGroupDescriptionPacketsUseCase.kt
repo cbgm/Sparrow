@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupDescriptionState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupDescriptionPacketCodec
@@ -14,7 +15,7 @@ class CreateGroupDescriptionPacketsUseCase(
         context: GroupAdminContext,
         recipients: Set<String> = context.recipientContactIds
     ): Result<Map<String, GroupDescriptionUpdatedPacket>> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             recipients.associateWith { packetCodec.create(state, context).getOrThrow() }
         }
 }

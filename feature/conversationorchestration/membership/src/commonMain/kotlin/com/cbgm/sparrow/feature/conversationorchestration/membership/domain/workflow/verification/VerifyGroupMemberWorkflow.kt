@@ -40,7 +40,7 @@ class VerifyGroupMemberWorkflow internal constructor(
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
                 require(step.command.contactId.isNotBlank()) { "Contact ID must not be blank" }
                 val security =
-                    verificationInputs.membershipContext(step.command.groupId).security
+                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
                         ?: error("Group security state was not found")
                 when {
                     security.isLocalAdmin -> Outcome.LocalAdmin

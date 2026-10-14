@@ -65,7 +65,8 @@ class HandleIdentityResultWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val result = step.command.result
         return when (step) {
-            is Step.ResolveDisplayName -> Outcome.DisplayNameResolved(getIdentityPeerDisplayName(result.peerId))
+            is Step.ResolveDisplayName ->
+                Outcome.DisplayNameResolved(getIdentityPeerDisplayName(result.peerId).getOrThrow())
             is Step.RecordIncomingInvitation -> {
                 engine.run(
                     LifecycleCommand.RecordIncomingDirectInvitation(
@@ -88,7 +89,8 @@ class HandleIdentityResultWorkflow internal constructor(
                 engine.run(MessageCommand.ActivateAuthorizedConversation(result.peerId)).getOrThrow()
                 Outcome.ConversationActivated
             }
-            is Step.LoadSetupMode -> Outcome.SetupModeLoaded(identitySetupModeRepository.getMode())
+            is Step.LoadSetupMode ->
+                Outcome.SetupModeLoaded(identitySetupModeRepository.getMode().getOrThrow())
             is Step.SendVerificationReceipt -> {
                 sendIdentityVerificationReceipt(result.peerId)
                     .onFailure { error ->

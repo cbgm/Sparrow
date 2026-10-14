@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecas
 
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import kotlinx.coroutines.flow.first
@@ -20,7 +21,7 @@ class DeleteLocalExpenseReceiptsUseCase(
         delete(groupId) { expense -> expense.expenseId == expenseId && expense.receipt?.id != keepReceiptId }
 
     private suspend fun delete(groupId: String, selection: (Expense) -> Boolean): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val receiptIds =
                 attachmentOperations.observeExpenses(groupId).first()
                     .filter(selection)

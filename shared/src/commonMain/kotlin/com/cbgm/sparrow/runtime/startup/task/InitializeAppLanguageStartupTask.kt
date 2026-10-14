@@ -12,7 +12,7 @@ class InitializeAppLanguageStartupTask(
     override val runOnMainThread = true
 
     override suspend fun run(): StartupTaskResult {
-        initAppLanguageUseCase()
+        initAppLanguageUseCase().getOrThrow()
         return StartupTaskResult.Completed
     }
 }

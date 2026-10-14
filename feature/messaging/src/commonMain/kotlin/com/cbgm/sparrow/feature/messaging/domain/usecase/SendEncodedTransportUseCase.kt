@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 
@@ -11,7 +12,7 @@ class SendEncodedTransportUseCase(
         recipientRoutingId: String,
         encodedTransportPayload: String
     ): Result<OutgoingWireAcceptance> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(recipientRoutingId.isNotBlank()) { "Recipient routing ID is required" }
             require(encodedTransportPayload.isNotBlank()) { "Encoded transport payload is required" }
             outgoingWireSender

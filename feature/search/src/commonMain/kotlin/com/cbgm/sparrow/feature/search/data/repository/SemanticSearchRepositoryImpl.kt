@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource
@@ -26,67 +27,76 @@ class SemanticSearchRepositoryImpl(
     override val state: StateFlow<SemanticSearchState> = mutableState
     private val lifecycleMutex = Mutex()
 
-    override suspend fun prepare() = lifecycleMutex.withLock {
-        if (mutableState.value is SemanticSearchState.Ready) return@withLock
+    override suspend fun prepare(): Result<Unit> =
+        safeSuspendCall {
+            lifecycleMutex.withLock {
+                if (mutableState.value is SemanticSearchState.Ready) return@withLock
 
-        try {
-            mutableState.value = SemanticSearchState.Preparing
-            indexDataSource.rebuild { processed, total ->
-                mutableState.value = SemanticSearchState.BuildingIndex(processed, total)
+                try {
+                    mutableState.value = SemanticSearchState.Preparing
+                    indexDataSource.rebuild { processed, total ->
+                        mutableState.value = SemanticSearchState.BuildingIndex(processed, total)
+                    }
+                    mutableState.value = SemanticSearchState.Ready
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (throwable: Throwable) {
+                    SparrowLog.error("SemanticSearchRepository", "Semantic search setup failed", throwable)
+                    mutableState.value =
+                        SemanticSearchState.Failed(
+                            throwable.message ?: "Semantic search setup failed"
+                        )
+                }
             }
-            mutableState.value = SemanticSearchState.Ready
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (throwable: Throwable) {
-            SparrowLog.error("SemanticSearchRepository", "Semantic search setup failed", throwable)
-            mutableState.value =
-                SemanticSearchState.Failed(
-                    throwable.message ?: "Semantic search setup failed"
-                )
         }
-    }
 
-    override suspend fun disable() = lifecycleMutex.withLock {
-        indexDataSource.clear()
-        mutableState.value = SemanticSearchState.Disabled
-    }
+    override suspend fun disable(): Result<Unit> =
+        safeSuspendCall {
+            lifecycleMutex.withLock {
+                indexDataSource.clear()
+                mutableState.value = SemanticSearchState.Disabled
+            }
+        }
 
     override suspend fun search(
         query: String,
         limit: Int
-    ): List<MessageSearchResult> {
-        if (query.isBlank() || state.value !is SemanticSearchState.Ready) return emptyList()
+    ): Result<List<MessageSearchResult>> =
+        safeSuspendCall {
+            if (query.isBlank() || state.value !is SemanticSearchState.Ready) {
+                return@safeSuspendCall emptyList()
+            }
 
-        indexDataSource.indexMissing()
-        val queryEmbedding = embeddingDataSource.embedQuery(query)
-        val indexedMessages = localDataSource.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
+            indexDataSource.indexMissing()
+            val queryEmbedding = embeddingDataSource.embedQuery(query)
+            val indexedMessages = localDataSource.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
 
-        return withContext(Dispatchers.Default) {
-            indexedMessages
-                .asSequence()
-                .map { message ->
-                    val semanticScore =
-                        embeddingDataSource.similarity(
-                            queryEmbedding = queryEmbedding,
-                            storedEmbedding = message.embedding
+            withContext(Dispatchers.Default) {
+                indexedMessages
+                    .asSequence()
+                    .map { message ->
+                        val semanticScore =
+                            embeddingDataSource.similarity(
+                                queryEmbedding = queryEmbedding,
+                                storedEmbedding = message.embedding
+                            )
+                        val metadataBoost =
+                            metadataMatchBoost(
+                                query = query,
+                                senderName = message.senderName,
+                                conversationTitle = message.conversationTitle,
+                                contactName = message.contactName
+                            )
+                        message.toMessageSearchResult(
+                            score = (semanticScore + metadataBoost).coerceAtMost(1f)
                         )
-                    val metadataBoost =
-                        metadataMatchBoost(
-                            query = query,
-                            senderName = message.senderName,
-                            conversationTitle = message.conversationTitle,
-                            contactName = message.contactName
-                        )
-                    message.toMessageSearchResult(
-                        score = (semanticScore + metadataBoost).coerceAtMost(1f)
-                    )
-                }.filter { result ->
-                    (result.score ?: Float.NEGATIVE_INFINITY) >= MIN_SEMANTIC_SIMILARITY
-                }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
-                .take(minOf(limit.coerceAtLeast(1), MAX_SEMANTIC_RESULTS))
-                .toList()
+                    }.filter { result ->
+                        (result.score ?: Float.NEGATIVE_INFINITY) >= MIN_SEMANTIC_SIMILARITY
+                    }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
+                    .take(minOf(limit.coerceAtLeast(1), MAX_SEMANTIC_RESULTS))
+                    .toList()
+            }
         }
-    }
 
     private fun metadataMatchBoost(
         query: String,

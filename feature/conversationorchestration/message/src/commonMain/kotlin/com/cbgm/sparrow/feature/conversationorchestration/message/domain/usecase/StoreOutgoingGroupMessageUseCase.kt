@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
@@ -22,7 +23,7 @@ class StoreOutgoingGroupMessageUseCase(
         content: OutgoingMessageContent,
         replyToMessageId: String?
     ): Result<StoredOutgoingMessage> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val message =
                 StoredMessage(
                     id = IdGenerator.generate(prefix = "group-message"),
@@ -40,7 +41,7 @@ class StoreOutgoingGroupMessageUseCase(
                 )
             messageRepository.saveOutgoing(message, content.text, recipientStates = emptyList()).getOrThrow()
             val parts =
-                runCatching {
+                safeSuspendCall(logFailure = false) {
                     val conversation = messageRepository.findConversation(groupId).getOrThrow()
                         ?: error("Group conversation was not found")
                     attachmentRepository.persistOutgoing(

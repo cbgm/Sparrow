@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 
 /** The contact's name for group history events; unknown or unnamed contacts read as "Member". */
@@ -7,7 +8,7 @@ class FindMemberDisplayNameUseCase(
     private val getContact: GetContactUseCase
 ) {
     suspend operator fun invoke(contactId: String): Result<String> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             getContact(contactId).getOrThrow()?.displayName?.trim()?.takeIf(String::isNotEmpty) ?: UNKNOWN_MEMBER_NAME
         }
 

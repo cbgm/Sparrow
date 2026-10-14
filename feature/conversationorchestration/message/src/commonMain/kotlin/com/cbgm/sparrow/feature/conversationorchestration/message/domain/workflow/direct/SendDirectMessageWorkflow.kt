@@ -63,7 +63,7 @@ class SendDirectMessageWorkflow internal constructor(
                 Outcome.ContentValidated(OutgoingMessageContentPolicy.requireDirectContent(step.command.parts))
             }
             is Step.CheckBlockedContact ->
-                if (contactBlocklistRepository.isBlocked(step.command.contactId)) {
+                if (contactBlocklistRepository.isBlocked(step.command.contactId).getOrThrow()) {
                     Outcome.ContactBlocked
                 } else {
                     Outcome.ContactNotBlocked(step.content)

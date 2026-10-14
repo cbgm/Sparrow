@@ -14,7 +14,7 @@ class LoadOlderMessagesUseCase(
         currentOldestCursor: MessageHistoryCursor?,
         pageSize: Int = MessageHistoryPolicy.PAGE_SIZE
     ): Result<MessageHistoryLoadResult> =
-        safeSuspendCall {
+        safeSuspendCall(logFailure = false) {
             require(pageSize > 0) { "Message page size must be positive" }
 
             val anchor =

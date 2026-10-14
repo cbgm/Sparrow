@@ -139,7 +139,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
                             isMine = false,
                             senderContactId = context.contactId
                         )
-                )
+                ).getOrThrow()
                 Outcome.AttachmentsStored
             }
             is Step.SendDeliveryReceipt -> {
@@ -147,7 +147,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
                 Outcome.DeliveryReceiptSent
             }
             is Step.CacheAttachments -> {
-                attachmentRepository.cacheIncoming(packet.messageId)
+                attachmentRepository.cacheIncoming(packet.messageId).getOrThrow()
                 Outcome.Done
             }
         }

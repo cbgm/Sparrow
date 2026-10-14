@@ -154,7 +154,7 @@ class CreateExpenseViewModel(
         mediaCleanupScope.launch {
             pending.flatMap { it.localFilePaths }
                 .distinct()
-                .forEach { path -> runCatching { mediaFiles.delete(path) } }
+                .forEach { path -> mediaFiles.delete(path) }
         }
     }
 

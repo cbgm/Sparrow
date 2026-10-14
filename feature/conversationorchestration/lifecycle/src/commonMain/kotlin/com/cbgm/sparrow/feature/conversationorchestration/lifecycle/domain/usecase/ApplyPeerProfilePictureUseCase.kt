@@ -10,8 +10,7 @@ class ApplyPeerProfilePictureUseCase(
 ) {
     private val logger = SparrowLog.withTag("ApplyPeerProfilePictureUseCase")
 
-    suspend operator fun invoke(contactId: String, metadata: ProfilePictureMetadata) {
+    suspend operator fun invoke(contactId: String, metadata: ProfilePictureMetadata): Result<Unit> =
         applyRemoteProfilePictureMetadata(contactId, metadata)
             .onFailure { error -> logger.warn(error) { "Could not store profile picture for $contactId" } }
-    }
 }

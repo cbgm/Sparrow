@@ -59,7 +59,8 @@ class ReceiveGroupInviteWorkflow internal constructor(
             is Step.InspectOffer -> {
                 val offer = inspectIncomingGroupMembership(context.contactId, packet).getOrThrow()
                 if (
-                    blocklistRepository.isBlocked(context.contactId) || offer.expiresAtEpochMilliseconds <= context.receivedAtEpochMilliseconds
+                    blocklistRepository.isBlocked(context.contactId).getOrThrow() ||
+                    offer.expiresAtEpochMilliseconds <= context.receivedAtEpochMilliseconds
                 ) {
                     Outcome.Dropped
                 } else {

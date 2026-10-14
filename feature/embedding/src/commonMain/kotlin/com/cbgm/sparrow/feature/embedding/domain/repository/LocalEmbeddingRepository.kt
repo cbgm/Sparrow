@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.StateFlow
 interface LocalEmbeddingRepository {
     val state: StateFlow<LocalEmbeddingState>
 
-    suspend fun initialize()
+    suspend fun initialize(): Result<Unit>
 
     suspend fun setFeatureEnabled(
         feature: LocalEmbeddingFeature,
         enabled: Boolean
-    )
+    ): Result<Unit>
 }

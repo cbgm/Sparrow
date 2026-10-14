@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.useca
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
@@ -21,7 +22,7 @@ class StoreUnreadableMessageUseCase(
         contentStatus: MessageContentStatus,
         receivedAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val conversationId = conversationRepository.getOrCreate(contactId).getOrThrow()
             messageRepository.saveIncoming(
                 message =

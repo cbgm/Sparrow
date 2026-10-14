@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contactimport.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
@@ -29,7 +30,7 @@ class ImportSharedIdentityUseCase(
         contactId: String? = null,
         identityImportTrust: IdentityImportTrust = IdentityImportTrust.UNVERIFIED
     ): Result<Contact> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val sharedIdentity =
                 identityShareRepository
                     .decode(encodedIdentity)
@@ -92,7 +93,7 @@ class ImportSharedIdentityUseCase(
                     displayName = displayName ?: importedContact.displayName,
                     phoneNumber = phoneNumber
                 )
-            )
+            ).getOrThrow()
 
             importedContact
         }

@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.avatar.domain.repository.AvatarEditorRepository
 internal class ClearAvatarEditorUseCase(
     private val repository: AvatarEditorRepository
 ) {
-    operator fun invoke() = repository.clear()
+    operator fun invoke(): Result<Unit> = repository.clear()
 }

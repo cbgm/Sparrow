@@ -28,7 +28,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
             null,
             byteArrayOf(1),
             byteArrayOf(2)
-        )
+        ).getOrThrow()
         assertEquals("incoming", result.peerId)
         assertFalse(result.wasKnownPeer)
     }
@@ -40,7 +40,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
             keyPeerId = "existing",
             records = mapOf("existing" to identity("existing", locallyImported = true))
         )
-        val result = resolve(contacts, identities)("incoming", null, byteArrayOf(1), byteArrayOf(2))
+        val result = resolve(contacts, identities)("incoming", null, byteArrayOf(1), byteArrayOf(2)).getOrThrow()
         assertEquals("existing", result.peerId)
         assertTrue(result.wasKnownPeer)
         assertEquals(listOf(IdentityPeerMerge("incoming", "existing", true)), result.merges)
@@ -58,7 +58,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
                 records = mapOf("existing" to identity("existing", exchange, verified))
             )
             assertFailsWith<RemoteIdentityReplacementRequiredException> {
-                resolve(contacts, identities)("incoming", null, byteArrayOf(9), byteArrayOf(2))
+                resolve(contacts, identities)("incoming", null, byteArrayOf(9), byteArrayOf(2)).getOrThrow()
             }
         }
     }
@@ -71,7 +71,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
         )
 
         val conflict = assertFailsWith<RemoteIdentityReplacementRequiredException> {
-            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8))
+            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8)).getOrThrow()
         }
         assertEquals("existing", conflict.peerId)
     }
@@ -82,7 +82,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
         val identities = FakeIdentities(records = mapOf("existing" to identity("existing")))
 
         assertFailsWith<RemoteIdentityReplacementRequiredException> {
-            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8))
+            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8)).getOrThrow()
         }
     }
 
@@ -93,7 +93,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
             keyPeerId = "existing",
             records = mapOf("existing" to identity("existing", KeyExchangeStatus.MUTUAL))
         )
-        val resolution = resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(1), byteArrayOf(2))
+        val resolution = resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(1), byteArrayOf(2)).getOrThrow()
         assertEquals("existing", resolution.peerId)
         assertEquals(listOf(IdentityPeerMerge("incoming", "existing", true)), resolution.merges)
     }
@@ -105,7 +105,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
             keyPeerId = "existing",
             records = mapOf("incoming" to identity("incoming"))
         )
-        val result = resolve(contacts, identities)("incoming", null, byteArrayOf(9), byteArrayOf(2))
+        val result = resolve(contacts, identities)("incoming", null, byteArrayOf(9), byteArrayOf(2)).getOrThrow()
         assertEquals("existing", result.peerId)
         assertEquals(emptyList(), result.merges)
     }
@@ -118,7 +118,7 @@ class ResolveIncomingIdentityPeerUseCaseTest {
             "+491234567890",
             byteArrayOf(1),
             byteArrayOf(2)
-        )
+        ).getOrThrow()
         assertEquals("phone", result.peerId)
     }
 
@@ -152,24 +152,27 @@ class ResolveIncomingIdentityPeerUseCaseTest {
         val existingPeerIds: Set<String>,
         val phonePeerId: String? = null
     ) : IdentityPeerRepository {
-        override suspend fun getDisplayName(peerId: String): String? = null
+        override suspend fun getDisplayName(peerId: String): Result<String?> = Result.success(null)
 
-        override suspend fun containsPeer(peerId: String): Boolean = peerId in existingPeerIds
+        override suspend fun containsPeer(peerId: String): Result<Boolean> =
+            Result.success(peerId in existingPeerIds)
 
-        override suspend fun isKnownContact(peerId: String): Boolean = false
+        override suspend fun isKnownContact(peerId: String): Result<Boolean> = Result.success(false)
 
-        override suspend fun findEquivalentPhonePeerId(phoneNumber: String): String? = phonePeerId
+        override suspend fun findEquivalentPhonePeerId(phoneNumber: String): Result<String?> =
+            Result.success(phonePeerId)
 
-        override suspend fun canMergeRoutingDuplicate(peerId: String, remotePhoneNumber: String?): Boolean =
-            peerId in existingPeerIds
+        override suspend fun canMergeRoutingDuplicate(
+            peerId: String,
+            remotePhoneNumber: String?
+        ): Result<Boolean> = Result.success(peerId in existingPeerIds)
 
-        override suspend fun applyMerge(merge: IdentityPeerMerge) = Unit
+        override suspend fun applyMerge(merge: IdentityPeerMerge): Result<Unit> = Result.success(Unit)
 
         override suspend fun updateIncomingMetadata(
             peerId: String,
             phoneNumber: String,
             updatedAtEpochMilliseconds: Long
-        ) =
-            Unit
+        ): Result<Unit> = Result.success(Unit)
     }
 }

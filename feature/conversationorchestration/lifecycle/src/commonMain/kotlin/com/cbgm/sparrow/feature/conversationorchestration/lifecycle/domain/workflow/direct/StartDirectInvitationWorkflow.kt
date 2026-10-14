@@ -48,7 +48,9 @@ class StartDirectInvitationWorkflow internal constructor(
         when (step) {
             is Step.CheckNotBlocked -> {
                 require(step.command.contactId.isNotBlank()) { "Peer ID must not be blank" }
-                check(!blocklistRepository.isBlocked(step.command.contactId)) { "Blocked contacts cannot be invited" }
+                check(!blocklistRepository.isBlocked(step.command.contactId).getOrThrow()) {
+                    "Blocked contacts cannot be invited"
+                }
                 Outcome.NotBlocked
             }
             is Step.LoadAuthorization ->
@@ -65,7 +67,7 @@ class StartDirectInvitationWorkflow internal constructor(
                 }
             is Step.PreflightRouting -> {
                 // Do not revoke a still valid authorization when the contact cannot be reached anyway.
-                resolveContactInvitationRoutingId(step.command.contactId)
+                resolveContactInvitationRoutingId(step.command.contactId).getOrThrow()
                 Outcome.RoutingAvailable
             }
             is Step.RevokeExchange -> {
@@ -74,7 +76,8 @@ class StartDirectInvitationWorkflow internal constructor(
             }
             is Step.LoadLabels ->
                 Outcome.LabelsLoaded(
-                    peerDisplayName = getIdentityPeerDisplayName(step.command.contactId),
+                    peerDisplayName =
+                        getIdentityPeerDisplayName(step.command.contactId).getOrThrow(),
                     senderLabel = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
                 )
             is Step.StartExchange -> {

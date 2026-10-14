@@ -5,5 +5,6 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepos
 class ResolveContactBootstrapRoutingIdUseCase(
     private val repository: ContactTransportRepository
 ) {
-    suspend operator fun invoke(contactId: String): String = repository.resolveBootstrapRoutingId(contactId)
+    suspend operator fun invoke(contactId: String): Result<String> =
+        repository.resolveBootstrapRoutingId(contactId)
 }

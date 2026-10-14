@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.useca
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.IncomingExpensePolicy
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
@@ -16,9 +17,9 @@ class AuthorizeIncomingExpensesUseCase(
         groupId: String,
         senderContactId: String,
         parts: List<MessagePart>
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = safeSuspendCall(logFailure = false) {
         val expenses = parts.filterIsInstance<Expense>()
-        if (expenses.isEmpty()) return@runCatching
+        if (expenses.isEmpty()) return@safeSuspendCall
 
         val senderKey = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
             .firstOrNull { it.contactId == senderContactId }

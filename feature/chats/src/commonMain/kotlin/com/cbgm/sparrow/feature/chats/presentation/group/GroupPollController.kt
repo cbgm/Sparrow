@@ -54,7 +54,9 @@ class GroupPollController(
             media.deleteLocalPaths(
                 poll.images.flatMap { listOfNotNull(it.localFilePath, it.thumbnailFilePath) }
             )
-            clearFinishedPoll()
+            clearFinishedPoll().onFailure {
+                errors.report(it.message ?: "Poll could not be cleared")
+            }
         }
     }
 }

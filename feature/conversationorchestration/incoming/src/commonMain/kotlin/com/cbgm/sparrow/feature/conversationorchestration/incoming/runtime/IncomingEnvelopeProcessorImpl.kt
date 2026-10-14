@@ -27,7 +27,7 @@ internal class IncomingEnvelopeProcessorImpl(
     ): Result<IncomingEnvelopeProcessingResult> =
         safeSuspendCall {
             val contactId =
-                resolveContactIdByRoutingId(senderRoutingId)
+                resolveContactIdByRoutingId(senderRoutingId).getOrThrow()
                     ?: groupRoutingResolver.resolveContactId(senderRoutingId)
                     ?: run {
                         logger.warn {
@@ -55,10 +55,7 @@ internal class IncomingEnvelopeProcessorImpl(
                 return@safeSuspendCall IncomingEnvelopeProcessingResult.Rejected
             }
 
-            try {
-                reconcileContactTransportRouting()
-            } catch (error: Throwable) {
-                if (error is kotlinx.coroutines.CancellationException) throw error
+            reconcileContactTransportRouting().onFailure { error ->
                 logger.error(error) {
                     "Contact routing reconciliation failed after envelope $envelopeId"
                 }

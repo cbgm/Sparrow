@@ -40,10 +40,14 @@ class GroupExpenseController(
                     .collect { group ->
                         storedReceiptIds =
                             group?.expenses.orEmpty().mapNotNullTo(mutableSetOf()) { it.receipt?.id }
-                        publishExpenseGroup(groupId, group)
+                        publishExpenseGroup(groupId, group).onFailure {
+                            errors.report(it.message ?: "Group expenses could not be shown")
+                        }
                     }
             } finally {
-                clearExpenseGroup(groupId)
+                clearExpenseGroup(groupId).onFailure {
+                    errors.report(it.message ?: "Group expenses could not be cleared")
+                }
             }
         }
         scope.launch {

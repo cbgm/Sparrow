@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
+import com.cbgm.sparrow.core.result.flatMap
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
@@ -8,7 +9,10 @@ class SharedContactController(
     private val addDeviceContact: AddDeviceContactUseCase
 ) {
     suspend fun add(contact: SharedContact): Result<Unit> =
-        when (val result = addDeviceContact(contact.displayName, contact.phoneNumber)) {
+        addDeviceContact(contact.displayName, contact.phoneNumber).flatMap(::toResult)
+
+    private fun toResult(result: AddDeviceContactResult): Result<Unit> =
+        when (result) {
             AddDeviceContactResult.Added, AddDeviceContactResult.AlreadyExists -> Result.success(
                 Unit
             )

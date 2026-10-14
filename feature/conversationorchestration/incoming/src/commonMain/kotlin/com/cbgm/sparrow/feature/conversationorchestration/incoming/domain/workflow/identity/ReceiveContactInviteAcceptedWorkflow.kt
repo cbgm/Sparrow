@@ -89,7 +89,7 @@ class ReceiveContactInviteAcceptedWorkflow internal constructor(
                     Outcome.ReviewRequired(review.peerId, review.invitationExpiresAtEpochMilliseconds)
                 }
             is Step.StageIdentityReview -> {
-                if (!blocklistRepository.isBlocked(step.peerId)) {
+                if (!blocklistRepository.isBlocked(step.peerId).getOrThrow()) {
                     check(step.peerId == context.contactId) { "Identity review does not match the invitation contact" }
                     stagePendingRemoteIdentityChange(
                         PendingRemoteIdentityChange(

@@ -6,7 +6,6 @@ import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupMo
 class SetDirectIdentitySetupModeUseCase(
     private val repository: DirectIdentitySetupModeRepository
 ) {
-    suspend operator fun invoke(mode: DirectIdentitySetupMode) {
+    suspend operator fun invoke(mode: DirectIdentitySetupMode): Result<Unit> =
         repository.setMode(mode)
-    }
 }

@@ -1,12 +1,13 @@
 package com.cbgm.sparrow.feature.expenses.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseSettlementSuggestion
 
 /** Suggests who pays whom to settle group expenses. No money is transferred here. */
 class CalculateExpenseSettlementsUseCase {
     operator fun invoke(balances: List<ExpenseBalance>): Result<List<ExpenseSettlementSuggestion>> =
-        runCatching {
+        safeCall(logFailure = false) {
             validateBalances(balances)
             suggestTransfers(balances)
         }

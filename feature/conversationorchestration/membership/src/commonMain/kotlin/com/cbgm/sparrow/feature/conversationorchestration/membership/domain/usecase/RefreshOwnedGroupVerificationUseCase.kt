@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationRow
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationStatus
@@ -17,11 +18,11 @@ class RefreshOwnedGroupVerificationUseCase(
     private val verificationInputs: GroupVerificationInputsUseCase
 ) {
     suspend operator fun invoke(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             val existingRows = verificationRepository.findRows(groupId).getOrThrow()
             val existingByContactId = existingRows.mapNotNull { row -> row.contactId?.let { it to row } }.toMap()
-            val inputs = verificationInputs.ownedState(groupId)
+            val inputs = verificationInputs.ownedState(groupId).getOrThrow()
             val now = SystemClock.nowEpochMilliseconds()
 
             val activeRows = activeRows(groupId, inputs, existingByContactId, now)

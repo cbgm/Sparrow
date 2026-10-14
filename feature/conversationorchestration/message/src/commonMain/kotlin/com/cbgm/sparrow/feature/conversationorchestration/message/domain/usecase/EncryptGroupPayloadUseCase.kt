@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
@@ -23,7 +24,7 @@ class EncryptGroupPayloadUseCase(
         recipients: List<String>,
         packetIdFor: (contactId: String) -> String
     ): Result<Map<String, GroupChatMessagePacket>> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
             val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
             val secured =

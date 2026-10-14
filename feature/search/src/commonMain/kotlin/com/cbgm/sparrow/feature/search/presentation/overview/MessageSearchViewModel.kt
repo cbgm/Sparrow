@@ -94,7 +94,7 @@ class MessageSearchViewModel(
                 _uiState.value = _uiState.value.copy(isSearching = true)
 
                 try {
-                    val results = searchMessages(query)
+                    val results = searchMessages(query).getOrThrow()
                     if (_uiState.value.query != query) return@launch
                     _uiState.value =
                         _uiState.value.copy(

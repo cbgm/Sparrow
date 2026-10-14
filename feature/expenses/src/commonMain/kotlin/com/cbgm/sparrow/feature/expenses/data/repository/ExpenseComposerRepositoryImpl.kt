@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.expenses.data.repository
 
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseGroup
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseRequest
@@ -23,13 +24,15 @@ internal class ExpenseComposerRepositoryImpl : ExpenseComposerRepository {
             .map { it[groupId] }
             .distinctUntilChanged()
 
-    override fun publishGroup(groupId: String, group: ExpenseGroup?) {
-        groups.update { it + (groupId to group) }
-    }
+    override fun publishGroup(groupId: String, group: ExpenseGroup?): Result<Unit> =
+        safeCall {
+            groups.update { it + (groupId to group) }
+        }
 
-    override fun clearGroup(groupId: String) {
-        groups.update { it - groupId }
-    }
+    override fun clearGroup(groupId: String): Result<Unit> =
+        safeCall {
+            groups.update { it - groupId }
+        }
 
     override fun observeRequests(): Flow<ExpenseRequest> = requests.receiveAsFlow()
 

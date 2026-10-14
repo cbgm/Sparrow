@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import kotlinx.coroutines.flow.first
@@ -13,7 +14,7 @@ class DeleteReplacedExpenseReceiptsUseCase(
     private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) {
     suspend operator fun invoke(groupId: String, parts: List<MessagePart>): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val revisions = parts.filterIsInstance<Expense>().filter { it.revisionOf != null }
             if (revisions.isNotEmpty()) {
                 val stored = attachmentOperations.observeExpenses(groupId).first()

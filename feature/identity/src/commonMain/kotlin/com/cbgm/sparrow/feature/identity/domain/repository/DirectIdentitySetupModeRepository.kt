@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface DirectIdentitySetupModeRepository {
     fun observeMode(): Flow<DirectIdentitySetupMode>
 
-    suspend fun getMode(): DirectIdentitySetupMode
+    suspend fun getMode(): Result<DirectIdentitySetupMode>
 
-    suspend fun setMode(mode: DirectIdentitySetupMode)
+    suspend fun setMode(mode: DirectIdentitySetupMode): Result<Unit>
 }

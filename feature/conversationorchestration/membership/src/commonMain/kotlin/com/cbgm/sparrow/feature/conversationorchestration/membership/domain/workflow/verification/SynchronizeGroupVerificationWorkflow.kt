@@ -40,7 +40,8 @@ class SynchronizeGroupVerificationWorkflow internal constructor(
         when (step) {
             is Step.LoadSecurity -> {
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
-                val security = verificationInputs.membershipContext(step.command.groupId).security
+                val security =
+                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
                 when {
                     security == null -> Outcome.NoSecurityState
                     security.isLocalAdmin -> Outcome.LocalAdmin

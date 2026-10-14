@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumber
 import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumberGenerator
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
@@ -14,7 +15,7 @@ class GetContactSafetyNumberUseCase(
     private val safetyNumberGenerator: SafetyNumberGenerator
 ) {
     suspend operator fun invoke(contactId: String): Result<SafetyNumber> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }

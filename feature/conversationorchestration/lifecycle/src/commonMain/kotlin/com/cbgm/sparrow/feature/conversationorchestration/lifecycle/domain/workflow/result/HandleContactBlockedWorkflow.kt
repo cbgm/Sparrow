@@ -25,7 +25,11 @@ class HandleContactBlockedWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.CheckStillBlocked ->
-                if (blocklistRepository.isBlocked(step.command.contactId)) Outcome.StillBlocked else Outcome.Unblocked
+                if (blocklistRepository.isBlocked(step.command.contactId).getOrThrow()) {
+                    Outcome.StillBlocked
+                } else {
+                    Outcome.Unblocked
+                }
             is Step.RevokeExchange -> {
                 engine.run(LifecycleCommand.RevokePeerExchange(step.command.contactId)).getOrThrow()
                 Outcome.ExchangeRevoked

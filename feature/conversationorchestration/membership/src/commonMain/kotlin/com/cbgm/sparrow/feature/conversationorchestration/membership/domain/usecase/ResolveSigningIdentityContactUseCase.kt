@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
@@ -14,7 +15,7 @@ class ResolveSigningIdentityContactUseCase(
         signingPublicKey: ByteArray,
         encryptionPublicKey: ByteArray,
         phoneNumber: String?
-    ): Result<String> = runCatching {
+    ): Result<String> = safeSuspendCall(logFailure = false) {
         val identityPeerId = findIdentityPeerId(signingPublicKey).getOrThrow()
         val byIdentity = identityPeerId?.let { contacts.getContact(it).getOrThrow() }
         val contact = byIdentity ?: contacts.findOrCreateByPhoneNumber(

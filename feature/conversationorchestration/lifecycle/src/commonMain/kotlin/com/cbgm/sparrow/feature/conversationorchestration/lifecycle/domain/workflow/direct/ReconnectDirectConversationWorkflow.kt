@@ -45,7 +45,9 @@ class ReconnectDirectConversationWorkflow internal constructor(
             is Step.CheckReconnectable -> {
                 val contactId = step.command.contactId
                 require(contactId.isNotBlank()) { "Peer ID must not be blank" }
-                check(!blocklistRepository.isBlocked(contactId)) { "Blocked contacts cannot be invited" }
+                check(!blocklistRepository.isBlocked(contactId).getOrThrow()) {
+                    "Blocked contacts cannot be invited"
+                }
                 check(conversationRepository.findConversationId(contactId).getOrThrow() != null) {
                     "Reconnection requires an existing direct conversation"
                 }
@@ -57,7 +59,7 @@ class ReconnectDirectConversationWorkflow internal constructor(
                 Outcome.Reconnectable
             }
             is Step.PreflightRouting -> {
-                resolveContactInvitationRoutingId(step.command.contactId)
+                resolveContactInvitationRoutingId(step.command.contactId).getOrThrow()
                 Outcome.RoutingAvailable
             }
             is Step.LoadAuthorization ->

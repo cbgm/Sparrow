@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
@@ -18,7 +19,7 @@ class EnqueueGroupPacketsUseCase(
         packetsByContactId: Map<String, SparrowPacket>,
         recordFailedRecipients: Boolean
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             val failures = mutableListOf<String>()
             packetsByContactId.forEach { (contactId, packet) ->
                 val error = protocolOutbox.enqueue(contactId, packet).exceptionOrNull() ?: return@forEach

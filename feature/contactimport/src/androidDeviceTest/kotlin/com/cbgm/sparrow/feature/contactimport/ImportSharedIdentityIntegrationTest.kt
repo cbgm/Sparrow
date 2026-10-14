@@ -362,5 +362,5 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
 private object TestDeviceContactWriterRepository : DeviceContactWriterRepository {
     override suspend fun addIfNotExists(
         request: AddDeviceContactRequest
-    ): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists
+    ): Result<AddDeviceContactResult> = Result.success(AddDeviceContactResult.AlreadyExists)
 }

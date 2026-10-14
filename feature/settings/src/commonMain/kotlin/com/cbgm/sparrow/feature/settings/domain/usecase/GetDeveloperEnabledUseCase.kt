@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 class GetDeveloperEnabledUseCase(
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke(): Boolean = settingsRepository.isDeveloperModeEnabled()
+    suspend operator fun invoke(): Result<Boolean> = settingsRepository.isDeveloperModeEnabled()
 }
