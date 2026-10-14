@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.expenses.presentation.create
+package com.cbgm.sparrow.feature.expenses.presentation.create.component
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.DropdownMenu
@@ -20,6 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,18 +43,26 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.expenses.presentation.create.icon
+import com.cbgm.sparrow.feature.expenses.presentation.create.label
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toAvatarTarget
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
+import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_expenses_amount
+import com.cbgm.sparrow.resources.feature_expenses_auto_import
 import com.cbgm.sparrow.resources.feature_expenses_category
 import com.cbgm.sparrow.resources.feature_expenses_description
 import com.cbgm.sparrow.resources.feature_expenses_description_hint
 import com.cbgm.sparrow.resources.feature_expenses_paid_by
+import com.cbgm.sparrow.resources.feature_expenses_receipt
+import com.cbgm.sparrow.resources.feature_expenses_receipt_attached
+import com.cbgm.sparrow.resources.feature_expenses_remove_receipt
 import com.cbgm.sparrow.resources.feature_expenses_split_all_members
 import com.cbgm.sparrow.resources.feature_expenses_split_between
 import com.cbgm.sparrow.resources.feature_expenses_split_custom_members
@@ -64,7 +75,8 @@ internal fun ExpenseDraftCard(
     participants: List<ExpenseParticipantUi>,
     currencyCode: String,
     enabled: Boolean,
-    onUiEvent: (CreateExpenseUiEvent) -> Unit
+    onUiEvent: (CreateExpenseUiEvent) -> Unit,
+    onScanReceipt: () -> Unit
 ) {
     SparrowCardNoAnimation {
         Column(
@@ -121,9 +133,96 @@ internal fun ExpenseDraftCard(
                 enabled = enabled,
                 onUiEvent = onUiEvent
             )
+            ReceiptSelection(
+                receipt = draft.receipt,
+                enabled = enabled,
+                onUiEvent = onUiEvent,
+                onScanReceipt = onScanReceipt
+            )
         }
     }
 }
+
+@Composable
+private fun ReceiptSelection(
+    receipt: VisualMediaSelectionUi?,
+    enabled: Boolean,
+    onUiEvent: (CreateExpenseUiEvent) -> Unit,
+    onScanReceipt: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .border(
+                Dimens.Base.borderStrokeWidth,
+                MaterialTheme.colorScheme.outlineVariant,
+                MaterialTheme.shapes.medium
+            )
+            .clickable(enabled) { onScanReceipt() }
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.medium
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    ) {
+        if (receipt == null) {
+            Icon(
+                imageVector = Icons.Default.DocumentScanner,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            MediaThumbnail(
+                media = receipt,
+                modifier = Modifier
+                    .size(RECEIPT_THUMBNAIL_SIZE)
+                    .clip(MaterialTheme.shapes.small)
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = stringResource(Res.string.feature_expenses_receipt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(
+                    if (receipt == null) {
+                        Res.string.feature_expenses_auto_import
+                    } else {
+                        Res.string.feature_expenses_receipt_attached
+                    }
+                ),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        if (receipt == null) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            IconButton(
+                onClick = { onUiEvent(CreateExpenseUiEvent.RemoveReceiptClicked) },
+                enabled = enabled
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.feature_expenses_remove_receipt),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private val RECEIPT_THUMBNAIL_SIZE = 32.dp
 
 @Composable
 private fun MemberSelection(
@@ -339,7 +438,8 @@ private fun ExpenseDraftCardPreview() {
             ),
             currencyCode = "EUR",
             enabled = true,
-            onUiEvent = {}
+            onUiEvent = {},
+            onScanReceipt = {}
         )
     }
 }

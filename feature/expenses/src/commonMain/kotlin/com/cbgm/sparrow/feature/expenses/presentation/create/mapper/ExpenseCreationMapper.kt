@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseSplit
+import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseCreationContext
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseMember
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
@@ -11,6 +12,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCatego
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 
 internal fun ExpenseCreationContext.toCreateExpenseUiState(): CreateExpenseUiState {
     val participants = members.map { member -> member.toExpenseParticipantUi() }
@@ -49,9 +51,21 @@ internal fun ExpenseDraftUi.toEditedExpense(original: Expense): Expense? {
         amountMinor = amount,
         paidByMemberId = payerId,
         allocations = allocations,
-        category = category.toExpenseCategory()
+        category = category.toExpenseCategory(),
+        receipt = receipt?.toReceiptImage() ?: original.receipt
     )
 }
+
+internal fun VisualMediaSelectionUi.toReceiptImage(): Image =
+    Image(
+        id = id,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        width = width,
+        height = height,
+        localFilePath = localFilePath,
+        thumbnailFilePath = thumbnailFilePath
+    )
 
 internal fun ExpenseMember.toExpenseParticipantUi(): ExpenseParticipantUi =
     ExpenseParticipantUi(id, displayName, isLocal, avatarContactId)

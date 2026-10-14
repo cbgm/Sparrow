@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/media` |
 | Build file | `feature/media/build.gradle.kts` |
-| Kotlin files | 82 |
-| Production Kotlin files | 79 |
-| Test Kotlin files | 3 |
+| Kotlin files | 95 |
+| Production Kotlin files | 91 |
+| Test Kotlin files | 4 |
 | Resource files | 2 |
 | Direct dependencies | 2 |
-| Direct dependents | 8 |
+| Direct dependents | 10 |
 
 ## Source sets
 
@@ -34,6 +34,8 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:chats`](../modules/feature-chats.md)
+- [`:feature:contactimport`](../modules/feature-contactimport.md)
+- [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:polls`](../modules/feature-polls.md)
 - [`:feature:voice`](../modules/feature-voice.md)

@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.presentation.create.model
 
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
+
 sealed interface CreateExpenseUiEvent {
     data class DescriptionChanged(
         val text: String
@@ -33,6 +35,12 @@ sealed interface CreateExpenseUiEvent {
     data class RemoveQueuedClicked(
         val index: Int
     ) : CreateExpenseUiEvent
+
+    data class ReceiptScanned(
+        val result: MediaSelectionResultUi
+    ) : CreateExpenseUiEvent
+
+    data object RemoveReceiptClicked : CreateExpenseUiEvent
 
     data object SplitPickerClicked : CreateExpenseUiEvent
 

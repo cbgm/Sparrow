@@ -611,6 +611,13 @@
     <string name="feature_media_file_picker_empty_folder">This folder is empty</string>
     <string name="feature_media_file_picker_file_access">Allow file access</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow needs file access to show the folders and files on this device.</string>
+    <string name="feature_media_document_scanner_automatic">Auto</string>
+    <string name="feature_media_document_scanner_manual">Manual</string>
+    <string name="feature_media_document_scanner_hint_automatic">Place the document inside the frame</string>
+    <string name="feature_media_document_scanner_hint_detected">Document found – hold still</string>
+    <string name="feature_media_document_scanner_hint_manual">Line up the document and take a photo</string>
+    <string name="feature_media_document_scanner_test_image">Use test image (debug)</string>
+    <string name="feature_media_qr_scanner_hint">Point the camera at a QR code</string>
     <string name="feature_chats_add_shared_contact_description">Do you want to add this shared contact to your contacts?</string>
     <string name="feature_voice_tap_to_record">Tap to record</string>
     <string name="feature_voice_transcribe">Transcribe</string>
@@ -844,6 +851,10 @@
     <string name="feature_expenses_detail_title">Expense</string>
     <string name="feature_expenses_receipt">Receipt</string>
     <string name="feature_expenses_receipt_missing">No receipt yet</string>
+    <string name="feature_expenses_auto_import">Auto import</string>
+    <string name="feature_expenses_receipt_attached">Receipt attached – tap to scan again</string>
+    <string name="feature_expenses_remove_receipt">Remove receipt</string>
+    <string name="feature_expenses_receipt_failed">The receipt could not be scanned</string>
     <string name="feature_expenses_detail_split_between">Split between %1$d</string>
     <string name="feature_expenses_detail_equal_each">Equal split · %1$s each</string>
 </resources>

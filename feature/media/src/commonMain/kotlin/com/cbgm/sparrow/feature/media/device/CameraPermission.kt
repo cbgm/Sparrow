@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contactimport.device
+package com.cbgm.sparrow.feature.media.device
 
 import androidx.compose.runtime.Composable
 
@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
  * immediately.
  */
 @Composable
-expect fun rememberQrScannerPermissionRequest(
+expect fun rememberCameraPermissionRequest(
     onPermissionGranted: () -> Unit,
     onPermissionDenied: () -> Unit
 ): () -> Unit

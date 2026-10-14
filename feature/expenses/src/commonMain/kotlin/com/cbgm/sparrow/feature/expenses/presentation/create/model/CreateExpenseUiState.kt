@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.presentation.create.model
 
 import com.cbgm.sparrow.feature.expenses.domain.ExpenseMoney
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 
 data class ExpenseParticipantUi(
     val id: String,
@@ -33,7 +34,8 @@ data class ExpenseDraftUi(
     val category: ExpenseCategoryUi = ExpenseCategoryUi.OTHER,
     val splitMode: ExpenseSplitModeUi = ExpenseSplitModeUi.EQUAL,
     // Raw text per participant; only used for custom splits.
-    val customAmounts: Map<String, String> = emptyMap()
+    val customAmounts: Map<String, String> = emptyMap(),
+    val receipt: VisualMediaSelectionUi? = null
 ) {
     fun isEmpty(): Boolean = description.isBlank() && amount.isBlank()
 

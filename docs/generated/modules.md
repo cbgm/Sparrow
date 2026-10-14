@@ -21,7 +21,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:autoreply`](modules/feature-autoreply.md) | `feature` | 21 | 0 | 0 | 3 | 5 |
 | [`:feature:avatar`](modules/feature-avatar.md) | `feature` | 36 | 0 | 0 | 4 | 8 |
 | [`:feature:chats`](modules/feature-chats.md) | `feature` | 225 | 12 | 1 | 22 | 3 |
-| [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 29 | 1 | 1 | 5 | 3 |
+| [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 25 | 1 | 1 | 6 | 3 |
 | [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 124 | 3 | 1 | 8 | 12 |
 | [`:feature:conversationorchestration`](modules/feature-conversationorchestration.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
 | [`:feature:conversationorchestration:api`](modules/feature-conversationorchestration-api.md) | `feature` | 12 | 0 | 0 | 1 | 3 |
@@ -33,14 +33,14 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 63 | 1 | 0 | 13 | 2 |
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 82 | 1 | 0 | 11 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
-| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 61 | 10 | 0 | 4 | 3 |
+| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 61 | 10 | 0 | 5 | 3 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 181 | 12 | 1 | 7 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |
-| [`:feature:media`](modules/feature-media.md) | `feature` | 82 | 3 | 2 | 2 | 8 |
+| [`:feature:media`](modules/feature-media.md) | `feature` | 95 | 4 | 2 | 2 | 10 |
 | [`:feature:membership`](modules/feature-membership.md) | `feature` | 123 | 8 | 0 | 5 | 9 |
 | [`:feature:messaging`](modules/feature-messaging.md) | `feature` | 26 | 7 | 1 | 2 | 6 |
-| [`:feature:notification`](modules/feature-notification.md) | `feature` | 29 | 1 | 1 | 7 | 2 |
+| [`:feature:notification`](modules/feature-notification.md) | `feature` | 28 | 1 | 1 | 7 | 2 |
 | [`:feature:onboarding`](modules/feature-onboarding.md) | `feature` | 14 | 0 | 1 | 3 | 3 |
 | [`:feature:polls`](modules/feature-polls.md) | `feature` | 27 | 0 | 0 | 6 | 3 |
 | [`:feature:safety`](modules/feature-safety.md) | `feature` | 38 | 6 | 1 | 5 | 5 |

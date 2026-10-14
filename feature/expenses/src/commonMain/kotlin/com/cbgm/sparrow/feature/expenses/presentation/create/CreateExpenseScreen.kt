@@ -30,6 +30,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.expenses.presentation.create.component.ExpenseDraftCard
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
@@ -49,6 +50,7 @@ import org.jetbrains.compose.resources.stringResource
 fun CreateExpenseScreen(
     uiState: CreateExpenseUiState,
     onUiEvent: (CreateExpenseUiEvent) -> Unit,
+    onScanReceipt: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -96,7 +98,11 @@ fun CreateExpenseScreen(
                     participants = uiState.participants,
                     currencyCode = uiState.currencyCode,
                     enabled = !uiState.isLoading && !uiState.isSending,
-                    onUiEvent = onUiEvent
+                    onUiEvent = onUiEvent,
+                    onScanReceipt = {
+                        focusManager.clearFocus()
+                        onScanReceipt()
+                    }
                 )
             }
             if (uiState.queued.isNotEmpty()) {
@@ -226,7 +232,8 @@ private fun CreateExpenseScreenPreview() {
                     )
                 )
             ),
-            onUiEvent = {}
+            onUiEvent = {},
+            onScanReceipt = {}
         )
     }
 }

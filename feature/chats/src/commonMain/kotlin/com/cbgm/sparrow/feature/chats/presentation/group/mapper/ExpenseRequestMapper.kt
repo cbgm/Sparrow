@@ -13,7 +13,8 @@ internal fun ExpenseRequest.toGroupMessageCommand(): GroupMessageCommand =
                 amountMinor = amountMinor,
                 paidByMemberId = paidByMemberId,
                 allocations = allocations,
-                category = category
+                category = category,
+                receipt = receipt
             )
         is ExpenseRequest.Edit -> GroupMessageCommand.EditExpense(groupId, expense)
         is ExpenseRequest.Delete -> GroupMessageCommand.DeleteExpense(groupId, expense)

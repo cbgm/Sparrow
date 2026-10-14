@@ -236,14 +236,6 @@ room-runtime = [
     "androidx-sqlite-bundled"
 ]
 
-camera = [
-    "androidx-camera-core",
-    "androidx-camera-camera2",
-    "androidx-camera-lifecycle",
-    "androidx-camera-view",
-    "zxing-core"
-]
-
 ktor-client = [
     "ktor-client-core",
     "ktor-client-websockets",

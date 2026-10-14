@@ -16,15 +16,25 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toCreateExpe
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toEditedExpense
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseAllocations
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCategory
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toReceiptImage
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withSplitMode
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
+import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
+import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_expenses_incomplete_draft
 import com.cbgm.sparrow.resources.feature_expenses_invalid_amount
 import com.cbgm.sparrow.resources.feature_expenses_load_failed
+import com.cbgm.sparrow.resources.feature_expenses_receipt_failed
 import com.cbgm.sparrow.resources.feature_expenses_send_failed
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,13 +45,15 @@ import org.jetbrains.compose.resources.getString
 class CreateExpenseViewModel(
     savedStateHandle: SavedStateHandle,
     private val getContext: GetExpenseCreationContextUseCase,
-    private val submitRequest: SubmitExpenseRequestUseCase
+    private val submitRequest: SubmitExpenseRequestUseCase,
+    private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId = savedStateHandle.requireRouteArgument<String>(AppRoute.CreateExpense::groupId.name)
     private val expenseId = savedStateHandle.get<String>(AppRoute.CreateExpense::expenseId.name)
     private var editedExpense: Expense? = null
     private val _uiState = MutableStateFlow(CreateExpenseUiState())
     val uiState: StateFlow<CreateExpenseUiState> = _uiState.asStateFlow()
+    private val mediaCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
         viewModelScope.launch {
@@ -88,13 +100,9 @@ class CreateExpenseViewModel(
                     copy(customAmounts = customAmounts + (event.id to event.text.toAmountInput()))
                 }
             }
-            is CreateExpenseUiEvent.RemoveQueuedClicked -> _uiState.update { current ->
-                if (event.index !in current.queued.indices) {
-                    current
-                } else {
-                    current.copy(queued = current.queued.filterIndexed { index, _ -> index != event.index })
-                }
-            }
+            is CreateExpenseUiEvent.RemoveQueuedClicked -> removeQueued(event.index)
+            is CreateExpenseUiEvent.ReceiptScanned -> updateReceipt(event.result)
+            CreateExpenseUiEvent.RemoveReceiptClicked -> replaceReceipt(null)
             CreateExpenseUiEvent.SplitPickerClicked -> _uiState.update { it.copy(isSplitOpen = true) }
             CreateExpenseUiEvent.SplitDoneClicked -> _uiState.update { it.copy(isSplitOpen = false) }
             CreateExpenseUiEvent.AddAnotherClicked -> queueDraft()
@@ -106,6 +114,53 @@ class CreateExpenseViewModel(
                     navigator.popBackStack()
                 }
         }
+    }
+
+    private fun removeQueued(index: Int) {
+        val removed = _uiState.value.queued.getOrNull(index) ?: return
+        _uiState.update { current ->
+            current.copy(queued = current.queued.filterIndexed { queuedIndex, _ -> queuedIndex != index })
+        }
+        removed.receipt?.let { deletePendingSelections(listOf(it)) }
+    }
+
+    private fun updateReceipt(result: MediaSelectionResultUi) {
+        when (result) {
+            MediaSelectionResultUi.Dismissed -> Unit
+            is MediaSelectionResultUi.Error -> viewModelScope.launch {
+                SparrowLog.showError(getString(Res.string.feature_expenses_receipt_failed))
+            }
+            is MediaSelectionResultUi.Selected -> {
+                val scanned = result.media.filterIsInstance<VisualMediaSelectionUi>()
+                val receipt = scanned.firstOrNull { it.type == MediaTypeUi.IMAGE }
+                deletePendingSelections(scanned - setOfNotNull(receipt))
+                if (receipt != null) replaceReceipt(receipt)
+            }
+        }
+    }
+
+    private fun replaceReceipt(receipt: VisualMediaSelectionUi?) {
+        val previous = _uiState.value.draft.receipt
+        updateDraft { copy(receipt = receipt) }
+        if (previous != null && previous.id != receipt?.id) {
+            deletePendingSelections(listOf(previous))
+        }
+    }
+
+    private fun deletePendingSelections(media: List<VisualMediaSelectionUi>) {
+        if (media.isEmpty()) return
+        mediaCleanupScope.launch {
+            media.flatMap { it.localFilePaths }
+                .distinct()
+                .forEach { path -> runCatching { mediaFiles.delete(path) } }
+        }
+    }
+
+    private fun pendingReceipts(state: CreateExpenseUiState): List<VisualMediaSelectionUi> =
+        (state.queued + state.draft).mapNotNull(ExpenseDraftUi::receipt)
+
+    override fun onCleared() {
+        deletePendingSelections(pendingReceipts(_uiState.value))
     }
 
     private fun updateDraft(update: ExpenseDraftUi.() -> ExpenseDraftUi) {
@@ -175,7 +230,8 @@ class CreateExpenseViewModel(
                             amountMinor = amount,
                             paidByMemberId = next.payerId,
                             allocations = allocations,
-                            category = next.category.toExpenseCategory()
+                            category = next.category.toExpenseCategory(),
+                            receipt = next.receipt?.toReceiptImage()
                         )
                     )
                 if (result.isFailure) {
@@ -197,7 +253,10 @@ class CreateExpenseViewModel(
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             submitRequest(ExpenseRequest.Edit(groupId, expense))
-                .onSuccess { navigator.popBackStack() }
+                .onSuccess {
+                    _uiState.update { it.copy(draft = it.draft.copy(receipt = null)) }
+                    navigator.popBackStack()
+                }
                 .onFailure {
                     _uiState.update { it.copy(isSending = false) }
                     SparrowLog.showError(getString(Res.string.feature_expenses_send_failed))

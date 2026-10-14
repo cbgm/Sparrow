@@ -615,6 +615,13 @@
     <string name="feature_media_file_picker_empty_folder">Dieser Ordner ist leer</string>
     <string name="feature_media_file_picker_file_access">Dateizugriff erlauben</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow benötigt Dateizugriff, um die Ordner und Dateien auf diesem Gerät anzuzeigen.</string>
+    <string name="feature_media_document_scanner_automatic">Automatisch</string>
+    <string name="feature_media_document_scanner_manual">Manuell</string>
+    <string name="feature_media_document_scanner_hint_automatic">Dokument im Rahmen platzieren</string>
+    <string name="feature_media_document_scanner_hint_detected">Dokument erkannt – ruhig halten</string>
+    <string name="feature_media_document_scanner_hint_manual">Dokument ausrichten und Foto aufnehmen</string>
+    <string name="feature_media_document_scanner_test_image">Testbild verwenden (Debug)</string>
+    <string name="feature_media_qr_scanner_hint">Kamera auf einen QR-Code richten</string>
     <string name="feature_chats_add_shared_contact_description">Möchtest du diesen geteilten Kontakt zu deinen Kontakten hinzufügen?</string>
     <string name="feature_voice_tap_to_record">Zum Aufnehmen tippen</string>
     <string name="feature_voice_transcribe">Transkribieren</string>
@@ -848,6 +855,10 @@
     <string name="feature_expenses_detail_title">Ausgabe</string>
     <string name="feature_expenses_receipt">Beleg</string>
     <string name="feature_expenses_receipt_missing">Noch kein Beleg</string>
+    <string name="feature_expenses_auto_import">Automatisch importieren</string>
+    <string name="feature_expenses_receipt_attached">Beleg angehängt – tippen zum erneuten Scannen</string>
+    <string name="feature_expenses_remove_receipt">Beleg entfernen</string>
+    <string name="feature_expenses_receipt_failed">Der Beleg konnte nicht gescannt werden</string>
     <string name="feature_expenses_detail_split_between">Aufgeteilt auf %1$d</string>
     <string name="feature_expenses_detail_equal_each">Gleich aufgeteilt · je %1$s</string>
 </resources>

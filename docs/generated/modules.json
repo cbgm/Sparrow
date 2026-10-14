@@ -480,8 +480,8 @@
     "group": "feature",
     "directory": "feature/contactimport",
     "buildFile": "feature/contactimport/build.gradle.kts",
-    "kotlinSourceFileCount": 29,
-    "productionKotlinFileCount": 28,
+    "kotlinSourceFileCount": 25,
+    "productionKotlinFileCount": 24,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -494,7 +494,8 @@
       ":core:util",
       ":feature:contacts",
       ":feature:identity",
-      ":feature:invite"
+      ":feature:invite",
+      ":feature:media"
     ],
     "dependents": [
       ":feature:chats",
@@ -846,7 +847,8 @@
       ":core:base",
       ":core:ui",
       ":core:util",
-      ":feature:avatar"
+      ":feature:avatar",
+      ":feature:media"
     ],
     "dependents": [
       ":feature:chats",
@@ -960,9 +962,9 @@
     "group": "feature",
     "directory": "feature/media",
     "buildFile": "feature/media/build.gradle.kts",
-    "kotlinSourceFileCount": 82,
-    "productionKotlinFileCount": 79,
-    "testKotlinFileCount": 3,
+    "kotlinSourceFileCount": 95,
+    "productionKotlinFileCount": 91,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 2,
     "sourceSets": [
       "androidMain",
@@ -978,6 +980,8 @@
       ":feature:attachments",
       ":feature:avatar",
       ":feature:chats",
+      ":feature:contactimport",
+      ":feature:expenses",
       ":feature:onboarding",
       ":feature:polls",
       ":feature:voice",
@@ -1054,8 +1058,8 @@
     "group": "feature",
     "directory": "feature/notification",
     "buildFile": "feature/notification/build.gradle.kts",
-    "kotlinSourceFileCount": 29,
-    "productionKotlinFileCount": 28,
+    "kotlinSourceFileCount": 28,
+    "productionKotlinFileCount": 27,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [

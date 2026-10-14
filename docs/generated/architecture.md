@@ -8,9 +8,9 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 61 |
 | Module groups | 11 |
-| Project dependencies | 310 |
-| Kotlin files | 2310 |
-| Test Kotlin files | 166 |
+| Project dependencies | 312 |
+| Kotlin files | 2318 |
+| Test Kotlin files | 167 |
 | Resource files | 57 |
 
 ## Module groups
@@ -258,6 +258,7 @@ graph TD
     module_feature_contactimport --> module_feature_contacts
     module_feature_contactimport --> module_feature_identity
     module_feature_contactimport --> module_feature_invite
+    module_feature_contactimport --> module_feature_media
     module_feature_contacts --> module_core_crypto
     module_feature_contacts --> module_core_ui
     module_feature_contacts --> module_core_util
@@ -347,6 +348,7 @@ graph TD
     module_feature_expenses --> module_core_ui
     module_feature_expenses --> module_core_util
     module_feature_expenses --> module_feature_avatar
+    module_feature_expenses --> module_feature_media
     module_feature_identity --> module_core_crypto
     module_feature_identity --> module_core_ui
     module_feature_identity --> module_core_util

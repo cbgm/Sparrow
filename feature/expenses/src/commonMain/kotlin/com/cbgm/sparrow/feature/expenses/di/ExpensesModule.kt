@@ -39,7 +39,14 @@ val expensesModule =
             )
         }
 
-        viewModel { CreateExpenseViewModel(savedStateHandle = get(), getContext = get(), submitRequest = get()) }
+        viewModel {
+            CreateExpenseViewModel(
+                savedStateHandle = get(),
+                getContext = get(),
+                submitRequest = get(),
+                mediaFiles = get()
+            )
+        }
         viewModel {
             ExpenseOverviewViewModel(savedStateHandle = get(), observeOverview = get(), submitRequest = get())
         }
