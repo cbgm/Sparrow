@@ -31,7 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
@@ -269,29 +272,39 @@ private fun PaymentCard(uiState: ExpenseDetailUiState) {
                 Box(
                     modifier = Modifier
                         .size(Dimens.GroupConversationScreen.avatarSize)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceContainerHighest,
-                            MaterialTheme.shapes.small
-                        ),
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-                    )
+                    val receiptPath = uiState.receiptPath
+                    if (receiptPath != null) {
+                        SparrowImage(
+                            model = receiptPath,
+                            contentDescription = stringResource(Res.string.feature_expenses_receipt),
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(Dimens.MessageBubble.iconSize)
+                        )
+                    }
                 }
                 Text(
                     text = stringResource(Res.string.feature_expenses_receipt),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = stringResource(Res.string.feature_expenses_receipt_missing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (uiState.receiptPath == null) {
+                    Text(
+                        text = stringResource(Res.string.feature_expenses_receipt_missing),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

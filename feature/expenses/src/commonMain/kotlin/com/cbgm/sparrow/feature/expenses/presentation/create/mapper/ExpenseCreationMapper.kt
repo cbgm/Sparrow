@@ -12,6 +12,8 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCatego
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
+import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 
 internal fun ExpenseCreationContext.toCreateExpenseUiState(): CreateExpenseUiState {
@@ -39,9 +41,24 @@ private fun Expense.toExpenseDraftUi(): ExpenseDraftUi {
         participantIds = participantIds,
         category = ExpenseCategoryUi.valueOf(category.name),
         splitMode = if (isEqualSplit) ExpenseSplitModeUi.EQUAL else ExpenseSplitModeUi.CUSTOM,
-        customAmounts = if (isEqualSplit) emptyMap() else allocations.associate { it.memberId to it.amountMinor.toAmountText('.') }
+        customAmounts = if (isEqualSplit) emptyMap() else allocations.associate { it.memberId to it.amountMinor.toAmountText('.') },
+        receipt = receipt?.toReceiptSelection()
     )
 }
+
+private fun Image.toReceiptSelection(): VisualMediaSelectionUi? =
+    localFilePath?.let { path ->
+        VisualMediaSelectionUi(
+            id = id,
+            localFilePath = path,
+            byteSize = byteSize,
+            mimeType = mimeType,
+            source = MediaSourceUi.CAMERA,
+            type = MediaTypeUi.IMAGE,
+            width = width,
+            height = height
+        )
+    }
 
 internal fun ExpenseDraftUi.toEditedExpense(original: Expense): Expense? {
     val amount = totalMinor ?: return null
@@ -52,7 +69,9 @@ internal fun ExpenseDraftUi.toEditedExpense(original: Expense): Expense? {
         paidByMemberId = payerId,
         allocations = allocations,
         category = category.toExpenseCategory(),
-        receipt = receipt?.toReceiptImage() ?: original.receipt
+        receipt = receipt?.let { selection ->
+            original.receipt?.takeIf { it.id == selection.id } ?: selection.toReceiptImage()
+        }
     )
 }
 
@@ -63,8 +82,7 @@ internal fun VisualMediaSelectionUi.toReceiptImage(): Image =
         byteSize = byteSize,
         width = width,
         height = height,
-        localFilePath = localFilePath,
-        thumbnailFilePath = thumbnailFilePath
+        localFilePath = localFilePath
     )
 
 internal fun ExpenseMember.toExpenseParticipantUi(): ExpenseParticipantUi =

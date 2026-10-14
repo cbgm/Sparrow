@@ -78,11 +78,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/group/ReceiveGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`, `ApplyIncomingExpenseReceiptsUseCase`
 
 ```text
 FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
-FindConversation -> DecryptMessage -> FindExisting -> [AuthorizeExpenses -> ApplyProfilePicture -> StoreMessage]
+FindConversation -> DecryptMessage -> FindExisting
+  -> [AuthorizeExpenses -> ApplyExpenseReceipts -> ApplyProfilePicture -> StoreMessage]
   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
 
 A redelivered message keeps its row; only attachments and the receipt are repeated.
@@ -97,7 +98,8 @@ stateDiagram-v2
     ApplyOperation --> [*] : Done
     FindExisting --> PrefetchLinkPreviews : MessageStored
     FindExisting --> AuthorizeExpenses : NewMessage
-    AuthorizeExpenses --> ApplyProfilePicture : ExpensesAuthorized
+    AuthorizeExpenses --> ApplyExpenseReceipts : ExpensesAuthorized
+    ApplyExpenseReceipts --> ApplyProfilePicture : ExpenseReceiptsApplied
     ApplyProfilePicture --> StoreMessage : ProfilePictureApplied
     StoreMessage --> PrefetchLinkPreviews : MessageStored
     PrefetchLinkPreviews --> StoreAttachments : LinkPreviewsRequested
@@ -316,10 +318,11 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDeletion`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupDeletionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`
+- **Uses:** `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`, `ExpenseReceiptRepository`
 
 ```text
-LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> PrepareDeletion -> CompleteDeletion -> FinishDeletion.
+LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> DeleteExpenseReceipts -> PrepareDeletion
+  -> CompleteDeletion -> FinishDeletion.
 ```
 
 ```mermaid
@@ -327,7 +330,8 @@ stateDiagram-v2
     [*] --> LoadOwnerKey
     LoadOwnerKey --> AuthorizeDeletion : OwnerKeyLoaded
     AuthorizeDeletion --> DeleteAttachments : DeletionAuthorized
-    DeleteAttachments --> PrepareDeletion : AttachmentsDeleted
+    DeleteAttachments --> DeleteExpenseReceipts : AttachmentsDeleted
+    DeleteExpenseReceipts --> PrepareDeletion : ExpenseReceiptsDeleted
     PrepareDeletion --> CompleteDeletion : DeletionPrepared
     CompleteDeletion --> FinishDeletion : MembershipDeleted
     FinishDeletion --> [*] : Finished

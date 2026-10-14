@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/conversationorchestration/message` |
 | Build file | `feature/conversationorchestration/message/build.gradle.kts` |
-| Kotlin files | 82 |
-| Production Kotlin files | 81 |
-| Test Kotlin files | 1 |
+| Kotlin files | 86 |
+| Production Kotlin files | 84 |
+| Test Kotlin files | 2 |
 | Resource files | 0 |
-| Direct dependencies | 11 |
+| Direct dependencies | 12 |
 | Direct dependents | 2 |
 
 ## Source sets
@@ -28,6 +28,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:util`](../modules/core-util.md)
 - [`:data:database`](../modules/data-database.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 - [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)

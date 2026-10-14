@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.group
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.ExpenseReceiptReadRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseGroup
@@ -27,7 +28,8 @@ class ObserveGroupExpensesUseCase(
     private val contacts: ContactRepository,
     private val localIdentity: LocalPublicIdentityProvider,
     private val getLocalIdentityName: GetLocalIdentityNameUseCase,
-    private val attachments: MessageAttachmentOperationsRepository
+    private val attachments: MessageAttachmentOperationsRepository,
+    private val receipts: ExpenseReceiptReadRepository
 ) {
     operator fun invoke(groupId: String): Flow<ExpenseGroup?> =
         pins.observe(groupId)
@@ -52,7 +54,11 @@ class ObserveGroupExpensesUseCase(
                                 localMemberId = localMemberId,
                                 isLocalAdmin = administration.isLocalAdmin,
                                 members = members,
-                                expenses = expenses.filter { it.boardId == board.id }
+                                expenses =
+                                    receipts.withLocalReceipts(
+                                        groupId = groupId,
+                                        expenses = expenses.filter { it.boardId == board.id }
+                                    )
                             )
                         }
                     )

@@ -53,17 +53,18 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CreateExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/CreateGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `StoreExpenseReceiptUseCase`, `ExpenseReceiptRepository`
 
 ```text
-FindExpenseMembers -> CreateExpense -> SendExpense.
+FindExpenseMembers -> CreateExpense -> StoreReceipt -> SendExpense.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> CreateExpense : ExpenseMembersFound
-    CreateExpense --> SendExpense : ExpenseCreated
+    CreateExpense --> StoreReceipt : ExpenseCreated
+    StoreReceipt --> SendExpense : ReceiptStored
     SendExpense --> [*] : ExpenseSent
 ```
 
@@ -72,10 +73,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/DeleteGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `ExpenseReceiptRepository`
 
 ```text
-FindExpenseMembers -> MarkExpenseDeleted -> SendExpense.
+FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipt.
 ```
 
 ```mermaid
@@ -83,7 +84,8 @@ stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> MarkExpenseDeleted : ExpenseMembersFound
     MarkExpenseDeleted --> SendExpense : ExpenseMarkedDeleted
-    SendExpense --> [*] : ExpenseSent
+    SendExpense --> DeleteReceipt : ExpenseSent
+    DeleteReceipt --> [*] : ReceiptDeleted
 ```
 
 ### EditGroupExpenseWorkflow
@@ -91,18 +93,20 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/EditGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `FindCurrentExpenseRevisionUseCase`, `StoreExpenseReceiptUseCase`, `ExpenseReceiptRepository`
 
 ```text
-FindExpenseMembers -> ReviseExpense -> SendExpense.
+FindExpenseMembers -> ReviseExpense -> StoreReceipt -> SendExpense -> DeleteReplacedReceipt.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindExpenseMembers
     FindExpenseMembers --> ReviseExpense : ExpenseMembersFound
-    ReviseExpense --> SendExpense : ExpenseRevised
-    SendExpense --> [*] : ExpenseSent
+    ReviseExpense --> StoreReceipt : ExpenseRevised
+    StoreReceipt --> SendExpense : ReceiptStored
+    SendExpense --> DeleteReplacedReceipt : ExpenseSent
+    DeleteReplacedReceipt --> [*] : ReplacedReceiptDeleted
 ```
 
 ## `metadata`
@@ -236,13 +240,14 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CloseExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/CloseGroupExpensesWorkflow.kt`
 - **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `ExpenseReceiptRepository`
 
 ```text
 Closes the open expense board: announces the closing as an ordinary encrypted group message,
 then clears the pin slot the board occupies.
 
-AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> SaveEmptyPin -> CreatePinPackets -> EnqueuePinPackets.
+AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> DeleteReceipts -> SaveEmptyPin -> CreatePinPackets
+  -> EnqueuePinPackets.
 
 The closing message is queued before the pin is released, so a failed send never closes the board.
 ```
@@ -254,7 +259,8 @@ stateDiagram-v2
     FindPin --> SendBoardClosedMessage : ExpenseBoardFound
     FindPin --> Rejected : NoActiveExpenseBoard
     FindPin --> [*] : NothingPinned
-    SendBoardClosedMessage --> SaveEmptyPin : BoardClosedMessageSent
+    SendBoardClosedMessage --> DeleteReceipts : BoardClosedMessageSent
+    DeleteReceipts --> SaveEmptyPin : ReceiptsDeleted
     SaveEmptyPin --> CreatePinPackets : EmptyPinSaved
     CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
     EnqueuePinPackets --> [*] : PinPacketsEnqueued

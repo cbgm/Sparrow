@@ -97,10 +97,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.LeaveGroup`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/LeaveGroupWorkflow.kt`
 - **Lock:** `groupAdministrationLockKey(command.groupId)`
-- **Uses:** `GroupConversationRepository`, `LeaveGroupUseCase`
+- **Uses:** `GroupConversationRepository`, `LeaveGroupUseCase`, `ExpenseReceiptRepository`
 
 ```text
-LoadContext -> LeaveGroup -> EndLocalMembership.
+LoadContext -> LeaveGroup -> EndLocalMembership -> DeleteExpenseReceipts.
 ```
 
 ```mermaid
@@ -108,7 +108,8 @@ stateDiagram-v2
     [*] --> LoadContext
     LoadContext --> LeaveGroup : ContextLoaded
     LeaveGroup --> EndLocalMembership : MembershipEnded
-    EndLocalMembership --> [*] : LocalMembershipEnded
+    EndLocalMembership --> DeleteExpenseReceipts : LocalMembershipEnded
+    DeleteExpenseReceipts --> [*] : ExpenseReceiptsDeleted
 ```
 
 ### PromoteGroupMemberWorkflow
@@ -157,10 +158,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.TransferAdminAndLeave`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/TransferGroupAdminAndLeaveWorkflow.kt`
 - **Lock:** `groupAdministrationLockKey(command.groupId)`
-- **Uses:** `GroupConversationRepository`, `TransferGroupAdminAndLeaveUseCase`
+- **Uses:** `GroupConversationRepository`, `TransferGroupAdminAndLeaveUseCase`, `ExpenseReceiptRepository`
 
 ```text
-LoadContext -> TransferAdminAndLeave -> EndLocalMembership.
+LoadContext -> TransferAdminAndLeave -> EndLocalMembership -> DeleteExpenseReceipts.
 ```
 
 ```mermaid
@@ -168,7 +169,8 @@ stateDiagram-v2
     [*] --> LoadContext
     LoadContext --> TransferAdminAndLeave : ContextLoaded
     TransferAdminAndLeave --> EndLocalMembership : MembershipEnded
-    EndLocalMembership --> [*] : LocalMembershipEnded
+    EndLocalMembership --> DeleteExpenseReceipts : LocalMembershipEnded
+    DeleteExpenseReceipts --> [*] : ExpenseReceiptsDeleted
 ```
 
 ## `join`

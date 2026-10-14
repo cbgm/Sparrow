@@ -16,6 +16,7 @@ kotlin {
             implementation(projects.core.crypto)
             implementation(projects.protocol)
             implementation(projects.data.database)
+            implementation(projects.data.datastore)
             implementation(projects.feature.attachments)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
@@ -29,6 +30,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.kotlinx.serialization.json)
         }
     }
 }

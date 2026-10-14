@@ -12,6 +12,7 @@ data class ExpenseDetailUiState(
     val dateLabel: String = "",
     val shares: List<ExpenseShareUi> = emptyList(),
     val equalShareLabel: String? = null,
+    val receiptPath: String? = null,
     val canChange: Boolean = false
 )
 

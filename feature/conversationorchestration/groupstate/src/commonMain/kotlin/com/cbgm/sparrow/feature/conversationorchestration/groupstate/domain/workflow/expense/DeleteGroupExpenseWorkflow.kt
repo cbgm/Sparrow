@@ -13,12 +13,14 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import kotlin.reflect.KClass
 
-/** FindExpenseMembers -> MarkExpenseDeleted -> SendExpense. */
+/** FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipt. */
 class DeleteGroupExpenseWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase
+    private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase,
+    private val expenseReceipts: ExpenseReceiptRepository
 ) : ConversationWorkflow<
         GroupMessageCommand.DeleteExpense,
         DeleteGroupExpenseWorkflow.Step,
@@ -39,13 +41,20 @@ class DeleteGroupExpenseWorkflow internal constructor(
                         .getOrThrow()
                 Outcome.ExpenseSent(result as ConversationResult.GroupMessageSent)
             }
+            is Step.DeleteReceipt -> {
+                val expense = step.command.expense
+                val receiptIds = listOfNotNull(expense.receipt?.id)
+                expenseReceipts.delete(step.command.groupId, receiptIds).getOrThrow()
+                Outcome.ReceiptDeleted(step.result)
+            }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ExpenseMembersFound -> Transition.Next(Step.MarkExpenseDeleted(outcome.members, step.command))
             is Outcome.ExpenseMarkedDeleted -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
-            is Outcome.ExpenseSent -> Transition.Complete(outcome.result)
+            is Outcome.ExpenseSent -> Transition.Next(Step.DeleteReceipt(outcome.result, step.command))
+            is Outcome.ReceiptDeleted -> Transition.Complete(outcome.result)
         }
 
     private fun markDeleted(members: GroupExpenseMembers, expense: Expense): Expense {
@@ -57,6 +66,7 @@ class DeleteGroupExpenseWorkflow internal constructor(
         val deleted = expense.copy(
             id = IdGenerator.generate(prefix = "expense"),
             revisionOf = expense.expenseId,
+            receipt = null,
             editedAtEpochMilliseconds = null,
             deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
@@ -80,6 +90,11 @@ class DeleteGroupExpenseWorkflow internal constructor(
             val expense: Expense,
             override val command: GroupMessageCommand.DeleteExpense
         ) : Step
+
+        data class DeleteReceipt(
+            val result: ConversationResult.GroupMessageSent,
+            override val command: GroupMessageCommand.DeleteExpense
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -92,6 +107,10 @@ class DeleteGroupExpenseWorkflow internal constructor(
         ) : Outcome
 
         data class ExpenseSent(
+            val result: ConversationResult.GroupMessageSent
+        ) : Outcome
+
+        data class ReceiptDeleted(
             val result: ConversationResult.GroupMessageSent
         ) : Outcome
     }

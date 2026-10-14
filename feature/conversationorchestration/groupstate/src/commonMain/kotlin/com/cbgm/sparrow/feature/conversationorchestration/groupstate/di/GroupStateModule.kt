@@ -26,11 +26,13 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupDescriptionPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupTitlePacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindCurrentExpenseRevisionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.StoreExpenseReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.ActivateGroupExpensesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.CreateGroupExpenseWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense.DeleteGroupExpenseWorkflow
@@ -80,6 +82,8 @@ private fun Module.registerUseCases() {
     singleOf(::CreateGroupPinPacketsUseCase)
     singleOf(::CreateGroupTitlePacketsUseCase)
     singleOf(::FindGroupExpenseMembersUseCase)
+    singleOf(::FindCurrentExpenseRevisionUseCase)
+    singleOf(::StoreExpenseReceiptUseCase)
     singleOf(::RequireGroupAdminContextUseCase)
     singleOf(::SendCurrentGroupAvatarUseCase)
     singleOf(::SendCurrentGroupDescriptionUseCase)

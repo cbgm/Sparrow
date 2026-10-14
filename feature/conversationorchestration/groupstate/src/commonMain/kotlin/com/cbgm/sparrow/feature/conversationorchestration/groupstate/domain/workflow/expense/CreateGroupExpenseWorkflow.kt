@@ -12,12 +12,16 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.StoreExpenseReceiptUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import kotlin.reflect.KClass
 
-/** FindExpenseMembers -> CreateExpense -> SendExpense. */
+/** FindExpenseMembers -> CreateExpense -> StoreReceipt -> SendExpense. */
 class CreateGroupExpenseWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase
+    private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase,
+    private val storeExpenseReceipt: StoreExpenseReceiptUseCase,
+    private val expenseReceipts: ExpenseReceiptRepository
 ) : ConversationWorkflow<
         GroupMessageCommand.CreateExpense,
         CreateGroupExpenseWorkflow.Step,
@@ -32,12 +36,16 @@ class CreateGroupExpenseWorkflow internal constructor(
             is Step.FindExpenseMembers ->
                 Outcome.ExpenseMembersFound(findGroupExpenseMembers(step.command.groupId).getOrThrow())
             is Step.CreateExpense -> Outcome.ExpenseCreated(createExpense(step.members, step.command))
+            is Step.StoreReceipt ->
+                Outcome.ReceiptStored(storeExpenseReceipt(step.command.groupId, step.expense).getOrThrow())
             is Step.SendExpense -> {
                 val result =
-                    engine.run(
-                        GroupMessageCommand.SendMessage(step.command.groupId, listOf(step.expense))
-                    )
-                        .getOrThrow()
+                    engine.run(GroupMessageCommand.SendMessage(step.command.groupId, listOf(step.expense)))
+                        .onFailure {
+                            val receipt = step.expense.receipt ?: return@onFailure
+                            val groupId = step.command.groupId
+                            expenseReceipts.delete(groupId, listOf(receipt.id))
+                        }.getOrThrow()
                 Outcome.ExpenseSent(result as ConversationResult.GroupMessageSent)
             }
         }
@@ -45,7 +53,8 @@ class CreateGroupExpenseWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ExpenseMembersFound -> Transition.Next(Step.CreateExpense(outcome.members, step.command))
-            is Outcome.ExpenseCreated -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
+            is Outcome.ExpenseCreated -> Transition.Next(Step.StoreReceipt(outcome.expense, step.command))
+            is Outcome.ReceiptStored -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
             is Outcome.ExpenseSent -> Transition.Complete(outcome.result)
         }
 
@@ -84,6 +93,11 @@ class CreateGroupExpenseWorkflow internal constructor(
             override val command: GroupMessageCommand.CreateExpense
         ) : Step
 
+        data class StoreReceipt(
+            val expense: Expense,
+            override val command: GroupMessageCommand.CreateExpense
+        ) : Step
+
         data class SendExpense(
             val expense: Expense,
             override val command: GroupMessageCommand.CreateExpense
@@ -96,6 +110,10 @@ class CreateGroupExpenseWorkflow internal constructor(
         ) : Outcome
 
         data class ExpenseCreated(
+            val expense: Expense
+        ) : Outcome
+
+        data class ReceiptStored(
             val expense: Expense
         ) : Outcome
 

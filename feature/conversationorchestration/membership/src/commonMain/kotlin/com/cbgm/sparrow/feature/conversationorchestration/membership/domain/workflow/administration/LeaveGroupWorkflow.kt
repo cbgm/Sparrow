@@ -5,15 +5,17 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
 import kotlin.reflect.KClass
 
-/** LoadContext -> LeaveGroup -> EndLocalMembership. */
+/** LoadContext -> LeaveGroup -> EndLocalMembership -> DeleteExpenseReceipts. */
 class LeaveGroupWorkflow internal constructor(
     private val conversationRepository: GroupConversationRepository,
-    private val leaveGroup: LeaveGroupUseCase
+    private val leaveGroup: LeaveGroupUseCase,
+    private val expenseReceipts: ExpenseReceiptRepository
 ) : ConversationWorkflow<GroupAdministrationCommand.LeaveGroup, LeaveGroupWorkflow.Step, LeaveGroupWorkflow.Outcome> {
     override val commandType: KClass<GroupAdministrationCommand.LeaveGroup> =
         GroupAdministrationCommand.LeaveGroup::class
@@ -32,13 +34,18 @@ class LeaveGroupWorkflow internal constructor(
                 conversationRepository.endLocalMembership(step.end).getOrThrow()
                 Outcome.LocalMembershipEnded
             }
+            is Step.DeleteExpenseReceipts -> {
+                expenseReceipts.deleteGroup(step.command.groupId).getOrThrow()
+                Outcome.ExpenseReceiptsDeleted
+            }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ContextLoaded -> Transition.Next(Step.LeaveGroup(outcome.context, step.command))
             is Outcome.MembershipEnded -> Transition.Next(Step.EndLocalMembership(outcome.end, step.command))
-            Outcome.LocalMembershipEnded -> Transition.Complete()
+            Outcome.LocalMembershipEnded -> Transition.Next(Step.DeleteExpenseReceipts(step.command))
+            Outcome.ExpenseReceiptsDeleted -> Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {
@@ -57,6 +64,10 @@ class LeaveGroupWorkflow internal constructor(
             val end: GroupLocalMembershipEnd,
             override val command: GroupAdministrationCommand.LeaveGroup
         ) : Step
+
+        data class DeleteExpenseReceipts(
+            override val command: GroupAdministrationCommand.LeaveGroup
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -69,5 +80,7 @@ class LeaveGroupWorkflow internal constructor(
         ) : Outcome
 
         data object LocalMembershipEnded : Outcome
+
+        data object ExpenseReceiptsDeleted : Outcome
     }
 }

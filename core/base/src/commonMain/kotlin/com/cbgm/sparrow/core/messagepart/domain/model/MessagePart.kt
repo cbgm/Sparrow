@@ -17,7 +17,8 @@ data class Image(
     val height: Int? = null,
     val fileName: String? = null,
     val localFilePath: String? = null,
-    val thumbnailFilePath: String? = null
+    val thumbnailFilePath: String? = null,
+    val bytes: ByteArray? = null
 ) : MessagePart
 
 data class Video(
@@ -135,6 +136,11 @@ data class Expense(
 ) : MessagePart
 
 val Expense.expenseId: String get() = revisionOf ?: id
+
+val Expense.revisionTime: Long get() = deletedAtEpochMilliseconds ?: editedAtEpochMilliseconds ?: 0L
+
+fun List<Expense>.latestRevision(expenseId: String): Expense? =
+    filter { it.expenseId == expenseId }.maxByOrNull { it.revisionTime }
 
 enum class ExpenseCategory {
     FLIGHT,

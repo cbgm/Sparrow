@@ -70,7 +70,7 @@ class ExpenseCreationMapperTest {
     }
 
     @Test
-    fun editingKeepsTheReceiptUnlessANewOneWasScanned() {
+    fun editingKeepsReplacesOrRemovesTheReceipt() {
         val original = Image("old-receipt", "image/jpeg", 10L, 10, 20)
         val taxi = Expense(
             "taxi",
@@ -96,10 +96,12 @@ class ExpenseCreationMapperTest {
                 height = 60
             )
 
-        val kept = draft.toEditedExpense(taxi)!!
+        val kept = draft.copy(receipt = scanned.copy(id = "old-receipt")).toEditedExpense(taxi)!!
         val replaced = draft.copy(receipt = scanned).toEditedExpense(taxi)!!
+        val removed = draft.toEditedExpense(taxi)!!
 
         assertEquals(original, kept.receipt)
+        assertEquals(null, removed.receipt)
         assertEquals(
             Image("camera-image-1", "image/jpeg", 42L, 30, 60, localFilePath = "/media/receipt.jpg"),
             replaced.receipt

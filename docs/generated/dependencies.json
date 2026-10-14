@@ -126,6 +126,7 @@
   {"source": ":feature:conversationorchestration:message", "target": ":core:crypto"},
   {"source": ":feature:conversationorchestration:message", "target": ":core:util"},
   {"source": ":feature:conversationorchestration:message", "target": ":data:database"},
+  {"source": ":feature:conversationorchestration:message", "target": ":data:datastore"},
   {"source": ":feature:conversationorchestration:message", "target": ":feature:attachments"},
   {"source": ":feature:conversationorchestration:message", "target": ":feature:contacts"},
   {"source": ":feature:conversationorchestration:message", "target": ":feature:conversationorchestration:delivery"},

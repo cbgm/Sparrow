@@ -197,6 +197,14 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 }
             }
 
+    override fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>> =
+        dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE_BOARD_CLOSED)
+            .map { partsByMessageId ->
+                partsByMessageId.values.flatMap { parts ->
+                    parts.map { part -> part.toMessagePart() }.filterIsInstance<ExpenseBoardClosed>()
+                }
+            }
+
     override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
@@ -297,9 +305,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             is Text -> error("Text is not uploaded as an attachment message part")
             is ExpenseBoard -> part.toDto() as ExpenseBoardDto
             is ExpenseBoardClosed -> part.toDto() as ExpenseBoardClosedDto
-            is Expense -> (part.toDto() as ExpenseDto).copy(
-                receipt = part.receipt?.let { createOutgoingDto(it) as ImageDto }
-            )
+            is Expense -> part.toDto() as ExpenseDto
             is Poll -> (part.toDto() as PollDto).copy(
                 images = part.images.map { image -> createOutgoingDto(image) as ImageDto }
             )

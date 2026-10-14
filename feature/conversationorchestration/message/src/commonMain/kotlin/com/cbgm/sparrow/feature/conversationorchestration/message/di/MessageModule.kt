@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.message.di
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.ConversationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.DirectMessageDataSource
+import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.ExpenseReceiptDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.GroupMessageDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.DirectMessagePacketFactoryImpl
@@ -10,6 +11,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.Gr
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.ConversationUnseenCountRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.DirectConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.DirectMessageRepositoryImpl
+import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.ExpenseReceiptRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.GroupMessageRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.MessageReactionRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.DirectMessagePacketFactory
@@ -17,6 +19,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ConversationUnseenCountRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.MessageReactionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
@@ -80,11 +83,13 @@ private fun Module.registerData() {
     singleOf(::ConversationDataSource)
     singleOf(::DirectMessageDataSource)
     singleOf(::GroupMessageDataSource)
+    singleOf(::ExpenseReceiptDataSource)
     singleOf(::MessageReactionDataSource)
     singleOf(::ConversationUnseenCountRepositoryImpl) { bind<ConversationUnseenCountRepository>() }
     singleOf(::DirectConversationRepositoryImpl) { bind<DirectConversationRepository>() }
     singleOf(::DirectMessageRepositoryImpl) { bind<DirectMessageRepository>() }
     singleOf(::GroupMessageRepositoryImpl) { bind<GroupMessageRepository>() }
+    singleOf(::ExpenseReceiptRepositoryImpl) { bind<ExpenseReceiptRepository>() }
     singleOf(::MessageReactionRepositoryImpl) { bind<MessageReactionRepository>() }
     singleOf(::DirectMessagePacketFactoryImpl) { bind<DirectMessagePacketFactory>() }
     singleOf(::GroupMessagePlaintextCodecImpl) { bind<GroupMessagePlaintextCodec>() }

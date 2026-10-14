@@ -8,9 +8,9 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 61 |
 | Module groups | 11 |
-| Project dependencies | 312 |
-| Kotlin files | 2318 |
-| Test Kotlin files | 167 |
+| Project dependencies | 313 |
+| Kotlin files | 2329 |
+| Test Kotlin files | 168 |
 | Resource files | 57 |
 
 ## Module groups
@@ -335,6 +335,7 @@ graph TD
     module_feature_conversationorchestration_message --> module_core_crypto
     module_feature_conversationorchestration_message --> module_core_util
     module_feature_conversationorchestration_message --> module_data_database
+    module_feature_conversationorchestration_message --> module_data_datastore
     module_feature_conversationorchestration_message --> module_feature_attachments
     module_feature_conversationorchestration_message --> module_feature_contacts
     module_feature_conversationorchestration_message --> module_feature_conversationorchestration_delivery

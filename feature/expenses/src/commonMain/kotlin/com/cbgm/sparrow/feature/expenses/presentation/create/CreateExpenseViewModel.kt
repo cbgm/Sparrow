@@ -148,9 +148,11 @@ class CreateExpenseViewModel(
     }
 
     private fun deletePendingSelections(media: List<VisualMediaSelectionUi>) {
-        if (media.isEmpty()) return
+        val storedReceiptId = editedExpense?.receipt?.id
+        val pending = media.filterNot { it.id == storedReceiptId }
+        if (pending.isEmpty()) return
         mediaCleanupScope.launch {
-            media.flatMap { it.localFilePaths }
+            pending.flatMap { it.localFilePaths }
                 .distinct()
                 .forEach { path -> runCatching { mediaFiles.delete(path) } }
         }

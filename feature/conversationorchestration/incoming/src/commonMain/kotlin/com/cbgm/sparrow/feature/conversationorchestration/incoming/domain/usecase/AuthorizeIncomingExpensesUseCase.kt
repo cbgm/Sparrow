@@ -27,8 +27,11 @@ class AuthorizeIncomingExpensesUseCase(
         val senderId = ExpenseMemberId.fromSigningPublicKey(senderKey)
         val senderIsAdmin = senderContactId in membership.observeAdministration(groupId).first().adminContactIds
         val stored = attachments.observeExpenses(groupId).first()
+        val closedBoardIds =
+            attachments.observeExpenseBoardClosures(groupId).first().mapTo(mutableSetOf()) { it.boardId }
 
         expenses.forEach { expense ->
+            require(expense.boardId !in closedBoardIds) { "Expense belongs to a closed expense board" }
             IncomingExpensePolicy.requireAuthorized(expense, stored, senderId, senderIsAdmin)
         }
     }

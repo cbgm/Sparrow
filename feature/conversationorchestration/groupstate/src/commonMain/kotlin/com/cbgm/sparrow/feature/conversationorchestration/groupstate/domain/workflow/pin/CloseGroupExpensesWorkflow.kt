@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.mode
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ExpenseReceiptRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import kotlin.reflect.KClass
@@ -24,7 +25,8 @@ import kotlin.reflect.KClass
  * Closes the open expense board: announces the closing as an ordinary encrypted group message,
  * then clears the pin slot the board occupies.
  *
- * AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> SaveEmptyPin -> CreatePinPackets -> EnqueuePinPackets.
+ * AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> DeleteReceipts -> SaveEmptyPin -> CreatePinPackets
+ *   -> EnqueuePinPackets.
  *
  * The closing message is queued before the pin is released, so a failed send never closes the board.
  */
@@ -33,7 +35,8 @@ class CloseGroupExpensesWorkflow internal constructor(
     private val pinRepository: GroupPinRepository,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
     private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
-    private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
+    private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
+    private val expenseReceipts: ExpenseReceiptRepository
 ) : ConversationWorkflow<
         GroupMessageCommand.CloseExpenses,
         CloseGroupExpensesWorkflow.Step,
@@ -65,7 +68,11 @@ class CloseGroupExpensesWorkflow internal constructor(
                         parts = listOf(step.board.toClosedPart())
                     )
                 ).getOrThrow()
-                Outcome.BoardClosedMessageSent(step.pin, step.context)
+                Outcome.BoardClosedMessageSent(step.pin, step.board, step.context)
+            }
+            is Step.DeleteReceipts -> {
+                expenseReceipts.deleteGroup(step.command.groupId).getOrThrow()
+                Outcome.ReceiptsDeleted(step.pin, step.context)
             }
             is Step.SaveEmptyPin -> {
                 val emptyPin = GroupPinState.unpinned(
@@ -97,6 +104,10 @@ class CloseGroupExpensesWorkflow internal constructor(
             is Outcome.ExpenseBoardFound ->
                 Transition.Next(Step.SendBoardClosedMessage(outcome.pin, outcome.board, outcome.context, step.command))
             is Outcome.BoardClosedMessageSent ->
+                Transition.Next(
+                    Step.DeleteReceipts(outcome.pin, outcome.board, outcome.context, step.command)
+                )
+            is Outcome.ReceiptsDeleted ->
                 Transition.Next(Step.SaveEmptyPin(outcome.pin, outcome.context, step.command))
             is Outcome.EmptyPinSaved ->
                 Transition.Next(Step.CreatePinPackets(outcome.pin, outcome.context, step.command))
@@ -117,6 +128,13 @@ class CloseGroupExpensesWorkflow internal constructor(
         ) : Step
 
         data class SendBoardClosedMessage(
+            val pin: GroupPinState,
+            val board: ExpenseBoard,
+            val context: GroupAdminContext,
+            override val command: GroupMessageCommand.CloseExpenses
+        ) : Step
+
+        data class DeleteReceipts(
             val pin: GroupPinState,
             val board: ExpenseBoard,
             val context: GroupAdminContext,
@@ -157,6 +175,12 @@ class CloseGroupExpensesWorkflow internal constructor(
         ) : Outcome
 
         data class BoardClosedMessageSent(
+            val pin: GroupPinState,
+            val board: ExpenseBoard,
+            val context: GroupAdminContext
+        ) : Outcome
+
+        data class ReceiptsDeleted(
             val pin: GroupPinState,
             val context: GroupAdminContext
         ) : Outcome

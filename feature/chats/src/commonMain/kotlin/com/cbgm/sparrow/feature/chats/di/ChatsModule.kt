@@ -4,10 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.repository.DirectConversationReadRepositoryImpl
+import com.cbgm.sparrow.feature.chats.data.group.datasource.ExpenseReceiptDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupDescriptionDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
+import com.cbgm.sparrow.feature.chats.data.group.repository.ExpenseReceiptReadRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupAvatarReadRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupConversationReadRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupDescriptionReadRepositoryImpl
@@ -18,6 +20,7 @@ import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverv
 import com.cbgm.sparrow.feature.chats.data.repository.MessageHistoryRepositoryImpl
 import com.cbgm.sparrow.feature.chats.domain.repository.MessageHistoryRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationReadRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.ExpenseReceiptReadRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarReadRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationReadRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionReadRepository
@@ -90,6 +93,8 @@ private fun org.koin.core.module.Module.registerDirectData() {
 private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupConversationHistoryDataSource)
     singleOf(::GroupAvatarDataSource)
+    singleOf(::ExpenseReceiptDataSource)
+    singleOf(::ExpenseReceiptReadRepositoryImpl) { bind<ExpenseReceiptReadRepository>() }
     singleOf(::GroupDescriptionDataSource)
     singleOf(::GroupPinDataSource)
 }

@@ -145,18 +145,11 @@ internal fun MessagePartEntity.toDto(
 private fun MessagePartDto.nestedPartIds(): List<String> =
     when (this) {
         is PollDto -> images.map(ImageDto::id)
-        is ExpenseDto -> listOfNotNull(receipt?.id)
         else -> emptyList()
     }
 
 private fun MessagePartDto.withNestedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
     when (this) {
-        is ExpenseDto -> copy(
-            receipt = receipt?.let { image ->
-                partsById[image.id] as? ImageDto
-                    ?: error("Expense receipt ${image.id} was not found")
-            }
-        )
         is PollDto -> copy(
             images = images.map { image ->
                 partsById[image.id] as? ImageDto

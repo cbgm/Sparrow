@@ -46,6 +46,7 @@ internal fun ExpenseOverview.toExpenseDetailUiState(expense: Expense): ExpenseDe
         } else {
             null
         },
+        receiptPath = expense.receipt?.localFilePath,
         canChange = isLocalAdmin || expense.createdByMemberId == localMemberId
     )
 }
