@@ -18,6 +18,7 @@ kotlin {
             implementation(projects.core.util)
             implementation(projects.feature.avatar)
             implementation(projects.feature.media)
+            implementation(projects.feature.ocr)
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)

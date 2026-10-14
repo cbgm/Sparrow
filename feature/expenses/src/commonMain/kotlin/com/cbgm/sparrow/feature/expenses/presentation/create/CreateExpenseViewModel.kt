@@ -17,6 +17,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toEditedExpe
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseAllocations
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCategory
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toReceiptImage
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withReceiptScan
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withSplitMode
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiState
@@ -26,6 +27,7 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.localFilePaths
+import com.cbgm.sparrow.feature.ocr.domain.usecase.ScanReceiptUseCase
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_expenses_incomplete_draft
 import com.cbgm.sparrow.resources.feature_expenses_invalid_amount
@@ -46,6 +48,7 @@ class CreateExpenseViewModel(
     savedStateHandle: SavedStateHandle,
     private val getContext: GetExpenseCreationContextUseCase,
     private val submitRequest: SubmitExpenseRequestUseCase,
+    private val scanReceipt: ScanReceiptUseCase,
     private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId = savedStateHandle.requireRouteArgument<String>(AppRoute.CreateExpense::groupId.name)
@@ -134,7 +137,18 @@ class CreateExpenseViewModel(
                 val scanned = result.media.filterIsInstance<VisualMediaSelectionUi>()
                 val receipt = scanned.firstOrNull { it.type == MediaTypeUi.IMAGE }
                 deletePendingSelections(scanned - setOfNotNull(receipt))
-                if (receipt != null) replaceReceipt(receipt)
+                if (receipt != null) {
+                    replaceReceipt(receipt)
+                    readReceipt(receipt)
+                }
+            }
+        }
+    }
+
+    private fun readReceipt(receipt: VisualMediaSelectionUi) {
+        viewModelScope.launch {
+            scanReceipt(receipt.localFilePath).onSuccess { scan ->
+                updateDraft { if (this.receipt?.id == receipt.id) withReceiptScan(scan) else this }
             }
         }
     }

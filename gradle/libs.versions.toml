@@ -27,6 +27,7 @@ sqlite = "2.7.1"
 ksp = "2.3.9"
 navigation-compose = "2.9.2"
 zxing = "3.5.4"
+mlkit-text-recognition = "16.0.1"
 cameraX = "1.6.2"
 androidx-splashscreen = "1.2.0"
 datastore = "1.2.1"
@@ -121,6 +122,7 @@ kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }

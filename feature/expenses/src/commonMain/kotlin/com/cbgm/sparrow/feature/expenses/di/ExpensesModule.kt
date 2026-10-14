@@ -44,6 +44,7 @@ val expensesModule =
                 savedStateHandle = get(),
                 getContext = get(),
                 submitRequest = get(),
+                scanReceipt = get(),
                 mediaFiles = get()
             )
         }

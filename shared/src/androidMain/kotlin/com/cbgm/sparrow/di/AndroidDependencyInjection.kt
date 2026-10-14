@@ -10,6 +10,7 @@ import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule
 import com.cbgm.sparrow.feature.media.di.platformMediaModule
 import com.cbgm.sparrow.feature.membership.di.androidMembershipModule
 import com.cbgm.sparrow.feature.notification.di.notificationAndroidModule
+import com.cbgm.sparrow.feature.ocr.di.platformOcrModule
 import com.cbgm.sparrow.feature.settings.di.androidSettingsModule
 import com.cbgm.sparrow.feature.voice.di.platformVoiceModule
 import org.koin.android.ext.koin.androidContext
@@ -32,6 +33,7 @@ private val androidApplicationModules: List<Module> =
         androidContactsModule,
         androidAttachmentsModule,
         platformMediaModule,
+        platformOcrModule,
         platformVoiceModule,
         androidMembershipModule,
         notificationAndroidModule,

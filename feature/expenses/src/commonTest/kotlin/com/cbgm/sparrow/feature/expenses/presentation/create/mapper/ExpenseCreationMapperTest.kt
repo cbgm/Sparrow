@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitM
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.ocr.domain.model.ReceiptScan
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -106,5 +107,18 @@ class ExpenseCreationMapperTest {
             Image("camera-image-1", "image/jpeg", 42L, 30, 60, localFilePath = "/media/receipt.jpg"),
             replaced.receipt
         )
+    }
+
+    @Test
+    fun receiptScanOnlyFillsEmptyFields() {
+        val scan = ReceiptScan(totalMinor = 1328L, merchant = "REWE Markt")
+
+        val empty = ExpenseDraftUi().withReceiptScan(scan)
+        val typed = ExpenseDraftUi(description = "Groceries", amount = "12").withReceiptScan(scan)
+
+        assertEquals("13.28", empty.amount)
+        assertEquals("REWE Markt", empty.description)
+        assertEquals("12", typed.amount)
+        assertEquals("Groceries", typed.description)
     }
 }

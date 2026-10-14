@@ -25,6 +25,7 @@ import com.cbgm.sparrow.feature.media.di.mediaModule
 import com.cbgm.sparrow.feature.membership.di.membershipModule
 import com.cbgm.sparrow.feature.messaging.di.messagingModule
 import com.cbgm.sparrow.feature.notification.di.notificationModule
+import com.cbgm.sparrow.feature.ocr.di.ocrModule
 import com.cbgm.sparrow.feature.onboarding.di.onboardingModule
 import com.cbgm.sparrow.feature.polls.di.pollsModule
 import com.cbgm.sparrow.feature.safety.di.safetyModule
@@ -62,6 +63,7 @@ internal val commonApplicationModules: List<Module> =
         autoReplyModule,
         avatarModule,
         mediaModule,
+        ocrModule,
         voiceModule,
         chatsModule,
         membershipModule,

@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitM
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
+import com.cbgm.sparrow.feature.ocr.domain.model.ReceiptScan
 
 internal fun ExpenseCreationContext.toCreateExpenseUiState(): CreateExpenseUiState {
     val participants = members.map { member -> member.toExpenseParticipantUi() }
@@ -112,6 +113,12 @@ internal fun ExpenseDraftUi.withSplitMode(mode: ExpenseSplitModeUi): ExpenseDraf
         customAmounts = equalShares.mapValues { (_, amountMinor) -> amountMinor.toAmountText(if (',' in amount) ',' else '.') }
     )
 }
+
+internal fun ExpenseDraftUi.withReceiptScan(scan: ReceiptScan): ExpenseDraftUi =
+    copy(
+        amount = amount.ifBlank { scan.totalMinor?.toAmountText('.').orEmpty() },
+        description = description.ifBlank { scan.merchant.orEmpty() }
+    )
 
 internal fun String.toAmountInput(): String = filter { it.isDigit() || it == '.' || it == ',' }.take(24)
 
