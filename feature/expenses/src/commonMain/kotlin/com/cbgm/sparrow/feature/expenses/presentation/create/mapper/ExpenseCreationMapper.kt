@@ -114,11 +114,18 @@ internal fun ExpenseDraftUi.withSplitMode(mode: ExpenseSplitModeUi): ExpenseDraf
     )
 }
 
-internal fun ExpenseDraftUi.withReceiptScan(scan: ReceiptScan): ExpenseDraftUi =
-    copy(
-        amount = amount.ifBlank { scan.totalMinor?.toAmountText('.').orEmpty() },
-        description = description.ifBlank { scan.merchant.orEmpty() }
+internal fun ExpenseDraftUi.withReceiptScan(scan: ReceiptScan): ExpenseDraftUi {
+    val newAmount = scan.totalMinor?.toAmountText('.').orEmpty()
+    val newDescription = scan.merchant.orEmpty()
+    val replaceAmount = amount.isBlank() || amount == scannedAmount
+    val replaceDescription = description.isBlank() || description == scannedDescription
+    return copy(
+        amount = if (replaceAmount) newAmount else amount,
+        description = if (replaceDescription) newDescription else description,
+        scannedAmount = newAmount,
+        scannedDescription = newDescription
     )
+}
 
 internal fun String.toAmountInput(): String = filter { it.isDigit() || it == '.' || it == ',' }.take(24)
 

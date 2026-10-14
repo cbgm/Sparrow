@@ -155,7 +155,12 @@ private fun TopBar(
     focusManager: FocusManager
 ) {
     CenterAlignedTopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = containerColor,
+            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+            actionIconContentColor = MaterialTheme.colorScheme.onBackground
+        ),
         title = {
             Text(
                 stringResource(

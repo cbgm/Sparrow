@@ -35,7 +35,9 @@ data class ExpenseDraftUi(
     val splitMode: ExpenseSplitModeUi = ExpenseSplitModeUi.EQUAL,
     // Raw text per participant; only used for custom splits.
     val customAmounts: Map<String, String> = emptyMap(),
-    val receipt: VisualMediaSelectionUi? = null
+    val receipt: VisualMediaSelectionUi? = null,
+    val scannedAmount: String = "",
+    val scannedDescription: String = ""
 ) {
     fun isEmpty(): Boolean = description.isBlank() && amount.isBlank()
 

@@ -121,4 +121,17 @@ class ExpenseCreationMapperTest {
         assertEquals("12", typed.amount)
         assertEquals("Groceries", typed.description)
     }
+
+    @Test
+    fun rescanReplacesScannedValuesButKeepsEditedOnes() {
+        val first =
+            ExpenseDraftUi().withReceiptScan(ReceiptScan(totalMinor = 714L, merchant = "Behrens"))
+        val edited = first.copy(description = "Dinner")
+
+        val rescanned =
+            edited.withReceiptScan(ReceiptScan(totalMinor = 2402L, merchant = "Behrens GmbH"))
+
+        assertEquals("24.02", rescanned.amount)
+        assertEquals("Dinner", rescanned.description)
+    }
 }
