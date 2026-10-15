@@ -37,29 +37,38 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.expenses.domain.ExpenseCurrencies
+import com.cbgm.sparrow.feature.expenses.presentation.common.mapper.toExpenseAmountLabel
 import com.cbgm.sparrow.feature.expenses.presentation.create.icon
 import com.cbgm.sparrow.feature.expenses.presentation.create.label
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toAvatarTarget
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCategoryUi
+import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCurrencyUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseSplitModeUi
+import com.cbgm.sparrow.feature.expenses.presentation.currency.ExpenseCurrencyListDialog
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_expenses_add_another
 import com.cbgm.sparrow.resources.feature_expenses_amount
 import com.cbgm.sparrow.resources.feature_expenses_auto_import
 import com.cbgm.sparrow.resources.feature_expenses_category
+import com.cbgm.sparrow.resources.feature_expenses_converted_amount
+import com.cbgm.sparrow.resources.feature_expenses_currency
 import com.cbgm.sparrow.resources.feature_expenses_description
 import com.cbgm.sparrow.resources.feature_expenses_description_hint
 import com.cbgm.sparrow.resources.feature_expenses_paid_by
+import com.cbgm.sparrow.resources.feature_expenses_rate_unavailable
 import com.cbgm.sparrow.resources.feature_expenses_receipt
 import com.cbgm.sparrow.resources.feature_expenses_receipt_attached
 import com.cbgm.sparrow.resources.feature_expenses_remove_receipt
@@ -73,8 +82,9 @@ import org.jetbrains.compose.resources.stringResource
 internal fun ExpenseDraftCard(
     draft: ExpenseDraftUi,
     participants: List<ExpenseParticipantUi>,
-    currencyCode: String,
+    currencies: List<ExpenseCurrencyUi>,
     enabled: Boolean,
+    canAddExpense: Boolean,
     onUiEvent: (CreateExpenseUiEvent) -> Unit,
     onScanReceipt: () -> Unit
 ) {
@@ -109,11 +119,22 @@ internal fun ExpenseDraftCard(
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.Bottom
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    CurrencySelection(
+                        draft = draft,
+                        currencies = currencies,
+                        enabled = enabled,
+                        onUiEvent = onUiEvent
+                    )
                     SparrowInputField(
                         value = draft.amount,
                         onValueChange = { onUiEvent(CreateExpenseUiEvent.AmountChanged(it)) },
-                        label = stringResource(Res.string.feature_expenses_amount) + " (" + currencyCode + ")",
+                        label = stringResource(Res.string.feature_expenses_amount),
+                        modifier = Modifier.weight(1f),
                         isSingleLine = true,
                         placeholderText = "0.00",
                         isEnabled = enabled
@@ -127,6 +148,7 @@ internal fun ExpenseDraftCard(
                     modifier = Modifier.weight(1f)
                 )
             }
+            ConvertedAmount(draft = draft)
             MemberSelection(
                 draft = draft,
                 participants = participants,
@@ -139,7 +161,77 @@ internal fun ExpenseDraftCard(
                 onUiEvent = onUiEvent,
                 onScanReceipt = onScanReceipt
             )
+            if (canAddExpense) {
+                SparrowApprovalButton(
+                    text = stringResource(Res.string.feature_expenses_add_another),
+                    onClick = { onUiEvent(CreateExpenseUiEvent.AddAnotherClicked) },
+                    enabled = draft.amount.isNotEmpty() && draft.description.isNotEmpty()
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun ConvertedAmount(draft: ExpenseDraftUi) {
+    val converted = draft.baseTotalMinor
+    if (!draft.isConverted || (draft.rate != null && converted == null)) return
+    Text(
+        text = when {
+            draft.rate == null || converted == null ->
+                stringResource(Res.string.feature_expenses_rate_unavailable)
+            else -> stringResource(
+                Res.string.feature_expenses_converted_amount,
+                converted.toExpenseAmountLabel(draft.baseCurrencyCode)
+            )
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = if (draft.rate == null) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    )
+}
+
+@Composable
+private fun CurrencySelection(
+    draft: ExpenseDraftUi,
+    currencies: List<ExpenseCurrencyUi>,
+    enabled: Boolean,
+    onUiEvent: (CreateExpenseUiEvent) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.Bottom) {
+        Text(
+            text = stringResource(Res.string.feature_expenses_currency),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Row(
+            modifier = Modifier
+                .clickable(enabled = enabled) { expanded = true }
+                .padding(vertical = MaterialTheme.spacing.small / 2),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = ExpenseCurrencies.symbol(draft.currencyCode),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Icon(Icons.Default.ExpandMore, contentDescription = null)
+        }
+    }
+    if (expanded) {
+        ExpenseCurrencyListDialog(
+            title = stringResource(Res.string.feature_expenses_currency),
+            currencies = currencies,
+            onCurrencySelected = { code ->
+                expanded = false
+                onUiEvent(CreateExpenseUiEvent.CurrencySelected(code))
+            },
+            onDismiss = { expanded = false }
+        )
     }
 }
 
@@ -436,9 +528,10 @@ private fun ExpenseDraftCardPreview() {
                 ExpenseParticipantUi("a", "Chris", true),
                 ExpenseParticipantUi("b", "Alex")
             ),
-            currencyCode = "EUR",
+            currencies = listOf(ExpenseCurrencyUi("EUR", "€", isAvailable = true)),
             enabled = true,
             onUiEvent = {},
+            canAddExpense = true,
             onScanReceipt = {}
         )
     }

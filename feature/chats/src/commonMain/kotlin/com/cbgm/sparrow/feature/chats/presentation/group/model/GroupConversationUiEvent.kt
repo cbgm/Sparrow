@@ -106,7 +106,9 @@ sealed interface GroupConversationUiEvent {
 
     data object ExpenseOverviewClicked : GroupConversationUiEvent
 
-    data object ActivateExpensesClicked : GroupConversationUiEvent
+    data class ActivateExpensesClicked(
+        val currencyCode: String
+    ) : GroupConversationUiEvent
 
     data object CloseExpensesClicked : GroupConversationUiEvent
 

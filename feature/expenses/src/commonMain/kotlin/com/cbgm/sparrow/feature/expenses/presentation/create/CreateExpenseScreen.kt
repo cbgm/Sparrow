@@ -5,14 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +35,6 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseDraftU
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseParticipantUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
-import com.cbgm.sparrow.resources.feature_expenses_add_another
 import com.cbgm.sparrow.resources.feature_expenses_add_multiple
 import com.cbgm.sparrow.resources.feature_expenses_edit
 import com.cbgm.sparrow.resources.feature_expenses_queued
@@ -64,24 +60,6 @@ fun CreateExpenseScreen(
                 containerColor = containerColor,
                 focusManager = focusManager
             )
-        },
-        floatingActionButton = {
-            if (!uiState.isLoading && !uiState.isSending && !uiState.isEditing) {
-                FloatingActionButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        onUiEvent(CreateExpenseUiEvent.AddAnotherClicked)
-                    },
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = stringResource(Res.string.feature_expenses_add_another)
-                    )
-                }
-            }
         }
     ) { innerPadding, listState ->
         LazyColumn(
@@ -96,8 +74,9 @@ fun CreateExpenseScreen(
                 ExpenseDraftCard(
                     draft = uiState.draft,
                     participants = uiState.participants,
-                    currencyCode = uiState.currencyCode,
+                    currencies = uiState.currencies,
                     enabled = !uiState.isLoading && !uiState.isSending,
+                    canAddExpense = !uiState.isLoading && !uiState.isSending && !uiState.isEditing,
                     onUiEvent = onUiEvent,
                     onScanReceipt = {
                         focusManager.clearFocus()
@@ -116,7 +95,6 @@ fun CreateExpenseScreen(
                         draft = uiState.queued[index],
                         number = index + 1,
                         participants = uiState.participants,
-                        currencyCode = uiState.currencyCode,
                         enabled = !uiState.isSending,
                         onDelete = { onUiEvent(CreateExpenseUiEvent.RemoveQueuedClicked(index)) }
                     )

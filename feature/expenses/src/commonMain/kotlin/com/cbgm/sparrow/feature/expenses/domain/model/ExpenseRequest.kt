@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.expenses.domain.model
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 
 sealed interface ExpenseRequest {
@@ -16,7 +17,8 @@ sealed interface ExpenseRequest {
         val paidByMemberId: String,
         val allocations: List<ExpenseAllocation>,
         val category: ExpenseCategory,
-        val receipt: Image? = null
+        val receipt: Image? = null,
+        val conversion: ExpenseConversion? = null
     ) : ExpenseRequest
 
     data class Edit(

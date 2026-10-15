@@ -281,7 +281,8 @@ class GroupConversationViewModel(
             )
 
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
-            GroupConversationUiEvent.ActivateExpensesClicked -> expenseController.activateBoard()
+            is GroupConversationUiEvent.ActivateExpensesClicked ->
+                expenseController.activateBoard(event.currencyCode)
             GroupConversationUiEvent.CloseExpensesClicked -> expenseController.closeBoard()
             GroupConversationUiEvent.ExpenseOverviewClicked -> navigator.navigateTo(AppRoute.ExpenseOverview(groupId))
             GroupConversationUiEvent.AddExpenseClicked -> navigator.navigateTo(

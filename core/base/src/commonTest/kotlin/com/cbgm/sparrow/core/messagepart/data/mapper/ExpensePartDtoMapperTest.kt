@@ -2,11 +2,13 @@ package com.cbgm.sparrow.core.messagepart.data.mapper
 
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseConversionDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -53,5 +55,24 @@ class ExpensePartDtoMapperTest {
             occurredAtEpochMilliseconds = 1L
         )
         assertEquals(ExpenseCategory.OTHER, assertIs<Expense>(dto.toMessagePart()).category)
+    }
+
+    @Test fun convertedExpenseKeepsOriginalAmountAndRate() {
+        val dto = ExpenseDto(
+            id = "dinner",
+            boardId = "board",
+            description = "Dinner",
+            amountMinor = 4_465L,
+            currencyCode = "EUR",
+            paidByMemberId = "alex",
+            allocations = listOf(ExpenseAllocationDto("alex", 4_465L)),
+            occurredAtEpochMilliseconds = 1L,
+            conversion = ExpenseConversionDto(5_000L, "USD", "0.89294")
+        )
+
+        val expense = assertIs<Expense>(dto.toMessagePart())
+
+        assertEquals(ExpenseConversion(5_000L, "USD", "0.89294"), expense.conversion)
+        assertEquals(dto.conversion, assertIs<ExpenseDto>(expense.toDto()).conversion)
     }
 }

@@ -39,7 +39,6 @@ internal fun ExpenseQueuedItem(
     draft: ExpenseDraftUi,
     number: Int,
     participants: List<ExpenseParticipantUi>,
-    currencyCode: String,
     enabled: Boolean,
     onDelete: () -> Unit
 ) {
@@ -105,7 +104,7 @@ internal fun ExpenseQueuedItem(
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
                 Text(
-                    text = draft.formattedAmount(currencyCode),
+                    text = draft.formattedAmount,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -139,7 +138,6 @@ private fun ExpenseQueuedItemPreview() {
                 ExpenseParticipantUi("a", "Chris", true),
                 ExpenseParticipantUi("b", "Alex")
             ),
-            currencyCode = "EUR",
             enabled = true,
             onDelete = {}
         )

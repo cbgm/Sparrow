@@ -131,10 +131,17 @@ data class Expense(
     val editedAtEpochMilliseconds: Long? = null,
     val deletedAtEpochMilliseconds: Long? = null,
     val createdByMemberId: String? = null,
-    val revisionOf: String? = null
+    val revisionOf: String? = null,
+    val conversion: ExpenseConversion? = null
 ) : MessagePart
 
 val Expense.expenseId: String get() = revisionOf ?: id
+
+data class ExpenseConversion(
+    val originalAmountMinor: Long,
+    val originalCurrencyCode: String,
+    val rate: String
+)
 
 enum class ExpenseCategory {
     FLIGHT,

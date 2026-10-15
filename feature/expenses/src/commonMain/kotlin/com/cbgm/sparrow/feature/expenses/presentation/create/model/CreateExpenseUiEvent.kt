@@ -11,6 +11,10 @@ sealed interface CreateExpenseUiEvent {
         val text: String
     ) : CreateExpenseUiEvent
 
+    data class CurrencySelected(
+        val code: String
+    ) : CreateExpenseUiEvent
+
     data class CategorySelected(
         val category: ExpenseCategoryUi
     ) : CreateExpenseUiEvent

@@ -17,10 +17,21 @@ class GetExpenseCreationContextUseCase(
         require(groupId.isNotBlank()) { "Group ID is missing" }
         val group = repository.observeGroup(groupId).first() ?: error("Group expenses are not active")
         val localMemberId = group.localMemberId ?: error("Local expense member is missing")
+        val current = ExpenseRevisions.current(group.expenses)
         val expense = expenseId?.let { id ->
-            ExpenseRevisions.current(group.expenses).firstOrNull { it.expenseId == id }
-                ?: error("Expense was not found")
+            current.firstOrNull { it.expenseId == id } ?: error("Expense was not found")
         }
-        ExpenseCreationContext(group.board, localMemberId, group.members, expense, group.isLocalAdmin)
+        val recentCurrencyCodes =
+            current.sortedByDescending { it.occurredAtEpochMilliseconds }
+                .mapNotNull { it.conversion?.originalCurrencyCode }
+                .distinct()
+        ExpenseCreationContext(
+            board = group.board,
+            localMemberId = localMemberId,
+            members = group.members,
+            expense = expense,
+            isLocalAdmin = group.isLocalAdmin,
+            recentCurrencyCodes = recentCurrencyCodes
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.expenses.presentation.create.mapper
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseCreationContext
@@ -133,5 +134,71 @@ class ExpenseCreationMapperTest {
 
         assertEquals("24.02", rescanned.amount)
         assertEquals("Dinner", rescanned.description)
+    }
+
+    @Test
+    fun foreignCurrencyDraftIsConvertedIntoTheBoardCurrency() {
+        val draft =
+            ExpenseDraftUi(
+                description = "Dinner",
+                amount = "50",
+                payerId = "a",
+                participantIds = setOf("a", "b", "c"),
+                currencyCode = "USD",
+                baseCurrencyCode = "EUR",
+                rate = "0.89294"
+            )
+
+        assertEquals(4_465L, draft.baseTotalMinor)
+        assertEquals(4_465L, draft.baseAllocationsMinor()!!.values.sum())
+        assertEquals(ExpenseConversion(5_000L, "USD", "0.89294"), draft.toExpenseConversion())
+        assertEquals(null, draft.copy(rate = null).baseAllocationsMinor())
+    }
+
+    @Test
+    fun switchingCurrencyKeepsTheTypedNumber() {
+        val draft = ExpenseDraftUi(amount = "50", currencyCode = "EUR", baseCurrencyCode = "EUR")
+
+        val dollars = draft.withCurrency("USD", "0.89294")
+        val euros = dollars.withCurrency("EUR", "1")
+
+        assertEquals("50", dollars.amount)
+        assertEquals("0.89294", dollars.rate)
+        assertEquals(null, euros.rate)
+        assertEquals(5_000L, euros.baseTotalMinor)
+    }
+
+    @Test
+    fun editingConvertedExpenseRestoresOriginalAmountAndKeepsRate() {
+        val board = ExpenseBoard("board", "EUR", 1L)
+        val dinner = Expense(
+            "dinner",
+            "board",
+            "Dinner",
+            4_465L,
+            "EUR",
+            "chris",
+            listOf(ExpenseAllocation("bob", 2_233L), ExpenseAllocation("chris", 2_232L)),
+            3L,
+            conversion = ExpenseConversion(5_000L, "USD", "0.89294")
+        )
+        val context = ExpenseCreationContext(
+            board = board,
+            localMemberId = "chris",
+            members = listOf(ExpenseMember("chris", "Chris", true), ExpenseMember("bob", "Bob", false)),
+            expense = dinner
+        )
+
+        val draft = context.toCreateExpenseUiState().draft
+        val edited = draft.copy(description = "Dinner downtown").toEditedExpense(dinner)!!
+
+        assertEquals("50.00", draft.amount)
+        assertEquals("USD", draft.currencyCode)
+        assertEquals(dinner.conversion, edited.conversion)
+        assertEquals(dinner.amountMinor, edited.amountMinor)
+        assertEquals(
+            dinner.allocations.sortedBy { it.memberId },
+            edited.allocations.sortedBy { it.memberId }
+        )
     }
 }

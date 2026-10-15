@@ -8,7 +8,8 @@ data class ExpenseCreationContext(
     val localMemberId: String,
     val members: List<ExpenseMember>,
     val expense: Expense? = null,
-    val isLocalAdmin: Boolean = false
+    val isLocalAdmin: Boolean = false,
+    val recentCurrencyCodes: List<String> = emptyList()
 )
 
 data class ExpenseMember(

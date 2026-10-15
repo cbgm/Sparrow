@@ -15,6 +15,8 @@ class ExpenseAmountMapperTest {
     @Test
     fun formatsNegativeAndOtherCurrencies() {
         assertEquals("-€168.80", (-16880L).toExpenseAmountLabel("EUR"))
-        assertEquals("12.30 USD", 1230L.toExpenseAmountLabel("USD"))
+        assertEquals("$12.30", 1230L.toExpenseAmountLabel("USD"))
+        assertEquals("12.30 CHF", 1230L.toExpenseAmountLabel("CHF"))
+        assertEquals("¥1,500", 1500L.toExpenseAmountLabel("JPY"))
     }
 }

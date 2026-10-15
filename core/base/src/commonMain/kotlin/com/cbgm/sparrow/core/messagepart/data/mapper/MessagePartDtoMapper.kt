@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseConversionDto
 import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
@@ -22,6 +23,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -149,7 +151,10 @@ fun MessagePart.toDto(): MessagePartDto {
             editedAtEpochMilliseconds = editedAtEpochMilliseconds,
             deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
             createdByMemberId = createdByMemberId,
-            revisionOf = revisionOf
+            revisionOf = revisionOf,
+            conversion = conversion?.let {
+                ExpenseConversionDto(it.originalAmountMinor, it.originalCurrencyCode, it.rate)
+            }
         )
         is Poll -> PollDto(
             id = id,
@@ -265,5 +270,8 @@ private fun ExpenseDto.toExpense(): Expense =
         editedAtEpochMilliseconds = editedAtEpochMilliseconds,
         deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
         createdByMemberId = createdByMemberId,
-        revisionOf = revisionOf
+        revisionOf = revisionOf,
+        conversion = conversion?.let {
+            ExpenseConversion(it.originalAmountMinor, it.originalCurrencyCode, it.rate)
+        }
     )

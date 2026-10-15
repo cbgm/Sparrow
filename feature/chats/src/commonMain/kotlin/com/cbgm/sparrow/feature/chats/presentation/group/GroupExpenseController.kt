@@ -61,8 +61,8 @@ class GroupExpenseController(
         }
     }
 
-    fun activateBoard() = execute("Could not activate group expenses") {
-        orchestrator.awaitResult(GroupMessageCommand.ActivateExpenses(groupId, EXPENSE_CURRENCY))
+    fun activateBoard(currencyCode: String) = execute("Could not activate group expenses") {
+        orchestrator.awaitResult(GroupMessageCommand.ActivateExpenses(groupId, currencyCode))
     }
 
     fun closeBoard() = execute("Could not close group expenses") {
@@ -81,9 +81,5 @@ class GroupExpenseController(
 
     private fun execute(fallback: String, action: suspend () -> Result<*>) {
         scope.launch { action().onFailure { errors.report(it.message ?: fallback) } }
-    }
-
-    private companion object {
-        const val EXPENSE_CURRENCY = "EUR"
     }
 }

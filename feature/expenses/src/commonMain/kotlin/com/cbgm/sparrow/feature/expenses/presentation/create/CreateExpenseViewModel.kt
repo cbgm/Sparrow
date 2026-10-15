@@ -7,16 +7,23 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.expenses.domain.model.ExchangeRates
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseRequest
 import com.cbgm.sparrow.feature.expenses.domain.usecase.GetExpenseCreationContextUseCase
+import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExchangeRatesUseCase
+import com.cbgm.sparrow.feature.expenses.domain.usecase.RefreshExchangeRatesUseCase
 import com.cbgm.sparrow.feature.expenses.domain.usecase.SubmitExpenseRequestUseCase
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.nextDraft
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.rateText
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toAmountInput
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toCreateExpenseUiState
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toEditedExpense
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseAllocations
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCategory
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseConversion
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCurrencyUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toReceiptImage
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withCurrency
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withReceiptScan
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withSplitMode
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
@@ -49,6 +56,8 @@ class CreateExpenseViewModel(
     private val getContext: GetExpenseCreationContextUseCase,
     private val submitRequest: SubmitExpenseRequestUseCase,
     private val scanReceipt: ScanReceiptUseCase,
+    private val observeExchangeRates: ObserveExchangeRatesUseCase,
+    private val refreshExchangeRates: RefreshExchangeRatesUseCase,
     private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId = savedStateHandle.requireRouteArgument<String>(AppRoute.CreateExpense::groupId.name)
@@ -57,6 +66,7 @@ class CreateExpenseViewModel(
     private val _uiState = MutableStateFlow(CreateExpenseUiState())
     val uiState: StateFlow<CreateExpenseUiState> = _uiState.asStateFlow()
     private val mediaCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var exchangeRates: ExchangeRates? = null
 
     init {
         viewModelScope.launch {
@@ -64,12 +74,44 @@ class CreateExpenseViewModel(
                 .onSuccess { context ->
                     editedExpense = context.expense
                     _uiState.value = context.toCreateExpenseUiState()
+                    observeRates()
                 }
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false) }
                     SparrowLog.showError(getString(Res.string.feature_expenses_load_failed))
                 }
         }
+    }
+
+    private fun observeRates() {
+        viewModelScope.launch { refreshExchangeRates() }
+        viewModelScope.launch {
+            observeExchangeRates().collect { rates ->
+                exchangeRates = rates
+                _uiState.update { state ->
+                    state.copy(
+                        currencies =
+                            rates.toExpenseCurrencyUi(
+                                state.currencyCode,
+                                state.recentCurrencyCodes
+                            ),
+                        draft = state.draft.withAvailableRate()
+                    )
+                }
+            }
+        }
+    }
+
+    private fun ExpenseDraftUi.withAvailableRate(): ExpenseDraftUi =
+        if (!isConverted || rate != null) {
+            this
+        } else {
+            withCurrency(currencyCode, rateFor(currencyCode))
+        }
+
+    private fun rateFor(currencyCode: String): String? {
+        val stored = editedExpense?.conversion?.takeIf { it.originalCurrencyCode == currencyCode }
+        return stored?.rate ?: exchangeRates?.rateText(currencyCode, _uiState.value.currencyCode)
     }
 
     fun onUiEvent(event: CreateExpenseUiEvent) {
@@ -81,6 +123,8 @@ class CreateExpenseViewModel(
         }
         when (event) {
             is CreateExpenseUiEvent.DescriptionChanged -> updateDraft { copy(description = event.text.take(500)) }
+            is CreateExpenseUiEvent.CurrencySelected ->
+                updateDraft { withCurrency(event.code, rateFor(event.code)) }
             is CreateExpenseUiEvent.CategorySelected -> updateDraft { copy(category = event.category) }
             is CreateExpenseUiEvent.AmountChanged -> updateDraft { copy(amount = event.text.toAmountInput()) }
             is CreateExpenseUiEvent.PayerSelected -> updateDraft {
@@ -199,7 +243,7 @@ class CreateExpenseViewModel(
 
     private fun reportDraftError(draft: ExpenseDraftUi) {
         viewModelScope.launch {
-            val message = if (draft.amount.isNotBlank() && draft.allocationsMinor() == null) {
+            val message = if (draft.amount.isNotBlank() && draft.baseAllocationsMinor() == null) {
                 getString(Res.string.feature_expenses_invalid_amount)
             } else {
                 getString(Res.string.feature_expenses_incomplete_draft)
@@ -230,7 +274,7 @@ class CreateExpenseViewModel(
             while (_uiState.value.queued.isNotEmpty()) {
                 val current = _uiState.value
                 val next = current.queued.first()
-                val amount = next.totalMinor
+                val amount = next.baseTotalMinor
                 val allocations = next.toExpenseAllocations()
                 if (amount == null || allocations == null) {
                     _uiState.update { it.copy(isSending = false) }
@@ -247,7 +291,8 @@ class CreateExpenseViewModel(
                             paidByMemberId = next.payerId,
                             allocations = allocations,
                             category = next.category.toExpenseCategory(),
-                            receipt = next.receipt?.toReceiptImage()
+                            receipt = next.receipt?.toReceiptImage(),
+                            conversion = next.toExpenseConversion()
                         )
                     )
                 if (result.isFailure) {

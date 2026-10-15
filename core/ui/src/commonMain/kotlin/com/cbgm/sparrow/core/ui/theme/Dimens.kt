@@ -23,6 +23,7 @@ object Dimens {
         val customAmountFieldWidth = 112.dp
         val balanceBarHeight = 8.dp
         val detailIconSize = 64.dp
+        val currencyListDialogHeight = 320.dp
     }
 
     object ActionMenu {

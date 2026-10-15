@@ -340,8 +340,16 @@ data class ExpenseDto(
     val editedAtEpochMilliseconds: Long? = null,
     val deletedAtEpochMilliseconds: Long? = null,
     val createdByMemberId: String? = null,
-    val revisionOf: String? = null
+    val revisionOf: String? = null,
+    val conversion: ExpenseConversionDto? = null
 ) : MessagePartDto
+
+@Serializable
+data class ExpenseConversionDto(
+    val originalAmountMinor: Long,
+    val originalCurrencyCode: String,
+    val rate: String
+)
 
 @Serializable
 data class ExpenseAllocationDto(

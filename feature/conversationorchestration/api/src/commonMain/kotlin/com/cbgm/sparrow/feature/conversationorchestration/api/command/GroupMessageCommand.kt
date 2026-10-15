@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.api.command
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
@@ -86,7 +87,8 @@ sealed interface GroupMessageCommand : ConversationCommand {
         val paidByMemberId: String,
         val allocations: List<ExpenseAllocation>,
         val category: ExpenseCategory,
-        val receipt: Image? = null
+        val receipt: Image? = null,
+        val conversion: ExpenseConversion? = null
     ) : GroupMessageCommand
 
     data class EditExpense(

@@ -756,6 +756,13 @@
     <string name="feature_expenses_description">Beschreibung</string>
     <string name="feature_expenses_description_hint">Wofür war die Ausgabe?</string>
     <string name="feature_expenses_amount">Betrag</string>
+    <string name="feature_expenses_currency">Währung</string>
+    <string name="feature_expenses_converted_amount">≈ %1$s</string>
+    <string name="feature_expenses_rate_unavailable">Kein Wechselkurs verfügbar</string>
+    <string name="feature_expenses_choose_currency">Gruppenwährung wählen</string>
+    <string name="feature_expenses_choose_currency_hint">Alle Salden werden in dieser Währung berechnet. Ausgaben in anderen Währungen werden umgerechnet.</string>
+    <string name="feature_expenses_search_currency">Währung suchen</string>
+    <string name="feature_expenses_original_amount">Bezahlt %1$s zum Kurs %2$s</string>
     <string name="feature_expenses_paid_by">Bezahlt von</string>
     <string name="feature_expenses_participants">Teilnehmer</string>
     <string name="feature_expenses_equal_split">Gleichmäßig aufteilen</string>
@@ -766,7 +773,7 @@
     <string name="feature_expenses_add_multiple">Ausgaben hinzufügen</string>
     <string name="feature_expenses_send_all">Ausgaben senden</string>
     <string name="feature_expenses_queued">Hinzugefügte Ausgaben (%1$d)</string>
-    <string name="feature_expenses_add_another">Weitere Ausgabe hinzufügen</string>
+    <string name="feature_expenses_add_another">Ausgab hinzufügen</string>
     <string name="feature_expenses_remove">Ausgabe entfernen</string>
     <string name="feature_expenses_load_failed">Gruppenausgaben konnten nicht geladen werden.</string>
     <string name="feature_expenses_send_failed">Ausgaben konnten nicht gesendet werden.</string>

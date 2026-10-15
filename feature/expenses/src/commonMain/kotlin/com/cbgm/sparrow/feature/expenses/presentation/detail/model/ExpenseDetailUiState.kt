@@ -7,6 +7,8 @@ data class ExpenseDetailUiState(
     val isLoading: Boolean = true,
     val description: String = "",
     val amountLabel: String = "",
+    val originalAmountLabel: String? = null,
+    val rate: String? = null,
     val category: ExpenseCategoryUi = ExpenseCategoryUi.OTHER,
     val payer: ExpenseParticipantUi = ExpenseParticipantUi("", ""),
     val dateLabel: String = "",

@@ -752,6 +752,13 @@
     <string name="feature_expenses_description">Description</string>
     <string name="feature_expenses_description_hint">What was this expense for?</string>
     <string name="feature_expenses_amount">Amount</string>
+    <string name="feature_expenses_currency">Currency</string>
+    <string name="feature_expenses_converted_amount">≈ %1$s</string>
+    <string name="feature_expenses_rate_unavailable">No exchange rate available</string>
+    <string name="feature_expenses_choose_currency">Choose the group currency</string>
+    <string name="feature_expenses_choose_currency_hint">All balances are calculated in this currency. Expenses in other currencies are converted.</string>
+    <string name="feature_expenses_search_currency">Search currency</string>
+    <string name="feature_expenses_original_amount">Paid %1$s at %2$s</string>
     <string name="feature_expenses_paid_by">Paid by</string>
     <string name="feature_expenses_participants">Participants</string>
     <string name="feature_expenses_equal_split">Split equally</string>
@@ -762,7 +769,7 @@
     <string name="feature_expenses_add_multiple">Add expenses</string>
     <string name="feature_expenses_send_all">Send expenses</string>
     <string name="feature_expenses_queued">Added expenses (%1$d)</string>
-    <string name="feature_expenses_add_another">Add another expense</string>
+    <string name="feature_expenses_add_another">Add expense</string>
     <string name="feature_expenses_remove">Remove expense</string>
     <string name="feature_expenses_load_failed">Could not load group expenses.</string>
     <string name="feature_expenses_send_failed">Could not send expenses.</string>

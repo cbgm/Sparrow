@@ -56,6 +56,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
+import com.cbgm.sparrow.feature.expenses.presentation.currency.ExpenseCurrencyPickerDialog
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
@@ -89,6 +90,7 @@ fun GroupConversationScreen(
         mutableStateOf<AttachmentSelection?>(null)
     }
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
+    var showCurrencySelection by rememberSaveable { mutableStateOf(false) }
     var showPinnedMessage by rememberSaveable { mutableStateOf(false) }
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
@@ -226,7 +228,8 @@ fun GroupConversationScreen(
                         expensesActive = uiState.expensesActive,
                         canActivateExpenses = uiState.isLocalAdmin,
                         onUiEvent = onUiEvent,
-                        onContactAttachmentClick = { showContactSelection = true }
+                        onContactAttachmentClick = { showContactSelection = true },
+                        onActivateExpensesClick = { showCurrencySelection = true }
                     )
                 }
             ) { innerPadding, listState ->
@@ -304,6 +307,16 @@ fun GroupConversationScreen(
                 MessageReactionBurstOverlay(burst = burst, onDismiss = { reactionBurst = null })
             }
         }
+    }
+
+    if (showCurrencySelection) {
+        ExpenseCurrencyPickerDialog(
+            onCurrencySelected = { currencyCode ->
+                showCurrencySelection = false
+                onUiEvent(GroupConversationUiEvent.ActivateExpensesClicked(currencyCode))
+            },
+            onDismiss = { showCurrencySelection = false }
+        )
     }
 
     SparrowOverlayHost(
@@ -443,7 +456,8 @@ private fun BottomBar(
     expensesActive: Boolean,
     canActivateExpenses: Boolean,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
-    onContactAttachmentClick: () -> Unit
+    onContactAttachmentClick: () -> Unit,
+    onActivateExpensesClick: () -> Unit
 ) {
     ComposerContent(
         composerState = composerState,
@@ -460,11 +474,7 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(GroupConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(GroupConversationUiEvent.LocationCaptureFailed(it)) },
         onPollAttachmentClick = { onUiEvent(GroupConversationUiEvent.CreatePollClicked) },
-        onActivateExpensesClick = if (canActivateExpenses) {
-            { onUiEvent(GroupConversationUiEvent.ActivateExpensesClicked) }
-        } else {
-            null
-        },
+        onActivateExpensesClick = onActivateExpensesClick.takeIf { canActivateExpenses },
         onAddExpenseClick = if (expensesActive) {
             { onUiEvent(GroupConversationUiEvent.AddExpenseClicked) }
         } else {

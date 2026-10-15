@@ -25,6 +25,10 @@ internal fun ExpenseOverview.toExpenseDetailUiState(expense: Expense): ExpenseDe
         isLoading = false,
         description = expense.description,
         amountLabel = expense.amountMinor.toExpenseAmountLabel(expense.currencyCode),
+        originalAmountLabel = expense.conversion?.let { conversion ->
+            conversion.originalAmountMinor.toExpenseAmountLabel(conversion.originalCurrencyCode)
+        },
+        rate = expense.conversion?.rate,
         category = ExpenseCategoryUi.valueOf(expense.category.name),
         payer = participant(expense.paidByMemberId),
         dateLabel = formatDate(expense.occurredAtEpochMilliseconds),

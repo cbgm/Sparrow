@@ -53,7 +53,6 @@ class CreateGroupExpenseWorkflow internal constructor(
         check(members.board.id == command.boardId) { "Expense board has changed" }
         check(command.paidByMemberId in members.memberIds) { "Payer is no longer a group member" }
         check(command.allocations.all { it.memberId in members.memberIds }) { "Expense includes a former group member" }
-        check(members.board.currencyCode == SUPPORTED_CURRENCY) { "Unsupported expense currency" }
         val expense =
             Expense(
                 id = IdGenerator.generate(prefix = "expense"),
@@ -66,7 +65,8 @@ class CreateGroupExpenseWorkflow internal constructor(
                 occurredAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 category = command.category,
                 receipt = command.receipt,
-                createdByMemberId = members.localMemberId
+                createdByMemberId = members.localMemberId,
+                conversion = command.conversion
             )
         ExpensePolicy.requireValid(expense)
         return expense
@@ -102,9 +102,5 @@ class CreateGroupExpenseWorkflow internal constructor(
         data class ExpenseSent(
             val result: ConversationResult.GroupMessageSent
         ) : Outcome
-    }
-
-    private companion object {
-        const val SUPPORTED_CURRENCY = "EUR"
     }
 }

@@ -72,6 +72,7 @@ import com.cbgm.sparrow.resources.feature_expenses_detail_equal_each
 import com.cbgm.sparrow.resources.feature_expenses_detail_split_between
 import com.cbgm.sparrow.resources.feature_expenses_detail_title
 import com.cbgm.sparrow.resources.feature_expenses_edit
+import com.cbgm.sparrow.resources.feature_expenses_original_amount
 import com.cbgm.sparrow.resources.feature_expenses_paid_by
 import com.cbgm.sparrow.resources.feature_expenses_receipt
 import com.cbgm.sparrow.resources.feature_expenses_receipt_missing
@@ -243,6 +244,19 @@ private fun DetailHeader(uiState: ExpenseDetailUiState) {
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
+        val originalAmountLabel = uiState.originalAmountLabel
+        val rate = uiState.rate
+        if (originalAmountLabel != null && rate != null) {
+            Text(
+                text = stringResource(
+                    Res.string.feature_expenses_original_amount,
+                    originalAmountLabel,
+                    rate
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         SparrowStatusBadge(
             text = uiState.category.label(),
             icon = uiState.category.icon,

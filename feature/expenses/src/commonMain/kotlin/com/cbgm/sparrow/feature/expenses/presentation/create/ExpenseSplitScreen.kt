@@ -152,7 +152,7 @@ fun ExpenseSplitScreen(
                                 person = person,
                                 draft = draft,
                                 shareMinor = allocations?.get(person.id),
-                                currencyCode = uiState.currencyCode,
+                                currencyCode = draft.currencyCode,
                                 onUiEvent = onUiEvent
                             )
                         }
@@ -160,7 +160,7 @@ fun ExpenseSplitScreen(
                 }
             }
             item(key = "summary") {
-                SplitSummary(draft = draft, currencyCode = uiState.currencyCode)
+                SplitSummary(draft = draft, currencyCode = draft.currencyCode)
             }
         }
     }

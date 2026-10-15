@@ -53,6 +53,18 @@ object ExpensePolicy {
             allocated += share.amountMinor
         }
         require(allocated == expense.amountMinor) { "Expense allocations must equal the full amount" }
+        expense.conversion?.let { conversion ->
+            requireCurrency(conversion.originalCurrencyCode)
+            require(conversion.originalCurrencyCode != expense.currencyCode) {
+                "Converted expenses need a different original currency"
+            }
+            require(conversion.originalAmountMinor > 0L) {
+                "Original expense amount must be positive"
+            }
+            require(RATE.matches(conversion.rate) && conversion.rate.toDouble() > 0.0) {
+                "Invalid expense exchange rate"
+            }
+        }
         expense.receipt?.let { image ->
             require(image.id != expense.id && image.id != expense.boardId) { "Receipt and expense IDs must differ" }
             MessageAttachmentPolicy.requireValid(listOf(image))
@@ -61,6 +73,8 @@ object ExpensePolicy {
             }
         }
     }
+
+    private val RATE = Regex("\\d{1,12}(\\.\\d{1,12})?")
 
     private fun requireCurrency(code: String) {
         require(code.length == 3 && code.all { it in 'A'..'Z' }) {
