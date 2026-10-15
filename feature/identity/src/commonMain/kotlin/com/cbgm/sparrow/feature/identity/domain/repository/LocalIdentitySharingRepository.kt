@@ -8,5 +8,5 @@ import kotlinx.coroutines.flow.Flow
 interface LocalIdentitySharingRepository {
     fun observeSharedWith(peerId: String): Flow<Boolean>
 
-    suspend fun recordSharedWith(peerId: String)
+    suspend fun recordSharedWith(peerId: String): Result<Unit>
 }

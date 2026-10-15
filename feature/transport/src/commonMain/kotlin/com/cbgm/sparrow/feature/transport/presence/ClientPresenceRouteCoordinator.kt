@@ -9,7 +9,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -27,16 +29,26 @@ internal class ClientPresenceRouteCoordinator(
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider
 ) {
+    // Starts the public gateway information request while the WebSocket is still opening, so
+    // both cold HTTPS connections overlap instead of running one after the other.
+    fun prefetchGatewayInformation(
+        scope: CoroutineScope,
+        serverUrl: String
+    ): Deferred<Result<GatewayInformationSnapshot>> =
+        scope.async { runCatching { httpClient.fetchGatewayInformation(serverUrl) } }
+
     fun createSession(
         scope: CoroutineScope,
         connection: PresenceRouteConnection,
         publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
         onReady: (Set<String>) -> Unit,
-        onFailure: suspend (Throwable) -> Unit
+        onFailure: suspend (Throwable) -> Unit,
+        prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>? = null
     ): ClientPresenceRouteSession =
         ClientPresenceRouteSession(
             scope = scope,
             connection = connection,
+            prefetchedGatewayInformation = prefetchedGatewayInformation,
             httpClient = httpClient,
             registrationFactory = registrationFactory,
             localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
@@ -49,6 +61,7 @@ internal class ClientPresenceRouteCoordinator(
 internal class ClientPresenceRouteSession(
     private val scope: CoroutineScope,
     private val connection: PresenceRouteConnection,
+    private var prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>?,
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
@@ -142,30 +155,19 @@ internal class ClientPresenceRouteSession(
         }
     }
 
+    // The first load uses the prefetched response; refreshes and expiration recovery always
+    // fetch again because they need a current server time.
     private suspend fun loadGatewayInformation() {
-        runCatching {
-            val response = httpClient.get(gatewayInformationUrl(connection.serverUrl))
-            val gatewayInformation = response.body<GatewayNodeInformation>()
-            val serverTimeEpochMilliseconds =
-                response.headers[SERVER_TIME_HEADER]
-                    ?.toLongOrNull()
-
-            // Keep a monotonic observation as well as the original epoch value.
-            // Changing the device wall clock while Sparrow is open must not
-            // manufacture a route that expires in the past or exceeds the TTL.
-            gatewayTimeObservedAt = serverTimeEpochMilliseconds?.let {
-                TimeSource.Monotonic.markNow()
-            }
-            gatewayInformation.copy(
-                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
-                serverTimeObservedAtEpochMilliseconds =
-                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
-            )
-        }.fold(
-            onSuccess = { gatewayInformation ->
+        val prefetched = prefetchedGatewayInformation?.also { prefetchedGatewayInformation = null }
+        val result =
+            prefetched?.await()?.takeIf(Result<GatewayInformationSnapshot>::isSuccess)
+                ?: runCatching { httpClient.fetchGatewayInformation(connection.serverUrl) }
+        result.fold(
+            onSuccess = { snapshot ->
+                gatewayTimeObservedAt = snapshot.observedAt
                 events.send(
                     ClientPresenceRouteEvent.GatewayInformationLoaded(
-                        gatewayInformation = gatewayInformation
+                        gatewayInformation = snapshot.information
                     )
                 )
             },
@@ -237,6 +239,33 @@ internal class ClientPresenceRouteSession(
                 events.send(ClientPresenceRouteEvent.RefreshDue)
             }
     }
+}
+
+internal class GatewayInformationSnapshot(
+    val information: GatewayNodeInformation,
+    val observedAt: TimeMark?
+)
+
+internal suspend fun HttpClient.fetchGatewayInformation(serverUrl: String): GatewayInformationSnapshot {
+    val response = get(gatewayInformationUrl(serverUrl))
+    val gatewayInformation = response.body<GatewayNodeInformation>()
+    val serverTimeEpochMilliseconds =
+        response.headers[SERVER_TIME_HEADER]
+            ?.toLongOrNull()
+
+    // Keep a monotonic observation as well as the original epoch value.
+    // Changing the device wall clock while Sparrow is open must not
+    // manufacture a route that expires in the past or exceeds the TTL.
+    val observedAt = serverTimeEpochMilliseconds?.let { TimeSource.Monotonic.markNow() }
+    return GatewayInformationSnapshot(
+        information =
+            gatewayInformation.copy(
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
+                serverTimeObservedAtEpochMilliseconds =
+                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
+            ),
+        observedAt = observedAt
+    )
 }
 
 internal data class PresenceRouteConnection(

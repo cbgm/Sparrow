@@ -6,6 +6,9 @@ import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
@@ -15,6 +18,9 @@ import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.core.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
@@ -24,6 +30,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
@@ -39,7 +46,9 @@ import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentO
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 internal class MessageAttachmentOperationsRepositoryImpl(
@@ -57,7 +66,9 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     ): Result<List<MessagePart>> = safeSuspendCall {
         if (parts.isEmpty()) return@safeSuspendCall emptyList()
         MessageAttachmentPolicy.requireValid(parts)
-        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
+        require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
+            "Polls and expenses are only supported in groups"
+        }
 
         val preparedParts = parts.map { part -> createOutgoingDto(part) }
         val uploadableParts = preparedParts
@@ -128,14 +139,23 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         messageId: String,
         parts: List<MessagePart>,
         context: AttachmentMessageContext
-    ) {
-        require(parts.none { it is Poll } || context.isGroup) { "Polls are only supported in groups" }
-        val dtos = parts.map { it.toDto() }
-        dataSource.persistIncoming(messageId, dtos, context.toDto())
-    }
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
+                "Polls and expenses are only supported in groups"
+            }
+            val dtos = parts.map { it.toDto() }
+            dataSource.persistIncoming(messageId, dtos, context.toDto())
+        }
 
-    override suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) =
-        dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
+    override suspend fun updateConversationDisplayName(
+        conversationId: String,
+        displayName: String,
+        isGroup: Boolean
+    ): Result<Unit> =
+        safeSuspendCall {
+            dataSource.updateConversationDisplayName(conversationId, displayName, isGroup)
+        }
 
     override suspend fun updateMessagePart(messageId: String, part: MessagePart): Result<Unit> =
         safeSuspendCall {
@@ -168,7 +188,8 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             dataSource.loadDetachedBytes(part.id)
         }
 
-    override suspend fun deleteForMessages(messageIds: List<String>) = dataSource.deleteForMessages(messageIds)
+    override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> =
+        safeSuspendCall { dataSource.deleteForMessages(messageIds) }
 
     override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
         dataSource.observeByMessageIds(messageIds)
@@ -178,7 +199,33 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                 }
             }
 
-    override fun cacheIncoming(messageId: String) = cacheCoordinator.cache(messageId)
+    override fun observeExpenses(conversationId: String): Flow<List<Expense>> =
+        dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE)
+            .map { partsByMessageId ->
+                partsByMessageId.values.flatMap { parts ->
+                    parts.map { part -> part.toMessagePart() }.filterIsInstance<Expense>()
+                }
+            }
+
+    override fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>> =
+        dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE_BOARD_CLOSED)
+            .map { partsByMessageId ->
+                partsByMessageId.values.flatMap { parts ->
+                    parts.map { part -> part.toMessagePart() }.filterIsInstance<ExpenseBoardClosed>()
+                }
+            }
+
+    override suspend fun findExpenseMessageIds(conversationId: String, boardId: String): Result<List<String>> =
+        safeSuspendCall {
+            dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE)
+                .first()
+                .filterValues { parts -> parts.any { part -> part is ExpenseDto && part.boardId == boardId } }
+                .keys
+                .toList()
+        }
+
+    override fun cacheIncoming(messageId: String): Result<Unit> =
+        safeCall { cacheCoordinator.cache(messageId) }
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
         when (part) {
@@ -276,6 +323,11 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             }
 
             is Text -> error("Text is not uploaded as an attachment message part")
+            is ExpenseBoard -> part.toDto() as ExpenseBoardDto
+            is ExpenseBoardClosed -> part.toDto() as ExpenseBoardClosedDto
+            is Expense -> (part.toDto() as ExpenseDto).copy(
+                receipt = part.receipt?.let { createOutgoingDto(it) as ImageDto }
+            )
             is Poll -> (part.toDto() as PollDto).copy(
                 images = part.images.map { image -> createOutgoingDto(image) as ImageDto }
             )

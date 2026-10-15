@@ -47,7 +47,7 @@ class RecoveryInboxViewModel(
                     MailboxReviewRequestUi(
                         peerId = candidate.peerId,
                         invitationId = candidate.invitationId,
-                        peerDisplayName = getPeerDisplayName(candidate.peerId)
+                        peerDisplayName = getPeerDisplayName(candidate.peerId).getOrNull()
                             ?.takeIf { it.isNotBlank() }
                             ?: getContact(candidate.peerId).getOrNull()?.preferredPhoneNumber?.value
                                 ?.takeIf { it.isNotBlank() }

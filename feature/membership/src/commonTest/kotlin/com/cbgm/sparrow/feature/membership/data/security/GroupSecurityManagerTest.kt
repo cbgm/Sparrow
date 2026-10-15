@@ -458,7 +458,7 @@ class GroupSecurityManagerTest {
                     groupId = GROUP_ID,
                     epoch = EPOCH,
                     groupKey = GROUP_KEY
-                )
+                ).getOrThrow()
 
             epochSecurity.verifyKeyConfirmation(
                 groupId = GROUP_ID,

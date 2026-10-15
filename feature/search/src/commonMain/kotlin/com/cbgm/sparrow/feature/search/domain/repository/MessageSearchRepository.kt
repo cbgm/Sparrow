@@ -6,5 +6,5 @@ interface MessageSearchRepository {
     suspend fun search(
         query: String,
         limit: Int = 30
-    ): List<MessageSearchResult>
+    ): Result<List<MessageSearchResult>>
 }

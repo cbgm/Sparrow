@@ -5,8 +5,5 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepos
 class UnblockContactUseCase(
     private val repository: ContactBlocklistRepository
 ) {
-    suspend operator fun invoke(contactId: String): Result<Unit> =
-        runCatching {
-            repository.unblock(contactId)
-        }
+    suspend operator fun invoke(contactId: String): Result<Unit> = repository.unblock(contactId)
 }

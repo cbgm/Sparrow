@@ -97,7 +97,7 @@ class OnboardingViewModel(
             require(file.byteSize in 1..MAX_IDENTITY_BACKUP_BYTES) {
                 "Identity backup is too large or empty"
             }
-            val document = selectedFiles.read(file.localFilePath)
+            val document = selectedFiles.read(file.localFilePath).getOrThrow()
             require(document.size.toLong() in 1..MAX_IDENTITY_BACKUP_BYTES) {
                 "Identity backup is too large or empty"
             }
@@ -115,7 +115,7 @@ class OnboardingViewModel(
             setBackupImportError(error.message ?: "Could not read identity backup")
         } finally {
             try {
-                selectedFiles.delete(file.localFilePath)
+                selectedFiles.delete(file.localFilePath).getOrThrow()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

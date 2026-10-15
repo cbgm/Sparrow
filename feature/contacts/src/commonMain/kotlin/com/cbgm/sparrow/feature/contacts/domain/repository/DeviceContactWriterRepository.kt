@@ -9,5 +9,5 @@ interface DeviceContactWriterRepository {
      *
      * If the phone number already exists, nothing is added.
      */
-    suspend fun addIfNotExists(request: AddDeviceContactRequest): AddDeviceContactResult
+    suspend fun addIfNotExists(request: AddDeviceContactRequest): Result<AddDeviceContactResult>
 }

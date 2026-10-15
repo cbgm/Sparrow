@@ -72,9 +72,11 @@ presentation/direct/...
 
 Use existing Direct components rather than routing the change through Group code.
 
+Chats is read-only. A new Direct **write** (send/edit/delete/…) is a `DirectConversationCommand` plus a workflow under `:feature:conversationorchestration:message` (`domain/workflow/direct`); the ViewModel submits it with `orchestrator.awaitResult(command)`. See [Conversation orchestration](../architecture/conversation-orchestration.md#adding-a-new-workflow).
+
 ## Add Group behavior
 
-First decide whether it is message sending/delivery, membership/invitation/activation/admin, group security/epoch, verification, typing or presentation only. Put it in the corresponding Group package/coordinator. Read [Chats architecture](../architecture/chats.md) before changing this area.
+First decide whether it is message sending/delivery, membership/invitation/activation/admin, group security/epoch, verification, typing or presentation only. Presentation and read-only data go into the corresponding Chats group package; writes become a `GroupMessageCommand` / `GroupAdministrationCommand` with a workflow in `:feature:conversationorchestration:message` or `membership`. Read [Chats architecture](../architecture/chats.md) and [Conversation orchestration](../architecture/conversation-orchestration.md) before changing this area.
 
 ## Add platform behavior
 
@@ -84,7 +86,7 @@ Keep common contracts/models in `commonMain`. Put Android/iOS implementations in
 
 1. Define the packet in `:protocol` and update `PacketCodec` support as required.
 2. Decide which feature owns its meaning.
-3. Add an explicit incoming handler/route in that feature.
+3. Add an explicit incoming handler/route in that feature. For conversation packets this is a `Receive*Workflow` in `:feature:conversationorchestration:incoming` plus a branch in `GroupPacketDispatcher` or `ControlPacketDispatcher`.
 4. Define outgoing creation in that feature, enqueue through `ProtocolOutbox` rather than calling WebSocket directly.
 5. Decide its transport policy/encryption requirements deliberately.
 6. Add routing-ID handling in `:feature:messaging` only if the packet needs a special routing rule.

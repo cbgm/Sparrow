@@ -11,7 +11,7 @@ class SynchronizeDeviceContactsStartupTask(
     override val name = "device contact synchronization"
 
     override suspend fun runAfterIdentityReady() {
-        if (!initialization.deviceContactsPermissionChecker.canReadContacts()) {
+        if (!initialization.deviceContactsPermissionChecker.canReadContacts().getOrDefault(false)) {
             logger.info {
                 "Device contact sync skipped: READ_CONTACTS is not granted"
             }

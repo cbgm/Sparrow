@@ -10,7 +10,7 @@ class AddDeviceContactUseCase(
     suspend operator fun invoke(
         displayName: String?,
         phoneNumber: String
-    ): AddDeviceContactResult =
+    ): Result<AddDeviceContactResult> =
         repository.addIfNotExists(
             AddDeviceContactRequest(
                 displayName = displayName,

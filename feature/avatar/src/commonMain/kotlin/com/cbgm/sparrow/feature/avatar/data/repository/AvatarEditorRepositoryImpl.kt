@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.avatar.data.repository
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.feature.avatar.data.datasource.LocalAvatarEditorDataSource
 import com.cbgm.sparrow.feature.avatar.device.cropAndEncodeProfilePicture
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
@@ -52,9 +53,10 @@ internal class AvatarEditorRepositoryImpl(
             }
         }
 
-    override fun clear() {
-        localDataSource.clearSource()
-    }
+    override fun clear(): Result<Unit> =
+        safeCall {
+            localDataSource.clearSource()
+        }
 
     private suspend fun <T> runLogged(
         message: String,

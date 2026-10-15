@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
@@ -19,16 +20,18 @@ class DirectIdentitySetupModeRepositoryImpl(
                 mode.value = loadMode()
             }.distinctUntilChanged()
 
-    override suspend fun getMode(): DirectIdentitySetupMode {
-        val storedMode = loadMode()
-        mode.value = storedMode
-        return storedMode
-    }
+    override suspend fun getMode(): Result<DirectIdentitySetupMode> =
+        safeSuspendCall {
+            val storedMode = loadMode()
+            mode.value = storedMode
+            storedMode
+        }
 
-    override suspend fun setMode(mode: DirectIdentitySetupMode) {
-        settingsStorage.setDirectIdentitySetupMode(mode.name)
-        this.mode.value = mode
-    }
+    override suspend fun setMode(mode: DirectIdentitySetupMode): Result<Unit> =
+        safeSuspendCall {
+            settingsStorage.setDirectIdentitySetupMode(mode.name)
+            this.mode.value = mode
+        }
 
     private suspend fun loadMode(): DirectIdentitySetupMode =
         settingsStorage

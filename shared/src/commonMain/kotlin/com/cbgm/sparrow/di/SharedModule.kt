@@ -17,7 +17,9 @@ import org.koin.dsl.module
 val sharedModule =
     module {
         single<PhoneNumberNormalizer> { DefaultPhoneNumberNormalizer() }
-        single { AttachmentConversationNameObserver(conversationRepository = get(), contacts = get(), attachments = get()) }
+        single {
+            AttachmentConversationNameObserver(conversationRepository = get(), contacts = get(), attachments = get())
+        }
         single { ApplicationCoroutineScope() }
         single {
             AppInitializationDependencies(
@@ -36,6 +38,8 @@ val sharedModule =
                 directIdentityResultObserver = get(),
                 approvedIdentityReconnectionObserver = get(),
                 contactBlockObserver = get(),
+                pendingAuthorizationCleanupRunner = get(),
+                workflowRegistry = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),
                 controlPlaneDirectorySynchronizer = get(),

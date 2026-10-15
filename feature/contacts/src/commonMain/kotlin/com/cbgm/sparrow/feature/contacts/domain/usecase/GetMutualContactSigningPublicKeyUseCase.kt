@@ -5,5 +5,6 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepos
 class GetMutualContactSigningPublicKeyUseCase(
     private val repository: ContactTransportRepository
 ) {
-    suspend operator fun invoke(contactId: String): ByteArray? = repository.getMutualSigningPublicKey(contactId)
+    suspend operator fun invoke(contactId: String): Result<ByteArray?> =
+        repository.getMutualSigningPublicKey(contactId)
 }

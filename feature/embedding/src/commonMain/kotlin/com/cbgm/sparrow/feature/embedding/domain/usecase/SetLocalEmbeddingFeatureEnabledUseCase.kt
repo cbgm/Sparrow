@@ -9,5 +9,5 @@ class SetLocalEmbeddingFeatureEnabledUseCase(
     suspend operator fun invoke(
         feature: LocalEmbeddingFeature,
         enabled: Boolean
-    ) = repository.setFeatureEnabled(feature, enabled)
+    ): Result<Unit> = repository.setFeatureEnabled(feature, enabled)
 }

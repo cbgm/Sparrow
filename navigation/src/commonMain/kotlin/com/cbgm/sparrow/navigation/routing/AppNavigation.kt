@@ -63,7 +63,7 @@ private data class FeedbackSnackbarVisuals(
     override val withDismissAction: Boolean = false
 ) : SnackbarVisuals
 
-private val ErrorSnackbarColor = Color(0xFFB3261E)
+private val errorSnackbarColor = Color(0xFFB3261E)
 
 @Composable
 fun AppNavigation(
@@ -137,7 +137,7 @@ fun AppNavigation(
             val isError = (data.visuals as? FeedbackSnackbarVisuals)?.kind == FeedbackKind.ERROR
             Snackbar(
                 snackbarData = data,
-                containerColor = if (isError) ErrorSnackbarColor else Color.White,
+                containerColor = if (isError) errorSnackbarColor else Color.White,
                 contentColor = if (isError) Color.White else Color.Black
             )
         }
@@ -263,7 +263,9 @@ private fun HandlePendingNotificationNavigation(
                 when (
                     val conversation = resolveNotificationConversation(
                         conversationId = target.conversationId
-                    )
+                    ).onFailure { error ->
+                        SparrowLog.error("AppNavigation", "Notification target not resolved", error)
+                    }.getOrNull()
                 ) {
                     is NotificationConversationTarget.Direct -> {
                         navigator.navigateTo(

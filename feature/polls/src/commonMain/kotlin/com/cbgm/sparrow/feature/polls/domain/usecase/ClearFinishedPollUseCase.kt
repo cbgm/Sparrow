@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.polls.domain.repository.PollComposerRepository
 class ClearFinishedPollUseCase(
     private val repository: PollComposerRepository
 ) {
-    operator fun invoke() = repository.clearFinishedPoll()
+    operator fun invoke(): Result<Unit> = repository.clearFinishedPoll()
 }

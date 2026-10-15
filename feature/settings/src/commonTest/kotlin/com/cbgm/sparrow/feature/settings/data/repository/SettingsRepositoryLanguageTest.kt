@@ -20,10 +20,10 @@ class SettingsRepositoryLanguageTest {
         val storage = InMemorySettingsStorage()
         val repository = repository(storage, "de-DE")
 
-        assertEquals(AppLanguage.GERMAN, repository.getLanguage())
+        assertEquals(AppLanguage.GERMAN, repository.getLanguage().getOrThrow())
         assertEquals("de", storage.getLanguageTag())
         // A later change to the phone locale must not replace the saved choice.
-        assertEquals(AppLanguage.GERMAN, repository(storage, "en-US").getLanguage())
+        assertEquals(AppLanguage.GERMAN, repository(storage, "en-US").getLanguage().getOrThrow())
     }
 
     @Test
@@ -41,7 +41,7 @@ class SettingsRepositoryLanguageTest {
                     }
             )
 
-        assertEquals(AppLanguage.ENGLISH, repository.getLanguage())
+        assertEquals(AppLanguage.ENGLISH, repository.getLanguage().getOrThrow())
         assertEquals("en", storage.getLanguageTag())
     }
 
@@ -49,7 +49,7 @@ class SettingsRepositoryLanguageTest {
     fun unsupportedPhoneLanguageFallsBackToEnglishAndPersistsIt() = runBlocking {
         val storage = InMemorySettingsStorage()
 
-        assertEquals(AppLanguage.ENGLISH, repository(storage, "fr-FR").getLanguage())
+        assertEquals(AppLanguage.ENGLISH, repository(storage, "fr-FR").getLanguage().getOrThrow())
         assertEquals("en", storage.getLanguageTag())
     }
 

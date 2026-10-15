@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.viewinterop.UIKitView
-import com.cbgm.sparrow.feature.media.device.MediaImage
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaUi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi

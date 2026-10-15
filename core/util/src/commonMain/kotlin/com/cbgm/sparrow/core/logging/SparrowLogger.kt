@@ -88,6 +88,11 @@ object SparrowLog {
         recordError(tag = tag, message = message, throwable = throwable, showSnackbar = false)
     }
 
+    /** User-facing error feedback only: no Logcat, developer error record, or source prefix. */
+    fun showError(message: String) {
+        if (message.isNotBlank()) errorQueue.trySend(message.take(MAX_SNACKBAR_LENGTH))
+    }
+
     /** Informational feedback is not an error and does not pollute the developer error log. */
     fun hint(message: String) {
         if (message.isNotBlank()) hintQueue.trySend(message)

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data.security
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.result.safeCall
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
@@ -281,8 +282,12 @@ internal class GroupSecurityManager internal constructor(
         epoch: Int
     ): String = "group-welcome-$groupId-$invitationId-$epoch"
 
-    override fun createKeyConfirmation(groupId: String, epoch: Int, groupKey: ByteArray): ByteArray =
-        GroupKeyConfirmation.create(cryptoHash, groupId, epoch, groupKey)
+    override fun createKeyConfirmation(
+        groupId: String,
+        epoch: Int,
+        groupKey: ByteArray
+    ): Result<ByteArray> =
+        safeCall { GroupKeyConfirmation.create(cryptoHash, groupId, epoch, groupKey) }
 
     override suspend fun openWelcome(
         packet: GroupCreatedPacket,

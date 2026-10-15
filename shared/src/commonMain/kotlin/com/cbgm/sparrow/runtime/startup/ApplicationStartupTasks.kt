@@ -20,7 +20,9 @@ import com.cbgm.sparrow.runtime.startup.task.StartDirectIdentityResultObserverSt
 import com.cbgm.sparrow.runtime.startup.task.StartInvitationResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartMembershipResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartMessagingTransportResultObserverStartupTask
+import com.cbgm.sparrow.runtime.startup.task.StartPendingAuthorizationCleanupStartupTask
 import com.cbgm.sparrow.runtime.startup.task.SynchronizeDeviceContactsStartupTask
+import com.cbgm.sparrow.runtime.startup.task.ValidateConversationWorkflowsStartupTask
 
 fun createApplicationStartupTasks(
     initAppLanguageUseCase: InitAppLanguageUseCase,
@@ -29,6 +31,7 @@ fun createApplicationStartupTasks(
     listOf(
         InitializeAppLanguageStartupTask(initAppLanguageUseCase),
         InitializeCryptoRuntimeStartupTask(initialization),
+        ValidateConversationWorkflowsStartupTask(initialization),
         LoadControlPlaneConfigurationStartupTask(initialization),
         ResolveIdentityStatusStartupTask(initialization),
         RestoreControlPlaneDirectoryStartupTask(initialization),
@@ -40,6 +43,7 @@ fun createApplicationStartupTasks(
         StartMessagingTransportResultObserverStartupTask(initialization),
         StartDirectIdentityResultObserverStartupTask(initialization),
         StartContactBlockObserverStartupTask(initialization),
+        StartPendingAuthorizationCleanupStartupTask(initialization),
         StartApprovedIdentityReconnectionObserverStartupTask(initialization),
         MaintainControlPlaneDirectoryStartupTask(initialization),
         MaintainControlPlaneHealthStartupTask(initialization),

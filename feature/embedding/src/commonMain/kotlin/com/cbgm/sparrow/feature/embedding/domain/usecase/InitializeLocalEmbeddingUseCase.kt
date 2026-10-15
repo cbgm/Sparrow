@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingReposi
 class InitializeLocalEmbeddingUseCase(
     private val repository: LocalEmbeddingRepository
 ) {
-    suspend operator fun invoke() = repository.initialize()
+    suspend operator fun invoke(): Result<Unit> = repository.initialize()
 }

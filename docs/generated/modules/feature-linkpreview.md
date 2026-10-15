@@ -15,7 +15,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Test Kotlin files | 1 |
 | Resource files | 0 |
 | Direct dependencies | 4 |
-| Direct dependents | 2 |
+| Direct dependents | 3 |
 
 ## Source sets
 
@@ -32,4 +32,5 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependents
 
 - [`:feature:chats`](../modules/feature-chats.md)
+- [`:feature:conversationorchestration:incoming`](../modules/feature-conversationorchestration-incoming.md)
 - [`:shared`](../modules/shared.md)

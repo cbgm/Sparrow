@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
 import kotlinx.coroutines.flow.Flow
@@ -22,16 +23,18 @@ class ContactBlocklistRepositoryImpl(
                 blockUnknownContactInvites.value = settingsStorage.getBlockUnknownContactInvites()
             }.distinctUntilChanged()
 
-    override suspend fun getBlockUnknownContactInvites(): Boolean {
-        val enabled = settingsStorage.getBlockUnknownContactInvites()
-        blockUnknownContactInvites.value = enabled
-        return enabled
-    }
+    override suspend fun getBlockUnknownContactInvites(): Result<Boolean> =
+        safeSuspendCall {
+            val enabled = settingsStorage.getBlockUnknownContactInvites()
+            blockUnknownContactInvites.value = enabled
+            enabled
+        }
 
-    override suspend fun setBlockUnknownContactInvites(enabled: Boolean) {
-        settingsStorage.setBlockUnknownContactInvites(enabled)
-        blockUnknownContactInvites.value = enabled
-    }
+    override suspend fun setBlockUnknownContactInvites(enabled: Boolean): Result<Unit> =
+        safeSuspendCall {
+            settingsStorage.setBlockUnknownContactInvites(enabled)
+            blockUnknownContactInvites.value = enabled
+        }
 
     override fun observeBlockedContactIds(): Flow<Set<String>> =
         blockedContactIds
@@ -39,27 +42,31 @@ class ContactBlocklistRepositoryImpl(
                 blockedContactIds.value = loadBlockedContactIds()
             }.distinctUntilChanged()
 
-    override suspend fun getBlockedContactIds(): Set<String> {
-        val contactIds = loadBlockedContactIds()
-        blockedContactIds.value = contactIds
-        return contactIds
-    }
-
-    override suspend fun isBlocked(contactId: String): Boolean {
-        require(contactId.isNotBlank()) {
-            "Contact ID must not be blank"
+    override suspend fun getBlockedContactIds(): Result<Set<String>> =
+        safeSuspendCall {
+            val contactIds = loadBlockedContactIds()
+            blockedContactIds.value = contactIds
+            contactIds
         }
 
-        return getBlockedContactIds().contains(contactId)
-    }
+    override suspend fun isBlocked(contactId: String): Result<Boolean> =
+        safeSuspendCall {
+            require(contactId.isNotBlank()) {
+                "Contact ID must not be blank"
+            }
 
-    override suspend fun block(contactId: String) {
-        updateBlockedContactIds(contactId = contactId, blocked = true)
-    }
+            getBlockedContactIds().getOrThrow().contains(contactId)
+        }
 
-    override suspend fun unblock(contactId: String) {
-        updateBlockedContactIds(contactId = contactId, blocked = false)
-    }
+    override suspend fun block(contactId: String): Result<Unit> =
+        safeSuspendCall {
+            updateBlockedContactIds(contactId = contactId, blocked = true)
+        }
+
+    override suspend fun unblock(contactId: String): Result<Unit> =
+        safeSuspendCall {
+            updateBlockedContactIds(contactId = contactId, blocked = false)
+        }
 
     private suspend fun updateBlockedContactIds(
         contactId: String,

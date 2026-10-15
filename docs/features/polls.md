@@ -24,14 +24,14 @@ flowchart LR
     CREATE[CreatePollViewModel] --> FINISH[FinishPollUseCase]
     FINISH --> REPO[PollComposerRepository]
     REPO --> OBS[ObserveFinishedPollUseCase]
-    OBS --> GVM[GroupConversationViewModel]
-    GVM --> SEND[SendGroupMessageUseCase]
+    OBS --> GVM[GroupPollController]
+    GVM --> SEND[SendGroupMessageWorkflow]
     SEND --> PART[Poll : MessagePart]
 ```
 
 ## Creation flow
 
-`CreatePollViewModel` owns editor state in `CreatePollUiState`. It does **not** send a group message directly. It builds the domain `Poll` through `CreatePollMapper.toPoll(...)` and publishes it through `FinishPollUseCase`. `GroupConversationViewModel` observes `ObserveFinishedPollUseCase` and sends the finished poll through the existing group message path. `ClearFinishedPollUseCase` clears the composer handoff after a successful send.
+`CreatePollViewModel` owns editor state in `CreatePollUiState`. It does **not** send a group message directly. It builds the domain `Poll` through `CreatePollMapper.toPoll(...)` and publishes it through `FinishPollUseCase`. `GroupPollController` (in Chats) observes `ObserveFinishedPollUseCase` and sends the finished poll through the existing group message path (`GroupMessageCommand.SendMessage` → `SendGroupMessageWorkflow`). `ClearFinishedPollUseCase` clears the composer handoff after a successful send.
 
 Poll media selection is gallery-only and images-only. `CreatePollViewModel.isValidPollMedia(...)` enforces the attachment policy and `MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES`.
 
@@ -55,9 +55,9 @@ closedAt is present OR now >= expiresAt
 
 ## Voting
 
-Voting is immediate when an option is clicked. There is no separate Vote/Change Vote submit button. `GroupConversationViewModel` handles `GroupConversationUiEvent.PollVoteSubmitted` and calls `VoteInGroupPollUseCase`.
+Voting is immediate when an option is clicked. There is no separate Vote/Change Vote submit button. `GroupConversationViewModel` handles `GroupConversationUiEvent.PollVoteSubmitted`; `GroupPollController` submits `GroupMessageCommand.VotePoll`.
 
-`GroupOutgoingMessageProcessor.votePoll(...)`:
+`VoteGroupPollWorkflow` (`CheckMembership -> FindPollMessage -> FindRecipients -> FindPoll -> SaveVote -> EncryptVote -> EnqueueVote`):
 
 1. verifies active membership;
 2. loads the target poll;
@@ -69,7 +69,7 @@ Voting is immediate when an option is clicked. There is no separate Vote/Change 
 
 ## Closing
 
-Manual close is the only close that writes `closedAtEpochMilliseconds` and is synchronized. The creator or a current group admin can close a poll. `CloseGroupPollUseCase` delegates to `GroupOutgoingMessageProcessor.closePoll(...)`, which applies `PollPolicy.close(...)` and sends `MessageOperation.PollClose`.
+Manual close is the only close that writes `closedAtEpochMilliseconds` and is synchronized. The creator or a current group admin can close a poll. `GroupMessageCommand.ClosePoll` runs `CloseGroupPollWorkflow`, which checks the close permission, applies `PollPolicy.close(...)` and sends `MessageOperation.PollClose`.
 
 An elapsed `expiresAtEpochMilliseconds` simply makes `PollPolicy.isClosedAt(...)` true locally and prevents further voting; it does not create a network operation.
 

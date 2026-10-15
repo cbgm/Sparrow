@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contactimport.domain.usecase
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
@@ -25,7 +26,7 @@ class VerifyContactByQrUseCase(
         contactId: String,
         encodedIdentity: String
     ): Result<Contact> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }

@@ -5,13 +5,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionEffect
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ForwardingSelectionRoute(
-    onTargetSelected: (ForwardingTarget) -> Unit,
+    onTargetSelected: (ForwardTarget) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ForwardingSelectionViewModel = koinViewModel()

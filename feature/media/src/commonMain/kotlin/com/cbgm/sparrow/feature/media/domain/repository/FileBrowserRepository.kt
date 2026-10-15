@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.media.domain.model.FileBrowserDirectory
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserEntry
 
 interface FileBrowserRepository {
-    fun hasFileAccess(): Boolean
+    fun hasFileAccess(): Result<Boolean>
 
     suspend fun setRootDirectory(reference: String): Result<Unit>
 

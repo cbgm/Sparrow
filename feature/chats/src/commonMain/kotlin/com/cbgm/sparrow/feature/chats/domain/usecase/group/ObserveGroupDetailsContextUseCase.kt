@@ -3,10 +3,10 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.group
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupDetailsContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationState
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarReadRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationReadRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionReadRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.flow.Flow
@@ -15,11 +15,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 
 class ObserveGroupDetailsContextUseCase(
-    private val verificationRepository: GroupVerificationRepository,
+    private val verificationRepository: GroupVerificationReadRepository,
     private val membershipRepository: GroupMembershipRepository,
-    private val conversationRepository: GroupConversationRepository,
-    private val avatarRepository: GroupAvatarRepository,
-    private val descriptionRepository: GroupDescriptionRepository,
+    private val conversationRepository: GroupConversationReadRepository,
+    private val avatarRepository: GroupAvatarReadRepository,
+    private val descriptionRepository: GroupDescriptionReadRepository,
     private val contactRepository: ContactRepository,
     private val observeVerificationContext: ObserveGroupVerificationContextUseCase
 ) {

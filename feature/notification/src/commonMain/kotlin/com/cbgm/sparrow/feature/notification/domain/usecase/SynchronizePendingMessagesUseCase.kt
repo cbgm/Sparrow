@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.notification.domain.usecase
 
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
@@ -22,7 +23,7 @@ class SynchronizePendingMessagesUseCase(
     private val logger = SparrowLog.withTag("SynchronizePendingMessagesUseCase")
 
     suspend operator fun invoke(wakeUpId: String): Result<PendingMessageSyncResult> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             initializeCryptoRuntime().getOrThrow()
             require(wakeUpId.isNotBlank()) {
                 "Wake-up ID must not be blank"

@@ -9,8 +9,15 @@ import com.cbgm.sparrow.feature.avatar.di.avatarModule
 import com.cbgm.sparrow.feature.chats.di.chatsModule
 import com.cbgm.sparrow.feature.contactimport.di.contactImportModule
 import com.cbgm.sparrow.feature.contacts.di.contactsModule
-import com.cbgm.sparrow.feature.conversationorchestration.di.conversationOrchestrationModule
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.di.conversationDeliveryModule
+import com.cbgm.sparrow.feature.conversationorchestration.engine.di.conversationEngineModule
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.di.conversationGroupStateModule
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.di.conversationIncomingModule
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.di.conversationLifecycleModule
+import com.cbgm.sparrow.feature.conversationorchestration.membership.di.conversationMembershipModule
+import com.cbgm.sparrow.feature.conversationorchestration.message.di.conversationMessageModule
 import com.cbgm.sparrow.feature.embedding.di.embeddingModule
+import com.cbgm.sparrow.feature.expenses.di.expensesModule
 import com.cbgm.sparrow.feature.identity.di.identityModule
 import com.cbgm.sparrow.feature.invite.di.inviteModule
 import com.cbgm.sparrow.feature.linkpreview.di.linkPreviewModule
@@ -18,6 +25,7 @@ import com.cbgm.sparrow.feature.media.di.mediaModule
 import com.cbgm.sparrow.feature.membership.di.membershipModule
 import com.cbgm.sparrow.feature.messaging.di.messagingModule
 import com.cbgm.sparrow.feature.notification.di.notificationModule
+import com.cbgm.sparrow.feature.ocr.di.ocrModule
 import com.cbgm.sparrow.feature.onboarding.di.onboardingModule
 import com.cbgm.sparrow.feature.polls.di.pollsModule
 import com.cbgm.sparrow.feature.safety.di.safetyModule
@@ -40,14 +48,22 @@ internal val commonApplicationModules: List<Module> =
         identityModule,
         onboardingModule,
         pollsModule,
+        expensesModule,
         contactsModule,
         inviteModule,
-        conversationOrchestrationModule,
+        conversationEngineModule,
+        conversationDeliveryModule,
+        conversationMessageModule,
+        conversationGroupStateModule,
+        conversationMembershipModule,
+        conversationLifecycleModule,
+        conversationIncomingModule,
         safetyModule,
         attachmentsModule,
         autoReplyModule,
         avatarModule,
         mediaModule,
+        ocrModule,
         voiceModule,
         chatsModule,
         membershipModule,

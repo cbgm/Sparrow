@@ -106,3 +106,41 @@ sealed interface MessagePartSourceUi {
         }
     }
 }
+
+data class ExpenseBoardUi(
+    override val id: String,
+    val currencyCode: String,
+    val activatedAtEpochMilliseconds: Long,
+    val closedAtEpochMilliseconds: Long? = null,
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
+
+data class ExpenseBoardClosedUi(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long,
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
+
+data class ExpenseUi(
+    override val id: String,
+    val boardId: String,
+    val description: String,
+    val amountMinor: Long,
+    val currencyCode: String,
+    val paidByMemberId: String,
+    val allocations: List<ExpenseAllocationUi>,
+    val occurredAtEpochMilliseconds: Long,
+    val receipt: ImageUi? = null,
+    val category: String = "OTHER",
+    val editedAtEpochMilliseconds: Long? = null,
+    val deletedAtEpochMilliseconds: Long? = null,
+    val createdByMemberId: String? = null,
+    val revisionOf: String? = null,
+    override val source: MessagePartSourceUi = MessagePartSourceUi.Message
+) : MessagePartUi
+
+data class ExpenseAllocationUi(
+    val memberId: String,
+    val amountMinor: Long
+)

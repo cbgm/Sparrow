@@ -5,6 +5,9 @@ import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.attachments.presentation.management.AttachmentManagementRoute
 import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStorageRoute
+import com.cbgm.sparrow.feature.expenses.presentation.create.CreateExpenseRoute
+import com.cbgm.sparrow.feature.expenses.presentation.detail.ExpenseDetailRoute
+import com.cbgm.sparrow.feature.expenses.presentation.overview.ExpenseOverviewRoute
 import com.cbgm.sparrow.feature.polls.presentation.create.CreatePollRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
@@ -22,6 +25,27 @@ fun NavGraphBuilder.attachmentsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) {
         AttachmentManagementRoute()
+    }
+
+    composable<AppRoute.CreateExpense>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        CreateExpenseRoute()
+    }
+
+    composable<AppRoute.ExpenseOverview>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        ExpenseOverviewRoute()
+    }
+
+    composable<AppRoute.ExpenseDetail>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        ExpenseDetailRoute()
     }
 
     composable<AppRoute.CreatePoll>(

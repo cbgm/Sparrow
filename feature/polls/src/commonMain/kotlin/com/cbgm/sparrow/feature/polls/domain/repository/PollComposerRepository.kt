@@ -8,5 +8,5 @@ interface PollComposerRepository {
 
     suspend fun finishPoll(poll: Poll): Result<Unit>
 
-    fun clearFinishedPoll()
+    fun clearFinishedPoll(): Result<Unit>
 }

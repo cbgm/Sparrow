@@ -20,7 +20,7 @@ This page describes the implemented behavior in the supplied 2026-10-08 release 
 - safety-number/QR verification;
 - device-contact import, contact merge/routing projection and blocking;
 - invitation inbox for Direct/Group flows;
-- explicit conversation orchestration in `:feature:conversationorchestration`.
+- explicit conversation orchestration in the `:feature:conversationorchestration:*` workflow modules.
 
 ## Direct chats
 
@@ -159,11 +159,11 @@ See [Startup architecture](../architecture/startup.md).
 
 ### Identity backup and recovery
 
-The current code includes encrypted identity export/restore (`PrepareIdentityBackupUseCase`, `RestoreIdentityBackupUseCase`, `AndroidIdentityBackupCodec`) plus durable remote-key replacement review and reconnection (`PendingRemoteIdentityChange`, `ApprovedIdentityReconnection`, `ApprovedIdentityReconnectionObserver`, `ApprovedReconnectionRetryWorker`, `StartRecoveryInvitationUseCase`). See [Identity backup, recovery and reconnection](identity-recovery.md).
+The current code includes encrypted identity export/restore (`PrepareIdentityBackupUseCase`, `RestoreIdentityBackupUseCase`, `AndroidIdentityBackupCodec`) plus durable remote-key replacement review and reconnection (`PendingRemoteIdentityChange`, `ApprovedIdentityReconnection`, `ApprovedIdentityReconnectionObserver`, `ApprovedReconnectionRetryWorker`, `StartRecoveryInvitationWorkflow`). See [Identity backup, recovery and reconnection](identity-recovery.md).
 
 ### Generic invitations and orchestration
 
-Invitation lifecycle is now a dedicated `:feature:invite` concern, while `:feature:conversationorchestration` contains `ConversationFlowHandler` and result observers that coordinate Invite, Identity, Membership and Chats. See [Invitations](invitations.md) and [Runtime orchestration](../architecture/runtime-flows.md).
+Invitation lifecycle is now a dedicated `:feature:invite` concern, while the `:feature:conversationorchestration:*` modules contain the workflow state machines (for example `StartDirectInvitationWorkflow`, `HandleIdentityResultWorkflow`, `HandleGroupInvitationResultWorkflow`) and result observers that coordinate Invite, Identity, Membership and messages. Chats submits commands through `ConversationOrchestrator`. See [Invitations](invitations.md), [Conversation orchestration](../architecture/conversation-orchestration.md) and [Runtime orchestration](../architecture/runtime-flows.md).
 
 ### Group membership module
 
@@ -183,7 +183,7 @@ Group membership/security is implemented in `:feature:membership` rather than in
 
 ### Group pinned messages
 
-Group admins can synchronize current pin state through `GroupPinRepositoryImpl`, `GroupPinBroadcaster`, `GroupPinUpdatedPacket`, `PinGroupMessageUseCase` and `UnpinGroupMessageUseCase`. See [Group pinned messages](pinned-messages.md).
+Group admins can synchronize current pin state through `PinGroupMessageWorkflow`, `UnpinGroupMessageWorkflow`, `SendCurrentGroupPinWorkflow`, `GroupPinUpdatedPacket` and `ReceiveGroupPinWorkflow`. See [Group pinned messages](pinned-messages.md).
 
 ### Persistence
 

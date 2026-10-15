@@ -9,5 +9,6 @@ class UpdateIncomingIdentityPeerMetadataUseCase(
         peerId: String,
         phoneNumber: String,
         updatedAtEpochMilliseconds: Long
-    ) = repository.updateIncomingMetadata(peerId, phoneNumber, updatedAtEpochMilliseconds)
+    ): Result<Unit> =
+        repository.updateIncomingMetadata(peerId, phoneNumber, updatedAtEpochMilliseconds)
 }

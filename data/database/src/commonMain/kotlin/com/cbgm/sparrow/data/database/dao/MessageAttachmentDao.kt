@@ -58,6 +58,26 @@ interface MessageAttachmentDao {
     )
     fun observeMessagePartsByMessageIds(messageIds: List<String>): Flow<List<MessagePartEntity>>
 
+    /** Returns every part of the conversation's messages that contain at least one part of [type]. */
+    @Query(
+        """
+        SELECT message_parts.*
+        FROM message_parts
+        INNER JOIN attachment_message_contexts AS ctx ON ctx.messageId = message_parts.messageId
+        LEFT JOIN message_blobs ON message_blobs.partId = message_parts.id
+        WHERE ctx.conversationId = :conversationId
+          AND message_parts.type != 'TEXT'
+          AND message_parts.messageId IN (
+            SELECT typed.messageId FROM message_parts AS typed WHERE typed.type = :type
+          )
+        ORDER BY ctx.createdAtEpochMilliseconds ASC, message_parts.messageId ASC, message_parts.position ASC
+        """
+    )
+    fun observeMessagePartsByConversationIdAndType(
+        conversationId: String,
+        type: String
+    ): Flow<List<MessagePartEntity>>
+
     @Query("SELECT * FROM message_parts WHERE messageId = :messageId AND type != 'TEXT' ORDER BY position")
     suspend fun findMessagePartsByMessageId(messageId: String): List<MessagePartEntity>
 

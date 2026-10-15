@@ -6,8 +6,8 @@
 
 - Invite owns generic pending/declined/expired/failed invitation records.
 - Membership owns whether a peer is an active/pending/removed Group member and the cryptographic epoch/member-key state.
-- Chats owns conversation/message presentation and Group message semantics.
-- `ConversationFlowHandler` coordinates the three.
+- Chats owns conversation/message presentation and submits group commands.
+- The workflows in `:feature:conversationorchestration:*` coordinate the three: group administration in `membership` (`CreateGroupWorkflow`, `AddGroupMembersWorkflow`, `RemoveGroupMemberWorkflow`, `PromoteGroupMemberWorkflow`, `TransferGroupAdminAndLeaveWorkflow`, `LeaveGroupWorkflow`, `DeleteGroupWorkflow`), invitation results in `invite`, incoming membership packets in `incoming`.
 
 ## Main implementation classes
 
@@ -50,23 +50,24 @@ Repositories/datasources:
 ```mermaid
 sequenceDiagram
     participant CHAT as Chats / group creation
-    participant FLOW as ConversationFlowHandler
+    participant FLOW as CreateGroupWorkflow / AddGroupMembersWorkflow
+    participant IN as Receive*Workflow (incoming)
     participant INV as feature:invite
     participant MEM as feature:membership
     participant PEER as remote member
 
-    CHAT->>FLOW: startGroupInvitations(groupId, peers)
+    CHAT->>FLOW: GroupAdministrationCommand.CreateGroup / AddMembers
     FLOW->>MEM: StartGroupMembershipUseCase
     FLOW->>INV: record GROUP invitation
-    FLOW-->>PEER: GroupInvitePacket
-    PEER-->>FLOW: acceptance / GroupJoinRequestPacket
-    FLOW->>MEM: membership receive/accept use cases
+    MEM-->>PEER: GroupInvitePacket
+    PEER-->>IN: GroupJoinRequestPacket
+    IN->>MEM: ReceiveGroupJoinRequestWorkflow (receive join, confirm identity)
     MEM-->>PEER: welcome/security material
-    PEER-->>FLOW: GroupReadyAcknowledgementPacket
-    FLOW->>MEM: ReceiveGroupReadyAcknowledgementUseCase
-    FLOW-->>PEER: GroupMemberActivatedPacket
-    PEER-->>FLOW: GroupMemberActivationAcknowledgementPacket
-    FLOW->>MEM: ReceiveGroupActivationAcknowledgementUseCase
+    PEER-->>IN: GroupReadyAcknowledgementPacket
+    IN->>MEM: ReceiveGroupReadyAcknowledgementWorkflow
+    MEM-->>PEER: GroupMemberActivatedPacket
+    PEER-->>IN: GroupMemberActivationAcknowledgementPacket
+    IN->>MEM: ReceiveGroupActivationAcknowledgementWorkflow
 ```
 
 The detailed steps depend on which side is owner/member and whether identity review is required, but Group cryptographic activation always remains a Membership concern.
@@ -119,12 +120,12 @@ Message/metadata authorization:
 
 ## Membership result stream
 
-`ObserveMembershipResultsUseCase` exposes durable domain results. `MembershipResultObserver` in `:feature:conversationorchestration` consumes them and calls `ConversationFlowHandler.onMembershipResult()`. This replaces cross-feature repository calls/coordinators.
+`ObserveMembershipResultsUseCase` exposes durable domain results. `MembershipResultObserver` in `:feature:conversationorchestration:membership` consumes them and runs `HandleMembershipResultWorkflow` (for `ACTIVE`: `ResolveMemberName -> LoadEpoch -> AddParticipant -> FlushQueuedMessages`). This replaces cross-feature repository calls/coordinators.
 
 ## Admin leave
 
-`GetGroupLeaveRequirementUseCase` decides whether a normal leave is possible or whether the last/required admin must transfer responsibility first. `TransferGroupAdminAndLeaveUseCase` performs the explicit transfer+leave path.
+`GetGroupLeaveRequirementUseCase` decides whether a normal leave is possible or whether the last/required admin must transfer responsibility first. `TransferGroupAdminAndLeaveUseCase` performs the explicit transfer+leave path; Chats triggers it with `GroupAdministrationCommand.TransferAdminAndLeave` (`TransferGroupAdminAndLeaveWorkflow`).
 
 ## Security epoch
 
-`GroupSecurityManager` and the epoch datasources own current Group encryption state. Group message sending (`GroupOutgoingMessageProcessor`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
+`GroupSecurityManager` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.

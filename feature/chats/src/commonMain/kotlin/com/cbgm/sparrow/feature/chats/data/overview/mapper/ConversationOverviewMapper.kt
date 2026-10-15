@@ -41,6 +41,9 @@ internal fun ConversationSummaryDto.toConversationOverview(): ConversationOvervi
                 MessageAttachmentType.CONTACT -> ConversationOverviewPreview.CONTACT_CARD
                 MessageAttachmentType.VOICE -> ConversationOverviewPreview.VOICE
                 MessageAttachmentType.POLL -> ConversationOverviewPreview.POLL
+                MessageAttachmentType.EXPENSE_BOARD,
+                MessageAttachmentType.EXPENSE_BOARD_CLOSED,
+                MessageAttachmentType.EXPENSE -> ConversationOverviewPreview.EXPENSE
             }
     )
 }

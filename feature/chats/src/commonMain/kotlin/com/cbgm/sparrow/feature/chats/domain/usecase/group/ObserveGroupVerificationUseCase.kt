@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationState
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObserveGroupVerificationUseCase(
-    private val repository: GroupVerificationRepository,
+    private val repository: GroupVerificationReadRepository,
     private val contactRepository: ContactRepository,
     private val observeVerificationContext: ObserveGroupVerificationContextUseCase
 ) {

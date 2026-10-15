@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
@@ -21,50 +22,53 @@ class AndroidDeviceContactWriterRepository(
 
     private val contentResolver: ContentResolver = applicationContext.contentResolver
 
-    override suspend fun addIfNotExists(request: AddDeviceContactRequest): AddDeviceContactResult {
-        val phoneNumber = request.phoneNumber.trim()
+    override suspend fun addIfNotExists(
+        request: AddDeviceContactRequest
+    ): Result<AddDeviceContactResult> =
+        safeSuspendCall {
+            val phoneNumber = request.phoneNumber.trim()
 
-        if (!isValidPhoneNumber(phoneNumber)) {
-            return AddDeviceContactResult.InvalidPhoneNumber
-        }
+            if (!isValidPhoneNumber(phoneNumber)) {
+                return@safeSuspendCall AddDeviceContactResult.InvalidPhoneNumber
+            }
 
-        if (!hasContactsPermissions()) {
-            return AddDeviceContactResult.PermissionDenied
-        }
+            if (!hasContactsPermissions()) {
+                return@safeSuspendCall AddDeviceContactResult.PermissionDenied
+            }
 
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                if (phoneNumberExists(phoneNumber)) {
-                    AddDeviceContactResult.AlreadyExists
-                } else {
-                    insertContact(
-                        request =
-                            request.copy(
-                                displayName =
-                                    request.displayName
-                                        ?.trim()
-                                        ?.takeIf { it.isNotEmpty() },
-                                phoneNumber = phoneNumber,
-                                email =
-                                    request.email
-                                        ?.trim()
-                                        ?.takeIf { it.isNotEmpty() },
-                                company =
-                                    request.company
-                                        ?.trim()
-                                        ?.takeIf { it.isNotEmpty() }
-                            )
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    if (phoneNumberExists(phoneNumber)) {
+                        AddDeviceContactResult.AlreadyExists
+                    } else {
+                        insertContact(
+                            request =
+                                request.copy(
+                                    displayName =
+                                        request.displayName
+                                            ?.trim()
+                                            ?.takeIf { it.isNotEmpty() },
+                                    phoneNumber = phoneNumber,
+                                    email =
+                                        request.email
+                                            ?.trim()
+                                            ?.takeIf { it.isNotEmpty() },
+                                    company =
+                                        request.company
+                                            ?.trim()
+                                            ?.takeIf { it.isNotEmpty() }
+                                )
+                        )
+
+                        AddDeviceContactResult.Added
+                    }
+                }.getOrElse { throwable ->
+                    AddDeviceContactResult.Failure(
+                        throwable = throwable
                     )
-
-                    AddDeviceContactResult.Added
                 }
-            }.getOrElse { throwable ->
-                AddDeviceContactResult.Failure(
-                    throwable = throwable
-                )
             }
         }
-    }
 
     private fun phoneNumberExists(phoneNumber: String): Boolean {
         val lookupUri =

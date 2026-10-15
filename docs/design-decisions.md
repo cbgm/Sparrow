@@ -24,7 +24,7 @@ Reason: client clock skew should not let one device permanently broadcast an ear
 
 ## Poll creation hands off to chat sending
 
-`:feature:polls` finishes a domain `Poll` into `PollComposerRepository`. `GroupConversationViewModel` observes and sends it through the existing group-message orchestration.
+`:feature:polls` finishes a domain `Poll` into `PollComposerRepository`. `GroupPollController` (in Chats) observes it and submits it as `GroupMessageCommand.SendMessage` to the existing group-message workflow.
 
 Reason: polls are group message parts. The poll UI should not own a parallel group send stack.
 
@@ -40,11 +40,17 @@ Reason: startup has one visible red line, avoids a bloated startup ViewModel, an
 
 ## Strict feature dependency direction
 
-Datasources do not call repositories; repository implementations do not call repositories/use cases. Cross-feature business workflows live in explicit orchestration/runtime boundaries such as `:feature:conversationorchestration`.
+Datasources do not call repositories; repository implementations do not call repositories/use cases. Cross-feature business workflows live in explicit orchestration/runtime boundaries such as the `:feature:conversationorchestration:*` modules.
+
+## Conversation writes are workflow state machines
+
+`:feature:chats` is read-only and submits `ConversationCommand`s to `ConversationOrchestrator`. Each command runs one workflow whose `perform(step)` executes exactly one operation and whose pure `transition(step, outcome)` decides the next step. See [Conversation orchestration](architecture/conversation-orchestration.md).
+
+Reason: the previous `ConversationFlowHandler` and Chats-side processors hid long, branching sequences in large classes. Explicit steps make every decision visible, testable without side effects and observable as `ConversationState.Running(step)`, and the layered modules prevent cycles between messages, membership and invitations.
 
 ## Direct and Group remain semantically separate
 
-Direct and Group processors/ViewModels/repositories remain separate where membership/security/delivery semantics differ. They share only genuinely common primitives such as message parts, protocol operations and transport infrastructure.
+Direct and Group workflows/ViewModels/repositories remain separate where membership/security/delivery semantics differ. They share only genuinely common primitives such as message parts, protocol operations and transport infrastructure.
 
 ## Durable outbox before transport
 

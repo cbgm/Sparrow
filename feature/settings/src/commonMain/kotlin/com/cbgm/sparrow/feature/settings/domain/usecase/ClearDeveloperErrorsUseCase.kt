@@ -5,7 +5,5 @@ import com.cbgm.sparrow.feature.settings.domain.repository.DeveloperErrorLogRepo
 class ClearDeveloperErrorsUseCase(
     private val repository: DeveloperErrorLogRepository
 ) {
-    suspend operator fun invoke() {
-        repository.clearErrors()
-    }
+    suspend operator fun invoke(): Result<Unit> = repository.clearErrors()
 }

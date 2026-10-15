@@ -5,7 +5,7 @@ echo =====================================
 echo Updating architecture documentation
 echo =====================================
 
-call gradlew.bat architectureReport
+call gradlew.bat architectureReport workflowCatalog
 
 if errorlevel 1 (
     echo.

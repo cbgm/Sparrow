@@ -6,5 +6,5 @@ import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 class GetAppLanguageUseCase(
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke(): AppLanguage = settingsRepository.getLanguage()
+    suspend operator fun invoke(): Result<AppLanguage> = settingsRepository.getLanguage()
 }

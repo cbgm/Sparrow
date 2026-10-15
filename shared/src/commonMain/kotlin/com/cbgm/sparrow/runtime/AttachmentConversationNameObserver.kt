@@ -31,13 +31,11 @@ class AttachmentConversationNameObserver internal constructor(
             }
         }.collect { conversations ->
             conversations.forEach { (conversationId, displayName, isGroup) ->
-                runCatching {
-                    attachments.updateConversationDisplayName(
-                        conversationId = conversationId,
-                        displayName = displayName,
-                        isGroup = isGroup
-                    )
-                }.onFailure { error ->
+                attachments.updateConversationDisplayName(
+                    conversationId = conversationId,
+                    displayName = displayName,
+                    isGroup = isGroup
+                ).onFailure { error ->
                     logger.error(error) { "Could not update attachment display name for $conversationId" }
                 }
             }

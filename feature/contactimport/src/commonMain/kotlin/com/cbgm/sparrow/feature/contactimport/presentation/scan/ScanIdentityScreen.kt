@@ -1,180 +1,39 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.scan
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.scanIdentityScreen
-import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contactimport.device.QrScanner
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
+import com.cbgm.sparrow.feature.media.device.CameraScanner
+import com.cbgm.sparrow.feature.media.domain.model.CameraScanMode
+import com.cbgm.sparrow.feature.media.domain.model.CameraScanResult
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_contactimport_scan_identity
 import com.cbgm.sparrow.resources.feature_contactimport_scan_identity_instruction
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanIdentityScreen(
     onUiEvent: (ScanIdentityUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SparrowStaticScaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    ),
-                title = {
-                    Text(
-                        text = stringResource(Res.string.feature_contactimport_scan_identity),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { onUiEvent(ScanIdentityUiEvent.BackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-        ) {
-            QrScanner(
-                onQrCodeScanned = { encodedIdentity ->
-                    onUiEvent(ScanIdentityUiEvent.QrCodeScanned(encodedIdentity))
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            ScannerOverlay(
-                modifier = Modifier.fillMaxSize()
-            )
-
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = MaterialTheme.spacing.screenPadding,
-                        vertical = MaterialTheme.spacing.times(5)
-                    ),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    text = stringResource(Res.string.feature_contactimport_scan_identity_instruction),
-                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
-                )
+    CameraScanner(
+        mode = CameraScanMode.QrCode,
+        onResult = { result ->
+            if (result is CameraScanResult.QrCode) {
+                onUiEvent(ScanIdentityUiEvent.QrCodeScanned(result.value))
             }
-        }
-    }
-}
-
-@Composable
-private fun ScannerOverlay(modifier: Modifier = Modifier) {
-    val scrimColor = MaterialTheme.colorScheme.scrim
-    val accentColor = MaterialTheme.colorScheme.primary
-    val frameCornerRadius = MaterialTheme.shapes.scanIdentityScreen.frameCornerRadius
-
-    Canvas(modifier = modifier) {
-        val frameSize = size.minDimension * 0.62f
-        val left = (size.width - frameSize) / 2f
-        val top = (size.height - frameSize) / 2f - Dimens.ScanIdentityScreen.frameVerticalOffset.toPx()
-
-        val scrimPath =
-            Path().apply {
-                addRect(Rect(Offset.Zero, size))
-                addRoundRect(
-                    RoundRect(
-                        rect =
-                            Rect(
-                                offset = Offset(left, top),
-                                size = Size(frameSize, frameSize)
-                            ),
-                        cornerRadius = CornerRadius(frameCornerRadius.toPx())
-                    )
-                )
-                fillType = PathFillType.EvenOdd
-            }
-
-        drawPath(path = scrimPath, color = scrimColor.copy(alpha = Alpha.ScanIdentityScreen.scrim))
-
-        val cornerLength = Dimens.ScanIdentityScreen.frameCornerLength.toPx()
-        val strokeWidth = Dimens.ScanIdentityScreen.frameStrokeWidth.toPx()
-        val corners =
-            listOf(
-                Offset(left, top) to Pair(1, 1),
-                Offset(left + frameSize, top) to Pair(-1, 1),
-                Offset(left, top + frameSize) to Pair(1, -1),
-                Offset(left + frameSize, top + frameSize) to Pair(-1, -1)
-            )
-
-        corners.forEach { (corner, direction) ->
-            val (dx, dy) = direction
-            drawLine(
-                color = accentColor,
-                start = corner,
-                end = Offset(corner.x + cornerLength * dx, corner.y),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = accentColor,
-                start = corner,
-                end = Offset(corner.x, corner.y + cornerLength * dy),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round
-            )
-        }
-    }
+        },
+        hint = stringResource(Res.string.feature_contactimport_scan_identity_instruction),
+        onDismiss = { onUiEvent(ScanIdentityUiEvent.BackClicked) },
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(FunctionalColors.MediaBackground)
+    )
 }
 
 @Preview

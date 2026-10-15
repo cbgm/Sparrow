@@ -59,11 +59,5 @@ class ObserveConversationOverviewContextUseCaseTest {
         private val conversations: Flow<List<ConversationOverview>>
     ) : ConversationOverviewRepository {
         override fun observeAll(): Flow<List<ConversationOverview>> = conversations
-
-        override suspend fun incrementUnseenLocalMessageCount(conversationId: String): Result<Unit> =
-            Result.success(Unit)
-
-        override suspend fun clearUnseenLocalMessageCount(conversationId: String): Result<Unit> =
-            Result.success(Unit)
     }
 }

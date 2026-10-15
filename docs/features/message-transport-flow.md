@@ -6,30 +6,32 @@ This page connects the current client layers from UI to encrypted network delive
 
 ```mermaid
 sequenceDiagram
-    participant VM as DirectConversationViewModel
-    participant UC as SendOrQueueDirectMessageUseCase
-    participant DP as DirectOutgoingMessageProcessor
+    participant VM as DirectConversationActionsController
+    participant ORCH as ConversationOrchestrator
+    participant WF as SendDirectMessageWorkflow
     participant AUTH as RequireDirectChatAuthorizationUseCase
+    participant DEL as DeliverDirectMessageWorkflow
     participant DB as Room
     participant OUT as ProtocolOutbox
     participant RUN as DefaultOutboxRunner
     participant SEND as OutgoingPacketSender
     participant WS as DefaultWebSocketTransportClient
 
-    VM->>UC: send
-    UC->>DP: send or queue
-    DP->>AUTH: authorization check
+    VM->>ORCH: awaitResult(DirectConversationCommand.SendMessage)
+    ORCH->>WF: blocked? pending identity change?
+    WF->>AUTH: CheckAuthorization step
     alt authorized
-        DP->>DB: persist message
-        DP->>OUT: enqueue encrypted packet work
+        WF->>DEL: DeliverMessage step
+        DEL->>DB: persist message
+        DEL->>OUT: enqueue encrypted packet work
         RUN->>SEND: process persisted packet
         SEND->>WS: send
     else not authorized
-        DP->>DB: persist WAITING_FOR_AUTHORIZATION
+        WF->>DB: persist WAITING_FOR_AUTHORIZATION (optionally request reauthorization)
     end
 ```
 
-A queued Direct message is released with `DirectOutgoingMessageProcessor.releaseWaitingForAuthorization()` only after orchestration establishes fresh authorization. There is no plaintext fallback.
+A queued Direct message is released by `ReleaseWaitingDirectMessagesWorkflow` (via `ActivateAuthorizedConversationWorkflow`) only after orchestration establishes fresh authorization. There is no plaintext fallback.
 
 ## Incoming delivery
 
@@ -37,38 +39,42 @@ A queued Direct message is released with `DirectOutgoingMessageProcessor.release
 sequenceDiagram
     participant WS as transport incoming gateway
     participant IR as DefaultIncomingEnvelopeRunner
-    participant IP as DefaultIncomingEnvelopeProcessor
-    participant PROTO as DefaultProtocolPacketHandler
-    participant FLOW as ConversationFlowHandler
-    participant ROUTER as IncomingPacketRouter
+    participant IP as IncomingEnvelopeProcessorImpl
+    participant H as IncomingTransportMessageHandler
+    participant ROUTE as RouteIncomingPacketWorkflow
+    participant CTRL as ControlPacketDispatcher
+    participant GRP as GroupPacketDispatcher
 
     WS-->>IR: envelope
     IR->>IP: process
-    IP->>PROTO: decode/verify packet
-    PROTO->>FLOW: identity/invite/membership protocol packets
-    PROTO->>ROUTER: chat/message/receipt packets
+    IP->>H: decrypt/decode packet
+    H->>ROUTE: IncomingPacket
+    ROUTE->>ROUTE: direct message: ReceiveDirectMessageWorkflow / receipt: ApplyDeliveryEventWorkflow
+    ROUTE->>GRP: group packets -> ReceiveGroup*Workflow
+    ROUTE->>CTRL: identity/invite packets -> ReceiveContact*/ReceiveGroupInvite*Workflow
 ```
 
 ## Direct invitation/authorization
 
-The generic invitation row is owned by `:feature:invite`, the cryptographic exchange by `:feature:identity`, and the cross-feature sequence by `ConversationFlowHandler`/`InvitationResultObserver`.
+The generic invitation row is owned by `:feature:invite`, the cryptographic exchange by `:feature:identity`, and the cross-feature sequence by the lifecycle workflows (`StartDirectInvitationWorkflow`, `HandleDirectInvitationResultWorkflow`, …) run by `OpenDirectConversationWorkflow` and `InvitationResultObserver`.
 
 ```mermaid
 flowchart LR
-    CONTACT[contact selection] --> FLOW[ConversationFlowHandler.startDirectInvitation]
+    CONTACT[contact selection] --> OPEN[OpenDirectConversationWorkflow]
+    OPEN --> FLOW[StartDirectInvitationWorkflow]
     FLOW --> ID[Identity exchange]
     FLOW --> INV[Invitation lifecycle]
     INV --> OBS[InvitationResultObserver]
-    OBS --> FLOW2[recover/accept result]
-    FLOW2 --> CHAT[authorized Direct conversation]
-    CHAT --> REL[release waiting messages]
+    OBS --> FLOW2[HandleDirectInvitationResultWorkflow /<br/>RecoverAcceptedDirectInvitationWorkflow]
+    FLOW2 --> CHAT[ActivateAuthorizedConversationWorkflow]
+    CHAT --> REL[ReleaseWaitingDirectMessagesWorkflow]
 ```
 
 Explicit recovery/reconnection is documented separately in [Identity recovery](identity-recovery.md).
 
 ## Group send
 
-`GroupOutgoingMessageProcessor` validates active membership, obtains current routing members from Membership, encrypts for the current Group epoch and queues one packet per active recipient. Group security state is not inferred from the invitation table.
+`SendGroupMessageWorkflow` validates active membership, obtains current recipients from Membership, encrypts for the current Group epoch and queues one packet per active recipient (`CheckMembership -> FindRecipients -> [FlushQueuedMessages] -> StoreMessage -> EncryptMessage -> SaveRecipientStates -> EnqueuePackets`). Group security state is not inferred from the invitation table.
 
 ## Offline mailbox
 
@@ -78,4 +84,4 @@ The server `mailbox` service stores opaque encrypted envelopes behind recipient-
 
 ## Delivery/read receipts
 
-Protocol receipts are routed back into Chats. Direct and Group maintain distinct recipient/delivery state logic (`DirectOutboxDeliveryHandler`, `GroupOutboxDeliveryHandler` and their data paths), while generic outbox execution remains in `:feature:messaging`.
+Protocol receipts are routed by `RouteIncomingPacketWorkflow` to `ApplyDeliveryEventWorkflow`; outbox progress reaches the same workflow through `OutboxDeliveryStateRouter`. Direct and Group maintain distinct recipient/delivery state logic (`DirectMessageDeliveryStateMachine`, `GroupMessageDeliveryStateMachine`, `DirectMessageDeliveryRepository` and `GroupRecipientDeliveryRepository` in `:feature:conversationorchestration:delivery`), while generic outbox execution remains in `:feature:messaging`.

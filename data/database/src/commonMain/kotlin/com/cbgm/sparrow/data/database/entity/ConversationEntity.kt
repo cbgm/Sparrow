@@ -34,7 +34,6 @@ data class ConversationEntity(
      */
     val contactId: String?,
     val type: String,
-    val title: String?,
     val createdAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long,
     @ColumnInfo(defaultValue = "0")

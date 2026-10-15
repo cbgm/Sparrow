@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.errors
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
@@ -54,7 +55,13 @@ class DeveloperErrorLogViewModel(
         viewModelScope.launch {
             isClearing.value = true
             try {
-                clearDeveloperErrorsUseCase()
+                clearDeveloperErrorsUseCase().onFailure { error ->
+                    SparrowLog.error(
+                        "DeveloperErrorLogViewModel",
+                        "Developer errors could not be cleared",
+                        error
+                    )
+                }
             } finally {
                 isClearing.value = false
             }

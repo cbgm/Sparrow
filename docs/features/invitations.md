@@ -66,27 +66,31 @@ Outbox integration:
 
 ```mermaid
 sequenceDiagram
-    participant NET as Incoming packet
-    participant FLOW as ConversationFlowHandler
+    participant NET as RouteIncomingPacketWorkflow
+    participant RECV as ReceiveContactInviteWorkflow
     participant ID as feature:identity
     participant INV as feature:invite
     participant UI as InvitationViewModel
+    participant OBS as InvitationResultObserver
+    participant RES as HandleDirectInvitationResultWorkflow
+    participant CHAT as ActivateAuthorizedConversationWorkflow
 
-    NET->>FLOW: ContactInvitePacket / Identity packet sequence
-    FLOW->>ID: stage/validate identity exchange
-    FLOW->>INV: RecordPendingInvitationUseCase
+    NET->>RECV: ContactInvitePacket (via ControlPacketDispatcher)
+    RECV->>ID: verify/stage identity exchange
+    RECV->>INV: RecordIncomingDirectInvitationWorkflow
     INV-->>UI: incoming Invitation
     UI->>INV: AcceptInvitationUseCase
-    INV-->>FLOW: InvitationResultObserver sees result
-    FLOW->>ID: continue/establish identity authorization
-    FLOW->>CHAT: create/recover conversation when authorized
+    INV-->>OBS: invitation result
+    OBS->>RES: run workflow
+    RES->>ID: AcceptExchange
+    RES->>CHAT: ActivateConversation, release waiting messages
 ```
 
 The application does not treat “invite accepted in the UI” as “message can now be sent.” Direct authorization is only released after the identity exchange reaches the required established state.
 
 ## Outgoing Direct invitation
 
-`ConversationFlowHandler.startDirectInvitation(peerId)` decides whether an existing established exchange/conversation already satisfies the request or whether an explicit fresh invitation/identity flow is required. The actual pending invitation row belongs to `:feature:invite`; identity packets belong to `:feature:identity`/`:protocol`.
+`StartDirectInvitationWorkflow` (run by `OpenDirectConversationWorkflow` for `DirectConversationCommand.OpenConversation`, by `ReconnectDirectConversationWorkflow` and by `RequestReauthorizationWorkflow`) decides whether an existing established exchange/conversation already satisfies the request or whether an explicit fresh invitation/identity flow is required. The actual pending invitation row belongs to `:feature:invite`; identity packets belong to `:feature:identity`/`:protocol`.
 
 ## Group invitation
 
@@ -95,18 +99,20 @@ Group invite UI lifecycle still uses `:feature:invite`, but accepting a group in
 ```mermaid
 sequenceDiagram
     participant OWNER as Group owner/admin
-    participant FLOW as ConversationFlowHandler
+    participant FLOW as AddGroupMembersWorkflow
     participant INV as feature:invite
     participant MEM as feature:membership
     participant MEMBER as Invited member
+    participant RES as HandleGroupInvitationResultWorkflow
 
-    OWNER->>FLOW: startGroupInvitations(...)
+    OWNER->>FLOW: GroupAdministrationCommand.AddMembers / CreateGroup
     FLOW->>MEM: StartGroupMembershipUseCase
-    FLOW->>INV: record outgoing GROUP invitation
-    FLOW-->>MEMBER: GroupInvitePacket
+    FLOW->>INV: RecordGroupInvitationUseCase
+    MEM-->>MEMBER: GroupInvitePacket
+    MEMBER->>MEMBER: ReceiveGroupInviteWorkflow records pending invitation
     MEMBER->>INV: accept/decline generic invitation
-    INV-->>FLOW: InvitationResultObserver
-    FLOW->>MEM: accept/decline membership workflow
+    INV-->>RES: InvitationResultObserver
+    RES->>MEM: AcceptGroupMembershipUseCase / DeclineGroupMembershipUseCase
     MEM-->>OWNER: join/ready/activation packet sequence
 ```
 
@@ -116,8 +122,8 @@ sequenceDiagram
 
 `InvitationResultObserver.run()` observes `ObserveInvitationResultsUseCase`. On its first emission it can replay still-relevant accepted results, using:
 
-- `ConversationFlowHandler.recoverAcceptedDirectInvitation()`
-- `ConversationFlowHandler.recoverAcceptedGroupInvitation()`
+- `RecoverAcceptedDirectInvitationWorkflow`
+- `RecoverAcceptedGroupInvitationWorkflow`
 
 This is what makes an accepted invitation resilient to observer startup timing/process restart rather than relying on a one-shot UI callback.
 

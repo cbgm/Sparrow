@@ -154,7 +154,7 @@ class CreatePollViewModel(
         mediaCleanupScope.launch {
             media.flatMap { it.localFilePaths }
                 .distinct()
-                .forEach { path -> runCatching { mediaFiles.delete(path) } }
+                .forEach { path -> mediaFiles.delete(path) }
         }
     }
 

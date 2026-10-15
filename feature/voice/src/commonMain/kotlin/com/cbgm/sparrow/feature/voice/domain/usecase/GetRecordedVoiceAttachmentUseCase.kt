@@ -14,11 +14,12 @@ class GetRecordedVoiceAttachmentUseCase(
     private val logger = SparrowLog.withTag("VoiceRecording")
 
     suspend operator fun invoke(): Result<Voice> =
-        safeSuspendCall {
-            val recording = repository.currentRecording()
+        safeSuspendCall(logFailure = false) {
+            val recording = repository.currentRecording().getOrThrow()
                 ?: throw IllegalStateException("No recorded voice message is available")
             val id = IdGenerator.generate(prefix = "voice")
-            val stored = mediaFiles.save(id = id, bytes = recording.bytes, previewBytes = null)
+            val stored =
+                mediaFiles.save(id = id, bytes = recording.bytes, previewBytes = null).getOrThrow()
 
             Voice(
                 id = id,

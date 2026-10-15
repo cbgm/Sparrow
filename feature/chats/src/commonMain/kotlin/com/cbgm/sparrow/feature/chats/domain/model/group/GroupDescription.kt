@@ -4,8 +4,4 @@ data class GroupDescription(
     val groupId: String,
     val description: String?,
     val changedAtEpochMilliseconds: Long
-) {
-    companion object {
-        const val MAX_LENGTH = 500
-    }
-}
+)

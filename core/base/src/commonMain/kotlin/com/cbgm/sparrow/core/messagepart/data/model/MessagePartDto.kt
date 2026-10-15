@@ -306,3 +306,53 @@ data class PollOptionDto(
     val text: String,
     val voterIds: Set<String> = emptySet()
 )
+
+@Serializable
+@SerialName("EXPENSE_BOARD")
+data class ExpenseBoardDto(
+    override val id: String,
+    val currencyCode: String,
+    val activatedAtEpochMilliseconds: Long,
+    val closedAtEpochMilliseconds: Long? = null
+) : MessagePartDto
+
+@Serializable
+@SerialName("EXPENSE_BOARD_CLOSED")
+data class ExpenseBoardClosedDto(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long
+) : MessagePartDto
+
+@Serializable
+@SerialName("EXPENSE")
+data class ExpenseDto(
+    override val id: String,
+    val boardId: String,
+    val description: String,
+    val amountMinor: Long,
+    val currencyCode: String,
+    val paidByMemberId: String,
+    val allocations: List<ExpenseAllocationDto>,
+    val occurredAtEpochMilliseconds: Long,
+    val receipt: ImageDto? = null,
+    val category: String = "OTHER",
+    val editedAtEpochMilliseconds: Long? = null,
+    val deletedAtEpochMilliseconds: Long? = null,
+    val createdByMemberId: String? = null,
+    val revisionOf: String? = null,
+    val conversion: ExpenseConversionDto? = null
+) : MessagePartDto
+
+@Serializable
+data class ExpenseConversionDto(
+    val originalAmountMinor: Long,
+    val originalCurrencyCode: String,
+    val rate: String
+)
+
+@Serializable
+data class ExpenseAllocationDto(
+    val memberId: String,
+    val amountMinor: Long
+)

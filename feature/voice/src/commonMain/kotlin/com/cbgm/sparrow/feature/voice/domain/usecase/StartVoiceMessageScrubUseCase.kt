@@ -5,5 +5,6 @@ import com.cbgm.sparrow.feature.voice.domain.repository.VoiceRepository
 class StartVoiceMessageScrubUseCase(
     private val repository: VoiceRepository
 ) {
-    operator fun invoke(attachmentId: String) = repository.startMessageScrub(attachmentId)
+    operator fun invoke(attachmentId: String): Result<Unit> =
+        repository.startMessageScrub(attachmentId)
 }

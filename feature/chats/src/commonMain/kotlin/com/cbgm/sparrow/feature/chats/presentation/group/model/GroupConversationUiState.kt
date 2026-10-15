@@ -10,6 +10,7 @@ data class GroupConversationUiState(
     val messages: List<MessageBubbleUi> = emptyList(),
     val pinnedMessage: MessageBubbleUi? = null,
     val pinnedAtEpochMilliseconds: Long = 0L,
+    val expensesActive: Boolean = false,
     val isLocalAdmin: Boolean = false,
     val isLoading: Boolean = true,
     val state: GroupConversationState = GroupConversationState.READY,

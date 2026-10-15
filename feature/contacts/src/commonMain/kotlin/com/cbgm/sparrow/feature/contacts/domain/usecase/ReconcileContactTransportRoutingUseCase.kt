@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepos
 class ReconcileContactTransportRoutingUseCase(
     private val repository: ContactTransportRepository
 ) {
-    suspend operator fun invoke(): Unit = repository.reconcileKnownContacts()
+    suspend operator fun invoke(): Result<Unit> = repository.reconcileKnownContacts()
 }

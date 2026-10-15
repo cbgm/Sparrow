@@ -100,3 +100,61 @@ sealed interface MessagePartSource {
         }
     }
 }
+
+/** One board is a standalone group attachment and owns the lifetime of its expenses. */
+data class ExpenseBoard(
+    override val id: String,
+    val currencyCode: String,
+    val activatedAtEpochMilliseconds: Long,
+    val closedAtEpochMilliseconds: Long? = null
+) : MessagePart
+
+/** A historical event for closing an existing board, with its own message-part ID. */
+data class ExpenseBoardClosed(
+    override val id: String,
+    val boardId: String,
+    val closedAtEpochMilliseconds: Long
+) : MessagePart
+
+/** A standalone group attachment associated with an existing expense board. */
+data class Expense(
+    override val id: String,
+    val boardId: String,
+    val description: String,
+    val amountMinor: Long,
+    val currencyCode: String,
+    val paidByMemberId: String,
+    val allocations: List<ExpenseAllocation>,
+    val occurredAtEpochMilliseconds: Long,
+    val receipt: Image? = null,
+    val category: ExpenseCategory = ExpenseCategory.OTHER,
+    val editedAtEpochMilliseconds: Long? = null,
+    val deletedAtEpochMilliseconds: Long? = null,
+    val createdByMemberId: String? = null,
+    val revisionOf: String? = null,
+    val conversion: ExpenseConversion? = null
+) : MessagePart
+
+val Expense.expenseId: String get() = revisionOf ?: id
+
+data class ExpenseConversion(
+    val originalAmountMinor: Long,
+    val originalCurrencyCode: String,
+    val rate: String
+)
+
+enum class ExpenseCategory {
+    FLIGHT,
+    FOOD,
+    ACTIVITY,
+    PARKING,
+    ACCOMMODATION,
+    TRANSPORT,
+    SHOPPING,
+    OTHER
+}
+
+data class ExpenseAllocation(
+    val memberId: String,
+    val amountMinor: Long
+)

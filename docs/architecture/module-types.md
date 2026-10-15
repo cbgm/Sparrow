@@ -1,6 +1,6 @@
 # Module types
 
-The current Gradle graph contains 47 modules.
+The current `settings.gradle.kts` declares 55 modules.
 
 ## Application shell
 
@@ -34,8 +34,15 @@ The current Gradle graph contains 47 modules.
 - `:feature:autoreply` — auto-reply rules/claims.
 - `:feature:avatar` — avatar observation/editing/cache.
 - `:feature:linkpreview` — link-preview client cache/rendering.
-- `:feature:chats` — Direct/Group conversations, message operations and pins.
-- `:feature:conversationorchestration` — explicit cross-feature workflow boundary.
+- `:feature:chats` — Direct/Group conversation presentation and read-only data; submits writes as commands.
+- `:feature:conversationorchestration:api` — public `ConversationOrchestrator`, commands, states and results.
+- `:feature:conversationorchestration:engine` — workflow state-machine runtime, locks and command routing.
+- `:feature:conversationorchestration:delivery` — delivery state, outgoing transport policy, mailbox and routing.
+- `:feature:conversationorchestration:message` — Direct/Group message, operation, poll and forwarding workflows.
+- `:feature:conversationorchestration:groupstate` — admin-owned group state: title, description, avatar, pin and expense board workflows.
+- `:feature:conversationorchestration:membership` — group administration, group join and verification workflows.
+- `:feature:conversationorchestration:lifecycle` — direct chat lifecycle workflows (`direct/`, `result/`, `recovery/`) plus result observers.
+- `:feature:conversationorchestration:incoming` — incoming packet routing and `Receive*` workflows.
 - `:feature:membership` — group membership/security/admin lifecycle.
 - `:feature:attachments` — encrypted attachment/blob transfer/cache/storage.
 - `:feature:media` — gallery/camera/file selection/viewers/export.

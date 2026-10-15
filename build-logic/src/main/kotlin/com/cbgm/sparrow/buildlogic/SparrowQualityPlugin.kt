@@ -24,14 +24,14 @@ class SparrowQualityPlugin : Plugin<Project> {
             QUALITY_FIX_TASK_NAME,
         ) {
             group = QUALITY_TASK_GROUP
-            description = "Automatically formats all Kotlin source files with KtLint."
+            description = "Formats all Kotlin source files with KtLint and regenerates the workflow catalog."
         }
 
         val qualityCheck = tasks.register(
             QUALITY_CHECK_TASK_NAME,
         ) {
             group = QUALITY_TASK_GROUP
-            description = "Runs KtLint, Detekt, and architecture validation without modifying files."
+            description = "Runs KtLint, Detekt, architecture validation and the workflow catalog check without modifying files."
         }
 
         val quality = tasks.register(
@@ -130,6 +130,20 @@ class SparrowQualityPlugin : Plugin<Project> {
                 .toList()
         }
 
+        val workflowCatalogTasks =
+            rootProject.tasks
+                .matching { task ->
+                    task.name == WORKFLOW_CATALOG_TASK_NAME
+                }
+                .toList()
+
+        val workflowCatalogVerificationTasks =
+            rootProject.tasks
+                .matching { task ->
+                    task.name == VERIFY_WORKFLOW_CATALOG_TASK_NAME
+                }
+                .toList()
+
         val architectureValidationTasks =
             rootProject.tasks
                 .matching { task ->
@@ -146,6 +160,7 @@ class SparrowQualityPlugin : Plugin<Project> {
 
         qualityFix.configure {
             dependsOn(formatTasks)
+            dependsOn(workflowCatalogTasks)
         }
 
         qualityCheck.configure {
@@ -153,16 +168,19 @@ class SparrowQualityPlugin : Plugin<Project> {
             dependsOn(detektTasks)
             dependsOn(architectureValidationTasks)
             dependsOn(architectureReportVerificationTasks)
+            dependsOn(workflowCatalogVerificationTasks)
         }
 
         val verificationTasks =
             ktlintCheckTasks +
                 detektTasks +
                 architectureValidationTasks +
-                architectureReportVerificationTasks
+                architectureReportVerificationTasks +
+                workflowCatalogVerificationTasks
 
         verificationTasks.forEach { verificationTask ->
             verificationTask.mustRunAfter(formatTasks)
+            verificationTask.mustRunAfter(workflowCatalogTasks)
         }
 
         quality.configure {
@@ -190,6 +208,10 @@ class SparrowQualityPlugin : Plugin<Project> {
         const val DETEKT_TASK_NAME = "detekt"
 
         const val VALIDATE_ARCHITECTURE_TASK_NAME = "validateArchitecture"
+
+        const val WORKFLOW_CATALOG_TASK_NAME = "workflowCatalog"
+
+        const val VERIFY_WORKFLOW_CATALOG_TASK_NAME = "verifyWorkflowCatalog"
 
         const val VERIFY_ARCHITECTURE_REPORT_TASK_NAME =
             "verifyArchitectureReport"

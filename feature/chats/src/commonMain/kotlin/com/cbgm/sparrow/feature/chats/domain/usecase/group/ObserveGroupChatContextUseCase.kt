@@ -5,8 +5,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationReadRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
@@ -18,10 +18,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 
 class ObserveGroupChatContextUseCase(
-    private val conversationRepository: GroupConversationRepository,
+    private val conversationRepository: GroupConversationReadRepository,
     private val membershipRepository: GroupMembershipRepository,
     private val contactRepository: ContactRepository,
-    private val pinRepository: GroupPinRepository
+    private val pinRepository: GroupPinReadRepository
 ) {
     operator fun invoke(
         groupId: String,

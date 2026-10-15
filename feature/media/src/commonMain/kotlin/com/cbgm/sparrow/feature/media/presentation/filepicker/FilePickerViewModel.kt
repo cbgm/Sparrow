@@ -102,7 +102,7 @@ class FilePickerViewModel(
     }
 
     private fun refreshAccessAndOpenRoot() {
-        if (!checkAccess()) {
+        if (!checkAccess().getOrDefault(false)) {
             _uiState.update { state ->
                 state.copy(
                     requiresFileAccess = true,
@@ -249,12 +249,13 @@ class FilePickerViewModel(
                     selectedReferences.forEach { reference ->
                         prepared += prepareMediaSelection
                             .fromFileBrowserContent(readFile(reference, currentSession.maxFileBytes).getOrThrow())
+                            .getOrThrow()
                             .toUi()
                     }
                 } catch (error: Exception) {
                     prepared.forEach { selection ->
                         selection.localFilePaths.forEach { path ->
-                            runCatching { mediaFiles.delete(path) }
+                            mediaFiles.delete(path)
                         }
                     }
                     throw error

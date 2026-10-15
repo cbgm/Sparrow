@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.datasource
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
@@ -13,20 +14,22 @@ import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /** Chats-owned group conversation, history, receipt, reaction and verification persistence. */
 internal class GroupConversationHistoryDataSource(
     private val chatDao: ChatDao,
     private val messageRecipientStateDao: MessageRecipientStateDao,
     private val messageReactionDao: MessageReactionDao,
-    private val groupVerificationDao: GroupVerificationDao
+    private val groupVerificationDao: GroupVerificationDao,
+    private val groupMetadataDao: GroupMetadataDao
 ) {
-    suspend fun upsertConversation(conversation: ConversationEntity) {
-        chatDao.upsertConversation(conversation)
-    }
-
     fun observeConversation(groupId: String): Flow<ConversationEntity?> =
         chatDao.observeConversationById(groupId)
+
+    fun observeTitle(groupId: String): Flow<String> =
+        groupMetadataDao.observe(groupId).map { metadata -> metadata?.title.orEmpty() }.distinctUntilChanged()
 
     fun observeRecentMessages(groupId: String, limit: Int): Flow<List<MessageEntity>> =
         chatDao.observeRecentMessages(groupId, limit)
@@ -84,7 +87,4 @@ internal class GroupConversationHistoryDataSource(
 
     fun observeVerificationRows(groupId: String): Flow<List<GroupVerificationPairEntity>> =
         groupVerificationDao.observeByGroupId(groupId)
-
-    suspend fun findVerificationRows(groupId: String): List<GroupVerificationPairEntity> =
-        groupVerificationDao.findByGroupId(groupId)
 }

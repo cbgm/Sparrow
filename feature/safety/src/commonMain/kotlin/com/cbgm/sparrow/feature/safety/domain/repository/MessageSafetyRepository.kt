@@ -10,20 +10,20 @@ interface MessageSafetyRepository {
     val state: StateFlow<MessageSafetyState>
     val assessments: StateFlow<Map<String, MessageSafetyAssessment>>
 
-    fun updateState(state: MessageSafetyState)
+    fun updateState(state: MessageSafetyState): Result<Unit>
 
-    suspend fun getUnassessedMessages(limit: Int): List<MessageSafetyCandidate>
+    suspend fun getUnassessedMessages(limit: Int): Result<List<MessageSafetyCandidate>>
 
-    suspend fun getUnassessedMessageCount(): Int
+    suspend fun getUnassessedMessageCount(): Result<Int>
 
     fun observeUnassessedMessageCount(): Flow<Int>
 
     suspend fun saveAssessment(
         messageId: String,
         assessment: MessageSafetyAssessment
-    )
+    ): Result<Unit>
 
-    suspend fun deleteAllAssessments()
+    suspend fun deleteAllAssessments(): Result<Unit>
 
-    suspend fun deleteAssessmentsForOtherAnalyzers()
+    suspend fun deleteAssessmentsForOtherAnalyzers(): Result<Unit>
 }
