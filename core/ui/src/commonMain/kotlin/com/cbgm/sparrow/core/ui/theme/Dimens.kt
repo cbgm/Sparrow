@@ -16,6 +16,10 @@ object Dimens {
         val buttonSize = 22.dp
     }
 
+    object Payment {
+        val loadingIndicatorSize = 30.dp
+    }
+
     object Expense {
         val numberBadgeSize = 25.dp
         val categoryBadgeSize = 40.dp
@@ -275,11 +279,6 @@ object Dimens {
         val progressSize = 18.dp
     }
 
-    object ProfileSettingsScreen {
-        val avatarEditorSize = 156.dp
-        val avatarPlaceholderIconSize = 72.dp
-    }
-
     object ControlPlaneSettingsScreen {
         val statusIndicatorSize = 10.dp
     }
@@ -288,12 +287,6 @@ object Dimens {
         val headerIconSize = 18.dp
         val progressSize = 20.dp
         val resultIconSize = 18.dp
-    }
-
-    object ScanIdentityScreen {
-        val frameVerticalOffset = 24.dp
-        val frameCornerLength = 28.dp
-        val frameStrokeWidth = 4.dp
     }
 
     object IdentityVerificationScreen {

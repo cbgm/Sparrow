@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.useca
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferPolicy
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.IncomingExpensePolicy
@@ -19,7 +21,8 @@ class AuthorizeIncomingExpensesUseCase(
         parts: List<MessagePart>
     ): Result<Unit> = safeSuspendCall(logFailure = false) {
         val expenses = parts.filterIsInstance<Expense>()
-        if (expenses.isEmpty()) return@safeSuspendCall
+        val transfers = parts.filterIsInstance<PaymentTransfer>()
+        if (expenses.isEmpty() && transfers.isEmpty()) return@safeSuspendCall
 
         val senderKey = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
             .firstOrNull { it.contactId == senderContactId }
@@ -31,6 +34,12 @@ class AuthorizeIncomingExpensesUseCase(
         val closedBoardIds =
             attachments.observeExpenseBoardClosures(groupId).first().mapTo(mutableSetOf()) { it.boardId }
 
+        val storedTransfers = if (transfers.isEmpty()) emptyList() else attachments.observePaymentTransfers(groupId).first()
+        transfers.forEach { event ->
+            require(storedTransfers.none { it.id == event.id && it != event }) { "Conflicting payment event" }
+            require(event.boardId !in closedBoardIds) { "Payment belongs to a closed expense board" }
+            PaymentTransferPolicy.requireActor(event, senderId)
+        }
         expenses.forEach { expense ->
             require(expense.boardId !in closedBoardIds) { "Expense belongs to a closed expense board" }
             IncomingExpensePolicy.requireAuthorized(expense, stored, senderId, senderIsAdmin)

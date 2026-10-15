@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.attachments.domain.repository
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import kotlinx.coroutines.flow.Flow
 
@@ -42,6 +43,13 @@ interface MessageAttachmentOperationsRepository {
     fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>>
 
     /** Observes a group's expenses in creation order; Chats decides which board they belong to. */
+    fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
+        kotlinx.coroutines.flow.combine(observeExpenses(conversationId), observePaymentTransfers(conversationId)) { expenses, transfers ->
+            expenses + transfers
+        }
+
+    fun observePaymentTransfers(conversationId: String): Flow<List<PaymentTransfer>> = kotlinx.coroutines.flow.flowOf(emptyList())
+
     fun observeExpenses(conversationId: String): Flow<List<Expense>>
 
     fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>>

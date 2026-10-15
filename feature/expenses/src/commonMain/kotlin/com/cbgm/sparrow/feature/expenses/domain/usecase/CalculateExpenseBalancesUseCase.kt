@@ -3,15 +3,21 @@ package com.cbgm.sparrow.feature.expenses.domain.usecase
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.feature.expenses.domain.ExpensePayments
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 
 /** Each member's balance is the amount they paid minus their share of expenses. */
 class CalculateExpenseBalancesUseCase {
-    operator fun invoke(board: ExpenseBoard, expenses: List<Expense>): Result<List<ExpenseBalance>> =
-        safeCall(logFailure = false) { calculateBalances(board, expenses) }
+    operator fun invoke(
+        board: ExpenseBoard,
+        expenses: List<Expense>,
+        transfers: List<PaymentTransfer> = emptyList()
+    ): Result<List<ExpenseBalance>> =
+        safeCall(logFailure = false) { calculateBalances(board, expenses, transfers) }
 
-    private fun calculateBalances(board: ExpenseBoard, expenses: List<Expense>): List<ExpenseBalance> {
+    private fun calculateBalances(board: ExpenseBoard, expenses: List<Expense>, transfers: List<PaymentTransfer>): List<ExpenseBalance> {
         ExpensePolicy.requireValid(board)
         val balancesByMember = mutableMapOf<String, Long>()
         val expenseIds = mutableSetOf<String>()
@@ -27,6 +33,11 @@ class CalculateExpenseBalancesUseCase {
             for (share in expense.allocations) {
                 balancesByMember.addAmount(share.memberId, -share.amountMinor)
             }
+        }
+
+        ExpensePayments.confirmed(board, transfers).forEach { payment ->
+            balancesByMember.addAmount(payment.fromMemberId, payment.amountMinor)
+            balancesByMember.addAmount(payment.toMemberId, -payment.amountMinor)
         }
 
         require(balancesByMember.values.fold(0L, ::addAmountsSafely) == 0L) {

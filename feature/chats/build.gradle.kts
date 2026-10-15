@@ -30,6 +30,7 @@ kotlin {
             implementation(projects.feature.identity)
             implementation(projects.feature.media)
             implementation(projects.feature.polls)
+            implementation(projects.feature.payment)
             implementation(projects.feature.expenses)
             implementation(projects.feature.membership)
             implementation(projects.feature.voice)

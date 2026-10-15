@@ -12,6 +12,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PaymentTransferDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollOptionDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
@@ -28,6 +29,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.PollOption
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
@@ -40,6 +42,7 @@ private val dtoRegistry = ConcurrentHashMap<String, MessagePartDto>()
 fun MessagePartDto.toMessagePart(): MessagePart {
     dtoRegistry[id] = this
     return when (this) {
+        is PaymentTransferDto -> toPaymentTransfer()
         is TextDto -> toText()
         is ImageDto -> toImage()
         is VideoDto -> toVideo()
@@ -57,6 +60,7 @@ fun MessagePartDto.toMessagePart(): MessagePart {
 fun MessagePart.toDto(): MessagePartDto {
     val cached = dtoRegistry[id]
     return when (this) {
+        is PaymentTransfer -> toPaymentTransferDto()
         is Text -> cached as? TextDto ?: TextDto(id = id, text = text)
         is Image -> (cached as? ImageDto)?.copy(
             mimeType = mimeType,

@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
+import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
@@ -12,9 +14,10 @@ import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepo
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -42,17 +45,25 @@ class ObserveGroupExpensesUseCase(
                     val localMemberId = localIdentity.getLocalPublicIdentity().getOrNull()
                         ?.signingPublicKey
                         ?.let(ExpenseMemberId::fromSigningPublicKey)
-                    val administration = membership.observeAdministration(groupId).first { it.activeMemberCount > 0 }
-                    val members = members(groupId, localMemberId, administration.currentMemberContactIds)
                     emitAll(
-                        attachments.observeExpenses(groupId).map { expenses ->
+                        combine(
+                            membership.observeAdministration(groupId).filter { it.activeMemberCount > 0 },
+                            contacts.observeContacts(),
+                            attachments.observeExpenseState(groupId)
+                        ) { administration, currentContacts, parts ->
                             ExpenseGroup(
                                 groupId = groupId,
                                 board = board,
                                 localMemberId = localMemberId,
                                 isLocalAdmin = administration.isLocalAdmin,
-                                members = members,
-                                expenses = expenses.filter { it.boardId == board.id }
+                                members = members(
+                                    groupId,
+                                    localMemberId,
+                                    administration.currentMemberContactIds,
+                                    currentContacts.associate { it.id to it.displayName.orEmpty() }
+                                ),
+                                expenses = parts.filterIsInstance<Expense>().filter { it.boardId == board.id },
+                                transfers = parts.filterIsInstance<PaymentTransfer>().filter { it.boardId == board.id }
                             )
                         }
                     )
@@ -62,17 +73,17 @@ class ObserveGroupExpensesUseCase(
     private suspend fun members(
         groupId: String,
         localMemberId: String?,
-        contactIds: Collection<String>
+        contactIds: Collection<String>,
+        contactNames: Map<String, String>
     ): List<ExpenseMember> {
         val routingMembers = membership.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
             .associateBy { it.contactId }
-        val contactsById = contacts.observeContacts().first().associateBy { it.id }
         val localName = getLocalIdentityName().getOrNull().orEmpty()
         return buildList {
             localMemberId?.let { add(ExpenseMember(it, localName, true)) }
             contactIds.sorted().forEach { contactId ->
                 val signingKey = routingMembers[contactId]?.signingPublicKey ?: return@forEach
-                val name = contactsById[contactId]?.displayName?.takeIf(String::isNotBlank) ?: contactId
+                val name = contactNames[contactId]?.takeIf(String::isNotBlank) ?: contactId
                 val id = ExpenseMemberId.fromSigningPublicKey(signingKey)
                 if (id != localMemberId && none { it.id == id }) add(ExpenseMember(id, name, false, contactId))
             }

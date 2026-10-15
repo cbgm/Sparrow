@@ -122,6 +122,16 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
+    data class Payment(
+        val groupId: String,
+        val boardId: String,
+        val fromMemberId: String,
+        val toMemberId: String,
+        val amountMinor: Long,
+        val transferId: String? = null
+    ) : AppRoute
+
+    @Serializable
     data class ExpenseDetail(
         val groupId: String,
         val expenseId: String

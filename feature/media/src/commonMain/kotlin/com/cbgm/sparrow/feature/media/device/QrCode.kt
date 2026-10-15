@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.device
+package com.cbgm.sparrow.feature.media.device
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

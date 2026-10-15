@@ -57,9 +57,9 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.identity.device.QrCode
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiState
+import com.cbgm.sparrow.feature.media.device.QrCode
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_create_qr_code
 import com.cbgm.sparrow.resources.feature_identity_create_qr_description

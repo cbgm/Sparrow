@@ -9,6 +9,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.File
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
@@ -48,6 +49,6 @@ private fun List<MessagePart>.hasEditableTextOnlyContent(): Boolean {
             part is Poll ||
             part is Expense ||
             part is ExpenseBoard ||
-            part is ExpenseBoardClosed
+            part is PaymentTransfer || part is ExpenseBoardClosed
     }
 }

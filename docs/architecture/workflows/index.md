@@ -8,7 +8,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 |---|---|---|---|
 | [Delivery workflows](delivery.md) | 2 | 0 | 2 |
 | [Message workflows](message.md) | 22 | 17 | 5 |
-| [Group state workflows](groupstate.md) | 15 | 11 | 4 |
+| [Group state workflows](groupstate.md) | 16 | 12 | 4 |
 | [Membership workflows](membership.md) | 14 | 9 | 5 |
 | [Direct chat lifecycle workflows](lifecycle.md) | 14 | 3 | 11 |
 | [Incoming packet workflows](incoming.md) | 30 | 0 | 30 |
@@ -54,6 +54,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupMessageCommand.RetryMessage` | [`RetryGroupMessageWorkflow`](message.md#retrygroupmessageworkflow) | `message` | — |
 | `GroupMessageCommand.SendIndicator` | [`SendGroupIndicatorWorkflow`](message.md#sendgroupindicatorworkflow) | `message` | — |
 | `GroupMessageCommand.SendMessage` | [`SendGroupMessageWorkflow`](message.md#sendgroupmessageworkflow) | `message` | `groupSendLockKey(command.groupId)` |
+| `GroupMessageCommand.SendPaymentTransfer` | [`SendGroupPaymentWorkflow`](groupstate.md#sendgrouppaymentworkflow) | `groupstate` | `"payment:${command.groupId}"` |
 | `GroupMessageCommand.ToggleReaction` | [`ToggleGroupReactionWorkflow`](message.md#togglegroupreactionworkflow) | `message` | — |
 | `GroupMessageCommand.UnpinMessage` | [`UnpinGroupMessageWorkflow`](groupstate.md#unpingroupmessageworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |
 | `GroupMessageCommand.VotePoll` | [`VoteGroupPollWorkflow`](message.md#votegrouppollworkflow) | `message` | — |
@@ -127,6 +128,7 @@ Workflows that share a lock key never run at the same time (`WorkflowLocks`). Lo
 | Lock key | Workflows |
 |---|---|
 | `"direct-release:${command.contactId}"` | `DiscardWaitingDirectMessagesWorkflow`, `ReleaseWaitingDirectMessagesWorkflow` |
+| `"payment:${command.groupId}"` | `SendGroupPaymentWorkflow` |
 | `DELIVERY_LOCK_KEY` | `ApplyDeliveryEventWorkflow` |
 | `groupAdministrationLockKey` | `AddGroupMembersWorkflow`, `DeleteGroupWorkflow`, `LeaveGroupWorkflow`, `PromoteGroupMemberWorkflow`, `RemoveGroupMemberWorkflow`, `TransferGroupAdminAndLeaveWorkflow` |
 | `groupMetadataLockKey` | `ChangeGroupDescriptionWorkflow`, `ChangeGroupTitleWorkflow`, `PublishGroupAvatarWorkflow` |

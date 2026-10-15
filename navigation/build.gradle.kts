@@ -22,6 +22,7 @@ kotlin {
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.expenses)
+            implementation(projects.feature.payment)
             implementation(projects.feature.identity)
             implementation(projects.feature.invite)
             implementation(projects.feature.membership)

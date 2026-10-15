@@ -699,7 +699,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyRemoteMessageOperation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyRemoteMessageOperationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`
+- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`, `RequireMessageWithoutPaymentUseCase`
 
 ```text
 FindTarget, then by operation:

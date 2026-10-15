@@ -8,6 +8,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PaymentTransferDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
@@ -64,6 +65,7 @@ internal fun MessagePartDto.toMessagePartEntity(
 
 private fun MessagePartDto.persistencePayload(): String? =
     when (this) {
+        is PaymentTransferDto -> Json.encodeToString(PaymentTransferDto.serializer(), this)
         is PollDto -> Json.encodeToString(PollDto.serializer(), this)
         is ExpenseBoardDto -> Json.encodeToString(ExpenseBoardDto.serializer(), this)
         is ExpenseBoardClosedDto -> Json.encodeToString(ExpenseBoardClosedDto.serializer(), this)
@@ -76,7 +78,7 @@ internal fun MessagePartDto.toMessageBlobEntityOrNull(
     localFilePath: String?
 ): MessageBlobEntity? =
     when (this) {
-        is TextDto, is PollDto, is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto -> null
+        is TextDto, is PollDto, is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto, is PaymentTransferDto -> null
         else -> toMessageBlobEntity(deleteCapability, localFilePath)
     }
 
@@ -133,7 +135,7 @@ internal fun MessagePartDto.requireBlobReference() =
             is LocationDto -> blob
             is ContactDto -> blob
             is TextDto -> null
-            is PollDto, is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto -> null
+            is PollDto, is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto, is PaymentTransferDto -> null
         }
     ) { "Message part $id has no blob reference" }
 
@@ -150,6 +152,7 @@ private fun MessagePartDto.persistenceType(): String =
         is ExpenseDto -> MessageAttachmentType.EXPENSE.name
         is ExpenseBoardDto -> MessageAttachmentType.EXPENSE_BOARD.name
         is ExpenseBoardClosedDto -> MessageAttachmentType.EXPENSE_BOARD_CLOSED.name
+        is PaymentTransferDto -> MessageAttachmentType.PAYMENT_TRANSFER.name
     }
 
 private fun MessagePartDto.mimeType(): String =
@@ -162,7 +165,7 @@ private fun MessagePartDto.mimeType(): String =
         is ContactDto -> mimeType
         is TextDto -> error("Text has no attachment MIME type")
         is PollDto -> error("Poll has no attachment MIME type")
-        is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto -> error("Structured expenses have no attachment MIME type")
+        is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto, is PaymentTransferDto -> error("Structured expenses have no attachment MIME type")
     }
 
 private fun MessagePartDto.byteSize(): Long =
@@ -175,5 +178,5 @@ private fun MessagePartDto.byteSize(): Long =
         is ContactDto -> byteSize
         is TextDto -> error("Text has no attachment byte size")
         is PollDto -> error("Poll has no attachment byte size")
-        is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto -> error("Structured expenses have no attachment byte size")
+        is ExpenseDto, is ExpenseBoardDto, is ExpenseBoardClosedDto, is PaymentTransferDto -> error("Structured expenses have no attachment byte size")
     }

@@ -6,10 +6,16 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
 import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 
 sealed interface GroupMessageCommand : ConversationCommand {
     val groupId: String
+
+    data class SendPaymentTransfer(
+        override val groupId: String,
+        val event: PaymentTransfer
+    ) : GroupMessageCommand
 
     data class SendMessage(
         override val groupId: String,

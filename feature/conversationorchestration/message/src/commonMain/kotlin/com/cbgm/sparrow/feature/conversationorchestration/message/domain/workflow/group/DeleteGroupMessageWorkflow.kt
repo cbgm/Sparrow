@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
@@ -26,7 +27,8 @@ class DeleteGroupMessageWorkflow internal constructor(
     private val findGroupRecipients: FindGroupRecipientsUseCase,
     private val encryptGroupOperation: EncryptGroupOperationUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
-    private val discardGroupMessages: DiscardGroupMessagesUseCase
+    private val discardGroupMessages: DiscardGroupMessagesUseCase,
+    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.DeleteMessage,
         DeleteGroupMessageWorkflow.Step,
@@ -48,6 +50,7 @@ class DeleteGroupMessageWorkflow internal constructor(
             is Step.FindOwnMessage -> {
                 val message = findGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
                 check(message.isGroupUserMessage) { "Only user messages can be deleted" }
+                requireMessageWithoutPayment(message.id).getOrThrow()
                 check(message.isMine) { "Only your own messages can be deleted for everyone" }
                 Outcome.OwnMessageFound(message)
             }

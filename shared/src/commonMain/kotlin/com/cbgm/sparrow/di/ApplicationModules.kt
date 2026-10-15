@@ -27,6 +27,8 @@ import com.cbgm.sparrow.feature.messaging.di.messagingModule
 import com.cbgm.sparrow.feature.notification.di.notificationModule
 import com.cbgm.sparrow.feature.ocr.di.ocrModule
 import com.cbgm.sparrow.feature.onboarding.di.onboardingModule
+import com.cbgm.sparrow.feature.payment.di.paymentModule
+import com.cbgm.sparrow.feature.payment.di.platformPaymentModule
 import com.cbgm.sparrow.feature.polls.di.pollsModule
 import com.cbgm.sparrow.feature.safety.di.safetyModule
 import com.cbgm.sparrow.feature.search.di.searchModule
@@ -49,6 +51,8 @@ internal val commonApplicationModules: List<Module> =
         onboardingModule,
         pollsModule,
         expensesModule,
+        paymentModule,
+        platformPaymentModule,
         contactsModule,
         inviteModule,
         conversationEngineModule,

@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Voice
@@ -50,5 +51,5 @@ object OutgoingMessageContentPolicy {
     }
 
     private fun MessagePart.isGroupOnly(): Boolean =
-        this is Poll || this is Expense || this is ExpenseBoard || this is ExpenseBoardClosed
+        this is PaymentTransfer || this is Poll || this is Expense || this is ExpenseBoard || this is ExpenseBoardClosed
 }

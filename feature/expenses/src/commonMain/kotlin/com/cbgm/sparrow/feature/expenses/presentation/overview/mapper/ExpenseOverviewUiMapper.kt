@@ -1,6 +1,9 @@
 package com.cbgm.sparrow.feature.expenses.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferPolicy
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
 import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
 import com.cbgm.sparrow.core.time.formatDate
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseOverview
@@ -12,6 +15,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseAmou
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseListItemUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseMemberBalanceUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseOverviewUiState
+import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpensePaymentUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseSettlementUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseYourBalanceUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseYourPartUi
@@ -27,6 +31,15 @@ internal fun ExpenseOverview.toExpenseOverviewUiState(): ExpenseOverviewUiState 
     val memberIds = (members.map { it.id } + balanceById.keys).distinct()
     val largestBalance = balanceById.values.maxOfOrNull { it.absoluteValue }?.takeIf { it > 0L } ?: 1L
 
+    val sentPayments = transfers.filter { it.status == PaymentTransferStatus.SENT }
+        .groupBy(PaymentTransfer::transferId).values.map { events ->
+            events.minWith(compareBy(PaymentTransfer::occurredAtEpochMilliseconds, PaymentTransfer::id))
+        }
+
+    fun isReceived(sent: PaymentTransfer) = transfers.any {
+        it.status == PaymentTransferStatus.RECEIVED && PaymentTransferPolicy.matches(sent, it)
+    }
+
     return ExpenseOverviewUiState(
         isLoading = false,
         currencyCode = currency,
@@ -35,8 +48,10 @@ internal fun ExpenseOverview.toExpenseOverviewUiState(): ExpenseOverviewUiState 
             balance = (balanceById[localMemberId] ?: 0L).toExpenseAmountUi(currency),
             totalLabel = expenses.sumOf(Expense::amountMinor).toExpenseAmountLabel(currency),
             yourShareLabel = expenses.sumOf { it.shareOf(localMemberId) }.toExpenseAmountLabel(currency),
-            youPaidLabel = expenses.filter { it.paidByMemberId == localMemberId }
-                .sumOf(Expense::amountMinor)
+            youPaidLabel = (
+                paidByMember[localMemberId]
+                    ?: expenses.filter { it.paidByMemberId == localMemberId }.sumOf(Expense::amountMinor)
+            )
                 .toExpenseAmountLabel(currency),
             counterpartCount = settlements.count { it.fromMemberId == localMemberId || it.toMemberId == localMemberId }
         ),
@@ -44,7 +59,24 @@ internal fun ExpenseOverview.toExpenseOverviewUiState(): ExpenseOverviewUiState 
             ExpenseSettlementUi(
                 from = participant(settlement.fromMemberId),
                 to = participant(settlement.toMemberId),
-                amountLabel = settlement.amountMinor.toExpenseAmountLabel(currency)
+                amountLabel = settlement.amountMinor.toExpenseAmountLabel(currency),
+                amountMinor = settlement.amountMinor,
+                canPay = currency == "EUR" && settlement.fromMemberId == localMemberId,
+                transferId = sentPayments.firstOrNull {
+                    it.fromMemberId == settlement.fromMemberId && it.toMemberId == settlement.toMemberId &&
+                        it.amountMinor == settlement.amountMinor && !isReceived(it)
+                }?.transferId
+            )
+        },
+        payments = sentPayments.sortedByDescending(PaymentTransfer::occurredAtEpochMilliseconds).map { sent ->
+            ExpensePaymentUi(
+                transferId = sent.transferId,
+                from = participant(sent.fromMemberId),
+                to = participant(sent.toMemberId),
+                amountMinor = sent.amountMinor,
+                amountLabel = sent.amountMinor.toExpenseAmountLabel(sent.currencyCode),
+                isReceived = isReceived(sent),
+                canOpen = localMemberId == sent.fromMemberId || localMemberId == sent.toMemberId
             )
         },
         balances = memberIds

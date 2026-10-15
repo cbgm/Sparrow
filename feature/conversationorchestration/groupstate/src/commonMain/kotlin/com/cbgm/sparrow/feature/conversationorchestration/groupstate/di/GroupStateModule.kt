@@ -28,6 +28,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupTitlePacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupPaymentTransferUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
@@ -42,6 +43,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.work
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.PublishGroupAvatarWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.RemoveGroupAvatarWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.SendCurrentGroupMetadataWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.payment.SendGroupPaymentWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.CloseGroupExpensesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.PinGroupMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.SendCurrentGroupPinWorkflow
@@ -80,6 +82,7 @@ private fun Module.registerUseCases() {
     singleOf(::CreateGroupDescriptionPacketsUseCase)
     singleOf(::CreateGroupPinPacketsUseCase)
     singleOf(::CreateGroupTitlePacketsUseCase)
+    singleOf(::RequireGroupPaymentTransferUseCase)
     singleOf(::FindGroupExpenseMembersUseCase)
     singleOf(::RequireGroupAdminContextUseCase)
     singleOf(::SendCurrentGroupAvatarUseCase)
@@ -100,6 +103,7 @@ private fun Module.registerPublicWorkflows() {
     singleOf(::ChangeGroupDescriptionWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ChangeGroupTitleWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CloseGroupExpensesWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::SendGroupPaymentWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CreateGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::EditGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::DeleteGroupExpenseWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }

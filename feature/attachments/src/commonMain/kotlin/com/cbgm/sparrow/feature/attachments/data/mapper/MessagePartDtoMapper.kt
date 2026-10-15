@@ -9,6 +9,7 @@ import com.cbgm.sparrow.core.messagepart.data.model.FileDto
 import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
 import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
 import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.messagepart.data.model.PaymentTransferDto
 import com.cbgm.sparrow.core.messagepart.data.model.PollDto
 import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
 import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
@@ -41,6 +42,10 @@ internal fun MessagePartEntity.toDto(
     resolveLocalFilePath: (String) -> String?
 ): MessagePartDto =
     when (MessageAttachmentType.valueOf(type)) {
+        MessageAttachmentType.PAYMENT_TRANSFER -> {
+            val json = requireNotNull(payload) { "Payment event is missing payload" }
+            Json.decodeFromString(PaymentTransferDto.serializer(), json).also { require(it.id == id) }
+        }
         MessageAttachmentType.EXPENSE_BOARD -> {
             val json = requireNotNull(payload) { "Expense board $id is missing payload" }
             Json.decodeFromString(ExpenseBoardDto.serializer(), json).also { require(it.id == id) }

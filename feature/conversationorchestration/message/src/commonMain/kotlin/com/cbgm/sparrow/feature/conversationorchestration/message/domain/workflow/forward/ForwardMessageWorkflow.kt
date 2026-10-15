@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardMessage
@@ -154,4 +155,4 @@ class ForwardMessageWorkflow internal constructor(
 }
 
 private fun MessagePart.isNotForwardable(): Boolean =
-    this is Poll || this is Expense || this is ExpenseBoard || this is ExpenseBoardClosed
+    this is PaymentTransfer || this is Poll || this is Expense || this is ExpenseBoard || this is ExpenseBoardClosed

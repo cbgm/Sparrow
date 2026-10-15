@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import kotlinx.coroutines.flow.first
@@ -41,7 +42,8 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
     private val discardDirectMessages: DiscardDirectMessagesUseCase,
     private val discardGroupMessages: DiscardGroupMessagesUseCase,
     private val findGroupPoll: FindGroupPollUseCase,
-    private val membershipRepository: GroupMembershipRepository
+    private val membershipRepository: GroupMembershipRepository,
+    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ApplyRemoteMessageOperation,
         ApplyRemoteMessageOperationWorkflow.Step,
@@ -75,6 +77,7 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
                 Outcome.Applied
             }
             is Step.CheckSender -> {
+                requireMessageWithoutPayment(step.target.id).getOrThrow()
                 requireSenderOwns(step.target, command)
                 Outcome.SenderOwnsTarget(step.target)
             }
