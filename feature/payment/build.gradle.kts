@@ -24,6 +24,10 @@ kotlin {
             implementation(libs.koin.android)
         }
         commonTest.dependencies { implementation(libs.bundles.kmp.testing) }
+        androidHostTest.dependencies {
+            implementation(libs.bundles.android.host.testing)
+            implementation(libs.robolectric)
+        }
         androidDeviceTest.dependencies {
             implementation(libs.zxing.core)
             implementation(libs.bundles.android.device.testing)

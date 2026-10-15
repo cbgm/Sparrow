@@ -23,7 +23,6 @@ data class PaymentUiState(
     val hasSavedDetails: Boolean = false,
     val isReviewing: Boolean = false,
     val status: PaymentStatusUi = PaymentStatusUi.UNPAID,
-    val error: PaymentErrorUi? = null,
     val imageRequest: PaymentImageRequest? = null
 ) {
     override fun toString(): String = "PaymentUiState(redacted)"

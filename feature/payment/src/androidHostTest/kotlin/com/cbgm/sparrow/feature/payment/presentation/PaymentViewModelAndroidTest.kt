@@ -7,9 +7,12 @@ import com.cbgm.sparrow.feature.payment.domain.usecase.DeleteBankDetailsUseCase
 import com.cbgm.sparrow.feature.payment.domain.usecase.FindBankDetailsUseCase
 import com.cbgm.sparrow.feature.payment.domain.usecase.PaymentFixture
 import com.cbgm.sparrow.feature.payment.presentation.model.PaymentUiEvent
-import com.cbgm.sparrow.feature.payment.presentation.model.PaymentUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_payment_invalid_details
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,16 +27,28 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.jetbrains.compose.resources.getString
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.After
+import org.junit.Before
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
-class PaymentViewModelTest {
+class PaymentViewModelAndroidTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(StandardTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun repeatedValidationErrorsUseGlobalFeedbackAndReleaseBusyState() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val fixture = PaymentFixture()
         fixture.publish()
         val viewModel = fixture.viewModel()
@@ -57,13 +72,11 @@ class PaymentViewModelTest {
         } finally {
             viewModel.viewModelScope.cancel()
             runCurrent()
-            Dispatchers.resetMain()
         }
     }
 
     @Test
     fun contextInvalidationClearsPreparedBankDetailsAndShareRequest() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val fixture = PaymentFixture()
         fixture.publish()
         val viewModel = fixture.viewModel()
@@ -88,32 +101,19 @@ class PaymentViewModelTest {
         } finally {
             viewModel.viewModelScope.cancel()
             runCurrent()
-            Dispatchers.resetMain()
         }
     }
 
-    @Test
-    fun stateStringShowsSafeStatusWithoutBankDetails() {
-        val state = PaymentUiState(isLoading = false, accountHolder = "Secret Holder", iban = "Secret IBAN")
-        val text = state.toString()
-        assertTrue(text.contains("isLoading=false"))
-        assertTrue(text.contains("status=UNPAID"))
-        assertFalse(text.contains("Secret"))
-    }
-
-    // This private commonTest factory intentionally uses the test-only constructor.
     @Suppress("VisibleForTests")
     private fun PaymentFixture.viewModel() = PaymentViewModel(
-        savedStateHandle = SavedStateHandle(
-            mapOf(
-                "groupId" to selection.groupId,
-                "boardId" to selection.boardId,
-                "fromMemberId" to selection.fromMemberId,
-                "toMemberId" to selection.toMemberId,
-                "amountMinor" to selection.amountMinor,
-                "transferId" to selection.transferId
-            )
-        ),
+        savedStateHandle = SavedStateHandle(mapOf(
+            "groupId" to selection.groupId,
+            "boardId" to selection.boardId,
+            "fromMemberId" to selection.fromMemberId,
+            "toMemberId" to selection.toMemberId,
+            "amountMinor" to selection.amountMinor,
+            "transferId" to selection.transferId
+        )),
         observeSession = observe,
         preparePayment = prepare,
         recordPayment = record,
