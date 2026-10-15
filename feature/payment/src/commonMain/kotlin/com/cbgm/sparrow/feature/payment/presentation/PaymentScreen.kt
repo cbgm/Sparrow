@@ -221,7 +221,7 @@ private fun PaymentReviewPreview() {
     SparrowTheme {
         PaymentScreen(
             PaymentUiState(
-                isLoading = true,
+                isLoading = false,
                 isPayer = true,
                 canPay = true,
                 isReviewing = true,

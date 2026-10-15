@@ -882,7 +882,7 @@
     <string name="feature_payment_forget">Gespeicherte Bankdaten löschen</string>
     <string name="feature_payment_review">Zahlung prüfen</string>
     <string name="feature_payment_share_hint">Teile das Zahlungsbild mit einer kompatiblen Banking-App. Prüfe Empfänger, Betrag und Verwendungszweck vor der Freigabe. Du kannst die Felder auch einzeln kopieren.</string>
-    <string name="feature_payment_share">Zahlungsbild teilen</string>
+    <string name="feature_payment_share">Zahlungsinformation teilen</string>
     <string name="feature_payment_mark_sent">Ich habe die Überweisung gesendet</string>
     <string name="feature_payment_edit">Bankdaten bearbeiten</string>
     <string name="feature_payment_copy">Kopieren</string>

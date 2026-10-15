@@ -878,7 +878,7 @@
     <string name="feature_payment_forget">Delete saved bank details</string>
     <string name="feature_payment_review">Review payment</string>
     <string name="feature_payment_share_hint">Share the payment image with a compatible banking app. Check the recipient, amount and reference before authorising. You can also copy the fields individually.</string>
-    <string name="feature_payment_share">Share payment image</string>
+    <string name="feature_payment_share">Share payment information</string>
     <string name="feature_payment_mark_sent">I have sent the transfer</string>
     <string name="feature_payment_edit">Edit bank details</string>
     <string name="feature_payment_copy">Copy</string>
