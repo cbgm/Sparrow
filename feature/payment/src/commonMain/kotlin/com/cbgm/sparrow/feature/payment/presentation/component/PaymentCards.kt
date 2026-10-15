@@ -60,7 +60,7 @@ internal fun PaymentSummaryCard(state: PaymentUiState) {
                 state.amountLabel,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             SparrowStatusBadge(
                 text = stringResource(

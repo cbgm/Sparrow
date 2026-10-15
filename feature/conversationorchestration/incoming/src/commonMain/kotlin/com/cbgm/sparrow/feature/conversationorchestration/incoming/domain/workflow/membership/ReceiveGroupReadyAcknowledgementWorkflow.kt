@@ -108,11 +108,15 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
             }
             is Step.RefreshVerification -> {
                 engine.run(MembershipCommand.RefreshOwnedGroupVerification(packet.groupId)).getOrThrow()
-                Outcome.VerificationRefreshed
+                Outcome.VerificationRefreshed(step.includeExpenseHistory)
             }
             is Step.SendCurrentMetadata -> {
                 engine.run(
-                    GroupStateCommand.SendCurrentGroupMetadata(packet.groupId, context.contactId)
+                    GroupStateCommand.SendCurrentGroupMetadata(
+                        packet.groupId,
+                        context.contactId,
+                        includeExpenseHistory = step.includeExpenseHistory
+                    )
                 ).getOrThrow()
                 Outcome.MetadataSent
             }
@@ -126,12 +130,13 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
             Outcome.EpochStillCurrent -> Transition.Next(Step.FindActivatedMembership(step.command))
             Outcome.AcknowledgementReceived -> Transition.Next(Step.CheckEpochStillCurrent(step.command))
             is Outcome.MembershipActivated -> Transition.Next(Step.ResolveMemberName(outcome.eventId, step.command))
-            Outcome.NoActivatedMembership -> Transition.Next(Step.RefreshVerification(step.command))
+            Outcome.NoActivatedMembership -> Transition.Next(Step.RefreshVerification(step.command, includeExpenseHistory = false))
             is Outcome.MemberNameResolved ->
                 Transition.Next(Step.AddParticipant(outcome.eventId, outcome.memberDisplayName, step.command))
             Outcome.ParticipantAdded -> Transition.Next(Step.FlushQueuedMessages(step.command))
-            Outcome.QueueFlushed -> Transition.Next(Step.RefreshVerification(step.command))
-            Outcome.VerificationRefreshed -> Transition.Next(Step.SendCurrentMetadata(step.command))
+            Outcome.QueueFlushed -> Transition.Next(Step.RefreshVerification(step.command, includeExpenseHistory = true))
+            is Outcome.VerificationRefreshed ->
+                Transition.Next(Step.SendCurrentMetadata(step.command, outcome.includeExpenseHistory))
             Outcome.MetadataSent -> Transition.Complete()
         }
 
@@ -182,11 +187,13 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
         ) : Step
 
         data class RefreshVerification(
-            override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement
+            override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement,
+            val includeExpenseHistory: Boolean
         ) : Step
 
         data class SendCurrentMetadata(
-            override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement
+            override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement,
+            val includeExpenseHistory: Boolean
         ) : Step
     }
 
@@ -215,7 +222,9 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
 
         data object QueueFlushed : Outcome
 
-        data object VerificationRefreshed : Outcome
+        data class VerificationRefreshed(
+            val includeExpenseHistory: Boolean
+        ) : Outcome
 
         data object MetadataSent : Outcome
     }

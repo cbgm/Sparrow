@@ -251,6 +251,7 @@ stateDiagram-v2
     SendDescription --> SendAvatar : ItemHandled
     SendAvatar --> SendPin : ItemHandled
     SendPin --> SendExpenses : ItemHandled
+    SendPin --> [*] : ItemHandled
     SendExpenses --> [*] : ItemHandled
 ```
 
