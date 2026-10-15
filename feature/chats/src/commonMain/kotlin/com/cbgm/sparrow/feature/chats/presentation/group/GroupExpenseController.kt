@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.expenses.domain.usecase.ClearExpenseGroupUseCase
 import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExpenseOverviewUseCase
 import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExpenseRequestsUseCase
 import com.cbgm.sparrow.feature.expenses.domain.usecase.PublishExpenseGroupUseCase
+import com.cbgm.sparrow.feature.payment.domain.model.PaymentContext
 import com.cbgm.sparrow.feature.payment.domain.usecase.ClearPaymentContextUseCase
 import com.cbgm.sparrow.feature.payment.domain.usecase.CompletePaymentRequestUseCase
 import com.cbgm.sparrow.feature.payment.domain.usecase.ObservePaymentRequestsUseCase
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class GroupExpenseController(
@@ -53,23 +55,16 @@ class GroupExpenseController(
         scope.launch {
             try {
                 observeGroupExpenses(groupId)
-                    .catch { errors.report(it.message ?: "Group expenses could not be loaded") }
-                    .collect { group ->
+                    .onEach { group ->
                         storedReceiptIds =
                             group?.expenses.orEmpty().mapNotNullTo(mutableSetOf()) { it.receipt?.id }
-                        publishExpenseGroup(groupId, group).onFailure {
-                            errors.report(it.message ?: "Group expenses could not be shown")
-                        }
+                        // Publish before subscribing to the overview: its first value reads this context.
+                        publishExpenseGroup(groupId, group).getOrThrow()
                     }
-            } finally {
-                clearExpenseGroup(groupId).onFailure {
-                    errors.report(it.message ?: "Group expenses could not be cleared")
-                }
-            }
-        }
-        scope.launch {
-            try {
-                observeGroupExpenses(groupId)
+                    .catch {
+                        errors.report(it.message ?: "Group expenses could not be loaded")
+                        emit(null)
+                    }
                     .map { it?.board?.id }
                     .distinctUntilChanged()
                     .flatMapLatest { boardId ->
@@ -77,16 +72,19 @@ class GroupExpenseController(
                             flowOf(null)
                         } else {
                             observeExpenseOverview(groupId)
-                                .map { it.toPaymentContext() }
+                                .map<_, PaymentContext?> { it.toPaymentContext() }
                                 .catch {
-                                    publishPaymentContext(groupId, null)
                                     errors.report(it.message ?: "Group expenses could not be loaded")
+                                    emit(null)
                                 }
                         }
                     }
                     .collect { publishPaymentContext(groupId, it).getOrThrow() }
             } finally {
                 clearPaymentContext(groupId)
+                clearExpenseGroup(groupId).onFailure {
+                    errors.report(it.message ?: "Group expenses could not be cleared")
+                }
             }
         }
         scope.launch {
