@@ -512,20 +512,15 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMemberRemoval`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupMemberRemovalWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupRemovalUseCase`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupRemovalUseCase`
+- **Uses:** `AuthorizeIncomingGroupRemovalUseCase`, `ApplyIncomingGroupRemovalUseCase`, `CompleteIncomingGroupRemovalUseCase`
 
 ```text
-[LoadPendingOwnerKey] -> AuthorizeRemoval -> ApplyRemoval -> CompleteRemoval
-
-The local member was removed or left. A pending invitation's removal is signed with the owner's
-contact identity; an established membership's with its epoch keys.
+AuthorizeRemoval -> ApplyRemoval -> CompleteRemoval; Membership resolves the trusted signing key.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> LoadPendingOwnerKey
     [*] --> AuthorizeRemoval
-    LoadPendingOwnerKey --> AuthorizeRemoval : PendingOwnerKeyLoaded
     AuthorizeRemoval --> [*] : NotApplicable
     AuthorizeRemoval --> ApplyRemoval : RemovalAuthorized
     ApplyRemoval --> CompleteRemoval : RemovalApplied

@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.policy.PendingGroupRemovalPolicy
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
@@ -23,56 +24,33 @@ internal class GroupIncomingRemovalDataSource(
 ) {
     suspend fun authorize(
         packet: GroupMemberRemovedPacket,
-        senderContactId: String,
-        pendingOwnerSigningPublicKey: ByteArray?
+        senderContactId: String
     ): Boolean {
-        val membership = groupMembershipDao.findBySourceInvitationId(packet.invitationId)
-        val expectedSigningKey =
-            if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-                pendingOwnerSigningPublicKey
-                    ?: error("Pending group membership owner identity was not found")
-            } else {
-                val state = groupSecurityDao.findState(packet.groupId)
-                    ?: error("Group security state was not found")
-                val authority = groupSecurityDao.findMemberKey(
-                    packet.groupId,
-                    state.currentEpoch,
-                    senderContactId
-                ) ?: error("Group removal sender is not part of the current epoch")
-                check(authority.role.isGroupAdminRole()) {
-                    "Group update sender is not an admin"
-                }
-                authority.signingPublicKey
-            }
+        if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
+            val membership = groupMembershipDao.findBySourceInvitationId(packet.invitationId)
+            val signingKey = PendingGroupRemovalPolicy.signingKey(packet, senderContactId, membership)
+                ?: return false
+            packetProtocol.verifyMemberRemoved(packet, signingKey).getOrThrow()
+            return true
+        }
+        val state = groupSecurityDao.findState(packet.groupId)
+            ?: error("Group security state was not found")
+        val authority = groupSecurityDao.findMemberKey(packet.groupId, state.currentEpoch, senderContactId)
+            ?: error("Group removal sender is not part of the current epoch")
+        check(authority.role.isGroupAdminRole()) { "Group update sender is not an admin" }
+        val expectedSigningKey = authority.signingPublicKey
         packetProtocol.verifyMemberRemoved(packet, expectedSigningKey).getOrThrow()
-        if (packet.epoch > GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-            val state = securityStore.findState(packet.groupId)
-            state?.let { active ->
-                check(packet.epoch > active.currentEpoch) { "Group removal must reference a later epoch" }
-                val localKey = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow().signingPublicKey
-                check(active.localSigningPublicKey.contentEquals(localKey)) {
-                    "Local group identity does not match the current security state"
-                }
-            }
-            val localSigningPublicKey = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow().signingPublicKey
-            check(packet.removedMemberSigningPublicKey.contentEquals(localSigningPublicKey)) {
-                "Group removal targets a different member"
+        val active = securityStore.findState(packet.groupId)
+        val localSigningPublicKey = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow().signingPublicKey
+        if (active != null) {
+            check(packet.epoch > active.currentEpoch) { "Group removal must reference a later epoch" }
+            check(active.localSigningPublicKey.contentEquals(localSigningPublicKey)) {
+                "Local group identity does not match the current security state"
             }
         }
-        if (packet.epoch != GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) return true
-        val pending = membership ?: return false
-        check(pending.groupId == packet.groupId) { "Group removal references the wrong group" }
-        check(pending.contactId == senderContactId) {
-            "Pending group removal came from a contact that is not the inviter"
+        check(packet.removedMemberSigningPublicKey.contentEquals(localSigningPublicKey)) {
+            "Group removal targets a different member"
         }
-        check(pending.challenge.contentEquals(packet.challenge)) {
-            "Group removal membership challenge does not match"
-        }
-        if (pending.status == GroupMembershipStatus.REMOVED.name) return false
-        check(
-            pending.status == GroupMembershipStatus.STAGED.name ||
-                pending.status == GroupMembershipStatus.JOIN_REQUEST_SENT.name
-        ) { "An installed group key requires an epoch-advancing removal" }
         return true
     }
 

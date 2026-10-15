@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.membership.data.protocol
 
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.data.policy.PendingGroupRemovalPolicy
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
@@ -172,6 +174,37 @@ class GroupMembershipPacketProtocolTest {
                     ).isFailure
             )
         }
+
+    @Test
+    fun pendingCancellationVerifiesAgainstThePinnedInvitationKey() = runTest {
+        suspend fun signedRemoval(key: ByteArray) = manager.createMemberRemoved(
+            invitationId = "pending-invite",
+            groupId = "pending-group",
+            epoch = GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH,
+            reason = GroupMemberRemovedPacket.REASON_REMOVED_BY_OWNER,
+            challenge = CHALLENGE,
+            removedMemberSigningPublicKey = byteArrayOf(),
+            removedAtEpochMilliseconds = 300L,
+            ownerSigningKeyPair = LocalSigningKeyPair(publicKey = key, privateKey = key)
+        ).getOrThrow()
+        val pending = GroupMembershipEntity(
+            membershipId = "pending-membership",
+            sourceInvitationId = "pending-invite",
+            groupId = "pending-group",
+            contactId = "inviter",
+            perspective = "MEMBER",
+            status = "STAGED",
+            challenge = CHALLENGE,
+            ownerSigningPublicKey = OWNER_SIGNING_KEY,
+            createdAtEpochMilliseconds = 100L,
+            updatedAtEpochMilliseconds = 100L
+        )
+        val packet = signedRemoval(OWNER_SIGNING_KEY)
+        val pinnedKey = requireNotNull(PendingGroupRemovalPolicy.signingKey(packet, "inviter", pending))
+        assertTrue(manager.verifyMemberRemoved(packet, pinnedKey).isSuccess)
+        assertTrue(manager.verifyMemberRemoved(signedRemoval(byteArrayOf(99)), pinnedKey).isFailure)
+        assertTrue(manager.verifyMemberRemoved(packet.copy(removedAtEpochMilliseconds = 301L), pinnedKey).isFailure)
+    }
 
     @Test
     fun memberRemovalBindsInvitationEpochAndRemovedIdentity() =
