@@ -54,7 +54,12 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
             is Step.SendTitle -> Transition.Next(Step.SendDescription(step.command))
             is Step.SendDescription -> Transition.Next(Step.SendAvatar(step.command))
             is Step.SendAvatar -> Transition.Next(Step.SendPin(step.command))
-            is Step.SendPin -> Transition.Next(Step.SendExpenses(step.command))
+            is Step.SendPin ->
+                if (step.command.includeExpenseHistory) {
+                    Transition.Next(Step.SendExpenses(step.command))
+                } else {
+                    Transition.Complete()
+                }
             is Step.SendExpenses -> Transition.Complete()
         }
 

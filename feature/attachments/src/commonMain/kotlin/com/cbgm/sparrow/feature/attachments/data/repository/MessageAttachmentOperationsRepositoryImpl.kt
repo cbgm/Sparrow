@@ -26,6 +26,7 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
 import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
@@ -66,7 +67,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     ): Result<List<MessagePart>> = safeSuspendCall {
         if (parts.isEmpty()) return@safeSuspendCall emptyList()
         MessageAttachmentPolicy.requireValid(parts)
-        require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
+        require(parts.none { it is PaymentTransfer || it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
             "Polls and expenses are only supported in groups"
         }
 
@@ -141,7 +142,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         context: AttachmentMessageContext
     ): Result<Unit> =
         safeSuspendCall {
-            require(parts.none { it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
+            require(parts.none { it is PaymentTransfer || it is Poll || it is Expense || it is ExpenseBoard || it is ExpenseBoardClosed } || context.isGroup) {
                 "Polls and expenses are only supported in groups"
             }
             val dtos = parts.map { it.toDto() }
@@ -198,6 +199,13 @@ internal class MessageAttachmentOperationsRepositoryImpl(
                     parts.map { part -> part.toMessagePart() }
                 }
             }
+
+    override fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
+        dataSource.observeExpenseState(conversationId).map { parts -> parts.map { it.toMessagePart() } }
+
+    override fun observePaymentTransfers(conversationId: String): Flow<List<PaymentTransfer>> =
+        dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.PAYMENT_TRANSFER)
+            .map { byMessage -> byMessage.values.flatten().map { it.toMessagePart() }.filterIsInstance<PaymentTransfer>() }
 
     override fun observeExpenses(conversationId: String): Flow<List<Expense>> =
         dataSource.observeByConversationIdAndType(conversationId, MessageAttachmentType.EXPENSE)
@@ -323,6 +331,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             }
 
             is Text -> error("Text is not uploaded as an attachment message part")
+            is PaymentTransfer -> part.toDto()
             is ExpenseBoard -> part.toDto() as ExpenseBoardDto
             is ExpenseBoardClosed -> part.toDto() as ExpenseBoardClosedDto
             is Expense -> (part.toDto() as ExpenseDto).copy(

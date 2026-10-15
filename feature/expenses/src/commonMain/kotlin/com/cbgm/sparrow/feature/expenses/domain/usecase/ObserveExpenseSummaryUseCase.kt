@@ -21,7 +21,7 @@ class ObserveExpenseSummaryUseCase(
     private fun summarize(group: ExpenseGroup): ExpenseSummary {
         val current = ExpenseRevisions.current(group.expenses)
         val localBalance = group.localMemberId?.let { memberId ->
-            calculateBalances(group.board, current).getOrNull()?.let { balances ->
+            calculateBalances(group.board, current, group.transfers).getOrNull()?.let { balances ->
                 balances.firstOrNull { it.memberId == memberId }?.amountMinor ?: 0L
             }
         }

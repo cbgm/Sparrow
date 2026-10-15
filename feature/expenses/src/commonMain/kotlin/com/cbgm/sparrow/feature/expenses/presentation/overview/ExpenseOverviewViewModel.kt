@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.expenses.presentation.overview
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
 import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
@@ -56,6 +57,7 @@ class ExpenseOverviewViewModel(
 
     fun onUiEvent(event: ExpenseOverviewUiEvent) {
         when (event) {
+            is ExpenseOverviewUiEvent.PaymentClicked -> openPayment(event)
             ExpenseOverviewUiEvent.BackClicked -> navigator.popBackStack()
             is ExpenseOverviewUiEvent.ExpenseClicked ->
                 navigator.navigateTo(AppRoute.ExpenseDetail(groupId, event.expenseId))
@@ -63,6 +65,23 @@ class ExpenseOverviewViewModel(
                 navigator.navigateTo(AppRoute.CreateExpense(groupId, event.expenseId))
             is ExpenseOverviewUiEvent.DeleteExpenseConfirmed -> deleteExpense(event.expenseId)
         }
+    }
+
+    private fun openPayment(event: ExpenseOverviewUiEvent.PaymentClicked) {
+        val value = overview.value ?: return
+        if (value.board.currencyCode != "EUR" || value.localMemberId !in setOf(event.fromMemberId, event.toMemberId)) return
+        val allowed = if (event.transferId != null) {
+            value.transfers.any {
+                it.transferId == event.transferId && it.status == PaymentTransferStatus.SENT &&
+                    it.fromMemberId == event.fromMemberId && it.toMemberId == event.toMemberId && it.amountMinor == event.amountMinor
+            }
+        } else {
+            value.settlements.any {
+                it.fromMemberId == value.localMemberId && it.fromMemberId == event.fromMemberId &&
+                    it.toMemberId == event.toMemberId && it.amountMinor == event.amountMinor
+            }
+        }
+        if (allowed) navigator.navigateTo(AppRoute.Payment(groupId, value.board.id, event.fromMemberId, event.toMemberId, event.amountMinor, event.transferId))
     }
 
     private fun deleteExpense(expenseId: String) {

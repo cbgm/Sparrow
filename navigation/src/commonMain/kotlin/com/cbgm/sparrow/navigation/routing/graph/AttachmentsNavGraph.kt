@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStora
 import com.cbgm.sparrow.feature.expenses.presentation.create.CreateExpenseRoute
 import com.cbgm.sparrow.feature.expenses.presentation.detail.ExpenseDetailRoute
 import com.cbgm.sparrow.feature.expenses.presentation.overview.ExpenseOverviewRoute
+import com.cbgm.sparrow.feature.payment.presentation.PaymentRoute
 import com.cbgm.sparrow.feature.polls.presentation.create.CreatePollRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
@@ -47,6 +48,11 @@ fun NavGraphBuilder.attachmentsNavGraph() {
     ) {
         ExpenseDetailRoute()
     }
+
+    composable<AppRoute.Payment>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) { PaymentRoute() }
 
     composable<AppRoute.CreatePoll>(
         enterTransition = { slideInFromRight() },

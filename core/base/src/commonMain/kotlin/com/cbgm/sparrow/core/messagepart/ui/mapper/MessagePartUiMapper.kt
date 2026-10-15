@@ -9,6 +9,8 @@ import com.cbgm.sparrow.core.messagepart.domain.model.Image
 import com.cbgm.sparrow.core.messagepart.domain.model.Location
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
 import com.cbgm.sparrow.core.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.messagepart.domain.model.Video
@@ -23,6 +25,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
 import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PaymentTransferUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollOptionUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
@@ -39,6 +42,7 @@ fun MessagePart.toMessagePartUi(source: MessagePartSource = MessagePartSource.Me
         is Location -> toLocationUi(source)
         is Contact -> toContactUi(source)
         is Poll -> toPollUi(source)
+        is PaymentTransfer -> PaymentTransferUi(id, amountMinor, currencyCode, status == PaymentTransferStatus.RECEIVED, source.toMessagePartSourceUi())
         is ExpenseBoard -> toExpenseBoardUi(source)
         is ExpenseBoardClosed -> toExpenseBoardClosedUi(source)
         is Expense -> toExpenseUi(source)

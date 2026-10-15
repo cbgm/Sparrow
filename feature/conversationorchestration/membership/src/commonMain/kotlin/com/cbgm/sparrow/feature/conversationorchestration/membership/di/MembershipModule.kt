@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupVerificationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.AcceptParticipantVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.AcceptVerificationSnapshotRequestUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ApplyIncomingGroupRemovalUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ApplyVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.BroadcastGroupVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.CheckGroupOwnershipUseCase
@@ -77,6 +78,7 @@ private fun Module.registerUseCases() {
     singleOf(::RequireMemberPhoneNumberUseCase)
     singleOf(::AcceptParticipantVerificationReceiptUseCase)
     singleOf(::AcceptVerificationSnapshotRequestUseCase)
+    singleOf(::ApplyIncomingGroupRemovalUseCase)
     singleOf(::ApplyVerificationSnapshotUseCase)
     singleOf(::BroadcastGroupVerificationSnapshotUseCase)
     singleOf(::CheckGroupOwnershipUseCase)

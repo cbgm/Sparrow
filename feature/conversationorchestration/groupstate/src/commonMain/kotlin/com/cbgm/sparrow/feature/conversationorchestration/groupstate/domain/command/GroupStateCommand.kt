@@ -13,10 +13,11 @@ sealed interface GroupStateCommand : WorkflowCommand {
         val bytes: ByteArray?
     ) : GroupStateCommand
 
-    /** Replays title, description, avatar, pin and open expenses to a member that just became ready. */
+    /** Replays metadata; expense history is included only for an activated join. */
     data class SendCurrentGroupMetadata(
         val groupId: String,
-        val contactId: String
+        val contactId: String,
+        val includeExpenseHistory: Boolean = false
     ) : GroupStateCommand
 
     /** Replays the group's current pin to one member that just became ready. */

@@ -400,7 +400,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/DeleteGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`
+- **Uses:** `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`, `RequireMessageWithoutPaymentUseCase`
 
 ```text
 CheckMembership -> FindOwnMessage -> FindRecipients -> EncryptDelete -> EnqueueDelete -> DiscardMessage.

@@ -205,6 +205,17 @@ internal class MessageAttachmentDataSource(
                 }
             }
 
+    fun observeExpenseState(conversationId: String): Flow<List<MessagePartDto>> =
+        attachmentDao.observeMessagePartsByConversationIdAndTypes(
+            conversationId,
+            listOf(MessageAttachmentType.EXPENSE.name, MessageAttachmentType.PAYMENT_TRANSFER.name)
+        ).map { parts ->
+            val blobs = loadBlobs(parts)
+            parts.groupBy(MessagePartEntity::messageId).values.flatMap { messageParts ->
+                messageParts.toDtos(blobs, fileDataSource::resolveCacheFilePath)
+            }
+        }
+
     fun observeByConversationIdAndType(
         conversationId: String,
         type: MessageAttachmentType

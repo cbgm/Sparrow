@@ -36,6 +36,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordPacketSendFailureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordRetryRequestedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendReadReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
@@ -92,6 +93,7 @@ private fun Module.registerData() {
 }
 
 private fun Module.registerUseCases() {
+    singleOf(::RequireMessageWithoutPaymentUseCase)
     singleOf(::CheckGroupMessageAccessUseCase)
     singleOf(::DiscardDirectMessagesUseCase)
     singleOf(::DiscardGroupMessagesUseCase)

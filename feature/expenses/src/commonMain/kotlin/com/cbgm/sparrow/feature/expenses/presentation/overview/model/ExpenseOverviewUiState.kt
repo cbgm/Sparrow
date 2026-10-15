@@ -10,7 +10,8 @@ data class ExpenseOverviewUiState(
     val yourBalance: ExpenseYourBalanceUi = ExpenseYourBalanceUi(),
     val settlements: List<ExpenseSettlementUi> = emptyList(),
     val balances: List<ExpenseMemberBalanceUi> = emptyList(),
-    val expenses: List<ExpenseListItemUi> = emptyList()
+    val expenses: List<ExpenseListItemUi> = emptyList(),
+    val payments: List<ExpensePaymentUi> = emptyList()
 )
 
 data class ExpenseYourBalanceUi(
@@ -38,7 +39,20 @@ sealed interface ExpenseAmountUi {
 data class ExpenseSettlementUi(
     val from: ExpenseParticipantUi,
     val to: ExpenseParticipantUi,
-    val amountLabel: String
+    val amountLabel: String,
+    val amountMinor: Long = 0L,
+    val canPay: Boolean = false,
+    val transferId: String? = null
+)
+
+data class ExpensePaymentUi(
+    val transferId: String,
+    val from: ExpenseParticipantUi,
+    val to: ExpenseParticipantUi,
+    val amountMinor: Long,
+    val amountLabel: String,
+    val isReceived: Boolean,
+    val canOpen: Boolean
 )
 
 data class ExpenseMemberBalanceUi(

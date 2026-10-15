@@ -19,6 +19,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | [`PublishGroupAvatarWorkflow`](#publishgroupavatarworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupAvatar` | `groupMetadataLockKey(command.groupId)` |
 | [`RemoveGroupAvatarWorkflow`](#removegroupavatarworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.RemoveAvatar` | — |
 | [`SendCurrentGroupMetadataWorkflow`](#sendcurrentgroupmetadataworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupMetadata` | — |
+| [`SendGroupPaymentWorkflow`](#sendgrouppaymentworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.SendPaymentTransfer` | `"payment:${command.groupId}"` |
 | [`CloseGroupExpensesWorkflow`](#closegroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CloseExpenses` | `groupPinLockKey(command.groupId)` |
 | [`PinGroupMessageWorkflow`](#pingroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.PinMessage` | `groupPinLockKey(command.groupId)` |
 | [`SendCurrentGroupPinWorkflow`](#sendcurrentgrouppinworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupPin` | — |
@@ -250,7 +251,28 @@ stateDiagram-v2
     SendDescription --> SendAvatar : ItemHandled
     SendAvatar --> SendPin : ItemHandled
     SendPin --> SendExpenses : ItemHandled
+    SendPin --> [*] : ItemHandled
     SendExpenses --> [*] : ItemHandled
+```
+
+## `payment`
+
+### SendGroupPaymentWorkflow
+
+- **Kind:** public — Chats submits `GroupMessageCommand.SendPaymentTransfer`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/payment/SendGroupPaymentWorkflow.kt`
+- **Lock:** `"payment:${command.groupId}"`
+- **Uses:** `WorkflowEngine`, `RequireGroupPaymentTransferUseCase`
+
+```text
+ValidatePayment -> SendPayment; bank details never enter messaging or the outbox.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> ValidatePayment
+    ValidatePayment --> SendPayment : Validated
+    SendPayment --> [*] : Sent
 ```
 
 ## `pin`

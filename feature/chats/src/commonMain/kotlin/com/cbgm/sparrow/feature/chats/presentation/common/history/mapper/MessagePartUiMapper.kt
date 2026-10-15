@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
 import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
 import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PaymentTransferUi
 import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -36,7 +37,7 @@ internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessagePartUi> =
     }
 
 internal fun MessageBubbleUi.expenseActivityPartOrNull(): MessagePartUi? =
-    parts.firstOrNull { part -> part is ExpenseBoardUi || part is ExpenseBoardClosedUi || part is ExpenseUi }
+    parts.firstOrNull { part -> part is PaymentTransferUi || part is ExpenseBoardUi || part is ExpenseBoardClosedUi || part is ExpenseUi }
 
 internal val MessageBubbleUi.activeExpenseBoard: ExpenseBoardUi?
     get() = parts.filterIsInstance<ExpenseBoardUi>().firstOrNull { it.closedAtEpochMilliseconds == null }

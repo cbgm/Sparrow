@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +59,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseList
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseMemberBalanceUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseOverviewUiEvent
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseOverviewUiState
+import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpensePaymentUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseSettlementUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseYourBalanceUi
 import com.cbgm.sparrow.feature.expenses.presentation.overview.model.ExpenseYourPartUi
@@ -92,6 +94,9 @@ import com.cbgm.sparrow.resources.feature_expenses_overview_you_paid_on
 import com.cbgm.sparrow.resources.feature_expenses_overview_you_pay
 import com.cbgm.sparrow.resources.feature_expenses_overview_your_balance
 import com.cbgm.sparrow.resources.feature_expenses_overview_your_share
+import com.cbgm.sparrow.resources.feature_payment_history
+import com.cbgm.sparrow.resources.feature_payment_history_received
+import com.cbgm.sparrow.resources.feature_payment_history_sent
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -130,7 +135,10 @@ fun ExpenseOverviewScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)
         ) {
             item(key = "balance") { YourBalanceSection(uiState.yourBalance) }
-            item(key = "settle") { SettleUpSection(uiState.settlements) }
+            item(key = "settle") { SettleUpSection(uiState.settlements, onUiEvent) }
+            if (uiState.payments.isNotEmpty()) {
+                item(key = "payments") { PaymentsSection(uiState.payments, onUiEvent) }
+            }
             item(key = "balances") { BalancesSection(uiState.balances) }
             item(key = "expenses") {
                 ExpensesSection(
@@ -318,7 +326,7 @@ private fun BalanceStat(
 }
 
 @Composable
-private fun SettleUpSection(settlements: List<ExpenseSettlementUi>) {
+private fun SettleUpSection(settlements: List<ExpenseSettlementUi>, onUiEvent: (ExpenseOverviewUiEvent) -> Unit) {
     ExpenseOverviewSection(
         title = stringResource(Res.string.feature_expenses_overview_settle_up),
         info = settlements.size.takeIf { it > 0 }?.let {
@@ -332,7 +340,7 @@ private fun SettleUpSection(settlements: List<ExpenseSettlementUi>) {
                 Column {
                     settlements.forEachIndexed { index, settlement ->
                         if (index > 0) RowDivider()
-                        SettlementRow(settlement)
+                        SettlementRow(settlement, onUiEvent)
                     }
                 }
             }
@@ -346,11 +354,14 @@ private fun SettleUpSection(settlements: List<ExpenseSettlementUi>) {
 }
 
 @Composable
-private fun SettlementRow(settlement: ExpenseSettlementUi) {
+private fun SettlementRow(settlement: ExpenseSettlementUi, onUiEvent: (ExpenseOverviewUiEvent) -> Unit) {
     val involvesYou = settlement.from.isLocal || settlement.to.isLocal
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = settlement.canPay || (involvesYou && settlement.transferId != null)) {
+                onUiEvent(ExpenseOverviewUiEvent.PaymentClicked(settlement.from.id, settlement.to.id, settlement.amountMinor, settlement.transferId))
+            }
             .background(if (involvesYou) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
             .padding(
                 horizontal = MaterialTheme.spacing.small,
@@ -398,6 +409,36 @@ private fun SettlementRow(settlement: ExpenseSettlementUi) {
             fontWeight = FontWeight.SemiBold,
             color = if (involvesYou) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
         )
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun PaymentsSection(payments: List<ExpensePaymentUi>, onUiEvent: (ExpenseOverviewUiEvent) -> Unit) {
+    ExpenseOverviewSection(title = stringResource(Res.string.feature_payment_history)) {
+        SparrowCardNoAnimation {
+            Column {
+                payments.forEachIndexed { index, payment ->
+                    if (index > 0) RowDivider()
+                    Column(
+                        Modifier.fillMaxWidth().clickable(enabled = payment.canOpen) {
+                            onUiEvent(ExpenseOverviewUiEvent.PaymentClicked(payment.from.id, payment.to.id, payment.amountMinor, payment.transferId))
+                        }.padding(MaterialTheme.spacing.base)
+                    ) {
+                        Text("${payment.from.label()} → ${payment.to.label()} · ${payment.amountLabel}", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(if (payment.isReceived) Res.string.feature_payment_history_received else Res.string.feature_payment_history_sent),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

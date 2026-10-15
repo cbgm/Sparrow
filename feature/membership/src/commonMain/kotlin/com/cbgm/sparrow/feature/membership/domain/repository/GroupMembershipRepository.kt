@@ -67,8 +67,7 @@ interface GroupMembershipRepository {
 
     suspend fun authorizeIncomingGroupRemoval(
         packet: GroupMemberRemovedPacket,
-        senderContactId: String,
-        pendingOwnerSigningPublicKey: ByteArray?
+        senderContactId: String
     ): Result<Boolean>
 
     suspend fun completeIncomingGroupRemoval(packet: GroupMemberRemovedPacket): Result<Unit>

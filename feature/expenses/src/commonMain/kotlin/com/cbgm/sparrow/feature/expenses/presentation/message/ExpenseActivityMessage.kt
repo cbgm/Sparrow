@@ -32,6 +32,7 @@ import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
 import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.messagepart.ui.model.PaymentTransferUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -49,6 +50,8 @@ import com.cbgm.sparrow.resources.feature_expenses_activity_edited
 import com.cbgm.sparrow.resources.feature_expenses_activity_participants
 import com.cbgm.sparrow.resources.feature_expenses_activity_retry
 import com.cbgm.sparrow.resources.feature_expenses_activity_you
+import com.cbgm.sparrow.resources.feature_payment_activity_received
+import com.cbgm.sparrow.resources.feature_payment_activity_sent
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -67,6 +70,15 @@ fun ExpenseActivityMessage(
             ?: stringResource(Res.string.feature_chats_group_unknown_member)
     }
     when (part) {
+        is PaymentTransferUi -> ExpenseStatusMessage(
+            text = stringResource(
+                if (part.isReceiptConfirmed) Res.string.feature_payment_activity_received else Res.string.feature_payment_activity_sent,
+                actor,
+                part.amountMinor.toExpenseAmountLabel(part.currencyCode)
+            ),
+            isClosing = part.isReceiptConfirmed,
+            modifier = modifier
+        )
         is ExpenseBoardClosedUi -> ExpenseStatusMessage(
             text = stringResource(Res.string.feature_expenses_activity_closed, actor),
             isClosing = true,
