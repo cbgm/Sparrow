@@ -21,7 +21,8 @@ internal data class PresenceRuntime(
     val store: PresenceStorage,
     val httpClient: HttpClient,
     val registryUrl: String,
-    val nodeRequestAuthorizer: NodeRequestAuthorizer
+    val nodeRequestAuthorizer: NodeRequestAuthorizer,
+    val phoneVerification: PhoneVerification = PhoneVerification.fromEnvironment()
 )
 
 internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {

@@ -33,6 +33,7 @@ $manifest = @{
         'control_plane_directory_registration.py', 'control_plane_directory_sync.py',
         'Start-SparrowServer.sh', 'Start-SparrowServer.command',
         'Update-SparrowServerBundle.ps1', 'Update-SparrowFromGitHub.ps1',
+        'SparrowLocalImages.ps1', 'Update-SparrowServerFromBundle.ps1', 'local-images.json', 'local-images.tar',
         'Reset-SparrowDeployment.ps1', 'bundle-source.json')
     'community-node' = @('docker-compose.yml', 'docker-compose.release.yml',
         'docker-compose.production.yml', 'docker-compose.shared-proxy.yml',
@@ -55,14 +56,34 @@ try {
             throw "Not a complete compatible Sparrow server bundle: missing $required. No files changed."
         }
     }
+    if (Test-Path -LiteralPath (Join-Path $stage 'local-images.json') -PathType Leaf) {
+        if ($ApplyImages) {
+            throw 'For a local-image bundle, omit -ApplyImages, then open the installed manager and click Install / Start. No files changed.'
+        }
+        . (Join-Path $stage 'SparrowLocalImages.ps1')
+        $local = Read-SparrowLocalImages $stage
+        if ((Get-FileHash -LiteralPath (Join-Path $stage $local.archive) -Algorithm SHA256).Hash -ine $local.sha256) {
+            throw 'Local image archive checksum mismatch. No files changed.'
+        }
+    } elseif (Test-Path -LiteralPath (Join-Path $stage 'local-images.tar') -PathType Leaf) {
+        throw 'Local image archive has no manifest. No files changed.'
+    }
     # Source ZIPs may contain placeholder config and secrets/.gitignore; ONLY
     # explicit code/Compose files in the manifest are copied.
     foreach ($folder in $manifest.Keys) {
         foreach ($name in $manifest[$folder]) {
             $relative = if ($folder) { "$folder/$name" } else { $name }
             $source = Join-Path $stage $relative
-            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
             $destination = Join-Path $install $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                # A normal release update must stop selecting a previous local bundle.
+                if (-not $folder -and $name -in @('local-images.json', 'local-images.tar') -and
+                    (Test-Path -LiteralPath $destination -PathType Leaf)) {
+                    $changes.Add([pscustomobject]@{ Relative = $relative; Source = $null;
+                        Destination = $destination; Existed = $true })
+                }
+                continue
+            }
             $changes.Add([pscustomobject]@{ Relative = $relative; Source = $source;
                 Destination = $destination; Existed = (Test-Path -LiteralPath $destination -PathType Leaf) })
         }
@@ -81,6 +102,10 @@ try {
         foreach ($change in $changes) {
             New-Item -ItemType Directory -Path (Split-Path -Parent $change.Destination) -Force | Out-Null
             $applied.Add($change)
+            if ($null -eq $change.Source) {
+                Remove-Item -LiteralPath $change.Destination -Force -ErrorAction Stop
+                continue
+            }
             Copy-Item -LiteralPath $change.Source -Destination $change.Destination -Force -ErrorAction Stop
             if ((Get-FileHash -LiteralPath $change.Source -Algorithm SHA256).Hash -ne
                 (Get-FileHash -LiteralPath $change.Destination -Algorithm SHA256).Hash) {

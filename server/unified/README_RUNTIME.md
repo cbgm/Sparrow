@@ -226,3 +226,31 @@ credentials and deployment files are never bundled. No server key is copied into
 its image; the only key mount is the existing root identity read-only, only for
 the lifetime of the registration attempt. The verified background worker does
 not have this mount. Docker image build errors cannot interrupt local messaging.
+
+### Local server build update (Windows, existing combined installation)
+
+With Docker Desktop running, double-click
+`server/unified/Build-SparrowServer-Local.cmd` in the source project.
+
+This compiles all six server images from the local working tree, gives them a
+unique local tag and packages them with the manager in `dist/sparrow-server.zip`.
+It does not push images or source to GitHub. Docker still downloads build tools
+and dependencies when they are not cached. This is not an offline build.
+
+Extract the new bundle into a NEW folder and open `Start-SparrowServer.cmd`.
+Click **Update ZIP...** and select `dist/sparrow-server.zip`. When opened outside
+an existing installation, the manager opens a folder picker for your ORIGINAL
+server installation. In an installed manager it uses its own folder automatically.
+The button updates the installed files, verifies and loads the bundled images,
+applies them to the existing server with `--pull never`, and reopens the installed
+manager. Progress and errors appear in its existing log panel. No PowerShell
+update command or second Install / Start click is required.
+
+Do not extract the ZIP over your configured installation. Existing configuration,
+credentials, identities and data volumes are retained. The displayed image
+prefix/tag are read-only while a local bundle is installed. Local bundles support
+updates of existing Windows combined installations, not fresh installs,
+destructive reinstalls, attached migrations, or Linux/macOS managers.
+Normal builds without `-IncludeLocalImages` keep the registry-based behavior.
+The updater removes previous local-image selection files when applying a normal
+release bundle; select the desired registry prefix/tag in the manager afterward.

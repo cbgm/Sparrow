@@ -170,6 +170,10 @@ internal class GatewaySessionHandler(
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
         val connection = message.toGatewayConnection(session)
+        if (com.cbgm.sparrow.server.security.ClientRoutingIds.isBootstrapRoutingId(message.routingId)) {
+            connection.sendError("INVALID_ROUTE", "Register a signing-key routing identity")
+            return null
+        }
         val registration = message.toClientRouteRegistration(connection, nodeId)
         val routeValidationFailure =
             registration?.let { currentRegistration ->
@@ -235,11 +239,13 @@ internal class GatewaySessionHandler(
                     message = "Signed route is invalid: ${routeValidationFailure.name}"
                 )
 
-            !synchronizePresence(registration) ->
+            !synchronizePresence(registration) -> {
+                connections.updateRoutingAliases(connection, emptyList())
                 connection.sendError(
                     code = "ROUTE_REJECTED",
                     message = "Presence route rejected"
                 )
+            }
 
             else -> {
                 val aliases = registration.route.aliases.orEmpty()

@@ -131,50 +131,72 @@ function Preserve-InstalledProxyRoute([string]$CombinedRoot) {
     }
     $source = [IO.File]::ReadAllText($manager)
     if ($source.Contains('# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE')) { return }
-    $old = @'
+    # Find the actual function instead of matching four lines byte-for-byte.
+    # Different newline styles and manager updates must not block route recovery.
+    $tokens = $null
+    $errors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$errors)
+    if ($errors.Count -gt 0) { throw 'Installed proxy manager has PowerShell syntax errors; it was not modified.' }
+    $definitions = @($ast.FindAll({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Write-ProxyConfig'
+    }, $true))
+    if ($definitions.Count -ne 1) { throw 'Cannot identify exactly one Write-ProxyConfig function. Installed manager was not modified.' }
+    if ($source -match '(?i)function\s+Write-SparrowProxyRoutesWithoutDirectory\b') {
+        throw 'An incomplete Directory preservation hook already exists. Installed manager was not modified.'
+    }
+    $definition = $definitions[0]
+    $original = $definition.Extent.Text
+    if ($original -notmatch '\$proxyRoot' -or $original -notmatch 'Caddyfile') {
+        throw 'The installed proxy writer does not use the expected public-proxy configuration. It was not modified.'
+    }
+    $renamed = ([regex]::new('(?i)\bfunction\s+Write-ProxyConfig\b')).Replace($original, 'function Write-SparrowProxyRoutesWithoutDirectory', 1)
+    $wrapper = @'
+function Write-ProxyConfig {
     $caddyfile = Join-Path $proxyRoot 'Caddyfile'
-    $temp = "$caddyfile.pending"
-    [System.IO.File]::WriteAllText($temp, (($routes + $entries) -join "`n"), [System.Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $temp -Destination $caddyfile -Force
-'@
-    $new = @'
-    $caddyfile = Join-Path $proxyRoot 'Caddyfile'
-    # Preserve the operator-managed Directory hostname across ordinary updates.
+    $previous = if (Test-Path -LiteralPath $caddyfile -PathType Leaf) { [IO.File]::ReadAllText($caddyfile) } else { '' }
+    $startMarker = '# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE'
+    $endMarker = '# END SPARROW INDEPENDENT DIRECTORY ROUTE'
+    $startAt = $previous.IndexOf($startMarker, [StringComparison]::Ordinal)
+    $endAt = $previous.IndexOf($endMarker, [StringComparison]::Ordinal)
     $directoryRoute = ''
-    if (Test-Path -LiteralPath $caddyfile -PathType Leaf) {
-        $previous = [System.IO.File]::ReadAllText($caddyfile)
-        $startMarker = '# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE'
-        $endMarker = '# END SPARROW INDEPENDENT DIRECTORY ROUTE'
-        $startAt = $previous.IndexOf($startMarker, [StringComparison]::Ordinal)
-        $endAt = $previous.IndexOf($endMarker, [StringComparison]::Ordinal)
-        if (($startAt -ge 0) -ne ($endAt -ge 0)) {
-            throw 'Incomplete managed Directory route in Caddyfile. Existing proxy preserved.'
+    if ($startAt -ge 0 -or $endAt -ge 0) {
+        if ($startAt -lt 0 -or $endAt -lt $startAt -or
+            $previous.IndexOf($startMarker, $startAt + $startMarker.Length, [StringComparison]::Ordinal) -ge 0 -or
+            $previous.IndexOf($endMarker, $endAt + $endMarker.Length, [StringComparison]::Ordinal) -ge 0) {
+            throw 'Incomplete or ambiguous independent Directory route. Existing proxy was not changed.'
         }
-        if ($startAt -ge 0) {
-            if ($endAt -le $startAt -or
-                $previous.IndexOf($startMarker, $startAt + $startMarker.Length, [StringComparison]::Ordinal) -ge 0 -or
-                $previous.IndexOf($endMarker, $endAt + $endMarker.Length, [StringComparison]::Ordinal) -ge 0) {
-                throw 'Ambiguous managed Directory route in Caddyfile. Existing proxy preserved.'
+        $directoryRoute = $previous.Substring($startAt, $endAt + $endMarker.Length - $startAt)
+    }
+    try {
+        Write-SparrowProxyRoutesWithoutDirectory
+        if ($directoryRoute) {
+            $normal = [IO.File]::ReadAllText($caddyfile)
+            if ($normal.Contains($startMarker)) {
+                if (-not $normal.Contains($directoryRoute)) { throw 'Proxy writer changed the independent Directory route.' }
+            } else {
+                $pending = "$caddyfile.pending"
+                [IO.File]::WriteAllText($pending, ($normal.TrimEnd() + "`n`n" + $directoryRoute + "`n"), [Text.UTF8Encoding]::new($false))
+                Move-Item -LiteralPath $pending -Destination $caddyfile -Force
             }
-            $directoryRoute = $previous.Substring($startAt, $endAt + $endMarker.Length - $startAt)
         }
+    } catch {
+        if ($previous) { [IO.File]::WriteAllText($caddyfile, $previous, [Text.UTF8Encoding]::new($false)) }
+        throw
     }
-    $temp = "$caddyfile.pending"
-    $normalRoutes = ($routes + $entries) -join "`n"
-    $newContent = if ($directoryRoute) { $normalRoutes.TrimEnd() + "`n`n" + $directoryRoute + "`n" } else { $normalRoutes }
-    [System.IO.File]::WriteAllText($temp, $newContent, [System.Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $temp -Destination $caddyfile -Force
+}
 '@
-    if ($source.IndexOf($old, [StringComparison]::Ordinal) -lt 0 -or
-        $source.IndexOf($old, $source.IndexOf($old, [StringComparison]::Ordinal) + $old.Length,
-                        [StringComparison]::Ordinal) -ge 0) {
-        throw 'Unknown installed Sparrow proxy-manager version. No Directory route added; use the accompanying source patch.'
-    }
+    $patched = $source.Substring(0, $definition.Extent.StartOffset) + $renamed + "`n`n" + $wrapper + $source.Substring($definition.Extent.EndOffset)
+    $tokens = $null
+    $errors = $null
+    $null = [Management.Automation.Language.Parser]::ParseInput($patched, [ref]$tokens, [ref]$errors)
+    if ($errors.Count -gt 0) { throw 'Generated proxy manager failed PowerShell validation. Installed manager was not modified.' }
     $backup = "$manager.before-directory"
     if (-not (Test-Path -LiteralPath $backup)) {
         [IO.File]::WriteAllText($backup,$source,[Text.UTF8Encoding]::new($false))
     }
-    [IO.File]::WriteAllText($manager,$source.Replace($old,$new),[Text.UTF8Encoding]::new($false))
+    $pendingManager = "$manager.pending-directory"
+    [IO.File]::WriteAllText($pendingManager,$patched,[Text.UTF8Encoding]::new($false))
+    Move-Item -LiteralPath $pendingManager -Destination $manager -Force
 }
 
 
@@ -612,15 +634,15 @@ $installButton.Add_Click({
         & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $scriptPath -Install -ServerRoot $installedRoot -DirectoryHostname $hostname 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Directory installation failed (exit $LASTEXITCODE)." }
     } -ArgumentList $script,$serverInput.Text.Trim(),$domainInput.Text.Trim()
-    $lastOutput = 0
+    $outputState = [pscustomobject]@{ LastOutput = 0 }
     $timer = [Windows.Forms.Timer]::new()
     $timer.Interval = 700
     $timer.Add_Tick({
         $all = @(Receive-Job -Job $job -Keep -ErrorAction SilentlyContinue)
-        for ($idx=$lastOutput; $idx -lt $all.Count; $idx++) {
+        for ($idx=$outputState.LastOutput; $idx -lt $all.Count; $idx++) {
             $logBox.AppendText(([string]$all[$idx]) + "`r`n")
         }
-        $lastOutput = $all.Count
+        $outputState.LastOutput = $all.Count
         if ($job.State -in @('Completed','Failed','Stopped')) {
             $timer.Stop(); $timer.Dispose()
             $installButton.Enabled = $true

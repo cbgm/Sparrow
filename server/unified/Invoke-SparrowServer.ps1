@@ -34,6 +34,8 @@ $attachmentFile = Join-Path $root '.sparrow-attached.json'
 $nodeSelected = $Component -in @('Node', 'Combined')
 $cpSelected = $Component -in @('ControlPlane', 'Combined')
 $shared = $Mode -eq 'public'
+. (Join-Path $root 'SparrowLocalImages.ps1')
+$localImages = Read-SparrowLocalImages $root
 
 function Start-SparrowDirectoryBackgroundSync {
     $cpConfig = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
@@ -539,8 +541,12 @@ function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string
             Write-Host 'Firebase Compose override enabled for the existing Control Plane push service.'
         }
     }
-    Write-Host "Fetching the latest selected $project backend images from GHCR ..."
-    Invoke-Docker -Arguments ($composeArgs + @('pull') + $BackendServices)
+    if ($null -eq $localImages) {
+        Write-Host "Fetching the latest selected $project backend images from GHCR ..."
+        Invoke-Docker -Arguments ($composeArgs + @('pull') + $BackendServices)
+    } else {
+        Write-Host "Using bundled local $project backend images; registry pull skipped."
+    }
     # 'up' rather than 'restart' recreates a backend only if its image/config
     # actually changed; --no-deps prevents database/redis replacement.
     Invoke-Docker -Arguments ($composeArgs + @('up', '-d', '--no-deps', '--pull', 'never') + $BackendServices)
@@ -883,6 +889,20 @@ function Get-ComponentRoutes([string]$Directory, [string]$Marker, [hashtable]$Al
     $routes = $routes.Replace('root * /srv', "root * $IndexRoot")
     return $routes
 }
+function Get-PreservedDirectoryRoute([string]$Contents) {
+    $startMarker = '# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE'
+    $endMarker = '# END SPARROW INDEPENDENT DIRECTORY ROUTE'
+    $startAt = $Contents.IndexOf($startMarker, [StringComparison]::Ordinal)
+    $endAt = $Contents.IndexOf($endMarker, [StringComparison]::Ordinal)
+    if ($startAt -lt 0 -and $endAt -lt 0) { return '' }
+    if ($startAt -lt 0 -or $endAt -lt $startAt -or
+        $Contents.IndexOf($startMarker, $startAt + $startMarker.Length, [StringComparison]::Ordinal) -ge 0 -or
+        $Contents.IndexOf($endMarker, $endAt + $endMarker.Length, [StringComparison]::Ordinal) -ge 0) {
+        throw 'Incomplete or ambiguous independent Directory route. Existing proxy configuration was not changed.'
+    }
+    return $Contents.Substring($startAt, $endAt + $endMarker.Length - $startAt)
+}
+
 function Write-ProxyConfig {
     # Editing or updating one component must not drop the other component's
     # already-configured public route from the shared entry point.
@@ -921,8 +941,16 @@ function Write-ProxyConfig {
         $entries += 'import /etc/caddy/node-routes/*.caddy'
     }
     $caddyfile = Join-Path $proxyRoot 'Caddyfile'
+    # The separate Directory installer owns this marked site. Keep it when
+    # regenerating combined-server routes, including after replacing this manager.
+    $directoryRoute = ''
+    if (Test-Path -LiteralPath $caddyfile -PathType Leaf) {
+        $directoryRoute = Get-PreservedDirectoryRoute ([IO.File]::ReadAllText($caddyfile))
+    }
+    $normalRoutes = ($routes + $entries) -join "`n"
+    $newContent = if ($directoryRoute) { $normalRoutes.TrimEnd() + "`n`n" + $directoryRoute + "`n" } else { $normalRoutes }
     $temp = "$caddyfile.pending"
-    [System.IO.File]::WriteAllText($temp, (($routes + $entries) -join "`n"), [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($temp, $newContent, [System.Text.UTF8Encoding]::new($false))
     Move-Item -LiteralPath $temp -Destination $caddyfile -Force
 }
 function Check-PublicPortOwnership {
@@ -1357,6 +1385,7 @@ try {
     Require-Docker
     if ($Action -eq 'Attach' -or (Test-Path -LiteralPath $attachmentFile -PathType Leaf)) {
         . (Join-Path $root 'Attached-SparrowDeployment.ps1')
+        if ($null -ne $localImages -and $Action -eq 'Start') { throw 'Bundled local images require the original combined installation, not an attached deployment.' }
         Attached-Invoke -Action $Action -Component $Component -PlanDirectory $PlanDirectory -ExpectedState $ExpectedState
         Write-TaskResult 'SUCCESS'
         exit 0
@@ -1390,6 +1419,22 @@ try {
         throw 'Sparrow installation requires Combined (Control Plane + Community Node).'
     }
     if ($Action -eq 'Start') {
+        if ($null -ne $localImages) {
+            if ($ExistingDeployment -ne 'Keep' -or
+                -not (Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf) -or
+                -not (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf)) {
+                throw 'This local-image bundle updates an existing combined installation. Apply it in place with Update-SparrowServerBundle.ps1; fresh install and destructive reinstall are not supported in local mode.'
+            }
+            foreach ($directory in @($cpRoot, $nodeRoot)) {
+                $installed = Read-Properties (Join-Path $directory 'sparrow.conf')
+                if ($installed['PUBLIC_TRANSITION'] -eq 'lan-in-place' -and $installed['PUBLIC_TRANSITION_COMPOSE'] -eq 'base') {
+                    throw 'Local image updates cannot change a legacy base-only deployment signing configuration.'
+                }
+            }
+            $ImagePrefix = [string]$localImages.prefix
+            $ImageTag = [string]$localImages.tag
+            Import-SparrowLocalImages $root $localImages
+        }
         if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') { throw 'Invalid image prefix.' }
         if ($ImageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') { throw 'Invalid image tag.' }
         Set-CaddyAutomaticHostnames

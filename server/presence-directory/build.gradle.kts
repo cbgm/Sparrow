@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.bundles.coroutines)
     implementation(libs.ktor.client.cio)
     implementation(libs.jedis)
+    implementation(libs.firebase.admin)
     implementation(libs.logback.classic)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.coroutines.test)

@@ -50,7 +50,7 @@
         reverse_proxy node-registry:8090
     }
 
-    @presence path /v1/routes /v1/routes/*
+    @presence path /v1/routes /v1/routes/* /v1/phone-verification/policy
     handle @presence {
         reverse_proxy presence-directory:8091
     }

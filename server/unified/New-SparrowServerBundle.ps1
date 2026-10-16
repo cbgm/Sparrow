@@ -2,11 +2,21 @@
 param(
     [string]$OutputDirectory = 'dist',
     [string]$ImagePrefix = 'ghcr.io/cbgm/sparrow',
-    [string]$ImageTag = 'latest'
+    [string]$ImageTag = 'latest',
+    [switch]$IncludeLocalImages
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+if ($IncludeLocalImages) {
+    if (-not $PSBoundParameters.ContainsKey('ImagePrefix')) { $ImagePrefix = 'local/sparrow' }
+    if (-not $PSBoundParameters.ContainsKey('ImageTag')) {
+        $ImageTag = 'local-' + (Get-Date -Format 'yyyyMMddHHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
+    }
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is required to build local images.' }
+    & docker info --format '{{.ServerVersion}}' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Start Docker Desktop before building local server images.' }
+}
 $bundleRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'sparrow-unified-server-bundle'
 $dest = Join-Path ([System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDirectory))) 'sparrow-server.zip'
 if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') { throw 'Invalid image prefix.' }
@@ -17,12 +27,12 @@ New-Item -ItemType Directory -Path $bundleRoot -Force | Out-Null
 # Runtime-only bundle: optional diagnostic scripts are deliberately excluded.
 # Do not require deleted Test-* files when producing the end-user installer.
 $sharedFiles = @(
-    'Invoke-SparrowServer.ps1', 'Get-SparrowDockerLabel.ps1',
+    'Invoke-SparrowServer.ps1', 'SparrowLocalImages.ps1', 'Get-SparrowDockerLabel.ps1',
     'Get-SparrowVerifiedDirectory.ps1',
     'Start-SparrowServer.ps1', 'Backup-SparrowDeployment.ps1',
     'Stage-SparrowPublicTls.ps1', 'Invoke-SparrowPublicCutover.ps1',
     'Attached-SparrowDeployment.ps1', 'Update-SparrowServerBundle.ps1',
-    'Update-SparrowFromGitHub.ps1',
+    'Update-SparrowFromGitHub.ps1', 'Update-SparrowServerFromBundle.ps1',
     'Invoke-SparrowServer.py', 'Manage-SparrowNodes.py', 'Manage-SparrowNodes.ps1', 'control_plane_directory_client.py', 'control_plane_directory_registration.py', 'control_plane_directory_sync.py', '.dockerignore', 'Start-SparrowServer.sh',
     'Start-SparrowServer.command'
 )
@@ -133,8 +143,48 @@ Copy-Item -LiteralPath (Join-Path $repositoryRoot 'server/scripts/Bootstrap-Cont
 [System.IO.File]::WriteAllText((Join-Path $bundleRoot 'Start-SparrowServer.cmd'),
     "@echo off`r`ncd /d `"%~dp0`"`r`nstart `"`" powershell.exe -STA -NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"%~dp0Start-SparrowServer.ps1`"`r`n",
     [System.Text.UTF8Encoding]::new($false))
+function Invoke-BundleDocker([string[]]$Arguments) {
+    # Docker build progress uses stderr even on success under Windows PowerShell.
+    $previousPreference = $ErrorActionPreference
+    $exitCode = -1
+    try {
+        $ErrorActionPreference = 'Continue'
+        & docker @Arguments 2>&1 | ForEach-Object { Write-Host ([string]$_) }
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($exitCode -ne 0) { throw "Docker command failed (exit $exitCode). No new installer was produced." }
+}
+if ($IncludeLocalImages) {
+    $images = @()
+    foreach ($service in @('node-registry', 'presence-directory', 'mailbox', 'federation', 'gateway', 'push')) {
+        $name = "${ImagePrefix}-${service}:${ImageTag}"
+        Write-Host "Building local server image: $name"
+        Invoke-BundleDocker -Arguments @('build', '--file', (Join-Path $repositoryRoot 'server/Dockerfile'), '--build-arg', "SERVICE=$service", '--tag', $name, $repositoryRoot)
+        $id = @(& docker image inspect --format '{{.Id}}' $name)
+        if ($LASTEXITCODE -ne 0 -or $id.Count -ne 1 -or $id[0] -notmatch '^sha256:[a-f0-9]{64}$') {
+            throw "Could not inspect the locally built image: $name"
+        }
+        $images += @{ service = $service; name = $name; id = $id[0] }
+    }
+    $imageArchive = Join-Path $bundleRoot 'local-images.tar'
+    $names = @($images | ForEach-Object { $_.name })
+    Invoke-BundleDocker -Arguments (@('save', '--output', $imageArchive) + $names)
+    $localManifest = @{
+        version = 1; archive = 'local-images.tar'
+        sha256 = (Get-FileHash -LiteralPath $imageArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+        prefix = $ImagePrefix; tag = $ImageTag; images = $images
+    }
+    [IO.File]::WriteAllText((Join-Path $bundleRoot 'local-images.json'),
+        ($localManifest | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+}
 New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Force }
 [System.IO.Compression.ZipFile]::CreateFromDirectory($bundleRoot, $dest, [System.IO.Compression.CompressionLevel]::Optimal, $false)
-Write-Host "Created $dest (fresh installations only; existing deployment migration must preserve original secrets/config and volumes)."
+if ($IncludeLocalImages) {
+    Write-Host "Created $dest with locally built server images. Update the existing Windows installation in place, then click Install / Start."
+} else {
+    Write-Host "Created $dest (registry-based server images)."
+}

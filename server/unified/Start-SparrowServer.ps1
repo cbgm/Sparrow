@@ -6,6 +6,8 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $root = $PSScriptRoot
+. (Join-Path $root 'SparrowLocalImages.ps1')
+$localImages = Read-SparrowLocalImages $root
 $form = [System.Windows.Forms.Form]::new()
 $form.Text = 'Sparrow Server — Installer & Manager'
 $form.Size = [System.Drawing.Size]::new(850, 925)
@@ -100,6 +102,13 @@ $imagePrefix.Text = if ($cpSettings['SPARROW_IMAGE_PREFIX']) { $cpSettings['SPAR
 New-Label 'Image tag' 22 268 | Out-Null
 $imageTag = New-Input 245 264 535
 $imageTag.Text = if ($cpSettings['SPARROW_IMAGE_TAG']) { $cpSettings['SPARROW_IMAGE_TAG'] } elseif ($nodeSettings['SPARROW_IMAGE_TAG']) { $nodeSettings['SPARROW_IMAGE_TAG'] } else { 'latest' }
+if ($null -ne $localImages) {
+    $imagePrefix.Text = [string]$localImages.prefix
+    $imageTag.Text = [string]$localImages.tag
+    $imagePrefix.ReadOnly = $true
+    $imageTag.ReadOnly = $true
+    $form.Text = 'Sparrow Server — Local build update'
+}
 New-Label 'Independent Firebase credentials' 22 304 | Out-Null
 $firebase = New-Input 245 300 425
 $firebase.ReadOnly = $true
@@ -147,6 +156,7 @@ $stop = New-Button 'Stop' 194 448 96
 $statusButton = New-Button 'Status' 302 448 96
 $logsButton = New-Button 'Logs' 410 448 96
 $cancel = New-Button 'Cancel task' 518 448 140
+$updateZip = New-Button 'Update ZIP...' 670 448 106
 # The public address fields are read from the INSTALLED config, never guessed
 # from the current router IP. Copy controls remain available after Status.
 $publicLabel = New-Label 'Configured public addresses (external reachability not verified)' 22 491 760
@@ -208,6 +218,7 @@ $script:utf8Decoder = [System.Text.Encoding]::UTF8.GetDecoder()
 $script:pendingCarriageReturn = $false
 $script:busy = $false
 $script:activeAction = ''
+$script:updateInstallationDirectory = ''
 $timer = [System.Windows.Forms.Timer]::new()
 $timer.Interval = 350
 function Append-Lines([string]$Value) {
@@ -275,8 +286,8 @@ $components.Add_SelectedIndexChanged({ Update-Selection })
 Update-Selection
 function Set-Busy([bool]$Busy) {
     $script:busy = $Busy
-    foreach ($button in @($start, $stop, $statusButton, $logsButton)) { $button.Enabled = -not $Busy }
-    $cancel.Enabled = $Busy
+    foreach ($button in @($start, $stop, $statusButton, $logsButton, $updateZip)) { $button.Enabled = -not $Busy }
+    $cancel.Enabled = $Busy -and $script:activeAction -ne 'Update'
     $components.Enabled = -not $Busy
     $reinstallPublic.Enabled = -not $Busy -and -not (Test-Path -LiteralPath $attachmentFile -PathType Leaf) -and $components.SelectedIndex -eq 0 -and $mode.SelectedIndex -eq 1
     $progress.MarqueeAnimationSpeed = if ($Busy) { 20 } else { 0 }
@@ -355,6 +366,15 @@ $timer.Add_Tick({
             Append-Lines "`r`n$($activity.Text)`r`n"
             $script:process.Dispose(); $script:process = $null
             if ($script:resultFile) { Remove-Item -LiteralPath $script:resultFile -Force -ErrorAction SilentlyContinue }
+            if ($success -and $script:activeAction -eq 'Update') {
+                try {
+                    $updatedUi = Join-Path $script:updateInstallationDirectory 'Start-SparrowServer.ps1'
+                    Start-Process -FilePath 'powershell.exe' -ArgumentList @('-STA', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $updatedUi + '"')) -WorkingDirectory $script:updateInstallationDirectory | Out-Null
+                    $form.Close()
+                } catch {
+                    $activity.Text = 'Server updated. Reopen Start-SparrowServer.cmd in the installed folder.'
+                }
+            }
 
         }
     }
@@ -381,7 +401,7 @@ function Test-NeedsPublicReinstall {
     }
     return $false
 }
-function Start-Task([string]$Action) {
+function Start-Task([string]$Action, [string]$BundleZip = '', [string]$InstallationDirectory = '') {
     if ($script:busy) { return }
     $hasAttachment = Test-Path -LiteralPath $attachmentFile -PathType Leaf
     $selection = 'Combined'
@@ -440,6 +460,14 @@ function Start-Task([string]$Action) {
     }
     $script:activeAction = $Action
     $worker = Join-Path $root 'Invoke-SparrowServer.ps1'
+    if ($Action -eq 'Update') {
+        $worker = Join-Path $root 'Update-SparrowServerFromBundle.ps1'
+        $values = @{
+            BundleZip = $BundleZip; InstallationDirectory = $InstallationDirectory
+            ResultPath = $script:resultFile; FailurePath = $script:failureFile
+        }
+        $script:updateInstallationDirectory = $InstallationDirectory
+    }
     $arguments = @("& '$($worker.Replace("'", "''"))'")
     foreach ($entry in $values.GetEnumerator()) {
         $arguments += "-$($entry.Key) '$(([string]$entry.Value).Replace("'", "''"))'"
@@ -470,6 +498,29 @@ function Start-Task([string]$Action) {
     }
 
 }
+$updateZip.Add_Click({
+    if ($script:busy) { return }
+    $picker = [System.Windows.Forms.OpenFileDialog]::new()
+    $picker.Title = 'Select the new Sparrow server bundle'
+    $picker.Filter = 'Sparrow server bundle (*.zip)|*.zip'
+    $picker.FileName = 'sparrow-server.zip'
+    try {
+        if ($picker.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) { return }
+        $bundle = $picker.FileName
+    } finally { $picker.Dispose() }
+    $destination = $root
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'control-plane/.env.runtime') -PathType Leaf) -or
+        -not (Test-Path -LiteralPath (Join-Path $root 'community-node/.env.runtime') -PathType Leaf)) {
+        $folder = [System.Windows.Forms.FolderBrowserDialog]::new()
+        $folder.Description = 'Select your EXISTING Sparrow server installation folder'
+        $folder.ShowNewFolderButton = $false
+        try {
+            if ($folder.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) { return }
+            $destination = $folder.SelectedPath
+        } finally { $folder.Dispose() }
+    }
+    Start-Task 'Update' $bundle $destination
+})
 $start.Add_Click({ Start-Task 'Start' })
 $reinstallPublic.Add_Click({ Start-Task 'Reinstall' })
 $stop.Add_Click({ Start-Task 'Stop' })

@@ -9,8 +9,23 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.time.Duration.Companion.milliseconds
 
 class GatewayBackgroundClientsTest {
+    @Test
+    fun presenceWrapperPropagatesRejectedPhoneRegistration() = runTest {
+        val wrapper = BestEffortPresenceClient(object : PresenceClient {
+            override suspend fun register(registration: ClientRouteRegistration) = false
+
+            override suspend fun remove(routingId: String, connectionId: String) = Unit
+        })
+        try {
+            assertFalse(wrapper.register(testRegistration()))
+        } finally {
+            wrapper.close()
+        }
+    }
+
     @Test
     fun presenceRegistrationMustBeConfirmedBeforeGatewayAcceptsRoute() =
         runTest {
@@ -162,12 +177,12 @@ class GatewayBackgroundClientsTest {
                     envelope = testEnvelope(),
                     federationEnvelopeId = "envelope-1"
                 )
-                withTimeout(TEST_TIMEOUT_MILLISECONDS) {
+                withTimeout(TEST_TIMEOUT_MILLISECONDS.milliseconds) {
                     storeStarted.await()
                 }
                 assertFalse(markedStored.isCompleted)
                 releaseStore.complete(Unit)
-                withTimeout(TEST_TIMEOUT_MILLISECONDS) {
+                withTimeout(TEST_TIMEOUT_MILLISECONDS.milliseconds) {
                     markedStored.await()
                 }
             } finally {

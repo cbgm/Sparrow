@@ -1,11 +1,9 @@
 package com.cbgm.sparrow.buildlogic
 
-import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.extensions.DetektExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
-import org.gradle.kotlin.dsl.withType
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
@@ -88,24 +86,12 @@ class SparrowLintPlugin : Plugin<Project> {
             ),
         )
 
-        dependencies.add(
-            "detektPlugins",
-            libs.requiredLibrary(
-                "compose-rules-detekt",
-            ),
-        )
-
-        dependencies.add(
-            "detektPlugins",
-            dependencies.project(
-                mapOf(
-                    "path" to ":quality:detekt-rules",
-                ),
-            ),
-        )
-
-        tasks.withType<Detekt>().configureEach {
-            dependsOn(":quality:detekt-rules:assemble")
+        if (path != ":quality:detekt-rules") {
+            evaluationDependsOn(":quality:detekt-rules")
+            dependencies.add(
+                "detektPlugins",
+                files(project(":quality:detekt-rules").tasks.named("jar")),
+            )
         }
     }
 }

@@ -16,14 +16,8 @@ internal class BestEffortPresenceClient(
     private val scope = CoroutineScope(SupervisorJob())
     private val slots = Semaphore(MAX_CONCURRENT_PRESENCE_SYNCS)
 
-    override suspend fun register(registration: ClientRouteRegistration): Boolean {
-        scope.launch {
-            slots.withPermit {
-                runCatching { delegate.register(registration) }
-            }
-        }
-        return true
-    }
+    override suspend fun register(registration: ClientRouteRegistration): Boolean =
+        slots.withPermit { delegate.register(registration) }
 
     override suspend fun remove(
         routingId: String,

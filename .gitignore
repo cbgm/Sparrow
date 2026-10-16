@@ -6,6 +6,8 @@ xcuserdata
 !src/**/build/
 local.properties
 /.sparrow-server/
+
+dist/
 .idea
 .DS_Store
 captures
