@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.presentation.setup
+package com.cbgm.sparrow.feature.identity.presentation.backup
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiState
-import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiStatus
+import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiState
+import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_backup_export_action
 import com.cbgm.sparrow.resources.feature_identity_backup_exported

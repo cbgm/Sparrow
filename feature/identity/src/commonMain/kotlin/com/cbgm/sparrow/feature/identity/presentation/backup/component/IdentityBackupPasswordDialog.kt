@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.presentation.setup
+package com.cbgm.sparrow.feature.identity.presentation.backup
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

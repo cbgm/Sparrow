@@ -1,9 +1,10 @@
-package com.cbgm.sparrow.feature.identity.presentation.setup.components
+package com.cbgm.sparrow.feature.identity.presentation.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +51,7 @@ fun IconBadge(
 fun IconBadgePreview() {
     SparrowTheme {
         IconBadge(
-            icon = androidx.compose.material.icons.Icons.Default.Lock,
+            icon = Icons.Default.Lock,
             tint = MaterialTheme.colorScheme.primary
         )
     }

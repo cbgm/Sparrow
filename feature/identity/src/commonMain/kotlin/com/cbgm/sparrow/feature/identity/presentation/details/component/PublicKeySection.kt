@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.presentation.setup.components
+package com.cbgm.sparrow.feature.identity.presentation.details.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -36,7 +36,7 @@ fun PublicKeySection(
     icon: ImageVector,
     title: String,
     description: String,
-    key: ByteArray,
+    key: String,
     onCopied: () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -78,8 +78,8 @@ fun PublicKeySection(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun KeyHexGrid(key: ByteArray, modifier: Modifier = Modifier, onCopied: () -> Unit = {}) {
-    val fullHexValue = key.toHexString().uppercase()
+internal fun KeyHexGrid(key: String, modifier: Modifier = Modifier, onCopied: () -> Unit = {}) {
+    val fullHexValue = key.uppercase()
     val groups = fullHexValue.chunked(4)
     val clipboard = LocalClipboardManager.current
     Column(
@@ -121,7 +121,7 @@ fun PublicKeySectionPreview() {
             icon = Icons.Default.VerifiedUser,
             title = "Test",
             description = "Test",
-            key = ByteArray(32)
+            key = "ByteArray(32)"
         )
     }
 }
