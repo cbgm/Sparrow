@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupDocumentLauncher
 import com.cbgm.sparrow.feature.identity.device.IdentityExportRequest
+import com.cbgm.sparrow.feature.identity.presentation.backup.component.IdentityBackupPasswordDialog
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiEvent
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -23,9 +24,7 @@ fun IdentityBackupRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val exportDocument by viewModel.exportDocument.collectAsStateWithLifecycle()
     var showExportDialog by remember { mutableStateOf(false) }
-    var importDocument by remember { mutableStateOf<ByteArray?>(null) }
     var password by remember { mutableStateOf("") }
-    var importRequestId by remember { mutableIntStateOf(0) }
     var exportRequestId by remember { mutableIntStateOf(0) }
     var exportRequest by remember { mutableStateOf<IdentityExportRequest?>(null) }
 
@@ -38,18 +37,11 @@ fun IdentityBackupRoute(
 
     IdentityBackupDocumentLauncher(
         exportRequest = exportRequest,
-        importRequestId = importRequestId,
+        importRequestId = 0,
+        onImportResult = { _, _ -> },
         onExportResult = { success, error ->
             exportRequest = null
             viewModel.onUiEvent(IdentityBackupUiEvent.BackupFileWritten(success, error))
-        },
-        onImportResult = { document, error ->
-            if (document != null) {
-                importDocument = document
-                password = ""
-            } else if (error != null && error != "Backup selection cancelled") {
-                viewModel.showBackupError(error)
-            }
         }
     )
 
@@ -66,30 +58,21 @@ fun IdentityBackupRoute(
             modifier = Modifier
         )
 
-        if (showExportDialog || importDocument != null) {
-            val isImport = importDocument != null
-            IdentityBackupPasswordDialog(
-                isImport = isImport,
-                password = password,
-                onPasswordChange = { password = it },
-                busy = uiState.busy,
-                onDismiss = {
-                    showExportDialog = false
-                    importDocument = null
-                    password = ""
-                },
-                onConfirm = {
-                    val pass = password.toCharArray()
-                    password = ""
-                    if (isImport) {
-                        viewModel.onUiEvent(IdentityBackupUiEvent.RestoreBackup(importDocument!!, pass))
-                        importDocument = null
-                    } else {
-                        showExportDialog = false
-                        viewModel.onUiEvent(IdentityBackupUiEvent.PrepareBackup(pass))
-                    }
-                }
-            )
-        }
+        IdentityBackupPasswordDialog(
+            password = password,
+            onPasswordChange = { password = it },
+            busy = uiState.busy,
+            onDismiss = {
+                showExportDialog = false
+                password = ""
+            },
+            onConfirm = {
+                val pass = password.toCharArray()
+                password = ""
+                showExportDialog = false
+                viewModel.onUiEvent(IdentityBackupUiEvent.PrepareBackup(pass))
+            },
+            isVisible = showExportDialog
+        )
     }
 }

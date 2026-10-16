@@ -15,7 +15,6 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
-            implementation(projects.feature.media)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

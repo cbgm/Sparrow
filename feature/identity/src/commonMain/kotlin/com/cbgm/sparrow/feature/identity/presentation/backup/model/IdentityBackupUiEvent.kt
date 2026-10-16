@@ -5,16 +5,22 @@ sealed interface IdentityBackupUiEvent {
 
     data object ExportIdentityClicked : IdentityBackupUiEvent
 
-    data object RestoreIdentityClicked : IdentityBackupUiEvent
-
     data class PrepareBackup(
         val password: CharArray
-    ) : IdentityBackupUiEvent
+    ) : IdentityBackupUiEvent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-    data class RestoreBackup(
-        val document: ByteArray,
-        val password: CharArray
-    ) : IdentityBackupUiEvent
+            other as PrepareBackup
+
+            if (!password.contentEquals(other.password)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int = password.contentHashCode()
+    }
 
     data class BackupFileWritten(
         val success: Boolean,

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.presentation.backup
+package com.cbgm.sparrow.feature.identity.presentation.backup.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,40 +20,22 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_identity_backup_export_action
 import com.cbgm.sparrow.resources.feature_identity_backup_password
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
 import org.jetbrains.compose.resources.stringResource
 
-/** Shared password prompt for both identity backup entry points; does not own the backup operation. */
 @Composable
 fun IdentityBackupPasswordDialog(
-    isImport: Boolean,
     password: String,
     onPasswordChange: (String) -> Unit,
     busy: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isVisible: Boolean
 ) {
-    val actionLabel = stringResource(
-        if (isImport) {
-            Res.string.feature_identity_backup_restore_action
-        } else {
-            Res.string.feature_identity_backup_export_action
-        }
-    )
-
     SparrowAlertDialog(
         onDismissRequest = onDismiss,
-        title = actionLabel,
+        title = stringResource(Res.string.feature_identity_backup_export_action),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-                if (isImport) {
-                    Text(
-                        text = stringResource(Res.string.feature_identity_backup_restore_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 OutlinedTextField(
                     value = password,
                     onValueChange = onPasswordChange,
@@ -69,10 +51,10 @@ fun IdentityBackupPasswordDialog(
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
                 SparrowApprovalButton(
-                    enabled = !busy && password.length >= (if (isImport) 1 else 12),
+                    enabled = !busy && password.length >= 12,
                     onClick = onConfirm,
                     modifier = Modifier.weight(1f),
-                    text = actionLabel
+                    text = stringResource(Res.string.feature_identity_backup_export_action)
                 )
                 SparrowSecondaryButton(
                     text = stringResource(Res.string.base_cancel),
@@ -82,6 +64,6 @@ fun IdentityBackupPasswordDialog(
             }
         },
         dismissButton = {},
-        isVisible = true
+        isVisible = isVisible
     )
 }

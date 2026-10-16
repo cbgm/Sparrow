@@ -2,11 +2,11 @@ package com.cbgm.sparrow.feature.identity.domain.usecase
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
-import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
+import kotlin.getOrThrow
 
 class PrepareIdentityBackupUseCase(
     private val identityRepository: IdentityRepository,
@@ -50,46 +50,14 @@ class MarkIdentityBackupExportedUseCase(
     }
 }
 
-class RestoreIdentityBackupUseCase(
-    private val identityRepository: IdentityRepository,
-    private val backupRepository: IdentityBackupRepository,
-    private val saveLocalPhoneName: SaveLocalPhoneNameUseCase
-) {
-    suspend operator fun invoke(
-        document: ByteArray,
-        password: CharArray,
-        phoneNumber: String,
-        name: String
-    ): Result<PublicIdentity> = safeSuspendCall(logFailure = false) {
-        check(identityRepository.getStatus().getOrThrow() == IdentityStatus.NOT_CREATED) {
-            "An identity already exists. Import cannot overwrite existing keys."
-        }
-        // Decrypt/authenticate before mutating even the local onboarding profile.
-        val backup = backupRepository.decrypt(document, password).getOrThrow()
-        try {
-            saveLocalPhoneName(phoneNumber, name).getOrThrow()
-            val restored = identityRepository.restoreIdentity(
-                backup.publicIdentity,
-                backup.encryptionPrivateKey,
-                backup.signingPrivateKey
-            ).getOrThrow()
-            backupRepository.markImported(restored).getOrThrow()
-            restored
-        } finally {
-            backup.encryptionPrivateKey.fill(0)
-            backup.signingPrivateKey.fill(0)
-        }
-    }
-}
-
 class GetIdentityBackupStatusUseCase(
     private val identityRepository: IdentityRepository,
     private val backupRepository: IdentityBackupRepository
 ) {
-    suspend operator fun invoke(): Result<IdentityBackupStatus> = safeSuspendCall(logFailure = false) {
+    suspend operator fun invoke(): Result<IdentityBackupState> = safeSuspendCall(logFailure = false) {
         val identity =
             identityRepository.getIdentity().getOrThrow()
-                ?: return@safeSuspendCall IdentityBackupStatus.NOT_BACKED_UP
+                ?: return@safeSuspendCall IdentityBackupState.NOT_BACKED_UP
         backupRepository.getStatus(identity).getOrThrow()
     }
 }

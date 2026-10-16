@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiState
-import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_backup_export_action
 import com.cbgm.sparrow.resources.feature_identity_backup_exported
@@ -27,9 +27,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
     val description = when (state.status) {
-        IdentityBackupUiStatus.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
-        IdentityBackupUiStatus.EXPORTED -> Res.string.feature_identity_backup_exported
-        IdentityBackupUiStatus.IMPORTED -> Res.string.feature_identity_backup_imported
+        BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
+        BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_exported
+        BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_imported
     }
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(

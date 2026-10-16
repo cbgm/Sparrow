@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.identity.data.repository
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDataSource
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupCodec
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupState
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import kotlinx.coroutines.Dispatchers
@@ -22,18 +22,18 @@ class IdentityBackupRepositoryImpl(
     }
 
     override suspend fun markExported(identity: PublicIdentity): Result<Unit> = runCatching {
-        statusDataSource.set(identity.signingPublicKey + identity.encryptionPublicKey, IdentityBackupStatus.EXPORTED.name)
+        statusDataSource.set(identity.signingPublicKey + identity.encryptionPublicKey, IdentityBackupState.EXPORTED.name)
     }
 
     override suspend fun markImported(identity: PublicIdentity): Result<Unit> = runCatching {
-        statusDataSource.set(identity.signingPublicKey + identity.encryptionPublicKey, IdentityBackupStatus.IMPORTED.name)
+        statusDataSource.set(identity.signingPublicKey + identity.encryptionPublicKey, IdentityBackupState.IMPORTED.name)
     }
 
-    override suspend fun getStatus(identity: PublicIdentity): Result<IdentityBackupStatus> = runCatching {
+    override suspend fun getStatus(identity: PublicIdentity): Result<IdentityBackupState> = runCatching {
         when (statusDataSource.get(identity.signingPublicKey + identity.encryptionPublicKey)) {
-            IdentityBackupStatus.EXPORTED.name -> IdentityBackupStatus.EXPORTED
-            IdentityBackupStatus.IMPORTED.name -> IdentityBackupStatus.IMPORTED
-            else -> IdentityBackupStatus.NOT_BACKED_UP
+            IdentityBackupState.EXPORTED.name -> IdentityBackupState.EXPORTED
+            IdentityBackupState.IMPORTED.name -> IdentityBackupState.IMPORTED
+            else -> IdentityBackupState.NOT_BACKED_UP
         }
     }
 }

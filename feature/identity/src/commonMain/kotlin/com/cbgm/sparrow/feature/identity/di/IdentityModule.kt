@@ -101,7 +101,6 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDecl
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.RestoreIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
@@ -110,9 +109,15 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCa
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
-import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
-import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityRestoreDocumentUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.RestoreIdentityBackupUseCase
+import com.cbgm.sparrow.feature.identity.presentation.backup.IdentityBackupViewModel
+import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
+import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsViewModel
+import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewViewModel
+import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
+import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
@@ -354,28 +359,50 @@ val identityModule =
         factory { MarkIdentityBackupExportedUseCase(identityRepository = get(), backupRepository = get()) }
         factory { GetIdentityBackupStatusUseCase(identityRepository = get(), backupRepository = get()) }
 
+        factory { ReadIdentityRestoreDocumentUseCase(selectedFiles = get()) }
         viewModel {
-            IdentityViewModel(
-                savedStateHandle = get(),
-                getIdentityStatus = get<GetIdentityStatusUseCase>(),
-                getPublicIdentity = get<GetPublicIdentityUseCase>(),
-                createIdentity = get<CreateIdentityUseCase>(),
-                getLocalPhoneNumber = get<GetLocalPhoneNumberUseCase>(),
-                normalizeLocalPhoneNumber = get<NormalizeLocalPhoneNumberUseCase>(),
-                saveLocalPhoneName = get<SaveLocalPhoneNameUseCase>(),
-                prepareIdentityBackup = get(),
-                restoreIdentityBackup = get(),
-                markIdentityBackupExported = get(),
-                getIdentityBackupStatus = get()
-            )
-        }
-
-        viewModel {
-            IdentityProfilePictureViewModel(
+            IdentityOverviewViewModel(
+                getPublicIdentity = get(),
+                getLocalPhoneNumber = get(),
+                getBackupStatus = get(),
                 observeLocalProfilePicture = get(),
                 consumeAvatarEditResult = get(),
                 setLocalProfilePicture = get(),
                 removeLocalProfilePicture = get()
+            )
+        }
+        viewModel {
+            IdentityCreateViewModel(
+                savedStateHandle = get(),
+                getIdentityStatus = get(),
+                getLocalPhoneNumber = get(),
+                normalizePhoneNumber = get(),
+                saveLocalPhoneName = get(),
+                createIdentity = get()
+            )
+        }
+        viewModel {
+            IdentityRestoreViewModel(
+                savedStateHandle = get(),
+                filePicker = FilePickerLauncher(sessions = get()),
+                readDocument = get(),
+                normalizePhoneNumber = get(),
+                restoreIdentityBackup = get()
+            )
+        }
+
+        viewModel {
+            IdentityDetailsViewModel(
+                getPublicIdentity = get<GetPublicIdentityUseCase>()
+            )
+        }
+
+        viewModel {
+            IdentityBackupViewModel(
+                prepareIdentityBackup = get(),
+                markIdentityBackupExported = get(),
+                getIdentityBackupStatus = get(),
+                getPublicIdentity = get<GetPublicIdentityUseCase>()
             )
         }
 

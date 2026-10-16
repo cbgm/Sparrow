@@ -18,9 +18,9 @@ import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiState
-import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.feature_identity_backup_title
@@ -78,9 +78,9 @@ fun IdentityBackupScreen(
                     IdentityBackupSection(
                         state = IdentityBackupUiState(
                             status = when (uiState.status) {
-                                IdentityBackupUiStatus.NOT_BACKED_UP -> IdentityBackupUiStatus.NOT_BACKED_UP
-                                IdentityBackupUiStatus.EXPORTED -> IdentityBackupUiStatus.EXPORTED
-                                IdentityBackupUiStatus.IMPORTED -> IdentityBackupUiStatus.IMPORTED
+                                BackupStateUi.NOT_BACKED_UP -> BackupStateUi.NOT_BACKED_UP
+                                BackupStateUi.EXPORTED -> BackupStateUi.EXPORTED
+                                BackupStateUi.IMPORTED -> BackupStateUi.IMPORTED
                             },
                             busy = uiState.busy,
                             message = uiState.message,

@@ -19,6 +19,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.identity.presentation.overview.profile.IdentityProfilePictureUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_profile_picture
 import com.cbgm.sparrow.resources.ic_identity

@@ -904,4 +904,15 @@
     <string name="feature_payment_bank_details">Bank details</string>
     <string name="feature_payment_export_title">SEPA transfer</string>
     <string name="feature_payment_export_recipient">Recipient</string>
+    <string name="feature_identity_create_failed">Your identity could not be created. Please try again.</string>
+    <string name="feature_identity_phone_hint_failed">The phone number could not be read from this device. Enter it manually.</string>
+    <string name="feature_identity_phone_number_invalid">Enter a valid phone number.</string>
+    <string name="feature_identity_setup_load_failed">Identity setup could not be loaded. Please restart Sparrow.</string>
+    <string name="feature_identity_restore_failed">The identity could not be restored. Check the backup and password, then try again.</string>
+    <string name="feature_identity_restore_invalid_phone">Enter a valid phone number before restoring your identity.</string>
+    <string name="feature_identity_restore_read_failed">The identity backup could not be read. Select a valid backup file.</string>
+    <string name="feature_identity_overview_load_failed">Your identity could not be loaded. Please try again.</string>
+    <string name="feature_identity_picture_save_failed">Profile picture could not be saved. Please try again.</string>
+    <string name="feature_identity_picture_remove_failed">Profile picture could not be removed. Please try again.</string>
+    <string name="feature_identity_backup_failed">The identity backup could not be completed. Please try again.</string>
 </resources>

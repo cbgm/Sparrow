@@ -908,4 +908,15 @@
     <string name="feature_payment_bank_details">Bankdaten</string>
     <string name="feature_payment_export_title">SEPA-Überweisung</string>
     <string name="feature_payment_export_recipient">Empfänger</string>
+    <string name="feature_identity_create_failed">Deine Identität konnte nicht erstellt werden. Bitte versuche es erneut.</string>
+    <string name="feature_identity_phone_hint_failed">Die Telefonnummer konnte nicht vom Gerät gelesen werden. Gib sie manuell ein.</string>
+    <string name="feature_identity_phone_number_invalid">Gib eine gültige Telefonnummer ein.</string>
+    <string name="feature_identity_setup_load_failed">Die Einrichtung konnte nicht geladen werden. Bitte starte Sparrow neu.</string>
+    <string name="feature_identity_restore_failed">Die Identität konnte nicht wiederhergestellt werden. Prüfe das Backup und das Passwort und versuche es erneut.</string>
+    <string name="feature_identity_restore_invalid_phone">Gib eine gültige Telefonnummer ein, bevor du deine Identität wiederherstellst.</string>
+    <string name="feature_identity_restore_read_failed">Das Identitäts-Backup konnte nicht gelesen werden. Wähle eine gültige Backup-Datei aus.</string>
+    <string name="feature_identity_overview_load_failed">Deine Identität konnte nicht geladen werden. Bitte versuche es erneut.</string>
+    <string name="feature_identity_picture_save_failed">Das Profilbild konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+    <string name="feature_identity_picture_remove_failed">Das Profilbild konnte nicht entfernt werden. Bitte versuche es erneut.</string>
+    <string name="feature_identity_backup_failed">Die Identitätssicherung konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
 </resources>

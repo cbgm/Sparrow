@@ -61,6 +61,12 @@ sealed interface AppRoute {
     data object IdentityBackup : AppRoute
 
     @Serializable
+    data class IdentityRestore(
+        val phoneNumber: String,
+        val name: String
+    ) : AppRoute
+
+    @Serializable
     data object ShareIdentity : AppRoute
 
     @Serializable
