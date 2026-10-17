@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.transport.presence
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.phone.PhoneVerificationProofProvider
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRoute
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.UnsignedClientRoute
@@ -10,7 +12,9 @@ import kotlinx.serialization.json.Json
 class ClientRouteRegistrationFactory(
     private val signingKeyPairProvider: LocalSigningKeyPairProvider,
     private val signatureCrypto: DetachedSignatureCrypto,
-    private val json: Json
+    private val json: Json,
+    private val phoneNumberProvider: LocalPhoneNumberProvider,
+    private val phoneVerificationProof: PhoneVerificationProofProvider
 ) {
     suspend fun create(
         routingId: String,
@@ -50,6 +54,12 @@ class ClientRouteRegistrationFactory(
                     )
                 }
 
+            val verificationToken = if (routeAliases != null) {
+                phoneNumberProvider.getLocalPhoneNumber().getOrNull()
+                    ?.let { phoneVerificationProof.tokenFor(it) }
+            } else {
+                null
+            }
             ClientRouteRegistration(
                 route =
                     ClientRoute(
@@ -61,7 +71,8 @@ class ClientRouteRegistrationFactory(
                         aliases = routeAliases,
                         clientSignature = signature
                     ),
-                clientSigningPublicKey = signingKeyPair.publicKey
+                clientSigningPublicKey = signingKeyPair.publicKey,
+                phoneVerificationToken = verificationToken
             )
         }
 }

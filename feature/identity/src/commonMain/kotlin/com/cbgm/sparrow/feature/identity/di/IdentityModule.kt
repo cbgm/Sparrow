@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.identity.di
 
 import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneVerificationPolicyProvider
+import com.cbgm.sparrow.core.phone.PhoneVerificationProofProvider
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
@@ -37,6 +39,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRep
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupCodec
+import com.cbgm.sparrow.feature.identity.device.createPhoneVerificationProofProvider
 import com.cbgm.sparrow.feature.identity.domain.repository.ApprovedIdentityReconnectionRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
@@ -74,6 +77,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseC
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetPhoneVerificationPolicyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.HandleIdentityVerificationReceiptUseCase
@@ -117,6 +121,7 @@ import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsVie
 import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewViewModel
 import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
+import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
@@ -134,6 +139,9 @@ import org.koin.dsl.module
 
 val identityModule =
     module {
+        single<PhoneVerificationProofProvider> { createPhoneVerificationProofProvider() }
+        factory { GetPhoneVerificationPolicyUseCase(provider = get<PhoneVerificationPolicyProvider>()) }
+        viewModel { PhoneVerificationViewModel(getPolicy = get()) }
         single { IdentityAcknowledgementPayloadEncoder() }
         single<IdentityAcknowledgementCrypto> {
             SodiumIdentityAcknowledgementCrypto(payloadEncoder = get())

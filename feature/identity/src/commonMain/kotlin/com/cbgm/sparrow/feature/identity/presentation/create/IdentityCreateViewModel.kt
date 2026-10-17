@@ -34,6 +34,8 @@ class IdentityCreateViewModel(
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<IdentityCreateUiState>(IdentityCreateUiState.Loading)
     val uiState = _uiState.asStateFlow()
+    private val _verificationPhoneNumber = MutableStateFlow<String?>(null)
+    val verificationPhoneNumber = _verificationPhoneNumber.asStateFlow()
     private var loadingIdentity = false
 
     init {
@@ -116,6 +118,19 @@ class IdentityCreateViewModel(
             viewModelScope.launch { showFailure(Res.string.feature_identity_phone_number_invalid) }
             return
         }
+        _verificationPhoneNumber.value = phone
+    }
+
+    fun onVerificationCancelled() {
+        _verificationPhoneNumber.value = null
+    }
+
+    fun onVerificationContinued() {
+        val form = _uiState.value as? IdentityCreateUiState.Form ?: return
+        val phone = _verificationPhoneNumber.value ?: return
+        _verificationPhoneNumber.value = null
+        // Discard a stale verification when the number has changed.
+        if (normalizePhoneNumber(form.phoneNumber).getOrNull() != phone) return
         _uiState.value = IdentityCreateUiState.Creating
         viewModelScope.launch {
             saveLocalPhoneName(phone, form.name).onFailure {
@@ -136,6 +151,7 @@ class IdentityCreateViewModel(
     private fun updatePhoneNumber(value: String) {
         val form = _uiState.value as? IdentityCreateUiState.Form ?: return
         savedStateHandle[PHONE_KEY] = value
+        _verificationPhoneNumber.value = null
         _uiState.value = form.copy(phoneNumber = value)
     }
 

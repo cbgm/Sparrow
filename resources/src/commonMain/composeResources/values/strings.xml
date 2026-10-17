@@ -915,4 +915,12 @@
     <string name="feature_identity_picture_save_failed">Profile picture could not be saved. Please try again.</string>
     <string name="feature_identity_picture_remove_failed">Profile picture could not be removed. Please try again.</string>
     <string name="feature_identity_backup_failed">The identity backup could not be completed. Please try again.</string>
+    <string name="feature_identity_phone_verification_title">Verify phone number</string>
+    <string name="feature_identity_phone_verification_description">We will send an SMS code to %1$s.</string>
+    <string name="feature_identity_phone_verification_code">6-digit verification code</string>
+    <string name="feature_identity_phone_verification_error">Verification failed. Try again.</string>
+    <string name="feature_identity_phone_verification_skip">Skip verification</string>
+    <string name="feature_identity_phone_verification_policy_failed">Could not check the server phone-verification policy.</string>
+    <string name="feature_identity_phone_verification_send_code">Send verification code</string>
+    <string name="feature_identity_phone_verification_unsupported">Phone verification is not supported on this device.</string>
 </resources>

@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintLauncher
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintResult
 import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
+import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationRoute
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberReader
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
@@ -23,6 +24,7 @@ fun OnboardingRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val identityState by identityViewModel.uiState.collectAsStateWithLifecycle()
+    val phoneToVerify by identityViewModel.verificationPhoneNumber.collectAsStateWithLifecycle()
 
     LifecycleResumeEffect(identityViewModel) {
         identityViewModel.refreshIdentity()
@@ -57,6 +59,12 @@ fun OnboardingRoute(
                 PhoneNumberHintResult.Unavailable, PhoneNumberHintResult.Cancelled -> Unit
             }
         }
+    )
+
+    PhoneVerificationRoute(
+        phoneNumber = phoneToVerify,
+        onContinue = identityViewModel::onVerificationContinued,
+        onCancel = identityViewModel::onVerificationCancelled
     )
 
     OnboardingScreen(

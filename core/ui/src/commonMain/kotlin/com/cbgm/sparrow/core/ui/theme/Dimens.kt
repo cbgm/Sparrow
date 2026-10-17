@@ -9,6 +9,7 @@ object Dimens {
         val dividerThickness = 0.5.dp
         val borderStrokeWidth = 1.dp
         val progressButtonIndicatorSize = 18.dp
+        val progressFieldIndicatorSize = 18.dp
     }
 
     object Poll {

@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.transport.di
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.phone.PhoneVerificationPolicyProvider
+import com.cbgm.sparrow.core.phone.PhoneVerificationProofProvider
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
@@ -33,6 +35,7 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.phone.HttpPhoneVerificationPolicyProvider
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
@@ -77,6 +80,13 @@ val transportModule =
 
         single<ControlPlaneConfiguration> {
             get<ControlPlaneConfigurationImpl>()
+        }
+
+        single<PhoneVerificationPolicyProvider> {
+            HttpPhoneVerificationPolicyProvider(
+                httpClient = get<HttpClient>(),
+                controlPlanes = get<ControlPlaneConfiguration>()
+            )
         }
 
         single<ControlPlaneStatusStore> {
@@ -136,7 +146,9 @@ val transportModule =
             ClientRouteRegistrationFactory(
                 signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                phoneNumberProvider = get(),
+                phoneVerificationProof = get<PhoneVerificationProofProvider>()
             )
         }
 

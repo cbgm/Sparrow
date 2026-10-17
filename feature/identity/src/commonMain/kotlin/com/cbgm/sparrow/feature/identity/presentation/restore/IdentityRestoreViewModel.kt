@@ -34,6 +34,8 @@ class IdentityRestoreViewModel(
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(IdentityRestoreUiState())
     val uiState = _uiState.asStateFlow()
+    val verificationPhoneNumber: String?
+        get() = if (_uiState.value.phoneVerificationPending) phoneNumber else null
     private var document: ByteArray? = null
     private var phoneNumber = ""
     private var name = ""
@@ -111,6 +113,16 @@ class IdentityRestoreViewModel(
     private fun confirm() {
         val state = _uiState.value
         if (!state.canConfirm) return
+        _uiState.update { it.copy(phoneVerificationPending = true) }
+    }
+
+    fun onVerificationCancelled() {
+        _uiState.update { it.copy(phoneVerificationPending = false) }
+    }
+
+    fun onVerificationContinued() {
+        val state = _uiState.value
+        if (!state.phoneVerificationPending || !state.canConfirm) return
         val document = document ?: return
         val password = state.password.toCharArray()
         _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.RESTORING)

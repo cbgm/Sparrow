@@ -919,4 +919,12 @@
     <string name="feature_identity_picture_save_failed">Das Profilbild konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_picture_remove_failed">Das Profilbild konnte nicht entfernt werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_backup_failed">Die Identitätssicherung konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
+    <string name="feature_identity_phone_verification_title">Telefonnummer bestätigen</string>
+    <string name="feature_identity_phone_verification_description">Wir senden einen SMS-Code an %1$s.</string>
+    <string name="feature_identity_phone_verification_code">6-stelliger Bestätigungscode</string>
+    <string name="feature_identity_phone_verification_error">Bestätigung fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="feature_identity_phone_verification_skip">Bestätigung überspringen</string>
+    <string name="feature_identity_phone_verification_policy_failed">Die Serverrichtlinie zur Telefonnummernbestätigung konnte nicht geladen werden.</string>
+    <string name="feature_identity_phone_verification_send_code">Bestätigungscode senden</string>
+    <string name="feature_identity_phone_verification_unsupported">Die Telefonnummernbestätigung wird auf diesem Gerät nicht unterstützt.</string>
 </resources>
