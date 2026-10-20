@@ -1,24 +1,35 @@
 package com.cbgm.sparrow.protocol.messagepart
 
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.data.model.CONTACT_MIME_TYPE
-import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
-import com.cbgm.sparrow.core.messagepart.data.model.FileDto
-import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
-import com.cbgm.sparrow.core.messagepart.data.model.LOCATION_MIME_TYPE
-import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
-import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
-import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.data.model.CONTACT_MIME_TYPE
+import com.cbgm.sparrow.core.base.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardClosedDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.FileDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.LOCATION_MIME_TYPE
+import com.cbgm.sparrow.core.base.messagepart.data.model.LocationDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PaymentTransferDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VideoDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VoiceDto
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
 
 internal fun List<MessagePartDto>.requireValidWireMessageParts(
     expectedTextPartId: String? = null,
-    allowPolls: Boolean = false
+    allowPolls: Boolean = false,
+    allowExpenses: Boolean = false
 ) {
     require(isNotEmpty()) { "Message must contain at least one message part" }
     require(map(MessagePartDto::id).distinct().size == size) {
@@ -104,6 +115,23 @@ internal fun List<MessagePartDto>.requireValidWireMessageParts(
                     "Contact message part must use the Sparrow contact MIME type"
                 }
                 require(part.byteSize > 0L) { "Contact message part byte size must be positive" }
+            }
+            is ExpenseBoardDto -> {
+                require(allowExpenses && size == 1) { "Expense boards require standalone group messages" }
+                ExpensePolicy.requireValid(part.toMessagePart() as ExpenseBoard)
+            }
+            is PaymentTransferDto -> {
+                require(allowExpenses && size == 1) { "Payments require standalone group messages" }
+                PaymentTransferPolicy.requireValid(part.toMessagePart() as PaymentTransfer)
+            }
+            is ExpenseBoardClosedDto -> {
+                require(allowExpenses && size == 1) { "Expense closures require standalone group messages" }
+                ExpensePolicy.requireValid(part.toMessagePart() as ExpenseBoardClosed)
+            }
+            is ExpenseDto -> {
+                require(allowExpenses && size == 1) { "Expenses require standalone group messages" }
+                ExpensePolicy.requireValid(part.toMessagePart() as Expense)
+                part.receipt?.let { listOf(it).requireValidWireMessageParts() }
             }
             is PollDto -> {
                 require(allowPolls && size == 1) { "Polls require a standalone group message" }

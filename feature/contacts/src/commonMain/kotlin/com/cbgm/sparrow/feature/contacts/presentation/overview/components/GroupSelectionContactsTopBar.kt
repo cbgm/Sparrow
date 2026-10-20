@@ -55,7 +55,7 @@ fun GroupSelectionContactsTopBar(
                     containerColor = containerColor,
                     scrolledContainerColor = containerColor,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 ),
             title = {
@@ -101,13 +101,13 @@ fun GroupSelectionContactsTopBar(
                     if (confirming) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(Dimens.ContactsScreen.selectionProgressSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(Res.string.feature_chats_group_name),
-                            tint = MaterialTheme.colorScheme.primary
+                            contentDescription = stringResource(Res.string.feature_chats_group_name)
                         )
                     }
                 }

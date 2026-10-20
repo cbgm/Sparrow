@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.data.datasource
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowErrorSink
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowErrorSink
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.settings.data.model.DeveloperErrorDto
 import kotlinx.coroutines.CancellationException

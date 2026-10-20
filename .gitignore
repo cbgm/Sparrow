@@ -6,6 +6,8 @@ xcuserdata
 !src/**/build/
 local.properties
 /.sparrow-server/
+
+dist/
 .idea
 .DS_Store
 captures
@@ -37,3 +39,5 @@ server/community-node/secrets/*.txt
 server/.standalone-smoke/
 server/community-node/.env.runtime
 server/community-node/release.env
+
+__pycache__/

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.handler
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class DefaultProtocolPacketHandler(

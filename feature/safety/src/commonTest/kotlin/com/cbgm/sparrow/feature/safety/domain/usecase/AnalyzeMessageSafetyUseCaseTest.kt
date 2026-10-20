@@ -18,7 +18,7 @@ class AnalyzeMessageSafetyUseCaseTest {
             )
         val useCase = AnalyzeMessageSafetyUseCase(FakeAnalysisRepository(expectedReasons))
 
-        val result = useCase("Open https://bit.ly/account-check")
+        val result = useCase("Open https://bit.ly/account-check").getOrThrow()
 
         assertEquals(MessageSafetyAssessment(expectedReasons), result)
     }
@@ -27,12 +27,12 @@ class AnalyzeMessageSafetyUseCaseTest {
     fun returnsSafeAssessmentWhenRepositoryFindsNoReasons() = runTest {
         val useCase = AnalyzeMessageSafetyUseCase(FakeAnalysisRepository(emptySet()))
 
-        assertEquals(MessageSafetyAssessment.Safe, useCase("ordinary message"))
+        assertEquals(MessageSafetyAssessment.Safe, useCase("ordinary message").getOrThrow())
     }
 }
 
 private class FakeAnalysisRepository(
     private val reasons: Set<MessageSafetyReason>
 ) : MessageSafetyAnalysisRepository {
-    override suspend fun analyze(text: String): Set<MessageSafetyReason> = reasons
+    override suspend fun analyze(text: String): Result<Set<MessageSafetyReason>> = Result.success(reasons)
 }

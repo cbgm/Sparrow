@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.membership.crypto
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 
 /** Protocol v1 confirmation; changing the encoding invalidates persisted group handshakes. */
 object GroupKeyConfirmation {

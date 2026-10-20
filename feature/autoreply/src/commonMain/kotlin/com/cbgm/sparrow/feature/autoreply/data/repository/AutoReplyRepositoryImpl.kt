@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.autoreply.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.autoreply.data.datasource.AutoReplyDataSource
 import com.cbgm.sparrow.feature.autoreply.data.mapper.toDomain
 import com.cbgm.sparrow.feature.autoreply.data.mapper.toEntity

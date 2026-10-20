@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.model.MessageCursorDto
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageHistoryDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor

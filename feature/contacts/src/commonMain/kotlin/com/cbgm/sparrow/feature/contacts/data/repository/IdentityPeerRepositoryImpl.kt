@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.data.repository
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
@@ -16,116 +17,127 @@ internal class IdentityPeerRepositoryImpl(
     private val contactRoutingIdDataSource: ContactRoutingIdDataSource,
     private val phoneNumberNormalizer: PhoneNumberNormalizer
 ) : IdentityPeerRepository {
-    override suspend fun getDisplayName(peerId: String): String? =
-        contactDataSource.findContactOnlyById(peerId)?.contact?.displayName
+    override suspend fun getDisplayName(peerId: String): Result<String?> =
+        safeSuspendCall { contactDataSource.findContactOnlyById(peerId)?.contact?.displayName }
 
-    override suspend fun containsPeer(peerId: String): Boolean =
-        contactDataSource.findContactOnlyById(peerId) != null
+    override suspend fun containsPeer(peerId: String): Result<Boolean> =
+        safeSuspendCall { contactDataSource.findContactOnlyById(peerId) != null }
 
-    override suspend fun applyMerge(merge: IdentityPeerMerge) {
-        if (merge.moveBootstrapRouting) {
-            val routingId = contactRoutingIdDataSource.findRoutingIdByContactId(merge.fromPeerId)
-            if (routingId?.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX) == true) {
-                contactRoutingIdDataSource.deleteOtherContactMapping(
-                    routingId = routingId,
-                    contactId = merge.toPeerId
-                )
-                contactRoutingIdDataSource.upsert(
-                    ContactRoutingIdEntity(
-                        contactId = merge.toPeerId,
-                        routingId = routingId
+    override suspend fun applyMerge(merge: IdentityPeerMerge): Result<Unit> =
+        safeSuspendCall {
+            if (merge.moveBootstrapRouting) {
+                val routingId = contactRoutingIdDataSource.findRoutingIdByContactId(merge.fromPeerId)
+                if (routingId?.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX) == true) {
+                    contactRoutingIdDataSource.deleteOtherContactMapping(
+                        routingId = routingId,
+                        contactId = merge.toPeerId
                     )
-                )
+                    contactRoutingIdDataSource.upsert(
+                        ContactRoutingIdEntity(
+                            contactId = merge.toPeerId,
+                            routingId = routingId
+                        )
+                    )
+                }
             }
+            contactDataSource.deleteById(merge.fromPeerId)
         }
-        contactDataSource.deleteById(merge.fromPeerId)
-    }
 
     override suspend fun updateIncomingMetadata(
         peerId: String,
         phoneNumber: String,
         updatedAtEpochMilliseconds: Long
-    ) {
-        contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
-            contactId = peerId,
-            phoneNumber = phoneNumber,
-            updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-        )
-
-        val contact = contactDataSource.findContactOnlyById(peerId) ?: return
-        if (contact.phoneNumbers.any { phoneNumbersEquivalent(it.value, phoneNumber) }) return
-        if (contactDataSource.findContactOnlyByNormalizedPhoneNumber(phoneNumber) != null) return
-
-        val phoneNumberId = IdGenerator.generate()
-        contactDataSource.upsertPhoneNumbers(
-            listOf(
-                ContactPhoneNumberEntity(
-                    id = phoneNumberId,
-                    contactId = peerId,
-                    value = phoneNumber,
-                    normalizedValue = phoneNumber,
-                    type = CONTACT_PHONE_NUMBER_TYPE_MOBILE,
-                    label = null,
-                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-                )
+    ): Result<Unit> =
+        safeSuspendCall {
+            contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
+                contactId = peerId,
+                phoneNumber = phoneNumber,
+                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
             )
-        )
-        if (contact.contact.preferredPhoneNumberId == null) {
-            contactDataSource.upsertContact(
-                contact.contact.copy(
-                    preferredPhoneNumberId = phoneNumberId,
-                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-                )
-            )
-        }
-    }
 
-    override suspend fun isKnownContact(peerId: String): Boolean {
-        val contact = contactDataSource.findContactOnlyById(peerId) ?: return false
-        return contact.contact.deviceContactId != null || contact.phoneNumbers.isNotEmpty()
-    }
-
-    override suspend fun findEquivalentPhonePeerId(phoneNumber: String): String? {
-        val contacts = contactDataSource.observeContactsOnly().first()
-        val matches =
-            contacts.filter { contact ->
-                contact.phoneNumbers.any { storedPhoneNumber ->
-                    phoneNumbersEquivalent(storedPhoneNumber.value, phoneNumber) ||
-                        phoneNumbersEquivalent(storedPhoneNumber.normalizedValue, phoneNumber)
-                }
+            val contact = contactDataSource.findContactOnlyById(peerId) ?: return@safeSuspendCall
+            if (contact.phoneNumbers.any { phoneNumbersEquivalent(it.value, phoneNumber) }) {
+                return@safeSuspendCall
             }
-        if (matches.isEmpty()) return null
+            if (contactDataSource.findContactOnlyByNormalizedPhoneNumber(phoneNumber) != null) {
+                return@safeSuspendCall
+            }
 
-        return matches.firstOrNull { contact ->
-            contact.contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED.name ||
-                contact.contact.deviceContactId != null
-        }?.contact?.id
-            ?: matches.firstOrNull { contact ->
-                contact.phoneNumbers.any { storedPhoneNumber ->
-                    phoneNumberNormalizer.normalize(storedPhoneNumber.normalizedValue).getOrNull() == phoneNumber
+            val phoneNumberId = IdGenerator.generate()
+            contactDataSource.upsertPhoneNumbers(
+                listOf(
+                    ContactPhoneNumberEntity(
+                        id = phoneNumberId,
+                        contactId = peerId,
+                        value = phoneNumber,
+                        normalizedValue = phoneNumber,
+                        type = CONTACT_PHONE_NUMBER_TYPE_MOBILE,
+                        label = null,
+                        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                    )
+                )
+            )
+            if (contact.contact.preferredPhoneNumberId == null) {
+                contactDataSource.upsertContact(
+                    contact.contact.copy(
+                        preferredPhoneNumberId = phoneNumberId,
+                        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                    )
+                )
+            }
+        }
+
+    override suspend fun isKnownContact(peerId: String): Result<Boolean> =
+        safeSuspendCall {
+            val contact =
+                contactDataSource.findContactOnlyById(peerId) ?: return@safeSuspendCall false
+            contact.contact.deviceContactId != null || contact.phoneNumbers.isNotEmpty()
+        }
+
+    override suspend fun findEquivalentPhonePeerId(phoneNumber: String): Result<String?> =
+        safeSuspendCall {
+            val contacts = contactDataSource.observeContactsOnly().first()
+            val matches =
+                contacts.filter { contact ->
+                    contact.phoneNumbers.any { storedPhoneNumber ->
+                        phoneNumbersEquivalent(storedPhoneNumber.value, phoneNumber) ||
+                            phoneNumbersEquivalent(storedPhoneNumber.normalizedValue, phoneNumber)
+                    }
                 }
+            if (matches.isEmpty()) return@safeSuspendCall null
+
+            matches.firstOrNull { contact ->
+                contact.contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED.name ||
+                    contact.contact.deviceContactId != null
             }?.contact?.id
-            ?: matches.first().contact.id
-    }
+                ?: matches.firstOrNull { contact ->
+                    contact.phoneNumbers.any { storedPhoneNumber ->
+                        phoneNumberNormalizer.normalize(storedPhoneNumber.normalizedValue).getOrNull() == phoneNumber
+                    }
+                }?.contact?.id
+                ?: matches.first().contact.id
+        }
 
     override suspend fun canMergeRoutingDuplicate(
         peerId: String,
         remotePhoneNumber: String?
-    ): Boolean {
-        val contact = contactDataSource.findContactOnlyById(peerId) ?: return false
-        if (
-            contact.contact.deviceContactId != null ||
-            contact.contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED.name
-        ) {
-            return false
-        }
+    ): Result<Boolean> =
+        safeSuspendCall {
+            val contact =
+                contactDataSource.findContactOnlyById(peerId) ?: return@safeSuspendCall false
+            if (
+                contact.contact.deviceContactId != null ||
+                contact.contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED.name
+            ) {
+                return@safeSuspendCall false
+            }
 
-        if (remotePhoneNumber == null) return contact.phoneNumbers.isEmpty()
-        return contact.phoneNumbers.all { stored ->
-            phoneNumbersEquivalent(stored.value, remotePhoneNumber) ||
-                phoneNumbersEquivalent(stored.normalizedValue, remotePhoneNumber)
+            if (remotePhoneNumber == null) return@safeSuspendCall contact.phoneNumbers.isEmpty()
+            contact.phoneNumbers.all { stored ->
+                phoneNumbersEquivalent(stored.value, remotePhoneNumber) ||
+                    phoneNumbersEquivalent(stored.normalizedValue, remotePhoneNumber)
+            }
         }
-    }
 
     private fun phoneNumbersEquivalent(first: String, second: String): Boolean {
         val firstNormalized = phoneNumberNormalizer.normalize(first).getOrNull() ?: return false

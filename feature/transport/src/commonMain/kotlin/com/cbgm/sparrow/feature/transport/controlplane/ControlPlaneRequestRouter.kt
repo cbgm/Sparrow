@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.ControlPlaneReachability

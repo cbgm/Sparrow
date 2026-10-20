@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.message
 
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.codec.createProtocolJson
 import kotlin.test.Test
 import kotlin.test.assertEquals

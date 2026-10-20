@@ -3,16 +3,16 @@
 set -e
 
 echo ""
-echo "Running Sparrow formatting before commit..."
+echo "Running Sparrow formatting and workflow catalog before commit..."
 echo ""
 
 # Remember which files were staged before formatting.
 staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
 
 if [ -f "./gradlew" ]; then
-    ./gradlew ktlintFormat --console=plain
+    ./gradlew ktlintFormat workflowCatalog --console=plain
 elif [ -f "./gradlew.bat" ]; then
-    ./gradlew.bat ktlintFormat --console=plain
+    ./gradlew.bat ktlintFormat workflowCatalog --console=plain
 else
     echo "Gradle Wrapper was not found."
     exit 1
@@ -26,6 +26,9 @@ while IFS= read -r file; do
     fi
 done
 
+# The workflow catalog is generated from the workflow sources and always belongs to the commit.
+git add -A -- docs/architecture/workflows
+
 echo ""
-echo "Formatting completed and formatted files were staged."
+echo "Formatting completed, formatted files and the workflow catalog were staged."
 echo ""

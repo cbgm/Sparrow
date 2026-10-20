@@ -76,7 +76,7 @@ fun MemberSelectionContactsTopBar(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = title,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }

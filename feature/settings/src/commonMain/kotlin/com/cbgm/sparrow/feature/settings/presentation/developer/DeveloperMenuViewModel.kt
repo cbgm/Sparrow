@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.settings.presentation.developer
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
@@ -32,7 +33,7 @@ class DeveloperMenuViewModel(
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) : BaseViewModel() {
     private val isClearingLocalData = MutableStateFlow(false)
-    private val buildInfo = getBuildInfoUseCase()
+    private val buildInfo = getBuildInfoUseCase().getOrThrow()
     private val savedErrorCount =
         observeDeveloperErrorsUseCase()
             .map { errors -> errors.size }
@@ -75,7 +76,9 @@ class DeveloperMenuViewModel(
         viewModelScope.launch {
             isClearingLocalData.value = true
             try {
-                clearLocalDataUseCase()
+                clearLocalDataUseCase().onFailure { error ->
+                    SparrowLog.error(TAG, "Local data could not be cleared", error)
+                }
             } finally {
                 isClearingLocalData.value = false
             }
@@ -84,7 +87,10 @@ class DeveloperMenuViewModel(
 
     private fun disableDeveloperMode() {
         viewModelScope.launch {
-            setDeveloperEnabledUseCase(false)
+            setDeveloperEnabledUseCase(false).onFailure { error ->
+                SparrowLog.error(TAG, "Developer mode could not be disabled", error)
+                return@launch
+            }
             navigator.popBackStack()
         }
     }
@@ -97,6 +103,7 @@ class DeveloperMenuViewModel(
     }
 
     private companion object {
+        const val TAG = "DeveloperMenuViewModel"
         const val DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS = 1_000L
     }
 }

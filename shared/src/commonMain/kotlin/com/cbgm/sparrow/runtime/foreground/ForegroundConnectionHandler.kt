@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.runtime.foreground
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies

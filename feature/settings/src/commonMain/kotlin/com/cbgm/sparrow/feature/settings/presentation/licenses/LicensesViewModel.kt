@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.settings.presentation.licenses
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState
@@ -25,11 +26,16 @@ class LicensesViewModel(
 
     init {
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    libraries = getLicenses()
-                )
-            }
+            getLicenses()
+                .onSuccess { libraries ->
+                    _uiState.update {
+                        it.copy(
+                            libraries = libraries
+                        )
+                    }
+                }.onFailure { error ->
+                    SparrowLog.error("LicensesViewModel", "Licenses could not be loaded", error)
+                }
         }
     }
 }

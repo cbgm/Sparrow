@@ -7,7 +7,10 @@ A transport node that accepts client WebSocket connections, federates encrypted 
 Discovery/control infrastructure for node registration, health, presence and push registration/wake-up.
 
 **Conversation orchestration**  
-The explicit `:feature:conversationorchestration` boundary that coordinates identity, invitations, membership and conversation workflows without hiding repository-to-repository dependencies.
+The `:feature:conversationorchestration:*` modules (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) that execute every conversation write and incoming packet as a workflow state machine, coordinating identity, invitations, membership and messages without hiding repository-to-repository dependencies.
+
+**Workflow (state machine)**  
+A `WorkflowStateMachine` with nested sealed `Step` and `Outcome` types: `perform(step)` executes one operation, the pure `transition(step, outcome)` picks the next step, `Complete` or `Reject`. Public workflows (`ConversationWorkflow`) are started by a `ConversationCommand` through `ConversationOrchestrator`; `lockKey` serializes workflows that share a key.
 
 **MessagePartDto / MessagePart / MessagePartUi**  
 The shared data/domain/presentation hierarchy in `:core:base`. Current variants are text, image, video, file, voice, location, contact and poll.

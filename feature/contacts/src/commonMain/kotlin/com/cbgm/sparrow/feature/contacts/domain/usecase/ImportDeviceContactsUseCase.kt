@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
@@ -17,7 +18,7 @@ class ImportDeviceContactsUseCase(
     private val repository: ContactRepository
 ) {
     suspend operator fun invoke(): Result<Unit> {
-        return runCatching {
+        return safeSuspendCall(logFailure = false) {
             val deviceContacts = deviceContactsRepository.getContacts().getOrThrow()
 
             deviceContacts.forEach { deviceContact ->

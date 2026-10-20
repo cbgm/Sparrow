@@ -1,14 +1,18 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.messagepart.data.model.ContactDto
-import com.cbgm.sparrow.core.messagepart.data.model.FileDto
-import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
-import com.cbgm.sparrow.core.messagepart.data.model.LocationDto
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollDto
-import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
-import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
+import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ContactDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardClosedDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.FileDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.LocationDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PaymentTransferDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VideoDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VoiceDto
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
@@ -38,6 +42,22 @@ internal fun MessagePartEntity.toDto(
     resolveLocalFilePath: (String) -> String?
 ): MessagePartDto =
     when (MessageAttachmentType.valueOf(type)) {
+        MessageAttachmentType.PAYMENT_TRANSFER -> {
+            val json = requireNotNull(payload) { "Payment event is missing payload" }
+            Json.decodeFromString(PaymentTransferDto.serializer(), json).also { require(it.id == id) }
+        }
+        MessageAttachmentType.EXPENSE_BOARD -> {
+            val json = requireNotNull(payload) { "Expense board $id is missing payload" }
+            Json.decodeFromString(ExpenseBoardDto.serializer(), json).also { require(it.id == id) }
+        }
+        MessageAttachmentType.EXPENSE_BOARD_CLOSED -> {
+            val json = requireNotNull(payload) { "Expense closure $id is missing payload" }
+            Json.decodeFromString(ExpenseBoardClosedDto.serializer(), json).also { require(it.id == id) }
+        }
+        MessageAttachmentType.EXPENSE -> {
+            val json = requireNotNull(payload) { "Expense $id is missing payload" }
+            Json.decodeFromString(ExpenseDto.serializer(), json).also { require(it.id == id) }
+        }
         MessageAttachmentType.POLL -> {
             val json = requireNotNull(payload) { "Poll message part $id is missing payload" }
             Json.decodeFromString(PollDto.serializer(), json).also { poll ->
@@ -130,11 +150,18 @@ internal fun MessagePartEntity.toDto(
 private fun MessagePartDto.nestedPartIds(): List<String> =
     when (this) {
         is PollDto -> images.map(ImageDto::id)
+        is ExpenseDto -> listOfNotNull(receipt?.id)
         else -> emptyList()
     }
 
 private fun MessagePartDto.withNestedParts(partsById: Map<String, MessagePartDto>): MessagePartDto =
     when (this) {
+        is ExpenseDto -> copy(
+            receipt = receipt?.let { image ->
+                partsById[image.id] as? ImageDto
+                    ?: error("Expense receipt ${image.id} was not found")
+            }
+        )
         is PollDto -> copy(
             images = images.map { image ->
                 partsById[image.id] as? ImageDto

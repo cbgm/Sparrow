@@ -8,14 +8,4 @@ sealed interface OnboardingUiEvent {
     data object ChooseAnotherNumberClicked : OnboardingUiEvent
 
     data object RetryAutomaticNumberClicked : OnboardingUiEvent
-
-    data class PhoneNumberChanged(
-        val value: String
-    ) : OnboardingUiEvent
-
-    data class NameChanged(
-        val value: String
-    ) : OnboardingUiEvent
-
-    data object ApproveAndCreateClicked : OnboardingUiEvent
 }

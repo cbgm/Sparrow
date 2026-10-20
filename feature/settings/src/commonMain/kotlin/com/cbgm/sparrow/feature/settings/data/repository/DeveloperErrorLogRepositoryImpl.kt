@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
 import com.cbgm.sparrow.feature.settings.data.mapper.toDeveloperError
 import com.cbgm.sparrow.feature.settings.domain.model.DeveloperError
@@ -13,7 +14,8 @@ class DeveloperErrorLogRepositoryImpl(
     override fun observeErrors(): Flow<List<DeveloperError>> =
         dataSource.observeErrors().map { errors -> errors.map { error -> error.toDeveloperError() } }
 
-    override suspend fun clearErrors() {
-        dataSource.clearErrors()
-    }
+    override suspend fun clearErrors(): Result<Unit> =
+        safeSuspendCall {
+            dataSource.clearErrors()
+        }
 }

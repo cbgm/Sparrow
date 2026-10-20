@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
@@ -31,13 +31,11 @@ class AttachmentConversationNameObserver internal constructor(
             }
         }.collect { conversations ->
             conversations.forEach { (conversationId, displayName, isGroup) ->
-                runCatching {
-                    attachments.updateConversationDisplayName(
-                        conversationId = conversationId,
-                        displayName = displayName,
-                        isGroup = isGroup
-                    )
-                }.onFailure { error ->
+                attachments.updateConversationDisplayName(
+                    conversationId = conversationId,
+                    displayName = displayName,
+                    isGroup = isGroup
+                ).onFailure { error ->
                     logger.error(error) { "Could not update attachment display name for $conversationId" }
                 }
             }

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.sender
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope

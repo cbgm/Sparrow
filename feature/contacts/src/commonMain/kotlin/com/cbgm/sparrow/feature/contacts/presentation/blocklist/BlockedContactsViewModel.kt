@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.contacts.presentation.blocklist
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveBlockedContactsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase

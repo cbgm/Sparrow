@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.settings.domain.usecase
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.locale.setAppLanguage
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 
 class SetAppLanguageUseCase(
@@ -9,13 +10,14 @@ class SetAppLanguageUseCase(
 ) {
     suspend operator fun invoke(
         language: AppLanguage
-    ) {
-        settingsRepository.setLanguage(
-            language
-        )
+    ): Result<Unit> =
+        safeSuspendCall(logFailure = false) {
+            settingsRepository.setLanguage(
+                language
+            ).getOrThrow()
 
-        setAppLanguage(
-            language
-        )
-    }
+            setAppLanguage(
+                language
+            )
+        }
 }

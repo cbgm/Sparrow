@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.runtime.startup.task
 
 import com.cbgm.sparrow.BuildKonfig
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.runtime.startup.StartupTask
 import com.cbgm.sparrow.runtime.startup.StartupTaskResult
@@ -12,6 +12,7 @@ class LoadControlPlaneConfigurationStartupTask(
     private val logger = SparrowLog.withTag("LoadControlPlaneConfigurationStartupTask")
 
     override val name = "load saved control-plane configuration"
+    override val requiredForTransport = true
     override val waitForCompletion = true
 
     override suspend fun run(): StartupTaskResult {

@@ -57,9 +57,9 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.identity.device.QrCode
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiState
+import com.cbgm.sparrow.feature.media.device.QrCode
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_create_qr_code
 import com.cbgm.sparrow.resources.feature_identity_create_qr_description
@@ -334,21 +334,10 @@ private fun GeneratedIdentityContent(
     onShareIdentity: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-        Text(
-            text = stringResource(Res.string.feature_identity_my_identity_qr),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
         Text(
             text = stringResource(Res.string.feature_identity_scan_to_add_you),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 

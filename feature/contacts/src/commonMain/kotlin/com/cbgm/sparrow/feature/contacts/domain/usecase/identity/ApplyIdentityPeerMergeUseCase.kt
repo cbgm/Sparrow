@@ -6,5 +6,6 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityPeerRepositor
 class ApplyIdentityPeerMergeUseCase(
     private val repository: IdentityPeerRepository
 ) {
-    suspend operator fun invoke(merge: IdentityPeerMerge) = repository.applyMerge(merge)
+    suspend operator fun invoke(merge: IdentityPeerMerge): Result<Unit> =
+        repository.applyMerge(merge)
 }

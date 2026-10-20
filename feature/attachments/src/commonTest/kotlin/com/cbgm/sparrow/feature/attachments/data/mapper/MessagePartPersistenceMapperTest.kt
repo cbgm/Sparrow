@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollOptionDto
+import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollOptionDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
@@ -362,5 +362,5 @@ private object TestIdentityExchangeRepository : IdentityExchangeRepository {
 private object TestDeviceContactWriterRepository : DeviceContactWriterRepository {
     override suspend fun addIfNotExists(
         request: AddDeviceContactRequest
-    ): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists
+    ): Result<AddDeviceContactResult> = Result.success(AddDeviceContactResult.AlreadyExists)
 }

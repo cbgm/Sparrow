@@ -34,11 +34,11 @@ import com.cbgm.sparrow.core.ui.component.SparrowSearchField
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.component.forwardingTargetSection
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiState
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingTargetUi
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_forward_chats
 import com.cbgm.sparrow.resources.feature_chats_forward_contacts
@@ -238,7 +238,7 @@ private fun ForwardSelectionScreenPreview() {
                         avatarTarget = AvatarTarget.User(
                             id = "113"
                         ),
-                        target = ForwardingTarget.Contact(
+                        target = ForwardTarget.Contact(
                             contactId = "1"
                         )
                     )

@@ -5,5 +5,5 @@ import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 class ClearLocalDataUseCase(
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke() = settingsRepository.clearLocalData()
+    suspend operator fun invoke(): Result<Unit> = settingsRepository.clearLocalData()
 }

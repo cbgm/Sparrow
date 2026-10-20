@@ -8,11 +8,9 @@ class AuthorizeIncomingGroupRemovalUseCase(
 ) {
     suspend operator fun invoke(
         packet: GroupMemberRemovedPacket,
-        senderContactId: String,
-        pendingOwnerSigningPublicKey: ByteArray?
+        senderContactId: String
     ): Result<Boolean> = repository.authorizeIncomingGroupRemoval(
         packet,
-        senderContactId,
-        pendingOwnerSigningPublicKey
+        senderContactId
     )
 }

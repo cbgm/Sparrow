@@ -1,0 +1,28 @@
+package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase
+
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupAvatarRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
+
+/** Replays the published group avatar to one member that just became ready. */
+class SendCurrentGroupAvatarUseCase(
+    private val repository: GroupAvatarRepository,
+    private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val createPackets: CreateGroupAvatarPacketsUseCase,
+    private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
+) {
+    suspend operator fun invoke(groupId: String, contactId: String): Result<Unit> =
+        safeSuspendCall(logFailure = false) {
+            require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+            val state = repository.get(groupId).getOrThrow()
+            if (!state.isPublished) return@safeSuspendCall
+            val context = requireGroupAdminContext(groupId, ADMIN_ACTION).getOrThrow()
+            check(contactId in context.recipientContactIds) { "Contact is not an active group member" }
+            val packets = createPackets(state, context, recipients = setOf(contactId)).getOrThrow()
+            enqueueGroupPackets(packets, recordFailedRecipients = false).getOrThrow()
+        }
+
+    private companion object {
+        const val ADMIN_ACTION = "group avatar"
+    }
+}

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.media.domain.usecase
 
-import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.CapturedMedia
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserContent
@@ -15,16 +16,18 @@ import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileReposi
 class PrepareMediaSelectionUseCase(
     private val files: MediaSelectionFileRepository
 ) {
-    suspend fun fromCapturedMedia(captured: CapturedMedia): MediaSelection {
+    suspend fun fromCapturedMedia(
+        captured: CapturedMedia
+    ): Result<MediaSelection> = safeSuspendCall(logFailure = false) {
         val type =
             when (captured.type) {
                 CameraCaptureType.PHOTO -> MediaContentType.IMAGE
                 CameraCaptureType.VIDEO -> MediaContentType.VIDEO
             }
         val id = IdGenerator.generate(prefix = if (type == MediaContentType.IMAGE) "camera-image" else "camera-video")
-        val saved = files.save(id, captured.bytes, null)
+        val saved = files.save(id, captured.bytes, null).getOrThrow()
 
-        return VisualMediaSelection(
+        VisualMediaSelection(
             id = id,
             localFilePath = saved.localFilePath,
             byteSize = captured.bytes.size.toLong(),
@@ -40,19 +43,19 @@ class PrepareMediaSelectionUseCase(
     suspend fun fromGalleryMedia(
         media: GalleryMedia,
         existing: MediaSelection? = null
-    ): MediaSelection {
+    ): Result<MediaSelection> = safeSuspendCall(logFailure = false) {
         if (
             existing != null &&
             existing.sourceReference == media.sourceReference &&
             media.sourceReference != null
         ) {
-            return existing
+            return@safeSuspendCall existing
         }
 
         val id = IdGenerator.generate(prefix = if (media.type == MediaContentType.IMAGE) "gallery-image" else "gallery-video")
-        val saved = files.save(id, media.bytes, media.previewBytes)
+        val saved = files.save(id, media.bytes, media.previewBytes).getOrThrow()
 
-        return VisualMediaSelection(
+        VisualMediaSelection(
             id = id,
             localFilePath = saved.localFilePath,
             thumbnailFilePath = saved.thumbnailFilePath,
@@ -67,10 +70,12 @@ class PrepareMediaSelectionUseCase(
         )
     }
 
-    suspend fun fromFileBrowserContent(content: FileBrowserContent): MediaSelection {
+    suspend fun fromFileBrowserContent(
+        content: FileBrowserContent
+    ): Result<MediaSelection> = safeSuspendCall(logFailure = false) {
         val id = IdGenerator.generate(prefix = "file")
-        val saved = files.save(id, content.bytes, null)
-        return FileMediaSelection(
+        val saved = files.save(id, content.bytes, null).getOrThrow()
+        FileMediaSelection(
             id = id,
             localFilePath = saved.localFilePath,
             byteSize = content.bytes.size.toLong(),

@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.base.group.domain.model.GroupMetadataPolicy
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
@@ -85,7 +86,6 @@ import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditor
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditorStrings
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupDescription
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDescriptionUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiEvent
@@ -606,7 +606,7 @@ private fun GroupDescriptionSection(
             ) {
                 BasicTextField(
                     value = draft,
-                    onValueChange = { if (it.length <= GroupDescription.MAX_LENGTH) draft = it },
+                    onValueChange = { if (it.length <= GroupMetadataPolicy.MAX_DESCRIPTION_LENGTH) draft = it },
                     modifier = Modifier.weight(1f).focusRequester(focusRequester),
                     enabled = !state.isSaving,
                     minLines = 1,
@@ -668,7 +668,7 @@ private fun GroupDescriptionSection(
                 }
             }
             Text(
-                text = "${draft.length}/${GroupDescription.MAX_LENGTH}",
+                text = "${draft.length}/${GroupMetadataPolicy.MAX_DESCRIPTION_LENGTH}",
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

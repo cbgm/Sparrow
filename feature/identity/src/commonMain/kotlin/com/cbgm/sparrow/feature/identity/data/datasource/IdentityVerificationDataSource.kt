@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
 import com.cbgm.sparrow.feature.identity.data.protocol.IdentityVerificationReceiptEncoder
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus

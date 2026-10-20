@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.invite.data.datasource
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.entity.InvitationEntity
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation

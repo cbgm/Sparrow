@@ -16,10 +16,4 @@ internal class ConversationOverviewDataSource(
             localDeletionTransportMode = localDeletionTransportMode,
             localMembershipStartedTransportMode = localMembershipStartedTransportMode
         )
-
-    suspend fun incrementUnseenLocalMessageCount(conversationId: String): Int =
-        chatDao.incrementUnseenLocalMessageCount(conversationId)
-
-    suspend fun clearUnseenLocalMessageCount(conversationId: String): Int =
-        chatDao.clearUnseenLocalMessageCount(conversationId)
 }

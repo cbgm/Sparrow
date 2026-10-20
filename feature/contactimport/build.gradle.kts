@@ -18,6 +18,7 @@ kotlin {
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
             implementation(projects.feature.invite)
+            implementation(projects.feature.media)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
@@ -27,7 +28,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
-            implementation(libs.bundles.camera)
         }
 
         commonTest.dependencies {

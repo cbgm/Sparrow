@@ -4,13 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +20,10 @@ import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
@@ -42,6 +43,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddS
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -103,24 +105,27 @@ fun DirectConversationScreen(
             anchor.messageId == contextState.message?.id
         }
 
-    if (showReconnectConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showReconnectConfirmation = false },
-            title = { Text(stringResource(Res.string.feature_chats_reconnect_contact)) },
-            text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
-            confirmButton = {
-                TextButton(onClick = {
+    SparrowAlertDialog(
+        onDismissRequest = { showReconnectConfirmation = false },
+        title = stringResource(Res.string.feature_chats_reconnect_contact),
+        text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
+        confirmButton = {
+            SparrowApprovalButton(
+                onClick = {
                     showReconnectConfirmation = false
                     onReconnectRequested()
-                }) { Text(stringResource(Res.string.feature_chats_reconnect_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReconnectConfirmation = false }) {
-                    Text(stringResource(Res.string.feature_chats_reconnect_cancel))
-                }
-            }
-        )
-    }
+                },
+                text = stringResource(Res.string.feature_chats_reconnect_confirm)
+            )
+        },
+        dismissButton = {
+            SparrowOutlinedButton(
+                onClick = { showReconnectConfirmation = false },
+                text = stringResource(Res.string.feature_chats_reconnect_cancel)
+            )
+        },
+        isVisible = showReconnectConfirmation
+    )
 
     Box(modifier = modifier.fillMaxSize()) {
         MessageContextHost(
@@ -150,7 +155,7 @@ fun DirectConversationScreen(
                 }
             },
             onCopyClick = {
-                contextState.message?.textPart?.text?.takeIf(String::isNotBlank)
+                contextState.message?.textOrNull()?.takeIf(String::isNotBlank)
                     ?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { contextAnchor ->
                     feedbackOverlay =
@@ -233,7 +238,10 @@ fun DirectConversationScreen(
             ) { innerPadding, listState ->
                 HistoryContent(
                     model = uiState.toHistoryUiModel(
-                        emptyTitle = stringResource(Res.string.feature_chats_start_conversation_with, uiState.contactName),
+                        emptyTitle = stringResource(
+                            Res.string.feature_chats_start_conversation_with,
+                            uiState.contactName
+                        ),
                         emptyDescription = securityDescription(uiState.contactSecurityState)
                     ),
                     listState = listState,

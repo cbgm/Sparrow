@@ -221,7 +221,7 @@ private fun CameraModeButton(
 }
 
 @Composable
-private fun CameraShutterButton(
+internal fun CameraShutterButton(
     type: CameraCaptureType,
     isRecording: Boolean,
     onClick: () -> Unit

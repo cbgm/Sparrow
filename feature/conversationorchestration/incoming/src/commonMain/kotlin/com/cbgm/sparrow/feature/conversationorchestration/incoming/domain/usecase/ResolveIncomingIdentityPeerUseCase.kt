@@ -1,0 +1,90 @@
+package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
+
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
+import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
+import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.RemoteIdentityReplacementRequiredException
+import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
+import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
+
+/** Combines Identity-owned key/trust state with Contacts-owned contact matching. */
+class ResolveIncomingIdentityPeerUseCase(
+    private val inspectContactPeer: InspectContactPeerUseCase,
+    private val findRemoteIdentityPeerId: FindRemoteIdentityPeerIdUseCase,
+    private val getRemoteIdentity: GetRemoteIdentityUseCase
+) {
+    suspend operator fun invoke(
+        resolvedPeerId: String,
+        remotePhoneNumber: String?,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ): Result<IdentityPeerResolution> =
+        safeSuspendCall(logFailure = false) {
+            resolve(
+                resolvedPeerId = resolvedPeerId,
+                remotePhoneNumber = remotePhoneNumber,
+                remoteEncryptionPublicKey = remoteEncryptionPublicKey,
+                remoteSigningPublicKey = remoteSigningPublicKey
+            )
+        }
+
+    private suspend fun resolve(
+        resolvedPeerId: String,
+        remotePhoneNumber: String?,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ): IdentityPeerResolution {
+        val phonePeerId =
+            remotePhoneNumber?.let { inspectContactPeer.findEquivalentPhonePeerId(it).getOrThrow() }
+        // An orphaned Identity record must not be selected as a nonexistent Contacts peer.
+        val identityPeerId = findRemoteIdentityPeerId(remoteSigningPublicKey).getOrThrow()
+            ?.takeIf { inspectContactPeer.containsPeer(it).getOrThrow() }
+        val targetPeerId = phonePeerId ?: identityPeerId ?: resolvedPeerId
+        val identities = setOfNotNull(resolvedPeerId, identityPeerId, targetPeerId).mapNotNull { peerId ->
+            getRemoteIdentity(peerId).getOrThrow()?.let { identity -> peerId to identity }
+        }.toMap()
+
+        // A phone-number match is a contact lookup, NOT evidence of cryptographic
+        // continuity. In particular, when a peer reinstalls with fresh keys the
+        // phone match is often the *only* way to find their existing contact and
+        // conversation. Check it before returning any merge or applying metadata:
+        // the caller merges/deletes duplicate Contacts rows before Identity handles
+        // the packet, so detecting the mismatch later is too late.
+        //
+        // Even a ONE_WAY/unverified key must not be overwritten as a side effect
+        // of a self-declared phone number. The separate, explicit recovery flow
+        // will need to authorize replacement of the exact previous key binding.
+        identities[targetPeerId]?.let { stored ->
+            if (!stored.matches(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
+                throw RemoteIdentityReplacementRequiredException(targetPeerId)
+            }
+        }
+
+        suspend fun mayMerge(peerId: String): Boolean =
+            inspectContactPeer.canMergeRoutingDuplicate(peerId, remotePhoneNumber).getOrThrow() &&
+                (identities[peerId]?.matches(remoteEncryptionPublicKey, remoteSigningPublicKey) != false)
+
+        val canMergeResolved = targetPeerId != resolvedPeerId && mayMerge(resolvedPeerId)
+        val canMergeIdentity = identityPeerId != null && identityPeerId != targetPeerId &&
+            identityPeerId != resolvedPeerId && mayMerge(identityPeerId)
+        val merges = buildList {
+            if (canMergeResolved) {
+                add(IdentityPeerMerge(resolvedPeerId, targetPeerId, moveBootstrapRouting = true))
+            }
+            if (canMergeIdentity) {
+                add(IdentityPeerMerge(requireNotNull(identityPeerId), targetPeerId, moveBootstrapRouting = false))
+            }
+        }
+        return IdentityPeerResolution(
+            peerId = targetPeerId,
+            wasKnownPeer = inspectContactPeer.isKnownContact(targetPeerId).getOrThrow() ||
+                identities[targetPeerId]?.locallyImported == true,
+            merges = merges
+        )
+    }
+}
+
+private fun RemotePeerIdentity.matches(encryption: ByteArray, signing: ByteArray): Boolean =
+    encryptionPublicKey.contentEquals(encryption) && signingPublicKey.contentEquals(signing)

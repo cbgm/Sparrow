@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.domain.usecase
 
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedIncomingGroupWelcome
 import com.cbgm.sparrow.feature.membership.domain.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
@@ -20,7 +21,7 @@ class OpenIncomingGroupWelcomeUseCase(
         isFirstWelcome: Boolean,
         previousAuthorityEncryptionPublicKey: ByteArray?,
         previousAuthoritySigningPublicKey: ByteArray?
-    ): Result<OpenedIncomingGroupWelcome> = runCatching {
+    ): Result<OpenedIncomingGroupWelcome> = safeSuspendCall(logFailure = false) {
         val expectedEncryption = requireNotNull(previousAuthorityEncryptionPublicKey) {
             if (isFirstWelcome) {
                 "Inviting group admin has no accepted Sparrow identity"

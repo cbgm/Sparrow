@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.search.domain.usecase
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
@@ -12,23 +13,27 @@ class InitializeSemanticSearchUseCase(
     private val semanticSearchRepository: SemanticSearchRepository,
     private val applicationScope: ApplicationCoroutineScope
 ) {
-    suspend operator fun invoke() {
-        synchronizeCurrentState()
-        applicationScope.launch {
-            localEmbeddingRepository.state.collectLatest { localState ->
-                when {
-                    !localState.semanticSearchEnabled -> semanticSearchRepository.disable()
-                    localState.modelState is LocalEmbeddingModelState.Ready -> semanticSearchRepository.prepare()
+    suspend operator fun invoke(): Result<Unit> =
+        safeSuspendCall(logFailure = false) {
+            synchronizeCurrentState()
+            applicationScope.launch {
+                localEmbeddingRepository.state.collectLatest { localState ->
+                    when {
+                        !localState.semanticSearchEnabled ->
+                            semanticSearchRepository.disable().getOrThrow()
+                        localState.modelState is LocalEmbeddingModelState.Ready ->
+                            semanticSearchRepository.prepare().getOrThrow()
+                    }
                 }
             }
         }
-    }
 
     private suspend fun synchronizeCurrentState() {
         val localState = localEmbeddingRepository.state.value
         when {
-            !localState.semanticSearchEnabled -> semanticSearchRepository.disable()
-            localState.modelState is LocalEmbeddingModelState.Ready -> semanticSearchRepository.prepare()
+            !localState.semanticSearchEnabled -> semanticSearchRepository.disable().getOrThrow()
+            localState.modelState is LocalEmbeddingModelState.Ready ->
+                semanticSearchRepository.prepare().getOrThrow()
         }
     }
 }

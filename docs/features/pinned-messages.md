@@ -4,40 +4,44 @@ Groups support one current pinned user message. Pinning is admin-controlled and 
 
 ## Main classes
 
-- `GroupPin` / `GroupPinTarget`
-- `GroupPinRepository` / `GroupPinRepositoryImpl`
-- `GroupPinDataSource`
-- `GroupPinBroadcaster`
-- `PinGroupMessageUseCase`
-- `UnpinGroupMessageUseCase`
+Write side (`:feature:conversationorchestration:groupstate` / `incoming`):
+
+- `PinGroupMessageWorkflow`, `UnpinGroupMessageWorkflow` (`GroupMessageCommand.PinMessage` / `UnpinMessage`)
+- `SendCurrentGroupPinWorkflow`
+- `ReceiveGroupPinWorkflow`
+- `GroupPinState`, `GroupPinRepository` / `GroupPinRepositoryImpl`, `GroupPinDataSource`, `GroupPinPacketCodec`
+
+Read side (`:feature:chats`):
+
+- `GroupPin`
+- `GroupPinReadRepository` / `GroupPinReadRepositoryImpl`, `GroupPinDataSource`
+- `GroupPinController`
 - `LoadGroupPinnedAttachmentUseCase`
-- `GroupPinUpdatedPacketHandler`
 - `GroupPinnedMessage`
 
 ## Snapshot model
 
-`GroupPinRepositoryImpl.pin(...)` validates that the target is a readable group user message, resolves the sender signing key, builds `GroupMessageContent` from text plus message parts, stores the pin and broadcasts the new state.
+`PinGroupMessageWorkflow` (`FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> CheckPinSlot -> SavePin -> CreatePinPackets -> EnqueuePinPackets`) validates that the target is a readable group user message, resolves the sender signing key, builds `GroupMessageContent` from text plus message parts, stores the pin and sends the new state to the group.
 
 ```mermaid
 sequenceDiagram
-    participant UI as GroupConversationViewModel
-    participant UC as PinGroupMessageUseCase
+    participant UI as GroupPinController
+    participant ORCH as ConversationOrchestrator
+    participant WF as PinGroupMessageWorkflow
     participant R as GroupPinRepositoryImpl
-    participant DB as GroupPinDataSource
-    participant B as GroupPinBroadcaster
+    participant OUT as ProtocolOutbox
 
-    UI->>UC: pin(messageId)
-    UC->>R: getPinTarget / pin
-    R->>R: require local admin + readable group message
-    R->>DB: save GroupPinEntity + encoded GroupMessageContent
-    R->>B: broadcast(groupId)
+    UI->>ORCH: awaitResult(GroupMessageCommand.PinMessage)
+    ORCH->>WF: FindPinTarget / AuthorizeAdmin / CheckPinSlot
+    WF->>R: SavePin (GroupPinEntity + encoded GroupMessageContent)
+    WF->>OUT: CreatePinPackets / EnqueuePinPackets
 ```
 
-`GroupPinEntity` stores the message ID, sent/pinned/change timestamps, sender identity metadata and encoded message content. Unpinning writes an unpinned state with a monotonically increasing `changedAtEpochMilliseconds` and broadcasts it.
+`GroupPinEntity` stores the message ID, sent/pinned/change timestamps, sender identity metadata and encoded message content. Unpinning (`UnpinGroupMessageWorkflow`) writes an unpinned state with a monotonically increasing `changedAtEpochMilliseconds` and sends it to the group.
 
 ## Attachments
 
-Pinned attachment loading uses the same message-part/blob infrastructure. `GroupPinRepositoryImpl.findPinnedAttachment(...)` searches top-level snapshot parts and nested `PollDto.images`, then `loadDetachedBytes(...)` resolves the encrypted blob.
+Pinned attachment loading uses the same message-part/blob infrastructure. Chats' `GroupPinReadRepositoryImpl.loadAttachment(...)` searches top-level snapshot parts and nested `PollDto.images`, then `loadDetachedBytes(...)` resolves the encrypted blob.
 
 The filesystem cache does **not** need separate `writePinned`/`readPinned` APIs; “pinned” is a source context, not a different kind of attachment file.
 

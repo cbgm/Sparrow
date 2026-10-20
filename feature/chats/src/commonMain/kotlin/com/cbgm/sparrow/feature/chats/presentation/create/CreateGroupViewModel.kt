@@ -2,9 +2,8 @@ package com.cbgm.sparrow.feature.chats.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
@@ -12,6 +11,9 @@ import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEve
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,7 +29,7 @@ import kotlinx.coroutines.launch
 class CreateGroupViewModel(
     savedStateHandle: SavedStateHandle,
     private val observeContacts: ObserveContactsUseCase,
-    private val createGroupConversation: CreateGroupConversationUseCase
+    private val orchestrator: ConversationOrchestrator
 ) : BaseViewModel() {
     private val title = savedStateHandle.getMutableStateFlow(TITLE_KEY, "")
     private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
@@ -120,7 +122,7 @@ class CreateGroupViewModel(
         viewModelScope.launch {
             actionState.value = CreateGroupActionState(isCreating = true)
 
-            createGroupConversation(state.title, state.selectedContactIds)
+            orchestrator.awaitResult(GroupAdministrationCommand.CreateGroup(state.title, state.selectedContactIds))
                 .onSuccess {
                     clearForm()
                     _effects.send(CreateGroupEffect.GroupCreated)

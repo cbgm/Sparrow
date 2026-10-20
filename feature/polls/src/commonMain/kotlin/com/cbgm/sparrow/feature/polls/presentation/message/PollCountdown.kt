@@ -10,8 +10,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MILLISECONDS_PER_MINUTE
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds

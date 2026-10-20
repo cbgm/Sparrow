@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DefaultNodeEndpointResolverTest {
@@ -247,6 +248,55 @@ class DefaultNodeEndpointResolverTest {
 
             assertTrue(result.isSuccess)
             assertEquals(2, result.getOrThrow().size)
+        }
+
+    @Test
+    fun cachedResolutionUsesExpiredDirectoryWithinGraceWithoutFetching() =
+        runTest {
+            val directory = signedDirectory(directoryValidUntil = NOW + 1_000L)
+            val source = RecordingNodeDirectorySource(Result.success(json.encodeToString(signedDirectory())))
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(directory),
+                        trustedRootNodeId = directory.authorityNodeId
+                    )
+                )
+            val resolver = resolver(source = source, cache = cache, now = { NOW + 2_000L })
+
+            val endpoints = resolver.resolveCached("routing-a").getOrThrow()
+
+            assertEquals(2, endpoints?.size)
+            assertEquals(0, source.fetchCount)
+        }
+
+    @Test
+    fun cachedResolutionRejectsDirectoryBeyondGrace() =
+        runTest {
+            val directory = signedDirectory(directoryValidUntil = NOW + 1_000L)
+            val source = RecordingNodeDirectorySource(Result.success(json.encodeToString(signedDirectory())))
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(directory),
+                        trustedRootNodeId = directory.authorityNodeId
+                    )
+                )
+            val resolver =
+                resolver(source = source, cache = cache, now = { NOW + CACHE_GRACE_MILLISECONDS + 2_000L })
+
+            assertNull(resolver.resolveCached("routing-a").getOrThrow())
+            assertEquals(0, source.fetchCount)
+        }
+
+    @Test
+    fun cachedResolutionWithoutCacheReturnsNull() =
+        runTest {
+            val source = RecordingNodeDirectorySource(Result.success(json.encodeToString(signedDirectory())))
+            val resolver = resolver(source = source, cache = RecordingNodeDirectoryCache(), now = { NOW })
+
+            assertNull(resolver.resolveCached("routing-a").getOrThrow())
+            assertEquals(0, source.fetchCount)
         }
 
     @Test

@@ -41,6 +41,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Hist
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
@@ -52,8 +53,10 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedCont
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
+import com.cbgm.sparrow.feature.expenses.presentation.currency.ExpenseCurrencyPickerDialog
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
@@ -77,6 +80,7 @@ fun GroupConversationScreen(
     indicatorState: IndicatorUiState,
     membershipState: GroupMembershipUiState,
     historyState: MessageHistoryUiState,
+    pin: GroupPinUi?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -86,6 +90,7 @@ fun GroupConversationScreen(
         mutableStateOf<AttachmentSelection?>(null)
     }
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
+    var showCurrencySelection by rememberSaveable { mutableStateOf(false) }
     var showPinnedMessage by rememberSaveable { mutableStateOf(false) }
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
@@ -123,6 +128,7 @@ fun GroupConversationScreen(
             onForwardClick = { contextMessage?.id?.let(onForwardMessageRequested) },
             showPin =
                 uiState.isLocalAdmin &&
+                    !uiState.expensesActive &&
                     contextMessage?.groupExtension?.type == ChatMessageType.USER,
             isPinned = contextMessage?.id == uiState.pinnedMessage?.id,
             onPinClick = {
@@ -145,7 +151,7 @@ fun GroupConversationScreen(
                 contextMessage?.id?.let { onUiEvent(GroupConversationUiEvent.EditMessage(it)) }
             },
             onCopyClick = {
-                contextMessage?.textPart?.text?.takeIf(String::isNotBlank)
+                contextMessage?.textOrNull()?.takeIf(String::isNotBlank)
                     ?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { anchor ->
                     feedbackOverlay =
@@ -200,12 +206,15 @@ fun GroupConversationScreen(
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
                         }
-                        uiState.pinnedMessage?.let { pinnedMessage ->
+                        pin?.let { pin ->
                             GroupPinnedMessageBar(
-                                message = pinnedMessage,
-                                pinnedAtEpochMilliseconds = uiState.pinnedAtEpochMilliseconds,
-                                canUnpin = uiState.isLocalAdmin,
-                                onClick = { showPinnedMessage = true },
+                                pin = pin,
+                                onClick = {
+                                    when (pin) {
+                                        is GroupPinUi.Expenses -> onUiEvent(GroupConversationUiEvent.ExpenseOverviewClicked)
+                                        is GroupPinUi.Message -> showPinnedMessage = true
+                                    }
+                                },
                                 onUnpinClick = { onUiEvent(GroupConversationUiEvent.UnpinMessage) }
                             )
                         }
@@ -216,8 +225,11 @@ fun GroupConversationScreen(
                         composerState = composerState,
                         indicatorState = indicatorState,
                         containerColor = containerColor,
+                        expensesActive = uiState.expensesActive,
+                        canActivateExpenses = uiState.isLocalAdmin,
                         onUiEvent = onUiEvent,
-                        onContactAttachmentClick = { showContactSelection = true }
+                        onContactAttachmentClick = { showContactSelection = true },
+                        onActivateExpensesClick = { showCurrencySelection = true }
                     )
                 }
             ) { innerPadding, listState ->
@@ -295,6 +307,16 @@ fun GroupConversationScreen(
                 MessageReactionBurstOverlay(burst = burst, onDismiss = { reactionBurst = null })
             }
         }
+    }
+
+    if (showCurrencySelection) {
+        ExpenseCurrencyPickerDialog(
+            onCurrencySelected = { currencyCode ->
+                showCurrencySelection = false
+                onUiEvent(GroupConversationUiEvent.ActivateExpensesClicked(currencyCode))
+            },
+            onDismiss = { showCurrencySelection = false }
+        )
     }
 
     SparrowOverlayHost(
@@ -431,8 +453,11 @@ private fun BottomBar(
     composerState: MessageComposerUiState,
     indicatorState: IndicatorUiState,
     containerColor: Color,
+    expensesActive: Boolean,
+    canActivateExpenses: Boolean,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
-    onContactAttachmentClick: () -> Unit
+    onContactAttachmentClick: () -> Unit,
+    onActivateExpensesClick: () -> Unit
 ) {
     ComposerContent(
         composerState = composerState,
@@ -449,6 +474,18 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(GroupConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(GroupConversationUiEvent.LocationCaptureFailed(it)) },
         onPollAttachmentClick = { onUiEvent(GroupConversationUiEvent.CreatePollClicked) },
+        onActivateExpensesClick = onActivateExpensesClick.takeIf { canActivateExpenses },
+        onAddExpenseClick = if (expensesActive) {
+            { onUiEvent(GroupConversationUiEvent.AddExpenseClicked) }
+        } else {
+            null
+        },
+        onCloseExpensesClick = if (canActivateExpenses && expensesActive) {
+            { onUiEvent(GroupConversationUiEvent.CloseExpensesClicked) }
+        } else {
+            null
+        },
+        isExpensesActive = expensesActive,
         onAttachmentError = { onUiEvent(GroupConversationUiEvent.AttachmentError(it)) },
         onVoiceSendClick = { onUiEvent(GroupConversationUiEvent.VoiceSendClicked) }
     )

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 import com.cbgm.sparrow.feature.media.presentation.mapper.toDomain
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi

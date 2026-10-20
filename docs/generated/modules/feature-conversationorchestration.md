@@ -9,33 +9,22 @@ Generated automatically by `./gradlew architectureReport`.
 | Name | `conversationorchestration` |
 | Group | `feature` |
 | Directory | `feature/conversationorchestration` |
-| Build file | `feature/conversationorchestration/build.gradle.kts` |
-| Kotlin files | 64 |
-| Production Kotlin files | 56 |
-| Test Kotlin files | 8 |
+| Build file | `feature/conversationorchestration/build.gradle` |
+| Kotlin files | 0 |
+| Production Kotlin files | 0 |
+| Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 9 |
-| Direct dependents | 3 |
+| Direct dependencies | 0 |
+| Direct dependents | 0 |
 
 ## Source sets
 
-- `commonMain`
-- `commonTest`
+None discovered.
 
 ## Dependencies
 
-- [`:core:crypto`](../modules/core-crypto.md)
-- [`:core:util`](../modules/core-util.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:identity`](../modules/feature-identity.md)
-- [`:feature:invite`](../modules/feature-invite.md)
-- [`:feature:membership`](../modules/feature-membership.md)
-- [`:feature:messaging`](../modules/feature-messaging.md)
-- [`:feature:transport`](../modules/feature-transport.md)
-- [`:protocol`](../modules/protocol.md)
+None.
 
 ## Dependents
 
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:shared`](../modules/shared.md)
+None.

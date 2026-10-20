@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.safety.domain.usecase
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
@@ -28,55 +29,56 @@ class InitializeMessageSafetyUseCase(
     private val logger = SparrowLog.withTag("InitializeMessageSafetyUseCase")
     private var processingJob: Job? = null
 
-    operator fun invoke() {
-        if (processingJob?.isActive == true) return
+    operator fun invoke(): Result<Unit> =
+        safeCall(logFailure = false) {
+            if (processingJob?.isActive == true) return@safeCall
 
-        processingJob =
-            applicationScope.launch {
-                localEmbeddingRepository.state
-                    .map { localState ->
-                        SafetyRuntimeState(
-                            enabled = localState.messageSafetyEnabled,
-                            modelState = localState.modelState
-                        )
-                    }.distinctUntilChanged()
-                    .collectLatest(::handleRuntimeState)
-            }
-    }
+            processingJob =
+                applicationScope.launch {
+                    localEmbeddingRepository.state
+                        .map { localState ->
+                            SafetyRuntimeState(
+                                enabled = localState.messageSafetyEnabled,
+                                modelState = localState.modelState
+                            )
+                        }.distinctUntilChanged()
+                        .collectLatest(::handleRuntimeState)
+                }
+        }
 
     private suspend fun handleRuntimeState(runtimeState: SafetyRuntimeState) {
         if (!runtimeState.enabled) {
-            repository.updateState(MessageSafetyState.Disabled)
-            repository.deleteAllAssessments()
+            repository.updateState(MessageSafetyState.Disabled).getOrThrow()
+            repository.deleteAllAssessments().getOrThrow()
             return
         }
 
         when (val modelState = runtimeState.modelState) {
             LocalEmbeddingModelState.Ready -> processMessages()
             is LocalEmbeddingModelState.Failed ->
-                repository.updateState(MessageSafetyState.Failed(modelState.message))
+                repository.updateState(MessageSafetyState.Failed(modelState.message)).getOrThrow()
 
             LocalEmbeddingModelState.NotNeeded,
             LocalEmbeddingModelState.Preparing,
             is LocalEmbeddingModelState.Downloading ->
-                repository.updateState(MessageSafetyState.Preparing)
+                repository.updateState(MessageSafetyState.Preparing).getOrThrow()
         }
     }
 
     private suspend fun processMessages() {
-        repository.deleteAssessmentsForOtherAnalyzers()
+        repository.deleteAssessmentsForOtherAnalyzers().getOrThrow()
 
         while (currentCoroutineContext().isActive) {
-            val pendingCount = repository.getUnassessedMessageCount()
+            val pendingCount = repository.getUnassessedMessageCount().getOrThrow()
             if (pendingCount == 0) {
-                repository.updateState(MessageSafetyState.Ready)
+                repository.updateState(MessageSafetyState.Ready).getOrThrow()
                 repository.observeUnassessedMessageCount().first { it > 0 }
                 continue
             }
 
-            repository.updateState(MessageSafetyState.Analyzing)
+            repository.updateState(MessageSafetyState.Analyzing).getOrThrow()
             try {
-                check(processMessageSafetyBatch(BATCH_SIZE) > 0) {
+                check(processMessageSafetyBatch(BATCH_SIZE).getOrThrow() > 0) {
                     "Safety analysis reported pending messages but did not process a batch"
                 }
             } catch (cancellation: CancellationException) {
@@ -84,6 +86,7 @@ class InitializeMessageSafetyUseCase(
             } catch (throwable: Throwable) {
                 logger.error(throwable) { "Local message safety analysis failed; retrying" }
                 repository.updateState(MessageSafetyState.Failed("Local message safety analysis failed"))
+                    .getOrThrow()
                 delay(RETRY_DELAY_MILLISECONDS.milliseconds)
                 currentCoroutineContext().ensureActive()
             }

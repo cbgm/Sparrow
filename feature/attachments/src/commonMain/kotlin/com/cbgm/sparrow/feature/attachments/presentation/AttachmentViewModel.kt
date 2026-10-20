@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.presentation
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact

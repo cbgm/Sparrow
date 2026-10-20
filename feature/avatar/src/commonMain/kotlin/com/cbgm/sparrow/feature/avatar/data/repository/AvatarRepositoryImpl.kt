@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.avatar.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.avatar.data.datasource.AvatarDataSource
 import com.cbgm.sparrow.feature.avatar.data.datasource.LocalAvatarImageDataSource
 import com.cbgm.sparrow.feature.avatar.domain.model.Avatar

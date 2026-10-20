@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepos
 class SetBlockUnknownContactInvitesUseCase(
     private val repository: ContactBlocklistRepository
 ) {
-    suspend operator fun invoke(enabled: Boolean) {
+    suspend operator fun invoke(enabled: Boolean): Result<Unit> =
         repository.setBlockUnknownContactInvites(enabled)
-    }
 }

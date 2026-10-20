@@ -75,17 +75,15 @@ class PendingIdentityReplacementTransactionTest {
                 id = "existing-chat",
                 contactId = "contact",
                 type = "DIRECT",
-                title = null,
                 createdAtEpochMilliseconds = 1L,
                 updatedAtEpochMilliseconds = 1L
             )
         )
-        database.chatDao().upsertMessage(
+        database.chatDao().upsertMessageWithText(
             MessageEntity(
                 id = "existing-message",
                 conversationId = "existing-chat",
                 packetId = "old-packet",
-                text = "Existing history",
                 transportPayload = null,
                 transportMode = "END_TO_END_ENCRYPTED",
                 contentStatus = "READABLE",
@@ -93,7 +91,8 @@ class PendingIdentityReplacementTransactionTest {
                 senderContactId = null,
                 isMine = true,
                 createdAtEpochMilliseconds = 1L
-            )
+            ),
+            "Existing history"
         )
         val dao = database.pendingRemoteIdentityChangeDao()
         dao.upsert(
@@ -112,7 +111,7 @@ class PendingIdentityReplacementTransactionTest {
         assertTrue(approved.originalInviteAutoSharesIdentity)
         assertTrue(requireNotNull(approved.originalInviterEncryptionPublicKey).contentEquals(newEnc))
         assertTrue(requireNotNull(approved.originalInviterSigningPublicKey).contentEquals(newSig))
-        assertEquals("Existing history", requireNotNull(database.chatDao().findMessageById("existing-message")).text)
+        assertEquals("Existing history", database.chatDao().findMessageText("existing-message"))
         assertEquals("existing-chat", requireNotNull(database.chatDao().findConversationByContactId("contact")).id)
     }
 
@@ -123,7 +122,6 @@ class PendingIdentityReplacementTransactionTest {
                 id = "direct-chat",
                 contactId = "contact",
                 type = "DIRECT",
-                title = null,
                 createdAtEpochMilliseconds = 1L,
                 updatedAtEpochMilliseconds = 1L
             )
@@ -152,12 +150,11 @@ class PendingIdentityReplacementTransactionTest {
     }
 
     private suspend fun seedMessage(id: String, delivery: String, packetId: String? = id) {
-        database.chatDao().upsertMessage(
+        database.chatDao().upsertMessageWithText(
             MessageEntity(
                 id = "message-$id",
                 conversationId = "direct-chat",
                 packetId = packetId,
-                text = "Keep my original message",
                 transportPayload = null,
                 transportMode = "END_TO_END_ENCRYPTED",
                 contentStatus = "READABLE",
@@ -165,7 +162,8 @@ class PendingIdentityReplacementTransactionTest {
                 senderContactId = null,
                 isMine = true,
                 createdAtEpochMilliseconds = 1L
-            )
+            ),
+            "Keep my original message"
         )
     }
 

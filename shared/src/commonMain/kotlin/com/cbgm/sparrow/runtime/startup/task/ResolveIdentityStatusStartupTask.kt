@@ -9,6 +9,7 @@ class ResolveIdentityStatusStartupTask(
     private val initialization: AppInitializationDependencies
 ) : StartupTask {
     override val name = "resolve local identity status"
+    override val requiredForTransport = true
     override val waitForCompletion = true
 
     override suspend fun run(): StartupTaskResult {

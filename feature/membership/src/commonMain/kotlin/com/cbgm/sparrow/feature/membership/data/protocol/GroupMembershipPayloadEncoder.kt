@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.protocol
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.GroupInvitePacket

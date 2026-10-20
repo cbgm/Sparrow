@@ -21,8 +21,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
-import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
+import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_choose_another_number
 import com.cbgm.sparrow.resources.base_choose_phone_number
@@ -30,6 +29,7 @@ import com.cbgm.sparrow.resources.base_generating_secure_identity
 import com.cbgm.sparrow.resources.base_identity_ready_opening
 import com.cbgm.sparrow.resources.base_phone_number
 import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
+import com.cbgm.sparrow.resources.feature_identity_something_went_wrong
 import com.cbgm.sparrow.resources.feature_onboarding_approve_create_identity
 import com.cbgm.sparrow.resources.feature_onboarding_approve_phone_number
 import com.cbgm.sparrow.resources.feature_onboarding_detected_automatically_confirm
@@ -44,7 +44,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PhonePage(
-    identityState: IdentityUiState,
+    identityState: IdentityCreateUiState,
     isCreating: Boolean,
     canRetryAutomatic: Boolean,
     onChooseAnotherNumber: () -> Unit,
@@ -52,8 +52,6 @@ fun PhonePage(
     onPhoneNumberChanged: (String) -> Unit,
     onApproveAndCreate: () -> Unit,
     onRestoreIdentity: () -> Unit = {},
-    isRestoring: Boolean = false,
-    restoreError: String? = null,
     onNameChanged: (String) -> Unit
 ) {
     Column(
@@ -61,7 +59,7 @@ fun PhonePage(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when (identityState) {
-            IdentityUiState.Loading -> {
+            IdentityCreateUiState.Loading, IdentityCreateUiState.Creating -> {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 Text(
@@ -77,7 +75,7 @@ fun PhonePage(
                 )
             }
 
-            is IdentityUiState.NoIdentity -> {
+            is IdentityCreateUiState.Form -> {
                 Text(
                     text = stringResource(Res.string.feature_onboarding_approve_phone_number),
                     style = MaterialTheme.typography.headlineSmall,
@@ -100,15 +98,13 @@ fun PhonePage(
                         modifier = Modifier.fillMaxWidth(),
                         label = stringResource(Res.string.base_phone_number),
                         placeholderText = "+491701234567",
-                        errorText = identityState.phoneNumberError
-                            ?: if (identityState.phoneNumber.isBlank()) {
-                                stringResource(Res.string.feature_onboarding_no_automatic_number)
-                            } else {
-                                stringResource(
-                                    Res.string.feature_onboarding_detected_automatically_confirm
-                                )
-                            },
-                        isError = identityState.phoneNumberError != null,
+                        errorText = if (identityState.phoneNumber.isBlank()) {
+                            stringResource(Res.string.feature_onboarding_no_automatic_number)
+                        } else {
+                            stringResource(
+                                Res.string.feature_onboarding_detected_automatically_confirm
+                            )
+                        },
                         isSingleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
@@ -148,22 +144,13 @@ fun PhonePage(
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 TextButton(
                     onClick = onRestoreIdentity,
-                    enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank() && !isCreating && !isRestoring
+                    enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank() && !isCreating
                 ) {
                     Text(stringResource(Res.string.feature_identity_backup_restore_action))
                 }
-                restoreError?.let { error ->
-                    Text(
-                        text = error,
-                        modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.base),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                }
             }
 
-            is IdentityUiState.Ready -> {
+            IdentityCreateUiState.Completed -> {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.medium))
                 Text(
@@ -174,7 +161,7 @@ fun PhonePage(
                 )
             }
 
-            IdentityUiState.IncompleteIdentity -> {
+            IdentityCreateUiState.IncompleteIdentity -> {
                 Text(
                     text = stringResource(Res.string.feature_onboarding_local_identity_incomplete),
                     color = MaterialTheme.colorScheme.error,
@@ -183,9 +170,9 @@ fun PhonePage(
                 )
             }
 
-            is IdentityUiState.Error -> {
+            IdentityCreateUiState.Error -> {
                 Text(
-                    text = identityState.message,
+                    text = stringResource(Res.string.feature_identity_something_went_wrong),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
@@ -201,14 +188,7 @@ private fun PhonePagePreview() {
     SparrowTheme {
         PhonePage(
             identityState =
-                IdentityUiState.Ready(
-                    localPhoneNumber = "445446",
-                    publicIdentity =
-                        PublicIdentity(
-                            ByteArray(size = 0),
-                            ByteArray(size = 0)
-                        )
-                ),
+                IdentityCreateUiState.Completed,
             isCreating = false,
             canRetryAutomatic = true,
             onChooseAnotherNumber = {},
@@ -225,7 +205,7 @@ private fun PhonePagePreview() {
 private fun PhonePageNoIdentityPreview() {
     SparrowTheme {
         PhonePage(
-            identityState = IdentityUiState.NoIdentity(),
+            identityState = IdentityCreateUiState.Form(),
             isCreating = false,
             canRetryAutomatic = true,
             onChooseAnotherNumber = {},

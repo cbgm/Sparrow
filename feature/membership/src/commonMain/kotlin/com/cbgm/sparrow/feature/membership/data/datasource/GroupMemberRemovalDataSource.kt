@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent

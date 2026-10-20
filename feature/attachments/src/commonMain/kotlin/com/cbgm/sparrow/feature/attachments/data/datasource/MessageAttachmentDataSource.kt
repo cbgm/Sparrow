@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
@@ -195,6 +195,32 @@ internal class MessageAttachmentDataSource(
 
     fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePartDto>>> =
         attachmentDao.observeMessagePartsByMessageIds(messageIds)
+            .map { parts ->
+                val blobs = loadBlobs(parts)
+                parts.groupBy(MessagePartEntity::messageId).mapValues { (_, messageParts) ->
+                    messageParts.toDtos(
+                        blobs = blobs,
+                        resolveLocalFilePath = fileDataSource::resolveCacheFilePath
+                    )
+                }
+            }
+
+    fun observeExpenseState(conversationId: String): Flow<List<MessagePartDto>> =
+        attachmentDao.observeMessagePartsByConversationIdAndTypes(
+            conversationId,
+            listOf(MessageAttachmentType.EXPENSE.name, MessageAttachmentType.PAYMENT_TRANSFER.name)
+        ).map { parts ->
+            val blobs = loadBlobs(parts)
+            parts.groupBy(MessagePartEntity::messageId).values.flatMap { messageParts ->
+                messageParts.toDtos(blobs, fileDataSource::resolveCacheFilePath)
+            }
+        }
+
+    fun observeByConversationIdAndType(
+        conversationId: String,
+        type: MessageAttachmentType
+    ): Flow<Map<String, List<MessagePartDto>>> =
+        attachmentDao.observeMessagePartsByConversationIdAndType(conversationId, type.name)
             .map { parts ->
                 val blobs = loadBlobs(parts)
                 parts.groupBy(MessagePartEntity::messageId).mapValues { (_, messageParts) ->

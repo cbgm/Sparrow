@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
@@ -26,7 +27,7 @@ class ImportContactUseCase(
     private val logger = SparrowLog.withTag("ImportContactUseCase")
 
     suspend operator fun invoke(request: ImportContactRequest): Result<Contact> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(request.encryptionPublicKey.isNotEmpty()) {
                 "Encryption public key must not be empty"
             }
@@ -77,7 +78,7 @@ class ImportContactUseCase(
                                 displayName = normalizedRequest.displayName ?: importedContact.displayName,
                                 phoneNumber = phoneNumber
                             )
-                        )
+                        ).getOrElse { error -> AddDeviceContactResult.Failure(error) }
                 ) {
                     AddDeviceContactResult.Added ->
                         logger.debug { "Device contact created for imported contact: contactId=${importedContact.id}" }

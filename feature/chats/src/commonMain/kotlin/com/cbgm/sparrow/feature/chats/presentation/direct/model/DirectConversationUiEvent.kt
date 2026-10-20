@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
@@ -50,7 +50,7 @@ sealed interface DirectConversationUiEvent {
 
     data class ForwardMessage(
         val messageId: String,
-        val target: ForwardingTarget
+        val target: ForwardTarget
     ) : DirectConversationUiEvent
 
     data class MediaSelected(

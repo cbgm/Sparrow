@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.voice.device
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptCue
 import com.cbgm.sparrow.feature.voice.domain.repository.VoiceTranscriptionRepository

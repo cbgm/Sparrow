@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.notification.presentation
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.notification.domain.model.ConversationNotificationEvent
 import com.cbgm.sparrow.feature.notification.domain.usecase.ObserveConversationNotificationEventsUseCase
 import kotlinx.coroutines.CoroutineScope

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
@@ -12,7 +12,7 @@ class GetIdentityPeerStateUseCase(
     private val pendingRemoteIdentityChanges: PendingRemoteIdentityChangeRepository
 ) {
     suspend operator fun invoke(peerId: String): Result<IdentityPeerState> =
-        safeSuspendCall {
+        safeSuspendCall(logFailure = false) {
             require(peerId.isNotBlank())
             val state = repository.getPeerState(peerId).getOrThrow()
             // Fail closed while the identity-change request remains in the mailbox.

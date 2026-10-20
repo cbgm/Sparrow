@@ -172,7 +172,7 @@ The tag must point at the exact release-branch commit whose candidate was tested
 
 The source archive used for this documentation audit does **not** contain the repository `.github/workflows` directory. Therefore this documentation does not pretend to verify the exact current GitHub Actions trigger/change-classification implementation from this ZIP alone.
 
-What **is** directly verifiable in the source is the current Android build configuration, server Dockerfiles/Compose definitions and the unified public server-bundle builder under `server/unified`.
+What **is** directly verifiable in the source is the current Android build configuration, server Dockerfiles/Compose definitions and the unified public server-bundle builder under `server/installer`.
 
 If the CI workflow in GitHub is changed, keep this page synchronized with the checked-in workflow files in the repository used for release.
 
@@ -180,13 +180,13 @@ If the CI workflow in GitHub is changed, keep this page synchronized with the ch
 
 The current server distribution path is a **single unified server bundle**, not separate public Control Plane and Community Node packages.
 
-Build from the repository root on Windows:
+Build from the repository root (Windows, Linux or macOS):
 
 ```text
-server\unified\Build-SparrowServer.cmd
+python3 server/installer/build.py
 ```
 
-That wrapper invokes `server/unified/New-SparrowServerBundle.ps1` and produces:
+This produces:
 
 ```text
 dist/sparrow-server.zip
@@ -196,11 +196,9 @@ The bundle contains the cross-platform runtime/manager scripts plus the Control 
 
 Important bundled entry points include:
 
-- `Start-SparrowServer.ps1`
-- `Start-SparrowServer.sh`
-- `Start-SparrowServer.command`
-- `Invoke-SparrowServer.ps1` / `.py`
-- `Manage-SparrowNodes.ps1` / `.py`
+- `Start-SparrowServer.cmd`, `Start-SparrowServer.sh`, `Start-SparrowServer.command` (top level)
+- `app/` with the manager UI, `Invoke-SparrowServer.ps1` / `.py`, `Update-SparrowServer.ps1`,
+  `Manage-SparrowNodes.py`, the installer window (`manager_window.py`) and `bundle.json` (source repository and image tag)
 - the Control Plane and Community Node Compose/Caddy templates
 - signed-directory client/registration helpers used by the public runtime
 - shared-public-proxy definitions used by public Combined deployments
@@ -209,7 +207,7 @@ The Windows bundle also exposes `Start-SparrowServer.cmd` as the normal GUI entr
 
 ## Server bundle exclusion: private Control Plane Directory
 
-`server/control-plane-directory` is **operator-only** infrastructure. `New-SparrowServerBundle.ps1` explicitly documents that it must never copy that directory or server identities/secrets into the public unified bundle.
+`server/control-plane-directory` is **operator-only** infrastructure. `server/installer/build.py` explicitly documents that it must never copy that directory or server identities/secrets into the public unified bundle.
 
 Therefore these are **not public Sparrow server release assets**:
 

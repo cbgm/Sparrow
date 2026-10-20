@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentResolver
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.contacts.device.AndroidDeviceContactWriterRepository
 import com.cbgm.sparrow.feature.contacts.device.AndroidDeviceContactsRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
@@ -29,10 +30,12 @@ val androidContactsModule =
         single<DeviceContactsPermissionRepository> {
             val context = androidContext()
             DeviceContactsPermissionRepository {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_CONTACTS
-                ) == PackageManager.PERMISSION_GRANTED
+                safeCall {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.READ_CONTACTS
+                    ) == PackageManager.PERMISSION_GRANTED
+                }
             }
         }
     }

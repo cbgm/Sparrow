@@ -14,8 +14,14 @@ interface FederationClient {
     suspend fun markStored(envelopeId: String) = Unit
 }
 
+enum class PresenceRegistrationResult {
+    ACCEPTED,
+    REJECTED,
+    PHONE_VERIFICATION_FAILED
+}
+
 interface PresenceClient {
-    suspend fun register(registration: ClientRouteRegistration): Boolean
+    suspend fun register(registration: ClientRouteRegistration): PresenceRegistrationResult
 
     suspend fun remove(
         routingId: String,

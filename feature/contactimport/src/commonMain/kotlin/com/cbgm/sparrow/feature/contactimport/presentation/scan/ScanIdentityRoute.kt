@@ -6,9 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.cbgm.sparrow.feature.contactimport.device.rememberQrScannerPermissionRequest
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.component.CameraPermissionDialog
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
+import com.cbgm.sparrow.feature.media.device.rememberCameraPermissionRequest
 
 @Composable
 fun ScanIdentityRoute(
@@ -18,7 +18,7 @@ fun ScanIdentityRoute(
     var cameraPermissionDenied by remember { mutableStateOf(false) }
 
     val requestCameraPermission =
-        rememberQrScannerPermissionRequest(
+        rememberCameraPermissionRequest(
             onPermissionGranted = {
                 cameraPermissionGranted = true
                 cameraPermissionDenied = false

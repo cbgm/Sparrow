@@ -1,10 +1,9 @@
 package com.cbgm.sparrow.feature.identity.domain.repository
 
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupState
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 
-/** Owns backup cryptography and fingerprint-scoped export status; does not orchestrate identity storage. */
 interface IdentityBackupRepository {
     suspend fun encrypt(backup: IdentityBackup, password: CharArray): Result<ByteArray>
 
@@ -14,5 +13,5 @@ interface IdentityBackupRepository {
 
     suspend fun markImported(identity: PublicIdentity): Result<Unit>
 
-    suspend fun getStatus(identity: PublicIdentity): Result<IdentityBackupStatus>
+    suspend fun getStatus(identity: PublicIdentity): Result<IdentityBackupState>
 }

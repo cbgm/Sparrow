@@ -30,7 +30,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
+- [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:invite`](../modules/feature-invite.md)
 - [`:feature:media`](../modules/feature-media.md)

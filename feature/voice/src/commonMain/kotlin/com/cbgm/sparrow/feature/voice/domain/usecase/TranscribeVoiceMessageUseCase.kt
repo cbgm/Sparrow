@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.voice.domain.usecase
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscriptCue
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadAttachmentBytesUseCase

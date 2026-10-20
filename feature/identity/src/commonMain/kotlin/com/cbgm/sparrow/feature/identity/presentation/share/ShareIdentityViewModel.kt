@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.presentation.share
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiState

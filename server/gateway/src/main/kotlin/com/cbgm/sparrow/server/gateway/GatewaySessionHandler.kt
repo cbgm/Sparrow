@@ -5,9 +5,11 @@ import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.GatewayClientMessage
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.ClientRoutingIds
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.consumeEach
 import java.util.UUID
 
@@ -170,6 +172,10 @@ internal class GatewaySessionHandler(
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
         val connection = message.toGatewayConnection(session)
+        if (ClientRoutingIds.isBootstrapRoutingId(message.routingId)) {
+            connection.sendError("INVALID_ROUTE", "Register a signing-key routing identity")
+            return null
+        }
         val registration = message.toClientRouteRegistration(connection, nodeId)
         val routeValidationFailure =
             registration?.let { currentRegistration ->
@@ -189,15 +195,13 @@ internal class GatewaySessionHandler(
             return null
         }
 
-        val routeAccepted = registration?.let { synchronizePresence(it) } ?: true
-        return if (routeAccepted) {
+        val presenceResult =
+            registration?.let { synchronizePresence(it) } ?: PresenceRegistrationResult.ACCEPTED
+        return if (presenceResult == PresenceRegistrationResult.ACCEPTED) {
             activateConnection(connection)
             connection
         } else {
-            connection.sendError(
-                code = "ROUTE_REJECTED",
-                message = "Presence route rejected"
-            )
+            connection.sendRouteRejected(presenceResult)
             null
         }
     }
@@ -228,20 +232,16 @@ internal class GatewaySessionHandler(
                 expectedNodeId = nodeId
             )
 
-        when {
-            routeValidationFailure != null ->
-                connection.sendError(
-                    code = "INVALID_ROUTE_REFRESH",
-                    message = "Signed route is invalid: ${routeValidationFailure.name}"
-                )
+        if (routeValidationFailure != null) {
+            connection.sendError(
+                code = "INVALID_ROUTE_REFRESH",
+                message = "Signed route is invalid: ${routeValidationFailure.name}"
+            )
+            return
+        }
 
-            !synchronizePresence(registration) ->
-                connection.sendError(
-                    code = "ROUTE_REJECTED",
-                    message = "Presence route rejected"
-                )
-
-            else -> {
+        when (val presenceResult = synchronizePresence(registration)) {
+            PresenceRegistrationResult.ACCEPTED -> {
                 val aliases = registration.route.aliases.orEmpty()
                 connections.updateRoutingAliases(
                     connection = connection,
@@ -252,10 +252,17 @@ internal class GatewaySessionHandler(
                 )
                 pushActions.deliverPending(connection)
             }
+
+            else -> {
+                connections.updateRoutingAliases(connection, emptyList())
+                connection.sendRouteRejected(presenceResult)
+            }
         }
     }
 
-    private suspend fun synchronizePresence(registration: ClientRouteRegistration): Boolean =
+    private suspend fun synchronizePresence(
+        registration: ClientRouteRegistration
+    ): PresenceRegistrationResult =
         synchronizePresenceRegistration(
             presence = presence,
             registration = registration
@@ -277,10 +284,26 @@ internal class GatewaySessionHandler(
 internal suspend fun synchronizePresenceRegistration(
     presence: PresenceClient,
     registration: ClientRouteRegistration
-): Boolean =
-    runCatching {
+): PresenceRegistrationResult =
+    try {
         presence.register(registration)
-    }.getOrDefault(false)
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        PresenceRegistrationResult.REJECTED
+    }
+
+private suspend fun GatewayConnection.sendRouteRejected(result: PresenceRegistrationResult) {
+    sendError(
+        code = "ROUTE_REJECTED",
+        message =
+            if (result == PresenceRegistrationResult.PHONE_VERIFICATION_FAILED) {
+                "Phone verification failed"
+            } else {
+                "Presence route rejected"
+            }
+    )
+}
 
 internal data class GatewayPushActions(
     val deliverPending: (GatewayConnection) -> Unit,

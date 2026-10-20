@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
-import com.cbgm.sparrow.feature.chats.domain.model.IndicatorType
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerAvailability
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.ComposerAvailabilityUi
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.ComposerPreviewUi
@@ -12,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.Indicat
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiType
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageInputState
+import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_edit_message
 import com.cbgm.sparrow.resources.feature_chats_reply_you
@@ -23,10 +23,10 @@ fun MessageComposerAvailability.toComposerAvailabilityUi() = ComposerAvailabilit
     canAddAttachment = canAddAttachment
 )
 
-fun IndicatorType.toIndicatorUiType() = when (this) {
-    IndicatorType.NONE -> IndicatorUiType.NONE
-    IndicatorType.TYPING -> IndicatorUiType.TYPING
-    IndicatorType.VOICE -> IndicatorUiType.VOICE
+fun ConversationIndicator.toIndicatorUiType() = when (this) {
+    ConversationIndicator.NONE -> IndicatorUiType.NONE
+    ConversationIndicator.TYPING -> IndicatorUiType.TYPING
+    ConversationIndicator.VOICE -> IndicatorUiType.VOICE
 }
 
 @Composable

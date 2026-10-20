@@ -59,6 +59,14 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().groupMetadataDao()
+        }
+
+        single {
+            get<SparrowDatabase>().contactProfilePictureDao()
+        }
+
+        single {
             get<SparrowDatabase>().identityExchangeDao()
         }
 

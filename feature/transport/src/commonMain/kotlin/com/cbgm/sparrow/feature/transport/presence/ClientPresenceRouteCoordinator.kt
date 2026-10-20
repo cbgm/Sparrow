@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.transport.presence
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
@@ -9,7 +10,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -25,21 +28,33 @@ private const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
 internal class ClientPresenceRouteCoordinator(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
-    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider
+    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
+    private val localPhoneNumberProvider: LocalPhoneNumberProvider
 ) {
+    // Starts the public gateway information request while the WebSocket is still opening, so
+    // both cold HTTPS connections overlap instead of running one after the other.
+    fun prefetchGatewayInformation(
+        scope: CoroutineScope,
+        serverUrl: String
+    ): Deferred<Result<GatewayInformationSnapshot>> =
+        scope.async { runCatching { httpClient.fetchGatewayInformation(serverUrl) } }
+
     fun createSession(
         scope: CoroutineScope,
         connection: PresenceRouteConnection,
         publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
         onReady: (Set<String>) -> Unit,
-        onFailure: suspend (Throwable) -> Unit
+        onFailure: suspend (Throwable) -> Unit,
+        prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>? = null
     ): ClientPresenceRouteSession =
         ClientPresenceRouteSession(
             scope = scope,
             connection = connection,
+            prefetchedGatewayInformation = prefetchedGatewayInformation,
             httpClient = httpClient,
             registrationFactory = registrationFactory,
             localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
+            localPhoneNumberProvider = localPhoneNumberProvider,
             publishRoute = publishRoute,
             onReady = onReady,
             onFailure = onFailure
@@ -49,9 +64,11 @@ internal class ClientPresenceRouteCoordinator(
 internal class ClientPresenceRouteSession(
     private val scope: CoroutineScope,
     private val connection: PresenceRouteConnection,
+    private var prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>?,
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
+    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
     private val onReady: (Set<String>) -> Unit,
     private val onFailure: suspend (Throwable) -> Unit
@@ -64,6 +81,7 @@ internal class ClientPresenceRouteSession(
     private var gatewayTimeObservedAt: TimeMark? = null
     private var expirationRetries = 0
     private var recoveringExpiredRoute = false
+    private var sentPhoneVerificationToken = false
 
     private val runner =
         scope.launch {
@@ -123,6 +141,7 @@ internal class ClientPresenceRouteSession(
             is ClientPresenceRouteEffect.AnnounceReady -> {
                 expirationRetries = 0
                 recoveringExpiredRoute = false
+                clearSentPhoneVerificationToken()
                 logger.info {
                     "Presence route ready for ${connection.routingId}; aliases=${effect.aliases.size}"
                 }
@@ -130,6 +149,8 @@ internal class ClientPresenceRouteSession(
             }
 
             is ClientPresenceRouteEffect.Fail -> {
+                // A rejected token is not sent again; the reconnect registers without it.
+                clearSentPhoneVerificationToken()
                 if (recoveringExpiredRoute || effect.error is PresenceRouteRefreshRejectedException) {
                     // Expected transport housekeeping failure; reconnect will retry.
                     // Error logging here would display an intrusive global snackbar.
@@ -142,30 +163,34 @@ internal class ClientPresenceRouteSession(
         }
     }
 
-    private suspend fun loadGatewayInformation() {
-        runCatching {
-            val response = httpClient.get(gatewayInformationUrl(connection.serverUrl))
-            val gatewayInformation = response.body<GatewayNodeInformation>()
-            val serverTimeEpochMilliseconds =
-                response.headers[SERVER_TIME_HEADER]
-                    ?.toLongOrNull()
+    // The phone number verified at sign-up is proven once, with the first accepted route.
+    private suspend fun loadPhoneVerificationToken(): String? =
+        localPhoneNumberProvider
+            .getPhoneVerificationToken()
+            .onFailure { failure -> logger.warn(failure) { "Could not load the phone token" } }
+            .getOrNull()
 
-            // Keep a monotonic observation as well as the original epoch value.
-            // Changing the device wall clock while Sparrow is open must not
-            // manufacture a route that expires in the past or exceeds the TTL.
-            gatewayTimeObservedAt = serverTimeEpochMilliseconds?.let {
-                TimeSource.Monotonic.markNow()
-            }
-            gatewayInformation.copy(
-                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
-                serverTimeObservedAtEpochMilliseconds =
-                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
-            )
-        }.fold(
-            onSuccess = { gatewayInformation ->
+    private suspend fun clearSentPhoneVerificationToken() {
+        if (!sentPhoneVerificationToken) return
+        sentPhoneVerificationToken = false
+        localPhoneNumberProvider
+            .clearPhoneVerificationToken()
+            .onFailure { failure -> logger.warn(failure) { "Could not clear the phone token" } }
+    }
+
+    // The first load uses the prefetched response; refreshes and expiration recovery always
+    // fetch again because they need a current server time.
+    private suspend fun loadGatewayInformation() {
+        val prefetched = prefetchedGatewayInformation?.also { prefetchedGatewayInformation = null }
+        val result =
+            prefetched?.await()?.takeIf(Result<GatewayInformationSnapshot>::isSuccess)
+                ?: runCatching { httpClient.fetchGatewayInformation(connection.serverUrl) }
+        result.fold(
+            onSuccess = { snapshot ->
+                gatewayTimeObservedAt = snapshot.observedAt
                 events.send(
                     ClientPresenceRouteEvent.GatewayInformationLoaded(
-                        gatewayInformation = gatewayInformation
+                        gatewayInformation = snapshot.information
                     )
                 )
             },
@@ -202,9 +227,11 @@ internal class ClientPresenceRouteSession(
             aliases = aliases
         ).fold(
             onSuccess = { registration ->
+                val token = if (aliases.isEmpty()) null else loadPhoneVerificationToken()
+                sentPhoneVerificationToken = token != null
                 events.send(
                     ClientPresenceRouteEvent.RegistrationPrepared(
-                        registration = registration
+                        registration = registration.copy(phoneVerificationToken = token)
                     )
                 )
             },
@@ -237,6 +264,33 @@ internal class ClientPresenceRouteSession(
                 events.send(ClientPresenceRouteEvent.RefreshDue)
             }
     }
+}
+
+internal class GatewayInformationSnapshot(
+    val information: GatewayNodeInformation,
+    val observedAt: TimeMark?
+)
+
+internal suspend fun HttpClient.fetchGatewayInformation(serverUrl: String): GatewayInformationSnapshot {
+    val response = get(gatewayInformationUrl(serverUrl))
+    val gatewayInformation = response.body<GatewayNodeInformation>()
+    val serverTimeEpochMilliseconds =
+        response.headers[SERVER_TIME_HEADER]
+            ?.toLongOrNull()
+
+    // Keep a monotonic observation as well as the original epoch value.
+    // Changing the device wall clock while Sparrow is open must not
+    // manufacture a route that expires in the past or exceeds the TTL.
+    val observedAt = serverTimeEpochMilliseconds?.let { TimeSource.Monotonic.markNow() }
+    return GatewayInformationSnapshot(
+        information =
+            gatewayInformation.copy(
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
+                serverTimeObservedAtEpochMilliseconds =
+                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
+            ),
+        observedAt = observedAt
+    )
 }
 
 internal data class PresenceRouteConnection(

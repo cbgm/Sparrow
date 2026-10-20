@@ -47,12 +47,12 @@ See [Server runtime, build and deployment](runtime-build-deployment.md#independe
 
 ## Unified server manager
 
-The current operator entry point is the unified tooling under `server/unified`, not the older separate Control-Plane launcher flow.
+The current operator entry point is the unified tooling under `server/installer`, not the older separate Control-Plane launcher flow.
 
 Windows source checkout:
 
 ```text
-server\unified\Build-SparrowServer.cmd
+python3 server/installer/build.py
 ```
 
 builds `dist/sparrow-server.zip`. Inside the unified runtime, `Start-SparrowServer.cmd` opens the Windows manager. Choose **Control Plane** or **Combined**, then use **Install / Start**.

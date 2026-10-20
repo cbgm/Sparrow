@@ -60,6 +60,15 @@ nav:
       - Dependency Rules: architecture/dependency-rules.md
       - Module Types: architecture/module-types.md
       - Messaging Boundary: architecture/messaging-boundary.md
+      - Conversation Orchestration: architecture/conversation-orchestration.md
+      - Workflow Catalog:
+          - Index: architecture/workflows/index.md
+          - Delivery: architecture/workflows/delivery.md
+          - Message: architecture/workflows/message.md
+          - Group State: architecture/workflows/groupstate.md
+          - Membership: architecture/workflows/membership.md
+          - Direct Chat Lifecycle: architecture/workflows/lifecycle.md
+          - Incoming Packets: architecture/workflows/incoming.md
       - Runtime Flows: architecture/runtime-flows.md
       - Startup Architecture: architecture/startup.md
       - Persistence: architecture/persistence.md

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.packet
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.protocol.avatar.GroupAvatarMetadata
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 

@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.voice.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.voice.device.VoicePlayer
 import com.cbgm.sparrow.feature.voice.device.VoiceRecorder
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceComposerPhase
@@ -113,25 +115,28 @@ internal class VoiceRepositoryImpl(
             .onFailure { error -> logger.error(error) { "Could not play voice recording preview" } }
     }
 
-    override suspend fun cancelRecording() {
-        recorder.cancel()
-        resetComposer()
-    }
-
-    override fun resetComposer() {
-        recordingTicker?.cancel()
-        if (previewPrepared) {
-            playbackTicker?.cancel()
-            player.stop()
+    override suspend fun cancelRecording(): Result<Unit> =
+        safeSuspendCall {
+            recorder.cancel()
+            resetComposer().getOrThrow()
         }
-        previewPlaying = false
-        previewPrepared = false
-        recording = null
-        recordingStartedAt = null
-        composerState.value = VoiceComposerState()
-    }
 
-    override fun currentRecording(): VoiceRecording? = recording
+    override fun resetComposer(): Result<Unit> =
+        safeCall {
+            recordingTicker?.cancel()
+            if (previewPrepared) {
+                playbackTicker?.cancel()
+                player.stop()
+            }
+            previewPlaying = false
+            previewPrepared = false
+            recording = null
+            recordingStartedAt = null
+            composerState.value = VoiceComposerState()
+        }
+
+    override fun currentRecording(): Result<VoiceRecording?> =
+        safeCall { recording }
 
     override fun toggleMessagePlayback(
         attachmentId: String,
@@ -190,25 +195,26 @@ internal class VoiceRepositoryImpl(
             .onFailure { error -> logger.error(error) { "Could not play voice message $attachmentId" } }
     }
 
-    override fun startMessageScrub(attachmentId: String) {
-        playbackTicker?.cancel()
-        stopPreviewPlayback()
+    override fun startMessageScrub(attachmentId: String): Result<Unit> =
+        safeCall {
+            playbackTicker?.cancel()
+            stopPreviewPlayback()
 
-        val current = playbackState.value
-        scrubbingAttachmentId = attachmentId
-        resumeAfterScrub =
-            current.attachmentId == attachmentId &&
-            preparedMessageAttachmentId == attachmentId &&
-            current.isPlaying
+            val current = playbackState.value
+            scrubbingAttachmentId = attachmentId
+            resumeAfterScrub =
+                current.attachmentId == attachmentId &&
+                preparedMessageAttachmentId == attachmentId &&
+                current.isPlaying
 
-        if (current.attachmentId == attachmentId && preparedMessageAttachmentId == attachmentId) {
-            player.pause()
-        } else {
-            player.stop()
-            preparedMessageAttachmentId = null
-            playbackState.value = VoicePlaybackState()
+            if (current.attachmentId == attachmentId && preparedMessageAttachmentId == attachmentId) {
+                player.pause()
+            } else {
+                player.stop()
+                preparedMessageAttachmentId = null
+                playbackState.value = VoicePlaybackState()
+            }
         }
-    }
 
     override fun finishMessageScrub(
         attachmentId: String,

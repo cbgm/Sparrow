@@ -6,5 +6,6 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepos
 class GetMailboxContactStatesUseCase(
     private val repository: ContactTransportRepository
 ) {
-    suspend operator fun invoke(): List<MailboxContactState> = repository.getMailboxContactStates()
+    suspend operator fun invoke(): Result<List<MailboxContactState>> =
+        repository.getMailboxContactStates()
 }

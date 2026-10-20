@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.media.device
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned

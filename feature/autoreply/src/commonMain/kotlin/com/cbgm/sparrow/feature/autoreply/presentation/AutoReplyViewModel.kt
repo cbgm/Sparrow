@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.autoreply.presentation
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ActivateAutoReplyUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.CreateAutoReplyUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.DeactivateAutoReplyUseCase

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.protocol.outbox.OutboxProcessingResult
 import com.cbgm.sparrow.protocol.outbox.OutboxProcessor

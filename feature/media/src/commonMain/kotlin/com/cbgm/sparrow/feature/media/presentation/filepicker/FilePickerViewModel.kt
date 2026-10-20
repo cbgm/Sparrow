@@ -2,10 +2,10 @@ package com.cbgm.sparrow.feature.media.presentation.filepicker
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserDirectory
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserEntry
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
@@ -102,7 +102,7 @@ class FilePickerViewModel(
     }
 
     private fun refreshAccessAndOpenRoot() {
-        if (!checkAccess()) {
+        if (!checkAccess().getOrDefault(false)) {
             _uiState.update { state ->
                 state.copy(
                     requiresFileAccess = true,
@@ -249,12 +249,13 @@ class FilePickerViewModel(
                     selectedReferences.forEach { reference ->
                         prepared += prepareMediaSelection
                             .fromFileBrowserContent(readFile(reference, currentSession.maxFileBytes).getOrThrow())
+                            .getOrThrow()
                             .toUi()
                     }
                 } catch (error: Exception) {
                     prepared.forEach { selection ->
                         selection.localFilePaths.forEach { path ->
-                            runCatching { mediaFiles.delete(path) }
+                            mediaFiles.delete(path)
                         }
                     }
                     throw error

@@ -1,6 +1,6 @@
 # Project structure
 
-The current `settings.gradle.kts` declares **47 Gradle modules**.
+The current `settings.gradle.kts` declares **55 Gradle modules**.
 
 ## Client/shared modules
 
@@ -27,8 +27,15 @@ The current `settings.gradle.kts` declares **47 Gradle modules**.
 | `:feature:autoreply` | automatic reply rules |
 | `:feature:avatar` | avatar observation/editing/cache |
 | `:feature:linkpreview` | link extraction/cache/rendering |
-| `:feature:chats` | Direct/Group messages, operations, receipts, pins and chat UI |
-| `:feature:conversationorchestration` | cross-feature identity/invite/membership/chat workflows |
+| `:feature:chats` | Direct/Group chat UI plus read-only conversation/message data; submits writes as commands |
+| `:feature:conversationorchestration:api` | `ConversationOrchestrator`, `ConversationCommand`, states/results |
+| `:feature:conversationorchestration:engine` | workflow state-machine runtime, locks, command routing |
+| `:feature:conversationorchestration:delivery` | delivery state, outgoing transport policy, mailbox/routing |
+| `:feature:conversationorchestration:message` | Direct/Group messages, operations, polls, forwarding |
+| `:feature:conversationorchestration:groupstate` | group title, description, avatar, pin and expense board |
+| `:feature:conversationorchestration:membership` | group administration, joining a group and verification |
+| `:feature:conversationorchestration:lifecycle` | direct chat lifecycle: open, invite, reconnect, delete, identity/invitation results, recovery |
+| `:feature:conversationorchestration:incoming` | incoming packet routing and `Receive*` workflows |
 | `:feature:membership` | group membership/security/admin lifecycle |
 | `:feature:attachments` | encrypted blob transfer/cache/storage and attachment UI state |
 | `:feature:media` | gallery/camera/files/media viewers/export |
@@ -47,7 +54,7 @@ The current `settings.gradle.kts` declares **47 Gradle modules**.
 
 The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push` and `:server:link-preview`.
 
-Deployment folders under `server/control-plane`, `server/community-node`, `server/unified` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
+Deployment folders under `server/control-plane`, `server/community-node`, `server/installer` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
 
 ## Feature layering
 
@@ -67,5 +74,7 @@ di/
 ```
 
 Cross-feature shared models are placed in an explicit shared module rather than duplicated inside features. The current message-part hierarchy is the main example: `MessagePartDto` / `MessagePart` / `MessagePartUi` live under `:core:base`.
+
+Conversation workflows use a different layout (`domain/workflow/<area>/…Workflow.kt` plus `runtime/` for observers); see [Conversation orchestration](../architecture/conversation-orchestration.md).
 
 See the generated [Module catalog](../generated/modules.md) for the source-derived dependency/declaration inventory.

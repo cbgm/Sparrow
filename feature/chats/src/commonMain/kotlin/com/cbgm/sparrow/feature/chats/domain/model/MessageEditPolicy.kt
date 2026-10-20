@@ -1,14 +1,19 @@
 package com.cbgm.sparrow.feature.chats.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Contact
-import com.cbgm.sparrow.core.messagepart.domain.model.File
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.Location
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.Text
-import com.cbgm.sparrow.core.messagepart.domain.model.Video
-import com.cbgm.sparrow.core.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.base.messagepart.domain.model.File
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Location
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Video
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Voice
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
@@ -41,6 +46,9 @@ private fun List<MessagePart>.hasEditableTextOnlyContent(): Boolean {
             part is Location ||
             part is Contact ||
             part is Voice ||
-            part is Poll
+            part is Poll ||
+            part is Expense ||
+            part is ExpenseBoard ||
+            part is PaymentTransfer || part is ExpenseBoardClosed
     }
 }

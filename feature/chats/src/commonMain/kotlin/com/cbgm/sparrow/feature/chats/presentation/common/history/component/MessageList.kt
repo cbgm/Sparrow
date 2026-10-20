@@ -22,21 +22,23 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.expenseActivityPartOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseActivityMessage
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import kotlinx.coroutines.flow.first
 
@@ -118,51 +120,67 @@ internal fun MessageList(
                     state = dissolvingListState
                 ) {
                     val systemType = message.groupExtension?.type
-                    if (systemType != null && systemType != ChatMessageType.USER) {
-                        MembershipSystemMessage(
-                            type = systemType,
-                            memberName = message.senderName
-                        )
-                    } else {
-                        MessageBubble(
-                            message = message,
-                            onRetryClick = { onRetryMessage(message.id) },
-                            onSafetyDetailsClick = { warning ->
-                                onSafetyWarningClick(
-                                    message.id,
-                                    message.groupExtension?.senderContactId,
-                                    warning
-                                )
-                            },
-                            onAttachmentClick = { attachmentId ->
-                                onAttachmentClick(
-                                    message.id,
-                                    attachmentId
-                                )
-                            },
-                            onContactClick = onContactClick,
-                            onReplyPreviewClick = replyJumpState.jumpTo,
-                            onContextMessageRequested = onContextMessageRequested,
-                            onReactionsClick = { anchor ->
-                                onReactionBurstRequested(
-                                    MessageReactionBurst(
-                                        reactions = message.reactions,
-                                        anchor = anchor
+                    val expensePart = message.expenseActivityPartOrNull()
+
+                    when {
+                        systemType != null && systemType != ChatMessageType.USER -> {
+                            MembershipSystemMessage(
+                                type = systemType,
+                                memberName = message.senderName
+                            )
+                        }
+
+                        expensePart != null -> {
+                            ExpenseActivityMessage(
+                                part = expensePart,
+                                senderName = message.senderName,
+                                isMine = message.isMine,
+                                isFailed = message.deliveryStatus == MessageDeliveryStatus.FAILED,
+                                onRetry = { onRetryMessage(message.id) }
+                            )
+                        }
+
+                        else -> {
+                            MessageBubble(
+                                message = message,
+                                onRetryClick = { onRetryMessage(message.id) },
+                                onSafetyDetailsClick = { warning ->
+                                    onSafetyWarningClick(
+                                        message.id,
+                                        message.groupExtension?.senderContactId,
+                                        warning
                                     )
-                                )
-                            },
-                            onPollVoteSubmit = onPollVoteSubmit,
-                            onPollClose = onPollClose,
-                            isContextSelected = selectedContextMessageId == message.id,
-                            isSearchHighlighted =
-                                message.id == searchTargetState.highlightedMessageId ||
-                                    message.id == replyJumpState.highlightedMessageId,
-                            leadingContent = {
-                                if (!message.isMine) {
-                                    itemLeadingContent?.invoke(message)
+                                },
+                                onAttachmentClick = { attachmentId ->
+                                    onAttachmentClick(
+                                        message.id,
+                                        attachmentId
+                                    )
+                                },
+                                onContactClick = onContactClick,
+                                onReplyPreviewClick = replyJumpState.jumpTo,
+                                onContextMessageRequested = onContextMessageRequested,
+                                onReactionsClick = { anchor ->
+                                    onReactionBurstRequested(
+                                        MessageReactionBurst(
+                                            reactions = message.reactions,
+                                            anchor = anchor
+                                        )
+                                    )
+                                },
+                                onPollVoteSubmit = onPollVoteSubmit,
+                                onPollClose = onPollClose,
+                                isContextSelected = selectedContextMessageId == message.id,
+                                isSearchHighlighted =
+                                    message.id == searchTargetState.highlightedMessageId ||
+                                        message.id == replyJumpState.highlightedMessageId,
+                                leadingContent = {
+                                    if (!message.isMine) {
+                                        itemLeadingContent?.invoke(message)
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -272,12 +290,13 @@ private fun MessageListPreview() {
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.READ,
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Yes, that sounds good 👍",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "3",
@@ -286,12 +305,13 @@ private fun MessageListPreview() {
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.READ,
                         senderName = "Chris",
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Should we meet around 18:00? Or do we not? Tell me",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "2",
@@ -299,12 +319,13 @@ private fun MessageListPreview() {
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
                         contentStatus = MessageContentStatus.READABLE,
                         deliveryStatus = MessageDeliveryStatus.DELIVERED,
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "I'm free this evening.",
                                 isContentFailed = false
                             )
+                        )
                     ),
                     MessageBubbleUi(
                         id = "1",
@@ -321,12 +342,13 @@ private fun MessageListPreview() {
                                     reactedByMe = false
                                 )
                             ),
-                        textPart =
+                        parts = listOf(
                             TextUi(
                                 id = "preview-text",
                                 text = "Hey! How are you?",
                                 isContentFailed = false
                             )
+                        )
                     )
                 )
             }

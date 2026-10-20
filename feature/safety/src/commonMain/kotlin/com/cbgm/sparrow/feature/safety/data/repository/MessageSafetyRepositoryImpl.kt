@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.safety.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyLocalDataSource
 import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessmentEntity
@@ -39,19 +41,22 @@ class MessageSafetyRepositoryImpl(
             initialValue = emptyMap()
         )
 
-    override fun updateState(state: MessageSafetyState) {
-        mutableState.value = state
-    }
+    override fun updateState(state: MessageSafetyState): Result<Unit> =
+        safeCall {
+            mutableState.value = state
+        }
 
-    override suspend fun getUnassessedMessages(limit: Int): List<MessageSafetyCandidate> =
-        localDataSource
-            .getMessagesMissingAssessment(
-                analyzerVersion = ANALYZER_VERSION,
-                limit = limit
-            ).map { source -> source.toMessageSafetyCandidate() }
+    override suspend fun getUnassessedMessages(limit: Int): Result<List<MessageSafetyCandidate>> =
+        safeSuspendCall {
+            localDataSource
+                .getMessagesMissingAssessment(
+                    analyzerVersion = ANALYZER_VERSION,
+                    limit = limit
+                ).map { source -> source.toMessageSafetyCandidate() }
+        }
 
-    override suspend fun getUnassessedMessageCount(): Int =
-        localDataSource.getUnassessedMessageCount(ANALYZER_VERSION)
+    override suspend fun getUnassessedMessageCount(): Result<Int> =
+        safeSuspendCall { localDataSource.getUnassessedMessageCount(ANALYZER_VERSION) }
 
     override fun observeUnassessedMessageCount(): Flow<Int> =
         localDataSource.observeUnassessedMessageCount(ANALYZER_VERSION)
@@ -59,22 +64,25 @@ class MessageSafetyRepositoryImpl(
     override suspend fun saveAssessment(
         messageId: String,
         assessment: MessageSafetyAssessment
-    ) {
-        localDataSource.upsertAssessment(
-            assessment.toMessageSafetyAssessmentEntity(
-                messageId = messageId,
-                analyzerVersion = ANALYZER_VERSION
+    ): Result<Unit> =
+        safeSuspendCall {
+            localDataSource.upsertAssessment(
+                assessment.toMessageSafetyAssessmentEntity(
+                    messageId = messageId,
+                    analyzerVersion = ANALYZER_VERSION
+                )
             )
-        )
-    }
+        }
 
-    override suspend fun deleteAllAssessments() {
-        localDataSource.deleteAllAssessments()
-    }
+    override suspend fun deleteAllAssessments(): Result<Unit> =
+        safeSuspendCall {
+            localDataSource.deleteAllAssessments()
+        }
 
-    override suspend fun deleteAssessmentsForOtherAnalyzers() {
-        localDataSource.deleteAssessmentsForOtherAnalyzers(ANALYZER_VERSION)
-    }
+    override suspend fun deleteAssessmentsForOtherAnalyzers(): Result<Unit> =
+        safeSuspendCall {
+            localDataSource.deleteAssessmentsForOtherAnalyzers(ANALYZER_VERSION)
+        }
 
     private companion object {
         const val ANALYZER_VERSION = 4

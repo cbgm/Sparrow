@@ -160,10 +160,9 @@ internal class GroupMembershipRepositoryImpl(
 
     override suspend fun authorizeIncomingGroupRemoval(
         packet: GroupMemberRemovedPacket,
-        senderContactId: String,
-        pendingOwnerSigningPublicKey: ByteArray?
+        senderContactId: String
     ): Result<Boolean> = runCatching {
-        incomingRemoval.authorize(packet, senderContactId, pendingOwnerSigningPublicKey)
+        incomingRemoval.authorize(packet, senderContactId)
     }
 
     override suspend fun completeIncomingGroupRemoval(packet: GroupMemberRemovedPacket): Result<Unit> =

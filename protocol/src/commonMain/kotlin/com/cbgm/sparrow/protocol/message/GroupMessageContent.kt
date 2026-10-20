@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.protocol.message
 
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.messagepart.requireValidWireMessageParts
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -17,7 +17,7 @@ data class GroupMessageContent(
     val replyToMessageId: String? = null
 ) {
     init {
-        parts.requireValidWireMessageParts(allowPolls = true)
+        parts.requireValidWireMessageParts(allowPolls = true, allowExpenses = true)
         require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
             "Reply message ID must not be blank"
         }

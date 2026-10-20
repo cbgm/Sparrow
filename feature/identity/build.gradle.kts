@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.crypto)
             implementation(libs.libsodium)
             implementation(projects.protocol)
+            implementation(projects.feature.media)
             implementation(projects.core.ui)
             implementation(projects.feature.avatar)
 
@@ -29,8 +30,8 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(libs.zxing.core)
             implementation(libs.play.services.auth)
+            implementation(libs.firebase.auth)
         }
 
         commonTest.dependencies {

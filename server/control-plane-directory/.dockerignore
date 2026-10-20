@@ -4,6 +4,8 @@
 private/
 **/__pycache__/
 test_*.py
-Start-SparrowDirectory.ps1
-Start-SparrowDirectory.cmd
+Start-SparrowDirectory.*
+directory_window.py
+directory_installer.py
+ui_window.py
 *.zip

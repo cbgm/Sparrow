@@ -20,6 +20,16 @@ buildkonfig {
             ),
             const = true
         )
+        // Debug builds only: a fake SMS with this code replaces the Firebase phone verification.
+        buildConfigField(
+            STRING,
+            "DEBUG_SMS_CODE",
+            localProperties.get(
+                key = "DEBUG_SMS_CODE",
+                defaultValue = ""
+            ),
+            const = true
+        )
     }
 
     defaultConfigs("release") {
@@ -32,6 +42,7 @@ buildkonfig {
             ),
             const = true
         )
+        buildConfigField(STRING, "DEBUG_SMS_CODE", "", const = true)
     }
 }
 
@@ -61,15 +72,25 @@ kotlin {
             implementation(projects.feature.attachments)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
-            implementation(projects.feature.conversationorchestration)
+            implementation(projects.feature.conversationorchestration.api)
+            implementation(projects.feature.conversationorchestration.engine)
+            implementation(projects.feature.conversationorchestration.delivery)
+            implementation(projects.feature.conversationorchestration.message)
+            implementation(projects.feature.conversationorchestration.groupstate)
+            implementation(projects.feature.conversationorchestration.membership)
+            implementation(projects.feature.conversationorchestration.lifecycle)
+            implementation(projects.feature.conversationorchestration.incoming)
             implementation(projects.feature.invite)
             implementation(projects.feature.identity)
             implementation(projects.feature.media)
+            implementation(projects.feature.ocr)
             implementation(projects.feature.membership)
             implementation(projects.feature.voice)
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.messaging)
             implementation(projects.feature.onboarding)
+            implementation(projects.feature.expenses)
+            implementation(projects.feature.payment)
             implementation(projects.feature.polls)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)

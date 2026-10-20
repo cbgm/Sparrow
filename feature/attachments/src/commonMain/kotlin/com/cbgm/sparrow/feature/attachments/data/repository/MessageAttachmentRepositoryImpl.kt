@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.AttachmentContentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource

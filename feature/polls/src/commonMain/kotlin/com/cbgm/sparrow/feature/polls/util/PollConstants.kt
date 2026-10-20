@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.polls.util
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
 
 object PollConstants {
     const val MIN_OPTIONS = PollPolicy.MIN_OPTIONS

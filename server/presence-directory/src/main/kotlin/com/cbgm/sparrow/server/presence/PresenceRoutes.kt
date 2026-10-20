@@ -69,8 +69,16 @@ private fun Route.installRouteRegistration(runtime: PresenceRuntime) {
             !authorized ->
                 call.respond(HttpStatusCode.Unauthorized)
 
+            !runtime.phoneVerification.accepts(registration) ->
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
+                )
+
             else ->
-                call.respondToRegistration(runtime.store.register(registration))
+                call.respondToRegistration(
+                    runtime.store.register(registration.copy(phoneVerificationToken = null))
+                )
         }
     }
 }

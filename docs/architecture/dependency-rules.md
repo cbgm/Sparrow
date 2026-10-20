@@ -22,11 +22,11 @@ quality/*
 
 1. **Keep `androidApp` thin.** Platform implementations belong in the owning feature/core module's platform source set.
 2. **Presentation calls domain use cases.** ViewModels should not reach directly into DAOs, datasources or repository implementations.
-3. **Use-case composition is allowed.** A use case may call another use case when it is the explicit workflow/orchestration boundary. `ConversationFlowHandler` and recovery/membership workflows rely on this.
+3. **Workflows compose use cases.** Cross-feature sequencing belongs in a workflow state machine in `:feature:conversationorchestration:*`; its `perform(step)` calls one use case/repository/nested workflow per step, and its pure `transition` decides the next step.
 4. **Repositories do not call unrelated repositories or use cases.** Repository implementations own their own datasources/mappers; cross-feature workflows belong above repositories.
 5. **Datasources do not call repositories.** Datasources face storage/network/platform primitives.
-6. **Feature ownership remains strict.** `:feature:invite` owns invitation lifecycle, `:feature:identity` identity/trust/recovery, `:feature:membership` Group membership/security, `:feature:chats` conversation/message semantics.
-7. **Cross-feature workflows belong in `:feature:conversationorchestration`.** Do not move membership logic back into Chats or identity logic into Invite.
+6. **Feature ownership remains strict.** `:feature:invite` owns invitation lifecycle, `:feature:identity` identity/trust/recovery, `:feature:membership` Group membership/security, `:feature:chats` conversation presentation and read-only data access.
+7. **Conversation writes belong in `:feature:conversationorchestration:*`.** Chats depends only on `:feature:conversationorchestration:api` and submits commands through `ConversationOrchestrator`. The orchestration modules are layered `delivery → message → groupstate → membership → invite → incoming`; a lower layer never depends on a higher one and uses a port instead (e.g. `DirectReauthorizationPort`). Do not move membership logic back into Chats or identity logic into Invite.
 8. **`:feature:messaging` stays generic.** It executes the persisted outbox/incoming queue and must not decide Direct-vs-Group business rules.
 9. **Domain is implementation-independent.** No Compose/Room/Ktor implementation/platform framework imports in common domain code.
 10. **Representation suffixes are meaningful.** `...Entity` = persistence, `...Dto` = data representation, unsuffixed = domain, `...Ui` = presentation.
@@ -40,15 +40,16 @@ quality/*
 
 ```mermaid
 flowchart LR
-    UI[ViewModel] --> UC[Use case]
-    UC --> FLOW[ConversationFlowHandler]
+    UI[Chats ViewModel] --> ORCH[ConversationOrchestrator]
+    ORCH --> ENG[WorkflowEngine]
+    ENG --> FLOW[ConversationWorkflow state machine]
     FLOW --> IUC[Invite use case]
     FLOW --> IDUC[Identity use case]
     FLOW --> MUC[Membership use case]
-    FLOW --> PORT[ConversationPort]
+    FLOW --> REPO[orchestration repository]
 ```
 
-The orchestration layer may compose use cases because that is precisely its responsibility. What remains forbidden is hiding that coordination inside `InvitationRepositoryImpl`, `GroupMembershipRepositoryImpl`, a datasource, or a Room DAO.
+Workflows may compose use cases because that is precisely their responsibility. See [Conversation orchestration](conversation-orchestration.md). What remains forbidden is hiding that coordination inside `InvitationRepositoryImpl`, `GroupMembershipRepositoryImpl`, a datasource, or a Room DAO.
 
 ## Generated reference
 

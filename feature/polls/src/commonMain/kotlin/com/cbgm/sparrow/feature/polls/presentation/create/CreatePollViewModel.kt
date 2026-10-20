@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.polls.presentation.create
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSourceUi
@@ -154,7 +154,7 @@ class CreatePollViewModel(
         mediaCleanupScope.launch {
             media.flatMap { it.localFilePaths }
                 .distinct()
-                .forEach { path -> runCatching { mediaFiles.delete(path) } }
+                .forEach { path -> mediaFiles.delete(path) }
         }
     }
 

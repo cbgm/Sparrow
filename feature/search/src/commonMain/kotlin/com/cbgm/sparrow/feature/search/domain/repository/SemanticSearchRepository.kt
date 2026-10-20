@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface SemanticSearchRepository {
     val state: StateFlow<SemanticSearchState>
 
-    suspend fun prepare()
+    suspend fun prepare(): Result<Unit>
 
-    suspend fun disable()
+    suspend fun disable(): Result<Unit>
 
     suspend fun search(
         query: String,
         limit: Int = 30
-    ): List<MessageSearchResult>
+    ): Result<List<MessageSearchResult>>
 }

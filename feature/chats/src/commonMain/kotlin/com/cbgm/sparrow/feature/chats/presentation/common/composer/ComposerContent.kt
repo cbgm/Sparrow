@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.common.composer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.device.rememberCurrentLocationLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.component.MessageControl
@@ -33,6 +33,10 @@ fun ComposerContent(
     onLocationCaptured: (CurrentLocation) -> Unit,
     onLocationCaptureFailed: (String) -> Unit,
     onPollAttachmentClick: (() -> Unit)? = null,
+    onActivateExpensesClick: (() -> Unit)? = null,
+    onCloseExpensesClick: (() -> Unit)? = null,
+    onAddExpenseClick: (() -> Unit)? = null,
+    isExpensesActive: Boolean = false,
     onAttachmentError: (String) -> Unit,
     onVoiceSendClick: () -> Unit
 ) {
@@ -89,6 +93,10 @@ fun ComposerContent(
                     currentLocationLauncher.launch()
                 },
                 onClickPoll = onPollAttachmentClick,
+                onClickActivateExpenses = onActivateExpensesClick,
+                onClickCloseExpenses = onCloseExpensesClick,
+                onClickAddExpense = onAddExpenseClick,
+                isExpensesActive = isExpensesActive,
                 onVoiceSendClick = onVoiceSendClick
             )
     )

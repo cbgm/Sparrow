@@ -621,24 +621,18 @@ jobs:
           done
 
       - name: Build unified server installer
-        shell: pwsh
+        shell: bash
         env:
           IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          $owner = "${{ github.repository_owner }}".ToLowerInvariant()
-          $imagePrefix = "ghcr.io/$owner/sparrow"
-
-          ./server/unified/New-SparrowServerBundle.ps1 `
-              -OutputDirectory dist-server `
-              -ImagePrefix $imagePrefix `
-              -ImageTag $env:IMAGE_TAG
-
-          $bundle = 'dist-server/sparrow-server.zip'
-          if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
-              throw 'Unified server installer was not created.'
-          }
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          python3 server/installer/build.py \
+            --output dist-server \
+            --image-prefix "ghcr.io/${owner}/sparrow" \
+            --image-tag "${IMAGE_TAG}"
           # The public release exposes exactly two server ZIPs: Windows and Linux.
+          test -s dist-server/sparrow-server.zip
 
       - name: Validate and prepare public unified server artifacts
         shell: bash
@@ -653,13 +647,22 @@ jobs:
             Start-SparrowServer.cmd
             Start-SparrowServer.sh
             Start-SparrowServer.command
-            Invoke-SparrowServer.py
-            Manage-SparrowNodes.py
-            control_plane_directory_client.py
-            control_plane_directory_registration.py
-            control_plane_directory_sync.py
-            directory-registration/Dockerfile
-            directory-sync/Dockerfile
+            app/manager_window.py
+            app/manager_terminal.py
+            app/manager_core.py
+            app/Invoke-SparrowServer.ps1
+            app/Update-SparrowServer.ps1
+            app/Update-SparrowServerBundle.ps1
+            app/update_server.py
+            app/layout.json
+            app/bundle.json
+            app/Invoke-SparrowServer.py
+            app/Manage-SparrowNodes.py
+            app/control_plane_directory_client.py
+            app/control_plane_directory_registration.py
+            app/control_plane_directory_sync.py
+            app/directory-registration/Dockerfile
+            app/directory-sync/Dockerfile
             public-proxy/docker-compose.yml
             control-plane/docker-compose.yml
             control-plane/docker-compose.release.yml
@@ -689,6 +692,9 @@ jobs:
             Start-SparrowDirectory.cmd
             Start-SparrowDirectory.ps1
             Start-SparrowDirectory.sh
+            Start-SparrowDirectory.command
+            directory_installer.py
+            directory_window.py
           )
 
           if find dist/server/windows -type d \
@@ -807,11 +813,7 @@ jobs:
             downloads/server-linux/Start-SparrowServer.sh \
             downloads/server-linux/Start-SparrowServer.command \
             downloads/server-linux/community-node/bootstrap-community-node.sh \
-            downloads/server-linux/community-node/start-sparrow-node.sh \
-            downloads/server-linux/community-node/Start-SparrowNode.command \
-            downloads/server-linux/control-plane/bootstrap-control-plane.sh \
-            downloads/server-linux/control-plane/start-sparrow-control-plane.sh \
-            downloads/server-linux/control-plane/Start-SparrowControlPlane.command
+            downloads/server-linux/control-plane/bootstrap-control-plane.sh
 
           (cd downloads/server-windows && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-server-${version}-windows.zip" .)
           (cd downloads/server-linux && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-server-${version}-linux.zip" .)

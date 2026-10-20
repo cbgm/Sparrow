@@ -21,5 +21,6 @@ enum class LastMessagePreviewUi {
     CONTACT_CARD,
     VOICE,
     POLL,
-    ATTACHMENT
+    ATTACHMENT,
+    EXPENSE
 }

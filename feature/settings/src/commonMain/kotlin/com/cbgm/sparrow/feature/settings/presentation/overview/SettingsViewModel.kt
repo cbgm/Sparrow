@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
@@ -56,7 +56,7 @@ class SettingsViewModel(
     private val setVoiceTranscriptionEnabled: SetVoiceTranscriptionEnabledUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase
 ) : BaseViewModel() {
-    private val buildInfo = getBuildInfoUseCase()
+    private val buildInfo = getBuildInfoUseCase().getOrThrow()
     private val localState = MutableStateFlow(SettingsLocalState())
 
     private val domainContext = observeSettingsDomainContext()
@@ -155,24 +155,37 @@ class SettingsViewModel(
 
     private fun loadLocalSettings() {
         viewModelScope.launch {
+            val currentLanguage = getAppLanguageUseCase()
+            val developerMode = getDeveloperEnabledUseCase()
             localState.update {
                 it.copy(
-                    currentLanguage = getAppLanguageUseCase(),
-                    isDeveloperModeEnabled = getDeveloperEnabledUseCase()
+                    currentLanguage = currentLanguage.getOrDefault(it.currentLanguage),
+                    isDeveloperModeEnabled = developerMode.getOrDefault(it.isDeveloperModeEnabled)
                 )
+            }
+            currentLanguage.exceptionOrNull()?.let { error ->
+                SparrowLog.error(TAG, "App language could not be loaded", error)
+            }
+            developerMode.exceptionOrNull()?.let { error ->
+                SparrowLog.error(TAG, "Developer mode could not be loaded", error)
             }
         }
     }
 
     private fun changeSemanticSearchEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSemanticSearchEnabled(enabled)
+            setSemanticSearchEnabled(enabled).onFailure { error ->
+                SparrowLog.error(TAG, "Semantic search setting could not be changed", error)
+            }
         }
     }
 
     private fun changeMessageSafetyEnabled(enabled: Boolean) {
         viewModelScope.launch {
             setLocalEmbeddingFeatureEnabled(LocalEmbeddingFeature.MESSAGE_SAFETY, enabled)
+                .onFailure { error ->
+                    SparrowLog.error(TAG, "Message safety setting could not be changed", error)
+                }
         }
     }
 
@@ -187,7 +200,9 @@ class SettingsViewModel(
 
     private fun changeBlockUnknownContactInvites(enabled: Boolean) {
         viewModelScope.launch {
-            setBlockUnknownContactInvites(enabled)
+            setBlockUnknownContactInvites(enabled).onFailure { error ->
+                SparrowLog.error(TAG, "Invite blocking setting could not be changed", error)
+            }
         }
     }
 
@@ -206,7 +221,10 @@ class SettingsViewModel(
 
     private fun changeDirectIdentitySetupMode(mode: DirectIdentitySetupMode) {
         viewModelScope.launch {
-            setDirectIdentitySetupMode(mode)
+            setDirectIdentitySetupMode(mode).onFailure { error ->
+                SparrowLog.error(TAG, "Direct identity setup mode could not be changed", error)
+                return@launch
+            }
 
             val message =
                 when (mode) {
@@ -222,7 +240,10 @@ class SettingsViewModel(
 
     private fun selectLanguage(language: AppLanguage) {
         viewModelScope.launch {
-            setAppLanguageUseCase(language)
+            setAppLanguageUseCase(language).onFailure { error ->
+                SparrowLog.error(TAG, "App language could not be changed", error)
+                return@launch
+            }
             localState.update {
                 it.copy(
                     currentLanguage = language,
@@ -240,7 +261,10 @@ class SettingsViewModel(
         val newCount = state.developerModeTapCount + 1
         if (newCount >= DEVELOPER_MODE_TAP_THRESHOLD) {
             viewModelScope.launch {
-                setDeveloperModeEnabledUseCase(true)
+                setDeveloperModeEnabledUseCase(true).onFailure { error ->
+                    SparrowLog.error(TAG, "Developer mode could not be enabled", error)
+                    return@launch
+                }
                 localState.update {
                     it.copy(
                         isDeveloperModeEnabled = true,
@@ -266,3 +290,5 @@ class SettingsViewModel(
         val showLanguagePicker: Boolean = false
     )
 }
+
+private const val TAG = "SettingsViewModel"

@@ -28,7 +28,7 @@
 
 ## Contact/peer resolution
 
-Cross-feature orchestration uses contact domain use cases such as:
+Conversation orchestration workflows use contact domain use cases such as:
 
 - `ResolveIncomingPeerContactsUseCase`
 - `ResolveContactInvitationRoutingIdUseCase`
@@ -39,7 +39,7 @@ Cross-feature orchestration uses contact domain use cases such as:
 - `UpdateIncomingIdentityPeerMetadataUseCase`
 - `GetIdentityPeerDisplayNameUseCase`
 
-This keeps contact merging/routing ownership inside Contacts while `ConversationFlowHandler` decides *when* those operations are part of an invite/identity/membership workflow.
+This keeps contact merging/routing ownership inside Contacts while the workflows in `:feature:conversationorchestration:*` (for example `ReceiveContactInviteWorkflow`, `ReconnectDirectConversationWorkflow`) decide *when* those operations are part of an invite/identity/membership workflow.
 
 ## Device contacts
 
@@ -55,7 +55,7 @@ Device-contact reading/writing is exposed through repository/use-case boundaries
 - `ObserveBlockedContactsContextUseCase`
 - `BlockedContactsViewModel`
 
-`ContactBlockObserver` in `:feature:conversationorchestration` reacts to persisted block state and asks `ConversationFlowHandler` to revoke the peer exchange as needed. Contacts does not call Identity repositories directly to perform the cross-feature revocation workflow.
+`ContactBlockObserver` in `:feature:conversationorchestration:lifecycle` reacts to persisted block state and runs `HandleContactBlockedWorkflow` (`CheckStillBlocked -> RevokeExchange`, via `RevokePeerExchangeWorkflow`) to revoke the peer exchange as needed. Contacts does not call Identity repositories directly to perform the cross-feature revocation workflow.
 
 ## Invitation relationship
 

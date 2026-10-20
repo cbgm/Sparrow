@@ -16,13 +16,14 @@ federated Kotlin/Docker server stack.
 2. [Current feature status](features/current-features.md)
 3. [Project structure](getting-started/project-structure.md)
 4. [Architecture overview](architecture/overview.md)
-5. [Startup architecture](architecture/startup.md)
-6. [Chats](features/chats.md) and [message transport flow](features/message-transport-flow.md)
-7. [Attachments](features/attachments.md) and [Polls](features/polls.md)
-8. [Identity recovery](features/identity-recovery.md), [Invitations](features/invitations.md) and [Group membership](features/group-membership.md)
-9. [App lock](features/app-lock.md) and [Settings](features/settings.md)
-10. [Server overview](server/overview.md)
-11. [2026-10-08 release documentation audit](development/release-2026-10-08.md)
+5. [Conversation orchestration](architecture/conversation-orchestration.md)
+6. [Startup architecture](architecture/startup.md)
+7. [Chats](features/chats.md) and [message transport flow](features/message-transport-flow.md)
+8. [Attachments](features/attachments.md) and [Polls](features/polls.md)
+9. [Identity recovery](features/identity-recovery.md), [Invitations](features/invitations.md) and [Group membership](features/group-membership.md)
+10. [App lock](features/app-lock.md) and [Settings](features/settings.md)
+11. [Server overview](server/overview.md)
+12. [2026-10-08 release documentation audit](development/release-2026-10-08.md)
 
 ## Operator shortcuts
 
@@ -37,7 +38,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 - **Why Sparrow?** — the federated design, Tor comparison, and where the security model differs from Signal/WhatsApp.
 - **Getting Started** — prerequisites, first build, project structure, development flow.
-- **Architecture** — Clean Architecture rules, module boundaries, Direct/Group separation.
+- **Architecture** — Clean Architecture rules, module boundaries, conversation workflow state machines, Direct/Group separation.
 - **Features** — current Android functionality, attachments/media, local message search, message safety and implementation classes.
 - **Transport & API** — Control Plane discovery, node failover, WebSocket frames and packets.
 - **Security** — identity, encryption, safety numbers, server trust and threat model.

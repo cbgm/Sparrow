@@ -35,7 +35,7 @@ The persisted exchange state machine is implemented by `IdentityExchangeDataSour
 - `RecoverIncompleteIdentityUseCase`
 - `RecoverManualIdentityExchangeUseCase`
 
-Cross-feature decisions around invitations/conversations are made by `ConversationFlowHandler`, not inside the identity repository.
+Cross-feature decisions around invitations/conversations are made by the workflows in `:feature:conversationorchestration:lifecycle` / `incoming` (for example `HandleIdentityResultWorkflow`, `ReceiveContactInviteWorkflow`, `CompleteManualIdentityWorkflow`), not inside the identity repository.
 
 ## Backup, restore and key replacement
 
@@ -52,7 +52,7 @@ Important classes include:
 - `ApprovedIdentityReconnectionRepositoryImpl`
 - `ApprovedIdentityReconnectionObserver`
 - `ApprovedReconnectionRetryWorker`
-- `StartRecoveryInvitationUseCase`
+- `StartRecoveryInvitationWorkflow` (in `:feature:conversationorchestration:lifecycle`)
 
 ## Sharing/import
 

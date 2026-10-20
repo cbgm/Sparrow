@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.applock.presentation.AppLockRoute
 import com.cbgm.sparrow.feature.onboarding.presentation.OnboardingRoute
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent

@@ -28,47 +28,52 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
-import com.cbgm.sparrow.core.time.formatMessageTimestamp
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageVideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ContactMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.FileMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.LocationMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.PhotoVideoMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.TextMessageBubbleBody
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.standalonePartOrNull
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textPartOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupPinUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseBoardMessageContent
+import com.cbgm.sparrow.feature.expenses.presentation.pin.ExpensePinContent
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_pinned_message
+import com.cbgm.sparrow.resources.feature_expenses_board
 import com.cbgm.sparrow.resources.ic_pin
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun GroupPinnedMessageBar(
-    message: MessageBubbleUi,
-    pinnedAtEpochMilliseconds: Long,
-    canUnpin: Boolean,
+    pin: GroupPinUi,
     onClick: () -> Unit,
     onUnpinClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val fallback = stringResource(Res.string.feature_chats_attachment)
-    val preview = message.pinnedPreviewText(fallback)
-    val sender = message.senderName?.takeIf { !message.isMine && it.isNotBlank() }
-    val pinnedTime = formatMessageTimestamp(pinnedAtEpochMilliseconds)
-    val label = sender?.let { "$it \u00B7 $pinnedTime" } ?: pinnedTime
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -84,47 +89,72 @@ internal fun GroupPinnedMessageBar(
         ),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.OpaqueBar)
     ) {
-        Row(
-            modifier = Modifier.padding(
-                vertical = MaterialTheme.spacing.micro
-            ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_pin),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(horizontal = MaterialTheme.spacing.medium)
-                    .size(Dimens.MessageBubble.iconSize),
-                tint = MaterialTheme.colorScheme.primary
+        when (pin) {
+            is GroupPinUi.Expenses -> ExpensePinContent(pin = pin.summary)
+            is GroupPinUi.Message -> PinnedMessageSummary(
+                message = pin.message,
+                pinnedAtEpochMilliseconds = pin.pinnedAtEpochMilliseconds,
+                canUnpin = pin.canUnpin,
+                onUnpinClick = onUnpinClick
             )
+        }
+    }
+}
 
-            Column(modifier = Modifier.weight(1f).padding(end = MaterialTheme.spacing.small)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = preview,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+@Composable
+private fun PinnedMessageSummary(
+    message: MessageBubbleUi,
+    pinnedAtEpochMilliseconds: Long,
+    canUnpin: Boolean,
+    onUnpinClick: () -> Unit
+) {
+    val fallback = stringResource(Res.string.feature_chats_attachment)
+    val boardLabel = stringResource(Res.string.feature_expenses_board)
+    val preview = if (message.parts.any { it is ExpenseBoardUi }) boardLabel else message.pinnedPreviewText(fallback)
+    val sender = message.senderName?.takeIf { !message.isMine && it.isNotBlank() }
+    val pinnedTime = formatMessageTimestamp(pinnedAtEpochMilliseconds)
+    val label = sender?.let { "$it \u00B7 $pinnedTime" } ?: pinnedTime
 
-            if (canUnpin) {
-                IconButton(onClick = onUnpinClick) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+    Row(
+        modifier = Modifier.padding(
+            vertical = MaterialTheme.spacing.micro
+        ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(Res.drawable.ic_pin),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(horizontal = MaterialTheme.spacing.medium)
+                .size(Dimens.MessageBubble.iconSize),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Column(modifier = Modifier.weight(1f).padding(end = MaterialTheme.spacing.small)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = preview,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (canUnpin) {
+            IconButton(onClick = onUnpinClick) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -159,6 +189,12 @@ internal fun GroupPinnedMessageContent(
                     .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
+            message.parts.filterIsInstance<ExpenseBoardUi>().firstOrNull()?.let { board ->
+                ExpenseBoardMessageContent(
+                    board = board,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             message.senderName
                 ?.takeIf { !message.isMine && it.isNotBlank() }
                 ?.let { senderName ->
@@ -170,60 +206,59 @@ internal fun GroupPinnedMessageContent(
                     )
                 }
 
-            message.pollPart?.let { pollPart ->
-                PollMessageContent(
-                    part = pollPart,
+            when (val part = message.parts.standalonePartOrNull()) {
+                is PollUi -> PollMessageContent(
+                    part = part,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     onVoteSubmit = { selectedOptionIds ->
-                        onPollVoteSubmit(message.id, pollPart.id, selectedOptionIds)
+                        onPollVoteSubmit(message.id, part.id, selectedOptionIds)
                     },
                     onClosePoll = {
-                        onPollClose(message.id, pollPart.id)
+                        onPollClose(message.id, part.id)
                     },
                     onMediaClick = { index ->
-                        pollPart.images.getOrNull(index)?.let { image ->
+                        part.images.getOrNull(index)?.let { image ->
                             onAttachmentClick(image.id)
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
 
-            message.voicePart?.let { voicePart ->
-                VoiceMessageContent(
-                    part = voicePart,
+                is VoiceUi -> VoiceMessageContent(
+                    part = part,
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
 
-            message.contactPart?.let { contactPart ->
-                ContactMessageBubbleBody(
-                    contactPart = contactPart,
+                is ContactUi -> ContactMessageBubbleBody(
+                    contactPart = part,
                     onContactClick = onContactClick
                 )
-            }
 
-            message.locationPart?.let { locationPart ->
-                LocationMessageBubbleBody(
-                    locationPart = locationPart,
+                is LocationUi -> LocationMessageBubbleBody(
+                    locationPart = part,
                     onAttachmentClick = onAttachmentClick
                 )
+
+                null -> {
+                    val imageVideoParts = message.parts.filterIsInstance<ImageVideoUi>()
+                    val fileParts = message.parts.filterIsInstance<FileUi>()
+                    if (imageVideoParts.isNotEmpty()) {
+                        PhotoVideoMessageBubbleBody(
+                            imageVideoParts = imageVideoParts,
+                            onAttachmentClick = onAttachmentClick
+                        )
+                    }
+                    if (fileParts.isNotEmpty()) {
+                        FileMessageBubbleBody(
+                            fileParts = fileParts
+                        )
+                    }
+                }
+
+                else -> Unit
             }
 
-            if (message.imageVideoParts.isNotEmpty()) {
-                PhotoVideoMessageBubbleBody(
-                    imageVideoParts = message.imageVideoParts,
-                    onAttachmentClick = onAttachmentClick
-                )
-            }
-
-            if (message.fileParts.isNotEmpty()) {
-                FileMessageBubbleBody(
-                    fileParts = message.fileParts
-                )
-            }
-
-            message.textPart?.let { textPart ->
+            message.parts.textPartOrNull()?.let { textPart ->
                 TextMessageBubbleBody(
                     textPart = textPart,
                     safetyWarning = message.safetyWarning,
@@ -267,12 +302,12 @@ private fun PinnedMessageTopBar(
 }
 
 private fun MessageBubbleUi.pinnedPreviewText(fallback: String): String =
-    textPart
+    parts.textPartOrNull()
         ?.text
         ?.trim()
         ?.takeIf(String::isNotBlank)
-        ?: pollPart?.question?.trim()?.takeIf(String::isNotBlank)
-        ?: fileParts.firstOrNull()?.fileName?.takeIf(String::isNotBlank)
+        ?: parts.filterIsInstance<PollUi>().firstOrNull()?.question?.trim()?.takeIf(String::isNotBlank)
+        ?: parts.filterIsInstance<FileUi>().firstOrNull()?.fileName?.takeIf(String::isNotBlank)
         ?: fallback
 
 @Preview
@@ -280,21 +315,24 @@ private fun MessageBubbleUi.pinnedPreviewText(fallback: String): String =
 private fun GroupPinnedMessageBarPreview() {
     SparrowTheme {
         GroupPinnedMessageBar(
-            message = MessageBubbleUi(
-                id = "2",
-                isMine = true,
-                security = MessageSecurity.END_TO_END_ENCRYPTED,
-                contentStatus = MessageContentStatus.READABLE,
-                deliveryStatus = MessageDeliveryStatus.DELIVERED,
-                textPart =
-                    TextUi(
-                        id = "preview-text",
-                        text = "I'm free this evening.",
-                        isContentFailed = false
+            pin = GroupPinUi.Message(
+                message = MessageBubbleUi(
+                    id = "2",
+                    isMine = true,
+                    security = MessageSecurity.END_TO_END_ENCRYPTED,
+                    contentStatus = MessageContentStatus.READABLE,
+                    deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                    parts = listOf(
+                        TextUi(
+                            id = "preview-text",
+                            text = "I'm free this evening.",
+                            isContentFailed = false
+                        )
                     )
+                ),
+                pinnedAtEpochMilliseconds = 0L,
+                canUnpin = true
             ),
-            pinnedAtEpochMilliseconds = 0L,
-            canUnpin = true,
             onUnpinClick = {},
             onClick = {}
         )

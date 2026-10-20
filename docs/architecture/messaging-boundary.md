@@ -8,8 +8,10 @@ Messaging crosses several modules, but the current code has a deliberate split b
 | Persistent outbox contracts/state | `:protocol` | `ProtocolOutbox`, outbox state/event types |
 | Persistent outbox storage | `:data:database` | `ProtocolOutboxEntity`, `ProtocolOutboxDao`, `ProtocolOutboxFailureEventEntity` |
 | Generic outbox/incoming execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner` |
-| Cross-feature send/receive policy | `:feature:conversationorchestration` | `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `DefaultIncomingEnvelopeProcessor`, `ConversationFlowHandler` |
-| Conversation semantics | `:feature:chats` | `DirectOutgoingMessageProcessor`, `GroupOutgoingMessageProcessor`, incoming handlers, delivery handlers |
+| Send policy, delivery state | `:feature:conversationorchestration:delivery` | `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `OutboxDeliveryStateRouter`, `ApplyDeliveryEventWorkflow` |
+| Conversation write semantics | `:feature:conversationorchestration:message` / `membership` / `lifecycle` | `SendDirectMessageWorkflow`, `DeliverDirectMessageWorkflow`, `SendGroupMessageWorkflow`, group administration and invitation workflows |
+| Incoming packet handling | `:feature:conversationorchestration:incoming` | `IncomingEnvelopeProcessorImpl`, `IncomingTransportMessageHandler`, `RouteIncomingPacketWorkflow`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `Receive*Workflow` |
+| Conversation presentation/read side | `:feature:chats` | ViewModels/controllers, read repositories, observe use cases; writes via `ConversationOrchestrator` |
 | Invitation lifecycle | `:feature:invite` | `InvitationRepositoryImpl`, `InvitationLifecycleDataSource`, `InvitationResultObserver` (consumer in orchestration) |
 | Identity/trust/recovery | `:feature:identity` | `IdentityExchangeDataSource`, pending identity changes, approved reconnection repositories/use cases |
 | Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityManager`, membership use cases |
@@ -19,7 +21,7 @@ Messaging crosses several modules, but the current code has a deliberate split b
 
 ```mermaid
 sequenceDiagram
-    participant CHAT as Chats outgoing processor
+    participant CHAT as Send*Workflow (message)
     participant OB as ProtocolOutbox
     participant RUN as DefaultOutboxRunner
     participant PROC as DefaultOutboxProcessor
@@ -46,17 +48,21 @@ sequenceDiagram
 sequenceDiagram
     participant TR as WebSocketIncomingEnvelopeGateway
     participant RUN as DefaultIncomingEnvelopeRunner
-    participant PROC as DefaultIncomingEnvelopeProcessor
+    participant PROC as IncomingEnvelopeProcessorImpl
+    participant H as IncomingTransportMessageHandler
+    participant ROUTE as RouteIncomingPacketWorkflow
+    participant WF as Receive*Workflow / dispatchers
     participant PH as DefaultProtocolPacketHandler
-    participant FLOW as ConversationFlowHandler
-    participant CHAT as IncomingPacketRouter
 
     TR-->>RUN: encrypted transport envelope
     RUN->>PROC: process
-    PROC->>PH: authenticated decoded packet
-    PH->>FLOW: identity/invite/membership/control workflow
-    PH->>CHAT: conversation message/receipt workflow
+    PROC->>H: resolve sender, local keys
+    H->>ROUTE: decrypted, decoded packet (WorkflowEngine)
+    ROUTE->>WF: direct message / group packet / receipt / control packet
+    WF->>PH: packets owned by other features (e.g. mailbox routes)
 ```
+
+See [Conversation orchestration](conversation-orchestration.md) for the routing step chain.
 
 ## Message operations
 

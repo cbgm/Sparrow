@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.media.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.data.datasource.FileBrowserDataSource
 import com.cbgm.sparrow.feature.media.data.mapper.toFileBrowserContent
 import com.cbgm.sparrow.feature.media.data.mapper.toFileBrowserDirectory
@@ -13,7 +14,8 @@ import com.cbgm.sparrow.feature.media.domain.repository.FileBrowserRepository
 class FileBrowserRepositoryImpl(
     private val dataSource: FileBrowserDataSource
 ) : FileBrowserRepository {
-    override fun hasFileAccess(): Boolean = dataSource.hasFileAccess()
+    override fun hasFileAccess(): Result<Boolean> =
+        safeCall { dataSource.hasFileAccess() }
 
     override suspend fun setRootDirectory(reference: String): Result<Unit> =
         safeSuspendCall { dataSource.setRootDirectory(reference) }

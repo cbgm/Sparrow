@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.search.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SearchMessagesUseCase
@@ -94,7 +94,7 @@ class MessageSearchViewModel(
                 _uiState.value = _uiState.value.copy(isSearching = true)
 
                 try {
-                    val results = searchMessages(query)
+                    val results = searchMessages(query).getOrThrow()
                     if (_uiState.value.query != query) return@launch
                     _uiState.value =
                         _uiState.value.copy(

@@ -10,7 +10,9 @@ flowchart TD
     BASE[core:base
 MessagePart hierarchy]
     UC[feature domain use cases]
-    ORCH[feature:conversationorchestration]
+    API[feature:conversationorchestration:api]
+    ORCH[feature:conversationorchestration
+engine / delivery / message / groupstate / membership / lifecycle / incoming]
     CHAT[feature:chats]
     POLL[feature:polls]
     ATT[feature:attachments / media / voice]
@@ -25,17 +27,19 @@ MessagePart hierarchy]
     UC --> POLL
     CHAT --> BASE
     POLL --> BASE
-    CHAT --> ORCH
-    ORCH --> CHAT
+    CHAT --> API
+    ORCH --> API
     CHAT --> ATT
     ATT --> DB
     CHAT --> DB
-    POLL --> CHAT
     CHAT --> PROTO
+    ORCH --> DB
     ORCH --> PROTO
     PROTO --> MSG
     MSG --> TR
 ```
+
+Chats submits every write as a `ConversationCommand` to `ConversationOrchestrator`; the orchestration modules execute it as a workflow state machine. See [Conversation orchestration](conversation-orchestration.md).
 
 ## Current ownership boundaries
 
@@ -43,7 +47,7 @@ MessagePart hierarchy]
 |---|---|
 | `:core:base` | shared message-part data/domain/UI models and common domain primitives |
 | `:protocol` | application packets/codecs and `OperationMessage` |
-| `:feature:chats` | Direct/Group message semantics, operations, delivery/read state and pins |
+| `:feature:chats` | Direct/Group conversation presentation and read-only data access; submits writes as commands |
 | `:feature:polls` | poll creation and poll-specific presentation |
 | `:feature:attachments` | encrypted blob transfer/cache/storage and attachment loading |
 | `:feature:media` | media/file selection, rendering and export |
@@ -51,7 +55,7 @@ MessagePart hierarchy]
 | `:feature:invite` | invitation lifecycle/inbox |
 | `:feature:identity` | local/remote identity, trust, backup/recovery |
 | `:feature:membership` | group membership/security/admin lifecycle |
-| `:feature:conversationorchestration` | cross-feature identity/invite/membership/chat workflows |
+| `:feature:conversationorchestration:*` | every conversation write and incoming packet as workflow state machines (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) |
 | `:feature:messaging` | durable outbox/incoming-envelope execution |
 | `:feature:transport` | discovery/WebSocket/presence/mailbox/push transport |
 | `:feature:applock` | application-lock setting/authentication boundary |
@@ -74,7 +78,7 @@ flowchart TD
     DS --> EXT[(Room / DataStore / Ktor / platform API)]
 ```
 
-Repositories do not call other repositories or use cases; datasources do not call repositories. Cross-feature workflows belong in explicit orchestration/runtime boundaries. Presentation receives presentation models rather than DTOs/entities.
+Repositories do not call other repositories or use cases; datasources do not call repositories. Cross-feature workflows belong in the [conversation orchestration](conversation-orchestration.md) workflows. Presentation receives presentation models rather than DTOs/entities.
 
 ## Direct vs Group
 

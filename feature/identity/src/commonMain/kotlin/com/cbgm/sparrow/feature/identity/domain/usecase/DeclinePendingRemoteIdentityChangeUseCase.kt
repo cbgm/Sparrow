@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
@@ -17,7 +17,10 @@ class DeclinePendingRemoteIdentityChangeUseCase(
     private val protocol: ContactInvitationDeclineProtocol,
     private val outbox: ProtocolOutbox
 ) {
-    suspend operator fun invoke(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
+    suspend operator fun invoke(
+        peerId: String,
+        invitationId: String
+    ): Result<Unit> = safeSuspendCall(logFailure = false) {
         val candidate = observePending().first().firstOrNull {
             it.peerId == peerId && it.invitationId == invitationId
         } ?: return@safeSuspendCall

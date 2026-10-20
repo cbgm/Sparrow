@@ -42,7 +42,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
-import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityRoute
+import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewRoute
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsRoute
 import com.cbgm.sparrow.navigation.presentation.main.model.MainTab
 import kotlinx.coroutines.launch
@@ -264,7 +264,7 @@ private fun MainContent(
             }
 
             MainTab.Me -> {
-                IdentityRoute(
+                IdentityOverviewRoute(
                     scrollState = scrollStates.scrollState(MainTab.Me),
                     innerPadding = innerPadding,
                     modifier = Modifier.fillMaxSize()

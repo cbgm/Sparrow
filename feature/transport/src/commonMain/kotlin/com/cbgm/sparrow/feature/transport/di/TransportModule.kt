@@ -2,7 +2,8 @@ package com.cbgm.sparrow.feature.transport.di
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
@@ -144,7 +145,8 @@ val transportModule =
             ClientPresenceRouteCoordinator(
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
-                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>()
+                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
+                localPhoneNumberProvider = get<LocalPhoneNumberProvider>()
             )
         }
 

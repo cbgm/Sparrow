@@ -56,7 +56,7 @@ Caddy routes `/v1/blobs/*` to the gateway. Uploads require short-lived upload au
 
 ## Unified multi-node management
 
-The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/unified`. On Windows `Start-SparrowServer.cmd` can open **Community Node only — manage instances**. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
+The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. On Windows `Start-SparrowServer.cmd` can open **Community Node only — manage instances**. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
 
 Node-only installs use an existing Control Plane directly or, in the advanced flow, a signed independent Control Plane Directory with a separately trusted/pinned key. They do not install a hidden Control Plane.
 

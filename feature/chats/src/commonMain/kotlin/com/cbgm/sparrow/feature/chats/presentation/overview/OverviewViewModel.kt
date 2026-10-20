@@ -1,20 +1,22 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeleteConversationGroupUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeletePeerConversationUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.GetConversationGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
+import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,9 +27,8 @@ import kotlinx.coroutines.launch
 class OverviewViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase,
-    private val deletePeerConversation: DeletePeerConversationUseCase,
-    private val deleteGroupConversation: DeleteConversationGroupUseCase,
-    private val getGroupLeaveRequirement: GetConversationGroupLeaveRequirementUseCase
+    private val orchestrator: ConversationOrchestrator,
+    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
 ) : BaseViewModel() {
     private val logger = SparrowLog.withTag("OverviewViewModel")
     private val error = MutableStateFlow<String?>(null)
@@ -74,7 +75,7 @@ class OverviewViewModel(
             if (chat.isGroup) {
                 deleteGroup(chat)
             } else {
-                deletePeerConversation(conversationId)
+                orchestrator.awaitResult(DirectConversationCommand.DeleteConversation(conversationId))
                     .onFailure { failure ->
                         logger.error(failure) { "Direct conversation deletion failed" }
                         error.value = failure.message ?: "Direct conversation deletion failed"
@@ -94,7 +95,7 @@ class OverviewViewModel(
             navigator.navigateTo(AppRoute.GroupDetails(chat.conversationId, requestLeave = true))
             return
         }
-        deleteGroupConversation(chat.conversationId)
+        orchestrator.awaitResult(GroupAdministrationCommand.DeleteGroup(chat.conversationId))
             .onFailure { failure ->
                 logger.error(failure) { "Group conversation deletion failed" }
                 error.value = failure.message ?: "Group conversation deletion failed"

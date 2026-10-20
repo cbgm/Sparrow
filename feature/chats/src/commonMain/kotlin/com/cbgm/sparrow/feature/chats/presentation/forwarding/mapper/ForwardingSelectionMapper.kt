@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.presentation.forwarding.mapper
 
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
-import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewContext
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiState
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingTargetUi
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
 
 internal fun toForwardingSelectionUiState(
     conversationContext: ConversationOverviewContext,
@@ -45,10 +45,10 @@ internal fun toForwardingSelectionUiState(
                     target =
                         when (conversation.type) {
                             ConversationOverviewType.DIRECT ->
-                                ForwardingTarget.Direct(conversation.id)
+                                ForwardTarget.DirectConversation(conversation.id)
 
                             ConversationOverviewType.GROUP ->
-                                ForwardingTarget.Group(groupId = conversation.id)
+                                ForwardTarget.GroupConversation(groupId = conversation.id)
                         }
                 )
             }.toList()
@@ -64,7 +64,7 @@ internal fun toForwardingSelectionUiState(
                     id = "contact:${contact.id}",
                     displayName = contact.forwardingDisplayName(),
                     avatarTarget = AvatarTarget.User(contact.id),
-                    target = ForwardingTarget.Contact(contact.id)
+                    target = ForwardTarget.Contact(contact.id)
                 )
             }.toList()
 

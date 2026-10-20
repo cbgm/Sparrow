@@ -2,10 +2,12 @@ package com.cbgm.sparrow.feature.media.device
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
@@ -42,8 +44,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.CameraLens
@@ -334,7 +336,7 @@ private fun CameraCaptureDialog(
     }
 }
 
-private fun capturePhoto(
+internal fun capturePhoto(
     imageCapture: ImageCapture,
     previewView: PreviewView,
     outputFile: File,
@@ -386,6 +388,33 @@ private fun capturePhoto(
     )
 }
 
+internal fun Uri.toCapturedPhoto(
+    context: Context,
+    maxDimension: Int?,
+    maxBytes: Int?
+): CapturedMedia {
+    val limit = maxDimension ?: DEFAULT_CAMERA_MAX_IMAGE_DIMENSION
+    val bitmap =
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, this)) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            val largestDimension = maxOf(info.size.width, info.size.height)
+            if (largestDimension > limit) {
+                decoder.setTargetSampleSize(ceil(largestDimension.toDouble() / limit.toDouble()).toInt())
+            }
+        }
+    return try {
+        CapturedMedia(
+            type = CameraCaptureType.PHOTO,
+            bytes = bitmap.encodeCameraPhoto(maxBytes),
+            mimeType = "image/jpeg",
+            width = bitmap.width,
+            height = bitmap.height
+        )
+    } finally {
+        bitmap.recycle()
+    }
+}
+
 private fun Bitmap.encodeCameraPhoto(maxBytes: Int?): ByteArray {
     for (quality in CAMERA_JPEG_QUALITIES) {
         val bytes =
@@ -402,7 +431,7 @@ private fun Bitmap.encodeCameraPhoto(maxBytes: Int?): ByteArray {
 
 @SuppressLint("MissingPermission")
 private fun startVideoRecording(
-    context: android.content.Context,
+    context: Context,
     videoCapture: VideoCapture<Recorder>,
     outputFile: File,
     maxBytes: Long?,

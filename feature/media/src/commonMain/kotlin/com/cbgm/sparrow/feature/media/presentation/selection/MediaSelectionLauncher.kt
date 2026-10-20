@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.device.GalleryPickerStrings
 import com.cbgm.sparrow.feature.media.device.rememberCameraCaptureLauncher
 import com.cbgm.sparrow.feature.media.device.rememberGalleryPickerLauncher
@@ -179,6 +179,7 @@ private fun rememberSubGalleryLauncher(
                                     media = item,
                                     existing = item.sourceReference?.let(previousByReference::get)?.toDomain()
                                 )
+                                .getOrThrow()
                                 .toUi()
                     }
                 } catch (error: Exception) {
@@ -186,7 +187,7 @@ private fun rememberSubGalleryLauncher(
                     val previousIds = latest.mapTo(mutableSetOf(), MediaSelectionUi::id)
                     mapped.filterNot { it.id in previousIds }.forEach { selection ->
                         selection.localFilePaths.forEach { path ->
-                            runCatching { mediaFiles.delete(path) }
+                            mediaFiles.delete(path)
                         }
                     }
                     throw error
@@ -220,7 +221,7 @@ private fun rememberSubCameraLauncher(
     ),
     onCaptured = { captured ->
         scope.launch {
-            runCatching { prepareMediaSelection.fromCapturedMedia(captured).toUi() }
+            prepareMediaSelection.fromCapturedMedia(captured).map { it.toUi() }
                 .onSuccess { tryAdd(listOf(it)) }
                 .onFailure { error ->
                     SparrowLog.error("MediaSelectionLauncher", "Camera media could not be stored", error)

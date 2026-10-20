@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.feature.identity.data.model.IdentityAcceptanceReviewRequiredDtoException
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
@@ -67,7 +67,8 @@ internal class IdentityExchangeDataSource(
     // It is not a manual identity import or acknowledgement: only the explicit
     // IdentityPacket/IdentityAcknowledgementPacket flow may establish manual keys.
     private suspend fun sharesIdentityAutomatically(): Boolean =
-        identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION
+        identitySetupModeRepository.getMode().getOrThrow() ==
+            DirectIdentitySetupMode.AUTOMATIC_INVITATION
 
     suspend fun start(contactId: String, invitationSenderLabel: String): Result<IdentityExchange?> =
         safeSuspendCall {

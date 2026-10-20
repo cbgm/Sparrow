@@ -8,8 +8,10 @@ import com.cbgm.sparrow.data.database.dao.ApprovedIdentityReconnectionDao
 import com.cbgm.sparrow.data.database.dao.AutoReplyDao
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
+import com.cbgm.sparrow.data.database.dao.ContactProfilePictureDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
+import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.dao.GroupPinDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
@@ -33,12 +35,14 @@ import com.cbgm.sparrow.data.database.entity.AutoReplyEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyRecipientEntity
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
+import com.cbgm.sparrow.data.database.entity.ContactProfilePictureEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.data.database.entity.GroupMetadataEntity
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
@@ -94,9 +98,11 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         ProtocolOutboxFailureEventEntity::class,
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class,
-        LinkPreviewEntity::class
+        LinkPreviewEntity::class,
+        GroupMetadataEntity::class,
+        ContactProfilePictureEntity::class
     ],
-    version = 54,
+    version = 55,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -164,4 +170,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun mailboxRouteDao(): MailboxRouteDao
 
     abstract fun linkPreviewDao(): LinkPreviewDao
+
+    abstract fun groupMetadataDao(): GroupMetadataDao
+
+    abstract fun contactProfilePictureDao(): ContactProfilePictureDao
 }

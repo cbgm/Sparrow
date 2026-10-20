@@ -1,0 +1,34 @@
+{
+  "topLevel": ["Start-SparrowServer.cmd", "Start-SparrowServer.sh", "Start-SparrowServer.command", "README.md"],
+  "components": {
+    "community-node": [
+      "docker-compose.yml", "docker-compose.release.yml", "docker-compose.production.yml",
+      "docker-compose.shared-proxy.yml", "docker-compose.public-transition.yml",
+      "docker-compose.directory-sync.yml", "Caddyfile", "index.html",
+      "Bootstrap-CommunityNode.ps1", "bootstrap-community-node.sh"
+    ],
+    "control-plane": [
+      "docker-compose.yml", "docker-compose.release.yml", "docker-compose.production.yml",
+      "docker-compose.shared-proxy.yml", "docker-compose.public-transition.yml",
+      "docker-compose.firebase.yml", "Caddyfile", "index.html",
+      "Bootstrap-ControlPlane.ps1", "bootstrap-control-plane.sh"
+    ],
+    "public-proxy": ["docker-compose.yml"]
+  },
+  "services": ["node-registry", "presence-directory", "mailbox", "federation", "gateway", "push"],
+  "instanceHelpers": ["control_plane_directory_client.py", "Get-SparrowVerifiedDirectory.ps1"],
+  "generated": ["bundle.json", "local-images.json", "local-images.tar"],
+  "legacy": [
+    "Invoke-SparrowServer.ps1", "Start-SparrowServer.ps1", "SparrowLocalImages.ps1",
+    "Get-SparrowDockerLabel.ps1", "Get-SparrowVerifiedDirectory.ps1", "Attached-SparrowDeployment.ps1",
+    "Backup-SparrowDeployment.ps1", "Stage-SparrowPublicTls.ps1", "Invoke-SparrowPublicCutover.ps1",
+    "Update-SparrowServerBundle.ps1", "Update-SparrowFromGitHub.ps1", "Update-SparrowServerFromBundle.ps1",
+    "Reset-SparrowDeployment.ps1", "Reset-SparrowTestDeployment.ps1", "Manage-SparrowNodes.ps1",
+    "Invoke-SparrowServer.py", "Manage-SparrowNodes.py", "control_plane_directory_client.py",
+    "control_plane_directory_registration.py", "control_plane_directory_sync.py", ".dockerignore",
+    "bundle-source.json", "local-images.json", "local-images.tar",
+    "directory-sync/Dockerfile", "directory-registration/Dockerfile",
+    "community-node/start-sparrow-node.sh", "community-node/Start-SparrowNode.command",
+    "control-plane/start-sparrow-control-plane.sh", "control-plane/Start-SparrowControlPlane.command"
+  ]
+}

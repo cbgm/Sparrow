@@ -6,13 +6,15 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityPeerRepositor
 class InspectContactPeerUseCase(
     private val repository: IdentityPeerRepository
 ) {
-    suspend fun containsPeer(peerId: String): Boolean = repository.containsPeer(peerId)
+    suspend fun containsPeer(peerId: String): Result<Boolean> = repository.containsPeer(peerId)
 
-    suspend fun isKnownContact(peerId: String): Boolean = repository.isKnownContact(peerId)
+    suspend fun isKnownContact(peerId: String): Result<Boolean> = repository.isKnownContact(peerId)
 
-    suspend fun findEquivalentPhonePeerId(phoneNumber: String): String? =
+    suspend fun findEquivalentPhonePeerId(phoneNumber: String): Result<String?> =
         repository.findEquivalentPhonePeerId(phoneNumber)
 
-    suspend fun canMergeRoutingDuplicate(peerId: String, remotePhoneNumber: String?): Boolean =
-        repository.canMergeRoutingDuplicate(peerId, remotePhoneNumber)
+    suspend fun canMergeRoutingDuplicate(
+        peerId: String,
+        remotePhoneNumber: String?
+    ): Result<Boolean> = repository.canMergeRoutingDuplicate(peerId, remotePhoneNumber)
 }

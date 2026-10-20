@@ -1,19 +1,21 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.data.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.database.dao.ContactProfilePictureDao
+import com.cbgm.sparrow.data.database.entity.ContactProfilePictureEntity
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSnapshot
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class RemoteProfilePictureDataSource(
-    private val dataStore: SparrowDataStore,
+    private val profilePictureDao: ContactProfilePictureDao,
     private val fileDataSource: ProfilePictureFileDataSource,
     private val cryptoHash: CryptoHash
 ) : RemoteProfilePictureProvider,
@@ -21,19 +23,9 @@ class RemoteProfilePictureDataSource(
     private val metadataMutex = Mutex()
 
     fun observePicture(contactId: String): Flow<RemoteProfilePicture> =
-        dataStore.observeLong(changedAtKey(contactId)).map { changedAt ->
-            RemoteProfilePicture(
-                contactId = contactId,
-                changedAtEpochMilliseconds = changedAt,
-                bytes = fileDataSource.readRemote(fileName(contactId))
-            )
-        }
+        profilePictureDao.observe(contactId).distinctUntilChanged().map { entity -> entity.toPicture(contactId) }
 
-    suspend fun get(contactId: String): RemoteProfilePicture = RemoteProfilePicture(
-        contactId = contactId,
-        changedAtEpochMilliseconds = dataStore.getLong(changedAtKey(contactId)),
-        bytes = fileDataSource.readRemote(fileName(contactId))
-    )
+    suspend fun get(contactId: String): RemoteProfilePicture = profilePictureDao.get(contactId).toPicture(contactId)
 
     suspend fun save(
         contactId: String,
@@ -41,7 +33,7 @@ class RemoteProfilePictureDataSource(
         changedAtEpochMilliseconds: Long
     ) {
         fileDataSource.writeRemote(fileName(contactId), bytes)
-        dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
+        profilePictureDao.upsert(ContactProfilePictureEntity(contactId, true, changedAtEpochMilliseconds))
     }
 
     suspend fun remove(
@@ -49,7 +41,7 @@ class RemoteProfilePictureDataSource(
         changedAtEpochMilliseconds: Long
     ) {
         fileDataSource.deleteRemote(fileName(contactId))
-        dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
+        profilePictureDao.upsert(ContactProfilePictureEntity(contactId, false, changedAtEpochMilliseconds))
     }
 
     override fun observe(contactId: String): Flow<RemoteProfilePictureSnapshot> =
@@ -93,8 +85,12 @@ class RemoteProfilePictureDataSource(
             }
         }
 
-    private fun changedAtKey(contactId: String): String =
-        "$REMOTE_PROFILE_PICTURE_CHANGED_AT_PREFIX$contactId"
+    private fun ContactProfilePictureEntity?.toPicture(contactId: String): RemoteProfilePicture =
+        RemoteProfilePicture(
+            contactId = contactId,
+            changedAtEpochMilliseconds = this?.changedAtEpochMilliseconds ?: 0L,
+            bytes = if (this?.hasPicture == true) fileDataSource.readRemote(fileName(contactId)) else null
+        )
 
     private fun fileName(contactId: String): String =
         cryptoHash
@@ -102,8 +98,4 @@ class RemoteProfilePictureDataSource(
             .joinToString(separator = "") { byte ->
                 (byte.toInt() and 0xff).toString(radix = 16).padStart(2, '0')
             } + ".jpg"
-
-    private companion object {
-        const val REMOTE_PROFILE_PICTURE_CHANGED_AT_PREFIX = "identity.remote_profile_picture.changed_at."
-    }
 }

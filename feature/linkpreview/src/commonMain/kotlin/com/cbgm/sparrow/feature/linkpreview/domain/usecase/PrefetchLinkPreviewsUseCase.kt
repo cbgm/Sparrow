@@ -5,7 +5,5 @@ import com.cbgm.sparrow.feature.linkpreview.domain.repository.LinkPreviewReposit
 class PrefetchLinkPreviewsUseCase(
     private val repository: LinkPreviewRepository
 ) {
-    operator fun invoke(text: String) {
-        repository.fetchPreviews(text)
-    }
+    operator fun invoke(text: String): Result<Unit> = repository.fetchPreviews(text)
 }

@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.embedding.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
 import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
@@ -32,67 +33,73 @@ class LocalEmbeddingRepositoryImpl(
     private var preparationJob: Job? = null
     private val lifecycleMutex = Mutex()
 
-    override suspend fun initialize(): Unit = lifecycleMutex.withLock {
-        val restored =
-            try {
-                LocalEmbeddingState(
-                    semanticSearchEnabled = settingsStorage.isSemanticSearchEnabled(),
-                    messageSafetyEnabled = settingsStorage.isMessageSafetyEnabled()
-                )
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (throwable: Throwable) {
-                SparrowLog.error("LocalEmbeddingRepository", "Could not restore local intelligence settings", throwable)
-                mutableState.value =
-                    LocalEmbeddingState(
-                        modelState =
-                            LocalEmbeddingModelState.Failed(
-                                throwable.message ?: "Local intelligence settings could not be restored"
+    override suspend fun initialize(): Result<Unit> =
+        safeSuspendCall {
+            lifecycleMutex.withLock {
+                val restored =
+                    try {
+                        LocalEmbeddingState(
+                            semanticSearchEnabled = settingsStorage.isSemanticSearchEnabled(),
+                            messageSafetyEnabled = settingsStorage.isMessageSafetyEnabled()
+                        )
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (throwable: Throwable) {
+                        SparrowLog.error("LocalEmbeddingRepository", "Could not restore local intelligence settings", throwable)
+                        mutableState.value =
+                            LocalEmbeddingState(
+                                modelState =
+                                    LocalEmbeddingModelState.Failed(
+                                        throwable.message ?: "Local intelligence settings could not be restored"
+                                    )
                             )
-                    )
-                return
-            }
-        mutableState.value = restored
+                        return@withLock
+                    }
+                mutableState.value = restored
 
-        if (!restored.isModelNeeded) {
-            preparationJob?.cancelAndJoin()
-            preparationJob = null
-            embedder.close()
-            modelManager.deleteModel()
-            mutableState.value = restored.copy(modelState = LocalEmbeddingModelState.NotNeeded)
-            return
+                if (!restored.isModelNeeded) {
+                    preparationJob?.cancelAndJoin()
+                    preparationJob = null
+                    embedder.close()
+                    modelManager.deleteModel()
+                    mutableState.value = restored.copy(modelState = LocalEmbeddingModelState.NotNeeded)
+                    return@withLock
+                }
+                startPreparationIfNeeded()
+            }
         }
-        startPreparationIfNeeded()
-    }
 
     override suspend fun setFeatureEnabled(
         feature: LocalEmbeddingFeature,
         enabled: Boolean
-    ): Unit = lifecycleMutex.withLock {
-        when (feature) {
-            LocalEmbeddingFeature.MESSAGE_SEARCH -> settingsStorage.setSemanticSearchEnabled(enabled)
-            LocalEmbeddingFeature.MESSAGE_SAFETY -> settingsStorage.setMessageSafetyEnabled(enabled)
-        }
+    ): Result<Unit> =
+        safeSuspendCall {
+            lifecycleMutex.withLock {
+                when (feature) {
+                    LocalEmbeddingFeature.MESSAGE_SEARCH -> settingsStorage.setSemanticSearchEnabled(enabled)
+                    LocalEmbeddingFeature.MESSAGE_SAFETY -> settingsStorage.setMessageSafetyEnabled(enabled)
+                }
 
-        val current = mutableState.value
-        val updated =
-            when (feature) {
-                LocalEmbeddingFeature.MESSAGE_SEARCH -> current.copy(semanticSearchEnabled = enabled)
-                LocalEmbeddingFeature.MESSAGE_SAFETY -> current.copy(messageSafetyEnabled = enabled)
+                val current = mutableState.value
+                val updated =
+                    when (feature) {
+                        LocalEmbeddingFeature.MESSAGE_SEARCH -> current.copy(semanticSearchEnabled = enabled)
+                        LocalEmbeddingFeature.MESSAGE_SAFETY -> current.copy(messageSafetyEnabled = enabled)
+                    }
+                mutableState.value = updated
+
+                if (!updated.isModelNeeded) {
+                    preparationJob?.cancelAndJoin()
+                    preparationJob = null
+                    embedder.close()
+                    modelManager.deleteModel()
+                    mutableState.value = updated.copy(modelState = LocalEmbeddingModelState.NotNeeded)
+                    return@withLock
+                }
+
+                startPreparationIfNeeded(forceRetry = updated.modelState is LocalEmbeddingModelState.Failed)
             }
-        mutableState.value = updated
-
-        if (!updated.isModelNeeded) {
-            preparationJob?.cancelAndJoin()
-            preparationJob = null
-            embedder.close()
-            modelManager.deleteModel()
-            mutableState.value = updated.copy(modelState = LocalEmbeddingModelState.NotNeeded)
-            return
         }
-
-        startPreparationIfNeeded(forceRetry = updated.modelState is LocalEmbeddingModelState.Failed)
-    }
 
     private fun startPreparationIfNeeded(forceRetry: Boolean = false) {
         if (!forceRetry && (mutableState.value.modelState is LocalEmbeddingModelState.Ready || preparationJob?.isActive == true)) {

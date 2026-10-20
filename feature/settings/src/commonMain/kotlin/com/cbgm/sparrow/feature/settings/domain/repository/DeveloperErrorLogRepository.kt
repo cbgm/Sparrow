@@ -6,5 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface DeveloperErrorLogRepository {
     fun observeErrors(): Flow<List<DeveloperError>>
 
-    suspend fun clearErrors()
+    suspend fun clearErrors(): Result<Unit>
 }

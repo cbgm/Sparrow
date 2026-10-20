@@ -5,17 +5,17 @@ import kotlinx.coroutines.flow.Flow
 interface ContactBlocklistRepository {
     fun observeBlockUnknownContactInvites(): Flow<Boolean>
 
-    suspend fun getBlockUnknownContactInvites(): Boolean
+    suspend fun getBlockUnknownContactInvites(): Result<Boolean>
 
-    suspend fun setBlockUnknownContactInvites(enabled: Boolean)
+    suspend fun setBlockUnknownContactInvites(enabled: Boolean): Result<Unit>
 
     fun observeBlockedContactIds(): Flow<Set<String>>
 
-    suspend fun getBlockedContactIds(): Set<String>
+    suspend fun getBlockedContactIds(): Result<Set<String>>
 
-    suspend fun isBlocked(contactId: String): Boolean
+    suspend fun isBlocked(contactId: String): Result<Boolean>
 
-    suspend fun block(contactId: String)
+    suspend fun block(contactId: String): Result<Unit>
 
-    suspend fun unblock(contactId: String)
+    suspend fun unblock(contactId: String): Result<Unit>
 }

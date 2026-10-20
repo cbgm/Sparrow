@@ -166,21 +166,17 @@ jobs:
           done
 
       - name: Build public unified Sparrow server installer
-        shell: pwsh
+        shell: bash
         env:
           IMAGE_PREFIX: ${{ steps.images.outputs.image_prefix }}
           IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          ./server/unified/New-SparrowServerBundle.ps1 `
-              -OutputDirectory dist-internal-server `
-              -ImagePrefix $env:IMAGE_PREFIX `
-              -ImageTag $env:IMAGE_TAG
-
-          $bundle = 'dist-internal-server/sparrow-server.zip'
-          if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
-              throw 'Unified Sparrow server bundle was not created.'
-          }
+          set -euo pipefail
+          python3 server/installer/build.py \
+            --output dist-internal-server \
+            --image-prefix "${IMAGE_PREFIX}" \
+            --image-tag "${IMAGE_TAG}"
+          test -s dist-internal-server/sparrow-server.zip
 
       - name: Verify public bundle contents and directory-server exclusion
         shell: python
@@ -194,13 +190,22 @@ jobs:
               "Start-SparrowServer.cmd",
               "Start-SparrowServer.sh",
               "Start-SparrowServer.command",
-              "Invoke-SparrowServer.py",
-              "Manage-SparrowNodes.py",
-              "control_plane_directory_client.py",
-              "control_plane_directory_registration.py",
-              "control_plane_directory_sync.py",
-              "directory-registration/Dockerfile",
-              "directory-sync/Dockerfile",
+              "app/manager_window.py",
+              "app/manager_terminal.py",
+              "app/manager_core.py",
+              "app/Invoke-SparrowServer.ps1",
+              "app/Update-SparrowServer.ps1",
+              "app/Update-SparrowServerBundle.ps1",
+              "app/update_server.py",
+              "app/layout.json",
+              "app/bundle.json",
+              "app/Invoke-SparrowServer.py",
+              "app/Manage-SparrowNodes.py",
+              "app/control_plane_directory_client.py",
+              "app/control_plane_directory_registration.py",
+              "app/control_plane_directory_sync.py",
+              "app/directory-registration/Dockerfile",
+              "app/directory-sync/Dockerfile",
               "public-proxy/docker-compose.yml",
               "community-node/docker-compose.yml",
               "community-node/docker-compose.release.yml",
@@ -224,6 +229,9 @@ jobs:
               "Start-SparrowDirectory.cmd",
               "Start-SparrowDirectory.ps1",
               "Start-SparrowDirectory.sh",
+              "Start-SparrowDirectory.command",
+              "directory_installer.py",
+              "directory_window.py",
           }
 
           with zipfile.ZipFile(bundle) as archive:

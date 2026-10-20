@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.protocol.invitation
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

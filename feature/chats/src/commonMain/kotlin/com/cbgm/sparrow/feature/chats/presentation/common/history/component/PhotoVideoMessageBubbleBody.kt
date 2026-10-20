@@ -22,9 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageVideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme

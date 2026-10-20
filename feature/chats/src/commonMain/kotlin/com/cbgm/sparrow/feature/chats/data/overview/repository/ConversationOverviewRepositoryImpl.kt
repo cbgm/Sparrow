@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.overview.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.feature.chats.data.overview.datasource.ConversationOverviewDataSource
 import com.cbgm.sparrow.feature.chats.data.overview.mapper.toConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
@@ -14,21 +13,7 @@ class ConversationOverviewRepositoryImpl internal constructor(
 ) : ConversationOverviewRepository {
     override fun observeAll(): Flow<List<ConversationOverview>> =
         dataSource.observeSummaries(
-            localDeletionTransportMode = GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE,
-            localMembershipStartedTransportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE
+            localDeletionTransportMode = MessageTransportMode.LOCAL_CONVERSATION_DELETED,
+            localMembershipStartedTransportMode = MessageTransportMode.LOCAL_GROUP_MEMBERSHIP_STARTED
         ).map { summaries -> summaries.map { it.toConversationOverview() } }
-
-    override suspend fun incrementUnseenLocalMessageCount(conversationId: String): Result<Unit> =
-        safeSuspendCall {
-            check(dataSource.incrementUnseenLocalMessageCount(conversationId) == 1) {
-                "Conversation not found"
-            }
-        }
-
-    override suspend fun clearUnseenLocalMessageCount(conversationId: String): Result<Unit> =
-        safeSuspendCall {
-            check(dataSource.clearUnseenLocalMessageCount(conversationId) == 1) {
-                "Conversation not found"
-            }
-        }
 }

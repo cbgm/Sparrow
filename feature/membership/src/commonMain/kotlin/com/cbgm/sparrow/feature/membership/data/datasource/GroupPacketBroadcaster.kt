@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 

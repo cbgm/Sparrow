@@ -43,10 +43,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageVideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
@@ -56,13 +64,15 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
-import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.standalonePartOrNull
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textPartOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
+import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseBoardMessageContent
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
@@ -259,18 +269,23 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-private enum class PrimaryContent { POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+private enum class PrimaryContent { EXPENSE_BOARD, POLL, VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
-private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
-    pollPart != null -> PrimaryContent.POLL
-    voicePart != null -> PrimaryContent.VOICE
-    contactPart != null -> PrimaryContent.CONTACT
-    locationPart != null -> PrimaryContent.LOCATION
-    imageVideoParts.isNotEmpty() -> PrimaryContent.IMAGE_VIDEO
-    fileParts.isNotEmpty() -> PrimaryContent.FILE
-    showTextBubble -> PrimaryContent.TEXT
-    else -> PrimaryContent.NONE
-}
+private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent =
+    when (parts.standalonePartOrNull()) {
+        is ExpenseBoardUi -> PrimaryContent.EXPENSE_BOARD
+        is PollUi -> PrimaryContent.POLL
+        is VoiceUi -> PrimaryContent.VOICE
+        is ContactUi -> PrimaryContent.CONTACT
+        is LocationUi -> PrimaryContent.LOCATION
+        null -> when {
+            parts.any { it is ImageVideoUi } -> PrimaryContent.IMAGE_VIDEO
+            parts.any { it is FileUi } -> PrimaryContent.FILE
+            showTextBubble -> PrimaryContent.TEXT
+            else -> PrimaryContent.NONE
+        }
+        else -> PrimaryContent.NONE
+    }
 
 @Composable
 private fun BubbleBody(
@@ -287,10 +302,7 @@ private fun BubbleBody(
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
-        message.pollPart == null &&
-            message.voicePart == null &&
-            message.locationPart == null &&
-            message.contactPart == null &&
+        message.parts.standalonePartOrNull() == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
 
     val reply = message.reply
@@ -302,7 +314,56 @@ private fun BubbleBody(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
-        message.pollPart?.let { pollPart ->
+        BubbleContent(
+            message = message,
+            state = state,
+            isSearchHighlighted = isSearchHighlighted,
+            safetyWarning = safetyWarning,
+            showTextBubble = showTextBubble,
+            replyFor = ::replyFor,
+            onAttachmentClick = onAttachmentClick,
+            onContactClick = onContactClick,
+            onReplyPreviewClick = onReplyPreviewClick,
+            onLongPress = onLongPress,
+            onPollVoteSubmit = onPollVoteSubmit,
+            onPollClose = onPollClose,
+            onSafetyDetailsClick = onSafetyDetailsClick
+        )
+    }
+}
+
+@Composable
+private fun BubbleContent(
+    message: MessageBubbleUi,
+    state: BubbleState,
+    isSearchHighlighted: Boolean,
+    safetyWarning: MessageSafetyWarningUi?,
+    showTextBubble: Boolean,
+    replyFor: (PrimaryContent) -> MessageReplyUi?,
+    onAttachmentClick: (String) -> Unit,
+    onContactClick: (SharedContact) -> Unit,
+    onReplyPreviewClick: (String) -> Unit,
+    onLongPress: () -> Unit,
+    onPollVoteSubmit: (String, String, Set<String>) -> Unit,
+    onPollClose: (String, String) -> Unit,
+    onSafetyDetailsClick: () -> Unit
+) {
+    when (val part = message.parts.standalonePartOrNull()) {
+        is ExpenseBoardUi -> {
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.EXPENSE_BOARD),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
+            ) {
+                ExpenseBoardMessageContent(board = part)
+            }
+        }
+
+        is PollUi -> {
+            val pollPart = part
             MessageBubbleSurface(
                 message = message,
                 state = state,
@@ -326,7 +387,8 @@ private fun BubbleBody(
                 )
             }
         }
-        message.voicePart?.let { voicePart ->
+
+        is VoiceUi -> {
             MessageBubbleSurface(
                 message = message,
                 state = state,
@@ -335,11 +397,11 @@ private fun BubbleBody(
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
-                VoiceMessageContent(part = voicePart)
+                VoiceMessageContent(part = part)
             }
         }
 
-        message.contactPart?.let { contactPart ->
+        is ContactUi -> {
             MessageBubbleSurface(
                 message = message,
                 state = state,
@@ -350,13 +412,13 @@ private fun BubbleBody(
                 onLongPress = onLongPress
             ) {
                 ContactMessageBubbleBody(
-                    contactPart = contactPart,
+                    contactPart = part,
                     onContactClick = onContactClick
                 )
             }
         }
 
-        message.locationPart?.let { locationPart ->
+        is LocationUi -> {
             MessageBubbleSurface(
                 message = message,
                 state = state,
@@ -367,66 +429,72 @@ private fun BubbleBody(
                 onLongPress = onLongPress
             ) {
                 LocationMessageBubbleBody(
-                    locationPart = locationPart,
+                    locationPart = part,
                     onAttachmentClick = onAttachmentClick
                 )
             }
         }
 
-        if (message.imageVideoParts.isNotEmpty()) {
-            MessageBubbleSurface(
-                message = message,
-                state = state,
-                isSearchHighlighted = isSearchHighlighted,
-                reply = replyFor(PrimaryContent.IMAGE_VIDEO),
-                onReplyPreviewClick = onReplyPreviewClick,
-                onLongPress = onLongPress
-            ) {
-                PhotoVideoMessageBubbleBody(
-                    imageVideoParts = message.imageVideoParts,
-                    onAttachmentClick = onAttachmentClick
-                )
+        null -> {
+            val imageVideoParts = message.parts.filterIsInstance<ImageVideoUi>()
+            val fileParts = message.parts.filterIsInstance<FileUi>()
+            if (imageVideoParts.isNotEmpty()) {
+                MessageBubbleSurface(
+                    message = message,
+                    state = state,
+                    isSearchHighlighted = isSearchHighlighted,
+                    reply = replyFor(PrimaryContent.IMAGE_VIDEO),
+                    onReplyPreviewClick = onReplyPreviewClick,
+                    onLongPress = onLongPress
+                ) {
+                    PhotoVideoMessageBubbleBody(
+                        imageVideoParts = imageVideoParts,
+                        onAttachmentClick = onAttachmentClick
+                    )
+                }
+            }
+
+            if (fileParts.isNotEmpty()) {
+                MessageBubbleSurface(
+                    message = message,
+                    state = state,
+                    isSearchHighlighted = isSearchHighlighted,
+                    reply = replyFor(PrimaryContent.FILE),
+                    onReplyPreviewClick = onReplyPreviewClick,
+                    onLongPress = onLongPress
+                ) {
+                    FileMessageBubbleBody(
+                        fileParts = fileParts
+                    )
+                }
+            }
+
+            if (showTextBubble) {
+                MessageBubbleSurface(
+                    message = message,
+                    state = state,
+                    hasInnerPadding = safetyWarning == null,
+                    isSearchHighlighted = isSearchHighlighted,
+                    reply = replyFor(PrimaryContent.TEXT),
+                    onReplyPreviewClick = onReplyPreviewClick,
+                    onLongPress = onLongPress
+                ) {
+                    TextMessageBubbleBody(
+                        textPart =
+                            message.parts.textPartOrNull()
+                                ?: TextUi(
+                                    id = message.id,
+                                    text = state.text,
+                                    isContentFailed = state.isContentFailed
+                                ),
+                        safetyWarning = safetyWarning,
+                        onSafetyDetailsClick = onSafetyDetailsClick
+                    )
+                }
             }
         }
 
-        if (message.fileParts.isNotEmpty()) {
-            MessageBubbleSurface(
-                message = message,
-                state = state,
-                isSearchHighlighted = isSearchHighlighted,
-                reply = replyFor(PrimaryContent.FILE),
-                onReplyPreviewClick = onReplyPreviewClick,
-                onLongPress = onLongPress
-            ) {
-                FileMessageBubbleBody(
-                    fileParts = message.fileParts
-                )
-            }
-        }
-
-        if (showTextBubble) {
-            MessageBubbleSurface(
-                message = message,
-                state = state,
-                hasInnerPadding = safetyWarning == null,
-                isSearchHighlighted = isSearchHighlighted,
-                reply = replyFor(PrimaryContent.TEXT),
-                onReplyPreviewClick = onReplyPreviewClick,
-                onLongPress = onLongPress
-            ) {
-                TextMessageBubbleBody(
-                    textPart =
-                        message.textPart
-                            ?: TextUi(
-                                id = message.id,
-                                text = state.text,
-                                isContentFailed = state.isContentFailed
-                            ),
-                    safetyWarning = safetyWarning,
-                    onSafetyDetailsClick = onSafetyDetailsClick
-                )
-            }
-        }
+        else -> Unit
     }
 }
 
@@ -784,7 +852,7 @@ private fun bubbleState(message: MessageBubbleUi): BubbleState =
     when (message.contentStatus) {
         MessageContentStatus.READABLE ->
             BubbleState(
-                text = message.textPart?.text ?: "",
+                text = message.textOrNull() ?: "",
                 isContentFailed = false,
                 bubbleColor =
                     if (message.isMine) {
@@ -844,12 +912,13 @@ private fun MessageBubblePreview() {
                             MessageReactionUi(emoji = "👍", count = 3, reactedByMe = false),
                             MessageReactionUi(emoji = "🔥", count = 1, reactedByMe = false)
                         ),
-                    textPart =
+                    parts = listOf(
                         TextUi(
                             id = "preview-text",
                             text = "Encrypted message",
                             isContentFailed = false
                         )
+                    )
                 ),
             onRetryClick = {}
         )
@@ -869,15 +938,18 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
-                    fileParts = listOf(
+                    parts = listOf(
+                        TextUi(
+                            id = "preview-text",
+                            text = "Test message",
+                            isContentFailed = false
+                        ),
                         FileUi(
                             id = "preview-file",
                             mimeType = "application/pdf",
                             byteSize = 0,
                             fileName = "test.pdf"
-                        )
-                    ),
-                    imageVideoParts = listOf(
+                        ),
                         ImageUi(
                             id = "preview-image-1",
                             mimeType = "image/jpeg",
@@ -888,12 +960,6 @@ private fun MessageBubbleWithAttachmentsPreview() {
                             mimeType = "video/mp4",
                             byteSize = 0
                         )
-                    ),
-                    locationPart = null,
-                    textPart = TextUi(
-                        id = "preview-text",
-                        text = "Test message",
-                        isContentFailed = false
                     )
                 ),
             onRetryClick = {},

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.discovery
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
@@ -48,6 +48,37 @@ class DefaultNodeEndpointResolver(
             }
         }
 
+    // Accepts the cached directory only while its signature verifies and it is within its own
+    // validity plus the existing grace period (the same rule as the offline fallback). Trust in
+    // old directories is not extended; beyond that window callers must fetch a fresh one.
+    override suspend fun resolveCached(localRoutingId: String): Result<List<NodeEndpoint>?> =
+        runCatching {
+            require(localRoutingId.isNotBlank()) {
+                "Local routing ID must not be blank"
+            }
+
+            resolutionMutex.withLock {
+                val cached = cache.read()
+                val cachedDirectory = cached?.decode()
+                val trustedRootNodeId = config.trustedRegistryRootNodeId ?: cached?.trustedRootForSource()
+                if (cachedDirectory == null || trustedRootNodeId == null || !isCachedSourceConfigured(cached)) {
+                    return@withLock null
+                }
+                verifier
+                    .verify(
+                        signedDirectory = cachedDirectory,
+                        trustedRootNodeId = trustedRootNodeId,
+                        supportedProtocolVersion = config.supportedProtocolVersion,
+                        nowEpochMilliseconds = now(),
+                        allowDirectoryExpiredUntilEpochMilliseconds =
+                            cachedDirectory.directory.validUntilEpochMilliseconds +
+                                config.cachedDirectoryGraceMilliseconds,
+                        descriptorExpiryGraceMilliseconds = config.cachedDirectoryGraceMilliseconds
+                    ).getOrNull() ?: return@withLock null
+                endpointSelector.select(cachedDirectory, localRoutingId)
+            }
+        }
+
     private suspend fun resolveRegistry(
         localRoutingId: String,
         forceRefresh: Boolean
@@ -58,20 +89,7 @@ class DefaultNodeEndpointResolver(
         val trustedRootNodeId =
             config.trustedRegistryRootNodeId ?: cached?.trustedRootForSource()
 
-        // Never keep selecting nodes from an endpoint removed from configuration.
-        // Older cache entries do not record their source; preserve their short-lived
-        // fallback until we can associate a verified response with an endpoint.
-        val cachedSourceIsConfigured =
-            cached?.sourceControlPlaneBaseUrl?.let { source ->
-                controlPlaneConfiguration.endpoints.value.any { it.baseUrl == source } &&
-                    (
-                        source in controlPlaneConfiguration.manualBaseUrls.value ||
-                            controlPlaneConfiguration.verifiedDirectoryRootId(source) == cached.trustedRootForSource()
-                    )
-            } ?: (
-                controlPlaneConfiguration.manualBaseUrls.value.isNotEmpty() &&
-                    controlPlaneConfiguration.directoryUrl.value == null
-            )
+        val cachedSourceIsConfigured = isCachedSourceConfigured(cached)
         if (
             !forceRefresh && cachedSourceIsConfigured &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
@@ -94,6 +112,21 @@ class DefaultNodeEndpointResolver(
             }
         return endpointSelector.select(selectedDirectory, localRoutingId)
     }
+
+    // Never keep selecting nodes from an endpoint removed from configuration.
+    // Older cache entries do not record their source; preserve their short-lived
+    // fallback until we can associate a verified response with an endpoint.
+    private fun isCachedSourceConfigured(cached: CachedNodeDirectory?): Boolean =
+        cached?.sourceControlPlaneBaseUrl?.let { source ->
+            controlPlaneConfiguration.endpoints.value.any { it.baseUrl == source } &&
+                (
+                    source in controlPlaneConfiguration.manualBaseUrls.value ||
+                        controlPlaneConfiguration.verifiedDirectoryRootId(source) == cached.trustedRootForSource()
+                )
+        } ?: (
+            controlPlaneConfiguration.manualBaseUrls.value.isNotEmpty() &&
+                controlPlaneConfiguration.directoryUrl.value == null
+        )
 
     private suspend fun fetchConfiguredDirectory(
         cached: CachedNodeDirectory?,

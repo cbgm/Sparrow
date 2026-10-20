@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.navigation.presentation.inbox
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
@@ -47,7 +47,7 @@ class RecoveryInboxViewModel(
                     MailboxReviewRequestUi(
                         peerId = candidate.peerId,
                         invitationId = candidate.invitationId,
-                        peerDisplayName = getPeerDisplayName(candidate.peerId)
+                        peerDisplayName = getPeerDisplayName(candidate.peerId).getOrNull()
                             ?.takeIf { it.isNotBlank() }
                             ?: getContact(candidate.peerId).getOrNull()?.preferredPhoneNumber?.value
                                 ?.takeIf { it.isNotBlank() }
