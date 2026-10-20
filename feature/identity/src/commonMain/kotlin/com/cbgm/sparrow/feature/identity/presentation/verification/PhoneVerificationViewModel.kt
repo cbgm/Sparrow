@@ -48,13 +48,17 @@ class PhoneVerificationViewModel(
     private var sending: Job? = null
     private var verificationId: String? = null
 
-    /** Opens the dialog and sends the SMS to the normalized [phoneNumber]. */
+    /** Opens the dialog for the normalized [phoneNumber]; the SMS is sent on "Verify". */
     fun start(phoneNumber: String) {
         if (_uiState.value.isVisible) return
         val parent = viewModelScope.coroutineContext
         dialogScope = CoroutineScope(parent + SupervisorJob(parent.job))
-        _uiState.value = PhoneVerificationUiState(phoneNumber = phoneNumber, canSkip = isDebugBuild)
-        send()
+        _uiState.value =
+            PhoneVerificationUiState(
+                stage = PhoneVerificationStageUi.REQUEST,
+                phoneNumber = phoneNumber,
+                canSkip = isDebugBuild
+            )
     }
 
     fun consumeResult() {
@@ -64,7 +68,7 @@ class PhoneVerificationViewModel(
     fun onUiEvent(event: PhoneVerificationUiEvent) {
         when (event) {
             is PhoneVerificationUiEvent.CodeChanged -> enterCode(event.value)
-            PhoneVerificationUiEvent.ConfirmClicked -> confirmEnteredCode()
+            PhoneVerificationUiEvent.ConfirmClicked -> verify()
             PhoneVerificationUiEvent.ResendClicked -> resend()
             PhoneVerificationUiEvent.SkipClicked -> skip()
             PhoneVerificationUiEvent.DismissClicked -> dismiss()
@@ -76,11 +80,13 @@ class PhoneVerificationViewModel(
         val code = value.filter(Char::isDigit).take(PhoneVerificationUiState.CODE_LENGTH)
         _uiState.update { it.copy(code = code) }
         // The last digit confirms right away
-        confirmEnteredCode()
+        verify()
     }
 
-    private fun confirmEnteredCode() {
-        if (_uiState.value.canConfirm) confirm()
+    private fun verify() {
+        val state = _uiState.value
+        if (!state.canConfirm) return
+        if (state.stage == PhoneVerificationStageUi.REQUEST) send() else confirm()
     }
 
     private fun resend() {
@@ -111,10 +117,11 @@ class PhoneVerificationViewModel(
                 sendCode(phoneNumber).collect { result ->
                     result.onSuccess(::onStep).onFailure { error ->
                         logger.warn { "Verification code could not be sent: ${error.message}" }
-                        finish(
-                            PhoneVerificationResultUi.Cancelled,
-                            Res.string.feature_identity_phone_verification_send_failed
-                        )
+                        // Back to "Verify", so sending can be retried (or skipped in debug builds).
+                        _uiState.update {
+                            it.copy(stage = PhoneVerificationStageUi.REQUEST, code = "")
+                        }
+                        showError(Res.string.feature_identity_phone_verification_send_failed)
                     }
                 }
             }
@@ -161,17 +168,13 @@ class PhoneVerificationViewModel(
         }
     }
 
-    private fun finish(
-        result: PhoneVerificationResultUi,
-        error: StringResource? = null
-    ) {
+    private fun finish(result: PhoneVerificationResultUi) {
         dialogScope?.cancel()
         dialogScope = null
         sending = null
         verificationId = null
         _uiState.value = PhoneVerificationUiState()
         _result.value = result
-        error?.let { viewModelScope.launch { showError(it) } }
     }
 
     private suspend fun showError(resource: StringResource) {

@@ -912,6 +912,7 @@
     <string name="feature_identity_phone_hint_failed">Die Telefonnummer konnte nicht vom Gerät gelesen werden. Gib sie manuell ein.</string>
     <string name="feature_identity_phone_number_invalid">Gib eine gültige Telefonnummer ein.</string>
     <string name="feature_identity_phone_verification_title">Telefonnummer bestätigen</string>
+    <string name="feature_identity_phone_verification_request">Wir senden dir einen Code per SMS an %1$s.</string>
     <string name="feature_identity_phone_verification_sending">Code wird an %1$s gesendet…</string>
     <string name="feature_identity_phone_verification_hint">Gib den Code ein, den wir per SMS an %1$s gesendet haben.</string>
     <string name="feature_identity_phone_verification_confirm">Bestätigen</string>

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.presentation.verification.model
 
-enum class PhoneVerificationStageUi { HIDDEN, SENDING, CODE, CONFIRMING }
+enum class PhoneVerificationStageUi { HIDDEN, REQUEST, SENDING, CODE, CONFIRMING }
 
 data class PhoneVerificationUiState(
     val stage: PhoneVerificationStageUi = PhoneVerificationStageUi.HIDDEN,
@@ -11,8 +11,12 @@ data class PhoneVerificationUiState(
 ) {
     val isVisible: Boolean
         get() = stage != PhoneVerificationStageUi.HIDDEN
+
+    // "Verify" first requests the SMS, then confirms the complete code.
     val canConfirm: Boolean
-        get() = stage == PhoneVerificationStageUi.CODE && code.length == CODE_LENGTH
+        get() =
+            stage == PhoneVerificationStageUi.REQUEST ||
+                stage == PhoneVerificationStageUi.CODE && code.length == CODE_LENGTH
     val canResend: Boolean
         get() = stage == PhoneVerificationStageUi.CODE && resendInSeconds == 0
 

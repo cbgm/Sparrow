@@ -26,6 +26,7 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_confirm
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_hint
+import com.cbgm.sparrow.resources.feature_identity_phone_verification_request
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_resend
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_resend_in
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_sending
@@ -71,47 +72,26 @@ private fun PhoneVerificationDialogContent(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (state.stage == PhoneVerificationStageUi.SENDING) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        text =
-                            stringResource(
-                                Res.string.feature_identity_phone_verification_sending,
-                                state.phoneNumber
-                            )
-                    )
-                } else {
-                    Text(
-                        text =
-                            stringResource(
-                                Res.string.feature_identity_phone_verification_hint,
-                                state.phoneNumber
-                            )
-                    )
-                    SparrowCodeField(
-                        value = state.code,
-                        onValueChange = { onUiEvent(PhoneVerificationUiEvent.CodeChanged(it)) },
-                        length = PhoneVerificationUiState.CODE_LENGTH,
-                        isEnabled = state.stage == PhoneVerificationStageUi.CODE
-                    )
-                    TextButton(
-                        enabled = state.canResend,
-                        onClick = { onUiEvent(PhoneVerificationUiEvent.ResendClicked) }
-                    ) {
+                when (state.stage) {
+                    PhoneVerificationStageUi.REQUEST ->
                         Text(
                             text =
-                                if (state.resendInSeconds > 0) {
-                                    stringResource(
-                                        Res.string.feature_identity_phone_verification_resend_in,
-                                        state.resendInSeconds
-                                    )
-                                } else {
-                                    stringResource(
-                                        Res.string.feature_identity_phone_verification_resend
-                                    )
-                                }
+                                stringResource(
+                                    Res.string.feature_identity_phone_verification_request,
+                                    state.phoneNumber
+                                )
+                        )
+                    PhoneVerificationStageUi.SENDING -> {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text =
+                                stringResource(
+                                    Res.string.feature_identity_phone_verification_sending,
+                                    state.phoneNumber
+                                )
                         )
                     }
+                    else -> PhoneVerificationCodeInput(state = state, onUiEvent = onUiEvent)
                 }
                 if (state.canSkip) {
                     TextButton(
@@ -141,4 +121,43 @@ private fun PhoneVerificationDialogContent(
         },
         isVisible = state.isVisible
     )
+}
+
+// The code entered by the user, or filled in when the platform read the SMS itself.
+@Composable
+private fun PhoneVerificationCodeInput(
+    state: PhoneVerificationUiState,
+    onUiEvent: (PhoneVerificationUiEvent) -> Unit
+) {
+    Text(
+        text =
+            stringResource(
+                Res.string.feature_identity_phone_verification_hint,
+                state.phoneNumber
+            )
+    )
+    SparrowCodeField(
+        value = state.code,
+        onValueChange = { onUiEvent(PhoneVerificationUiEvent.CodeChanged(it)) },
+        length = PhoneVerificationUiState.CODE_LENGTH,
+        isEnabled = state.stage == PhoneVerificationStageUi.CODE
+    )
+    TextButton(
+        enabled = state.canResend,
+        onClick = { onUiEvent(PhoneVerificationUiEvent.ResendClicked) }
+    ) {
+        Text(
+            text =
+                if (state.resendInSeconds > 0) {
+                    stringResource(
+                        Res.string.feature_identity_phone_verification_resend_in,
+                        state.resendInSeconds
+                    )
+                } else {
+                    stringResource(
+                        Res.string.feature_identity_phone_verification_resend
+                    )
+                }
+        )
+    }
 }

@@ -31,6 +31,17 @@ class DefaultMailboxCapabilityLifecycleTest {
         }
 
     @Test
+    fun unreachableNodeDefersRevocation() =
+        runTest {
+            val repository = FakeMailboxRouteRepository(credential())
+            val gateway = FakeMailboxGateway(failRevocation = true, failure = ConnectTimeoutException())
+            val lifecycle = DefaultMailboxCapabilityLifecycle(repository, gateway)
+
+            assertTrue(lifecycle.revokeForContact(CONTACT_ID).isSuccess)
+            assertTrue(repository.credential?.revocationPending == true)
+        }
+
+    @Test
     fun successfulRevocationRemovesLocalAndRemoteRoutes() =
         runTest {
             val repository = FakeMailboxRouteRepository(credential())
@@ -88,8 +99,12 @@ class DefaultMailboxCapabilityLifecycleTest {
         }
     }
 
+    // Named like the platform exception that a connect timeout raises.
+    private class ConnectTimeoutException : Exception("connect timeout")
+
     private class FakeMailboxGateway(
-        var failRevocation: Boolean
+        var failRevocation: Boolean,
+        private val failure: Exception = IllegalStateException("offline")
     ) : MailboxGateway {
         var revocationAttempts = 0
 
@@ -113,7 +128,7 @@ class DefaultMailboxCapabilityLifecycleTest {
         override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> {
             revocationAttempts += 1
             return if (failRevocation) {
-                Result.failure(IllegalStateException("offline"))
+                Result.failure(failure)
             } else {
                 Result.success(Unit)
             }

@@ -28,6 +28,16 @@ class MailboxRouteNodeRetirementTest {
         assertFalse(oldCredential().isRetiredFrom(emptyList()))
     }
 
+    @Test
+    fun `same node under a new address has moved`() {
+        assertTrue(oldCredential().hasMovedIn(listOf(node("old-node"))))
+    }
+
+    @Test
+    fun `another node with a new address does not move the credential`() {
+        assertFalse(oldCredential().hasMovedIn(listOf(node("new-node"))))
+    }
+
     private fun node(nodeId: String): NodeEndpoint =
         NodeEndpoint(
             nodeId = nodeId,
