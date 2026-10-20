@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.conversationorchestration.api.command
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseCategory
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseCategory
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseConversion
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 
 sealed interface GroupMessageCommand : ConversationCommand {

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.extensions.toFingerprint
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.ocr.device
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.ocr.data.model.RecognizedTextLine
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents

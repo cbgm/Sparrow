@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.safety.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyEmbeddingDataSource
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import com.cbgm.sparrow.feature.safety.domain.repository.MessageSafetyAnalysisRepository

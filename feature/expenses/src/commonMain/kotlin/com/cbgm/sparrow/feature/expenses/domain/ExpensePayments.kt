@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.expenses.domain
 
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferPolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
 
 internal object ExpensePayments {
     fun confirmed(board: ExpenseBoard, transfers: List<PaymentTransfer>): List<PaymentTransfer> =

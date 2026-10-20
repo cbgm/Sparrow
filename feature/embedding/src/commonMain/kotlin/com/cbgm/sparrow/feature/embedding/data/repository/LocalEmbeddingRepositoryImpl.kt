@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.embedding.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
 import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType

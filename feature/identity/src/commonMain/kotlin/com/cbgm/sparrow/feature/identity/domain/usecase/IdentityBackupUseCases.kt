@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus

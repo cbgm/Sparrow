@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupVerificationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.toGroupVerificationPairEntity
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.toGroupVerificationRow

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.data.mapper
 
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage

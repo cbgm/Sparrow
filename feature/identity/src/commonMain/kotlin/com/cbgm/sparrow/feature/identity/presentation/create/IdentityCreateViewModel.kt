@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.identity.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase

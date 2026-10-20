@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.expenses.domain.ExpenseRevisions
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseCreationContext
 import com.cbgm.sparrow.feature.expenses.domain.repository.ExpenseComposerRepository

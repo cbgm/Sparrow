@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage

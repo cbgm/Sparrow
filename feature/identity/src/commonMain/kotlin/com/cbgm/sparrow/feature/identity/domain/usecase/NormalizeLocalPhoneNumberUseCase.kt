@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 
 class NormalizeLocalPhoneNumberUseCase(
     private val phoneNumberNormalizer: PhoneNumberNormalizer

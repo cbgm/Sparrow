@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.websocket
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent

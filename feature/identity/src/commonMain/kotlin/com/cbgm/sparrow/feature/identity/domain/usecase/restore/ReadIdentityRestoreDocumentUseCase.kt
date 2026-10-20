@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase.restore
 
-import com.cbgm.sparrow.core.result.flatMap
-import com.cbgm.sparrow.core.result.safeCall
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.flatMap
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable

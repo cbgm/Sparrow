@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand

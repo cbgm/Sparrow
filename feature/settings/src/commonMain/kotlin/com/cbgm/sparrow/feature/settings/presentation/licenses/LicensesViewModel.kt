@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.licenses
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState

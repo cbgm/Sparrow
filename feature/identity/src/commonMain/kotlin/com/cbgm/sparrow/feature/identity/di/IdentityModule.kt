@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator

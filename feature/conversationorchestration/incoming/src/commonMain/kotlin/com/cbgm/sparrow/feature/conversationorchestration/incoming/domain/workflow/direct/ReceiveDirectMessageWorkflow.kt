@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.direct
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.autoreply.domain.model.AutoReply

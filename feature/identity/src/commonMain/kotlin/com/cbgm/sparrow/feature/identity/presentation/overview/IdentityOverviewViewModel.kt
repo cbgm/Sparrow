@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.identity.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.flatMap
-import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.flatMap
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
 import com.cbgm.sparrow.feature.avatar.domain.usecase.ConsumeAvatarEditResultUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusUseCase

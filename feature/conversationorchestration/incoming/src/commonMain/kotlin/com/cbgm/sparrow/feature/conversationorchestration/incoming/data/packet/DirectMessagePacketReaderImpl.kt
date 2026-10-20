@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet
 
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.IncomingMessageContent
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.packet.DirectMessagePacketReader
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket

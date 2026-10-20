@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.embedding.data.platform.AndroidLocalEmbeddingModelDownloader
 import com.cbgm.sparrow.feature.embedding.data.platform.AndroidLocalEmbeddingModelFiles
 import kotlinx.coroutines.CancellationException

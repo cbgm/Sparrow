@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.mapper.toGroupAvatarDto
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.mapper.toGroupAvatarState

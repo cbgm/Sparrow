@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.expenses.domain
 
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseSplit
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseSplit
 import kotlin.math.pow
 import kotlin.math.roundToLong
 

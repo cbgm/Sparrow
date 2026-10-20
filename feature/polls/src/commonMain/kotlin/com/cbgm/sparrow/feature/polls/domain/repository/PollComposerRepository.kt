@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.polls.domain.repository
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
 import kotlinx.coroutines.flow.Flow
 
 interface PollComposerRepository {

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.payment.domain.repository
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentContext
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentRequest
 import kotlinx.coroutines.flow.Flow

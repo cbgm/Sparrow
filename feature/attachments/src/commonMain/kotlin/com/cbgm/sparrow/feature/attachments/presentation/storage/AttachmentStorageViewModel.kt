@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.presentation.storage
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveAttachmentStorageSummariesUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.storage.model.AttachmentStorageUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.storage.model.AttachmentStorageUiState

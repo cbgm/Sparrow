@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outb
 import com.cbgm.sparrow.core.crypto.transport.EncryptedTransportPayload
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupTransportKeyResolver
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus

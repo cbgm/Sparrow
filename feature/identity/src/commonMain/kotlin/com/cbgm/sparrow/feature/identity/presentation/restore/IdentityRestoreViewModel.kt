@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.identity.presentation.restore
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityBackupUseCase

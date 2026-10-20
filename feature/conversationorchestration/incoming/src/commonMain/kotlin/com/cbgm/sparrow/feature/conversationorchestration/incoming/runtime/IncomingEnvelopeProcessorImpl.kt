@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ReconcileContactTransportRoutingUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactIdByRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupRoutingResolver

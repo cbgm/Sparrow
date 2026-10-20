@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.polls.presentation.create.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.PollOption
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollOption
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.polls.presentation.create.model.CreatePollUiState
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_EXPIRY_MINUTES

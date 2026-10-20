@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository

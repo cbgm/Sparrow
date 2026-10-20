@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
 import com.cbgm.sparrow.feature.search.data.mapper.toMessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult

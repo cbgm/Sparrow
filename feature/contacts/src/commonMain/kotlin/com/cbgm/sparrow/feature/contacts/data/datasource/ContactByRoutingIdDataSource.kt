@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.data.datasource
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity

@@ -37,11 +37,11 @@ import androidx.core.graphics.scale
 import androidx.photopicker.compose.EmbeddedPhotoPicker
 import androidx.photopicker.compose.ExperimentalPhotoPickerComposeApi
 import androidx.photopicker.compose.rememberEmbeddedPhotoPickerState
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.GalleryMedia
 import com.cbgm.sparrow.feature.media.domain.model.GalleryPickerConfig
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType

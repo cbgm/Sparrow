@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.protocol.message
 
-import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollDto
-import com.cbgm.sparrow.core.messagepart.data.model.PollOptionDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PollOptionDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.codec.createProtocolJson
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import kotlin.test.Test

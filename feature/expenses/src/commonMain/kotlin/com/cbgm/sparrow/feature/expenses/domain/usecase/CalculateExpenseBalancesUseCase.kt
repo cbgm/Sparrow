@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.expenses.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.expenses.domain.ExpensePayments
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 

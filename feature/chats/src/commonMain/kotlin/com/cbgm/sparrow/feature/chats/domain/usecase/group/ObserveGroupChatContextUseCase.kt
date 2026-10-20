@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation

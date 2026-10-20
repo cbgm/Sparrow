@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.autoreply.domain.usecase
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.autoreply.domain.repository.AutoReplyRepository
 
 class UpdateAutoReplyUseCase(

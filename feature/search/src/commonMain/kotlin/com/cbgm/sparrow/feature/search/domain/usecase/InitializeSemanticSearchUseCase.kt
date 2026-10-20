@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.search.domain.usecase
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.feature.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository

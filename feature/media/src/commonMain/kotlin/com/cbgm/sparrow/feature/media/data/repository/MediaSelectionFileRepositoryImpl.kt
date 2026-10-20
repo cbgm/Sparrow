@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.media.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.data.datasource.MediaSelectionFileDataSource
 import com.cbgm.sparrow.feature.media.data.mapper.toStoredMediaSelectionPaths
 import com.cbgm.sparrow.feature.media.domain.model.StoredMediaSelectionPaths

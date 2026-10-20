@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository
 
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.GroupRecipientDelivery
 
 interface GroupRecipientDeliveryRepository {

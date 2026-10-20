@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.expenses.presentation.create.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseConversion
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseConversion
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseCreationContext
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseMember

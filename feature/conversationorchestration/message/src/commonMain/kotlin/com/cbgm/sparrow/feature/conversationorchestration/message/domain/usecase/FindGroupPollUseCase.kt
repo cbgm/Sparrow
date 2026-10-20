@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 
 /** Loads one poll part of a group message. */

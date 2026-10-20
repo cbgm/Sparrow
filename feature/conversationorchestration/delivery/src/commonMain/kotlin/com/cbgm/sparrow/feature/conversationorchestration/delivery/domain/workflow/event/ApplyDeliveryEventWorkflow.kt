@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.event
 
-import com.cbgm.sparrow.core.message.domain.model.GroupDeliveryStatusAggregation
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.GroupDeliveryStatusAggregation
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.command.DeliveryCommand
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.DeliveryEventTarget
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.DirectMessageDeliveryStateMachine

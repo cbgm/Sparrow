@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.protocol.messagepart
 
-import com.cbgm.sparrow.core.messagepart.data.model.PaymentTransferDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.PaymentTransferDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 

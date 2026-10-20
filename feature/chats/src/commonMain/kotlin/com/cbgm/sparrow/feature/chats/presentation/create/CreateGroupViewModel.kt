@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.chats.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect

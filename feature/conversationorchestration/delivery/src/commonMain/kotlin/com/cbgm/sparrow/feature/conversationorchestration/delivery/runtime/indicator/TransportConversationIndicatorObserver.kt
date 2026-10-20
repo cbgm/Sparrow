@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationIndicator
 import com.cbgm.sparrow.feature.conversationorchestration.api.observer.ConversationIndicatorObserver

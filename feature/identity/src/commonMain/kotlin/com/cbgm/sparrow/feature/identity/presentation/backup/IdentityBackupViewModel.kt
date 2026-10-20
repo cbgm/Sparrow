@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.presentation.backup
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.MarkIdentityBackupExportedUseCase

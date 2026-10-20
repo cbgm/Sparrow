@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.messaging.domain.usecase.AcknowledgeMessagingFailureUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingFailureEventsUseCase
 import kotlinx.coroutines.CancellationException

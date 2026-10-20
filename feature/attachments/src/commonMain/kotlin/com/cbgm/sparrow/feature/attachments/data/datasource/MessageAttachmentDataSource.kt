@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.core.blob.data.model.EncryptedBlobReferenceDto
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity

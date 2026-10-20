@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.model
 
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
 
 /** A persisted conversation message as the write workflows see it. */
 data class StoredMessage(

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.data.database.outbox
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.protocol.codec.PacketCodec

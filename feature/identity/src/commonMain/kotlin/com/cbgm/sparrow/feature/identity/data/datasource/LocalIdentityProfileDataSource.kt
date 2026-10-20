@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
 

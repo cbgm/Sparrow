@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.protocol.authorization
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.DirectChatAuthorizationRevokedPacket
 import com.cbgm.sparrow.protocol.version.ProtocolVersion

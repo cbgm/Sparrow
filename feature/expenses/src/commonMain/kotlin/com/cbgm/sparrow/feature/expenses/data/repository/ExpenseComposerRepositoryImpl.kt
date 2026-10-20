@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.data.repository
 
-import com.cbgm.sparrow.core.result.safeCall
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseGroup
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseRequest
 import com.cbgm.sparrow.feature.expenses.domain.repository.ExpenseComposerRepository

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group
 
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi

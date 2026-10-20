@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 
 /** The persisted pin slot of one group; [messageId] is null while nothing is pinned. */
 data class GroupPinState(

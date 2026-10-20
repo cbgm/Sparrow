@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.packet
 
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
 import com.cbgm.sparrow.protocol.messagepart.requireValidWireMessageParts
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.version.ProtocolVersion

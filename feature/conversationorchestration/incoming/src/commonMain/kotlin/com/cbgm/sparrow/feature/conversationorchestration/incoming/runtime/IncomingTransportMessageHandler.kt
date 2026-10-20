@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.cbgm.sparrow.core.crypto.transport.DecodedTransportMessage
 import com.cbgm.sparrow.core.crypto.transport.IncomingTransportMessageDecoder
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StoreUnreadableMessageUseCase

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.data.model.StoredKeyExchangeStatusDto
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase

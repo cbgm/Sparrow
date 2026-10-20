@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason

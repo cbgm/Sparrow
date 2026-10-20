@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.voice.di
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadAttachmentBytesUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveMessageAttachmentTranscriptUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.SaveMessageAttachmentTranscriptUseCase

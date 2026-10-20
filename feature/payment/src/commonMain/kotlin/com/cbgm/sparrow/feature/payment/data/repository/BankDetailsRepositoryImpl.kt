@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.payment.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.payment.data.mapper.toBankDetails
 import com.cbgm.sparrow.feature.payment.data.mapper.toDto
 import com.cbgm.sparrow.feature.payment.data.model.BankDetailsDto

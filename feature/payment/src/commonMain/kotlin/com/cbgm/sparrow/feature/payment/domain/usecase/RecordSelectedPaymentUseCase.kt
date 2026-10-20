@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.payment.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentSelection
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentUnavailableException
 import kotlinx.coroutines.flow.first

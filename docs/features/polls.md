@@ -4,7 +4,7 @@ Polls are implemented as **Group message parts**, not as a separate conversation
 
 ## Model
 
-The domain model is `com.cbgm.sparrow.core.messagepart.domain.model.Poll` in `core/base`. A poll contains:
+The domain model is `com.cbgm.sparrow.core.base.messagepart.domain.model.Poll` in `core/base`. A poll contains:
 
 - `id`
 - `question`

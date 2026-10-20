@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.mapper.toGroupAvatarMetadata
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAvatarState

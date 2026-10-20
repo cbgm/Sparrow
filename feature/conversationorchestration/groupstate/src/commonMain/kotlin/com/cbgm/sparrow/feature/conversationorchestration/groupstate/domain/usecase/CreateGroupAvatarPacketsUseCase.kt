@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAvatarState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupAvatarPacketCodec

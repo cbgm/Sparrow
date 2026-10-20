@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.payment.domain.usecase
 
-import com.cbgm.sparrow.core.result.flatMap
-import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.core.util.result.flatMap
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.payment.domain.SepaPaymentPolicy
 import com.cbgm.sparrow.feature.payment.domain.model.BankDetails
 import com.cbgm.sparrow.feature.payment.domain.model.InvalidPaymentDetailsException

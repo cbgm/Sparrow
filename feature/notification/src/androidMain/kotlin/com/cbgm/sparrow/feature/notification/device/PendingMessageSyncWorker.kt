@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.notification.device
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.notification.domain.model.AppVisibilityState
 import com.cbgm.sparrow.feature.notification.domain.usecase.SynchronizePendingMessagesUseCase
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationPresenter

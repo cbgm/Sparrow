@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.voice.presentation.message
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartSourceUi
-import com.cbgm.sparrow.core.messagepart.ui.model.VoiceUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveMessageAttachmentTranscriptUseCase
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.expenses.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
 import com.cbgm.sparrow.feature.expenses.domain.ExpensePayments
 import com.cbgm.sparrow.feature.expenses.domain.ExpenseRevisions
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseOverview

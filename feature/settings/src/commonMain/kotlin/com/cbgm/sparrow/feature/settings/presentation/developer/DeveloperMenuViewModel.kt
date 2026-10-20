@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase

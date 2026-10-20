@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.media.domain.usecase
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.CapturedMedia
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserContent

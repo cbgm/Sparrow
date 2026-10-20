@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure

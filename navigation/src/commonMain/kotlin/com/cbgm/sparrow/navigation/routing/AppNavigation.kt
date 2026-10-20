@@ -22,9 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.notification.domain.model.NotificationConversationTarget
 import com.cbgm.sparrow.feature.notification.domain.usecase.ResolveNotificationConversationUseCase
 import com.cbgm.sparrow.feature.notification.presentation.navigation.NotificationNavigationController

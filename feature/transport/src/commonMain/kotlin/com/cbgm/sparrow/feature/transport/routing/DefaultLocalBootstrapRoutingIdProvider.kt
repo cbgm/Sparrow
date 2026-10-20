@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.routing
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 
 class DefaultLocalBootstrapRoutingIdProvider(
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,

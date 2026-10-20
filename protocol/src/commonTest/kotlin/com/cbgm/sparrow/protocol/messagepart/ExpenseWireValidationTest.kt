@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.protocol.messagepart
 
-import com.cbgm.sparrow.core.messagepart.data.model.ExpenseAllocationDto
-import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardClosedDto
-import com.cbgm.sparrow.core.messagepart.data.model.ExpenseBoardDto
-import com.cbgm.sparrow.core.messagepart.data.model.ExpenseDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseAllocationDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardClosedDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseBoardDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ExpenseDto
 import com.cbgm.sparrow.protocol.message.GroupMessageContent
 import kotlin.test.Test
 import kotlin.test.assertFailsWith

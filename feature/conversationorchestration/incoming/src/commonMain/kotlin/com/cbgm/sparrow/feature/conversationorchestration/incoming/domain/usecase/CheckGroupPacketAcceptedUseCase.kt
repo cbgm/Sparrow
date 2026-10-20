@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket

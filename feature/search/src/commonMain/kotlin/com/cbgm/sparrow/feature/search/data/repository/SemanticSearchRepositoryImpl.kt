@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource

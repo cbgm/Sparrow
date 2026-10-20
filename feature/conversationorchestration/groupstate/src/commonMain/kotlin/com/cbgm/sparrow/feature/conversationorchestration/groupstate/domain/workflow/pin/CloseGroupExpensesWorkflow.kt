@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason

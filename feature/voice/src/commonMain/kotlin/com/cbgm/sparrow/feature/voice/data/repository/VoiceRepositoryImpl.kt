@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.voice.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeCall
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.voice.device.VoicePlayer
 import com.cbgm.sparrow.feature.voice.device.VoiceRecorder
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceComposerPhase

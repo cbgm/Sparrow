@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpensePolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.Image
-import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand

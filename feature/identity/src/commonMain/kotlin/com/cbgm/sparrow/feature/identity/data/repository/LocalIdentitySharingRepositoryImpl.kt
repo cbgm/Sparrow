@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentitySharingDataSource
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentitySharingRepository
 import kotlinx.coroutines.flow.Flow

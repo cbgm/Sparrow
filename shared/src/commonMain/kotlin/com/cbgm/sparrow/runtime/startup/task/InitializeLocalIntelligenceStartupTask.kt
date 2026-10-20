@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.runtime.startup.task
 
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 
 class InitializeLocalIntelligenceStartupTask(

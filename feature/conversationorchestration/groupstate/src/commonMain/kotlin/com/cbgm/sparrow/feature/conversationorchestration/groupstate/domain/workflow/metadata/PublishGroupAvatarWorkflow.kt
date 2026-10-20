@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep

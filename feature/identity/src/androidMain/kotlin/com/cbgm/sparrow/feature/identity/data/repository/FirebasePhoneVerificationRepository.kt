@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import android.app.Activity
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.device.DebugSmsNotifier
 import com.cbgm.sparrow.feature.identity.domain.model.PhoneVerificationStep
 import com.cbgm.sparrow.feature.identity.domain.repository.PhoneVerificationRepository

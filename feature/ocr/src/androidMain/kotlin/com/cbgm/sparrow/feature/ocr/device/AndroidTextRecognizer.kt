@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.ocr.device
 
 import android.content.Context
 import android.net.Uri
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.ocr.data.model.RecognizedTextLine
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
-import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox

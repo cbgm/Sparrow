@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.device.rememberCameraScannerLauncher
 import com.cbgm.sparrow.feature.media.domain.model.CameraScanMode
 import com.cbgm.sparrow.feature.media.domain.model.CameraScanResult

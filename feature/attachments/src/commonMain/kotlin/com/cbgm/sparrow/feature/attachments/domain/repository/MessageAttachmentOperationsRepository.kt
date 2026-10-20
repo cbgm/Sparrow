@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import kotlinx.coroutines.flow.Flow
 
