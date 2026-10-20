@@ -232,7 +232,12 @@ val identityModule =
         }
 
         // PhoneVerificationRepository is bound by the platform module (Firebase on Android).
-        factory { SendPhoneVerificationCodeUseCase(repository = get()) }
+        factory {
+            SendPhoneVerificationCodeUseCase(
+                repository = get(),
+                localIdentityProfileRepository = get()
+            )
+        }
         factory {
             ConfirmPhoneVerificationCodeUseCase(
                 repository = get(),
