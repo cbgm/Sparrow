@@ -120,9 +120,9 @@ def enable_firebase_credentials(source_file):
     try:
         update_installed_properties(runtime_file, {"FIREBASE_ADMIN_CREDENTIALS": str(destination)})
         dc("control-plane", "config", "--quiet")
-        # Apply optional Compose secret to the push container only. Normal
-        # backend update may recreate push again, but volumes remain intact.
-        dc("control-plane", "up", "-d", "--no-deps", "--pull", "never", "push")
+        # Apply the optional Compose secret to both services that use it: push (FCM)
+        # and presence-directory (phone verification). Volumes remain intact.
+        dc("control-plane", "up", "-d", "--no-deps", "--pull", "never", "push", "presence-directory")
     except Exception:
         runtime_file.write_bytes(previous_runtime)
         if added:

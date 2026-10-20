@@ -36,6 +36,10 @@ https://github.com/user-attachments/assets/73a1d095-f11c-44ed-91a1-d02b783e4cd4
 
 https://github.com/user-attachments/assets/daae9719-3445-472b-9257-8d2403dd3f4d
 
+## Verify and Expenses
+
+https://github.com/user-attachments/assets/29ad0a51-1a75-4e56-a11e-a8c339c9aa80
+
 ## What makes Sparrow different?
 
 Sparrow combines client-side end-to-end encryption with a **federated, independently hostable transport
