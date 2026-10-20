@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.identity.presentation.create
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
@@ -13,6 +12,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCas
 import com.cbgm.sparrow.feature.identity.presentation.create.mapper.toUi
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
+import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationResultUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_create_failed
 import com.cbgm.sparrow.resources.feature_identity_phone_hint_failed
@@ -34,6 +34,11 @@ class IdentityCreateViewModel(
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<IdentityCreateUiState>(IdentityCreateUiState.Loading)
     val uiState = _uiState.asStateFlow()
+
+    // The number waiting for SMS verification; the identity is created once it is verified.
+    private val _phoneToVerify = MutableStateFlow<String?>(null)
+    val phoneToVerify = _phoneToVerify.asStateFlow()
+    private var verifying: Pair<IdentityCreateUiState.Form, String>? = null
     private var loadingIdentity = false
 
     init {
@@ -86,7 +91,7 @@ class IdentityCreateViewModel(
                 savedStateHandle[NAME_KEY] = event.value
                 _uiState.value = form.copy(name = event.value)
             }
-            IdentityCreateUiEvent.CreateClicked -> create()
+            IdentityCreateUiEvent.CreateClicked -> verifyAndCreate()
         }
     }
 
@@ -96,40 +101,47 @@ class IdentityCreateViewModel(
         viewModelScope.launch { showFailure(Res.string.feature_identity_phone_hint_failed) }
     }
 
-    fun requestRestore() {
-        val form = _uiState.value as? IdentityCreateUiState.Form ?: return
-        val phone = normalizePhoneNumber(form.phoneNumber).getOrElse {
-            viewModelScope.launch { showFailure(Res.string.feature_identity_phone_number_invalid) }
-            return
-        }
-        navigator.navigateTo(AppRoute.IdentityRestore(phoneNumber = phone, name = form.name))
-    }
-
     private suspend fun showLoadFailure() {
         _uiState.value = IdentityCreateUiState.Error
         showFailure(Res.string.feature_identity_setup_load_failed)
     }
 
-    private fun create() {
+    // The identity is created only after the phone number was verified.
+    private fun verifyAndCreate() {
         val form = _uiState.value as? IdentityCreateUiState.Form ?: return
         val phone = normalizePhoneNumber(form.phoneNumber).getOrElse {
             viewModelScope.launch { showFailure(Res.string.feature_identity_phone_number_invalid) }
             return
         }
+        verifying = form to phone
+        _phoneToVerify.value = phone
+    }
+
+    fun onPhoneVerification(result: PhoneVerificationResultUi) {
+        val (form, phone) = verifying ?: return
+        verifying = null
+        _phoneToVerify.value = null
+        if (result == PhoneVerificationResultUi.Verified) {
+            viewModelScope.launch { create(form, phone) }
+        }
+    }
+
+    private suspend fun create(
+        form: IdentityCreateUiState.Form,
+        phone: String
+    ) {
         _uiState.value = IdentityCreateUiState.Creating
-        viewModelScope.launch {
-            saveLocalPhoneName(phone, form.name).onFailure {
-                _uiState.value = form
-                showFailure(Res.string.feature_identity_create_failed)
-                return@launch
-            }
-            createIdentity().onSuccess {
-                clearDraft()
-                _uiState.value = IdentityCreateUiState.Completed
-            }.onFailure {
-                _uiState.value = form
-                showFailure(Res.string.feature_identity_create_failed)
-            }
+        saveLocalPhoneName(phone, form.name).onFailure {
+            _uiState.value = form
+            showFailure(Res.string.feature_identity_create_failed)
+            return
+        }
+        createIdentity().onSuccess {
+            clearDraft()
+            _uiState.value = IdentityCreateUiState.Completed
+        }.onFailure {
+            _uiState.value = form
+            showFailure(Res.string.feature_identity_create_failed)
         }
     }
 

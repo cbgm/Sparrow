@@ -77,10 +77,6 @@ class Installer(EngineWindow):
         self.firebase_button = self.button(chooser, "Choose...", self.choose_firebase)
         self.firebase_button.grid(row=0, column=1, padx=(8, 0))
         push.add(chooser, "Service account JSON")
-        self.phone = tk.BooleanVar(value=self.settings["phoneVerification"])
-        self.phone_check = push.add(ttk.Checkbutton(
-            push, text="Require verified phone numbers (needs the Firebase credentials)", variable=self.phone),
-            sticky="w")
         push.hint("Leave the file empty to keep the installed credentials. "
                   "They need FCM and Authentication access to Sparrow's Firebase project.")
 
@@ -152,9 +148,6 @@ class Installer(EngineWindow):
         push = "normal" if self.push.get() else "disabled"
         self.firebase_entry.configure(state=push)
         self.firebase_button.configure(state=push)
-        self.phone_check.configure(state=push)
-        if not self.push.get():
-            self.phone.set(False)
 
     def collect(self) -> dict:
         self.settings.update({
@@ -162,7 +155,6 @@ class Installer(EngineWindow):
             "autoDns": self.auto_dns.get(), "nodeDomain": self.node_domain.get().strip(),
             "controlDomain": self.control_domain.get().strip(), "directoryUrl": self.directory_url.get().strip(),
             "push": self.push.get(), "firebaseFile": self.firebase.get().strip(),
-            "phoneVerification": self.phone.get(),
             "imagePrefix": self.image_prefix.get().strip(), "imageTag": self.image_tag.get().strip(),
         })
         self.preferences["settings"] = self.settings

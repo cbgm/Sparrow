@@ -6,7 +6,6 @@ import com.cbgm.sparrow.server.security.ClientRoutingIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -16,17 +15,15 @@ class PhoneVerificationTest {
     private val alias = ClientRoutingIds.fromPhoneNumber(phone)
 
     @Test
-    fun optionalAllowsSkippingAndMandatoryRejectsSkipping() =
+    fun registrationsWithoutProofAreAccepted() =
         runTest {
-            val unverified = registration(null)
-            assertTrue(verification(false) { error("Must not call Firebase") }.accepts(unverified))
-            assertFalse(verification(true) { error("Must not call Firebase") }.accepts(unverified))
+            assertTrue(verification { error("Must not call Firebase") }.accepts(registration(null)))
         }
 
     @Test
     fun proofMustMatchEveryAdvertisedPhoneAlias() =
         runTest {
-            val verification = verification(true) { phone }
+            val verification = verification { phone }
             val otherAlias = ClientRoutingIds.fromPhoneNumber("+491709999999")
             assertTrue(verification.accepts(registration("valid")))
             assertFalse(verification.accepts(registration("valid", listOf(otherAlias))))
@@ -36,68 +33,31 @@ class PhoneVerificationTest {
         }
 
     @Test
-    fun invalidProofIsRejectedEvenWhenOptional() =
+    fun invalidProofIsRejected() =
         runTest {
-            for (required in listOf(false, true)) {
-                val verification = verification(required) { error("Expired or invalid JWT") }
-                assertFalse(verification.accepts(registration("invalid")))
-                assertFalse(verification.accepts(registration("")))
-            }
+            val verification = verification { error("Expired or invalid JWT") }
+            assertFalse(verification.accepts(registration("invalid")))
+            assertFalse(verification.accepts(registration("")))
         }
 
     @Test
     fun proofIsIgnoredWhenTheServerCannotVerifyPhones() =
         runTest {
-            assertTrue(PhoneVerification(false, verifier = null).accepts(registration("token")))
-            assertFalse(PhoneVerification(true, verifier = null).accepts(registration("token")))
+            assertTrue(PhoneVerification(verifier = null).accepts(registration("token")))
+            assertTrue(createPhoneVerification { null }.accepts(registration("token")))
         }
-
-    @Test
-    fun policyReportsWhetherVerificationIsAvailable() {
-        assertEquals(
-            PhoneVerificationPolicy(required = true, available = true),
-            verification(true) { phone }.policy
-        )
-        assertEquals(
-            PhoneVerificationPolicy(required = false, available = false),
-            PhoneVerification(false, verifier = null).policy
-        )
-    }
-
-    @Test
-    fun environmentEnablesVerificationOnlyWithFirebaseCredentials() {
-        val withoutCredentials = mapOf("PHONE_VERIFICATION_REQUIRED" to "true")
-        val withCredentials =
-            withoutCredentials + ("GOOGLE_APPLICATION_CREDENTIALS" to "/run/firebase.json")
-
-        assertEquals(
-            PhoneVerificationPolicy(required = true, available = false),
-            createPhoneVerification(withoutCredentials::get).policy
-        )
-        assertEquals(
-            PhoneVerificationPolicy(required = true, available = true),
-            createPhoneVerification(withCredentials::get).policy
-        )
-        assertEquals(
-            PhoneVerificationPolicy(required = false, available = false),
-            createPhoneVerification { null }.policy
-        )
-        assertFailsWith<IllegalArgumentException> {
-            createPhoneVerification(mapOf("PHONE_VERIFICATION_REQUIRED" to "yes")::get)
-        }
-    }
 
     @Test
     fun malformedVerifiedNumberIsRejected() =
         runTest {
-            assertFalse(verification(true) { "not-a-phone" }.accepts(registration("valid")))
+            assertFalse(verification { "not-a-phone" }.accepts(registration("valid")))
         }
 
     @Test
     fun keyOnlyRoutingDoesNotClaimAPhoneNumber() =
         runTest {
             assertTrue(
-                verification(true) { error("No phone claimed") }
+                verification { error("No phone claimed") }
                     .accepts(registration(null, emptyList()))
             )
         }
@@ -106,7 +66,7 @@ class PhoneVerificationTest {
     fun cancellationIsNotConvertedToAuthorizationFailure() =
         runTest {
             assertFailsWith<CancellationException> {
-                verification(true) { throw CancellationException() }.accepts(registration("valid"))
+                verification { throw CancellationException() }.accepts(registration("valid"))
             }
         }
 
@@ -115,8 +75,8 @@ class PhoneVerificationTest {
         assertFalse(registration("sensitive-token").toString().contains("sensitive-token"))
     }
 
-    private fun verification(required: Boolean, phoneNumber: suspend (String) -> String) =
-        PhoneVerification(required) { token -> VerifiedPhone(phoneNumber(token), Long.MAX_VALUE) }
+    private fun verification(phoneNumber: suspend (String) -> String) =
+        PhoneVerification { token -> VerifiedPhone(phoneNumber(token), Long.MAX_VALUE) }
 
     private fun registration(token: String?, aliases: List<String> = listOf(alias)) =
         ClientRouteRegistration(

@@ -20,7 +20,6 @@ param(
     [string]$ResultPath = '',
     [string]$FailurePath = '',
     [ValidateSet('Keep','ReplaceTestData')][string]$ExistingDeployment = 'Keep',
-    [ValidateSet('Keep','Required','Optional')][string]$PhoneVerification = 'Keep',
     [string]$ReplacementConfirmation = ''
 )
 Set-StrictMode -Version Latest
@@ -1651,35 +1650,7 @@ try {
                 # registration client cannot write to.
                 New-Item -ItemType Directory -Path (Join-Path $cpRoot 'directory-registration-proofs') -Force | Out-Null
             }
-            $phoneVerificationRequired = switch ($PhoneVerification) {
-                'Required' { 'true' }
-                'Optional' { 'false' }
-                default { $null }
-            }
-            $cpRuntimePath = Join-Path $cpRoot '.env.runtime'
-            if ($null -ne $phoneVerificationRequired) {
-                # Compose prefers the process value on a fresh install; the
-                # runtime file keeps the choice for every later start.
-                $env:PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired
-                if ((Test-Path -LiteralPath $cpRuntimePath -PathType Leaf) -and
-                    (Read-Properties $cpRuntimePath)['PHONE_VERIFICATION_REQUIRED'] -ne $phoneVerificationRequired) {
-                    Write-Properties $cpRuntimePath @{ PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired }
-                }
-            }
             Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory', 'push')
-            if ($null -ne $phoneVerificationRequired) {
-                $cpRuntime = Read-Properties $cpRuntimePath
-                if ($cpRuntime['PHONE_VERIFICATION_REQUIRED'] -ne $phoneVerificationRequired) {
-                    Write-Properties $cpRuntimePath @{ PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired }
-                }
-                $hasFirebase = -not [string]::IsNullOrWhiteSpace($cpRuntime['FIREBASE_ADMIN_CREDENTIALS']) -and
-                    (Test-Path -LiteralPath $cpRuntime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)
-                if ($phoneVerificationRequired -eq 'true' -and -not $hasFirebase) {
-                    Write-Warning 'Phone verification is required but no Firebase credentials are configured: phone number registrations will be rejected until credentials are imported.'
-                } else {
-                    Write-Host "Phone verification: $(if ($phoneVerificationRequired -eq 'true') { 'required' } else { 'optional' })."
-                }
-            }
         }
         if ($nodeSelected) {
             if (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) {

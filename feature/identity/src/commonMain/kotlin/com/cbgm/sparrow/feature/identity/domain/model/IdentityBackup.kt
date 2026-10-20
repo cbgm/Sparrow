@@ -6,6 +6,11 @@ data class IdentityBackup(
     val encryptionPrivateKey: ByteArray,
     val signingPrivateKey: ByteArray
 ) {
+    fun wipe() {
+        encryptionPrivateKey.fill(0)
+        signingPrivateKey.fill(0)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

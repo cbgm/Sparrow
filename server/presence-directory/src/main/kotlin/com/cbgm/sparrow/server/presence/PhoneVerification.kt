@@ -3,13 +3,6 @@ package com.cbgm.sparrow.server.presence
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.security.ClientRoutingIds
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.Serializable
-
-@Serializable
-internal data class PhoneVerificationPolicy(
-    val required: Boolean,
-    val available: Boolean
-)
 
 internal data class VerifiedPhone(
     val phoneNumber: String,
@@ -20,19 +13,19 @@ internal fun interface PhoneTokenVerifier {
     suspend fun verify(token: String): VerifiedPhone
 }
 
+/**
+ * Phone numbers are verified once in the app during sign-up. Its first route registration
+ * carries the Firebase token; later registrations carry none. Nothing is stored: a token that
+ * is present must prove every advertised phone alias, a missing token is accepted.
+ */
 internal class PhoneVerification(
-    private val required: Boolean,
     private val verifier: PhoneTokenVerifier?
 ) {
-    val policy: PhoneVerificationPolicy
-        get() = PhoneVerificationPolicy(required = required, available = verifier != null)
-
     suspend fun accepts(registration: ClientRouteRegistration): Boolean {
         val aliases = registration.route.aliases.orEmpty()
         val token = registration.phoneVerificationToken
         return when {
-            aliases.isEmpty() -> true
-            verifier == null || token == null -> !required
+            aliases.isEmpty() || token == null || verifier == null -> true
             token.isBlank() -> false
             else -> {
                 val alias = verifiedAlias(verifier, token)

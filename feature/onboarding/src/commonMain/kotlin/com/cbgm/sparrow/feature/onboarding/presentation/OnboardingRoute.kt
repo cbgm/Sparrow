@@ -9,6 +9,8 @@ import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintLauncher
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintResult
 import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
+import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
+import com.cbgm.sparrow.feature.identity.presentation.setup.IdentitySetupDialogs
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberReader
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
@@ -19,7 +21,8 @@ import org.koin.compose.viewmodel.koinViewModel
 fun OnboardingRoute(
     onComplete: () -> Unit,
     viewModel: OnboardingViewModel = koinViewModel(),
-    identityViewModel: IdentityCreateViewModel = koinViewModel()
+    identityViewModel: IdentityCreateViewModel = koinViewModel(),
+    restoreViewModel: IdentityRestoreViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val identityState by identityViewModel.uiState.collectAsStateWithLifecycle()
@@ -62,8 +65,13 @@ fun OnboardingRoute(
     OnboardingScreen(
         state = state,
         identityState = identityState,
-        onRestoreIdentity = identityViewModel::requestRestore,
+        onRestoreIdentity = {
+            (identityState as? IdentityCreateUiState.Form)?.let { form ->
+                restoreViewModel.start(phoneNumber = form.phoneNumber, name = form.name)
+            }
+        },
         onIdentityUiEvent = identityViewModel::onUiEvent,
         onUiEvent = viewModel::onUiEvent
     )
+    IdentitySetupDialogs(createViewModel = identityViewModel, restoreViewModel = restoreViewModel)
 }

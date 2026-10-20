@@ -297,8 +297,8 @@ private suspend fun GatewayConnection.sendRouteRejected(result: PresenceRegistra
     sendError(
         code = "ROUTE_REJECTED",
         message =
-            if (result == PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED) {
-                "Phone verification required"
+            if (result == PresenceRegistrationResult.PHONE_VERIFICATION_FAILED) {
+                "Phone verification failed"
             } else {
                 "Presence route rejected"
             }

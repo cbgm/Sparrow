@@ -17,7 +17,7 @@ interface FederationClient {
 enum class PresenceRegistrationResult {
     ACCEPTED,
     REJECTED,
-    PHONE_VERIFICATION_REQUIRED
+    PHONE_VERIFICATION_FAILED
 }
 
 interface PresenceClient {

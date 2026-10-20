@@ -907,6 +907,15 @@
     <string name="feature_identity_create_failed">Your identity could not be created. Please try again.</string>
     <string name="feature_identity_phone_hint_failed">The phone number could not be read from this device. Enter it manually.</string>
     <string name="feature_identity_phone_number_invalid">Enter a valid phone number.</string>
+    <string name="feature_identity_phone_verification_title">Verify your phone number</string>
+    <string name="feature_identity_phone_verification_sending">Sending a code to %1$s…</string>
+    <string name="feature_identity_phone_verification_hint">Enter the code we sent by SMS to %1$s.</string>
+    <string name="feature_identity_phone_verification_confirm">Verify</string>
+    <string name="feature_identity_phone_verification_resend">Send again</string>
+    <string name="feature_identity_phone_verification_resend_in">Send again in %1$d s</string>
+    <string name="feature_identity_phone_verification_skip">Skip (debug)</string>
+    <string name="feature_identity_phone_verification_send_failed">The code could not be sent. Check the number and try again.</string>
+    <string name="feature_identity_phone_verification_wrong_code">The code is not correct.</string>
     <string name="feature_identity_setup_load_failed">Identity setup could not be loaded. Please restart Sparrow.</string>
     <string name="feature_identity_restore_failed">The identity could not be restored. Check the backup and password, then try again.</string>
     <string name="feature_identity_restore_invalid_phone">Enter a valid phone number before restoring your identity.</string>

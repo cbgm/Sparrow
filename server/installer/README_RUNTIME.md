@@ -289,10 +289,8 @@ Building from source needs Docker and Python 3 (as does the manager itself).
 
 ### Phone verification
 
-The **Require verified phone numbers** option (Windows manager) sets
-`PHONE_VERIFICATION_REQUIRED` for the Control Plane presence directory. When it
-is on, phone-number aliases are only published for clients that present a
-valid Firebase phone sign-in token. It needs the Firebase service-account
-credentials (the same import as push). On Linux/macOS set
-`PHONE_VERIFICATION_REQUIRED=true` in `control-plane/.env.runtime` and run
-`install` again.
+Phone numbers are verified once in the app during sign-up (Firebase SMS). The
+app's first route registration carries the Firebase token; the Control Plane
+checks it with the Firebase service-account credentials (the same import as
+push) and stores nothing. Later registrations carry no token. Without imported
+credentials tokens are not checked.

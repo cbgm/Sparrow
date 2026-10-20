@@ -13,6 +13,13 @@ interface IdentityRepository {
 
     suspend fun createIdentity(): Result<PublicIdentity>
 
+    /** Checks that the private keys belong to [publicIdentity]; nothing is stored. */
+    suspend fun validateIdentityKeys(
+        publicIdentity: PublicIdentity,
+        encryptionPrivateKey: ByteArray,
+        signingPrivateKey: ByteArray
+    ): Result<Unit>
+
     suspend fun restoreIdentity(
         publicIdentity: PublicIdentity,
         encryptionPrivateKey: ByteArray,

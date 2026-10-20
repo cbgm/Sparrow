@@ -60,7 +60,6 @@ def save_preferences(preferences: dict) -> None:
 def default_settings() -> dict:
     cp = properties(ROOT / "control-plane" / "sparrow.conf")
     node = properties(ROOT / "community-node" / "sparrow.conf")
-    cp_runtime = properties(ROOT / "control-plane" / ".env.runtime")
     automatic = cp.get("PUBLIC_HOSTNAME_MODE") == "CaddyAutomatic" or bool(
         re.fullmatch("control" + SSLIP, cp.get("PUBLIC_DOMAIN", ""))) or not cp.get("PUBLIC_DOMAIN")
     return {
@@ -71,7 +70,6 @@ def default_settings() -> dict:
         "directoryUrl": node.get("CONTROL_PLANE_DIRECTORY_URL") or cp.get("CONTROL_PLANE_DIRECTORY_URL", ""),
         "push": True,
         "firebaseFile": "",
-        "phoneVerification": cp_runtime.get("PHONE_VERIFICATION_REQUIRED") == "true",
         "imagePrefix": cp.get("SPARROW_IMAGE_PREFIX", "ghcr.io/cbgm/sparrow"),
         "imageTag": cp.get("SPARROW_IMAGE_TAG", "latest"),
     }
@@ -145,7 +143,6 @@ def platform_engine(action: str, settings: dict) -> list[str]:
                 "ImagePrefix": settings["imagePrefix"], "ImageTag": settings["imageTag"],
                 "FirebaseCredentialsPath": settings["firebaseFile"],
                 "FirebaseMode": "Enabled" if settings["push"] else "Disabled",
-                "PhoneVerification": "Required" if settings["phoneVerification"] else "Optional",
             })
         if reinstall:
             parameters.update({"ExistingDeployment": "ReplaceTestData",
@@ -154,8 +151,7 @@ def platform_engine(action: str, settings: dict) -> list[str]:
     if action not in ("start", "reinstall"):
         return python("Invoke-SparrowServer.py", action, "--component", "combined")
     arguments = ["reinstall-public" if reinstall else "install", "--component", "combined", "--mode", settings["mode"],
-                 "--image-prefix", settings["imagePrefix"], "--image-tag", settings["imageTag"],
-                 "--phone-verification", "required" if settings["phoneVerification"] else "optional"]
+                 "--image-prefix", settings["imagePrefix"], "--image-tag", settings["imageTag"]]
     if public and settings["autoDns"]:
         arguments.append("--auto-dns")
     elif public:
@@ -229,7 +225,6 @@ def describe(settings: dict) -> list[tuple[str, str]]:
     rows += [("Directory Server URL", settings["directoryUrl"] or "-"),
              ("Push notifications", "on" if settings["push"] else "off"),
              ("Firebase credentials file", settings["firebaseFile"] or "keep installed"),
-             ("Require verified phone numbers", "yes" if settings["phoneVerification"] else "no"),
              ("Images", f"{settings['imagePrefix']}-*:{settings['imageTag']}")]
     return rows
 

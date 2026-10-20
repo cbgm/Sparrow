@@ -21,7 +21,6 @@ import io.ktor.server.routing.routing
 internal fun Application.installPresenceRoutes(runtime: PresenceRuntime) {
     routing {
         installHealthRoute(runtime)
-        installPhoneVerificationPolicy(runtime)
         installRouteRegistration(runtime)
         installRouteRemoval(runtime)
         installRouteResolution(runtime)
@@ -34,12 +33,6 @@ private fun Route.installHealthRoute(runtime: PresenceRuntime) {
             "ok persistence=${runtime.store.persistenceMode} " +
                 "routes=${runtime.store.routeCount()}"
         )
-    }
-}
-
-private fun Route.installPhoneVerificationPolicy(runtime: PresenceRuntime) {
-    get("/v1/phone-verification/policy") {
-        call.respond(runtime.phoneVerification.policy)
     }
 }
 
@@ -79,7 +72,7 @@ private fun Route.installRouteRegistration(runtime: PresenceRuntime) {
             !runtime.phoneVerification.accepts(registration) ->
                 call.respond(
                     HttpStatusCode.Forbidden,
-                    ErrorResponse("PHONE_VERIFICATION_REQUIRED", "Phone verification is required")
+                    ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
                 )
 
             else ->

@@ -31,6 +31,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.play.services.auth)
+            implementation(libs.firebase.auth)
         }
 
         commonTest.dependencies {

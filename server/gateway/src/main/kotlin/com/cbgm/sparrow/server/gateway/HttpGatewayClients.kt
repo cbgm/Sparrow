@@ -69,8 +69,8 @@ class HttpPresenceClient(
         val results = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
         return when {
             PresenceRegistrationResult.ACCEPTED in results -> PresenceRegistrationResult.ACCEPTED
-            PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED in results ->
-                PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED
+            PresenceRegistrationResult.PHONE_VERIFICATION_FAILED in results ->
+                PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
             else -> PresenceRegistrationResult.REJECTED
         }
     }
@@ -113,7 +113,7 @@ class HttpPresenceClient(
 
                 status == HttpStatusCode.Forbidden -> {
                     endpointPool.markReachable(baseUrl)
-                    PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED
+                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
                 }
 
                 else -> {

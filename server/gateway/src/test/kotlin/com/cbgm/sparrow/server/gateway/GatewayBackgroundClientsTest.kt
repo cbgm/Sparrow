@@ -17,7 +17,7 @@ class GatewayBackgroundClientsTest {
                 BoundedPresenceClient(
                     object : PresenceClient {
                         override suspend fun register(registration: ClientRouteRegistration) =
-                            PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED
+                            PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
 
                         override suspend fun remove(
                             routingId: String,
@@ -27,7 +27,7 @@ class GatewayBackgroundClientsTest {
                 )
             try {
                 assertEquals(
-                    PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED,
+                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED,
                     wrapper.register(testRegistration())
                 )
             } finally {

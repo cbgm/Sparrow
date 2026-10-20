@@ -25,6 +25,9 @@ class LocalIdentityProfileRepositoryImpl(
             dataSource.savePhoneName(phoneNumber = phoneNumber, name = name)
         }
 
+    override fun keepPhoneVerificationToken(token: String) =
+        dataSource.keepPhoneVerificationToken(token)
+
     override suspend fun deletePhoneName(): Result<Unit> =
         safeSuspendCall { dataSource.deletePhoneName() }
 }

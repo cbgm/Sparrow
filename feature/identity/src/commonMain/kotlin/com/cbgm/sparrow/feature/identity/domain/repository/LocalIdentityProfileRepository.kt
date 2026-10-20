@@ -12,6 +12,9 @@ interface LocalIdentityProfileRepository {
         name: String
     ): Result<Unit>
 
+    /** Keeps the token in memory for the first route registration; it is never stored. */
+    fun keepPhoneVerificationToken(token: String)
+
     suspend fun loadPhoneNumber(): Result<String?>
 
     suspend fun deletePhoneName(): Result<Unit>

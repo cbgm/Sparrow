@@ -856,8 +856,6 @@ def install(args):
             require(not dest.exists(), "Existing Firebase file must not be replaced automatically.")
             shutil.copyfile(Path(args.firebase_file).expanduser(), dest)
             dest.chmod(0o600)
-        if args.phone_verification:
-            os.environ["PHONE_VERIFICATION_REQUIRED"] = "true" if args.phone_verification == "required" else "false"
         run(["bash", str(ROOT / "control-plane" / "bootstrap-control-plane.sh")])
     if "node" in components and not runtime("node").exists():
         cp_url = (f"https://{args.control_domain}" if args.mode == "public" else "http://localhost:8390") if args.component == "combined" else ""
@@ -908,9 +906,6 @@ def install(args):
     # normal backend update. A freshly bootstrapped CP already imported them.
     if args.firebase_file and runtime("control-plane").is_file():
         enable_firebase_credentials(args.firebase_file)
-    if args.phone_verification and runtime("control-plane").is_file():
-        update_installed_properties(runtime("control-plane"), {
-            "PHONE_VERIFICATION_REQUIRED": "true" if args.phone_verification == "required" else "false"})
     # Install / Start always refreshes existing Sparrow backend images from GHCR.
     # No database/Redis/Caddy image updates, no re-bootstrap or new identities.
     for component in components:
@@ -987,8 +982,6 @@ def parse_args():
     parser.add_argument("--auto-dns", action="store_true", help="generate free sslip.io hostnames from WAN IPv4")
     parser.add_argument("--public-ip", default="", help="optional explicit public IPv4 for automatic DNS")
     parser.add_argument("--verify-public", action="store_true", help="require advertised public Node in the signed CP directory")
-    parser.add_argument("--phone-verification", choices=("required", "optional"), default=None,
-                        help="require Firebase-verified phone numbers (needs Firebase credentials)")
     parser.add_argument("--confirm-delete-data", action="store_true", help="explicit authorization for destructive Public reinstall")
     return parser.parse_args()
 

@@ -138,16 +138,11 @@ class IdentityRepositoryImpl(
             }
         }
 
-    /** Validates both key pairs BEFORE persisting either; fails closed if any identity state exists. */
-    @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun restoreIdentity(
+    override suspend fun validateIdentityKeys(
         publicIdentity: PublicIdentity,
         encryptionPrivateKey: ByteArray,
         signingPrivateKey: ByteArray
-    ): Result<PublicIdentity> = safeSuspendCall {
-        check(!publicIdentityDataSource.exists() && !privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()) {
-            "An identity or partial identity already exists"
-        }
+    ): Result<Unit> = safeSuspendCall(logFailure = false) {
         require(
             publicIdentity.encryptionPublicKey.size == 32 && encryptionPrivateKey.size == 32 &&
                 publicIdentity.signingPublicKey.size == 32 && signingPrivateKey.size == 64
@@ -164,6 +159,19 @@ class IdentityRepositoryImpl(
             encryptionPrivateKey
         ).getOrThrow()
         check(decrypted.contentEquals(testPayload)) { "Backup encryption key does not match public identity" }
+    }
+
+    /** Validates both key pairs BEFORE persisting either; fails closed if any identity state exists. */
+    @OptIn(ExperimentalUnsignedTypes::class)
+    override suspend fun restoreIdentity(
+        publicIdentity: PublicIdentity,
+        encryptionPrivateKey: ByteArray,
+        signingPrivateKey: ByteArray
+    ): Result<PublicIdentity> = safeSuspendCall {
+        check(!publicIdentityDataSource.exists() && !privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()) {
+            "An identity or partial identity already exists"
+        }
+        validateIdentityKeys(publicIdentity, encryptionPrivateKey, signingPrivateKey).getOrThrow()
         // The private-key storage uses one DataStore edit for both already-wrapped private keys.
         // Public keys are stored only afterwards; a failed import attempts rollback of both.
         try {

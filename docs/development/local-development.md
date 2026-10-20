@@ -13,6 +13,18 @@ CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://<release-directory-host>/v1/control-
 
 The production discovery model is signed; do not model a new deployment as an unsigned hardcoded list of arbitrary nodes.
 
+### Phone verification in debug builds
+
+Sign-up verifies the phone number once by SMS (Firebase). Debug builds show a **Skip** button in
+the verification dialog. With `DEBUG_SMS_CODE` set, debug builds use the Firebase test mode: add
+the number as a test phone number with this code in the Firebase console (Authentication → Sign-in
+method → Phone); the app check is skipped and the code is filled in automatically. Release builds
+ignore both.
+
+```properties
+DEBUG_SMS_CODE=123456
+```
+
 ## 2. Build the Android client
 
 Windows:

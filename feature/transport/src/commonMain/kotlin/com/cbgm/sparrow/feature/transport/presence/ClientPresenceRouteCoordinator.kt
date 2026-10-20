@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.presence
 
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
@@ -27,7 +28,8 @@ private const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
 internal class ClientPresenceRouteCoordinator(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
-    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider
+    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
+    private val localPhoneNumberProvider: LocalPhoneNumberProvider
 ) {
     // Starts the public gateway information request while the WebSocket is still opening, so
     // both cold HTTPS connections overlap instead of running one after the other.
@@ -52,6 +54,7 @@ internal class ClientPresenceRouteCoordinator(
             httpClient = httpClient,
             registrationFactory = registrationFactory,
             localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
+            localPhoneNumberProvider = localPhoneNumberProvider,
             publishRoute = publishRoute,
             onReady = onReady,
             onFailure = onFailure
@@ -65,6 +68,7 @@ internal class ClientPresenceRouteSession(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
+    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
     private val onReady: (Set<String>) -> Unit,
     private val onFailure: suspend (Throwable) -> Unit
@@ -77,6 +81,7 @@ internal class ClientPresenceRouteSession(
     private var gatewayTimeObservedAt: TimeMark? = null
     private var expirationRetries = 0
     private var recoveringExpiredRoute = false
+    private var sentPhoneVerificationToken = false
 
     private val runner =
         scope.launch {
@@ -136,6 +141,7 @@ internal class ClientPresenceRouteSession(
             is ClientPresenceRouteEffect.AnnounceReady -> {
                 expirationRetries = 0
                 recoveringExpiredRoute = false
+                clearSentPhoneVerificationToken()
                 logger.info {
                     "Presence route ready for ${connection.routingId}; aliases=${effect.aliases.size}"
                 }
@@ -143,6 +149,8 @@ internal class ClientPresenceRouteSession(
             }
 
             is ClientPresenceRouteEffect.Fail -> {
+                // A rejected token is not sent again; the reconnect registers without it.
+                clearSentPhoneVerificationToken()
                 if (recoveringExpiredRoute || effect.error is PresenceRouteRefreshRejectedException) {
                     // Expected transport housekeeping failure; reconnect will retry.
                     // Error logging here would display an intrusive global snackbar.
@@ -153,6 +161,21 @@ internal class ClientPresenceRouteSession(
                 onFailure(effect.error)
             }
         }
+    }
+
+    // The phone number verified at sign-up is proven once, with the first accepted route.
+    private suspend fun loadPhoneVerificationToken(): String? =
+        localPhoneNumberProvider
+            .getPhoneVerificationToken()
+            .onFailure { failure -> logger.warn(failure) { "Could not load the phone token" } }
+            .getOrNull()
+
+    private suspend fun clearSentPhoneVerificationToken() {
+        if (!sentPhoneVerificationToken) return
+        sentPhoneVerificationToken = false
+        localPhoneNumberProvider
+            .clearPhoneVerificationToken()
+            .onFailure { failure -> logger.warn(failure) { "Could not clear the phone token" } }
     }
 
     // The first load uses the prefetched response; refreshes and expiration recovery always
@@ -204,9 +227,11 @@ internal class ClientPresenceRouteSession(
             aliases = aliases
         ).fold(
             onSuccess = { registration ->
+                val token = if (aliases.isEmpty()) null else loadPhoneVerificationToken()
+                sentPhoneVerificationToken = token != null
                 events.send(
                     ClientPresenceRouteEvent.RegistrationPrepared(
-                        registration = registration
+                        registration = registration.copy(phoneVerificationToken = token)
                     )
                 )
             },

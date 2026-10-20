@@ -1,16 +1,18 @@
 package com.cbgm.sparrow.feature.identity.presentation.restore
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackup
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityRestoreDocumentUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.restore.RestoreIdentityBackupUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.SaveRestoredIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.restore.model.IdentityRestoreStageUi
 import com.cbgm.sparrow.feature.identity.presentation.restore.model.IdentityRestoreUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.restore.model.IdentityRestoreUiState
+import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationResultUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResultUi
 import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
@@ -25,16 +27,22 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 
+/** Restore from a backup file, shown on top of the onboarding screen. */
 class IdentityRestoreViewModel(
-    savedStateHandle: SavedStateHandle,
     private val filePicker: FilePickerLauncher,
     private val readDocument: ReadIdentityRestoreDocumentUseCase,
     private val normalizePhoneNumber: NormalizeLocalPhoneNumberUseCase,
-    private val restoreIdentityBackup: RestoreIdentityBackupUseCase
+    private val readBackup: ReadIdentityBackupUseCase,
+    private val saveRestoredIdentity: SaveRestoredIdentityUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(IdentityRestoreUiState())
     val uiState = _uiState.asStateFlow()
+
+    // The number waiting for SMS verification; the backup is stored once it is verified.
+    private val _phoneToVerify = MutableStateFlow<String?>(null)
+    val phoneToVerify = _phoneToVerify.asStateFlow()
     private var document: ByteArray? = null
+    private var backup: IdentityBackup? = null
     private var phoneNumber = ""
     private var name = ""
 
@@ -49,14 +57,6 @@ class IdentityRestoreViewModel(
                     is FilePickerSessionResultUi.Failed -> report(Res.string.feature_identity_restore_read_failed)
                 }
             }
-        }
-        val phoneNumber = savedStateHandle.get<String>(AppRoute.IdentityRestore::phoneNumber.name)
-        val name = savedStateHandle.get<String>(AppRoute.IdentityRestore::name.name)
-        if (phoneNumber == null || name == null) {
-            dismiss()
-            viewModelScope.launch { report(Res.string.feature_identity_restore_invalid_phone) }
-        } else {
-            open(phoneNumber, name)
         }
     }
 
@@ -74,7 +74,8 @@ class IdentityRestoreViewModel(
         }
     }
 
-    private fun open(phoneNumber: String, name: String) {
+    /** Starts with the number and name entered on the phone page. */
+    fun start(phoneNumber: String, name: String) {
         if (_uiState.value.stage != IdentityRestoreStageUi.IDLE) return
         this@IdentityRestoreViewModel.phoneNumber = normalizePhoneNumber(phoneNumber).getOrElse {
             dismiss()
@@ -108,6 +109,7 @@ class IdentityRestoreViewModel(
         }
     }
 
+    // The backup is only decrypted and checked here; it is stored after the phone was verified.
     private fun confirm() {
         val state = _uiState.value
         if (!state.canConfirm) return
@@ -115,25 +117,51 @@ class IdentityRestoreViewModel(
         val password = state.password.toCharArray()
         _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.RESTORING)
         viewModelScope.launch {
-            try {
-                restoreIdentityBackup(document, password, phoneNumber, name).onSuccess {
-                    clearSensitiveData()
-                    _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.COMPLETED)
-                }.onFailure {
-                    _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.PASSWORD)
-                    report(Res.string.feature_identity_restore_failed)
+            val read =
+                try {
+                    readBackup(document, password)
+                } finally {
+                    password.fill('\u0000')
                 }
-            } finally {
-                password.fill('\u0000')
+            read.onSuccess {
+                document.fill(0)
+                this@IdentityRestoreViewModel.document = null
+                backup = it
+                _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.VERIFYING)
+                _phoneToVerify.value = phoneNumber
+            }.onFailure {
+                _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.PASSWORD)
+                report(Res.string.feature_identity_restore_failed)
             }
         }
     }
 
+    fun onPhoneVerification(result: PhoneVerificationResultUi) {
+        _phoneToVerify.value = null
+        if (_uiState.value.stage != IdentityRestoreStageUi.VERIFYING) return
+        when (result) {
+            PhoneVerificationResultUi.Verified -> viewModelScope.launch { restore() }
+            PhoneVerificationResultUi.Cancelled -> dismiss()
+        }
+    }
+
+    private suspend fun restore() {
+        val backup = backup ?: return
+        this.backup = null
+        saveRestoredIdentity(backup, phoneNumber, name).onSuccess {
+            clearSensitiveData()
+            _uiState.value = IdentityRestoreUiState(stage = IdentityRestoreStageUi.COMPLETED)
+        }.onFailure {
+            dismiss()
+            report(Res.string.feature_identity_restore_failed)
+        }
+    }
+
+    /** Back to idle after the restore completed or was dismissed. */
     fun finish() {
         val stage = _uiState.value.stage
         if (stage != IdentityRestoreStageUi.COMPLETED && stage != IdentityRestoreStageUi.DISMISSED) return
         reset()
-        navigator.popBackStack()
     }
 
     private fun dismiss() {
@@ -148,6 +176,8 @@ class IdentityRestoreViewModel(
     private fun clearSensitiveData() {
         document?.fill(0)
         document = null
+        backup?.wipe()
+        backup = null
         phoneNumber = ""
         name = ""
     }

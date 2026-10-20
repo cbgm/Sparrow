@@ -151,8 +151,6 @@ def edit_settings(settings: dict, preferences: dict) -> None:
                 print(bad("File not found.")); pause()
             else:
                 settings["firebaseFile"] = str(Path(path).expanduser().resolve()) if path else ""
-        elif label == "Require verified phone numbers":
-            settings["phoneVerification"] = not settings["phoneVerification"]
         elif label == "Images":
             if local_build_tag():
                 print(warn("A local build is installed; its images are used.")); pause()

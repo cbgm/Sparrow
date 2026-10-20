@@ -5,7 +5,6 @@ import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.identity.presentation.backup.IdentityBackupRoute
 import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsRoute
-import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreRoute
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
@@ -22,9 +21,6 @@ fun NavGraphBuilder.identityNavGraph() {
         exitTransition = { slideOutToRight() }
     ) {
         IdentityBackupRoute()
-    }
-    composable<AppRoute.IdentityRestore> {
-        IdentityRestoreRoute()
     }
     composable<AppRoute.ShareIdentity>(
         enterTransition = { slideInFromRight() },
