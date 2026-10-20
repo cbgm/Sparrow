@@ -88,6 +88,10 @@ else
       server/community-node/*|server/scripts/New-CommunityNodeBundle.ps1)
         community_node_package=true
         ;;
+      server/installer/*)
+        control_plane_package=true
+        community_node_package=true
+        ;;
     esac
   done <<< "${changed_files}"
 fi

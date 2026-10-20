@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper
 
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

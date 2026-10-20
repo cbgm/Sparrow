@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMutualContactSigningPublicKeyUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext

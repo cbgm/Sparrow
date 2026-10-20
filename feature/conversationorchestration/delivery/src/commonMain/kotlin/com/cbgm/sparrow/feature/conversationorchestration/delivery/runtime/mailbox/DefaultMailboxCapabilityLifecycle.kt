@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
+import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
@@ -15,7 +16,11 @@ class DefaultMailboxCapabilityLifecycle(
             repository.deleteRemote(contactId).getOrThrow()
             val credential = repository.localForContact(contactId).getOrThrow() ?: return@runCatching
             repository.markLocalRevocationPending(contactId).getOrThrow()
-            revokeAndDelete(credential)
+            // An unreachable node must not block the caller (e.g. approving an identity change):
+            // the revocation stays pending and the mailbox provisioning retries it.
+            runCatching { revokeAndDelete(credential) }.onFailure { failure ->
+                if (!failure.isRecoverableConnectivityFailure()) throw failure
+            }
         }
 
     override suspend fun revokeAll(): Result<Unit> =

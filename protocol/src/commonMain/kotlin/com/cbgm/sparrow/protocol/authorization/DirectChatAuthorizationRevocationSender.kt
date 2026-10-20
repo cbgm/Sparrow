@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.authorization
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 

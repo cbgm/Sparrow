@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.protocol.packet.GroupVerificationMemberPayload
 import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket

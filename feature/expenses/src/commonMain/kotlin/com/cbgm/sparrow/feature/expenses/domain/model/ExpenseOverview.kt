@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.expenses.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 
 data class ExpenseOverview(
     val board: ExpenseBoard,

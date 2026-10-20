@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.DirectMessageDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.mapper.toMessageEntity
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.mapper.toStoredMessage

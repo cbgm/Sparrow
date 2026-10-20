@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.linkpreview.presentation
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.GetLinkPreviewUseCase
 import com.cbgm.sparrow.feature.linkpreview.presentation.mapper.toUi
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.LinkPreviewUiState

@@ -30,8 +30,8 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
-import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
+import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiEvent
+import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
@@ -48,10 +48,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun OnboardingScreen(
     state: OnboardingUiState,
-    identityState: IdentityUiState,
-    backupError: String? = null,
-    isRestoring: Boolean = false,
+    identityState: IdentityCreateUiState,
     onRestoreIdentity: () -> Unit = {},
+    onIdentityUiEvent: (IdentityCreateUiEvent) -> Unit,
     onUiEvent: (OnboardingUiEvent) -> Unit
 ) {
     Box(
@@ -107,19 +106,17 @@ fun OnboardingScreen(
                         OnboardingPage.PHONE ->
                             PhonePage(
                                 identityState = identityState,
-                                isCreating = state.isCreatingIdentity,
+                                isCreating = identityState == IdentityCreateUiState.Creating,
                                 canRetryAutomatic = state.phonePermissionGranted,
                                 onChooseAnotherNumber = { onUiEvent(OnboardingUiEvent.ChooseAnotherNumberClicked) },
                                 onRetryAutomaticNumber = { onUiEvent(OnboardingUiEvent.RetryAutomaticNumberClicked) },
                                 onPhoneNumberChanged = { value ->
-                                    onUiEvent(OnboardingUiEvent.PhoneNumberChanged(value))
+                                    onIdentityUiEvent(IdentityCreateUiEvent.PhoneNumberChanged(value))
                                 },
-                                onApproveAndCreate = { onUiEvent(OnboardingUiEvent.ApproveAndCreateClicked) },
+                                onApproveAndCreate = { onIdentityUiEvent(IdentityCreateUiEvent.CreateClicked) },
                                 onRestoreIdentity = onRestoreIdentity,
-                                isRestoring = isRestoring,
-                                restoreError = backupError,
                                 onNameChanged = { value ->
-                                    onUiEvent(OnboardingUiEvent.NameChanged(value))
+                                    onIdentityUiEvent(IdentityCreateUiEvent.NameChanged(value))
                                 }
                             )
                     }
@@ -136,14 +133,8 @@ private fun OnboardingScreenPreview() {
         OnboardingScreen(
             state = OnboardingUiState(page = OnboardingPage.PERMISSIONS),
             identityState =
-                IdentityUiState.Ready(
-                    localPhoneNumber = "445446",
-                    publicIdentity =
-                        PublicIdentity(
-                            ByteArray(size = 0),
-                            ByteArray(size = 0)
-                        )
-                ),
+                IdentityCreateUiState.Completed,
+            onIdentityUiEvent = {},
             onUiEvent = {}
         )
     }
@@ -155,7 +146,8 @@ private fun OnboardingScreen2Preview() {
     SparrowTheme {
         OnboardingScreen(
             state = OnboardingUiState(page = OnboardingPage.WELCOME),
-            identityState = IdentityUiState.NoIdentity(),
+            identityState = IdentityCreateUiState.Form(),
+            onIdentityUiEvent = {},
             onUiEvent = {}
         )
     }

@@ -2,10 +2,10 @@ package com.cbgm.sparrow.feature.safety.presentation.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyDetailsUiEvent

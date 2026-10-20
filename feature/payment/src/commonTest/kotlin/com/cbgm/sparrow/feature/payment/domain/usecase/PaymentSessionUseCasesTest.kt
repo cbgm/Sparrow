@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.payment.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
 import com.cbgm.sparrow.feature.payment.data.repository.PaymentComposerRepositoryImpl
 import com.cbgm.sparrow.feature.payment.domain.model.BankDetails
 import com.cbgm.sparrow.feature.payment.domain.model.InvalidPaymentDetailsException

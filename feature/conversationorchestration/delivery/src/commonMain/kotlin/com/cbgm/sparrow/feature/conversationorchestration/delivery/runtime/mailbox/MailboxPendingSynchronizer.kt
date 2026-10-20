@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway

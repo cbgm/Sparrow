@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.connection
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.TransportDiagnostics
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider

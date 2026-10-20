@@ -12,9 +12,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import org.koin.compose.viewmodel.koinViewModel

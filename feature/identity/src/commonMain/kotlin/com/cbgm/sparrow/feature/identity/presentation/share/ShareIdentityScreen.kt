@@ -334,21 +334,10 @@ private fun GeneratedIdentityContent(
     onShareIdentity: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-        Text(
-            text = stringResource(Res.string.feature_identity_my_identity_qr),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
         Text(
             text = stringResource(Res.string.feature_identity_scan_to_add_you),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.notification.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
 import com.cbgm.sparrow.feature.notification.domain.model.NotificationConversationTarget

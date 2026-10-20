@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.direct.datasource
 
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity

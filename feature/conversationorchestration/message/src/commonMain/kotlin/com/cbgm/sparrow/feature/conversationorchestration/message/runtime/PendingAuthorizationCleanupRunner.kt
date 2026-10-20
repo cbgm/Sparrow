@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.runtime
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository

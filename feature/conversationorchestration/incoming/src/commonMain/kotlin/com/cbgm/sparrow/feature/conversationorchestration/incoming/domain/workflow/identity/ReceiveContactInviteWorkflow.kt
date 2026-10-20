@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity
 
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository
 
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.DirectDeliveryDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository.DirectMessageDeliveryRepository

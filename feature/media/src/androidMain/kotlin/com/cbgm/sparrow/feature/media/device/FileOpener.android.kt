@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import java.io.File
 
 @Composable

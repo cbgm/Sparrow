@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.data.model.FileDto
-import com.cbgm.sparrow.core.messagepart.data.model.ImageDto
-import com.cbgm.sparrow.core.messagepart.data.model.MessagePartDto
-import com.cbgm.sparrow.core.messagepart.data.model.VideoDto
-import com.cbgm.sparrow.core.messagepart.data.model.VoiceDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.FileDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.ImageDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VideoDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.VoiceDto
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageBlobEntity
 import com.cbgm.sparrow.data.database.entity.MessagePartEntity

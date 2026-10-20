@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource
 
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity

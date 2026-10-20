@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.payment.presentation.mapper
 
 import androidx.lifecycle.SavedStateHandle
-import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
+import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentSelection
 import com.cbgm.sparrow.feature.payment.presentation.model.PaymentSelectionUi
 

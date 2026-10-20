@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
@@ -35,6 +35,7 @@ class MailboxRouteProvisioner(
             // from a socket failure: an offline node may still own pending envelopes.
             val availableNodes = resolveMailboxNodes()
             val node = availableNodes.first()
+            followMovedNodes(availableNodes)
             mailboxCapabilityLifecycle.retryPendingRevocations()
                 .onFailure { failure ->
                     if (failure is CancellationException) throw failure
@@ -75,10 +76,12 @@ class MailboxRouteProvisioner(
                 // Only the signed node directory can retire an old mailbox. A previous installation's capability cannot retrieve from
                 // a newly installed server, even if its public hostname is the same.
                 val retired = current != null && current.isRetiredFrom(availableNodes)
+                // Contacts still deliver to the old address of a moved node until a new route is shared.
+                val moved = current != null && current.hasMovedIn(availableNodes)
                 if (current?.revocationPending == true && !retired) return@forEach
                 val credential =
                     if (
-                        current != null && !retired &&
+                        current != null && !retired && !moved &&
                         current.deliveryRoute.expiresAtEpochMilliseconds > now + RENEWAL_WINDOW_MILLISECONDS
                     ) {
                         current
@@ -117,6 +120,22 @@ class MailboxRouteProvisioner(
             .filter { node ->
                 node.mailboxRouteEndpoint != null && node.mailboxAccessEndpoint != null
             }.also { nodes -> check(nodes.isNotEmpty()) { "No mailbox-capable node is available" } }
+
+    // A node keeps its ID when its address changes (e.g. a new public IP of the server). The
+    // verified directory has the current address; the saved mailboxes are reached there.
+    private suspend fun followMovedNodes(availableNodes: List<NodeEndpoint>) {
+        mailboxRouteRepository.allLocal().getOrThrow().forEach { credential ->
+            val accessEndpoint =
+                availableNodes
+                    .firstOrNull { node -> node.nodeId == credential.deliveryRoute.nodeId }
+                    ?.mailboxAccessEndpoint
+            if (accessEndpoint != null && accessEndpoint != credential.accessEndpoint) {
+                mailboxRouteRepository
+                    .saveLocal(credential.copy(accessEndpoint = accessEndpoint))
+                    .getOrThrow()
+            }
+        }
+    }
 
     private suspend fun replaceCredential(
         contactId: String,
@@ -163,6 +182,14 @@ class MailboxRouteProvisioner(
         const val RENEWAL_WINDOW_MILLISECONDS = 3L * 24L * 60L * 60L * 1_000L
     }
 }
+
+/** The node of this mailbox is still in the directory, but under another route address. */
+internal fun LocalMailboxCredential.hasMovedIn(availableNodes: List<NodeEndpoint>): Boolean =
+    availableNodes.any { node ->
+        node.nodeId == deliveryRoute.nodeId &&
+            node.mailboxRouteEndpoint != null &&
+            node.mailboxRouteEndpoint != deliveryRoute.nodeEndpoint
+    }
 
 /** Do not discard a mailbox merely because its original node is temporarily unreachable. */
 internal fun LocalMailboxCredential.isRetiredFrom(availableNodes: List<NodeEndpoint>): Boolean =

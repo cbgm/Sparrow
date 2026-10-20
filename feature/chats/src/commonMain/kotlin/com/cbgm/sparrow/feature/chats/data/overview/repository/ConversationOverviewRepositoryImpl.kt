@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.overview.repository
 
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
 import com.cbgm.sparrow.feature.chats.data.overview.datasource.ConversationOverviewDataSource
 import com.cbgm.sparrow.feature.chats.data.overview.mapper.toConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview

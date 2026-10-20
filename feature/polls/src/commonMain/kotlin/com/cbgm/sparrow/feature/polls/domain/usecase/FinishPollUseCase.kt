@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.polls.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.polls.domain.repository.PollComposerRepository
 
 class FinishPollUseCase(

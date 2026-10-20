@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupRoutingResolver
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendMessagingIndicatorUseCase

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryptionKeys
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase

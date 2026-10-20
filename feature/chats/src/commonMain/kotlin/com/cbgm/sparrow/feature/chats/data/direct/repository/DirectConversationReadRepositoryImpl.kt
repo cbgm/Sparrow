@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository

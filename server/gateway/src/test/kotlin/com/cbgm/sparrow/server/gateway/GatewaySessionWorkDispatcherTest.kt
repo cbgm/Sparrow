@@ -2,10 +2,8 @@ package com.cbgm.sparrow.server.gateway
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.time.Duration.Companion.milliseconds
 
 class GatewaySessionWorkDispatcherTest {
     @Test
@@ -26,7 +24,7 @@ class GatewaySessionWorkDispatcherTest {
                 }
 
                 firstStarted.await()
-                withTimeout(TEST_TIMEOUT_MILLISECONDS.milliseconds) {
+                withRealTimeout {
                     secondCompleted.await()
                 }
             } finally {
@@ -60,7 +58,7 @@ class GatewaySessionWorkDispatcherTest {
                 assertEquals(listOf("first-start"), events)
 
                 releaseFirst.complete(Unit)
-                withTimeout(TEST_TIMEOUT_MILLISECONDS.milliseconds) {
+                withRealTimeout {
                     secondCompleted.await()
                 }
 
@@ -73,8 +71,4 @@ class GatewaySessionWorkDispatcherTest {
                 dispatcher.close()
             }
         }
-
-    private companion object {
-        const val TEST_TIMEOUT_MILLISECONDS = 1_000L
-    }
 }

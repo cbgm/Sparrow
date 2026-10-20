@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.settings.presentation.network
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneUiModels

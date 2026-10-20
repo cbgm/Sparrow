@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.di
 
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumberGenerator
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactByRoutingIdDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource

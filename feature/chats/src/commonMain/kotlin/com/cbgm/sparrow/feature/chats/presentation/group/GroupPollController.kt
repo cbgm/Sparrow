@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationErrors
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator

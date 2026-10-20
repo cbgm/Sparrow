@@ -30,7 +30,7 @@ The Community Node shares a persistent `node-identity` volume between mailbox/fe
 
 ### Optional public shared proxy
 
-`server/unified/public-proxy/docker-compose.yml` runs shared public-edge Caddy plus directory registration/synchronization helpers. Public Control Plane and Community Node hostnames can therefore share one public host while remaining independent Compose projects.
+`server/installer/public-proxy/docker-compose.yml` runs shared public-edge Caddy plus directory registration/synchronization helpers. Public Control Plane and Community Node hostnames can therefore share one public host while remaining independent Compose projects.
 
 ## Server request flow
 
@@ -109,19 +109,20 @@ Link preview:
 
 ## Unified installer/runtime
 
-The active unified bundle lives in `server/unified`.
+The active unified bundle lives in `server/installer`.
 
 Key entry points:
 
-- `Build-SparrowServer.cmd` — build a fresh distributable from the repository root on Windows.
-- `New-SparrowServerBundle.ps1` — constructs the bundle.
-- `Start-SparrowServer.ps1`, `Start-SparrowServer.sh`, `Start-SparrowServer.command` — platform launchers.
-- `Invoke-SparrowServer.ps1` / `.py` — runtime lifecycle operations.
-- `Manage-SparrowNodes.ps1` / `.py` — node-only multi-instance management.
-- `Update-SparrowFromGitHub.ps1` — guarded source/runtime tooling update path.
-- `Backup-SparrowDeployment.ps1` — deployment backup support.
-- `Invoke-SparrowPublicCutover.ps1`, `Stage-SparrowPublicTls.ps1`, `Attached-SparrowDeployment.ps1` — advanced migration/public-edge tooling.
-- `Get-SparrowVerifiedDirectory.ps1` plus `control_plane_directory_*.py` — signed directory consumption/registration/synchronization.
+- `server/installer/build.py` — constructs the bundle (launchers + `app/` + component templates).
+- `Start-SparrowServer.sh`, `Start-SparrowServer.command` — Linux/macOS launchers; the Windows `Start-SparrowServer.cmd` is generated.
+- `app/manager_window.py` — the installer window (Windows, macOS, Linux; Tk); `app/manager_terminal.py` is the same menu for machines without a screen.
+- `app/Invoke-SparrowServer.ps1` / `.py` — runtime lifecycle operations.
+- `app/Update-SparrowServer.ps1` — in-place update from the latest release, a ZIP, an extracted bundle or a local source build.
+- `app/Update-SparrowServerBundle.ps1` — replaces manager code/templates and migrates older flat installations.
+- `app/Manage-SparrowNodes.py` — node-only multi-instance management.
+- `app/Backup-SparrowDeployment.ps1` — deployment backup support.
+- `app/Invoke-SparrowPublicCutover.ps1`, `app/Stage-SparrowPublicTls.ps1`, `app/Attached-SparrowDeployment.ps1` — advanced migration/public-edge tooling.
+- `app/Get-SparrowVerifiedDirectory.ps1` plus `app/control_plane_directory_*.py` — signed directory consumption/registration/synchronization.
 
 ## Install / Start semantics
 
@@ -133,13 +134,13 @@ A fresh test runtime with missing `.env.runtime` can discard abandoned test cont
 
 ## Building the unified bundle
 
-From repository root on Windows:
+From the repository root (Windows, Linux or macOS):
 
 ```cmd
-server\unified\Build-SparrowServer.cmd
+python3 server/installer/build.py
 ```
 
-The wrapper invokes `New-SparrowServerBundle.ps1` with process-local PowerShell execution-policy bypass. The expected development artifact is `dist/sparrow-server.zip`.
+Add `--local-images` to embed locally built server images. The installed manager does the same with **Build from source...**. The expected development artifact is `dist/sparrow-server.zip`.
 
 ## Service image build
 
@@ -149,7 +150,7 @@ Each executable Ktor service has an `application` main class and is built throug
 
 Normal updates are not a substitute for backups. Backend image updates may include incompatible database migrations. Persistent server identities, PostgreSQL/Redis state, queues, mailbox state and TLS data should be treated as deployment state, not as files that can be regenerated safely for a valuable installation.
 
-Use the unified runtime README files (`server/unified/README.md`, `README_RUNTIME.md`) as the operational source of truth for exact manager commands and safety guards.
+Use the unified runtime README files (`server/installer/README.md`, `README_RUNTIME.md`) as the operational source of truth for exact manager commands and safety guards.
 
 
 ## Independent Control Plane Directory (operator-only)
@@ -160,7 +161,7 @@ Its implementation is Python rather than a Gradle server module. Important sourc
 
 - `directory_service.py` — HTTP service and signed directory implementation;
 - `directory_admin_cli.py` — private administrator operations;
-- `Start-SparrowDirectory.cmd`, `.ps1`, `.sh` — private deployment entry points;
+- `Start-SparrowDirectory.cmd`, `.sh`, `.command` — open the Directory installer window (`directory_window.py`, engine `directory_installer.py`);
 - `Build-SparrowDirectoryInstaller.py` — private installer builder;
 - `docker-compose.yml` and `Dockerfile` — standalone deployment.
 
@@ -196,4 +197,4 @@ sequenceDiagram
 
 The directory signing key and SQLite state live in the persistent `sparrow-central-directory-state` Docker volume and must not be regenerated on an ordinary restart/update. Clients preserve previously verified candidates during an outage. A compromised directory signing key requires a dedicated secure recovery procedure; merely editing the URL is not a safe recovery mechanism and such key-recovery automation is not currently implemented.
 
-`New-SparrowServerBundle.ps1` deliberately excludes this directory service from `dist/sparrow-server.zip`. Never publish its private admin token, persistent state, installer, or operator credentials as public release assets.
+`server/installer/build.py` deliberately excludes this directory service from `dist/sparrow-server.zip`. Never publish its private admin token, persistent state, installer, or operator credentials as public release assets.

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure

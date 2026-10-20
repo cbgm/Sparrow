@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.expenses.presentation.overview.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferPolicy
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
-import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
-import com.cbgm.sparrow.core.time.formatDate
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.util.time.formatDate
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseOverview
 import com.cbgm.sparrow.feature.expenses.presentation.common.mapper.toExpenseAmountLabel
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseParticipantUi

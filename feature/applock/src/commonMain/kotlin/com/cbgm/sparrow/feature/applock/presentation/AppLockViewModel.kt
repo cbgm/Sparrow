@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.applock.presentation
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationResult
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.applock.presentation.model.AppLockUiState

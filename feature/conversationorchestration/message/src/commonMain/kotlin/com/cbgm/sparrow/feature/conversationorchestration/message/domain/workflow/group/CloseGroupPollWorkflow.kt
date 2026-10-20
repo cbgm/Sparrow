@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure

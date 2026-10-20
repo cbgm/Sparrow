@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.create.model.ContactsFlowUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect

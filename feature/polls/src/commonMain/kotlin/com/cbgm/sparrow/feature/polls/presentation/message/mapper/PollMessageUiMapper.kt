@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.polls.presentation.message.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PollPolicy
-import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaTypeUi
 import com.cbgm.sparrow.feature.polls.presentation.message.model.PollMessageUiState

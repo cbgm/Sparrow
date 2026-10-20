@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
 import androidx.lifecycle.SavedStateHandle
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState

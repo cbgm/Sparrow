@@ -5,18 +5,43 @@ import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class GatewayBackgroundClientsTest {
     @Test
+    fun presenceWrapperPropagatesRejectedPhoneRegistration() =
+        runTest {
+            val wrapper =
+                BoundedPresenceClient(
+                    object : PresenceClient {
+                        override suspend fun register(registration: ClientRouteRegistration) =
+                            PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
+
+                        override suspend fun remove(
+                            routingId: String,
+                            connectionId: String
+                        ) = Unit
+                    }
+                )
+            try {
+                assertEquals(
+                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED,
+                    wrapper.register(testRegistration())
+                )
+            } finally {
+                wrapper.close()
+            }
+        }
+
+    @Test
     fun presenceRegistrationMustBeConfirmedBeforeGatewayAcceptsRoute() =
         runTest {
             val rejectedPresence =
                 object : PresenceClient {
-                    override suspend fun register(registration: ClientRouteRegistration): Boolean = false
+                    override suspend fun register(registration: ClientRouteRegistration) =
+                        PresenceRegistrationResult.REJECTED
 
                     override suspend fun remove(
                         routingId: String,
@@ -24,7 +49,8 @@ class GatewayBackgroundClientsTest {
                     ) = Unit
                 }
 
-            assertFalse(
+            assertEquals(
+                PresenceRegistrationResult.REJECTED,
                 synchronizePresenceRegistration(
                     presence = rejectedPresence,
                     registration = testRegistration()
@@ -37,8 +63,9 @@ class GatewayBackgroundClientsTest {
         runTest {
             val failingPresence =
                 object : PresenceClient {
-                    override suspend fun register(registration: ClientRouteRegistration): Boolean =
-                        error("presence unavailable")
+                    override suspend fun register(
+                        registration: ClientRouteRegistration
+                    ): PresenceRegistrationResult = error("presence unavailable")
 
                     override suspend fun remove(
                         routingId: String,
@@ -46,7 +73,8 @@ class GatewayBackgroundClientsTest {
                     ) = Unit
                 }
 
-            assertFalse(
+            assertEquals(
+                PresenceRegistrationResult.REJECTED,
                 synchronizePresenceRegistration(
                     presence = failingPresence,
                     registration = testRegistration()
@@ -162,12 +190,12 @@ class GatewayBackgroundClientsTest {
                     envelope = testEnvelope(),
                     federationEnvelopeId = "envelope-1"
                 )
-                withTimeout(TEST_TIMEOUT_MILLISECONDS) {
+                withRealTimeout {
                     storeStarted.await()
                 }
                 assertFalse(markedStored.isCompleted)
                 releaseStore.complete(Unit)
-                withTimeout(TEST_TIMEOUT_MILLISECONDS) {
+                withRealTimeout {
                     markedStored.await()
                 }
             } finally {
@@ -198,8 +226,4 @@ class GatewayBackgroundClientsTest {
             payload = "payload",
             createdAtEpochMilliseconds = 1_000L
         )
-
-    private companion object {
-        const val TEST_TIMEOUT_MILLISECONDS = 1_000L
-    }
 }

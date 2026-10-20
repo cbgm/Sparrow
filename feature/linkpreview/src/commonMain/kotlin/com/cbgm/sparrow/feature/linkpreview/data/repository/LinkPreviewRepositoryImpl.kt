@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.linkpreview.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeCall
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.linkpreview.data.datasource.LocalLinkPreviewDataSource
 import com.cbgm.sparrow.feature.linkpreview.data.datasource.RemoteLinkPreviewDataSource
 import com.cbgm.sparrow.feature.linkpreview.data.mapper.toDomain

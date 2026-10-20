@@ -1,0 +1,171 @@
+package com.cbgm.sparrow.core.base.messagepart.ui.mapper
+
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Contact
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.base.messagepart.domain.model.File
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Image
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Location
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePartSource
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Video
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Voice
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseAllocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardClosedUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartSourceUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PaymentTransferUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollOptionUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
+
+fun MessagePart.toMessagePartUi(source: MessagePartSource = MessagePartSource.Message): MessagePartUi =
+    when (this) {
+        is Text -> toTextUi(source)
+        is Image -> toImageUi(source)
+        is Video -> toVideoUi(source)
+        is File -> toFileUi(source)
+        is Voice -> toVoiceUi(source)
+        is Location -> toLocationUi(source)
+        is Contact -> toContactUi(source)
+        is Poll -> toPollUi(source)
+        is PaymentTransfer -> PaymentTransferUi(id, amountMinor, currencyCode, status == PaymentTransferStatus.RECEIVED, source.toMessagePartSourceUi())
+        is ExpenseBoard -> toExpenseBoardUi(source)
+        is ExpenseBoardClosed -> toExpenseBoardClosedUi(source)
+        is Expense -> toExpenseUi(source)
+    }
+
+fun MessagePartSource.toMessagePartSourceUi(): MessagePartSourceUi =
+    when (this) {
+        MessagePartSource.Message -> MessagePartSourceUi.Message
+        is MessagePartSource.GroupPin -> MessagePartSourceUi.GroupPin(groupId)
+    }
+
+private fun Text.toTextUi(source: MessagePartSource): TextUi =
+    TextUi(
+        id = id,
+        text = text,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Image.toImageUi(source: MessagePartSource): ImageUi =
+    ImageUi(
+        id = id,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        width = width,
+        height = height,
+        fileName = fileName,
+        localFilePath = localFilePath,
+        thumbnailFilePath = thumbnailFilePath,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Video.toVideoUi(source: MessagePartSource): VideoUi =
+    VideoUi(
+        id = id,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        fileName = fileName,
+        width = width,
+        height = height,
+        durationMilliseconds = durationMilliseconds,
+        localFilePath = localFilePath,
+        thumbnailFilePath = thumbnailFilePath,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun File.toFileUi(source: MessagePartSource): FileUi =
+    FileUi(
+        id = id,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        fileName = fileName,
+        localFilePath = localFilePath,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Voice.toVoiceUi(source: MessagePartSource): VoiceUi =
+    VoiceUi(
+        id = id,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        durationMilliseconds = durationMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Location.toLocationUi(source: MessagePartSource): LocationUi =
+    LocationUi(
+        id = id,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Contact.toContactUi(source: MessagePartSource): ContactUi =
+    ContactUi(
+        id = id,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Poll.toPollUi(source: MessagePartSource): PollUi =
+    PollUi(
+        id = id,
+        question = question,
+        description = description,
+        options = options.map { PollOptionUi(id = it.id, text = it.text, voterIds = it.voterIds) },
+        images = images.map { it.toImageUi(source) },
+        allowMultipleSelection = allowMultipleSelection,
+        allowVoteChange = allowVoteChange,
+        isAnonymous = isAnonymous,
+        expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun ExpenseBoard.toExpenseBoardUi(source: MessagePartSource): ExpenseBoardUi =
+    ExpenseBoardUi(
+        id = id,
+        currencyCode = currencyCode,
+        activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun ExpenseBoardClosed.toExpenseBoardClosedUi(source: MessagePartSource): ExpenseBoardClosedUi =
+    ExpenseBoardClosedUi(
+        id = id,
+        boardId = boardId,
+        closedAtEpochMilliseconds = closedAtEpochMilliseconds,
+        source = source.toMessagePartSourceUi()
+    )
+
+private fun Expense.toExpenseUi(source: MessagePartSource): ExpenseUi =
+    ExpenseUi(
+        id = id,
+        boardId = boardId,
+        description = description,
+        amountMinor = amountMinor,
+        currencyCode = currencyCode,
+        paidByMemberId = paidByMemberId,
+        allocations = allocations.map { ExpenseAllocationUi(it.memberId, it.amountMinor) },
+        occurredAtEpochMilliseconds = occurredAtEpochMilliseconds,
+        receipt = receipt?.toImageUi(source),
+        category = category.name,
+        editedAtEpochMilliseconds = editedAtEpochMilliseconds,
+        deletedAtEpochMilliseconds = deletedAtEpochMilliseconds,
+        createdByMemberId = createdByMemberId,
+        revisionOf = revisionOf,
+        source = source.toMessagePartSourceUi()
+    )

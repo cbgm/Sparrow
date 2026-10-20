@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
-import com.cbgm.sparrow.core.result.flatMap
+import com.cbgm.sparrow.core.util.result.flatMap
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase

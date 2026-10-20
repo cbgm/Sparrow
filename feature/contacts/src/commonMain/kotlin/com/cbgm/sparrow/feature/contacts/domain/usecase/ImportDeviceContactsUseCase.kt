@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber

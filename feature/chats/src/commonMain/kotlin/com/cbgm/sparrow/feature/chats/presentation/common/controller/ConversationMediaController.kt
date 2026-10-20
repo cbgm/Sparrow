@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.presentation.model.FileMediaSelectionUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi

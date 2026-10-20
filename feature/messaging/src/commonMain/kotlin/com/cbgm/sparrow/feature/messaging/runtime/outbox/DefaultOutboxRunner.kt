@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.protocol.outbox.OutboxRunner
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox

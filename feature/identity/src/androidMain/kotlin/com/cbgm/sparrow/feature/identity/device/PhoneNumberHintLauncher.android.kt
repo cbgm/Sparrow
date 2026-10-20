@@ -11,7 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.google.android.gms.auth.api.identity.GetPhoneNumberHintIntentRequest
 import com.google.android.gms.auth.api.identity.Identity
 

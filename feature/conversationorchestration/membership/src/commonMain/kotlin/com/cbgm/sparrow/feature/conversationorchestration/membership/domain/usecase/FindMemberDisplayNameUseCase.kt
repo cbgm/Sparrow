@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 
 /** The contact's name for group history events; unknown or unnamed contacts read as "Member". */

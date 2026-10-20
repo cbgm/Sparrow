@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.api.command
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 
 data class ForwardMessage(
     val parts: List<MessagePart>,

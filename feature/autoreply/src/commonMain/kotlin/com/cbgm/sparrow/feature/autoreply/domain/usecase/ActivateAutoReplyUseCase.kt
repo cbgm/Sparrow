@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.autoreply.domain.usecase
 
-import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.feature.autoreply.domain.repository.AutoReplyRepository
 
 class ActivateAutoReplyUseCase(

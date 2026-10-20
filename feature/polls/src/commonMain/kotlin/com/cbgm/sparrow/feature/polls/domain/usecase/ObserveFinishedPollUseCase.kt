@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.polls.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
 import com.cbgm.sparrow.feature.polls.domain.repository.PollComposerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull

@@ -11,6 +11,12 @@ object ClientRoutingIds {
         return "$DEVICE_ROUTING_ID_PREFIX$encoded"
     }
 
+    fun fromPhoneNumber(phoneNumber: String): String {
+        require(phoneNumber.matches(Regex("\\+[1-9][0-9]{1,14}"))) { "Verified phone must use E.164" }
+        val digest = MessageDigest.getInstance("SHA-256").digest(phoneNumber.toByteArray(Charsets.UTF_8))
+        return BOOTSTRAP_ROUTING_ID_PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(digest)
+    }
+
     fun matchesSigningPublicKey(routingId: String, signingPublicKey: ByteArray): Boolean =
         runCatching { routingId == fromSigningPublicKey(signingPublicKey) }.getOrDefault(false)
 

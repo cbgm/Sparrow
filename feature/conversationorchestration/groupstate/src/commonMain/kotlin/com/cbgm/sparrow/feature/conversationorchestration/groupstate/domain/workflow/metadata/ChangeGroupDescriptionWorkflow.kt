@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata
 
-import com.cbgm.sparrow.core.group.domain.model.GroupMetadataPolicy
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.group.domain.model.GroupMetadataPolicy
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition

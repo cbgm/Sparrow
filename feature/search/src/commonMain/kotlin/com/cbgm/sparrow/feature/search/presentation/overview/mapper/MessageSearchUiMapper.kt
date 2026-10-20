@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.search.presentation.overview.mapper
 
-import com.cbgm.sparrow.core.time.formatMessageTimestamp
+import com.cbgm.sparrow.core.util.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchMode

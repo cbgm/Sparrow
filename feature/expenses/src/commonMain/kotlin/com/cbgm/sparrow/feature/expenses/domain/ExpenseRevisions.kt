@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.domain
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
 
 object ExpenseRevisions {
     fun current(expenses: List<Expense>): List<Expense> =

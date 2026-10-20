@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.profile
 
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.codec.KotlinxPacketCodec
 import com.cbgm.sparrow.protocol.codec.createProtocolJson
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket

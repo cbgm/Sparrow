@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository

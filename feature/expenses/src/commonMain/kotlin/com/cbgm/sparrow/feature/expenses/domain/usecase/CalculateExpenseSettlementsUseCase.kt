@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.expenses.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseBalance
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseSettlementSuggestion
 

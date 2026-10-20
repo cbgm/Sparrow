@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType

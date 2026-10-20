@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.payment.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 
 /** Published by the hosting conversation; contains no bank details. */
 data class PaymentContext(

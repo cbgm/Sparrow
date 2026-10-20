@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import kotlinx.coroutines.flow.Flow
 

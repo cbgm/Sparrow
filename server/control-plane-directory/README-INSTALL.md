@@ -1,43 +1,58 @@
 # Independent Sparrow Control Plane Directory — operator installer
 
-Launch `Start-SparrowDirectory.cmd` in this directory on Windows with Docker Desktop running. **No Control Plane or Community Node needs to be installed or running.** The source lives under `server/control-plane-directory` but this directory, its image and its secrets must **never** be shipped in the public unified server bundle.
+Double-click `Start-SparrowDirectory.cmd` (Windows), `Start-SparrowDirectory.command` (macOS) or run
+`./Start-SparrowDirectory.sh` (Linux) with Docker running. A window opens in the same style as the
+Sparrow Server installer; it needs Python 3.9+ (on Linux also `python3-tk`). Started from the source
+code, it first asks where to create your Directory folder (like the server installer), copies the
+settings of the running Directory so the new folder takes it over, and opens there. **No Control Plane or
+Community Node needs to be installed or running.** The source lives under
+`server/control-plane-directory`; this folder, its image and its secrets are **never** shipped in
+the public server bundle.
 
-- Leave **Optional combined server folder** empty to run the Directory with its own Caddy HTTPS container. This requires public TCP 80/443 on this host to be free, your directory hostname to resolve to the host, and router/firewall forwarding. Installer creates the Docker network, key, persistent volume and Caddy automatically. It does not touch a Sparrow server.
-- If the combined server's Caddy already owns TCP 80/443 on the SAME public IP, Docker cannot run an independent second HTTPS proxy on those ports. To keep both on the same host, explicitly select the existing combined server folder to share that one ingress; the directory *service* remains a separate container, but its external HTTPS will depend on the shared Caddy. For fully independent ingress, use another public IP / machine or a separate always-on reverse proxy.
-- The installer preserves `sparrow-central-directory-state` (SQLite data and directory signing identity). Never delete that Docker volume to troubleshoot a deployment.
-- Verified Control Planes register **automatically** after the directory checks public DNS, HTTPS endpoint ownership and Ed25519 private-key possession. No pending-registration approval is required. A previously approved Control Plane may move to a new HTTPS endpoint automatically only when the **same signing identity** completes a fresh challenge and the new endpoint serves the matching proof. Public-key rotation and revoked identities still require separate operator recovery.
-- `/.well-known/sparrow-directory` publishes a public bootstrap key; Android verifies it over valid HTTPS on first connection, verifies the signed snapshot and pins the key in persistent storage. The key and URL need not be inserted into `local.properties`. The existing directory URL build variable is only an optional *initial test bootstrap*; users can edit the URL in Settings. A moved URL must present the same already-pinned key.
+The window shows the Directory URL and public key (with Copy), its status, and the buttons
+**Install / Start**, **Stop**, **Status**, **Logs** and **Servers** (the registered Control Planes).
 
-- If the Directory uses an automatic `directory-<public-ip>.sslip.io` hostname on a dynamic residential IP, its hostname changes when the WAN IPv4 changes. The installer preserves the Directory signing identity while updating that generated hostname. Clients whose only bootstrap URL is the old hostname still need a stable DNS/DDNS bootstrap (or a one-time URL edit) because no client can infer an unknown new server address from the old unreachable address alone.
-- A compromised active signing key is **not** recovered merely by changing the URL. Safely recovering from a compromised signing key requires a separately authorized recovery mechanism and is not provided by this patch. Do not weaken identity-pinning checks to bypass a warning.
+- **Hostname:** by default the free `directory-<public-ip>.sslip.io` name. Untick *Automatic* to use
+  your own DNS name.
+- **HTTPS proxy — Sparrow Server's proxy (same IP):** the running Sparrow Server is found
+  automatically. Its Caddy gets a marked Directory route (the server installer keeps it on every
+  Start), the server's `sparrow.conf` files get the Directory URL and key, and its Control Plane is
+  registered and verified. The Directory *service* stays a separate container.
+- **HTTPS proxy — Own proxy:** the Directory runs its own Caddy and needs free public ports 80/443
+  on this host, DNS for the hostname and router forwarding. No Sparrow Server is touched.
+- The installer preserves `sparrow-central-directory-state` (SQLite data and signing identity).
+  Never delete that Docker volume to troubleshoot a deployment.
+- Verified Control Planes register **automatically** after the Directory checks public DNS, HTTPS
+  endpoint ownership and Ed25519 private-key possession. A registered Control Plane may move to a
+  new HTTPS endpoint only when the **same signing identity** completes a fresh challenge.
+  Public-key rotation and revoked identities still require separate operator recovery.
+- `/.well-known/sparrow-directory` publishes a public bootstrap key; Android verifies it over valid
+  HTTPS, verifies the signed snapshot and pins the key. Users can edit the Directory URL in the
+  app's settings; a moved URL must present the same pinned key.
+- **Dynamic IP:** an automatic `directory-<ip>.sslip.io` name changes with the public IPv4. The
+  server installer moves the route on its next Start; **Start** here then updates the Directory's
+  own settings. The signing identity is kept. Apps that only know the old name need the new URL
+  once in their settings, unless the Directory uses a stable DNS/DDNS name.
+- A compromised signing key is **not** recovered by changing the URL. Do not weaken
+  identity-pinning checks to bypass a warning.
 
-The directory requires reachable HTTPS to be used by Android. Never forward its loopback-only admin listener to Caddy or publish the admin token. No untrusted Certificate Authority or TLS bypass is needed.
+Never forward the loopback-only admin listener to Caddy or publish the admin token.
 
-## Linux + operator-only packaging
-
-On an independent Linux Docker host with publicly reachable ports 80/443 and
-DNS for the directory hostname, extract `sparrow-directory-linux.zip` and run:
+## Without a desktop
 
 ```bash
-chmod +x Start-SparrowDirectory.sh
-./Start-SparrowDirectory.sh --hostname directory.example.com
+./Start-SparrowDirectory.sh                       # install / start with the automatic name
+./Start-SparrowDirectory.sh install --hostname directory.example.com --standalone
+./Start-SparrowDirectory.sh status|logs|planes|stop
 ```
 
-The Linux script installs the Directory and its own Caddy without querying or
-changing any combined Sparrow Server. On the same IP as an existing Caddy
-already listening on ports 80/443, use a distinct host/IP or an independently
-managed always-on front proxy; two projects cannot claim the same ingress.
-
-Build BOTH private operator installer archives from the Sparrow source tree:
+## Operator-only packaging
 
 ```bash
 python3 server/control-plane-directory/Build-SparrowDirectoryInstaller.py
 ```
 
-Generated ZIPs remain in `server/control-plane-directory/dist/` and must not be
-copied into the public unified server release bundle. The template in
-`CI-WORKFLOW-JOB.yml` is intended for merging into your CURRENT release workflow
-under `jobs:` without changing its existing Android signing/release logic.
-Workflow-run artifacts are **not** Release downloads, but they may still be
-visible to people with workflow-artifact access. Use a private repository or
-restricted internal storage if the installer itself must not be publicly obtainable.
+Creates `sparrow-directory-windows.zip` and `sparrow-directory-linux.zip` (Linux and macOS) in
+`server/control-plane-directory/dist/`. They must not be copied into the public server release
+bundle. Workflow-run artifacts are **not** Release downloads, but people with workflow-artifact
+access can see them; use a private repository or restricted storage if needed.

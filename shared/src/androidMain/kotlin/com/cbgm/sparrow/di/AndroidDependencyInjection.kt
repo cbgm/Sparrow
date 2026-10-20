@@ -1,11 +1,15 @@
 package com.cbgm.sparrow.di
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
+import com.cbgm.sparrow.BuildKonfig
 import com.cbgm.sparrow.data.database.di.androidDatabaseModule
 import com.cbgm.sparrow.data.datastore.di.androidDataStoreModule
 import com.cbgm.sparrow.feature.attachments.di.androidAttachmentsModule
 import com.cbgm.sparrow.feature.contacts.di.androidContactsModule
 import com.cbgm.sparrow.feature.embedding.di.androidEmbeddingModule
+import com.cbgm.sparrow.feature.identity.di.DEBUG_BUILD_PROPERTY
+import com.cbgm.sparrow.feature.identity.di.DEBUG_SMS_CODE_PROPERTY
 import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule
 import com.cbgm.sparrow.feature.media.di.platformMediaModule
 import com.cbgm.sparrow.feature.membership.di.androidMembershipModule
@@ -47,6 +51,15 @@ fun initializeAndroidDependencyInjection(application: Application) {
             options(viewModelScopeFactory())
             androidLogger()
             androidContext(application)
+            // Skip and the Firebase test mode exist only in debuggable builds.
+            if (application.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+                properties(
+                    mapOf(
+                        DEBUG_BUILD_PROPERTY to true,
+                        DEBUG_SMS_CODE_PROPERTY to BuildKonfig.DEBUG_SMS_CODE
+                    )
+                )
+            }
             workManagerFactory()
             modules(commonApplicationModules + androidApplicationModules)
         }.koin

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.protocol.codec.PacketCodec

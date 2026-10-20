@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.startup.domain.model.StartupResult
 import com.cbgm.sparrow.startup.domain.runner.StartupRunner
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model
 
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

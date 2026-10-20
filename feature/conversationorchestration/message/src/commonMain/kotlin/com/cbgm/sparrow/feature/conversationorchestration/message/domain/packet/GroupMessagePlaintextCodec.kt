@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessagePlaintext
 import com.cbgm.sparrow.protocol.message.OperationMessage
 

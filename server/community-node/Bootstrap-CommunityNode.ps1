@@ -400,7 +400,11 @@ function Get-DirectoryControlPlaneUrls {
         [Parameter(Mandatory = $true)][string]$Mode,
         [Parameter(Mandatory = $true)][string]$PinnedPublicKey
     )
-    $helperRoot = if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Get-SparrowVerifiedDirectory.ps1')) { Split-Path -Parent $PSScriptRoot } else { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
+    $parent = Split-Path -Parent $PSScriptRoot
+    $helperRoot = @($parent, (Join-Path $parent 'app'), (Split-Path -Parent $parent)) |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_ 'Get-SparrowVerifiedDirectory.ps1') -PathType Leaf } |
+        Select-Object -First 1
+    if (-not $helperRoot) { throw 'Signed directory helper is missing.' }
     . (Join-Path $helperRoot 'Get-SparrowVerifiedDirectory.ps1')
     $verified = @(Get-SparrowVerifiedDirectoryUrls `
         -DirectoryUrl $DirectoryUrl `

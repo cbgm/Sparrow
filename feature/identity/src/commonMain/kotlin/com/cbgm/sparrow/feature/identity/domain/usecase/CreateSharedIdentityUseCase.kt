@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository

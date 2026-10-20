@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.errors
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.presentation.errors.mapper.toDeveloperErrorUi

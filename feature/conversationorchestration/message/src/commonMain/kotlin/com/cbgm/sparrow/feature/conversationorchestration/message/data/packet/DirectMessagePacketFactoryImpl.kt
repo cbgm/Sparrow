@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.data.packet
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.DirectMessagePacketFactory
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider

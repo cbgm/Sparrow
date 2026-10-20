@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.model.RemoteIdentityImportOriginDto

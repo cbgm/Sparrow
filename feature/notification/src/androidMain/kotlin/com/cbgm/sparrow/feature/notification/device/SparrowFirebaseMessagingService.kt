@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.notification.device
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import org.koin.android.ext.android.inject

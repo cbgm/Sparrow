@@ -89,7 +89,8 @@ resolve_configured_control_planes() {
     [[ -n "$local_urls" ]] || exit 1
     return
   fi
-  local client="${CONTROL_PLANE_DIRECTORY_CLIENT:-$SCRIPT_DIR/../control_plane_directory_client.py}"
+  local client="${CONTROL_PLANE_DIRECTORY_CLIENT:-$SCRIPT_DIR/../app/control_plane_directory_client.py}"
+  [[ -f "$client" ]] || client="$SCRIPT_DIR/../control_plane_directory_client.py"
   if [[ ! -f "$client" ]]; then
     echo "Signed directory client missing; continuing with local Control Plane." >&2
     [[ -n "$local_urls" ]] || exit 1

@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.core.message.domain.model.MessageTransportMode
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.message.domain.model.MessageTransportMode
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity

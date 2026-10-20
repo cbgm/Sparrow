@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.push
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider

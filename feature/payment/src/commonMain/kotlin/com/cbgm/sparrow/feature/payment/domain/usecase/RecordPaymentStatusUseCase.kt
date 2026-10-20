@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.payment.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.payment.domain.repository.PaymentComposerRepository
 
 class RecordPaymentStatusUseCase(

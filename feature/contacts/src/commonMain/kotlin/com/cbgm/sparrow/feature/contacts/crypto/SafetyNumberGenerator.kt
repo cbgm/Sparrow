@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.crypto
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 
 class SafetyNumberGenerator(

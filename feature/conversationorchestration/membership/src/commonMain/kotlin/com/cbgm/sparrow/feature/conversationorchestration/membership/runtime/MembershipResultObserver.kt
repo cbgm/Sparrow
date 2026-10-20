@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipPerspective

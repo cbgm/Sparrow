@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.data.packet
 
-import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessagePlaintext
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.GroupMessagePlaintextCodec
 import com.cbgm.sparrow.protocol.message.GroupMessageContent

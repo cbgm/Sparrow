@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationRow
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationStatus
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.OwnedGroupVerificationInputs

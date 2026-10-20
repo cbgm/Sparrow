@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.avatar.data.repository
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.avatar.data.datasource.LocalAvatarEditorDataSource
 import com.cbgm.sparrow.feature.avatar.device.cropAndEncodeProfilePicture
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.presentation.management.model
 
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
 
 data class AttachmentManagementUiState(
     val attachments: List<MessagePartUi> = emptyList(),

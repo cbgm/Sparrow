@@ -2,11 +2,11 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType

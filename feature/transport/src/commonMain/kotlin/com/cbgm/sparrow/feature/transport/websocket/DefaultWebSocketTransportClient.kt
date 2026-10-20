@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.transport.websocket
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope

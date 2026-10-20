@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation

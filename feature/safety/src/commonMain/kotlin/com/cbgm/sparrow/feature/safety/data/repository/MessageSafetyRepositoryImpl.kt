@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.safety.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.result.safeCall
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
+import com.cbgm.sparrow.core.util.result.safeCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyLocalDataSource
 import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessmentEntity

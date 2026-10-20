@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.DirectMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.MessageDeliveryEvent

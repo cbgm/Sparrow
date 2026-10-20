@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository

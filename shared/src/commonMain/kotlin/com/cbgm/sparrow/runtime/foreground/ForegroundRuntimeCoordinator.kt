@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.runtime.foreground
 
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import kotlinx.coroutines.CoroutineScope

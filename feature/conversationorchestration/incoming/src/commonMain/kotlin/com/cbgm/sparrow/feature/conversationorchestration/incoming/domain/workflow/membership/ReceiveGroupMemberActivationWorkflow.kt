@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.membership
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine

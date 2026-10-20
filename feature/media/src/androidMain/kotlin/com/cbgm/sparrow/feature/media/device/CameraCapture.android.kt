@@ -44,8 +44,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
 import com.cbgm.sparrow.feature.media.domain.model.CameraLens

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.repository
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation

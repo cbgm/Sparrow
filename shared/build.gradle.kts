@@ -20,6 +20,16 @@ buildkonfig {
             ),
             const = true
         )
+        // Debug builds only: a fake SMS with this code replaces the Firebase phone verification.
+        buildConfigField(
+            STRING,
+            "DEBUG_SMS_CODE",
+            localProperties.get(
+                key = "DEBUG_SMS_CODE",
+                defaultValue = ""
+            ),
+            const = true
+        )
     }
 
     defaultConfigs("release") {
@@ -32,6 +42,7 @@ buildkonfig {
             ),
             const = true
         )
+        buildConfigField(STRING, "DEBUG_SMS_CODE", "", const = true)
     }
 }
 

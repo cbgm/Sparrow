@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.runtime
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

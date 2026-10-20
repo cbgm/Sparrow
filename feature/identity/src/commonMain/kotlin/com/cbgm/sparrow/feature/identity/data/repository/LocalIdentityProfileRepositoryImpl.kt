@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +24,9 @@ class LocalIdentityProfileRepositoryImpl(
             require(phoneNumber.isNotBlank()) { "Phone number must not be blank" }
             dataSource.savePhoneName(phoneNumber = phoneNumber, name = name)
         }
+
+    override fun keepPhoneVerificationToken(token: String) =
+        dataSource.keepPhoneVerificationToken(token)
 
     override suspend fun deletePhoneName(): Result<Unit> =
         safeSuspendCall { dataSource.deletePhoneName() }

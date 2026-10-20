@@ -143,7 +143,7 @@ See [Startup architecture](../architecture/startup.md).
 ## Release/build automation
 
 - Android debug/release builds and signing configuration are present in the source tree.
-- Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/unified`.
+- Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/installer`.
 - `server/control-plane-directory` is private operator infrastructure and is deliberately excluded from that public bundle.
 - This source snapshot does not include `.github/workflows`; exact current CI trigger/change-classification behavior therefore must be verified from the release checkout rather than inferred here.
 

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase
 
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseMemberId
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository

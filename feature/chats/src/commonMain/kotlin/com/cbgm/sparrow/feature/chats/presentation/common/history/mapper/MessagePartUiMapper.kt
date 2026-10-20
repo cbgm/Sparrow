@@ -1,19 +1,19 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePartSource
-import com.cbgm.sparrow.core.messagepart.ui.mapper.toMessagePartUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ContactUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
-import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageVideoUi
-import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
-import com.cbgm.sparrow.core.messagepart.ui.model.PaymentTransferUi
-import com.cbgm.sparrow.core.messagepart.ui.model.PollUi
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePartSource
+import com.cbgm.sparrow.core.base.messagepart.ui.mapper.toMessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ContactUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardClosedUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageVideoUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PaymentTransferUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 
 internal fun List<MessagePart>.toMessagePartsUi(

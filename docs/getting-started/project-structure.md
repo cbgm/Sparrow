@@ -54,7 +54,7 @@ The current `settings.gradle.kts` declares **55 Gradle modules**.
 
 The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push` and `:server:link-preview`.
 
-Deployment folders under `server/control-plane`, `server/community-node`, `server/unified` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
+Deployment folders under `server/control-plane`, `server/community-node`, `server/installer` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
 
 ## Feature layering
 

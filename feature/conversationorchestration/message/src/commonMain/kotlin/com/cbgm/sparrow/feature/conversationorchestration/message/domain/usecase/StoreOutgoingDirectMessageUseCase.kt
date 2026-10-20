@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectRecipient

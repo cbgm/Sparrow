@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase

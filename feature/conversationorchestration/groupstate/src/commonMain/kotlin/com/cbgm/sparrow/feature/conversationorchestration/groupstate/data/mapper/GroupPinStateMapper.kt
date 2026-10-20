@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.mapper
 
-import com.cbgm.sparrow.core.messagepart.data.mapper.toDto
-import com.cbgm.sparrow.core.messagepart.data.mapper.toMessagePart
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toDto
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinState
 import com.cbgm.sparrow.protocol.message.GroupMessageContent

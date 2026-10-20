@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupConversationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupLocalCleanupDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.toGroupConversationEntity

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 
 /** A persisted outgoing message with its persisted (attachment-backed) parts. */
 data class StoredOutgoingMessage(

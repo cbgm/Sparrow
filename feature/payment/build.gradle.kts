@@ -26,7 +26,6 @@ kotlin {
         commonTest.dependencies { implementation(libs.bundles.kmp.testing) }
         androidHostTest.dependencies {
             implementation(libs.bundles.android.host.testing)
-            implementation(libs.robolectric)
         }
         androidDeviceTest.dependencies {
             implementation(libs.zxing.core)

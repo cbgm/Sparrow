@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
 import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider

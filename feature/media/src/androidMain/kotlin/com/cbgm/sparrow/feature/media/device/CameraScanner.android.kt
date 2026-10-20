@@ -23,8 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.CameraScanMode
 import com.cbgm.sparrow.feature.media.domain.model.CameraScanResult
 import com.cbgm.sparrow.feature.media.domain.model.DocumentCaptureMode

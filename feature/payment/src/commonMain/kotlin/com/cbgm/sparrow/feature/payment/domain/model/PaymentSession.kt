@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.payment.domain.model
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
 
 data class PaymentSession(
     val selection: PaymentSelection,

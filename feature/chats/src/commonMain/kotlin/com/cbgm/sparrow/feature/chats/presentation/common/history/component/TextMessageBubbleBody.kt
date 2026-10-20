@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.linkpreview.presentation.component.LinkPreview

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.crypto
 
-import com.cbgm.sparrow.core.bytes.ByteArrays
+import com.cbgm.sparrow.core.util.bytes.ByteArrays
 
 class IdentityAcknowledgementPayloadEncoder {
     fun encode(

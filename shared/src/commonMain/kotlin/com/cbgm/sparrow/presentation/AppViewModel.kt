@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.presentation
 
 import androidx.lifecycle.ViewModel
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
 
 class AppViewModel(

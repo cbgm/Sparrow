@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.mapper
 
-import com.cbgm.sparrow.core.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
-import com.cbgm.sparrow.core.messagepart.ui.model.FileUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ImageUi
-import com.cbgm.sparrow.core.messagepart.ui.model.LocationUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
-import com.cbgm.sparrow.core.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.FileUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.LocationUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import kotlin.test.Test

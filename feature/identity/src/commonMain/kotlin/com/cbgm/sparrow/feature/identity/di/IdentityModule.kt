@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.core.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
@@ -57,6 +57,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ApplyRemoteProfilePictur
 import com.cbgm.sparrow.feature.identity.domain.usecase.ApprovePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CancelIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CloseIdentityExchangeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ConfirmPhoneVerificationCodeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
@@ -101,18 +102,26 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDecl
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.RestoreIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.SendPhoneVerificationCodeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
-import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
-import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityBackupUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityRestoreDocumentUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.SaveRestoredIdentityUseCase
+import com.cbgm.sparrow.feature.identity.presentation.backup.IdentityBackupViewModel
+import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
+import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsViewModel
+import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewViewModel
+import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
+import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
+import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
@@ -220,6 +229,27 @@ val identityModule =
 
         single<LocalPhoneNumberProvider> {
             get<LocalIdentityProfileDataSource>()
+        }
+
+        // PhoneVerificationRepository is bound by the platform module (Firebase on Android).
+        factory {
+            SendPhoneVerificationCodeUseCase(
+                repository = get(),
+                localIdentityProfileRepository = get()
+            )
+        }
+        factory {
+            ConfirmPhoneVerificationCodeUseCase(
+                repository = get(),
+                localIdentityProfileRepository = get<LocalIdentityProfileRepository>()
+            )
+        }
+        viewModel {
+            PhoneVerificationViewModel(
+                sendCode = get(),
+                confirmCode = get(),
+                isDebugBuild = getProperty(DEBUG_BUILD_PROPERTY, false)
+            )
         }
 
         single {
@@ -350,32 +380,61 @@ val identityModule =
             IdentityBackupRepositoryImpl(codec = get<IdentityBackupCodec>(), statusDataSource = get())
         }
         factory { PrepareIdentityBackupUseCase(identityRepository = get(), backupRepository = get()) }
-        factory { RestoreIdentityBackupUseCase(identityRepository = get(), backupRepository = get(), saveLocalPhoneName = get()) }
+        factory { ReadIdentityBackupUseCase(identityRepository = get(), backupRepository = get()) }
+        factory {
+            SaveRestoredIdentityUseCase(
+                identityRepository = get(),
+                backupRepository = get(),
+                saveLocalPhoneName = get()
+            )
+        }
         factory { MarkIdentityBackupExportedUseCase(identityRepository = get(), backupRepository = get()) }
         factory { GetIdentityBackupStatusUseCase(identityRepository = get(), backupRepository = get()) }
 
+        factory { ReadIdentityRestoreDocumentUseCase(selectedFiles = get()) }
         viewModel {
-            IdentityViewModel(
-                savedStateHandle = get(),
-                getIdentityStatus = get<GetIdentityStatusUseCase>(),
-                getPublicIdentity = get<GetPublicIdentityUseCase>(),
-                createIdentity = get<CreateIdentityUseCase>(),
-                getLocalPhoneNumber = get<GetLocalPhoneNumberUseCase>(),
-                normalizeLocalPhoneNumber = get<NormalizeLocalPhoneNumberUseCase>(),
-                saveLocalPhoneName = get<SaveLocalPhoneNameUseCase>(),
-                prepareIdentityBackup = get(),
-                restoreIdentityBackup = get(),
-                markIdentityBackupExported = get(),
-                getIdentityBackupStatus = get()
-            )
-        }
-
-        viewModel {
-            IdentityProfilePictureViewModel(
+            IdentityOverviewViewModel(
+                getPublicIdentity = get(),
+                getLocalPhoneNumber = get(),
+                getBackupStatus = get(),
                 observeLocalProfilePicture = get(),
                 consumeAvatarEditResult = get(),
                 setLocalProfilePicture = get(),
                 removeLocalProfilePicture = get()
+            )
+        }
+        viewModel {
+            IdentityCreateViewModel(
+                savedStateHandle = get(),
+                getIdentityStatus = get(),
+                getLocalPhoneNumber = get(),
+                normalizePhoneNumber = get(),
+                saveLocalPhoneName = get(),
+                createIdentity = get()
+            )
+        }
+        viewModel {
+            IdentityRestoreViewModel(
+                filePicker = FilePickerLauncher(sessions = get()),
+                readDocument = get(),
+                normalizePhoneNumber = get(),
+                readBackup = get(),
+                saveRestoredIdentity = get()
+            )
+        }
+
+        viewModel {
+            IdentityDetailsViewModel(
+                getPublicIdentity = get<GetPublicIdentityUseCase>()
+            )
+        }
+
+        viewModel {
+            IdentityBackupViewModel(
+                prepareIdentityBackup = get(),
+                markIdentityBackupExported = get(),
+                getIdentityBackupStatus = get(),
+                getPublicIdentity = get<GetPublicIdentityUseCase>()
             )
         }
 

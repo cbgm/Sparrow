@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.transport.controlplane
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.extensions.toHexString
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.extensions.toHexString
+import com.cbgm.sparrow.core.util.time.SystemClock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject

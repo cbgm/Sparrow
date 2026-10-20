@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.controlplane
 
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier

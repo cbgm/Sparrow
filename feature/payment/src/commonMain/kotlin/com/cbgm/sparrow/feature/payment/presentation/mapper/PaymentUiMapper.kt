@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.payment.presentation.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
 import com.cbgm.sparrow.feature.payment.device.PaymentImageRequest
 import com.cbgm.sparrow.feature.payment.domain.SepaPaymentPolicy
 import com.cbgm.sparrow.feature.payment.domain.model.BankDetails

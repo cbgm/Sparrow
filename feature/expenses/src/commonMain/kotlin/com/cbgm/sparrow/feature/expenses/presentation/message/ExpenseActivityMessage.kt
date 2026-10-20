@@ -28,11 +28,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardClosedUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseBoardUi
-import com.cbgm.sparrow.core.messagepart.ui.model.ExpenseUi
-import com.cbgm.sparrow.core.messagepart.ui.model.MessagePartUi
-import com.cbgm.sparrow.core.messagepart.ui.model.PaymentTransferUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardClosedUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
+import com.cbgm.sparrow.core.base.messagepart.ui.model.PaymentTransferUi
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing

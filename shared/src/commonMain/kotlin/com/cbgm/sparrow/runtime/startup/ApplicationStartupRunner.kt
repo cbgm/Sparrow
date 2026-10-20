@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.runtime.startup
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.logging.StartupTrace
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
 import com.cbgm.sparrow.startup.domain.model.StartupResult
 import com.cbgm.sparrow.startup.domain.runner.StartupRunner

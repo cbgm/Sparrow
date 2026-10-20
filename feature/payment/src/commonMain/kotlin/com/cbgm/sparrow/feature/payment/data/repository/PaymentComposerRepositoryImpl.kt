@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.payment.data.repository
 
-import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.result.safeCall
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentContext
 import com.cbgm.sparrow.feature.payment.domain.model.PaymentRequest
 import com.cbgm.sparrow.feature.payment.domain.repository.PaymentComposerRepository

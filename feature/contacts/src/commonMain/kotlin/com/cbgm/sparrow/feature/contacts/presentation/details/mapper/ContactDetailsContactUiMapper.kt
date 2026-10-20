@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.mapper
 
-import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus

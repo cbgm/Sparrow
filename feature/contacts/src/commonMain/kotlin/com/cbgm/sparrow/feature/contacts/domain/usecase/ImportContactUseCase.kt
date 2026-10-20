@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest

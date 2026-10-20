@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
-import com.cbgm.sparrow.core.message.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult

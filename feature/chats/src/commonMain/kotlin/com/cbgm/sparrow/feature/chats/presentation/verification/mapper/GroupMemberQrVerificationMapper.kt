@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.verification.mapper
 
-import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
 

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct
 
-import com.cbgm.sparrow.core.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase

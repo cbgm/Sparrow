@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
 import kotlinx.coroutines.flow.Flow

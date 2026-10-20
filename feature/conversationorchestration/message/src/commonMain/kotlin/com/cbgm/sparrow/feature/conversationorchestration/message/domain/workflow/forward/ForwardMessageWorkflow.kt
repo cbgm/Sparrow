@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.forward
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardMessage
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget

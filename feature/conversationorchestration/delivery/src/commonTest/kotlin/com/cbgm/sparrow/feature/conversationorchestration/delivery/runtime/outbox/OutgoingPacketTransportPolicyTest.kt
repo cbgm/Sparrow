@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox
 
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.protocol.message.MessageOperation

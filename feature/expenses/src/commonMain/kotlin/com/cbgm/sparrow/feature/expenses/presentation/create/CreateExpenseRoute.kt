@@ -6,7 +6,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.cbgm.sparrow.core.messagepart.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberDocumentScanLauncher
 import org.koin.compose.viewmodel.koinViewModel

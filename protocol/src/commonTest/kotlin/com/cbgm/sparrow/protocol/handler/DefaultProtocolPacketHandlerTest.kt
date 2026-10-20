@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.protocol.handler
 
-import com.cbgm.sparrow.core.messagepart.data.model.TextDto
+import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import kotlinx.coroutines.test.runTest

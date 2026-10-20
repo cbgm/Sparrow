@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
-import com.cbgm.sparrow.core.extensions.toFingerprint
-import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.feature.identity.data.datasource.PendingRemoteIdentityChangeDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange

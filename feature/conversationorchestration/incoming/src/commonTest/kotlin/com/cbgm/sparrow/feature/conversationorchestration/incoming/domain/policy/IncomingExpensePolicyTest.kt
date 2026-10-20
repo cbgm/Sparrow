@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseAllocation
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview.mapper
 
-import com.cbgm.sparrow.core.time.formatMessageTimestamp
+import com.cbgm.sparrow.core.util.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewPreview

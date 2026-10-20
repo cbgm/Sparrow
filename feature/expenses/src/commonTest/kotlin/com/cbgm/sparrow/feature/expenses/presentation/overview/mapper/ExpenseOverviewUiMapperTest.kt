@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.expenses.presentation.overview.mapper
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseAllocation
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseAllocation
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseMember
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseOverview
 import com.cbgm.sparrow.feature.expenses.domain.usecase.CalculateExpenseBalancesUseCase

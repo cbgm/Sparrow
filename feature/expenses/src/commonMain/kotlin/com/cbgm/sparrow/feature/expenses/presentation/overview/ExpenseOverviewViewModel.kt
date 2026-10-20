@@ -2,12 +2,12 @@ package com.cbgm.sparrow.feature.expenses.presentation.overview
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransferStatus
-import com.cbgm.sparrow.core.messagepart.domain.model.expenseId
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferStatus
+import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseOverview
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseRequest
 import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExpenseOverviewUseCase

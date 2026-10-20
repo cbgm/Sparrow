@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
-import com.cbgm.sparrow.core.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.messagepart.domain.model.ExpenseMemberId
-import com.cbgm.sparrow.core.messagepart.domain.model.PaymentTransfer
+import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
+import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseMemberId
+import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinReadRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository

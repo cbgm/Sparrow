@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker
 
-import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResultUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionUi
 import kotlinx.coroutines.flow.MutableStateFlow
