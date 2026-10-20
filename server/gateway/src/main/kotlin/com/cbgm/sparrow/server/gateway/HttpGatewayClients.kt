@@ -63,12 +63,16 @@ class HttpPresenceClient(
     private val endpointPool: ControlPlaneEndpointPool,
     private val signer: NodeRequestSigner
 ) : PresenceClient {
-    override suspend fun register(registration: ClientRouteRegistration): Boolean {
-        var accepted = false
-        endpointPool.all().forEach { baseUrl ->
-            accepted = registerAt(baseUrl, registration) || accepted
+    override suspend fun register(
+        registration: ClientRouteRegistration
+    ): PresenceRegistrationResult {
+        val results = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
+        return when {
+            PresenceRegistrationResult.ACCEPTED in results -> PresenceRegistrationResult.ACCEPTED
+            PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED in results ->
+                PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED
+            else -> PresenceRegistrationResult.REJECTED
         }
-        return accepted
     }
 
     override suspend fun remove(
@@ -80,7 +84,7 @@ class HttpPresenceClient(
                 removeAt(baseUrl, routingId, connectionId)
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 endpointPool.markUnavailable(baseUrl)
             }
         }
@@ -89,7 +93,7 @@ class HttpPresenceClient(
     private suspend fun registerAt(
         baseUrl: String,
         registration: ClientRouteRegistration
-    ): Boolean =
+    ): PresenceRegistrationResult =
         try {
             val path = "/v1/routes/${registration.route.routingId}"
             val body = serverJson.encodeToString(registration)
@@ -101,20 +105,31 @@ class HttpPresenceClient(
                         contentType(ContentType.Application.Json)
                         setBody(body)
                     }.status
-            if (status.isSuccess()) {
-                endpointPool.markReachable(baseUrl)
-                true
-            } else {
-                if (status.value >= SERVER_ERROR_STATUS_CODE || status == HttpStatusCode.TooManyRequests) {
-                    endpointPool.markUnavailable(baseUrl)
+            when {
+                status.isSuccess() -> {
+                    endpointPool.markReachable(baseUrl)
+                    PresenceRegistrationResult.ACCEPTED
                 }
-                false
+
+                status == HttpStatusCode.Forbidden -> {
+                    endpointPool.markReachable(baseUrl)
+                    PresenceRegistrationResult.PHONE_VERIFICATION_REQUIRED
+                }
+
+                else -> {
+                    if (status.value >= SERVER_ERROR_STATUS_CODE ||
+                        status == HttpStatusCode.TooManyRequests
+                    ) {
+                        endpointPool.markUnavailable(baseUrl)
+                    }
+                    PresenceRegistrationResult.REJECTED
+                }
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             endpointPool.markUnavailable(baseUrl)
-            false
+            PresenceRegistrationResult.REJECTED
         }
 
     private suspend fun removeAt(
@@ -241,7 +256,7 @@ class HttpNodePushClient(
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 endpointPool.markUnavailable(baseUrl)
             }
         }
@@ -258,7 +273,7 @@ class HttpNodePushClient(
                 handlePushFailure(baseUrl, response.status.value)
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 endpointPool.markUnavailable(baseUrl)
             }
         }
@@ -304,7 +319,7 @@ class HttpNodePushClient(
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             endpointPool.markUnavailable(baseUrl)
         }
     }

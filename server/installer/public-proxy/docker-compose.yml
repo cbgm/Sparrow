@@ -23,7 +23,7 @@ services:
     profiles: [registration]
     image: sparrow-directory-register:local
     build:
-      context: ..
+      context: ../app
       dockerfile: directory-registration/Dockerfile
     restart: "no"
     read_only: true
@@ -41,7 +41,7 @@ services:
     profiles: [directory]
     image: sparrow-directory-sync:local
     build:
-      context: ..
+      context: ../app
       dockerfile: directory-sync/Dockerfile
     restart: unless-stopped
     read_only: true

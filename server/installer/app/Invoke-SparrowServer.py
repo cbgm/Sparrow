@@ -22,7 +22,8 @@ import sys
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-ROOT = Path(__file__).resolve().parent
+APP = Path(__file__).resolve().parent
+ROOT = APP.parent
 PROJECTS = {"node": ("community-node", "sparrow-community-node"),
             "control-plane": ("control-plane", "sparrow-control-plane"),
             "proxy": ("public-proxy", "sparrow-public-proxy")}
@@ -412,6 +413,17 @@ def render_proxy(entries):
     return output_text
 
 
+def preserved_directory_route(contents):
+    """The marked site of the separate Directory installer survives regenerated proxy routes."""
+    begin, end = "# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE", "# END SPARROW INDEPENDENT DIRECTORY ROUTE"
+    start, finish = contents.find(begin), contents.find(end)
+    if start < 0 and finish < 0:
+        return ""
+    require(0 <= start < finish and contents.count(begin) == 1 and contents.count(end) == 1,
+            "Incomplete or ambiguous Directory route in the proxy configuration; nothing was changed.")
+    return contents[start:finish + len(end)]
+
+
 def installed_public():
     result = []
     for component in ("control-plane", "node"):
@@ -550,6 +562,46 @@ def sync_installed_node_discovery(directory_url):
 
 
 
+def read_local_images():
+    """Manifest of server images embedded by a local source build, or None."""
+    path = APP / "local-images.json"
+    if not path.is_file():
+        return None
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    services = set(BACKEND_SERVICES["node"]) | set(BACKEND_SERVICES["control-plane"])
+    images = manifest.get("images", [])
+    require(manifest.get("version") == 1 and manifest.get("archive") == "local-images.tar" and
+            re.fullmatch(r"[a-fA-F0-9]{64}", str(manifest.get("sha256", ""))) and
+            IMAGE_PREFIX.fullmatch(str(manifest.get("prefix", ""))) and
+            IMAGE_TAG.fullmatch(str(manifest.get("tag", ""))), "Invalid bundled local-image manifest.")
+    require(len(images) == len(services) and {image.get("service") for image in images} == services,
+            "The local build must contain all six Sparrow server images.")
+    for image in images:
+        require(image.get("name") == f"{manifest['prefix']}-{image['service']}:{manifest['tag']}" and
+                re.fullmatch(r"sha256:[a-f0-9]{64}", str(image.get("id", ""))), "Invalid bundled local-image entry.")
+    require((APP / manifest["archive"]).is_file(), "Bundled local-images.tar is missing.")
+    return manifest
+
+
+def load_local_images(manifest):
+    import hashlib
+    archive = APP / manifest["archive"]
+    digest = hashlib.sha256()
+    with archive.open("rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(block)
+    require(digest.hexdigest().lower() == manifest["sha256"].lower(),
+            "Bundled image archive checksum mismatch. No server images were applied.")
+    print("Loading the locally built Sparrow server images ...")
+    docker("load", "--input", str(archive))
+    for image in manifest["images"]:
+        loaded = docker("image", "inspect", "--format", "{{.Id}}", image["name"], capture=True).stdout.strip()
+        require(loaded == image["id"], f"Loaded image does not match the bundle: {image['name']}")
+
+
+LOCAL_IMAGES = None
+
+
 def update_backends(component, image_prefix, image_tag):
     require(component in BACKEND_SERVICES, "Only backend components support image updates.")
     inspect_ownership(component)
@@ -562,8 +614,11 @@ def update_backends(component, image_prefix, image_tag):
                           "--filter", f"label=com.docker.compose.service={service}", capture=True).stdout.strip()
         require(existing, f"{project} is missing service {service}; refusing to create a partial replacement.")
     dc(component, "config", "--quiet")
-    print(f"Pulling existing {component} backend images from GHCR ...")
-    dc(component, "pull", *BACKEND_SERVICES[component])
+    if LOCAL_IMAGES is None:
+        print(f"Pulling existing {component} backend images from GHCR ...")
+        dc(component, "pull", *BACKEND_SERVICES[component])
+    else:
+        print(f"Using the bundled local {component} backend images; registry pull skipped.")
     dc(component, "up", "-d", "--no-deps", "--pull", "never", *BACKEND_SERVICES[component])
 
 
@@ -670,7 +725,7 @@ def register_installed_public_control_plane():
             identity.stat().st_mtime, (ROOT / "control-plane" / "sparrow.conf").stat().st_mtime)
             and time.time() - marker.stat().st_mtime < 9 * 60):
         return
-    helper = ROOT / "control_plane_directory_registration.py"
+    helper = APP / "control_plane_directory_registration.py"
     if not helper.is_file():
         print("Directory registration client missing; local Control Plane remains available.")
         return
@@ -705,7 +760,14 @@ def register_installed_public_control_plane():
 
 
 def install(args):
+    global LOCAL_IMAGES
     components = selected(args.component)
+    LOCAL_IMAGES = read_local_images()
+    if LOCAL_IMAGES is not None:
+        require(all(runtime(component).is_file() for component in components),
+                "A local build updates an existing installation; install from a release first.")
+        args.image_prefix, args.image_tag = LOCAL_IMAGES["prefix"], LOCAL_IMAGES["tag"]
+        load_local_images(LOCAL_IMAGES)
     require(args.component == "combined", "Sparrow installation requires Combined (Control Plane + Community Node).")
     # Reuse the installed directory bootstrap if the operator leaves the field
     # unspecified on a normal update; a provided URL overrides it explicitly.
@@ -794,6 +856,8 @@ def install(args):
             require(not dest.exists(), "Existing Firebase file must not be replaced automatically.")
             shutil.copyfile(Path(args.firebase_file).expanduser(), dest)
             dest.chmod(0o600)
+        if args.phone_verification:
+            os.environ["PHONE_VERIFICATION_REQUIRED"] = "true" if args.phone_verification == "required" else "false"
         run(["bash", str(ROOT / "control-plane" / "bootstrap-control-plane.sh")])
     if "node" in components and not runtime("node").exists():
         cp_url = (f"https://{args.control_domain}" if args.mode == "public" else "http://localhost:8390") if args.component == "combined" else ""
@@ -810,6 +874,9 @@ def install(args):
         entries = installed_public()
         candidate = render_proxy(entries)
         proxy = ROOT / "public-proxy" / "Caddyfile"
+        directory = preserved_directory_route(proxy.read_text(encoding="utf-8") if proxy.exists() else "")
+        if directory:
+            candidate = candidate.rstrip() + "\n\n" + directory + "\n"
         if proxy.exists() and proxy.read_text(encoding="utf-8") != candidate:
             # Allow ONLY this revision's additive proof route on an already
             # configured Combined installation. Keep all existing hostnames,
@@ -841,6 +908,9 @@ def install(args):
     # normal backend update. A freshly bootstrapped CP already imported them.
     if args.firebase_file and runtime("control-plane").is_file():
         enable_firebase_credentials(args.firebase_file)
+    if args.phone_verification and runtime("control-plane").is_file():
+        update_installed_properties(runtime("control-plane"), {
+            "PHONE_VERIFICATION_REQUIRED": "true" if args.phone_verification == "required" else "false"})
     # Install / Start always refreshes existing Sparrow backend images from GHCR.
     # No database/Redis/Caddy image updates, no re-bootstrap or new identities.
     for component in components:
@@ -911,18 +981,25 @@ def parse_args():
     parser.add_argument("--node-domain", default="")
     parser.add_argument("--control-domain", default="")
     parser.add_argument("--directory-url", default="")
-    parser.add_argument("--image-prefix", default="ghcr.io/cbgm/sparrow")
-    parser.add_argument("--image-tag", default="latest")
+    parser.add_argument("--image-prefix", default=None, help="default: the installed or bundled prefix")
+    parser.add_argument("--image-tag", default=None, help="default: the installed or bundled tag")
     parser.add_argument("--firebase-file", default="", help="authorized Firebase Admin service-account JSON")
     parser.add_argument("--auto-dns", action="store_true", help="generate free sslip.io hostnames from WAN IPv4")
     parser.add_argument("--public-ip", default="", help="optional explicit public IPv4 for automatic DNS")
     parser.add_argument("--verify-public", action="store_true", help="require advertised public Node in the signed CP directory")
+    parser.add_argument("--phone-verification", choices=("required", "optional"), default=None,
+                        help="require Firebase-verified phone numbers (needs Firebase credentials)")
     parser.add_argument("--confirm-delete-data", action="store_true", help="explicit authorization for destructive Public reinstall")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    # Without explicit values keep the images selected by sparrow.conf (the
+    # installed ones, or the bundle's own for a fresh installation).
+    planned = config("control-plane")
+    args.image_prefix = args.image_prefix or planned.get("SPARROW_IMAGE_PREFIX") or "ghcr.io/cbgm/sparrow"
+    args.image_tag = args.image_tag or planned.get("SPARROW_IMAGE_TAG") or "latest"
     if args.mode is None:
         installed = [config(part).get("MODE") for part in selected(args.component) if part != "proxy" and runtime(part).is_file()]
         args.mode = installed[0] if installed and all(mode == installed[0] for mode in installed) else "lan"

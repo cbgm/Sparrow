@@ -41,7 +41,7 @@ function Normalize-Workdir([string]$Value) {
 }
 function Check-ProjectFolder([string]$Project, [string]$Folder) {
     $ids = @(Invoke-DockerChecked @('ps', '-a', '--filter', "label=com.docker.compose.project=$Project", '--format', '{{.ID}}'))
-    if ($ids.Count -eq 0) { throw "Cannot verify the Compose project $Project: no containers found. Refusing to assume a volume belongs to this deployment." }
+    if ($ids.Count -eq 0) { throw "Cannot verify the Compose project ${Project}: no containers found. Refusing to assume a volume belongs to this deployment." }
     foreach ($id in $ids) {
         $workdir = @(Get-SparrowDockerLabel -Resource container -Id $id -Key 'com.docker.compose.project.working_dir')
         if ($workdir.Count -ne 1 -or -not $workdir[0] -or $workdir[0] -eq '<no value>') {

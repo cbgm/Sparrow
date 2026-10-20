@@ -1,10 +1,16 @@
-# Sparrow unified server installer (Windows, Linux, macOS)
+# Sparrow server installer (Windows, Linux, macOS)
 
-The server bundle includes a Combined Control Plane + Community Node installer (default) and a separate manager for one or more independent Community Node-only instances. Every managed node runs in its own Docker Compose project and retains its own signing identity, credentials and databases. Source-only validation and recovery rehearsal scripts are not distributed.
+Open the installer:
 
-Windows: Start-SparrowServer.cmd
-Linux: ./Start-SparrowServer.sh --help
-macOS: ./Start-SparrowServer.command (or ./Start-SparrowServer.sh --help)
+- Windows: double-click `Start-SparrowServer.cmd`
+- macOS: double-click `Start-SparrowServer.command`
+- Linux: run `./Start-SparrowServer.sh`
+
+The installer window is the same on all three systems. It needs Python 3.9+
+(Windows: python.org installer; most Linux desktops need the `python3-tk`
+package). On a machine without a screen, for example over SSH, the same options
+appear as a text menu. Every action can also be run directly from the command
+line (see below).
 
 On Linux/macOS, install a fresh combined public server with shared Caddy and automatic sslip.io hostnames:
 
@@ -25,7 +31,7 @@ The installed public addresses are printed by `status` and `install`. Operation 
 
 ### Dynamic public IPv4 and automatic sslip.io names
 
-When an installation was created with **automatic sslip.io hostnames**, a later `Install / Start` (Windows) or `install --auto-dns` (Linux/macOS) detects the current WAN IPv4. If it changed, Sparrow rotates only its generated `node-<ip>.sslip.io`, `control-<ip>.sslip.io`, managed `node-<id>-<ip>.sslip.io`, and marked `directory-<ip>.sslip.io` endpoints. Existing signing identities, secrets, databases, FCM credentials and Docker volumes are retained. Custom/manual DNS names are never rewritten. The Control Plane then re-registers the same identity at its new endpoint and Community Nodes re-advertise their new endpoints.
+When an installation was created with **automatic sslip.io hostnames**, every **Start / apply settings** in the installer (window or text menu, all platforms) first detects the current WAN IPv4 (`app/public_ip.py`). If it changed, Sparrow rotates only its generated `node-<ip>.sslip.io`, `control-<ip>.sslip.io`, managed `node-<id>-<ip>.sslip.io`, and marked `directory-<ip>.sslip.io` endpoints. Existing signing identities, secrets, databases, FCM credentials and Docker volumes are retained. Custom/manual DNS names are never rewritten; backups of the previous settings are kept under `backups/`. The Control Plane then re-registers the same identity at its new endpoint and Community Nodes re-advertise their new endpoints.
 
 If the **independent Directory itself** is hosted on the same dynamic residential IP and Android knows it only through an old `directory-<old-ip>.sslip.io` bootstrap URL, the client has no stable address from which it can discover the new Directory URL. For unattended recovery, host the Directory under a stable DNS/DDNS name (or on stable external infrastructure). Endpoint rotation preserves the Directory signing identity; this limitation is only about finding the new network address.
 
@@ -227,30 +233,66 @@ its image; the only key mount is the existing root identity read-only, only for
 the lifetime of the registration attempt. The verified background worker does
 not have this mount. Docker image build errors cannot interrupt local messaging.
 
-### Local server build update (Windows, existing combined installation)
+### Updating
 
-With Docker Desktop running, double-click
-`server/unified/Build-SparrowServer-Local.cmd` in the source project.
+The **Updates** card of the installer updates the installation in place. Every
+update keeps `sparrow.conf`, `.env.runtime`, secrets, identities, databases and
+Docker volumes; only manager code, Compose/bootstrap templates and backend
+images change. The previous code is saved under `.sparrow-code-backups/`.
 
-This compiles all six server images from the local working tree, gives them a
-unique local tag and packages them with the manager in `dist/sparrow-server.zip`.
-It does not push images or source to GitHub. Docker still downloads build tools
-and dependencies when they are not cached. This is not an offline build.
+- **Update to latest release** downloads the newest published GitHub release
+  for your platform, verifies it against `SHA256SUMS.txt`, installs its code and
+  applies its server images.
+- **Build from source...** (needs Python 3) asks once for your Sparrow source folder (it is
+  remembered), builds all six server images from that working tree with Docker
+  (`server/installer/build.py --local-images`) and applies them with
+  `--pull never`. Docker still downloads build tools and dependencies that are
+  not cached. Local builds update existing installations; install first.
+- **Apply ZIP...** applies a `sparrow-server.zip` (release or local build).
+- **Move existing server here...** (shown in a new, not yet installed folder)
+  finds the server already running in Docker, copies its settings, secrets
+  and caches into this folder and recreates the same containers from here.
+  Docker volumes (databases, identities, certificates) are kept. If anything
+  fails, the server is started again from the old folder. Afterwards the old
+  folder can be deleted.
 
-Extract the new bundle into a NEW folder and open `Start-SparrowServer.cmd`.
-Click **Update ZIP...** and select `dist/sparrow-server.zip`. When opened outside
-an existing installation, the manager opens a folder picker for your ORIGINAL
-server installation. In an installed manager it uses its own folder automatically.
-The button updates the installed files, verifies and loads the bundled images,
-applies them to the existing server with `--pull never`, and reopens the installed
-manager. Progress and errors appear in its existing log panel. No PowerShell
-update command or second Install / Start click is required.
+The manager reopens itself after an update so its new code is used. Never
+extract a bundle over a configured installation. Applying a release bundle
+removes a previously applied local build.
 
-Do not extract the ZIP over your configured installation. Existing configuration,
-credentials, identities and data volumes are retained. The displayed image
-prefix/tag are read-only while a local bundle is installed. Local bundles support
-updates of existing Windows combined installations, not fresh installs,
-destructive reinstalls, attached migrations, or Linux/macOS managers.
-Normal builds without `-IncludeLocalImages` keep the registry-based behavior.
-The updater removes previous local-image selection files when applying a normal
-release bundle; select the desired registry prefix/tag in the manager afterward.
+Command line equivalent:
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Release
+    powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Source -Path C:\src\Sparrow
+    powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Zip -Path C:\Downloads\sparrow-server.zip
+
+### Updating (Linux and macOS)
+
+    ./Start-SparrowServer.sh update --release              latest GitHub release
+    ./Start-SparrowServer.sh update --source ~/Sparrow     build images from your source folder
+    ./Start-SparrowServer.sh update --zip sparrow-server.zip
+    ./Start-SparrowServer.sh update --folder ~/sparrow-server --installation /srv/sparrow
+                                                           move an old installation to the new layout
+
+Building from source needs Docker and Python 3 (as does the manager itself).
+
+### Folder layout
+
+    Start-SparrowServer.cmd / .sh / .command   launchers
+    README.md
+    app/              manager code (replaced by updates)
+    control-plane/    Control Plane templates and its runtime state
+    community-node/   Community Node templates and its runtime state
+    public-proxy/     shared public Caddy proxy
+    node-instances/   additional Community Node instances
+    logs/             operation logs
+
+### Phone verification
+
+The **Require verified phone numbers** option (Windows manager) sets
+`PHONE_VERIFICATION_REQUIRED` for the Control Plane presence directory. When it
+is on, phone-number aliases are only published for clients that present a
+valid Firebase phone sign-in token. It needs the Firebase service-account
+credentials (the same import as push). On Linux/macOS set
+`PHONE_VERIFICATION_REQUIRED=true` in `control-plane/.env.runtime` and run
+`install` again.

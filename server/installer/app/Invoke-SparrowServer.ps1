@@ -20,13 +20,15 @@ param(
     [string]$ResultPath = '',
     [string]$FailurePath = '',
     [ValidateSet('Keep','ReplaceTestData')][string]$ExistingDeployment = 'Keep',
+    [ValidateSet('Keep','Required','Optional')][string]$PhoneVerification = 'Keep',
     [string]$ReplacementConfirmation = ''
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Get-SparrowDockerLabel.ps1')
 . (Join-Path $PSScriptRoot 'Get-SparrowVerifiedDirectory.ps1')
-$root = $PSScriptRoot
+$appRoot = $PSScriptRoot
+$root = Split-Path -Parent $appRoot
 $nodeRoot = Join-Path $root 'community-node'
 $cpRoot = Join-Path $root 'control-plane'
 $proxyRoot = Join-Path $root 'public-proxy'
@@ -34,8 +36,8 @@ $attachmentFile = Join-Path $root '.sparrow-attached.json'
 $nodeSelected = $Component -in @('Node', 'Combined')
 $cpSelected = $Component -in @('ControlPlane', 'Combined')
 $shared = $Mode -eq 'public'
-. (Join-Path $root 'SparrowLocalImages.ps1')
-$localImages = Read-SparrowLocalImages $root
+. (Join-Path $appRoot 'SparrowLocalImages.ps1')
+$localImages = Read-SparrowLocalImages $appRoot
 
 function Start-SparrowDirectoryBackgroundSync {
     $cpConfig = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
@@ -65,7 +67,7 @@ function Refresh-PublicControlPlaneDirectory {
             -DirectoryUrl $settings['CONTROL_PLANE_DIRECTORY_URL'] `
             -PinnedPublicKey $settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] `
             -CacheFile (Join-Path $cpRoot '.control-plane-directory-verified.json') `
-            -ClientScript (Join-Path $root 'control_plane_directory_client.py'))
+            -ClientScript (Join-Path $appRoot 'control_plane_directory_client.py'))
         Write-Host 'Control Plane signed-directory cache refreshed or reused.'
     } catch {
         Write-Host 'Control Plane directory unavailable; local server and previous verified cache remain unchanged.'
@@ -336,7 +338,7 @@ function Show-AdoptionPreflight([string]$Source, [string]$Destination, [string]$
     Write-Host 'The existing installation must be backed up and its project working directory reconciled before adoption. Do not start a second bundle using the same project/volumes.'
 }
 function Show-Preflight {
-    Write-Host '==== Sparrow Server — read-only deployment preflight ===='
+    Write-Host '==== Sparrow Server - read-only deployment preflight ===='
     Show-AdoptionPreflight $ExistingNodeDirectory $nodeRoot 'sparrow-community-node'
     Show-AdoptionPreflight $ExistingControlPlaneDirectory $cpRoot 'sparrow-control-plane'
     foreach ($directory in @($nodeRoot, $cpRoot)) {
@@ -629,7 +631,7 @@ function Sync-InstalledNodeDiscovery([string]$RequestedDirectoryUrl) {
                     -DirectoryUrl $RequestedDirectoryUrl `
                     -PinnedPublicKey $pin `
                     -CacheFile (Join-Path $nodeRoot '.control-plane-directory-verified.json') `
-                    -ClientScript (Join-Path $root 'control_plane_directory_client.py'))
+                    -ClientScript (Join-Path $appRoot 'control_plane_directory_client.py'))
                 foreach ($remote in $remoteUrls) { & $addCandidate $remote }
             } catch {
                 Write-Host "Verified directory unavailable; using local/manual addresses: $($_.Exception.Message)"
@@ -793,7 +795,7 @@ function Resolve-OrphanedTestData {
     # deployment, never while one component still owns a valid installation.
     $resetSelection = if ($orphanNode -and $orphanControlPlane) { 'Combined' } elseif ($orphanNode) { 'Node' } else { 'ControlPlane' }
     Write-Host "Fresh-install cleanup: $resetSelection has old Docker resources but no local runtime. Replacing its old containers, volumes and generated secrets with a new installation."
-    & (Join-Path $root 'Reset-SparrowTestDeployment.ps1') -InstallationDirectory $root -Component $resetSelection -DeleteDisposableData -Confirmation 'DELETE SPARROW TEST DATA'
+    & (Join-Path $appRoot 'Reset-SparrowDeployment.ps1') -InstallationDirectory $root -Component $resetSelection -DeleteDisposableData -Confirmation 'DELETE SPARROW TEST DATA'
     if (-not $?) { throw 'Could not replace orphaned test Docker resources. The installation was not started.' }
     if ($orphanNode) { Assert-NotOrphaned $nodeRoot 'sparrow-community-node' }
     if ($orphanControlPlane) { Assert-NotOrphaned $cpRoot 'sparrow-control-plane' }
@@ -1384,7 +1386,7 @@ function Write-TaskResult([string]$Value) {
 try {
     Require-Docker
     if ($Action -eq 'Attach' -or (Test-Path -LiteralPath $attachmentFile -PathType Leaf)) {
-        . (Join-Path $root 'Attached-SparrowDeployment.ps1')
+        . (Join-Path $appRoot 'Attached-SparrowDeployment.ps1')
         if ($null -ne $localImages -and $Action -eq 'Start') { throw 'Bundled local images require the original combined installation, not an attached deployment.' }
         Attached-Invoke -Action $Action -Component $Component -PlanDirectory $PlanDirectory -ExpectedState $ExpectedState
         Write-TaskResult 'SUCCESS'
@@ -1408,7 +1410,7 @@ try {
             $backupParameters['IncludeSharedProxy'] = $true
             $backupParameters['ProxyDirectory'] = if ($ExistingProxyDirectory) { $ExistingProxyDirectory } else { $proxyRoot }
         }
-        & (Join-Path $root 'Backup-SparrowDeployment.ps1') @backupParameters
+        & (Join-Path $appRoot 'Backup-SparrowDeployment.ps1') @backupParameters
         if (-not $?) { throw 'Offline backup command failed.' }
         Write-TaskResult 'SUCCESS'
         exit 0
@@ -1433,7 +1435,7 @@ try {
             }
             $ImagePrefix = [string]$localImages.prefix
             $ImageTag = [string]$localImages.tag
-            Import-SparrowLocalImages $root $localImages
+            Import-SparrowLocalImages $appRoot $localImages
         }
         if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') { throw 'Invalid image prefix.' }
         if ($ImageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') { throw 'Invalid image tag.' }
@@ -1449,7 +1451,7 @@ try {
             }
             # Check prerequisites BEFORE deleting the old server. Replacing an
             # installed test server is destructive; no migration code is run.
-            foreach ($required in @((Join-Path $root 'Reset-SparrowTestDeployment.ps1'),
+            foreach ($required in @((Join-Path $appRoot 'Reset-SparrowDeployment.ps1'),
                                    (Join-Path $cpRoot 'Bootstrap-ControlPlane.ps1'),
                                    (Join-Path $nodeRoot 'Bootstrap-CommunityNode.ps1'),
                                    (Join-Path $proxyRoot 'docker-compose.yml'))) {
@@ -1459,7 +1461,7 @@ try {
             }
             if ($shared) { Ensure-SharedNetwork }
             Write-Host 'EXPLICIT TEST REPLACEMENT: deleting existing Combined server identities, databases, queued messages, certificates and credentials; installing fresh Public configuration.'
-            & (Join-Path $root 'Reset-SparrowTestDeployment.ps1') -InstallationDirectory $root -Component Combined -ReplaceInstalledTestData -DeleteDisposableData -Confirmation 'DELETE SPARROW SERVER DATA'
+            & (Join-Path $appRoot 'Reset-SparrowDeployment.ps1') -InstallationDirectory $root -Component Combined -ReplaceInstalledTestData -DeleteDisposableData -Confirmation 'DELETE SPARROW SERVER DATA'
             if (-not $?) { throw 'The explicit test replacement failed. No new bootstrap was attempted.' }
         }
         $installedCp = Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf
@@ -1548,7 +1550,7 @@ try {
             # discovery environment and the gateway/federation/mailbox services.
         }
         # Check required bundle assets before touching any old TEST data.
-        $freshRequired = @((Join-Path $root 'Reset-SparrowTestDeployment.ps1'))
+        $freshRequired = @((Join-Path $appRoot 'Reset-SparrowDeployment.ps1'))
         if ($nodeSelected) { $freshRequired += (Join-Path $nodeRoot 'Bootstrap-CommunityNode.ps1') }
         if ($cpSelected) { $freshRequired += (Join-Path $cpRoot 'Bootstrap-ControlPlane.ps1') }
         if ($shared) { $freshRequired += (Join-Path $proxyRoot 'docker-compose.yml') }
@@ -1649,7 +1651,35 @@ try {
                 # registration client cannot write to.
                 New-Item -ItemType Directory -Path (Join-Path $cpRoot 'directory-registration-proofs') -Force | Out-Null
             }
+            $phoneVerificationRequired = switch ($PhoneVerification) {
+                'Required' { 'true' }
+                'Optional' { 'false' }
+                default { $null }
+            }
+            $cpRuntimePath = Join-Path $cpRoot '.env.runtime'
+            if ($null -ne $phoneVerificationRequired) {
+                # Compose prefers the process value on a fresh install; the
+                # runtime file keeps the choice for every later start.
+                $env:PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired
+                if ((Test-Path -LiteralPath $cpRuntimePath -PathType Leaf) -and
+                    (Read-Properties $cpRuntimePath)['PHONE_VERIFICATION_REQUIRED'] -ne $phoneVerificationRequired) {
+                    Write-Properties $cpRuntimePath @{ PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired }
+                }
+            }
             Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory', 'push')
+            if ($null -ne $phoneVerificationRequired) {
+                $cpRuntime = Read-Properties $cpRuntimePath
+                if ($cpRuntime['PHONE_VERIFICATION_REQUIRED'] -ne $phoneVerificationRequired) {
+                    Write-Properties $cpRuntimePath @{ PHONE_VERIFICATION_REQUIRED = $phoneVerificationRequired }
+                }
+                $hasFirebase = -not [string]::IsNullOrWhiteSpace($cpRuntime['FIREBASE_ADMIN_CREDENTIALS']) -and
+                    (Test-Path -LiteralPath $cpRuntime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)
+                if ($phoneVerificationRequired -eq 'true' -and -not $hasFirebase) {
+                    Write-Warning 'Phone verification is required but no Firebase credentials are configured: phone number registrations will be rejected until credentials are imported.'
+                } else {
+                    Write-Host "Phone verification: $(if ($phoneVerificationRequired -eq 'true') { 'required' } else { 'optional' })."
+                }
+            }
         }
         if ($nodeSelected) {
             if (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) {

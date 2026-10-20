@@ -25,11 +25,11 @@ from urllib.request import urlopen
 # SOURCE; new instances and proxy routes must live beside the EXISTING
 # deployment instead of creating a second proxy and duplicate server state.
 SOURCE = Path(__file__).resolve().parent
-ROOT = SOURCE
+ROOT = SOURCE.parent
 INSTANCES = ROOT / 'node-instances'
 ROUTES = INSTANCES / 'routes'
 PROXY = ROOT / 'public-proxy'
-TEMPLATE = SOURCE / 'community-node'
+TEMPLATE = ROOT / 'community-node'
 NETWORK = 'sparrow-public-edge'
 ID = re.compile(r'[a-z][a-z0-9-]{1,30}[a-z0-9]\Z')
 DOMAIN = re.compile(r'(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\Z')
@@ -984,6 +984,9 @@ def start_directory_worker(directory):
     conf = properties(directory / 'sparrow.conf')
     if not conf.get('CONTROL_PLANE_DIRECTORY_URL') or not conf.get('CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'):
         return
+    # Instances keep a copy of this secret-free template; refresh it so an
+    # updated bundle layout also updates the worker's build context.
+    shutil.copy2(TEMPLATE / 'docker-compose.directory-sync.yml', directory / 'docker-compose.directory-sync.yml')
     # Unlike the central directory SERVER, this is a public, independently
     # pinned discovery CLIENT. One worker and one verified cache per node.
     args = ['docker', 'compose', '--env-file', str(directory / '.env.runtime')]

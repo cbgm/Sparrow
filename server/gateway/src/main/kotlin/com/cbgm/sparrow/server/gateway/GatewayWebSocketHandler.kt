@@ -16,7 +16,7 @@ class GatewayWebSocketHandler(
     private val routeLifetimeMilliseconds: Long,
     private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
 ) {
-    private val bestEffortPresence = BestEffortPresenceClient(presence)
+    private val boundedPresence = BoundedPresenceClient(presence)
     private val pushDispatcher =
         GatewayPushDispatcher(
             pushClient = legacyPush,
@@ -27,7 +27,7 @@ class GatewayWebSocketHandler(
         GatewaySessionHandler(
             nodeId = nodeId,
             connections = connections,
-            presence = bestEffortPresence,
+            presence = boundedPresence,
             pushActions =
                 GatewayPushActions(
                     deliverPending = pushDispatcher::deliverPending,
@@ -57,7 +57,7 @@ class GatewayWebSocketHandler(
     }
 
     fun close() {
-        bestEffortPresence.close()
+        boundedPresence.close()
         pushDispatcher.close()
     }
 

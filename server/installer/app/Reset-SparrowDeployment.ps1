@@ -3,7 +3,7 @@ param(
     [switch]$DeleteDisposableData,
     [switch]$ReplaceInstalledTestData,
     [string]$Confirmation = '',
-    [string]$InstallationDirectory = $PSScriptRoot,
+    [string]$InstallationDirectory = (Split-Path -Parent $PSScriptRoot),
     [ValidateSet('Node','ControlPlane','Combined')][string]$Component = 'Combined'
 )
 Set-StrictMode -Version Latest

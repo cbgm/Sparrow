@@ -157,6 +157,7 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
+      FIREBASE_TARGET_PROJECT_ID: ${FIREBASE_TARGET_PROJECT_ID:-sparrow-a9048}
       PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
       PUSH_DATABASE_USER: sparrow_push
       PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}

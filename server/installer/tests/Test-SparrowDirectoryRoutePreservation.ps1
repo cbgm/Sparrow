@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$source = Join-Path $PSScriptRoot 'Invoke-SparrowServer.ps1'
+$source = Join-Path $PSScriptRoot '../app/Invoke-SparrowServer.ps1'
 $tokens = $null
 $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($source, [ref]$tokens, [ref]$errors)

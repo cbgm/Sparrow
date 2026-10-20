@@ -10,13 +10,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-internal class BestEffortPresenceClient(
+internal class BoundedPresenceClient(
     private val delegate: PresenceClient
 ) : PresenceClient {
     private val scope = CoroutineScope(SupervisorJob())
     private val slots = Semaphore(MAX_CONCURRENT_PRESENCE_SYNCS)
 
-    override suspend fun register(registration: ClientRouteRegistration): Boolean =
+    override suspend fun register(
+        registration: ClientRouteRegistration
+    ): PresenceRegistrationResult =
         slots.withPermit { delegate.register(registration) }
 
     override suspend fun remove(

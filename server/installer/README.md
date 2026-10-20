@@ -4,9 +4,9 @@ The unified bundle contains the Community Node and Control Plane as **independen
 
 ## Install / Start pulls backend updates from GitHub Container Registry
 
-The manager has **no separate Update button or bundle picker**. In its ORIGINAL
-installation directory, select Node, Control Plane or Combined and click
-**Install / Start**. The first run creates the normal generated configuration,
+Updating the manager itself (release, ZIP or local source build) is done from
+the **Updates** card; see `README_RUNTIME.md`. In its ORIGINAL installation
+directory, click **Install** / **Start**. The first run creates the normal generated configuration,
 secrets, identity and named volumes. Subsequent runs validate the existing
 Docker Compose ownership, pull only the selected Sparrow backend service images
 from the configured GHCR image prefix/tag, then apply changed backend images
@@ -95,7 +95,7 @@ For Control Plane installs, optionally select an administrator-owned Google serv
 
 ## Source and testing
 
-Build a fresh distributable from the repository root on Windows by running `server\unified\Build-SparrowServer.cmd`. The wrapper runs `New-SparrowServerBundle.ps1` with `powershell.exe -NoProfile -ExecutionPolicy Bypass` for **that process only**, avoiding the unsigned-script error under a normal `RemoteSigned`/`Restricted` process policy. If you call the PowerShell script directly instead, use `powershell.exe -NoProfile -ExecutionPolicy Bypass -File server/unified/New-SparrowServerBundle.ps1`. GitHub Actions uses the same wrapper in `.github/workflows/sparrow-server-bundle.yml` (manual `workflow_dispatch`); download the single `sparrow-server-unified` workflow artifact for development. For distributing new manager scripts, publish a `server-v*` Git tag to create a GitHub Release containing `sparrow-server.zip` and its SHA-256 file. Organization-enforced policies or AppLocker/WDAC may still block execution and should not be circumvented. The resulting `dist/sparrow-server.zip` contains no service-account keys and has no deployment data. Apply the changed-file patch to the source tree **before** running this builder. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS, public ingress, and FCM account authorization require integration verification on the operator's machine. This development patch is not suitable for unattended upgrades of existing deployments.
+Build a fresh distributable from the repository root on Windows with `python3 server/installer/build.py` (Windows, Linux and macOS). An installed manager builds and applies local images itself with **Build from source...**. GitHub Actions uses the same script in `.github/workflows/sparrow-server-bundle.yml` (manual `workflow_dispatch`); download the single `sparrow-server-unified` workflow artifact for development. For distributing new manager scripts, publish a `server-v*` Git tag to create a GitHub Release containing `sparrow-server.zip` and its SHA-256 file. Organization-enforced policies or AppLocker/WDAC may still block execution and should not be circumvented. The resulting `dist/sparrow-server.zip` contains no service-account keys and has no deployment data. Apply the changed-file patch to the source tree **before** running this builder. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS, public ingress, and FCM account authorization require integration verification on the operator's machine. This development patch is not suitable for unattended upgrades of existing deployments.
 
 ## Management and deployment preflight (Step 7 / Step 8a)
 
@@ -292,10 +292,10 @@ From a clean unified manager bundle on Windows, either click **Attach
 cutover...** and select the original plan, or explicitly run:
 
 ```powershell
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 `
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 `
   -Action Attach -PlanDirectory 'D:\ProtectedBackups\sparrow-cutover-plan-node'
 
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 `
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 `
   -Action Status -Component Combined
 ```
 
@@ -349,11 +349,11 @@ WebSocket, federation, push delivery or verified recoverability.
 CLI examples from the attached manager bundle:
 
 ```powershell
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 -Action Verify -Component Combined
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 -Action Verify -Component Proxy -ExpectedState Running
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 -Action Verify -Component Node -ExpectedState Stopped
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 -Action Restart -Component Node
-powershell.exe -NoProfile -File .\Invoke-SparrowServer.ps1 -Action Status -Component Proxy
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 -Action Verify -Component Combined
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 -Action Verify -Component Proxy -ExpectedState Running
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 -Action Verify -Component Node -ExpectedState Stopped
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 -Action Restart -Component Node
+powershell.exe -NoProfile -File .\app\Invoke-SparrowServer.ps1 -Action Status -Component Proxy
 ```
 
 Only use Stop/Restart in an authorized non-production rehearsal or with a
@@ -670,7 +670,7 @@ was run here.
 ## Single cross-platform GitHub bundle (Windows, Linux, macOS)
 
 The **single** `.github/workflows/sparrow-server-bundle.yml` builds **one** `dist/sparrow-server.zip`
-(on Windows using `server/unified/Build-SparrowServer.cmd`) and uploads exactly one
+(using `server/installer/build.py`) and uploads exactly one
 `sparrow-server-unified` artifact. The same ZIP is then smoke-checked on Windows,
 Ubuntu and macOS; the workflow does **not** build separate Community Node or Control
 Plane installer ZIPs. This does **not** replace the container-image publication

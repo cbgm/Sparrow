@@ -178,10 +178,10 @@ Or open the project in Android Studio and run `androidApp`.
 The current public operator package is the **unified Sparrow server bundle**. From a Windows source checkout build it with:
 
 ```text
-server\unified\Build-SparrowServer.cmd
+python3 server/installer/build.py
 ```
 
-This produces `dist/sparrow-server.zip`. Extract it into its own runtime directory and run `Start-SparrowServer.cmd`. The manager can install/start a **Control Plane**, **Community Node**, or **Combined** deployment. Node-only mode can manage multiple independent Community Node instances.
+This produces `dist/sparrow-server.zip`; published releases contain the same bundle. Extract it into its own runtime directory and run `Start-SparrowServer.cmd`. Later updates (latest GitHub release or a local source build) are done from the manager's **Updates** card. The manager can install/start a **Control Plane**, **Community Node**, or **Combined** deployment. Node-only mode can manage multiple independent Community Node instances.
 
 On macOS/Linux use the bundled `Start-SparrowServer.sh` / `Start-SparrowServer.command`, or run `server/control-plane/docker-compose.yml` and `server/community-node/docker-compose.yml` directly for source-level development.
 
@@ -293,7 +293,7 @@ Do not manually edit `docs/generated/`.
 
 The documented Git branch flow is `develop -> master -> release/x.y -> tag`. The current source archive used for this documentation audit does not include `.github/workflows`, so exact current CI change-classification rules are not asserted here without those workflow files.
 
-The current **verifiable server packaging path** is `server/unified/Build-SparrowServer.cmd`, which creates the single public `dist/sparrow-server.zip`. The private `server/control-plane-directory` installer/state must not be included in that public asset.
+The current **verifiable server packaging path** is `server/installer/build.py`, which creates the single public `dist/sparrow-server.zip`. The private `server/control-plane-directory` installer/state must not be included in that public asset.
 
 See [Release process](docs/development/release-process.md) for the source-verified packaging rules and release checklist.
 

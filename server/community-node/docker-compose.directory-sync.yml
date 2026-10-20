@@ -6,7 +6,7 @@ services:
     profiles: [directory]
     image: sparrow-directory-sync:local
     build:
-      context: ../..
+      context: ../../app
       dockerfile: directory-sync/Dockerfile
     restart: unless-stopped
     read_only: true

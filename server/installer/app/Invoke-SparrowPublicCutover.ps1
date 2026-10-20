@@ -80,7 +80,7 @@ function Verify-ProjectOwner([object]$Component) {
             $normal = "$($Matches[1]):\$($Matches[2].Replace('/', '\'))"
         }
         if (-not $normal.Equals((Absolute ([string]$Component.OriginalDirectory)),[StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to change $project: unexpected working directory for container $id ($normal)."
+            throw "Refusing to change ${project}: unexpected working directory for container $id ($normal)."
         }
     }
 }
@@ -166,7 +166,7 @@ if ($readiness.State -ne 'READINESS_ONLY_NOT_AUTHORIZED_TO_CUT_OVER' -or $readin
 }
 $backup = Absolute ([string]$readiness.Snapshot)
 $stage = Absolute ([string]$readiness.TlsStage)
-$bundle = Absolute $PSScriptRoot
+$bundle = Absolute (Split-Path -Parent $PSScriptRoot)
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI required.' }
 # Plan-level lock, shared by apply and rollback in this plan. Other readiness
 # plans cannot adopt this snapshot because stage/volume ownership is rechecked.
@@ -193,7 +193,7 @@ try {
     # and unused staged volumes immediately before the first mutation.
     $recheck = Join-Path ([System.IO.Path]::GetTempPath()) ("sparrow-public-recheck-" + [Guid]::NewGuid().ToString('N'))
     try {
-        & (Join-Path $bundle 'Test-SparrowCutoverReadiness.ps1') -BackupDirectory $backup -StageDirectory $stage -PlanDirectory $recheck
+        & (Join-Path $PSScriptRoot 'Test-SparrowCutoverReadiness.ps1') -BackupDirectory $backup -StageDirectory $stage -PlanDirectory $recheck
         if (-not $?) { throw 'Cutover readiness could not be reconfirmed.' }
         $current = Get-Content -LiteralPath (Join-Path $recheck 'cutover-readiness.json') -Raw | ConvertFrom-Json
         if ($current.CandidateCaddySha256 -ne $readiness.CandidateCaddySha256 -or

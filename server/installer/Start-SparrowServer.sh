@@ -5,13 +5,24 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo 'Python 3 is required to run the macOS/Linux Sparrow server manager.' >&2
   exit 1
 fi
+if [[ "${1:-}" == "update" ]]; then
+  shift
+  exec python3 "$ROOT/app/update_server.py" "$@"
+fi
 if [[ "${1:-}" == "nodes" ]]; then
   shift
-  exec python3 "$ROOT/Manage-SparrowNodes.py" "$@"
+  exec python3 "$ROOT/app/Manage-SparrowNodes.py" "$@"
 fi
 if [[ $# -eq 0 ]]; then
+  # Opens the installer window on a desktop, otherwise the same menu as text.
+  if [[ "$(uname)" == "Darwin" || -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && python3 -c 'import tkinter' 2>/dev/null; then
+    exec python3 "$ROOT/app/manager_window.py"
+  fi
+  if [[ -t 0 ]]; then
+    exec python3 "$ROOT/app/manager_terminal.py"
+  fi
   cat <<'HELP'
-Sparrow unified server — Combined by default; independent Community Nodes (macOS/Linux).
+Sparrow server - Combined by default; independent Community Nodes (macOS/Linux).
 
 Install both components for LAN:
   ./Start-SparrowServer.sh install --component combined --mode lan
@@ -31,6 +42,11 @@ Explicit destructive reinstall (not used by install):
   ./Start-SparrowServer.sh reinstall-public --component combined --mode public \
     --confirm-delete-data
 
+Update in place (data and settings are kept):
+  ./Start-SparrowServer.sh update --release            latest GitHub release
+  ./Start-SparrowServer.sh update --source ~/Sparrow   build from your source folder
+  ./Start-SparrowServer.sh update --zip sparrow-server.zip
+
 Manage independent Community Nodes without provisioning a Control Plane:
   ./Start-SparrowServer.sh nodes add --name "Node A" --mode public \
     --auto-dns --control-plane-url https://existing-control.example.com
@@ -48,4 +64,4 @@ existing Compose projects/volumes from another installation directory.
 HELP
   exit 0
 fi
-exec python3 "$ROOT/Invoke-SparrowServer.py" "$@"
+exec python3 "$ROOT/app/Invoke-SparrowServer.py" "$@"

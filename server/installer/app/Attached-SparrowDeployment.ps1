@@ -3,6 +3,7 @@
 # an original deployment. Only a plan pointer is stored in the manager bundle.
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'Get-SparrowDockerLabel.ps1')
+$attachedInstallRoot = Split-Path -Parent $PSScriptRoot
 
 function Attached-Absolute([string]$Path) {
     if ([string]::IsNullOrWhiteSpace($Path) -or -not [System.IO.Path]::IsPathRooted($Path)) {
@@ -72,7 +73,7 @@ function Attached-ProjectInventory([string]$Project, [string]$Directory) {
         default { throw "Unknown attached project: $Project" }
     }
     $ids = @(Attached-DockerResult @('ps','--all','--filter',"label=com.docker.compose.project=$Project",'--format','{{.ID}}'))
-    if ($ids.Count -lt $expected.Count) { throw "Incomplete attached project $Project: expected $($expected.Count) existing service containers, found $($ids.Count). No project will be recreated." }
+    if ($ids.Count -lt $expected.Count) { throw "Incomplete attached project ${Project}: expected $($expected.Count) existing service containers, found $($ids.Count). No project will be recreated." }
     $seen = @{}
     $states = @{}
     foreach ($id in $ids) {
@@ -169,7 +170,7 @@ function Attached-Validate([string]$Plan, [string]$RecordedHash = '') {
     Attached-AssertHash (Join-Path ([string]$record.TlsStageDirectory) 'tls-stage.json') ([string]$readiness.TlsStageManifestSha256)
     Attached-AssertHash (Join-Path $plan 'Caddyfile.candidate') ([string]$readiness.CandidateCaddySha256)
     Attached-AssertHash (Join-Path ([string]$record.ProxyDirectory) 'Caddyfile') ([string]$readiness.CandidateCaddySha256)
-    Attached-AssertHash (Join-Path ([string]$record.ProxyDirectory) 'docker-compose.yml') (Attached-Hash (Join-Path $PSScriptRoot 'public-proxy/docker-compose.yml'))
+    Attached-AssertHash (Join-Path ([string]$record.ProxyDirectory) 'docker-compose.yml') (Attached-Hash (Join-Path $attachedInstallRoot 'public-proxy/docker-compose.yml'))
     $snapshot = Attached-ReadJson (Join-Path ([string]$record.BackupDirectory) 'manifest.json')
     $tls = Attached-ReadJson (Join-Path ([string]$record.TlsStageDirectory) 'tls-stage.json')
     if ($tls.FormatVersion -ne 1 -or $tls.State -ne 'TLS_STAGED_NOT_CUT_OVER' -or
@@ -191,8 +192,8 @@ function Attached-Validate([string]$Plan, [string]$RecordedHash = '') {
             [string]$part.Project -ne "sparrow-$name") { throw 'Unexpected or duplicate attached Compose project.' }
         $names[$name] = $true
         $source = Attached-Absolute ([string]$part.OriginalDirectory)
-        if ((Attached-SamePath $source $PSScriptRoot) -or
-            $source.StartsWith(((Attached-Absolute $PSScriptRoot) + [System.IO.Path]::DirectorySeparatorChar),[StringComparison]::OrdinalIgnoreCase)) {
+        if ((Attached-SamePath $source $attachedInstallRoot) -or
+            $source.StartsWith(((Attached-Absolute $attachedInstallRoot) + [System.IO.Path]::DirectorySeparatorChar),[StringComparison]::OrdinalIgnoreCase)) {
             throw 'Original component folder cannot be inside the fresh manager bundle.'
         }
         $matching = @($readiness.OriginalComponents | Where-Object { $_.Component -eq $name })
@@ -255,7 +256,7 @@ function Attached-Validate([string]$Plan, [string]$RecordedHash = '') {
     # pages in this bundle. Check both copies before managing its container.
     foreach ($name in @('community-node','control-plane')) {
         $part = @($parts | Where-Object { $_.Component -eq $name })
-        $originalIndex = if ($part.Count -eq 1) { Join-Path ([string]$part[0].OriginalDirectory) 'index.html' } else { Join-Path $PSScriptRoot "$name/index.html" }
+        $originalIndex = if ($part.Count -eq 1) { Join-Path ([string]$part[0].OriginalDirectory) 'index.html' } else { Join-Path $attachedInstallRoot "$name/index.html" }
         Attached-AssertHash (Join-Path $plan "$name/index.html") (Attached-Hash $originalIndex)
     }
     # Reject a proxy that was replaced or rebound to a different Compose owner.
@@ -274,7 +275,7 @@ function Attached-Validate([string]$Plan, [string]$RecordedHash = '') {
     return [PSCustomObject]@{ Plan=$plan; TransactionSha256=$actualHash; Components=$parts; ProxyDirectory=$proxy }
 }
 function Attached-Invoke([string]$Action, [string]$Component, [string]$PlanDirectory, [string]$ExpectedState = 'Any') {
-    $pointerPath = Join-Path $PSScriptRoot '.sparrow-attached.json'
+    $pointerPath = Join-Path $attachedInstallRoot '.sparrow-attached.json'
     # Hold the SAME plan lock used by Step 8f Apply/Rollback throughout
     # validation and the selected Docker operation. A concurrent rollback
     # must not change file ownership between our check and our action.
@@ -289,11 +290,11 @@ function Attached-Invoke([string]$Action, [string]$Component, [string]$PlanDirec
     if ($Action -eq 'Attach') {
         if (Test-Path -LiteralPath $pointerPath) { throw 'A cutover is already attached to this manager. Attachment was not overwritten.' }
         foreach ($folder in @('community-node','control-plane')) {
-            if (Test-Path -LiteralPath (Join-Path $PSScriptRoot "$folder/.env.runtime") -PathType Leaf) {
+            if (Test-Path -LiteralPath (Join-Path $attachedInstallRoot "$folder/.env.runtime") -PathType Leaf) {
                 throw 'The manager bundle already contains a locally installed component. Use a clean bundle for explicit attachment.'
             }
         }
-        if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'public-proxy/Caddyfile') -PathType Leaf) {
+        if (Test-Path -LiteralPath (Join-Path $attachedInstallRoot 'public-proxy/Caddyfile') -PathType Leaf) {
             throw 'The manager bundle already has a locally configured shared proxy; attachment refused.'
         }
         $validated = Attached-Validate $PlanDirectory

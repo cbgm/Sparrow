@@ -1,6 +1,6 @@
 # Pure local-image validation tests. No Docker engine or Pester installation required.
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'SparrowLocalImages.ps1')
+. (Join-Path $PSScriptRoot '../app/SparrowLocalImages.ps1')
 
 function Assert-Throws([scriptblock]$Action) {
     $failed = $false

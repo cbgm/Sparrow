@@ -31,14 +31,14 @@ Android Studio can run the `androidApp` target directly.
 
 ## 3. Preferred server path: unified manager
 
-The active release/runtime tooling is `server/unified`.
+The active release/runtime tooling is `server/installer`.
 
 ### Build a local unified bundle on Windows
 
 From the repository root:
 
 ```text
-server\unified\Build-SparrowServer.cmd
+python3 server/installer/build.py
 ```
 
 This builds:
