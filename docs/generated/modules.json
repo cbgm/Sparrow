@@ -856,7 +856,8 @@
       ":data:datastore",
       ":feature:avatar",
       ":feature:media",
-      ":feature:ocr"
+      ":feature:ocr",
+      ":feature:transport"
     ],
     "dependents": [
       ":feature:chats",
@@ -1315,6 +1316,7 @@
       ":feature:attachments",
       ":feature:contacts",
       ":feature:conversationorchestration:delivery",
+      ":feature:expenses",
       ":feature:linkpreview",
       ":feature:notification",
       ":feature:settings",
@@ -1508,6 +1510,26 @@
     ]
   },
   {
+    "name": "exchange-rates",
+    "path": ":server:exchange-rates",
+    "group": "server",
+    "directory": "server/exchange-rates",
+    "buildFile": "server/exchange-rates/build.gradle.kts",
+    "kotlinSourceFileCount": 3,
+    "productionKotlinFileCount": 2,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "main",
+      "test"
+    ],
+    "dependencies": [
+    ],
+    "dependents": [
+      ":server:gateway"
+    ]
+  },
+  {
     "name": "federation",
     "path": ":server:federation",
     "group": "server",
@@ -1545,6 +1567,7 @@
       "test"
     ],
     "dependencies": [
+      ":server:exchange-rates",
       ":server:link-preview",
       ":server:observability",
       ":server:persistence",

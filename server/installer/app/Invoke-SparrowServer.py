@@ -465,6 +465,14 @@ def update_installed_properties(path, updates):
     return True
 
 
+def add_exchange_rates_placeholder():
+    """Empty EXCHANGE_RATES_URL in the node's .env.runtime to fill in; empty keeps the default."""
+    path = runtime("node")
+    text = path.read_text(encoding="utf-8")
+    if not re.search(r"^EXCHANGE_RATES_URL=", text, re.M):
+        path.write_text(text.rstrip("\n") + "\nEXCHANGE_RATES_URL=\n", encoding="utf-8")
+
+
 def sync_installed_node_discovery(directory_url):
     """Refresh gateway-advertised Control Planes, not just the initial bootstrap."""
     if not runtime("node").is_file():
@@ -908,6 +916,8 @@ def install(args):
         enable_firebase_credentials(args.firebase_file)
     # Install / Start always refreshes existing Sparrow backend images from GHCR.
     # No database/Redis/Caddy image updates, no re-bootstrap or new identities.
+    if "node" in components and runtime("node").is_file():
+        add_exchange_rates_placeholder()
     for component in components:
         if runtime(component).is_file():
             update_backends(component, args.image_prefix, args.image_tag)

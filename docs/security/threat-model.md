@@ -31,6 +31,9 @@ Phone verification at sign-up uses Firebase phone authentication on Android, so 
 processes the phone number and sends the SMS. A registration without a token is still accepted,
 so phone verification is not a guarantee that every advertised alias was verified.
 
+Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
+provider (Frankfurter by default) sees the node's address once a day, never a user's.
+
 Sparrow is not documented as an anonymity network.
 
 ## Local search and message safety

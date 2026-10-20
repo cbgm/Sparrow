@@ -14,7 +14,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Production Kotlin files | 19 |
 | Test Kotlin files | 6 |
 | Resource files | 0 |
-| Direct dependencies | 5 |
+| Direct dependencies | 6 |
 | Direct dependents | 0 |
 
 ## Source sets
@@ -24,6 +24,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependencies
 
+- [`:server:exchange-rates`](../modules/server-exchange-rates.md)
 - [`:server:link-preview`](../modules/server-link-preview.md)
 - [`:server:observability`](../modules/server-observability.md)
 - [`:server:persistence`](../modules/server-persistence.md)

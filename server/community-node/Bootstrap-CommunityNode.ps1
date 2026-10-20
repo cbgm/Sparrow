@@ -1331,7 +1331,8 @@ try {
         "MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt",
         "FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt",
         "FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt",
-        "GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt"
+        "GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt",
+        "EXCHANGE_RATES_URL="
     )
 
     [System.IO.File]::WriteAllLines(

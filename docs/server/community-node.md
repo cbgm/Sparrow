@@ -38,6 +38,22 @@ Compose services are `caddy`, `mailbox-database`, `mailbox`, `federation-databas
 
 The gateway sees routing metadata/envelopes but application payloads remain end-to-end encrypted by the client protocol. Attachment storage contains encrypted blob bytes rather than decoded media.
 
+## Exchange rates
+
+The gateway also serves `GET /v1/exchange-rates` for currency conversion in group expenses
+(`:server:exchange-rates`, `installExchangeRateRoutes()`, `ExchangeRateCache`). It fetches the euro
+reference rates from `EXCHANGE_RATES_URL` (default
+`https://api.frankfurter.dev/v2/rates?base=EUR`), checks that the answer is a JSON list, keeps it
+for 24 hours for all clients and passes it through unchanged. When the upstream fails, the last
+rates stay in use; without any rates the route answers `502`. The upstream therefore sees only the
+node, never the apps.
+
+Another source must answer in the same Frankfurter format, for example a self-hosted Frankfurter
+instance. Fill in the empty `EXCHANGE_RATES_URL=` line in the node's `.env.runtime` and recreate the
+gateway: Start for `community-node/.env.runtime`, **Update** under **Nodes...** for a managed node in
+`node-instances/<id>/`. The installer writes the empty line for new nodes and Start adds it to an
+existing main node. An empty value uses the default.
+
 ## Federation
 
 `:server:federation` handles routing between Community Nodes. Important classes include `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeQueue`, `OutboundEnvelopeRetryAgent`, `NodeRegistrationAgent`, `CachingNodeRegistryClient`, `HttpPresenceDirectoryClient`, `HttpLocalGatewayClient`, `HttpRemoteFederationClient`, and `HttpMailboxClient`.

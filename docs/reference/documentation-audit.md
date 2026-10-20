@@ -4,7 +4,7 @@ Audit basis: the source tree on **2026-10-21**.
 
 ## Structural findings
 
-- `57` Gradle modules are included by `settings.gradle.kts`, including `:feature:expenses`, `:feature:payment` and `:feature:ocr`.
+- `58` Gradle modules are included by `settings.gradle.kts`, including `:feature:expenses`, `:feature:payment`, `:feature:ocr` and `:server:exchange-rates`.
 - `:feature:polls`, `:feature:applock`, `:feature:expenses` and `:feature:payment` are first-class feature modules and are documented in the hand-written feature pages ([Group expenses](../features/expenses.md), [Settle up and payment](../features/payment.md)).
 - Shared message-part models live under `:core:base` (`com.cbgm.sparrow.core.base.messagepart`). The packages of `:core:base` and `:core:util` follow their modules: `com.cbgm.sparrow.core.base.*` and `com.cbgm.sparrow.core.util.*`.
 - Message parts include the expense board, expense, closed board and payment transfer parts next to text, media, files, voice, location, contact and poll parts; every part type has a fixed `@SerialName`.

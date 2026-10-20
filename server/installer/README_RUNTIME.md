@@ -311,6 +311,18 @@ Building from source needs Docker and Python 3 (as does the manager itself).
     logs/             operation logs
     backups/          previous settings, e.g. before following a new public IP
 
+### Exchange rates source
+
+Each Community Node fetches the exchange rates for group expenses once a day for all apps (`GET
+/v1/exchange-rates`). The default source is the Frankfurter API
+(`https://api.frankfurter.dev/v2/rates?base=EUR`). To use another source in the same format, for
+example a self-hosted Frankfurter instance, fill in the empty `EXCHANGE_RATES_URL=` line in the
+node's `.env.runtime` and recreate its gateway: for the main node `community-node/.env.runtime` and
+click Start; for a managed node `node-instances/<id>/.env.runtime` and **Update** it under
+**Nodes...** (its Start does not recreate containers). New nodes get the empty line at installation,
+and Start adds it to an existing main node; add it yourself to an older managed node. The installer
+keeps the value. An empty value uses the default.
+
 ### Phone verification
 
 Phone numbers are verified once in the app during sign-up (Firebase SMS), when

@@ -14,7 +14,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Production Kotlin files | 66 |
 | Test Kotlin files | 13 |
 | Resource files | 0 |
-| Direct dependencies | 7 |
+| Direct dependencies | 8 |
 | Direct dependents | 3 |
 
 ## Source sets
@@ -31,6 +31,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:media`](../modules/feature-media.md)
 - [`:feature:ocr`](../modules/feature-ocr.md)
+- [`:feature:transport`](../modules/feature-transport.md)
 
 ## Dependents
 

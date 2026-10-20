@@ -28,7 +28,9 @@ val expensesModule =
     module {
         single<ExpenseComposerRepository> { ExpenseComposerRepositoryImpl() }
         single { LocalExchangeRateDataSource(dataStore = get()) }
-        single { RemoteExchangeRateDataSource(httpClient = get()) }
+        single {
+            RemoteExchangeRateDataSource(httpClient = get(), transportDiagnosticsProvider = get())
+        }
         single<ExchangeRateRepository> {
             ExchangeRateRepositoryImpl(localDataSource = get(), remoteDataSource = get())
         }

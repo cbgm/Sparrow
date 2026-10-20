@@ -1,6 +1,6 @@
 # Project structure
 
-The current `settings.gradle.kts` declares **57 Gradle modules**.
+The current `settings.gradle.kts` declares **58 Gradle modules**.
 
 ## Client/shared modules
 
@@ -55,7 +55,7 @@ The current `settings.gradle.kts` declares **57 Gradle modules**.
 
 ## Server modules
 
-The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push` and `:server:link-preview`.
+The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview` and `:server:exchange-rates`.
 
 Deployment folders under `server/control-plane`, `server/community-node`, `server/installer` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
 

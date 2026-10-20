@@ -78,6 +78,7 @@ The current source tree includes:
 - unified `OperationMessage` transport for edit/delete/reaction and Group poll vote/close operations;
 - voice recording/playback plus local Whisper-backed transcription and persisted attachment transcripts;
 - link previews with client DB caching/prefetch and the `:server:link-preview` fetch/parse/validation service;
+- exchange rates for group expenses fetched and cached by the Community Node (`:server:exchange-rates`), so the rate provider never sees the app;
 - one pinned Group message with admin-controlled pin/unpin and attachment-aware pinned-message rendering;
 - auto-reply rules with active-rule and recipient-claim persistence;
 - target-aware avatar observation plus reusable profile-picture selection/cropping in `:feature:avatar`;

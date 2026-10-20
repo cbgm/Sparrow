@@ -2,9 +2,9 @@
 
 Source-derived declaration inventory of the source tree on **2026-10-21**.
 
-- Kotlin files scanned: **2479**
-- Declarations detected: **4537**
-- Included Gradle modules: **57**
+- Kotlin files scanned: **2482**
+- Declarations detected: **4539**
+- Included Gradle modules: **58**
 
 ## Declarations by module
 
@@ -4824,3 +4824,10 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `LinkPreviewService` | class | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewService.kt` |
 | `LinkPreviewUrlValidator` | object | `main` | `server/link-preview/src/main/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewUrlValidator.kt` |
 | `LinkPreviewHtmlParserTest` | class | `test` | `server/link-preview/src/test/kotlin/com/cbgm/sparrow/server/linkpreview/LinkPreviewHtmlParserTest.kt` |
+
+### `:server:exchange-rates`
+
+| Declaration | Kind | Source set | Path |
+|---|---|---|---|
+| `ExchangeRateCache` | class | `main` | `server/exchange-rates/src/main/kotlin/com/cbgm/sparrow/server/exchangerates/ExchangeRateCache.kt` |
+| `ExchangeRateCacheTest` | class | `test` | `server/exchange-rates/src/test/kotlin/com/cbgm/sparrow/server/exchangerates/ExchangeRateCacheTest.kt` |

@@ -75,6 +75,7 @@ graph TD
 
     subgraph group_server["server"]
         module_server[":server"]
+        module_server_exchange_rates[":server:exchange-rates"]
         module_server_federation[":server:federation"]
         module_server_gateway[":server:gateway"]
         module_server_link_preview[":server:link-preview"]
@@ -240,6 +241,7 @@ graph TD
     module_feature_expenses --> module_feature_avatar
     module_feature_expenses --> module_feature_media
     module_feature_expenses --> module_feature_ocr
+    module_feature_expenses --> module_feature_transport
     module_feature_identity --> module_core_crypto
     module_feature_identity --> module_core_ui
     module_feature_identity --> module_core_util
@@ -345,6 +347,7 @@ graph TD
     module_server_federation --> module_server_persistence
     module_server_federation --> module_server_protocol
     module_server_federation --> module_server_security
+    module_server_gateway --> module_server_exchange_rates
     module_server_gateway --> module_server_link_preview
     module_server_gateway --> module_server_observability
     module_server_gateway --> module_server_persistence

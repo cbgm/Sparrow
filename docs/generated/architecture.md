@@ -6,11 +6,11 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 63 |
+| Modules | 64 |
 | Module groups | 11 |
-| Project dependencies | 323 |
-| Kotlin files | 2479 |
-| Test Kotlin files | 184 |
+| Project dependencies | 325 |
+| Kotlin files | 2482 |
+| Test Kotlin files | 185 |
 | Resource files | 59 |
 
 ## Module groups
@@ -91,6 +91,7 @@ Generated automatically by `./gradlew architectureReport`.
 ### server
 
 - [**server** (`:server`)](modules/server.md)
+- [**exchange-rates** (`:server:exchange-rates`)](modules/server-exchange-rates.md)
 - [**federation** (`:server:federation`)](modules/server-federation.md)
 - [**gateway** (`:server:gateway`)](modules/server-gateway.md)
 - [**link-preview** (`:server:link-preview`)](modules/server-link-preview.md)
@@ -191,6 +192,7 @@ graph TD
 
     subgraph group_server["server"]
         module_server[":server"]
+        module_server_exchange_rates[":server:exchange-rates"]
         module_server_federation[":server:federation"]
         module_server_gateway[":server:gateway"]
         module_server_link_preview[":server:link-preview"]
@@ -356,6 +358,7 @@ graph TD
     module_feature_expenses --> module_feature_avatar
     module_feature_expenses --> module_feature_media
     module_feature_expenses --> module_feature_ocr
+    module_feature_expenses --> module_feature_transport
     module_feature_identity --> module_core_crypto
     module_feature_identity --> module_core_ui
     module_feature_identity --> module_core_util
@@ -461,6 +464,7 @@ graph TD
     module_server_federation --> module_server_persistence
     module_server_federation --> module_server_protocol
     module_server_federation --> module_server_security
+    module_server_gateway --> module_server_exchange_rates
     module_server_gateway --> module_server_link_preview
     module_server_gateway --> module_server_observability
     module_server_gateway --> module_server_persistence

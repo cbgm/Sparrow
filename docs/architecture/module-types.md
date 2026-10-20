@@ -1,6 +1,6 @@
 # Module types
 
-The current `settings.gradle.kts` declares 57 modules.
+The current `settings.gradle.kts` declares 58 modules.
 
 ## Application shell
 
@@ -61,7 +61,7 @@ The current `settings.gradle.kts` declares 57 modules.
 
 ## Server modules
 
-`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview`.
+`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview`, `:server:exchange-rates`.
 
 ## Quality
 

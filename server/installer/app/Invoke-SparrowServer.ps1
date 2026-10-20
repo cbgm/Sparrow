@@ -476,6 +476,16 @@ function Start-Component([string]$Directory, [string]$Bootstrap) {
         ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) { throw "Component installer failed: $Directory (exit $LASTEXITCODE). Existing volumes were not deleted." }
 }
+# Empty EXCHANGE_RATES_URL in the node's .env.runtime to fill in; empty keeps the default.
+function Add-ExchangeRatesPlaceholder([string]$Directory) {
+    $runtimePath = Join-Path $Directory '.env.runtime'
+    if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { return }
+    if (Select-String -LiteralPath $runtimePath -Pattern '^EXCHANGE_RATES_URL=' -Quiet) { return }
+    $text = [System.IO.File]::ReadAllText($runtimePath)
+    $separator = if ($text.Length -gt 0 -and -not $text.EndsWith("`n")) { [Environment]::NewLine } else { '' }
+    [System.IO.File]::AppendAllText($runtimePath, $separator + 'EXCHANGE_RATES_URL=' + [Environment]::NewLine,
+        [System.Text.UTF8Encoding]::new($false))
+}
 function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string[]]$BackendServices) {
     $runtimePath = Join-Path $Directory '.env.runtime'
     if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) {
@@ -1673,6 +1683,7 @@ try {
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                 }
             }
+            Add-ExchangeRatesPlaceholder $nodeRoot
             Start-OrUpdateComponent $nodeRoot 'Bootstrap-CommunityNode.ps1' @('mailbox', 'federation', 'gateway')
         }
         if ($shared) {

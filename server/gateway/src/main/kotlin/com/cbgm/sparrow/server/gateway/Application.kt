@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.server.gateway
 
+import com.cbgm.sparrow.server.exchangerates.DEFAULT_EXCHANGE_RATES_URL
+import com.cbgm.sparrow.server.exchangerates.installExchangeRateRoutes
 import com.cbgm.sparrow.server.linkpreview.installLinkPreviewRoutes
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.persistence.controlPlaneUrlsFromEnvironment
@@ -36,6 +38,9 @@ fun Application.gatewayModule(
     installGatewayPlugins(runtime, config)
     installGatewayRoutes(runtime, identity, config)
     installLinkPreviewRoutes()
+    installExchangeRateRoutes(
+        ServiceEnvironment.string("EXCHANGE_RATES_URL", DEFAULT_EXCHANGE_RATES_URL)
+    )
 }
 
 data class GatewayConfig(

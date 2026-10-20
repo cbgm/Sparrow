@@ -33,7 +33,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 64 | 1 | 0 | 13 | 2 |
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 84 | 1 | 0 | 11 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
-| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 79 | 13 | 0 | 7 | 3 |
+| [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 79 | 13 | 0 | 8 | 3 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 218 | 12 | 1 | 8 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |
@@ -48,7 +48,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:safety`](modules/feature-safety.md) | `feature` | 38 | 6 | 1 | 5 | 5 |
 | [`:feature:search`](modules/feature-search.md) | `feature` | 30 | 2 | 0 | 4 | 4 |
 | [`:feature:settings`](modules/feature-settings.md) | `feature` | 91 | 1 | 2 | 13 | 2 |
-| [`:feature:transport`](modules/feature-transport.md) | `feature` | 80 | 15 | 1 | 4 | 8 |
+| [`:feature:transport`](modules/feature-transport.md) | `feature` | 80 | 15 | 1 | 4 | 9 |
 | [`:feature:voice`](modules/feature-voice.md) | `feature` | 50 | 1 | 2 | 7 | 3 |
 | [`:navigation`](modules/navigation.md) | `navigation` | 18 | 0 | 0 | 20 | 1 |
 | [`:protocol`](modules/protocol.md) | `protocol` | 98 | 21 | 1 | 3 | 19 |
@@ -56,8 +56,9 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:quality:detekt-rules`](modules/quality-detekt-rules.md) | `quality` | 11 | 0 | 0 | 0 | 0 |
 | [`:resources`](modules/resources.md) | `resources` | 0 | 0 | 22 | 0 | 2 |
 | [`:server`](modules/server.md) | `server` | 0 | 0 | 0 | 0 | 0 |
+| [`:server:exchange-rates`](modules/server-exchange-rates.md) | `server` | 3 | 1 | 0 | 0 | 1 |
 | [`:server:federation`](modules/server-federation.md) | `server` | 16 | 3 | 0 | 4 | 0 |
-| [`:server:gateway`](modules/server-gateway.md) | `server` | 25 | 6 | 0 | 5 | 0 |
+| [`:server:gateway`](modules/server-gateway.md) | `server` | 25 | 6 | 0 | 6 | 0 |
 | [`:server:link-preview`](modules/server-link-preview.md) | `server` | 7 | 1 | 0 | 1 | 1 |
 | [`:server:mailbox`](modules/server-mailbox.md) | `server` | 11 | 3 | 0 | 4 | 0 |
 | [`:server:node-registry`](modules/server-node-registry.md) | `server` | 12 | 4 | 0 | 4 | 0 |

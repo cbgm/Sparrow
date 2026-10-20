@@ -86,11 +86,15 @@ An expense can be entered in a currency other than the group currency. The app t
 and stores the original amount, original currency and rate in `ExpenseConversion`, so every member
 sees the same converted amount ("Paid … at …").
 
-Exchange rates are loaded by `RemoteExchangeRateDataSource` from
-`https://api.frankfurter.dev/v2/rates?base=EUR` and cached locally
-(`LocalExchangeRateDataSource`). `ExchangeRateRepositoryImpl.refreshIfStale()` fetches new rates
-at most once every 24 hours. The request contains no expense or user data. Without a rate for a
-currency the screen shows *No exchange rate available*.
+Exchange rates are loaded by `RemoteExchangeRateDataSource` from the connected Community Node
+(`GET /v1/exchange-rates`) and cached locally (`LocalExchangeRateDataSource`).
+`ExchangeRateRepositoryImpl.refreshIfStale()` asks for new rates at most once every 24 hours; without
+a node connection the cached rates stay in use. The node fetches the euro reference rates from the
+Frankfurter API (`https://api.frankfurter.dev/v2/rates?base=EUR`), caches them for 24 hours for all
+clients and passes them through unchanged, so the rate provider sees the node and never the user's
+address (see [`:server:exchange-rates`](../server/community-node.md#exchange-rates)). The request
+contains no expense or user data. Without a rate for a currency the screen shows *No exchange rate
+available*.
 
 ## Revisions: edit and delete
 

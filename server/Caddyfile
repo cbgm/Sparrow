@@ -30,6 +30,11 @@
         reverse_proxy gateway:8094
     }
 
+    @exchange_rates path /v1/exchange-rates
+    handle @exchange_rates {
+        reverse_proxy gateway:8094
+    }
+
     @push path /push /push/*
     handle @push {
         reverse_proxy push:8095
