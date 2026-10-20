@@ -54,13 +54,13 @@ At the client, mailbox fetch ultimately enters the same incoming-envelope proces
 
 Caddy routes `/v1/blobs/*` to the gateway. Uploads require short-lived upload authorization/tickets; downloads and deletion are capability-based. The persistent gateway blob volume stores encrypted bytes plus server-side metadata required for size, expiration and capability enforcement. `BlobCleanupAgent` removes expired data.
 
-## Unified multi-node management
+## Multi-node management
 
-The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. On Windows `Start-SparrowServer.cmd` can open **Community Node only — manage instances**. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
+The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. In the installer window (Windows, macOS, Linux) **Nodes...** opens the manager for additional Community Node instances. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
 
 Node-only installs use an existing Control Plane directly or, in the advanced flow, a signed independent Control Plane Directory with a separately trusted/pinned key. They do not install a hidden Control Plane.
 
-Linux/macOS have equivalent commands through `Start-SparrowServer.sh` (`nodes --help` for node-instance management).
+On the command line, Linux/macOS use `Start-SparrowServer.sh nodes --help` (`app/Manage-SparrowNodes.py` on every system). With automatic sslip.io hostnames, managed nodes follow a changed public IP on the next **Start / apply settings** like the Combined installation.
 
 ## LAN/public endpoints
 

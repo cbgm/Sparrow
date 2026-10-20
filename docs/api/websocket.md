@@ -19,6 +19,10 @@ sequenceDiagram
     end
 ```
 
+## Route registration and phone verification
+
+The signed route is published with a `RefreshRoute` frame carrying a `ClientRouteRegistration` (`:server:protocol` / `:feature:transport`). The gateway forwards it to the Presence Directory (`PUT /v1/routes/{routingId}`). The registration has an optional `phoneVerificationToken`: the app sends the one-time token from sign-up phone verification only with its first registration that advertises a phone alias, and never again afterwards. The Presence Directory accepts a registration without a token; a present token must prove every advertised alias, otherwise the registration is rejected with `PHONE_VERIFICATION_FAILED`. See [Transport](../features/transport.md#phone-verification-token-at-sign-up).
+
 ## Blob upload tickets
 
 The authenticated gateway WebSocket is also the control channel for attachment uploads. The client can request a blob-upload ticket containing the intended blob ID, maximum bytes and expiry. The gateway returns either an issued short-lived permit or a rejection such as an invalid size/expiry. The actual encrypted bytes are then uploaded over the HTTP `/v1/blobs/{blobId}` endpoint.

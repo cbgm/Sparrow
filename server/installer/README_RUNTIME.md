@@ -12,11 +12,22 @@ package). On a machine without a screen, for example over SSH, the same options
 appear as a text menu. Every action can also be run directly from the command
 line (see below).
 
+### Starting from the source code
+
+The same launchers in `server/installer` of a source checkout open a short
+**Create your Sparrow server** step instead (window or text menu): choose a new
+or empty folder (default `~/Sparrow Server`), the installer creates it with
+`server/installer/build.py --install <folder>` using the published server
+images and opens there. Nothing is installed into the source tree. When a
+Sparrow server already runs in Docker from another folder, the new folder shows
+**Move server here** (see "Updating" below) and Install stays disabled until it
+has been moved.
+
 On Linux/macOS, install a fresh combined public server with shared Caddy and automatic sslip.io hostnames:
 
     ./Start-SparrowServer.sh install --component combined --mode public --auto-dns
 
-Use the same `install` action in the original installed folder to start/update without clearing server identity, stored messages, databases, or volumes. To configure Firebase Admin on that deployment:
+Use the same `install` action in the original installed folder to start/update without clearing server identity, stored messages, databases, or volumes. To configure Firebase Admin (push and phone verification, see below) on that deployment:
 
     ./Start-SparrowServer.sh install --component combined --mode public --firebase-file /outside-the-installation/firebase-admin.json
 
@@ -31,7 +42,7 @@ The installed public addresses are printed by `status` and `install`. Operation 
 
 ### Dynamic public IPv4 and automatic sslip.io names
 
-When an installation was created with **automatic sslip.io hostnames**, every **Start / apply settings** in the installer (window or text menu, all platforms) first detects the current WAN IPv4 (`app/public_ip.py`). If it changed, Sparrow rotates only its generated `node-<ip>.sslip.io`, `control-<ip>.sslip.io`, managed `node-<id>-<ip>.sslip.io`, and marked `directory-<ip>.sslip.io` endpoints. Existing signing identities, secrets, databases, FCM credentials and Docker volumes are retained. Custom/manual DNS names are never rewritten; backups of the previous settings are kept under `backups/`. The Control Plane then re-registers the same identity at its new endpoint and Community Nodes re-advertise their new endpoints.
+When an installation was created with **automatic sslip.io hostnames**, every **Start / apply settings** in the installer (window or text menu, all platforms) first detects the current WAN IPv4 (`app/public_ip.py`). If it changed, Sparrow rotates only its generated `node-<ip>.sslip.io`, `control-<ip>.sslip.io`, managed `node-<id>-<ip>.sslip.io`, and marked `directory-<ip>.sslip.io` endpoints. Existing signing identities, secrets, databases, FCM credentials and Docker volumes are retained. Nothing changes when the new IP cannot be detected or its `control-<ip>.sslip.io` name does not resolve to it yet; the server then starts with its current addresses. Custom/manual DNS names are never rewritten; backups of the previous settings are kept under `backups/public-ip-<timestamp>/`. The Control Plane then re-registers the same identity at its new endpoint and Community Nodes re-advertise their new endpoints.
 
 If the **independent Directory itself** is hosted on the same dynamic residential IP and Android knows it only through an old `directory-<old-ip>.sslip.io` bootstrap URL, the client has no stable address from which it can discover the new Directory URL. For unattended recovery, host the Directory under a stable DNS/DDNS name (or on stable external infrastructure). Endpoint rotation preserves the Directory signing identity; this limitation is only about finding the new network address.
 
@@ -57,9 +68,9 @@ and uses that signed cache if the directory is offline. The cached information
 is a discovery hint, not authorization to change a previously pinned Control
 Plane identity; an expired snapshot must not authorize new trust decisions.
 If the signer pin or crypto dependency is absent, no unsigned directory list
-is consumed; the paired Control Plane remains available. On Windows the
-federation-discovery helper also requires an installed Python 3 with
-`cryptography`; local combined installations do not require Python.
+is consumed; the paired Control Plane remains available. The installer itself
+needs Python 3 on every system; the host-side signed directory helper
+additionally needs the `cryptography` package.
 
 This is an incremental implementation: Control Plane registration and the
 signed Install/Start cache exist, and Public mode additionally starts an
@@ -73,12 +84,11 @@ The independent Directory Server itself and all its admin credentials are
 
 ### Independent Community Nodes — Node only and multi-node
 
-Use the **Community Node only — manage instances** choice in the Windows
-installer, or on Linux/macOS use the `nodes` subcommand. The Windows manager
-requires Python 3; signed directory lookups additionally require the Python
-`cryptography` package. On Linux/macOS both are required for signed directory
-lookup, while explicit manually configured Control Plane URLs require Python 3
-only. A Node-only install does **not** create a Control Plane or register
+Click **Nodes...** in the installer window (text menu: **Community Nodes**),
+or use the `nodes` subcommand on Linux/macOS (`app/Manage-SparrowNodes.py` on
+every system). Signed directory lookups additionally require the Python
+`cryptography` package; explicit manually configured Control Plane URLs require
+Python 3 only. A Node-only install does **not** create a Control Plane or register
 with the independent central directory server; it registers each node with
 its configured existing Control Plane using the existing node protocol.
 
@@ -94,12 +104,12 @@ For example, to create two publicly addressable nodes on one Docker host:
     ./Start-SparrowServer.sh nodes status --id <node-a-id>
 
 When an existing Combined Control Plane is installed in the same runtime
-folder, **Add Node** automatically selects its public HTTPS origin (or its
-advertised LAN origin when applicable); no signing-key field, second plane or
-separate directory is needed for the usual multi-node setup. The Windows UI
-keeps the optional signed-directory URL under **Advanced** and never asks for
-a verification key. A matching independently provisioned trust pin is reused
-from the release bundle or existing Combined configuration. It is **not**
+folder and the Control Plane URL is left empty, **Add...** uses its public
+HTTPS origin (or its advertised LAN origin when applicable); no signing-key
+field, second plane or separate directory is needed for the usual multi-node
+setup. The window never asks for a verification key. A matching independently
+provisioned trust pin is reused from the release bundle or existing Combined
+configuration. It is **not**
 downloaded from the directory URL; an untrusted custom URL is rejected rather
 than accepted without signature verification.
 
@@ -195,7 +205,9 @@ Docker image requires a first-time online build of the pinned `cryptography`
 package; if that build fails, installation continues with the paired server
 and signed host caches, but autonomous polling is unavailable until started.
 The worker does not install Python on the Windows host. Initial registration uses the separate one-shot Docker client without any
-host Python cryptography dependency. ### Runtime routing from the verified directory (Step 2F)
+host Python cryptography dependency.
+
+### Runtime routing from the verified directory (Step 2F)
 
 The signed directory worker now atomically publishes public origins together
 with each Control Plane's verified root identity. Gateway, Federation and
@@ -249,12 +261,16 @@ images change. The previous code is saved under `.sparrow-code-backups/`.
   `--pull never`. Docker still downloads build tools and dependencies that are
   not cached. Local builds update existing installations; install first.
 - **Apply ZIP...** applies a `sparrow-server.zip` (release or local build).
-- **Move existing server here...** (shown in a new, not yet installed folder)
-  finds the server already running in Docker, copies its settings, secrets
-  and caches into this folder and recreates the same containers from here.
-  Docker volumes (databases, identities, certificates) are kept. If anything
-  fails, the server is started again from the old folder. Afterwards the old
-  folder can be deleted.
+- **Move existing server here...** (shown in a new, not yet installed folder;
+  when a running server is found, a **Move server here** banner replaces the
+  Updates card) finds the server already running in Docker
+  (`app/move_installation.py`), copies its settings, secrets, caches, proxy
+  routes and node instances into this folder, rewrites the paths inside them and
+  recreates the same containers from here. Compose project names, Docker
+  volumes (databases, identities, certificates) and the shared network are
+  kept. If anything fails, the server is started again from the old folder.
+  Click **Start / apply settings** once afterwards, check that messaging works,
+  then the old folder can be deleted.
 
 The manager reopens itself after an update so its new code is used. Never
 extract a bundle over a configured installation. Applying a release bundle
@@ -265,6 +281,12 @@ Command line equivalent:
     powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Release
     powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Source -Path C:\src\Sparrow
     powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Zip -Path C:\Downloads\sparrow-server.zip
+    powershell -NoProfile -ExecutionPolicy Bypass -File app\Update-SparrowServer.ps1 -From Folder -Path C:\Downloads\sparrow-server
+
+`-From Folder` applies an extracted bundle and also migrates older installations
+that still use the previous flat folder layout (`app\Update-SparrowServerBundle.ps1`).
+Moving a running server: `python app\move_installation.py --from <old folder>`
+in the new folder.
 
 ### Updating (Linux and macOS)
 
@@ -273,6 +295,7 @@ Command line equivalent:
     ./Start-SparrowServer.sh update --zip sparrow-server.zip
     ./Start-SparrowServer.sh update --folder ~/sparrow-server --installation /srv/sparrow
                                                            move an old installation to the new layout
+    python3 app/move_installation.py --from ~/old-sparrow-server   move a running server into this folder
 
 Building from source needs Docker and Python 3 (as does the manager itself).
 
@@ -286,11 +309,23 @@ Building from source needs Docker and Python 3 (as does the manager itself).
     public-proxy/     shared public Caddy proxy
     node-instances/   additional Community Node instances
     logs/             operation logs
+    backups/          previous settings, e.g. before following a new public IP
 
 ### Phone verification
 
-Phone numbers are verified once in the app during sign-up (Firebase SMS). The
-app's first route registration carries the Firebase token; the Control Plane
-checks it with the Firebase service-account credentials (the same import as
-push) and stores nothing. Later registrations carry no token. Without imported
-credentials tokens are not checked.
+Phone numbers are verified once in the app during sign-up (Firebase SMS), when
+an identity is created or restored. Only the app's first route registration
+carries the one-time Firebase ID token; later registrations carry none. The
+Control Plane's `presence-directory` checks a token with the Firebase
+service-account credentials (the same import as push, mounted as
+`GOOGLE_APPLICATION_CREDENTIALS` through `docker-compose.firebase.yml`) and
+stores nothing about it:
+
+- no token, or no credentials imported: the registration is accepted;
+- a blank token, an invalid or expired token, a token that is not a phone
+  sign-in, or a phone alias that does not match the verified number: the
+  registration is rejected with HTTP 403 `PHONE_VERIFICATION_FAILED`.
+
+There is no server setting that makes verified phone numbers mandatory. The
+Firebase project is `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`); the
+service account needs Firebase Authentication access to it in addition to FCM.

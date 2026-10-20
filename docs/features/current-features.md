@@ -1,6 +1,6 @@
 # Current feature status
 
-This page describes the implemented behavior in the supplied 2026-10-08 release source tree. Roadmap-only ideas are not listed as working features.
+This page describes the implemented behavior in the current source tree. Roadmap-only ideas are not listed as working features.
 
 ## Platform status
 
@@ -13,7 +13,8 @@ This page describes the implemented behavior in the supplied 2026-10-08 release 
 
 ## Identity, onboarding and trust
 
-- onboarding, phone entry/hint, permission flow and identity creation;
+- onboarding, permission flow, phone entry/hint and identity creation;
+- one-time SMS phone verification at sign-up (create and restore), Firebase-based on Android;
 - local signing/encryption identity and encrypted backup/restore;
 - public identity exchange, acknowledgement and manual/QR import;
 - durable pending remote-identity-change review and approved reconnection retry;
@@ -41,7 +42,8 @@ This page describes the implemented behavior in the supplied 2026-10-08 release 
 - typing indicators;
 - edit/delete/reaction operations;
 - one current pinned message;
-- group polls including images, voting, anonymity, optional expiry and manual creator/admin close.
+- group polls including images, voting, anonymity, optional expiry and manual creator/admin close;
+- group expenses with balances, settlement suggestions, receipt scanning and SEPA settle-up.
 
 ## Polls
 
@@ -64,9 +66,29 @@ This page describes the implemented behavior in the supplied 2026-10-08 release 
 
 See [Polls](polls.md).
 
+## Group expenses and payment
+
+`:feature:expenses`, `:feature:ocr` and `:feature:payment` are implemented and wired as Group
+message-part features:
+
+- an admin activates an expense board with a group currency; the board occupies the pin slot and
+  is closed by an admin;
+- any member adds expenses with category, payer, equal or custom split and optional receipt;
+  several expenses can be sent at once;
+- expenses in other currencies are converted with cached daily exchange rates and keep the
+  original amount and rate;
+- creator or admin can edit/delete an expense through revisions;
+- per-member balances and suggested transfers;
+- on-device receipt OCR (ML Kit on Android) fills amount and merchant;
+- EUR boards: SEPA transfer preparation with EPC QR image or copyable fields, locally encrypted
+  bank details, payer "sent" and recipient "received" status events; only confirmed transfers
+  change balances.
+
+See [Group expenses](expenses.md) and [Settle up and payment](payment.md).
+
 ## Attachments/media/voice
 
-The shared `:core:base` message-part hierarchy supports `Text`, `Image`, `Video`, `File`, `Voice`, `Location`, `Contact` and `Poll`.
+The shared `:core:base` message-part hierarchy supports `Text`, `Image`, `Video`, `File`, `Voice`, `Location`, `Contact`, `Poll`, `ExpenseBoard`, `ExpenseBoardClosed`, `Expense` and `PaymentTransfer`.
 
 `:feature:attachments` owns encrypted blob transfer/cache/storage; `:feature:media` owns selection/viewers/export; `:feature:voice` owns recording/playback/transcription.
 
@@ -120,7 +142,7 @@ See [Startup architecture](../architecture/startup.md).
 
 - signed Community Node registration/directory;
 - node heartbeat/health expiry;
-- Redis-backed presence routes;
+- Redis-backed presence routes, with a check of the one-time phone verification token at the first route registration;
 - PostgreSQL-backed push registrations/wake-ups;
 - Firebase Admin integration;
 - Caddy reverse proxy and `/index` operator page;
@@ -159,7 +181,7 @@ See [Startup architecture](../architecture/startup.md).
 
 ### Identity backup and recovery
 
-The current code includes encrypted identity export/restore (`PrepareIdentityBackupUseCase`, `RestoreIdentityBackupUseCase`, `AndroidIdentityBackupCodec`) plus durable remote-key replacement review and reconnection (`PendingRemoteIdentityChange`, `ApprovedIdentityReconnection`, `ApprovedIdentityReconnectionObserver`, `ApprovedReconnectionRetryWorker`, `StartRecoveryInvitationWorkflow`). See [Identity backup, recovery and reconnection](identity-recovery.md).
+The current code includes encrypted identity export/restore (`PrepareIdentityBackupUseCase`, `ReadIdentityBackupUseCase`, `SaveRestoredIdentityUseCase`, `AndroidIdentityBackupCodec`) plus durable remote-key replacement review and reconnection (`PendingRemoteIdentityChange`, `ApprovedIdentityReconnection`, `ApprovedIdentityReconnectionObserver`, `ApprovedReconnectionRetryWorker`, `StartRecoveryInvitationWorkflow`). See [Identity backup, recovery and reconnection](identity-recovery.md).
 
 ### Generic invitations and orchestration
 
@@ -187,7 +209,7 @@ Group admins can synchronize current pin state through `PinGroupMessageWorkflow`
 
 ### Persistence
 
-The current Room database is schema **54** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
+The current Room database is schema **55** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
 
 
 ## Avatars and profile-picture editing

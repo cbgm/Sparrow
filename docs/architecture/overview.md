@@ -19,7 +19,7 @@ engine / delivery / message / groupstate / membership / lifecycle / incoming]
     MSG[feature:messaging]
     TR[feature:transport]
     PROTO[protocol]
-    DB[(data:database v54)]
+    DB[(data:database v55)]
 
     UI --> UC
     UI --> BASE
@@ -52,6 +52,9 @@ Chats submits every write as a `ConversationCommand` to `ConversationOrchestrato
 | `:feature:attachments` | encrypted blob transfer/cache/storage and attachment loading |
 | `:feature:media` | media/file selection, rendering and export |
 | `:feature:voice` | voice record/playback/transcription |
+| `:feature:expenses` | group expenses, splits, balances and settlements |
+| `:feature:payment` | settle-up payments with bank details and SEPA payment QR codes |
+| `:feature:ocr` | on-device receipt text recognition for expenses |
 | `:feature:invite` | invitation lifecycle/inbox |
 | `:feature:identity` | local/remote identity, trust, backup/recovery |
 | `:feature:membership` | group membership/security/admin lifecycle |
@@ -86,7 +89,7 @@ Direct and Group remain separate where authorization, recipients, membership, de
 
 ## Persistence
 
-Room schema is version **54**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
+Room schema is version **55**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
 
 ## Server topology
 

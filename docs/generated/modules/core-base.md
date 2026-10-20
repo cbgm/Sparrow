@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/base` |
 | Build file | `core/base/build.gradle.kts` |
-| Kotlin files | 25 |
-| Production Kotlin files | 17 |
-| Test Kotlin files | 8 |
+| Kotlin files | 31 |
+| Production Kotlin files | 21 |
+| Test Kotlin files | 10 |
 | Resource files | 0 |
 | Direct dependencies | 0 |
-| Direct dependents | 12 |
+| Direct dependents | 13 |
 
 ## Source sets
 
@@ -38,5 +38,6 @@ None.
 - [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
 - [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:feature:expenses`](../modules/feature-expenses.md)
+- [`:feature:payment`](../modules/feature-payment.md)
 - [`:feature:voice`](../modules/feature-voice.md)
 - [`:protocol`](../modules/protocol.md)

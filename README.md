@@ -59,7 +59,7 @@ boundaries, and the exact classes implementing discovery, failover, federation a
 
 The current source tree includes:
 
-- local identity creation plus encrypted identity backup/export and restore of the original signing/encryption keys;
+- local identity creation plus encrypted identity backup/export and restore of the original signing/encryption keys, with one-time SMS phone verification at sign-up (create and restore);
 - explicit remote-identity replacement review, persistent approved reconnection state and retryable recovery after process/network interruption;
 - contacts/device-contact import, verification, blocking and identity-peer/routing resolution;
 - the generic `:feature:invite` lifecycle for Direct and Group invitations, separated from identity and membership state;
@@ -67,9 +67,10 @@ The current source tree includes:
 - Group conversations with dedicated `:feature:membership` handshakes, welcome/activation, epoch security, admin promotion/removal/transfer/leave/delete and member routing;
 - `:feature:conversationorchestration:*` (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) as the explicit workflow boundary: every conversation write and incoming packet runs as a state machine, plus result observers and recovery workers; Chats only reads data and submits commands;
 - `:feature:messaging` as generic durable protocol-outbox/incoming-envelope execution rather than business-feature orchestration;
-- the shared `:core:base` `MessagePartDto` / `MessagePart` / `MessagePartUi` hierarchy for text, image, video, file, voice, location, contact and poll content;
+- the shared `:core:base` `MessagePartDto` / `MessagePart` / `MessagePartUi` hierarchy for text, image, video, file, voice, location, contact, poll, expense and payment-status content;
 - encrypted attachments for images, video, files, location, contacts and voice; attachment management/viewers and media/file export;
 - Group polls in `:feature:polls` with 2–6 options, optional images/anonymity/multi-select/vote changes, minute-based expiry countdown, manual close, voter details and pinned-message rendering;
+- Group expenses in `:feature:expenses` with admin-activated boards, equal/custom splits, currency conversion, balances and settlement suggestions, on-device receipt OCR in `:feature:ocr`, and EUR settle-up in `:feature:payment` (SEPA/EPC QR preparation, locally encrypted bank details, sent/received confirmation);
 - unified `OperationMessage` transport for edit/delete/reaction and Group poll vote/close operations;
 - voice recording/playback plus local Whisper-backed transcription and persisted attachment transcripts;
 - link previews with client DB caching/prefetch and the `:server:link-preview` fetch/parse/validation service;
@@ -83,7 +84,7 @@ The current source tree includes:
 - unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
 - Docker/Ktor server services, persistent registry/mailbox/federation/push state, observability and deployment tooling.
 
-See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/reference/current-code-inventory.md).
+See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [Group expenses](docs/features/expenses.md), [Settle up and payment](docs/features/payment.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/reference/current-code-inventory.md).
 
 ## The system in one picture
 
@@ -229,6 +230,9 @@ feature/attachments/              encrypted attachment transfer/cache/storage/UI
 feature/media/                    gallery/camera/file access, media viewers/export
 feature/voice/                    recording/playback/transcription
 feature/polls/                    poll creation/message presentation
+feature/expenses/                 group expenses, balances, currency conversion
+feature/ocr/                      on-device receipt text recognition
+feature/payment/                  SEPA settle-up and payment status
 feature/applock/                  device-owner application lock
 feature/messaging/                generic durable outbox + incoming envelope runners
 feature/transport/                discovery/WebSocket/routing/mailbox/push gateways

@@ -12,6 +12,7 @@ Install:
 4. Docker Desktop with Docker Compose 2.24.4 or newer.
 5. PowerShell 5.1+ (Windows already includes it; PowerShell 7 is also fine for repository scripts unless the
    script explicitly uses Windows Forms).
+6. Python 3.9+ from python.org (tick "Add python.exe to PATH") if you want to run the server installer window.
 
 Then clone the repository and open it in Android Studio.
 
@@ -25,9 +26,11 @@ Install:
 4. Docker Desktop.
 5. Xcode only if you want to inspect the unfinished iOS host.
 
-The Android app can be developed normally on macOS. The Community Node release bundle has a macOS/Linux shell
-launcher. The Control Plane's friendly GUI bundle is currently Windows-only; on macOS run the Control Plane from
-source with Docker Compose.
+The Android app can be developed normally on macOS. The server installer (`server/installer`, Control Plane +
+Community Node) opens the same window on Windows, macOS and Linux; it needs Python 3.9+ with Tk (on Linux usually
+the `python3-tk` package). Started from the source checkout (`Start-SparrowServer.cmd`, `.command` or `.sh`), it
+first creates a separate installation folder and opens there. For development you can also run the Control Plane
+and Community Node from source with Docker Compose.
 
 ## `local.properties`
 

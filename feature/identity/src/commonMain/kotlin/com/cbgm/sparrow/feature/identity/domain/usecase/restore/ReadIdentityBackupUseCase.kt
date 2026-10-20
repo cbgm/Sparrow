@@ -10,7 +10,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 
 /**
  * Decrypts a backup and checks its keys in memory only; nothing is stored. The caller owns the
- * returned private keys and must wipe them (see [RestoreIdentityBackupUseCase]).
+ * returned private keys and must wipe them (see [SaveRestoredIdentityUseCase]).
  */
 class ReadIdentityBackupUseCase(
     private val identityRepository: IdentityRepository,

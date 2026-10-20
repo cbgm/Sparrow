@@ -15,7 +15,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 1 |
-| Direct dependents | 11 |
+| Direct dependents | 12 |
 
 ## Source sets
 
@@ -34,6 +34,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:conversationorchestration:groupstate`](../modules/feature-conversationorchestration-groupstate.md)
 - [`:feature:conversationorchestration:membership`](../modules/feature-conversationorchestration-membership.md)
 - [`:feature:embedding`](../modules/feature-embedding.md)
+- [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:membership`](../modules/feature-membership.md)
 - [`:feature:settings`](../modules/feature-settings.md)

@@ -1,6 +1,6 @@
 # Project structure
 
-The current `settings.gradle.kts` declares **55 Gradle modules**.
+The current `settings.gradle.kts` declares **57 Gradle modules**.
 
 ## Client/shared modules
 
@@ -16,7 +16,7 @@ The current `settings.gradle.kts` declares **55 Gradle modules**.
 | `:core:crypto` | crypto implementations/providers |
 | `:core:ui` | shared Compose/navigation primitives |
 | `:protocol` | client wire packets, codecs, operation messages and protocol contracts |
-| `:data:database` | Room schema v54, DAOs/entities/migrations |
+| `:data:database` | Room schema v55, DAOs/entities/migrations |
 | `:data:datastore` | key/value/settings persistence |
 | `:feature:embedding` | local embedding runtime/model lifecycle |
 | `:feature:identity` | identity lifecycle/exchange/backup/recovery persistence |
@@ -39,8 +39,11 @@ The current `settings.gradle.kts` declares **55 Gradle modules**.
 | `:feature:membership` | group membership/security/admin lifecycle |
 | `:feature:attachments` | encrypted blob transfer/cache/storage and attachment UI state |
 | `:feature:media` | gallery/camera/files/media viewers/export |
+| `:feature:ocr` | on-device text recognition and receipt parsing |
 | `:feature:voice` | recording/playback/local transcription |
 | `:feature:polls` | poll creation and poll-specific presentation |
+| `:feature:expenses` | group expenses, splits, balances, settlements, exchange rates |
+| `:feature:payment` | settle-up payments: bank details and SEPA payment QR codes |
 | `:feature:messaging` | durable outbox/incoming-envelope execution |
 | `:feature:transport` | discovery/WebSocket/routing/mailbox/push gateways |
 | `:feature:onboarding` | onboarding flows |

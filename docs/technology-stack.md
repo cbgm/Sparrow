@@ -6,7 +6,7 @@ Versions below are read from the current `gradle/libs.versions.toml` release sna
 
 | Technology | Version / role |
 |---|---|
-| Kotlin | 2.4.20 |
+| Kotlin | 2.4.21 |
 | Android Gradle Plugin | 9.4.1 |
 | Compose Multiplatform | 1.12.1 |
 | Material 3 | 1.12.0-alpha03 |
@@ -25,6 +25,7 @@ Versions below are read from the current `gradle/libs.versions.toml` release sna
 | CameraX | 1.6.2 |
 | WorkManager | 2.11.2 |
 | Firebase Messaging | 25.1.3 |
+| Firebase Authentication | 25.0.0 (phone verification at sign-up, Android) |
 | Kermit | 2.2.0 |
 | Okio | 3.18.2 |
 
@@ -35,7 +36,7 @@ Versions below are read from the current `gradle/libs.versions.toml` release sna
 | PostgreSQL JDBC | 42.7.13 |
 | HikariCP | 7.1.0 |
 | Jedis | 5.2.0 |
-| Firebase Admin | 9.10.0 |
+| Firebase Admin | 9.10.0 (push FCM sending, phone-token verification) |
 | Micrometer | 1.17.1 |
 | Logback | 1.6.5 |
 | KSP | 2.3.9 |

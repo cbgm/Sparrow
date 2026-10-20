@@ -16,12 +16,12 @@ Target-named mappers are preferred: `toPoll()`, `toPollUi()`, `toMessagePartEnti
 The current shared hierarchy lives in `:core:base`:
 
 ```text
-core/messagepart/data/model/MessagePartDto.kt
-core/messagepart/domain/model/MessagePart.kt
-core/messagepart/ui/model/MessagePartUi.kt
+core/base/messagepart/data/model/MessagePartDto.kt
+core/base/messagepart/domain/model/MessagePart.kt
+core/base/messagepart/ui/model/MessagePartUi.kt
 ```
 
-That hierarchy contains text, image, video, file, voice, location, contact and poll variants. Features consume the shared type instead of defining parallel chat/attachment/poll hierarchies.
+That hierarchy contains text, image, video, file, voice, location, contact, poll, expense (board, expense, board closed) and payment-transfer variants. Features consume the shared type instead of defining parallel chat/attachment/poll hierarchies.
 
 ```mermaid
 flowchart TD

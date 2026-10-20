@@ -17,8 +17,8 @@ Production classes:
 
 - `PrepareIdentityBackupUseCase`
 - `MarkIdentityBackupExportedUseCase`
-- `RestoreIdentityBackupUseCase`
 - `GetIdentityBackupStatusUseCase`
+- `ReadIdentityRestoreDocumentUseCase`, `ReadIdentityBackupUseCase`, `SaveRestoredIdentityUseCase`
 - `IdentityBackupRepository`
 - `IdentityBackupRepositoryImpl`
 - `IdentityBackupCodec`
@@ -27,7 +27,8 @@ Production classes:
 - `IdentityBackupDocumentLauncher`
 - `IdentityBackupSection`
 - `IdentityBackupPasswordDialog`
-- `IdentityViewModel`
+- `IdentityBackupViewModel` (export)
+- `IdentityRestoreViewModel`, `IdentityRestoreDialog` (restore during onboarding)
 
 `IdentityBackup` contains `PublicIdentity`, the encryption private key and the signing private key. The model is explicitly documented in code as short-lived sensitive data and must never be logged or persisted unencrypted.
 
@@ -35,7 +36,7 @@ Production classes:
 
 ```mermaid
 sequenceDiagram
-    participant UI as IdentityViewModel
+    participant UI as IdentityBackupViewModel
     participant PREP as PrepareIdentityBackupUseCase
     participant ID as IdentityRepository
     participant CODEC as AndroidIdentityBackupCodec
@@ -52,27 +53,47 @@ sequenceDiagram
     MARK->>ID: verify identity did not change during export
 ```
 
-The backup status is keyed to the current signing+encryption public keys and is represented by `IdentityBackupStatus` (`NOT_BACKED_UP`, `EXPORTED`, `IMPORTED`).
+The backup status is keyed to the current signing+encryption public keys and is represented by `IdentityBackupState` (`NOT_BACKED_UP`, `EXPORTED`, `IMPORTED`).
 
 ## Restore after reinstall
 
-`RestoreIdentityBackupUseCase` refuses to overwrite an existing local identity. It first decrypts/authenticates the backup, then saves the supplied local phone/name profile and calls `IdentityRepository.restoreIdentity(...)` with the original public identity and private keys. Restored private-key byte arrays are zeroed after use.
+Restore is part of onboarding: on the phone page the user enters phone number and name and taps
+*Restore*. `IdentityRestoreViewModel` then runs three stages, and nothing is stored before the
+phone number has been verified:
+
+1. **Read** — the user selects the backup file; `ReadIdentityRestoreDocumentUseCase` reads it
+   (at most 16 KiB) and deletes the temporary copy.
+2. **Decrypt and check** — after the password is entered, `ReadIdentityBackupUseCase` refuses to
+   continue if a local identity already exists, decrypts/authenticates the backup and validates
+   the key pairs (`IdentityRepository.validateIdentityKeys(...)`), all in memory.
+3. **Verify and save** — the phone verification dialog runs (see
+   [Onboarding](onboarding.md#phone-verification)). Only after it succeeds does
+   `SaveRestoredIdentityUseCase` save the local phone/name profile, call
+   `IdentityRepository.restoreIdentity(...)` with the original public identity and private keys,
+   and mark the backup as imported.
+
+Cancelling the verification discards the decrypted backup. Private-key byte arrays, the document
+bytes and the password are wiped after use.
 
 ```mermaid
 sequenceDiagram
-    participant UI as IdentityViewModel
-    participant REST as RestoreIdentityBackupUseCase
-    participant CODEC as IdentityBackupRepository
+    participant UI as IdentityRestoreViewModel
+    participant READ as ReadIdentityBackupUseCase
+    participant VER as PhoneVerificationDialog
+    participant SAVE as SaveRestoredIdentityUseCase
     participant ID as IdentityRepository
-    participant PROFILE as SaveLocalPhoneNameUseCase
+    participant CODEC as IdentityBackupRepository
 
-    UI->>REST: backup bytes + password + phone + name
-    REST->>ID: require NOT_CREATED
-    REST->>CODEC: decrypt/authenticate
-    CODEC-->>REST: original key material
-    REST->>PROFILE: save local profile
-    REST->>ID: restoreIdentity(public, private encryption, private signing)
-    REST->>CODEC: markImported(restored identity)
+    UI->>READ: backup bytes + password
+    READ->>ID: require NOT_CREATED
+    READ->>CODEC: decrypt/authenticate
+    READ->>ID: validateIdentityKeys(...)
+    READ-->>UI: IdentityBackup (in memory)
+    UI->>VER: phone number
+    VER-->>UI: Verified
+    UI->>SAVE: backup + phone + name
+    SAVE->>ID: restoreIdentity(public, private encryption, private signing)
+    SAVE->>CODEC: markImported(restored identity)
 ```
 
 The backup restores identity key material; it is not a database backup of conversations/messages/membership rows.
@@ -172,4 +193,4 @@ An approved key replacement is supposed to resume the approved original identity
 
 ## Local phone number
 
-The current snapshot has `LocalIdentityProfileDataSource`, `GetLocalPhoneNumberUseCase`, `NormalizeLocalPhoneNumberUseCase`, `SaveLocalPhoneNameUseCase` and the initial identity/onboarding phone editor. It does **not** contain a completed post-creation phone-number migration/broadcast workflow that rewrites existing peer relationships. Documentation should not claim that such migration is implemented until dedicated production classes exist for it.
+The current snapshot has `LocalIdentityProfileDataSource`, `GetLocalPhoneNumberUseCase`, `NormalizeLocalPhoneNumberUseCase`, `SaveLocalPhoneNameUseCase` and the initial identity/onboarding phone editor. The number is verified by SMS once, when the identity is created or restored (see [Identity](identity.md#phone-verification-at-sign-up)). It does **not** contain a completed post-creation phone-number migration/broadcast workflow that rewrites existing peer relationships. Documentation should not claim that such migration is implemented until dedicated production classes exist for it.

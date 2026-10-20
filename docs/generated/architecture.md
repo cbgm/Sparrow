@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 61 |
+| Modules | 63 |
 | Module groups | 11 |
-| Project dependencies | 312 |
-| Kotlin files | 2321 |
-| Test Kotlin files | 167 |
-| Resource files | 57 |
+| Project dependencies | 323 |
+| Kotlin files | 2479 |
+| Test Kotlin files | 184 |
+| Resource files | 59 |
 
 ## Module groups
 
@@ -61,7 +61,9 @@ Generated automatically by `./gradlew architectureReport`.
 - [**membership** (`:feature:membership`)](modules/feature-membership.md)
 - [**messaging** (`:feature:messaging`)](modules/feature-messaging.md)
 - [**notification** (`:feature:notification`)](modules/feature-notification.md)
+- [**ocr** (`:feature:ocr`)](modules/feature-ocr.md)
 - [**onboarding** (`:feature:onboarding`)](modules/feature-onboarding.md)
+- [**payment** (`:feature:payment`)](modules/feature-payment.md)
 - [**polls** (`:feature:polls`)](modules/feature-polls.md)
 - [**safety** (`:feature:safety`)](modules/feature-safety.md)
 - [**search** (`:feature:search`)](modules/feature-search.md)
@@ -159,7 +161,9 @@ graph TD
         module_feature_membership[":feature:membership"]
         module_feature_messaging[":feature:messaging"]
         module_feature_notification[":feature:notification"]
+        module_feature_ocr[":feature:ocr"]
         module_feature_onboarding[":feature:onboarding"]
+        module_feature_payment[":feature:payment"]
         module_feature_polls[":feature:polls"]
         module_feature_safety[":feature:safety"]
         module_feature_search[":feature:search"]
@@ -249,6 +253,7 @@ graph TD
     module_feature_chats --> module_feature_linkpreview
     module_feature_chats --> module_feature_media
     module_feature_chats --> module_feature_membership
+    module_feature_chats --> module_feature_payment
     module_feature_chats --> module_feature_polls
     module_feature_chats --> module_feature_safety
     module_feature_chats --> module_feature_voice
@@ -347,14 +352,17 @@ graph TD
     module_feature_expenses --> module_core_base
     module_feature_expenses --> module_core_ui
     module_feature_expenses --> module_core_util
+    module_feature_expenses --> module_data_datastore
     module_feature_expenses --> module_feature_avatar
     module_feature_expenses --> module_feature_media
+    module_feature_expenses --> module_feature_ocr
     module_feature_identity --> module_core_crypto
     module_feature_identity --> module_core_ui
     module_feature_identity --> module_core_util
     module_feature_identity --> module_data_database
     module_feature_identity --> module_data_datastore
     module_feature_identity --> module_feature_avatar
+    module_feature_identity --> module_feature_media
     module_feature_identity --> module_protocol
     module_feature_invite --> module_core_ui
     module_feature_invite --> module_core_util
@@ -380,9 +388,13 @@ graph TD
     module_feature_notification --> module_feature_transport
     module_feature_notification --> module_protocol
     module_feature_notification --> module_resources
+    module_feature_ocr --> module_core_util
     module_feature_onboarding --> module_core_ui
     module_feature_onboarding --> module_feature_identity
-    module_feature_onboarding --> module_feature_media
+    module_feature_payment --> module_core_base
+    module_feature_payment --> module_core_ui
+    module_feature_payment --> module_core_util
+    module_feature_payment --> module_feature_media
     module_feature_polls --> module_core_ui
     module_feature_polls --> module_core_util
     module_feature_polls --> module_feature_attachments
@@ -436,6 +448,7 @@ graph TD
     module_navigation --> module_feature_membership
     module_navigation --> module_feature_notification
     module_navigation --> module_feature_onboarding
+    module_navigation --> module_feature_payment
     module_navigation --> module_feature_polls
     module_navigation --> module_feature_safety
     module_navigation --> module_feature_search
@@ -501,7 +514,9 @@ graph TD
     module_shared --> module_feature_membership
     module_shared --> module_feature_messaging
     module_shared --> module_feature_notification
+    module_shared --> module_feature_ocr
     module_shared --> module_feature_onboarding
+    module_shared --> module_feature_payment
     module_shared --> module_feature_polls
     module_shared --> module_feature_safety
     module_shared --> module_feature_search

@@ -13,7 +13,7 @@ The `:feature:conversationorchestration:*` modules (`api`, `engine`, `delivery`,
 A `WorkflowStateMachine` with nested sealed `Step` and `Outcome` types: `perform(step)` executes one operation, the pure `transition(step, outcome)` picks the next step, `Complete` or `Reject`. Public workflows (`ConversationWorkflow`) are started by a `ConversationCommand` through `ConversationOrchestrator`; `lockKey` serializes workflows that share a key.
 
 **MessagePartDto / MessagePart / MessagePartUi**  
-The shared data/domain/presentation hierarchy in `:core:base`. Current variants are text, image, video, file, voice, location, contact and poll.
+The shared data/domain/presentation hierarchy in `:core:base`. Current variants are text, image, video, file, voice, location, contact, poll, expense board, expense board closure, expense and payment transfer.
 
 **MessageBlobEntity**  
 Room row containing blob metadata/capabilities/crypto fields and the resolved local cache path for a blob-backed message part.
@@ -31,7 +31,7 @@ A group-only `MessagePart` with 2–6 options, optional nested images, multiple-
 `PollPolicy.isClosedAt(now)` is true when a manual close timestamp exists or when the absolute expiry timestamp has elapsed. Only manual close is synchronized as `PollClose`.
 
 **Pinned message**  
-A group-admin-controlled snapshot of one group user message, stored as encoded `GroupMessageContent`. Pinned content can include attachments, voice, links and polls.
+A group-admin-controlled snapshot of one group user message, stored as encoded `GroupMessageContent`. Pinned content can include attachments, voice, links and polls. While group expenses are active, the pin slot holds the expense board instead.
 
 **Protocol outbox**  
 Durable client storage for outbound protocol work, processed independently from a screen by `:feature:messaging` runtime.

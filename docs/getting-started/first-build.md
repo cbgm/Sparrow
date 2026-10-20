@@ -28,7 +28,7 @@ The APK is written below:
 androidApp/build/outputs/apk/debug/
 ```
 
-The Android application ID is `com.cbgm.sparrow`. For FCM/background wake-ups, `androidApp/google-services.json` must belong to a Firebase Android app registered with that package name. A debug build can still be compiled without the file because the Google Services plugin is applied only when the file exists.
+The Android application ID is `com.cbgm.sparrow`. For FCM/background wake-ups, `androidApp/google-services.json` must belong to a Firebase Android app registered with that package name. A debug build can still be compiled without the file because the Google Services plugin is applied only when the file exists. The same Firebase app is used for phone verification by SMS at sign-up; debug builds offer a **Skip (debug)** button in the verification dialog.
 
 ## 3. Run checks
 

@@ -77,6 +77,8 @@ nav:
       - Current Feature Status: features/current-features.md
       - Chats: features/chats.md
       - Polls: features/polls.md
+      - Group Expenses: features/expenses.md
+      - Settle Up & Payment: features/payment.md
       - Attachments: features/attachments.md
       - Contacts: features/contacts.md
       - Message Search: features/search.md

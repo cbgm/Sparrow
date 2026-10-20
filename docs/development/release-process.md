@@ -170,11 +170,18 @@ The tag must point at the exact release-branch commit whose candidate was tested
 
 ## Release automation present in this source snapshot
 
-The source archive used for this documentation audit does **not** contain the repository `.github/workflows` directory. Therefore this documentation does not pretend to verify the exact current GitHub Actions trigger/change-classification implementation from this ZIP alone.
+The workflows are checked in under `.github/workflows`:
 
-What **is** directly verifiable in the source is the current Android build configuration, server Dockerfiles/Compose definitions and the unified public server-bundle builder under `server/installer`.
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| `android-pr.yml` | pull requests to `develop`, manual | Android build and checks |
+| `server-smoke.yml` | pull requests to `develop` touching server/build files | Server smoke test |
+| `server-community-node-smoke.yml` | pull requests to `develop` touching server/build files | Community Node smoke test |
+| `sparrow-server-bundle.yml` | pushes touching server/build files | Server bundle artifacts |
+| `docs.yml` | pushes to `master` touching `docs/**` or `mkdocs.yml` | Documentation site |
+| `release.yml` | `v*` tags and `release/**` branches | Release build |
 
-If the CI workflow in GitHub is changed, keep this page synchronized with the checked-in workflow files in the repository used for release.
+If a workflow changes, keep this page synchronized with the checked-in workflow files.
 
 ## Current public server bundle
 
@@ -203,7 +210,7 @@ Important bundled entry points include:
 - signed-directory client/registration helpers used by the public runtime
 - shared-public-proxy definitions used by public Combined deployments
 
-The Windows bundle also exposes `Start-SparrowServer.cmd` as the normal GUI entry point after packaging.
+All three launchers open the same cross-platform installer window (Tk, shared `ui_window.py`); without a desktop the same options appear as a text menu.
 
 ## Server bundle exclusion: private Control Plane Directory
 
