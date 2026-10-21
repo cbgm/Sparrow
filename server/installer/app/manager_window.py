@@ -9,11 +9,15 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from manager_core import (ROOT, SOURCE_TREE, WINDOWS, addresses, create_command, default_server_folder,
+from manager_core import (MAIN_NODE, ROOT, SOURCE_TREE, WINDOWS, addresses, create_command, default_server_folder,
                           find_existing_installation, move_command, describe, engine_command, installed, load_settings,
-                          local_build_tag, node_command, save_preferences, server_state, update_command,
+                          local_build_tag, main_node, node_command, save_preferences, server_state, update_command,
                           version_text)
 from ui_window import COLORS, HIDDEN, Card, EngineWindow, apply_style, window_fonts
+
+
+COMBINED = "Control Plane + Community Node"
+NODE_ONLY = "Community Node only (connects to an existing Control Plane)"
 
 
 class Installer(EngineWindow):
@@ -46,15 +50,22 @@ class Installer(EngineWindow):
                             fg=COLORS["accent"], cursor="hand2")
         advanced.grid(row=0, column=1, sticky="e")
         advanced.bind("<Button-1>", lambda _: self.open_advanced())
+        self.component = tk.StringVar(value=NODE_ONLY if self.settings["component"] == "node" and not installed()
+                                      else COMBINED)
+        self.component_combo = ttk.Combobox(card, textvariable=self.component, state="readonly",
+                                            font=self.fonts["body"], values=(COMBINED, NODE_ONLY))
+        card.add(self.component_combo, "What to install")
+        self.component_combo.bind("<<ComboboxSelected>>", lambda _: self.refresh())
         self.mode = tk.StringVar(value="Public (reachable from the internet)" if self.settings["mode"] == "public"
                                  else "LAN (this network only)")
-        combo = ttk.Combobox(card, textvariable=self.mode, state="readonly", font=self.fonts["body"],
-                             values=("LAN (this network only)", "Public (reachable from the internet)"))
-        card.add(combo, "Reachability")
-        combo.bind("<<ComboboxSelected>>", lambda _: self.update_fields())
+        self.mode_combo = ttk.Combobox(card, textvariable=self.mode, state="readonly", font=self.fonts["body"],
+                                       values=("LAN (this network only)", "Public (reachable from the internet)"))
+        card.add(self.mode_combo, "Reachability")
+        self.mode_combo.bind("<<ComboboxSelected>>", lambda _: self.update_fields())
         self.auto_dns = tk.BooleanVar(value=self.settings["autoDns"])
-        card.add(ttk.Checkbutton(card, text="Automatic public hostnames (free sslip.io names, no domain needed)",
-                                 variable=self.auto_dns, command=self.update_fields), sticky="w")
+        self.auto_dns_check = card.add(
+            ttk.Checkbutton(card, text="Automatic public hostnames (free sslip.io names, no domain needed)",
+                            variable=self.auto_dns, command=self.update_fields), sticky="w")
         self.node_domain = tk.StringVar(value=self.settings["nodeDomain"])
         self.control_domain = tk.StringVar(value=self.settings["controlDomain"])
         self.directory_url = tk.StringVar(value=self.settings["directoryUrl"])
@@ -62,13 +73,16 @@ class Installer(EngineWindow):
                                    "Community Node hostname")
         self.control_entry = card.add(ttk.Entry(card, textvariable=self.control_domain, font=self.fonts["body"]),
                                       "Control Plane hostname")
-        card.add(ttk.Entry(card, textvariable=self.directory_url, font=self.fonts["body"]), "Directory Server URL")
+        self.directory_entry = card.add(ttk.Entry(card, textvariable=self.directory_url, font=self.fonts["body"]),
+                                        "Directory Server URL")
+        self.node_only_hint = card.hint("Each node is added with the address of its Control Plane and managed "
+                                        "under Nodes...")
 
         push = Card(parent, "Push notifications and phone verification", self.fonts)
         push.pack(fill="x", pady=(12, 0))
         self.push = tk.BooleanVar(value=self.settings["push"])
-        push.add(ttk.Checkbutton(push, text="Enable push notifications (Firebase)", variable=self.push,
-                                 command=self.update_fields), sticky="w")
+        self.push_check = push.add(ttk.Checkbutton(push, text="Enable push notifications (Firebase)",
+                                                   variable=self.push, command=self.update_fields), sticky="w")
         self.firebase = tk.StringVar(value=self.settings["firebaseFile"])
         chooser = tk.Frame(push, bg=COLORS["card"])
         chooser.columnconfigure(0, weight=1)
@@ -117,13 +131,19 @@ class Installer(EngineWindow):
         actions = tk.Frame(card, bg=COLORS["card"])
         self.start_button = self.button(actions, "Install", lambda: self.server_action("start"), "Primary")
         self.start_button.grid(row=0, column=0, columnspan=2, sticky="ew", padx=(0, 8), pady=4)
-        self.button(actions, "Stop", lambda: self.server_action("stop")).grid(row=0, column=2, sticky="ew", pady=4)
+        stop = self.button(actions, "Stop", lambda: self.server_action("stop"))
+        stop.grid(row=0, column=2, sticky="ew", pady=4)
         for column in range(3):
             actions.columnconfigure(column, weight=1, uniform="action")
+        # Stop, Status and Logs act on the Control Plane + Community Node installation.
+        self.combined_buttons = [stop]
         for index, (text, command) in enumerate((("Status", lambda: self.server_action("status")),
                                                  ("Logs", lambda: self.server_action("logs")),
                                                  ("Nodes...", self.open_nodes))):
-            self.button(actions, text, command).grid(row=1, column=index, sticky="ew", padx=(0, 8), pady=4)
+            widget = self.button(actions, text, command)
+            widget.grid(row=1, column=index, sticky="ew", padx=(0, 8), pady=4)
+            if text != "Nodes...":
+                self.combined_buttons.append(widget)
         card.add(actions, sticky="ew")
 
     def build_updates(self, parent) -> None:
@@ -140,14 +160,31 @@ class Installer(EngineWindow):
         card.hint("Updates keep all data, identities and settings. The server restarts briefly.")
 
     # ------------------------------------------------------------------ state
+    def node_only(self) -> bool:
+        return self.component.get() == NODE_ONLY and not installed()
+
     def update_fields(self) -> None:
+        node_only = self.node_only()
         public = self.mode.get().startswith("Public")
-        manual = public and not self.auto_dns.get()
+        manual = public and not self.auto_dns.get() and not node_only
         for entry in (self.node_entry, self.control_entry):
             entry.configure(state="normal" if manual else "disabled")
-        push = "normal" if self.push.get() else "disabled"
+        # Community Node only: each node gets its own settings when it is added.
+        combined = "disabled" if node_only else "normal"
+        self.mode_combo.configure(state="disabled" if node_only else "readonly")
+        for widget in (self.auto_dns_check, self.directory_entry, self.push_check):
+            widget.configure(state=combined)
+        push = "normal" if self.push.get() and not node_only else "disabled"
         self.firebase_entry.configure(state=push)
         self.firebase_button.configure(state=push)
+        self.component_combo.configure(state="disabled" if installed() else "readonly")
+        if node_only:
+            self.node_only_hint.grid()
+        else:
+            self.node_only_hint.grid_remove()
+        for widget in getattr(self, "combined_buttons", ()):
+            if node_only:
+                widget.configure(state="disabled")
 
     def collect(self) -> dict:
         self.settings.update({
@@ -156,6 +193,7 @@ class Installer(EngineWindow):
             "controlDomain": self.control_domain.get().strip(), "directoryUrl": self.directory_url.get().strip(),
             "push": self.push.get(), "firebaseFile": self.firebase.get().strip(),
             "imagePrefix": self.image_prefix.get().strip(), "imageTag": self.image_tag.get().strip(),
+            "component": "node" if self.node_only() else "combined",
         })
         self.preferences["settings"] = self.settings
         save_preferences(self.preferences)
@@ -165,9 +203,14 @@ class Installer(EngineWindow):
         state, level = server_state()
         self.set_pill(state, level)
         cp_mode = "Public" if self.settings["mode"] == "public" else "LAN"
-        self.subtitle.configure(text=f"Control Plane + Community Node   |   {cp_mode if installed() else 'not installed'}"
-                                     f"   |   {ROOT}")
-        self.start_button.configure(text="Start / apply settings" if installed() else "Install")
+        node_only = self.node_only()
+        what = "Community Node only" if node_only else "Control Plane + Community Node"
+        self.subtitle.configure(text=f"{what}   |   {cp_mode if installed() else 'not installed'}   |   {ROOT}")
+        if installed():
+            self.start_button.configure(text="Start / apply settings")
+        else:
+            self.start_button.configure(text="Add Community Node..." if node_only else "Install")
+        self.update_fields()
         self.version.configure(text=version_text() if installed() else "-")
         for child in self.address_frame.winfo_children():
             child.destroy()
@@ -211,6 +254,9 @@ class Installer(EngineWindow):
     # ------------------------------------------------------------------ actions
     def server_action(self, action: str) -> None:
         settings = self.collect()
+        if action == "start" and self.node_only():
+            self.open_nodes(add=True)
+            return
         if action == "start":
             if settings["mode"] == "public" and not settings["autoDns"] and not (
                     settings["nodeDomain"] and settings["controlDomain"]):
@@ -295,14 +341,14 @@ class Installer(EngineWindow):
         messagebox.showinfo("Server moved", "The server now runs from this folder. Click Start / apply settings "
                             "once, check that messaging works, then you can delete the old folder.")
 
-    def open_nodes(self) -> None:
-        NodesDialog(self)
+    def open_nodes(self, add: bool = False) -> None:
+        NodesDialog(self, add)
 
 
 class NodesDialog:
     """Lists independent Community Nodes and runs their actions."""
 
-    def __init__(self, installer: Installer):
+    def __init__(self, installer: Installer, add: bool = False):
         self.installer = installer
         self.window = tk.Toplevel(installer.root, bg=COLORS["window"], padx=16, pady=16)
         self.window.title("Community Nodes")
@@ -320,9 +366,14 @@ class NodesDialog:
             ttk.Button(buttons, text=action.capitalize(), command=lambda chosen=action: self.act(chosen)).pack(
                 side="left", padx=(0, 8))
         self.reload()
+        if add:
+            self.add()
 
     def reload(self) -> None:
         self.table.delete(*self.table.get_children())
+        main = main_node()
+        if main is not None:
+            self.table.insert("", "end", values=main)
         result = subprocess.run(node_command("list"), cwd=ROOT, capture_output=True, text=True,
                                 creationflags=HIDDEN)
         for line in result.stdout.splitlines():
@@ -341,6 +392,10 @@ class NodesDialog:
         node = self.selected()
         if not node:
             return
+        if node == MAIN_NODE:
+            messagebox.showinfo("Community Nodes", "The main node belongs to the Control Plane + Community Node "
+                                "installation; start, stop and update it in the main window.", parent=self.window)
+            return
         if action == "remove" and not messagebox.askyesno("Remove node", f"Remove node {node}?", parent=self.window):
             return
         self.installer.run(f"Community Node {node}: {action}", node_command(action, "--id", node), self.reload)
@@ -358,11 +413,17 @@ class NodesDialog:
         for row, (label, widget) in enumerate(rows):
             tk.Label(dialog, text=label, bg=COLORS["card"]).grid(row=row, column=0, sticky="w", padx=(0, 10), pady=4)
             widget.grid(row=row, column=1, sticky="w", pady=4)
-        tk.Label(dialog, text="Leave the Control Plane URL empty to use this installation.", bg=COLORS["card"],
+        own_plane = installed()
+        hint = ("Leave the Control Plane URL empty to use this installation." if own_plane
+                else "Enter the address of the Control Plane this node connects to.")
+        tk.Label(dialog, text=hint, bg=COLORS["card"],
                  fg=COLORS["muted"]).grid(row=len(rows), column=0, columnspan=2, sticky="w")
 
         def submit():
             if not name.get().strip():
+                return
+            if not own_plane and not plane.get().strip():
+                messagebox.showwarning("Add Community Node", "Enter the Control Plane URL.", parent=dialog)
                 return
             arguments = ["add", "--name", name.get().strip(), "--mode", "public" if public.get() else "lan"]
             if public.get():

@@ -84,8 +84,10 @@ The independent Directory Server itself and all its admin credentials are
 
 ### Independent Community Nodes — Node only and multi-node
 
-Click **Nodes...** in the installer window (text menu: **Community Nodes**),
-or use the `nodes` subcommand on Linux/macOS (`app/Manage-SparrowNodes.py` on
+Choose **Community Node only** under **What to install** on a machine without
+a Control Plane (its button **Add Community Node...** asks for the Control
+Plane URL), or click **Nodes...** in the installer window (text menu:
+**Community Nodes**), or use the `nodes` subcommand on Linux/macOS (`app/Manage-SparrowNodes.py` on
 every system). Signed directory lookups additionally require the Python
 `cryptography` package; explicit manually configured Control Plane URLs require
 Python 3 only. A Node-only install does **not** create a Control Plane or register

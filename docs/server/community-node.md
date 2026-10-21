@@ -72,7 +72,7 @@ Caddy routes `/v1/blobs/*` to the gateway. Uploads require short-lived upload au
 
 ## Multi-node management
 
-The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. In the installer window (Windows, macOS, Linux) **Nodes...** opens the manager for additional Community Node instances. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
+The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. In the installer window (Windows, macOS, Linux) **What to install** offers **Community Node only** for a machine whose nodes connect to an existing Control Plane, and **Nodes...** opens the manager for additional Community Node instances, listing the main node of a Combined installation first. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
 
 Node-only installs use an existing Control Plane directly or, in the advanced flow, a signed independent Control Plane Directory with a separately trusted/pinned key. They do not install a hidden Control Plane.
 

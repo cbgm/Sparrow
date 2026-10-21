@@ -130,7 +130,7 @@ Key entry points:
 
 ## Install / Start semantics
 
-The installer treats Control Plane and Community Node as independent Compose projects. The window always manages both (Combined) from one runtime directory; **Nodes...** can manage multiple additional Community Node instances against this or an existing Control Plane.
+The installer treats Control Plane and Community Node as independent Compose projects. The window manages both (Combined) from one runtime directory, or with **What to install: Community Node only** just nodes that connect to an existing Control Plane; **Nodes...** can manage multiple additional Community Node instances against this or an existing Control Plane.
 
 On an existing installation with `.env.runtime`, **Start / apply settings** validates ownership, pulls only the selected Sparrow backend images and applies changed backend services without intentionally recreating PostgreSQL/Redis/Caddy volumes or identities.
 

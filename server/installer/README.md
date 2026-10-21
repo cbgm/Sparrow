@@ -6,10 +6,12 @@ separate shared Caddy proxy only when Public mode is chosen. Extract it to a new
 (Linux) opens the same installer window on all three systems (`app/manager_window.py`, Python 3.9+
 with Tk; most Linux desktops need the `python3-tk` package). Without a desktop, for example over SSH,
 the same options appear as a text menu (`app/manager_terminal.py`), and every action can also be run
-from the command line (see `README_RUNTIME.md`). The window always manages the Combined installation
-(Control Plane + Community Node); defaults: Public with automatic sslip.io hostnames for a fresh
-installation. **Nodes...** opens a separate manager for additional independent Community Node
-instances; it never installs an extra Control Plane. Docker work runs in a separate engine process
+from the command line (see `README_RUNTIME.md`). **What to install** chooses between the Combined
+installation (Control Plane + Community Node; defaults: Public with automatic sslip.io hostnames for a
+fresh installation) and **Community Node only**, for a machine whose nodes connect to an existing
+Control Plane. Once Combined is installed, the choice stays Combined. **Nodes...** opens a separate
+manager for additional independent Community Node instances; it lists the main node of the Combined
+installation first and never installs an extra Control Plane. Docker work runs in a separate engine process
 (PowerShell on Windows, Python on Linux/macOS) so the window stays responsive. Combined installations
 accept an optional signed Directory URL **as well as** the local Control Plane (LAN) or its configured
 public hostname (Public). Without a Directory, Combined mode does not discover independent Control
@@ -50,14 +52,17 @@ here...** for that.
 
 ### Node-only instances and the signed Control Plane directory
 
-Click **Nodes...** in the installer window (text menu: **Community Nodes**), then **Add...**. Enter a
-name, choose Public or LAN and an automatic sslip.io or your own hostname. Leave the Control Plane URL
-empty to use the Control Plane of this installation. Then select the node and click **Install**. Each
+Click **Nodes...** in the installer window (text menu: **Community Nodes**), then **Add...**. On a
+machine without the Combined installation, choose **Community Node only** under **What to install**;
+its button **Add Community Node...** opens the same dialog. Enter a name, choose Public or LAN and an
+automatic sslip.io or your own hostname. Leave the Control Plane URL empty to use the Control Plane of
+this installation; Community Node only requires it. Then select the node and click **Install**. Each
 new instance receives a distinct Compose project, node signing identity, secret
 files, cache and named volumes. You can install multiple instances under one
 Docker host; they are **not** multiple unrelated nodes in one container.
 The node manager offers Install, Start, Stop, Update, Status, Logs and Remove (keep data) per selected
-node. Public node hostnames share a single Caddy process and distinct virtual host routes. A signed
+node. Its first row, **Main node (main installation)**, is the Community Node of the Combined
+installation; it is started, stopped and updated in the main window. Public node hostnames share a single Caddy process and distinct virtual host routes. A signed
 Directory URL with an independently obtained public key is set through the command line
 (`./Start-SparrowServer.sh nodes --help`, `app/Manage-SparrowNodes.py`); signed directory lookups
 require the Python `cryptography` package. Read `README_RUNTIME.md` for commands,

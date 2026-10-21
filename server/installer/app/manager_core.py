@@ -72,6 +72,8 @@ def default_settings() -> dict:
         "firebaseFile": "",
         "imagePrefix": cp.get("SPARROW_IMAGE_PREFIX", "ghcr.io/cbgm/sparrow"),
         "imageTag": cp.get("SPARROW_IMAGE_TAG", "latest"),
+        # "combined" (Control Plane + Community Node) or "node" (Community Node only).
+        "component": "combined",
     }
 
 
@@ -200,6 +202,24 @@ def addresses() -> dict[str, str]:
     return {"Control Plane": f"https://{cp.get('PUBLIC_DOMAIN', '')}",
             "Community Node": f"https://{node.get('PUBLIC_DOMAIN', '')}",
             "Gateway": f"wss://{node.get('PUBLIC_DOMAIN', '')}/v1/gateway"}
+
+
+# Not a valid node ID, so it can never collide with an added node.
+MAIN_NODE = "(main)"
+
+
+def main_node() -> tuple[str, str, str, str, str] | None:
+    """The Community Node of the Control Plane + Node installation, listed before the added nodes."""
+    if not installed():
+        return None
+    node = properties(ROOT / "community-node" / "sparrow.conf")
+    mode = node.get("MODE", "lan")
+    if mode == "public":
+        endpoint = f"https://{node.get('PUBLIC_DOMAIN', '')}"
+    else:
+        port = properties(ROOT / "community-node" / ".env.runtime").get("COMMUNITY_NODE_HTTP_PORT", "8490")
+        endpoint = f"LAN port {port}"
+    return MAIN_NODE, "Main node (main installation)", mode, "installed", endpoint
 
 
 def version_text() -> str:
