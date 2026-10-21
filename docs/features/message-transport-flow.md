@@ -54,6 +54,11 @@ sequenceDiagram
     ROUTE->>CTRL: identity/invite packets -> ReceiveContact*/ReceiveGroupInvite*Workflow
 ```
 
+Delivery paths do not guarantee order: after a reconnect, an edit, delete, reaction or poll operation can
+arrive before the message it refers to. Such an operation is parked locally and applied right after the
+message is stored; it is deleted after 7 days if the message never arrives
+([Conversation orchestration](../architecture/conversation-orchestration.md#operations-that-overtake-their-message)).
+
 ## Direct invitation/authorization
 
 The generic invitation row is owned by `:feature:invite`, the cryptographic exchange by `:feature:identity`, and the cross-feature sequence by the lifecycle workflows (`StartDirectInvitationWorkflow`, `HandleDirectInvitationResultWorkflow`, …) run by `OpenDirectConversationWorkflow` and `InvitationResultObserver`.

@@ -27,7 +27,7 @@ Direct and Group workflows in `:feature:conversationorchestration:message` own t
 
 ## Message operations
 
-Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. `ApplyRemoteMessageOperationWorkflow` accepts edit/delete/reaction for Direct chats and rejects poll operations there. Group workflows additionally support `PollVote` and `PollClose`.
+Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. `ApplyRemoteMessageOperationWorkflow` accepts edit/delete/reaction for Direct chats and rejects poll operations there. Group workflows additionally support `PollVote` and `PollClose`. An operation whose message has not arrived yet is parked locally and applied once the message is stored ([Conversation orchestration](conversation-orchestration.md#operations-that-overtake-their-message)).
 
 ## Poll composer handoff
 

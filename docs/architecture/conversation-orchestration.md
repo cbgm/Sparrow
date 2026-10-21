@@ -312,7 +312,7 @@ Each module lists every internal job in one sealed interface in `domain/command/
 | `GroupStateCommand` | `groupstate` | `PublishGroupAvatar`, `SendCurrentGroupMetadata`, `SendCurrentGroupPin` |
 | `MembershipCommand` | `membership` | `RefreshOwnedGroupVerification`, `HandleGroupInvitationResult`, `HandleMembershipResult`, `RecoverAcceptedGroupInvitation`, `ResumeApprovedGroupJoin` |
 | `LifecycleCommand` | `lifecycle` | `RequestReauthorization`, `RevokePeerExchange`, `StartDirectInvitation`, `HandleContactBlocked`, `HandleDirectInvitationResult`, `HandleIdentityResult`, `RecordIncomingDirectInvitation`, `RecoverAcceptedDirectInvitation`, `RecoverAuthorizedConversation`, `AcceptApprovedIdentityChange`, `StartRecoveryInvitation` |
-| `IncomingCommand` | `incoming` | `RouteIncomingPacket`, `ApplyRemoteMessageOperation`, `CompleteManualIdentity` and one `Receive*` command per packet type (27) |
+| `IncomingCommand` | `incoming` | `RouteIncomingPacket`, `ApplyRemoteMessageOperation`, `ApplyParkedMessageOperations`, `CompleteManualIdentity` and one `Receive*` command per packet type (27) |
 
 ### Starting a workflow
 
@@ -390,6 +390,18 @@ group packet:    CheckGroupAccepted -> DispatchGroupPacket
 receipt:         ApplyReceipt
 anything else:   FindControlConversation -> DispatchControlPacket
 ```
+
+### Operations that overtake their message
+
+An edit, delete, reaction, poll vote or poll close can arrive before the message it refers to, for example
+when a reconnect delivers the mailbox out of order. `ApplyRemoteMessageOperationWorkflow` then parks the
+operation (`FindTarget -> Park`) in `parked_message_operations` and the envelope is acknowledged. Once
+`ReceiveDirectMessageWorkflow` or `ReceiveGroupMessageWorkflow` has stored a message, its last step
+`ApplyParkedOperations` runs `ApplyParkedMessageOperationsWorkflow`, which applies the waiting operations in
+the order they were sent through the normal operation workflow (so the same sender and admin checks apply)
+and removes each one. An operation that is not allowed is dropped as it would have been on arrival. Parked
+operations whose message never arrives are deleted after 7 days. `ParkedMessageOperationsTest` covers these
+cases.
 
 Every packet type has its own command, for example `IncomingCommand.ReceiveGroupTitle(context: IncomingPacketContext, packet: GroupTitleUpdatedPacket)`. `IncomingPacketCommandMapper` (`toGroupCommand()`, `toControlCommand()`) maps a `ReceivedPacket` to that command; the dispatchers only submit it with `engine.run(command)`. Direct and Group packets never share a workflow.
 

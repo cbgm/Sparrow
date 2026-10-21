@@ -11,7 +11,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | [Group state workflows](groupstate.md) | 16 | 12 | 4 |
 | [Membership workflows](membership.md) | 14 | 9 | 5 |
 | [Direct chat lifecycle workflows](lifecycle.md) | 14 | 3 | 11 |
-| [Incoming packet workflows](incoming.md) | 30 | 0 | 30 |
+| [Incoming packet workflows](incoming.md) | 31 | 0 | 31 |
 
 ## Public commands (Chats → `ConversationOrchestrator`)
 
@@ -69,6 +69,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupStateCommand.SendCurrentGroupExpenses` | [`SendCurrentGroupExpensesWorkflow`](groupstate.md#sendcurrentgroupexpensesworkflow) | `groupstate` | — |
 | `GroupStateCommand.SendCurrentGroupMetadata` | [`SendCurrentGroupMetadataWorkflow`](groupstate.md#sendcurrentgroupmetadataworkflow) | `groupstate` | — |
 | `GroupStateCommand.SendCurrentGroupPin` | [`SendCurrentGroupPinWorkflow`](groupstate.md#sendcurrentgrouppinworkflow) | `groupstate` | — |
+| `IncomingCommand.ApplyParkedMessageOperations` | [`ApplyParkedMessageOperationsWorkflow`](incoming.md#applyparkedmessageoperationsworkflow) | `incoming` | — |
 | `IncomingCommand.ApplyRemoteMessageOperation` | [`ApplyRemoteMessageOperationWorkflow`](incoming.md#applyremotemessageoperationworkflow) | `incoming` | — |
 | `IncomingCommand.CompleteManualIdentity` | [`CompleteManualIdentityWorkflow`](incoming.md#completemanualidentityworkflow) | `incoming` | — |
 | `IncomingCommand.ReceiveAuthorizationRevoked` | [`ReceiveAuthorizationRevokedWorkflow`](incoming.md#receiveauthorizationrevokedworkflow) | `incoming` | — |

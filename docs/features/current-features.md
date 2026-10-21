@@ -209,7 +209,7 @@ Group admins can synchronize current pin state through `PinGroupMessageWorkflow`
 
 ### Persistence
 
-The current Room database is schema **55** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
+The current Room database is schema **56** and includes durable recovery, parked early message operations, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
 
 
 ## Avatars and profile-picture editing

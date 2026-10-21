@@ -1,10 +1,13 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.di
 
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.datasource.ParkedMessageOperationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.DirectMessagePacketReaderImpl
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.repository.ParkedMessageOperationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.ControlPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.GroupPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.packet.DirectMessagePacketReader
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketAcceptedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.DeleteReplacedExpenseReceiptsUseCase
@@ -38,6 +41,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workfl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupDescriptionWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupPinWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupTitleWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.ApplyParkedMessageOperationsWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.ApplyRemoteMessageOperationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.routing.RouteIncomingPacketWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationReceiptWorkflow
@@ -65,6 +69,8 @@ val conversationIncomingModule =
 
 private fun Module.registerData() {
     singleOf(::DirectMessagePacketReaderImpl) { bind<DirectMessagePacketReader>() }
+    singleOf(::ParkedMessageOperationDataSource)
+    singleOf(::ParkedMessageOperationRepositoryImpl) { bind<ParkedMessageOperationRepository>() }
 }
 
 private fun Module.registerUseCases() {
@@ -80,6 +86,7 @@ private fun Module.registerUseCases() {
 
 private fun Module.registerInternalWorkflows() {
     singleOf(::ApplyRemoteMessageOperationWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::ApplyParkedMessageOperationsWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CompleteManualIdentityWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ReceiveAuthorizationRevokedWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ReceiveContactInviteAcceptedWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
