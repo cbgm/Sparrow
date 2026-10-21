@@ -33,6 +33,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | [`ReceiveGroupDescriptionWorkflow`](#receivegroupdescriptionworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupDescription` | — |
 | [`ReceiveGroupPinWorkflow`](#receivegrouppinworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupPin` | — |
 | [`ReceiveGroupTitleWorkflow`](#receivegrouptitleworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupTitle` | — |
+| [`ApplyParkedMessageOperationsWorkflow`](#applyparkedmessageoperationsworkflow) | orchestration (`engine.run`) | `IncomingCommand.ApplyParkedMessageOperations` | — |
 | [`ApplyRemoteMessageOperationWorkflow`](#applyremotemessageoperationworkflow) | orchestration (`engine.run`) | `IncomingCommand.ApplyRemoteMessageOperation` | — |
 | [`RouteIncomingPacketWorkflow`](#routeincomingpacketworkflow) | orchestration (`engine.run`) | `IncomingCommand.RouteIncomingPacket` | — |
 | [`ReceiveVerificationReceiptWorkflow`](#receiveverificationreceiptworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveVerificationReceipt` | `groupVerificationLockKey(command.packet.groupId)` |
@@ -50,7 +51,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 
 ```text
 ReadMessage -> UpdateSenderProfile -> StoreMessage -> StoreAttachments -> SendDeliveryReceipt -> ClaimAutoReply
--> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments
+-> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments -> ApplyParkedOperations
 
 The router created the conversation and checked the authorization before this workflow starts.
 ```
@@ -68,7 +69,8 @@ stateDiagram-v2
     SendAutoReply --> ReleaseAutoReplyClaim : AutoReplyFailed
     SendAutoReply --> CacheAttachments : AutoReplyHandled
     ReleaseAutoReplyClaim --> CacheAttachments : AutoReplyHandled
-    CacheAttachments --> [*] : AttachmentsCached
+    CacheAttachments --> ApplyParkedOperations : AttachmentsCached
+    ApplyParkedOperations --> [*] : ParkedOperationsApplied
 ```
 
 ## `group`
@@ -84,7 +86,8 @@ stateDiagram-v2
 FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
 FindConversation -> DecryptMessage -> FindExisting
   -> [AuthorizeExpenses -> DeleteReplacedReceipts -> ApplyProfilePicture -> StoreMessage]
-  -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
+  -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments
+  -> ApplyParkedOperations                                                              (a message)
 
 A redelivered message keeps its row; only attachments and the receipt are repeated.
 ```
@@ -105,7 +108,8 @@ stateDiagram-v2
     PrefetchLinkPreviews --> StoreAttachments : LinkPreviewsRequested
     StoreAttachments --> SendDeliveryReceipt : AttachmentsStored
     SendDeliveryReceipt --> CacheAttachments : DeliveryReceiptSent
-    CacheAttachments --> [*] : Done
+    CacheAttachments --> ApplyParkedOperations : AttachmentsCached
+    ApplyParkedOperations --> [*] : Done
 ```
 
 ## `identity`
@@ -689,12 +693,36 @@ stateDiagram-v2
 
 ## `operation`
 
+### ApplyParkedMessageOperationsWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyParkedMessageOperations`
+- **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyParkedMessageOperationsWorkflow.kt`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `ParkedMessageOperationRepository`
+
+```text
+FindParked -> [Apply -> Apply -> ...]
+
+Runs after a message was stored: the operations that arrived before it (an edit that overtook its message
+after a reconnect, for example) are applied in the order they were sent. Each one is removed once it ran;
+one that is not allowed, such as an edit by another sender, is dropped as it would have been on arrival.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindParked
+    FindParked --> Apply : Waiting
+    FindParked --> [*] : Waiting
+    Apply --> Apply : Waiting
+    Apply --> [*] : Waiting
+```
+
 ### ApplyRemoteMessageOperationWorkflow
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyRemoteMessageOperation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyRemoteMessageOperationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`, `RequireMessageWithoutPaymentUseCase`
+- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`, `RequireMessageWithoutPaymentUseCase`, `ParkedMessageOperationRepository`
 
 ```text
 FindTarget, then by operation:
@@ -703,9 +731,11 @@ Delete:    CheckSender -> DeleteMessage
 Reaction:  SaveReaction | RemoveReaction
 PollVote:  FindPoll -> SavePoll
 PollClose: CheckPollCloser -> FindPoll -> SavePoll
+No target: Park
 
-Only the original sender edits or deletes; group operations only touch user messages. A missing direct
-target or reaction target is ignored, a missing group target is an error.
+Only the original sender edits or deletes; group operations only touch user messages. An operation whose
+message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
+once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
 ```
 
 ```mermaid
@@ -717,7 +747,7 @@ stateDiagram-v2
     FindTarget --> FindPoll : TargetFound
     FindTarget --> RemoveReaction : TargetFound
     FindTarget --> SaveReaction : TargetFound
-    FindTarget --> [*] : TargetMissing
+    FindTarget --> Park : TargetMissing
     CheckEditable --> ReplaceText : Editable
     ReplaceText --> [*] : Applied
     CheckSender --> DeleteMessage : SenderOwnsTarget
@@ -727,6 +757,7 @@ stateDiagram-v2
     CheckPollCloser --> FindPoll : PollCloserAllowed
     FindPoll --> SavePoll : PollFound
     SavePoll --> [*] : Applied
+    Park --> [*] : Parked
 ```
 
 ## `routing`

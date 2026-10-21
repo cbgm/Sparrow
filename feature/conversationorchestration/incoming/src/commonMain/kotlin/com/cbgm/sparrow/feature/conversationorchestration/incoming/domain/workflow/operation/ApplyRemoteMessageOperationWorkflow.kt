@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
@@ -29,9 +30,11 @@ import kotlin.reflect.KClass
  * Reaction:  SaveReaction | RemoveReaction
  * PollVote:  FindPoll -> SavePoll
  * PollClose: CheckPollCloser -> FindPoll -> SavePoll
+ * No target: Park
  *
- * Only the original sender edits or deletes; group operations only touch user messages. A missing direct
- * target or reaction target is ignored, a missing group target is an error.
+ * Only the original sender edits or deletes; group operations only touch user messages. An operation whose
+ * message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
+ * once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
  */
 class ApplyRemoteMessageOperationWorkflow internal constructor(
     private val findOperationTarget: FindOperationTargetUseCase,
@@ -43,7 +46,8 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
     private val discardGroupMessages: DiscardGroupMessagesUseCase,
     private val findGroupPoll: FindGroupPollUseCase,
     private val membershipRepository: GroupMembershipRepository,
-    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase
+    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase,
+    private val parkedOperations: ParkedMessageOperationRepository
 ) : WorkflowStateMachine<
         IncomingCommand.ApplyRemoteMessageOperation,
         ApplyRemoteMessageOperationWorkflow.Step,
@@ -120,18 +124,23 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.Applied
             }
+            is Step.Park -> {
+                parkedOperations.park(command).getOrThrow()
+                Outcome.Parked
+            }
         }
     }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            Outcome.TargetMissing -> Transition.Complete()
+            Outcome.TargetMissing -> Transition.Next(Step.Park(step.command))
             is Outcome.TargetFound -> nextForOperation(outcome.target, step.command)
             is Outcome.Editable -> Transition.Next(Step.ReplaceText(outcome.edit, step.command))
             is Outcome.SenderOwnsTarget -> Transition.Next(Step.DeleteMessage(outcome.target, step.command))
             Outcome.PollCloserAllowed -> Transition.Next(Step.FindPoll(step.command.pollId(), step.command))
             is Outcome.PollFound -> Transition.Next(Step.SavePoll(outcome.poll, step.command))
             Outcome.Applied -> Transition.Complete()
+            Outcome.Parked -> Transition.Complete()
         }
 
     private suspend fun findTarget(command: IncomingCommand.ApplyRemoteMessageOperation): Outcome {
@@ -141,13 +150,8 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
                 "Poll operations are only supported in groups"
             }
         }
-        val target = findOperationTarget(command.conversation, operation.messageId).getOrThrow()
-        if (target == null) {
-            val ignoreMissing =
-                command.conversation == OperationConversation.DIRECT || operation is MessageOperation.Reaction
-            check(ignoreMissing) { "Message was not found" }
-            return Outcome.TargetMissing
-        }
+        val target =
+            findOperationTarget(command.conversation, operation.messageId).getOrThrow() ?: return Outcome.TargetMissing
         check(target.conversationId == command.conversationId) { "Operation target belongs to another conversation" }
         if (command.conversation == OperationConversation.GROUP && operation !is MessageOperation.Reaction) {
             check(target.isGroupUserMessage) { "Operation target is not a user message" }
@@ -264,6 +268,11 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
             val poll: Poll,
             override val command: IncomingCommand.ApplyRemoteMessageOperation
         ) : Step
+
+        /** The message has not arrived yet; the operation waits for it. */
+        data class Park(
+            override val command: IncomingCommand.ApplyRemoteMessageOperation
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -288,5 +297,7 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
         ) : Outcome
 
         data object Applied : Outcome
+
+        data object Parked : Outcome
     }
 }

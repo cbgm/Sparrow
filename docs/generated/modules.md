@@ -13,7 +13,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:core:ui`](modules/core-ui.md) | `core` | 51 | 1 | 0 | 1 | 22 |
 | [`:core:util`](modules/core-util.md) | `core` | 29 | 2 | 1 | 0 | 36 |
 | [`:data`](modules/data.md) | `data` | 0 | 0 | 0 | 0 | 0 |
-| [`:data:database`](modules/data-database.md) | `data` | 93 | 1 | 1 | 2 | 17 |
+| [`:data:database`](modules/data-database.md) | `data` | 95 | 1 | 1 | 2 | 17 |
 | [`:data:datastore`](modules/data-datastore.md) | `data` | 5 | 0 | 1 | 1 | 12 |
 | [`:feature`](modules/feature.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
 | [`:feature:applock`](modules/feature-applock.md) | `feature` | 13 | 0 | 1 | 3 | 3 |
@@ -28,7 +28,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:delivery`](modules/feature-conversationorchestration-delivery.md) | `feature` | 45 | 6 | 0 | 11 | 2 |
 | [`:feature:conversationorchestration:engine`](modules/feature-conversationorchestration-engine.md) | `feature` | 14 | 2 | 0 | 2 | 2 |
 | [`:feature:conversationorchestration:groupstate`](modules/feature-conversationorchestration-groupstate.md) | `feature` | 61 | 0 | 0 | 12 | 2 |
-| [`:feature:conversationorchestration:incoming`](modules/feature-conversationorchestration-incoming.md) | `feature` | 59 | 4 | 0 | 14 | 1 |
+| [`:feature:conversationorchestration:incoming`](modules/feature-conversationorchestration-incoming.md) | `feature` | 67 | 6 | 0 | 14 | 1 |
 | [`:feature:conversationorchestration:lifecycle`](modules/feature-conversationorchestration-lifecycle.md) | `feature` | 29 | 1 | 0 | 11 | 2 |
 | [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 64 | 1 | 0 | 13 | 2 |
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 84 | 1 | 0 | 11 | 2 |

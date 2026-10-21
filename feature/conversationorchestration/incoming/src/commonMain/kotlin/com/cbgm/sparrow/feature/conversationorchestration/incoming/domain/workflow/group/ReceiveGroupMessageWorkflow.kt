@@ -29,7 +29,8 @@ import kotlin.reflect.KClass
  * FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
  * FindConversation -> DecryptMessage -> FindExisting
  *   -> [AuthorizeExpenses -> DeleteReplacedReceipts -> ApplyProfilePicture -> StoreMessage]
- *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
+ *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments
+ *   -> ApplyParkedOperations                                                              (a message)
  *
  * A redelivered message keeps its row; only attachments and the receipt are repeated.
  */
@@ -148,6 +149,10 @@ class ReceiveGroupMessageWorkflow internal constructor(
             }
             is Step.CacheAttachments -> {
                 attachmentRepository.cacheIncoming(packet.messageId).getOrThrow()
+                Outcome.AttachmentsCached
+            }
+            is Step.ApplyParkedOperations -> {
+                engine.run(IncomingCommand.ApplyParkedMessageOperations(packet.messageId)).getOrThrow()
                 Outcome.Done
             }
         }
@@ -168,6 +173,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
             is Outcome.LinkPreviewsRequested -> Transition.Next(Step.StoreAttachments(outcome.message, step.command))
             Outcome.AttachmentsStored -> Transition.Next(Step.SendDeliveryReceipt(step.command))
             Outcome.DeliveryReceiptSent -> Transition.Next(Step.CacheAttachments(step.command))
+            Outcome.AttachmentsCached -> Transition.Next(Step.ApplyParkedOperations(step.command))
             Outcome.Done -> Transition.Complete()
         }
 
@@ -256,6 +262,11 @@ class ReceiveGroupMessageWorkflow internal constructor(
         data class CacheAttachments(
             override val command: IncomingCommand.ReceiveGroupMessage
         ) : Step
+
+        /** Edits, deletes, reactions and poll operations that arrived before this message. */
+        data class ApplyParkedOperations(
+            override val command: IncomingCommand.ReceiveGroupMessage
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -299,6 +310,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
         data object AttachmentsStored : Outcome
 
         data object DeliveryReceiptSent : Outcome
+
+        data object AttachmentsCached : Outcome
 
         data object Done : Outcome
     }

@@ -20,7 +20,7 @@ The current `settings.gradle.kts` declares 58 modules.
 
 ## Data
 
-- `:data:database` — Room schema v55, DAOs/entities/migrations/outbox persistence.
+- `:data:database` — Room schema v56, DAOs/entities/migrations/outbox persistence.
 - `:data:datastore` — settings/key-value persistence.
 
 ## Feature modules

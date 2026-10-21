@@ -89,7 +89,7 @@ Direct and Group remain separate where authorization, recipients, membership, de
 
 ## Persistence
 
-Room schema is version **55**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
+Room schema is version **56**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
 
 ## Server topology
 

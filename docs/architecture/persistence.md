@@ -1,6 +1,6 @@
 # Persistence
 
-The Android client uses Room. The current `SparrowDatabase` schema version is **55**.
+The Android client uses Room. The current `SparrowDatabase` schema version is **56**.
 
 ## Message storage
 
@@ -36,6 +36,13 @@ payload?
 Since schema 54, structured part JSON is stored directly in `MessagePartEntity.payload`. `MessagePartPayloadMigration53To54` copies legacy values from `message_structured.json` into that column and drops the legacy table.
 
 `PollDto`, the expense parts (`ExpenseBoardDto`, `ExpenseDto`, `ExpenseBoardClosedDto`) and `PaymentTransferDto` use this mechanism. Poll nested images are persisted as separate image parts/blobs and are reattached by `MessagePartPersistenceMapper.withPersistedParts(...)`.
+
+## Parked message operations
+
+`ParkedMessageOperationEntity` (`parked_message_operations`, added in schema 56 by auto-migration) holds
+incoming edits, deletes, reactions and poll operations whose message has not arrived yet: the target message
+ID, conversation, sender, the operation as JSON and its sent and parked times. Rows are removed once the
+message is stored and the operation was applied, and are purged after 7 days.
 
 ## Outbox
 

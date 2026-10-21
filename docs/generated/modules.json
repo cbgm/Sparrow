@@ -228,8 +228,8 @@
     "group": "data",
     "directory": "data/database",
     "buildFile": "data/database/build.gradle.kts",
-    "kotlinSourceFileCount": 93,
-    "productionKotlinFileCount": 92,
+    "kotlinSourceFileCount": 95,
+    "productionKotlinFileCount": 94,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -682,9 +682,9 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/incoming",
     "buildFile": "feature/conversationorchestration/incoming/build.gradle.kts",
-    "kotlinSourceFileCount": 59,
-    "productionKotlinFileCount": 55,
-    "testKotlinFileCount": 4,
+    "kotlinSourceFileCount": 67,
+    "productionKotlinFileCount": 61,
+    "testKotlinFileCount": 6,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",

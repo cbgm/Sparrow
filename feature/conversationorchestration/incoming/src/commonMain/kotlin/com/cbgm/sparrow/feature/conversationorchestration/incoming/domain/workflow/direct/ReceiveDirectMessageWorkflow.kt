@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
 
 /**
  * ReadMessage -> UpdateSenderProfile -> StoreMessage -> StoreAttachments -> SendDeliveryReceipt -> ClaimAutoReply
- * -> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments
+ * -> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments -> ApplyParkedOperations
  *
  * The router created the conversation and checked the authorization before this workflow starts.
  */
@@ -137,6 +137,10 @@ class ReceiveDirectMessageWorkflow internal constructor(
                 attachmentRepository.cacheIncoming(packet.messageId).getOrThrow()
                 Outcome.AttachmentsCached
             }
+            is Step.ApplyParkedOperations -> {
+                engine.run(IncomingCommand.ApplyParkedMessageOperations(packet.messageId)).getOrThrow()
+                Outcome.ParkedOperationsApplied
+            }
         }
     }
 
@@ -152,7 +156,8 @@ class ReceiveDirectMessageWorkflow internal constructor(
             Outcome.AutoReplyHandled -> Transition.Next(Step.CacheAttachments(step.command))
             is Outcome.AutoReplyFailed ->
                 Transition.Next(Step.ReleaseAutoReplyClaim(outcome.activationSessionId, step.command))
-            Outcome.AttachmentsCached -> Transition.Complete()
+            Outcome.AttachmentsCached -> Transition.Next(Step.ApplyParkedOperations(step.command))
+            Outcome.ParkedOperationsApplied -> Transition.Complete()
         }
 
     private suspend fun sendAutoReply(step: Step.SendAutoReply): Outcome {
@@ -229,6 +234,11 @@ class ReceiveDirectMessageWorkflow internal constructor(
         data class CacheAttachments(
             override val command: IncomingCommand.ReceiveDirectMessage
         ) : Step
+
+        /** Edits, deletes and reactions that arrived before this message. */
+        data class ApplyParkedOperations(
+            override val command: IncomingCommand.ReceiveDirectMessage
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -262,5 +272,7 @@ class ReceiveDirectMessageWorkflow internal constructor(
         ) : Outcome
 
         data object AttachmentsCached : Outcome
+
+        data object ParkedOperationsApplied : Outcome
     }
 }
