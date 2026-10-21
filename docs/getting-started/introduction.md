@@ -56,25 +56,45 @@ Both deployments use Caddy as their public edge and expose an operator `/index` 
 
 ## Control Plane directory
 
-Apps and Community Nodes do not keep a hardcoded list of Control Plane addresses. They start from one directory
-URL whose body looks like:
+Apps and Community Nodes do not keep a hardcoded list of Control Plane addresses. They start from one
+signed directory, configured as an HTTPS origin without a path (for example
+`https://directory.example.com`). The app reads `/.well-known/sparrow-directory` (protocol, `keyId`,
+Ed25519 `publicKey`) and then `/v1/control-planes`, a signed envelope:
 
 ```json
 {
-  "controlPlanes": [
-    "https://plane-a.example.com",
-    "https://plane-b.example.com"
-  ]
+  "payload": {
+    "protocol": "sparrow-control-plane-directory-v1",
+    "version": 7,
+    "generatedAtEpochMilliseconds": 1760000000000,
+    "validUntilEpochMilliseconds": 1760086400000,
+    "controlPlanes": [
+      { "controlPlaneId": "<sha256 of publicKey>", "baseUrl": "https://plane-a.example.com", "publicKey": "<base64url DER>" }
+    ],
+    "revokedControlPlaneIds": []
+  },
+  "keyId": "<sha256 of the directory key>",
+  "signature": "<base64url Ed25519 signature>"
 }
 ```
 
-The HTTP `Content-Type` is irrelevant; the response body is explicitly parsed as JSON.
+`SignedControlPlaneDirectoryVerifier` checks the signature over the canonical payload, the timestamps
+(at most 24 h validity), HTTPS origins and that each `controlPlaneId` matches its key.
+`VerifiedControlPlaneDirectoryState` pins the directory key on the first verified snapshot and
+refuses a different key later, rejects version rollbacks and reinstated revoked IDs, and keeps the
+last verified snapshot for offline starts. Removing the directory in Settings forgets the pin. An
+unsigned `{"controlPlanes": [...]}` list is only accepted as a one-time manual import in Settings
+(JSON list).
 
-For local builds, the directory URL is stored in `local.properties` as `controlPlaneDirectoryUrl`. The shared
-module exposes it through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`. Startup/runtime ownership is task based:
-`LoadControlPlaneConfigurationStartupTask` loads the configured source, `RestoreControlPlaneDirectoryStartupTask`
-restores directory state, and `MaintainControlPlaneDirectoryStartupTask`, `MaintainControlPlaneHealthStartupTask`
-and `ObserveControlPlaneRegistrationTargetsStartupTask` keep it synchronized after navigation.
+For local builds, the directory URL is stored in `local.properties` as `CONTROL_PLANE_DIRECTORY_URL`
+(release builds: `CONTROL_PLANE_RELEASE_DIRECTORY_URL`) and exposed as
+`BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`. It is applied only once, on first start, if no directory is
+configured yet. Startup is task based: `LoadControlPlaneConfigurationStartupTask` applies that
+default, `RestoreControlPlaneDirectoryStartupTask` restores the verified cached snapshot, and after
+navigation `MaintainControlPlaneDirectoryStartupTask` refreshes the directory (every 5 minutes, retry
+after 5 s), `MaintainControlPlaneHealthStartupTask` probes the Control Planes and
+`ObserveControlPlaneRegistrationTargetsStartupTask` re-registers the push token when the reachable
+Control Planes change.
 
 ## Read next
 

@@ -41,9 +41,9 @@
     "group": "core",
     "directory": "core/base",
     "buildFile": "core/base/build.gradle.kts",
-    "kotlinSourceFileCount": 25,
-    "productionKotlinFileCount": 17,
-    "testKotlinFileCount": 8,
+    "kotlinSourceFileCount": 31,
+    "productionKotlinFileCount": 21,
+    "testKotlinFileCount": 10,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -62,6 +62,7 @@
       ":feature:conversationorchestration:membership",
       ":feature:conversationorchestration:message",
       ":feature:expenses",
+      ":feature:payment",
       ":feature:voice",
       ":protocol"
     ]
@@ -109,8 +110,8 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 50,
-    "productionKotlinFileCount": 49,
+    "kotlinSourceFileCount": 51,
+    "productionKotlinFileCount": 50,
     "testKotlinFileCount": 1,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -136,6 +137,7 @@
       ":feature:linkpreview",
       ":feature:media",
       ":feature:onboarding",
+      ":feature:payment",
       ":feature:polls",
       ":feature:safety",
       ":feature:search",
@@ -152,8 +154,8 @@
     "group": "core",
     "directory": "core/util",
     "buildFile": "core/util/build.gradle.kts",
-    "kotlinSourceFileCount": 28,
-    "productionKotlinFileCount": 26,
+    "kotlinSourceFileCount": 29,
+    "productionKotlinFileCount": 27,
     "testKotlinFileCount": 2,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -189,6 +191,8 @@
       ":feature:membership",
       ":feature:messaging",
       ":feature:notification",
+      ":feature:ocr",
+      ":feature:payment",
       ":feature:polls",
       ":feature:safety",
       ":feature:search",
@@ -281,6 +285,7 @@
       ":feature:conversationorchestration:groupstate",
       ":feature:conversationorchestration:membership",
       ":feature:embedding",
+      ":feature:expenses",
       ":feature:identity",
       ":feature:membership",
       ":feature:settings",
@@ -435,8 +440,8 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 225,
-    "productionKotlinFileCount": 213,
+    "kotlinSourceFileCount": 226,
+    "productionKotlinFileCount": 214,
     "testKotlinFileCount": 12,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -463,6 +468,7 @@
       ":feature:linkpreview",
       ":feature:media",
       ":feature:membership",
+      ":feature:payment",
       ":feature:polls",
       ":feature:safety",
       ":feature:voice",
@@ -644,8 +650,8 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/groupstate",
     "buildFile": "feature/conversationorchestration/groupstate/build.gradle.kts",
-    "kotlinSourceFileCount": 59,
-    "productionKotlinFileCount": 59,
+    "kotlinSourceFileCount": 61,
+    "productionKotlinFileCount": 61,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -742,8 +748,8 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/membership",
     "buildFile": "feature/conversationorchestration/membership/build.gradle.kts",
-    "kotlinSourceFileCount": 63,
-    "productionKotlinFileCount": 62,
+    "kotlinSourceFileCount": 64,
+    "productionKotlinFileCount": 63,
     "testKotlinFileCount": 1,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -776,8 +782,8 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/message",
     "buildFile": "feature/conversationorchestration/message/build.gradle.kts",
-    "kotlinSourceFileCount": 83,
-    "productionKotlinFileCount": 82,
+    "kotlinSourceFileCount": 84,
+    "productionKotlinFileCount": 83,
     "testKotlinFileCount": 1,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -835,9 +841,9 @@
     "group": "feature",
     "directory": "feature/expenses",
     "buildFile": "feature/expenses/build.gradle.kts",
-    "kotlinSourceFileCount": 61,
-    "productionKotlinFileCount": 51,
-    "testKotlinFileCount": 10,
+    "kotlinSourceFileCount": 79,
+    "productionKotlinFileCount": 66,
+    "testKotlinFileCount": 13,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -847,8 +853,11 @@
       ":core:base",
       ":core:ui",
       ":core:util",
+      ":data:datastore",
       ":feature:avatar",
-      ":feature:media"
+      ":feature:media",
+      ":feature:ocr",
+      ":feature:transport"
     ],
     "dependents": [
       ":feature:chats",
@@ -862,8 +871,8 @@
     "group": "feature",
     "directory": "feature/identity",
     "buildFile": "feature/identity/build.gradle.kts",
-    "kotlinSourceFileCount": 181,
-    "productionKotlinFileCount": 169,
+    "kotlinSourceFileCount": 218,
+    "productionKotlinFileCount": 206,
     "testKotlinFileCount": 12,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -880,6 +889,7 @@
       ":data:database",
       ":data:datastore",
       ":feature:avatar",
+      ":feature:media",
       ":protocol"
     ],
     "dependents": [
@@ -962,9 +972,9 @@
     "group": "feature",
     "directory": "feature/media",
     "buildFile": "feature/media/build.gradle.kts",
-    "kotlinSourceFileCount": 95,
-    "productionKotlinFileCount": 91,
-    "testKotlinFileCount": 4,
+    "kotlinSourceFileCount": 104,
+    "productionKotlinFileCount": 99,
+    "testKotlinFileCount": 5,
     "resourceFileCount": 2,
     "sourceSets": [
       "androidMain",
@@ -982,7 +992,8 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:expenses",
-      ":feature:onboarding",
+      ":feature:identity",
+      ":feature:payment",
       ":feature:polls",
       ":feature:voice",
       ":navigation",
@@ -995,9 +1006,9 @@
     "group": "feature",
     "directory": "feature/membership",
     "buildFile": "feature/membership/build.gradle.kts",
-    "kotlinSourceFileCount": 123,
-    "productionKotlinFileCount": 115,
-    "testKotlinFileCount": 8,
+    "kotlinSourceFileCount": 125,
+    "productionKotlinFileCount": 116,
+    "testKotlinFileCount": 9,
     "resourceFileCount": 0,
     "sourceSets": [
       "androidDeviceTest",
@@ -1082,6 +1093,30 @@
     ]
   },
   {
+    "name": "ocr",
+    "path": ":feature:ocr",
+    "group": "feature",
+    "directory": "feature/ocr",
+    "buildFile": "feature/ocr/build.gradle.kts",
+    "kotlinSourceFileCount": 14,
+    "productionKotlinFileCount": 13,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "androidMain",
+      "commonMain",
+      "commonTest",
+      "iosMain"
+    ],
+    "dependencies": [
+      ":core:util"
+    ],
+    "dependents": [
+      ":feature:expenses",
+      ":shared"
+    ]
+  },
+  {
     "name": "onboarding",
     "path": ":feature:onboarding",
     "group": "feature",
@@ -1098,13 +1133,41 @@
     ],
     "dependencies": [
       ":core:ui",
-      ":feature:identity",
-      ":feature:media"
+      ":feature:identity"
     ],
     "dependents": [
       ":navigation",
       ":shared",
       ":startup"
+    ]
+  },
+  {
+    "name": "payment",
+    "path": ":feature:payment",
+    "group": "feature",
+    "directory": "feature/payment",
+    "buildFile": "feature/payment/build.gradle.kts",
+    "kotlinSourceFileCount": 58,
+    "productionKotlinFileCount": 53,
+    "testKotlinFileCount": 5,
+    "resourceFileCount": 2,
+    "sourceSets": [
+      "androidDeviceTest",
+      "androidMain",
+      "commonMain",
+      "commonTest",
+      "iosMain"
+    ],
+    "dependencies": [
+      ":core:base",
+      ":core:ui",
+      ":core:util",
+      ":feature:media"
+    ],
+    "dependents": [
+      ":feature:chats",
+      ":navigation",
+      ":shared"
     ]
   },
   {
@@ -1253,6 +1316,7 @@
       ":feature:attachments",
       ":feature:contacts",
       ":feature:conversationorchestration:delivery",
+      ":feature:expenses",
       ":feature:linkpreview",
       ":feature:notification",
       ":feature:settings",
@@ -1319,6 +1383,7 @@
       ":feature:membership",
       ":feature:notification",
       ":feature:onboarding",
+      ":feature:payment",
       ":feature:polls",
       ":feature:safety",
       ":feature:search",
@@ -1335,9 +1400,9 @@
     "group": "protocol",
     "directory": "protocol",
     "buildFile": "protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 97,
+    "kotlinSourceFileCount": 98,
     "productionKotlinFileCount": 77,
-    "testKotlinFileCount": 20,
+    "testKotlinFileCount": 21,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -1445,6 +1510,26 @@
     ]
   },
   {
+    "name": "exchange-rates",
+    "path": ":server:exchange-rates",
+    "group": "server",
+    "directory": "server/exchange-rates",
+    "buildFile": "server/exchange-rates/build.gradle.kts",
+    "kotlinSourceFileCount": 3,
+    "productionKotlinFileCount": 2,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "main",
+      "test"
+    ],
+    "dependencies": [
+    ],
+    "dependents": [
+      ":server:gateway"
+    ]
+  },
+  {
     "name": "federation",
     "path": ":server:federation",
     "group": "server",
@@ -1473,15 +1558,16 @@
     "group": "server",
     "directory": "server/gateway",
     "buildFile": "server/gateway/build.gradle.kts",
-    "kotlinSourceFileCount": 24,
+    "kotlinSourceFileCount": 25,
     "productionKotlinFileCount": 19,
-    "testKotlinFileCount": 5,
+    "testKotlinFileCount": 6,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
       "test"
     ],
     "dependencies": [
+      ":server:exchange-rates",
       ":server:link-preview",
       ":server:observability",
       ":server:persistence",
@@ -1615,9 +1701,9 @@
     "group": "server",
     "directory": "server/presence-directory",
     "buildFile": "server/presence-directory/build.gradle.kts",
-    "kotlinSourceFileCount": 8,
-    "productionKotlinFileCount": 6,
-    "testKotlinFileCount": 2,
+    "kotlinSourceFileCount": 13,
+    "productionKotlinFileCount": 9,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -1754,7 +1840,9 @@
       ":feature:membership",
       ":feature:messaging",
       ":feature:notification",
+      ":feature:ocr",
       ":feature:onboarding",
+      ":feature:payment",
       ":feature:polls",
       ":feature:safety",
       ":feature:search",

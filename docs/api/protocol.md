@@ -11,9 +11,9 @@ val parts: List<MessagePartDto>
 val replyToMessageId: String?
 ```
 
-It validates wire message parts with polls allowed and is encoded with `sparrow-group-message-v2:`. Legacy group plaintext is decoded as a text part for compatibility.
+It validates wire message parts with polls and expense/payment parts allowed (each as a standalone part) and is encoded with `sparrow-group-message-v2:`. Legacy group plaintext is decoded as a text part for compatibility.
 
-The shared serialized part hierarchy includes `TEXT`, `IMAGE`, `VIDEO`, `FILE`, `VOICE`, `LOCATION`, `CONTACT` and `POLL`. Binary parts carry `EncryptedBlobReferenceDto`; raw bytes are transferred through the blob service rather than embedded in packets. Poll structured fields are serialized in `PollDto`, including nested image descriptors.
+The shared serialized part hierarchy includes `TEXT`, `IMAGE`, `VIDEO`, `FILE`, `VOICE`, `LOCATION`, `CONTACT`, `POLL`, the group-expense parts `EXPENSE_BOARD`, `EXPENSE`, `EXPENSE_BOARD_CLOSED` and the settle-up part `PAYMENT_TRANSFER`. Binary parts carry `EncryptedBlobReferenceDto`; raw bytes are transferred through the blob service rather than embedded in packets. Poll structured fields are serialized in `PollDto`, including nested image descriptors.
 
 ## Operations on existing messages
 

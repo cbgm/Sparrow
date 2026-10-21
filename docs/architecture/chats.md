@@ -29,7 +29,7 @@ The canonical content hierarchy is in `:core:base`:
 MessagePartDto -> MessagePart -> MessagePartUi
 ```
 
-`GroupMessageContent` serializes `List<MessagePartDto>` and allows polls. `GroupMessageContentCodec` uses the `sparrow-group-message-v2:` prefix and can decode legacy plaintext into a synthetic text part.
+`GroupMessageContent` serializes `List<MessagePartDto>` and allows polls and expense/payment parts. `GroupMessageContentCodec` uses the `sparrow-group-message-v2:` prefix and can decode legacy plaintext into a synthetic text part.
 
 `:feature:attachments` persists blob-backed parts and structured payloads; Chats presents conversations/messages rather than redefining content models.
 

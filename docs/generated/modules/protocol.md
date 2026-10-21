@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `protocol` |
 | Directory | `protocol` |
 | Build file | `protocol/build.gradle.kts` |
-| Kotlin files | 97 |
+| Kotlin files | 98 |
 | Production Kotlin files | 77 |
-| Test Kotlin files | 20 |
+| Test Kotlin files | 21 |
 | Resource files | 1 |
 | Direct dependencies | 3 |
 | Direct dependents | 19 |

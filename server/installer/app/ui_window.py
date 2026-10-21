@@ -37,6 +37,7 @@ COLORS = {
     "idle": "#647282",
 }
 HIDDEN = subprocess.CREATE_NO_WINDOW if WINDOWS else 0
+OUTPUT_DRAIN_SECONDS = 2
 
 
 def pick_family(root: tk.Tk, *candidates: str) -> str:
@@ -257,13 +258,23 @@ class EngineWindow:
         threading.Thread(target=self.read_output, args=(self.process, ), daemon=True).start()
 
     def read_output(self, process: subprocess.Popen) -> None:
+        reader = threading.Thread(target=self.forward_output, args=(process, ), daemon=True)
+        reader.start()
+        code = process.wait()
+        # A program the engine started (e.g. a Docker helper on Windows) can keep the output open
+        # after the engine has exited. The operation ends with the engine, after its last lines.
+        reader.join(timeout=OUTPUT_DRAIN_SECONDS)
+        self.output.put(("done", code))
+
+    def forward_output(self, process: subprocess.Popen) -> None:
         for raw in iter(process.stdout.readline, b""):
+            if process is not self.process:
+                return  # output of a finished operation must not reach the next one
             try:
                 text = raw.decode("utf-8")
             except UnicodeDecodeError:
                 text = raw.decode("cp850" if WINDOWS else "latin-1", errors="replace")
             self.output.put(text.replace("\r\n", "\n"))
-        self.output.put(("done", process.wait()))
 
     def pump(self) -> None:
         try:

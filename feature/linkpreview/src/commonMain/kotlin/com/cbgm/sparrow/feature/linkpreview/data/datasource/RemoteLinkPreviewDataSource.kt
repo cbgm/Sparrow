@@ -17,7 +17,9 @@ class RemoteLinkPreviewDataSource(
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) {
     suspend fun getPreview(url: String): LinkPreviewDto {
-        val nodeBaseUrl = currentNodeBaseUrl()
+        val nodeBaseUrl =
+            transportDiagnosticsProvider.diagnostics.value.currentNodeBaseUrl
+                ?: error("No connected node is available")
         val preview =
             httpClient
                 .post("$nodeBaseUrl/v1/link-preview") {
@@ -39,21 +41,6 @@ class RemoteLinkPreviewDataSource(
                 ?.takeIf { bytes -> bytes.size <= MAX_LINK_PREVIEW_IMAGE_BYTES }
 
         return preview.copy(imageBytes = imageBytes)
-    }
-
-    private fun currentNodeBaseUrl(): String {
-        val websocketUrl =
-            transportDiagnosticsProvider.diagnostics.value.currentWebSocketUrl
-                ?: error("No connected node is available")
-
-        val httpUrl =
-            when {
-                websocketUrl.startsWith("wss://") -> "https://${websocketUrl.removePrefix("wss://")}"
-                websocketUrl.startsWith("ws://") -> "http://${websocketUrl.removePrefix("ws://")}"
-                else -> error("Unsupported gateway WebSocket URL: $websocketUrl")
-            }
-
-        return httpUrl.substringBefore("/v1/gateway").trimEnd('/')
     }
 }
 

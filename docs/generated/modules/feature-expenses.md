@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/expenses` |
 | Build file | `feature/expenses/build.gradle.kts` |
-| Kotlin files | 61 |
-| Production Kotlin files | 51 |
-| Test Kotlin files | 10 |
+| Kotlin files | 79 |
+| Production Kotlin files | 66 |
+| Test Kotlin files | 13 |
 | Resource files | 0 |
-| Direct dependencies | 5 |
+| Direct dependencies | 8 |
 | Direct dependents | 3 |
 
 ## Source sets
@@ -27,8 +27,11 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:core:base`](../modules/core-base.md)
 - [`:core:ui`](../modules/core-ui.md)
 - [`:core:util`](../modules/core-util.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 - [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:media`](../modules/feature-media.md)
+- [`:feature:ocr`](../modules/feature-ocr.md)
+- [`:feature:transport`](../modules/feature-transport.md)
 
 ## Dependents
 

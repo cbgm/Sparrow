@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/chats` |
 | Build file | `feature/chats/build.gradle.kts` |
-| Kotlin files | 225 |
-| Production Kotlin files | 213 |
+| Kotlin files | 226 |
+| Production Kotlin files | 214 |
 | Test Kotlin files | 12 |
 | Resource files | 1 |
-| Direct dependencies | 22 |
+| Direct dependencies | 23 |
 | Direct dependents | 3 |
 
 ## Source sets
@@ -43,6 +43,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:linkpreview`](../modules/feature-linkpreview.md)
 - [`:feature:media`](../modules/feature-media.md)
 - [`:feature:membership`](../modules/feature-membership.md)
+- [`:feature:payment`](../modules/feature-payment.md)
 - [`:feature:polls`](../modules/feature-polls.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:voice`](../modules/feature-voice.md)

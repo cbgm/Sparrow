@@ -1,6 +1,6 @@
 # Module types
 
-The current `settings.gradle.kts` declares 55 modules.
+The current `settings.gradle.kts` declares 58 modules.
 
 ## Application shell
 
@@ -20,7 +20,7 @@ The current `settings.gradle.kts` declares 55 modules.
 
 ## Data
 
-- `:data:database` — Room schema v54, DAOs/entities/migrations/outbox persistence.
+- `:data:database` — Room schema v55, DAOs/entities/migrations/outbox persistence.
 - `:data:datastore` — settings/key-value persistence.
 
 ## Feature modules
@@ -46,8 +46,11 @@ The current `settings.gradle.kts` declares 55 modules.
 - `:feature:membership` — group membership/security/admin lifecycle.
 - `:feature:attachments` — encrypted attachment/blob transfer/cache/storage.
 - `:feature:media` — gallery/camera/file selection/viewers/export.
+- `:feature:ocr` — on-device text recognition and receipt parsing for expense scanning.
 - `:feature:voice` — voice record/playback/transcription.
 - `:feature:polls` — poll creation and presentation.
+- `:feature:expenses` — group expense creation, splits, balances, settlements and exchange rates.
+- `:feature:payment` — settle-up payments: stored bank details and SEPA payment QR codes.
 - `:feature:messaging` — durable outbox/incoming-envelope execution.
 - `:feature:transport` — discovery/WebSocket/presence/mailbox/push transport.
 - `:feature:onboarding` — onboarding.
@@ -58,7 +61,7 @@ The current `settings.gradle.kts` declares 55 modules.
 
 ## Server modules
 
-`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview`.
+`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview`, `:server:exchange-rates`.
 
 ## Quality
 

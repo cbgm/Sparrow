@@ -85,6 +85,9 @@ server/scripts/Backup-Sparrow.ps1
 server/scripts/Restore-SparrowBackup.ps1
 ```
 
+For an installation created by the server installer, the Windows offline snapshot script is
+`app/Backup-SparrowDeployment.ps1` in the installation folder (see `server/installer/README.md`).
+
 ## Troubleshooting sequence
 
 1. Open deployment `/index`.
@@ -96,6 +99,13 @@ server/scripts/Restore-SparrowBackup.ps1
 7. For Community Node registration, verify the directory URL and `/v1/control-planes`.
 8. For attachment failures, inspect gateway blob/ticket logs, blob volume capacity and configured size/retention values.
 9. For client disconnects, inspect gateway health and Android transport logs.
+10. For a sign-up whose route registration is rejected with `PHONE_VERIFICATION_FAILED`, check the
+    `presence-directory` logs and that the Firebase Admin service account has Firebase Authentication access to
+    the project in `FIREBASE_TARGET_PROJECT_ID`. Without credentials, tokens are not checked at all.
+11. For a public installation with automatic sslip.io hostnames that became unreachable after the internet
+    provider changed the public IP, run **Start / apply settings** in the installer: it moves the generated
+    names to the new IP (previous settings in `backups/public-ip-*`). Custom DNS names must be updated at your
+    DNS provider.
 
 ## Caddy 502 errors
 

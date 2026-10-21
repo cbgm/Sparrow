@@ -2,7 +2,7 @@
 
 ## One shared message-part hierarchy
 
-Message content is represented by `MessagePartDto` -> `MessagePart` -> `MessagePartUi` under `:core:base`. Image, video, file, voice, location, contact and poll are concrete variants of the same hierarchy.
+Message content is represented by `MessagePartDto` -> `MessagePart` -> `MessagePartUi` under `:core:base`. Image, video, file, voice, location, contact, poll, the group-expense parts and the payment transfer are concrete variants of the same hierarchy.
 
 Reason: chat, attachments, voice, polls, pinned messages and protocol serialization need the same content semantics; parallel feature-owned hierarchies caused duplicate mapping and nullable/type-field workarounds.
 

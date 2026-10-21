@@ -11,7 +11,10 @@ The design aims to protect against:
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
 - offline-message storage that requires server plaintext;
-- accidental persistence of client private keys in plaintext Android preferences.
+- accidental persistence of client private keys in plaintext Android preferences;
+- advertising a phone alias with a phone verification token for a different number (the one-time
+  token from sign-up must match the alias when the presence directory has a verifier
+  configured).
 
 ## Infrastructure can still observe metadata
 
@@ -23,6 +26,13 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - node connection counts/load;
 - encrypted envelope sizes;
 - encrypted attachment/blob sizes and blob-transfer timing.
+
+Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase
+processes the phone number and sends the SMS. A registration without a token is still accepted,
+so phone verification is not a guarantee that every advertised alias was verified.
+
+Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
+provider (Frankfurter by default) sees the node's address once a day, never a user's.
 
 Sparrow is not documented as an anonymity network.
 

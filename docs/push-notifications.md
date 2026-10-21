@@ -61,6 +61,8 @@ Legacy/compatibility pending-envelope behavior can exist for clients that do not
 
 The Control Plane push service needs Firebase Admin credentials for real FCM delivery. Without them, local server health may still run depending on configuration, but real Android background wake-ups will not work.
 
+Operators select the service-account JSON in the server installer (**Push notifications and phone verification**, or `--firebase-file` on the command line); `server/control-plane/docker-compose.firebase.yml` mounts it read-only into `push`. The same file is mounted into `presence-directory`, which uses it to check the optional phone verification token sent at sign-up (see [Control Plane](server/control-plane.md)). The account therefore needs Firebase Cloud Messaging and Firebase Authentication access to the app's Firebase project (`FIREBASE_TARGET_PROJECT_ID`, default `sparrow-a9048`).
+
 Do not commit `firebase-admin.json` or other production credentials.
 
 ### Android Firebase app after the Sparrow rebrand

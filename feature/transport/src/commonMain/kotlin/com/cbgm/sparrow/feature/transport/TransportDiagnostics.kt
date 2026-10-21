@@ -33,7 +33,20 @@ data class TransportDiagnostics(
     val lastDisconnectReason: String? = null,
     val lastFailedNodeId: String? = null,
     val failoverCount: Int = 0
-)
+) {
+    /** HTTP base URL of the connected node: its WebSocket URL without the gateway path. */
+    val currentNodeBaseUrl: String?
+        get() {
+            val websocketUrl = currentWebSocketUrl ?: return null
+            val httpUrl =
+                when {
+                    websocketUrl.startsWith("wss://") -> "https://" + websocketUrl.removePrefix("wss://")
+                    websocketUrl.startsWith("ws://") -> "http://" + websocketUrl.removePrefix("ws://")
+                    else -> return null
+                }
+            return httpUrl.substringBefore("/v1/gateway").trimEnd('/')
+        }
+}
 
 interface TransportDiagnosticsProvider {
     val diagnostics: StateFlow<TransportDiagnostics>

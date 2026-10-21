@@ -15,6 +15,7 @@ flowchart LR
     P --> REDIS[(Redis)]
     U --> UDB[(PostgreSQL)]
     U --> FCM[Firebase Cloud Messaging]
+    P -. optional token check .-> FA[Firebase Authentication]
 ```
 
 Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis`, `presence-directory`, `push-database`, and `push`.
@@ -31,6 +32,10 @@ The registry signing path matters because Sparrow does not treat an arbitrary li
 
 Presence is intentionally short-lived routing state. Redis is used for state that can be reconstructed as nodes/clients reconnect; it is not the authoritative store for conversations or messages.
 
+Phone verification is optional per registration. The app verifies the user's phone number once at sign-up (Firebase SMS) and sends the resulting Firebase ID token only with its first route registration (`ClientRouteRegistration.phoneVerificationToken`). `PhoneVerification` accepts a registration without a token; a present token is checked by `FirebasePhoneTokenVerifier` (cached per token until it expires by `CachingPhoneTokenVerifier`) and must be a phone sign-in whose number, as `ClientRoutingIds.fromPhoneNumber`, equals every advertised phone alias. A blank or failing token is answered with `403 PHONE_VERIFICATION_FAILED`. The token is removed before the route is stored. There is no setting that requires verified phone numbers.
+
+The verifier is enabled when `GOOGLE_APPLICATION_CREDENTIALS` points at a Firebase Admin service-account JSON; `docker-compose.firebase.yml` mounts the same `firebase-admin.json` secret as for `push`. `FIREBASE_TARGET_PROJECT_ID` selects the Firebase project (default `sparrow-a9048`). Without credentials, tokens are not checked and all registrations are accepted.
+
 ### `:server:push`
 
 The push service stores the registration state required for wake-ups and coordinates Android FCM notification delivery. Important types include `PushCoordinator` and `FirebasePushSender`. Push wakes a client so it can fetch encrypted mailbox traffic; it is not a plaintext message-delivery channel.
@@ -45,25 +50,23 @@ Do not confuse a Control Plane with `server/control-plane-directory`.
 
 See [Server runtime, build and deployment](runtime-build-deployment.md#independent-control-plane-directory-operator-only).
 
-## Unified server manager
+## Server installer
 
-The current operator entry point is the unified tooling under `server/installer`, not the older separate Control-Plane launcher flow.
+The current operator entry point is the installer under `server/installer`, not the older separate Control-Plane launcher flow. It always installs the Control Plane together with a Community Node (Combined).
 
-Windows source checkout:
+`Start-SparrowServer.cmd` (Windows), `Start-SparrowServer.command` (macOS) or `./Start-SparrowServer.sh` (Linux) opens the same installer window on all three systems (Python 3.9+ with Tk; a text menu without a desktop). Started from a source checkout it first creates an installation folder (`build.py --install`) and opens there. In the installation folder use **Install**, later **Start / apply settings**.
 
 ```text
 python3 server/installer/build.py
 ```
 
-builds `dist/sparrow-server.zip`. Inside the unified runtime, `Start-SparrowServer.cmd` opens the Windows manager. Choose **Control Plane** or **Combined**, then use **Install / Start**.
-
-Linux/macOS use the corresponding `Start-SparrowServer.sh` / `Start-SparrowServer.command` CLI flow. A developer can also run the Compose file directly from source.
+builds `dist/sparrow-server.zip` for distribution. A developer can also run the Compose file directly from source.
 
 ## LAN and public deployment
 
 In LAN mode the Control Plane Caddy edge is normally exposed on port `8390`. `/index` is the operator-friendly entry page and links to registry/presence/push health and node information.
 
-Public mode uses Caddy/TLS and a public hostname. In a unified Combined installation, Control Plane and Community Node remain separate Compose projects; an optional shared public-edge Caddy routes their distinct hostnames.
+Public mode uses Caddy/TLS and a public hostname. In a Combined installation, Control Plane and Community Node remain separate Compose projects; an optional shared public-edge Caddy routes their distinct hostnames.
 
 ## State that must survive upgrades
 
@@ -74,9 +77,9 @@ A valuable deployment must preserve at least:
 - Redis configuration/state as appropriate for the deployment;
 - generated runtime secrets;
 - Caddy/TLS state when used;
-- `.env.runtime` and the runtime ownership information used by the unified manager.
+- `.env.runtime` and the runtime ownership information used by the installer.
 
-`Install / Start` on an intact existing unified runtime updates selected Sparrow backend images in place and is deliberately designed not to recreate stateful stores or identities as a normal update mechanism. Backups are still required before meaningful upgrades because database migrations can be incompatible.
+**Start / apply settings** on an intact existing installation updates selected Sparrow backend images in place and is deliberately designed not to recreate stateful stores or identities as a normal update mechanism. Backups are still required before meaningful upgrades because database migrations can be incompatible.
 
 ## Running directly from source
 
@@ -86,4 +89,4 @@ For development:
 docker compose -f server/control-plane/docker-compose.yml up -d --build
 ```
 
-Use `docker compose ... ps` and `logs` to inspect startup. Real Firebase push delivery additionally requires correctly authorized service-account credentials; without them the rest of the stack can still be developed/tested but real FCM delivery is unavailable.
+Use `docker compose ... ps` and `logs` to inspect startup. Real Firebase push delivery and phone token verification additionally require correctly authorized service-account credentials (add `-f server/control-plane/docker-compose.firebase.yml` with `FIREBASE_ADMIN_CREDENTIALS` set to the JSON file); without them the rest of the stack can still be developed/tested, real FCM delivery is unavailable and phone tokens are not checked.

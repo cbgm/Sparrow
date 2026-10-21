@@ -36,6 +36,17 @@ Uploads require a short-lived bearer permit first requested over the authenticat
 
 The server stores opaque encrypted bytes; attachment payload decryption/meaning stays on the client. Blob size, retention/storage limits and cleanup are enforced by the gateway runtime.
 
+## Exchange rates
+
+```text
+GET /v1/exchange-rates
+```
+
+Returns the euro reference rates as a JSON list in the Frankfurter format
+(`[{"date": "...", "base": "EUR", "quote": "USD", "rate": 1.08}, ...]`), cached by the node for 24 hours
+(`Cache-Control: public, max-age=3600`). `502` means the node has no rates yet and its upstream
+(`EXCHANGE_RATES_URL`) failed. See [Community Node](../server/community-node.md#exchange-rates).
+
 ## Internal delivery
 
 The gateway also participates in node-internal delivery from federation. Those endpoints are authenticated internal APIs and are not public client APIs.

@@ -9,7 +9,7 @@ import sys
 
 from manager_core import (ROOT, SOURCE_TREE, WINDOWS, create_command, default_server_folder,
                           find_existing_installation, move_command, addresses, describe, engine_command, installed, load_settings,
-                          local_build_tag, node_command, save_preferences, server_state, update_command,
+                          local_build_tag, main_node, node_command, save_preferences, server_state, update_command,
                           version_text)
 
 # ------------------------------------------------------------------ terminal
@@ -108,7 +108,8 @@ def menu(settings: dict) -> str:
     start = "Start / apply settings" if installed() else "Install"
     entries = [("1", start), ("2", "Stop"), ("3", "Status (details)"), ("4", "Logs"), ("5", "Settings"),
                ("6", "Update to latest release"), ("7", "Build from source"),
-               ("8", "Apply ZIP / move an existing server here"), ("9", "Community Nodes"),
+               ("8", "Apply ZIP / move an existing server here"),
+               ("9", "Community Nodes (added nodes, or Community Node only)"),
                ("0", "Reinstall from scratch (deletes all data)"), ("q", "Quit")]
     for key, label in entries:
         text = bad(label) if key == "0" else label
@@ -222,6 +223,9 @@ def nodes() -> None:
     while True:
         header({})
         print(bold(" Community Nodes") + dim("  (additional independent nodes)"))
+        main = main_node()
+        if main is not None:
+            print("\t".join(main) + dim("   (start, stop and update it in the main menu)"))
         run(node_command("list"))
         print()
         entries = [("1", "Add a node"), ("2", "Install / start / stop / update / status / logs / remove a node"), ("b", "Back")]
@@ -239,7 +243,14 @@ def nodes() -> None:
                     arguments.append("--auto-dns")
                 else:
                     arguments += ["--node-domain", ask("Hostname")]
-            plane = ask("Control Plane URL (empty = this installation)")
+            if installed():
+                plane = ask("Control Plane URL (empty = this installation)")
+            else:
+                # Community Node only: the node connects to an existing Control Plane.
+                plane = ask("Control Plane URL")
+                if not plane:
+                    print(warn("A Community Node only needs the address of its Control Plane.")); pause()
+                    continue
             if plane:
                 arguments += ["--control-plane-url", plane]
             finish(run(node_command(*arguments)), "Node added. Install it next.")

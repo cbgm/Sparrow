@@ -38,6 +38,22 @@ Compose services are `caddy`, `mailbox-database`, `mailbox`, `federation-databas
 
 The gateway sees routing metadata/envelopes but application payloads remain end-to-end encrypted by the client protocol. Attachment storage contains encrypted blob bytes rather than decoded media.
 
+## Exchange rates
+
+The gateway also serves `GET /v1/exchange-rates` for currency conversion in group expenses
+(`:server:exchange-rates`, `installExchangeRateRoutes()`, `ExchangeRateCache`). It fetches the euro
+reference rates from `EXCHANGE_RATES_URL` (default
+`https://api.frankfurter.dev/v2/rates?base=EUR`), checks that the answer is a JSON list, keeps it
+for 24 hours for all clients and passes it through unchanged. When the upstream fails, the last
+rates stay in use; without any rates the route answers `502`. The upstream therefore sees only the
+node, never the apps.
+
+Another source must answer in the same Frankfurter format, for example a self-hosted Frankfurter
+instance. Fill in the empty `EXCHANGE_RATES_URL=` line in the node's `.env.runtime` and recreate the
+gateway: Start for `community-node/.env.runtime`, **Update** under **Nodes...** for a managed node in
+`node-instances/<id>/`. The installer writes the empty line for new nodes and Start adds it to an
+existing main node. An empty value uses the default.
+
 ## Federation
 
 `:server:federation` handles routing between Community Nodes. Important classes include `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeQueue`, `OutboundEnvelopeRetryAgent`, `NodeRegistrationAgent`, `CachingNodeRegistryClient`, `HttpPresenceDirectoryClient`, `HttpLocalGatewayClient`, `HttpRemoteFederationClient`, and `HttpMailboxClient`.
@@ -54,13 +70,13 @@ At the client, mailbox fetch ultimately enters the same incoming-envelope proces
 
 Caddy routes `/v1/blobs/*` to the gateway. Uploads require short-lived upload authorization/tickets; downloads and deletion are capability-based. The persistent gateway blob volume stores encrypted bytes plus server-side metadata required for size, expiration and capability enforcement. `BlobCleanupAgent` removes expired data.
 
-## Unified multi-node management
+## Multi-node management
 
-The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. On Windows `Start-SparrowServer.cmd` can open **Community Node only — manage instances**. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
+The current public operator bundle is `dist/sparrow-server.zip`, generated from `server/installer`. In the installer window (Windows, macOS, Linux) **What to install** offers **Community Node only** for a machine whose nodes connect to an existing Control Plane, and **Nodes...** opens the manager for additional Community Node instances, listing the main node of a Combined installation first. Each node instance receives a distinct Compose project, node signing identity, secrets/cache and named volumes; multiple nodes are not simulated as unrelated identities inside one container.
 
 Node-only installs use an existing Control Plane directly or, in the advanced flow, a signed independent Control Plane Directory with a separately trusted/pinned key. They do not install a hidden Control Plane.
 
-Linux/macOS have equivalent commands through `Start-SparrowServer.sh` (`nodes --help` for node-instance management).
+On the command line, Linux/macOS use `Start-SparrowServer.sh nodes --help` (`app/Manage-SparrowNodes.py` on every system). With automatic sslip.io hostnames, managed nodes follow a changed public IP on the next **Start / apply settings** like the Combined installation.
 
 ## LAN/public endpoints
 

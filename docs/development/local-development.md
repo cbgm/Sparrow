@@ -4,22 +4,24 @@ This guide follows the **current** repository topology. For normal end-to-end te
 
 ## 1. Configure client discovery
 
-Repository-root `local.properties` can provide the build-time directory endpoints used by common KMP code. Keep the normal Android SDK entry as well.
+Repository-root `local.properties` can provide the build-time signed directory used by common KMP code (debug and release builds respectively). Keep the normal Android SDK entry as well. The value is an HTTPS origin without a path; the app fetches `/.well-known/sparrow-directory` and `/v1/control-planes` itself. It is applied only on first start when no directory is configured yet.
 
 ```properties
-CONTROL_PLANE_DIRECTORY_URL=https://<directory-host>/v1/control-planes
-CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://<release-directory-host>/v1/control-planes
+CONTROL_PLANE_DIRECTORY_URL=https://<directory-host>
+CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://<release-directory-host>
 ```
 
 The production discovery model is signed; do not model a new deployment as an unsigned hardcoded list of arbitrary nodes.
 
 ### Phone verification in debug builds
 
-Sign-up verifies the phone number once by SMS (Firebase). Debug builds show a **Skip** button in
-the verification dialog. With `DEBUG_SMS_CODE` set, debug builds use the Firebase test mode: add
-the number as a test phone number with this code in the Firebase console (Authentication → Sign-in
-method → Phone); the app check is skipped and the code is filled in automatically. Release builds
-ignore both.
+Sign-up verifies the phone number once by SMS (Firebase). Debug builds show a **Skip (debug)**
+button in the verification dialog. With `DEBUG_SMS_CODE` set, debug builds use the Firebase test
+mode: add the number as a test phone number with this code in the Firebase console (Authentication
+→ Sign-in method → Phone); the app check is skipped, the code is filled in automatically and also
+shown as a "Sparrow (test SMS)" notification. Release builds ignore both. The resulting one-time
+token is sent only with the first route registration (see
+[Transport](../features/transport.md#phone-verification-token-at-sign-up)).
 
 ```properties
 DEBUG_SMS_CODE=123456
@@ -41,13 +43,24 @@ macOS/Linux:
 
 Android Studio can run the `androidApp` target directly.
 
-## 3. Preferred server path: unified manager
+## 3. Preferred server path: unified installer
 
-The active release/runtime tooling is `server/installer`.
+The active release/runtime tooling is `server/installer`. The installer window (Tk) is the same on
+Windows, macOS and Linux and needs Python 3.9+ (most Linux desktops also need `python3-tk`).
+Without a desktop, for example over SSH, the same options appear as a text menu.
 
-### Build a local unified bundle on Windows
+### Start the installer directly from source
 
-From the repository root:
+From the repository, start `server/installer/Start-SparrowServer.cmd` (Windows),
+`Start-SparrowServer.command` (macOS) or `./Start-SparrowServer.sh` (Linux). In the source tree the
+window first asks for a server folder (default `~/Sparrow Server`), creates it with
+`build.py --install` (using the published server images) and opens the installer there. The
+server's data lives in that folder. When a Sparrow server is already running from another folder,
+the installer offers to move it (data, identities and settings are kept).
+
+### Build a local unified bundle
+
+From the repository root (Windows, macOS or Linux):
 
 ```text
 python3 server/installer/build.py
@@ -59,13 +72,10 @@ This builds:
 dist/sparrow-server.zip
 ```
 
-Extract that ZIP into a dedicated runtime directory. On Windows run:
+Extract that ZIP into a dedicated runtime directory and start `Start-SparrowServer.cmd`,
+`Start-SparrowServer.command` or `Start-SparrowServer.sh` there.
 
-```text
-Start-SparrowServer.cmd
-```
-
-The GUI can manage:
+The installer can manage:
 
 - **Control Plane only**;
 - **Community Node only** (including multiple independent node instances);
@@ -73,9 +83,9 @@ The GUI can manage:
 
 The default fresh operator setup is Combined + LAN. **Install / Start** creates the normal generated runtime configuration, secrets, identities and named Docker volumes. On an existing intact runtime it validates ownership and updates selected backend images without intentionally rebuilding persistent identities/state.
 
-### Linux/macOS unified CLI
+### Command line
 
-The bundle provides `Start-SparrowServer.sh` and the macOS launcher `Start-SparrowServer.command`. Use the CLI help for exact commands; `install` is the equivalent of Windows **Install / Start**, while `start` is the no-pull lifecycle command. Node-only multi-instance management is available through the `nodes` command group.
+Every action can also be run from the command line with `Start-SparrowServer.sh` (Linux/macOS). Use the CLI help for exact commands; `install` is the equivalent of **Install / Start**, while `start` is the no-pull lifecycle command. Node-only multi-instance management is available through the `nodes` command group.
 
 ## 4. Development directly from Compose
 
@@ -137,7 +147,7 @@ The Control Plane handles discovery/presence/push. Community Nodes handle client
 
 `server/control-plane-directory` is a **separate operator-only service**, not something every developer/node must install and not part of the public `sparrow-server.zip`.
 
-Use it only when testing the signed multi-Control-Plane discovery/registration layer itself. Its source includes private installer/admin tooling and persistent signing state. A public client should consume only its public signed endpoints, never its admin listener/token.
+Use it only when testing the signed multi-Control-Plane discovery/registration layer itself. Its source includes private installer/admin tooling and persistent signing state. Its own installer window (`Start-SparrowDirectory.cmd` / `.command` / `.sh`) creates a separate Directory folder via `Build-SparrowDirectoryInstaller.py --install`; it uses the Sparrow Server's proxy when one runs on the machine, otherwise its own proxy on ports 80/443. A public client should consume only its public signed endpoints, never its admin listener/token.
 
 For ordinary local testing, a Combined unified installation can use its local Control Plane directly; a Node-only installation can be configured against an existing Control Plane. The signed independent directory is an optional advanced path.
 

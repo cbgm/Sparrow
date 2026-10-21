@@ -65,17 +65,25 @@ Key classes:
 Stores short-lived routing information mapping a client routing ID to its current node/connection. Redis is used
 because presence is ephemeral and should be rebuilt by reconnecting clients.
 
+It also checks the optional phone verification of a route registration. The app sends a one-time Firebase ID
+token only with its first route registration at sign-up. When Firebase Admin credentials are configured
+(`GOOGLE_APPLICATION_CREDENTIALS`), a present token must be a valid Firebase phone sign-in whose number matches
+every advertised phone alias, otherwise the registration is rejected with `PHONE_VERIFICATION_FAILED`.
+Registrations without a token, or without configured credentials, are accepted; nothing about the verification is
+stored.
+
 Key classes:
 
 - `PresenceRuntime`
 - `installPresenceRoutes()`
 - `RedisPresenceStore`
 - `NodeRequestAuthorizer`
+- `PhoneVerification`, `FirebasePhoneTokenVerifier`, `CachingPhoneTokenVerifier`
 
 ### `push`
 
 Stores Android device registrations and wake-up/pending fallback information. It integrates with Firebase Admin
-when credentials are configured.
+when credentials are configured (the same service account as phone verification).
 
 Key classes:
 
@@ -156,8 +164,10 @@ classDiagram
     class PostgresNodeRegistryStore
     class PresenceRuntime
     class NodeRequestAuthorizer
-    class PresenceStore
+    class PresenceStorage
     class RedisPresenceStore
+    class PhoneVerification
+    class FirebasePhoneTokenVerifier
     class PushRuntime
     class PushCoordinator
     class PostgresPushDeviceStore
@@ -168,8 +178,10 @@ classDiagram
     RegistrySigningRuntime --> RegistryDirectorySigner
     NodeRegistryStore <|.. PostgresNodeRegistryStore
     PresenceRuntime --> NodeRequestAuthorizer
-    PresenceRuntime --> PresenceStore
-    PresenceStore <|.. RedisPresenceStore
+    PresenceRuntime --> PresenceStorage
+    PresenceStorage <|.. RedisPresenceStore
+    PresenceRuntime --> PhoneVerification
+    PhoneVerification --> FirebasePhoneTokenVerifier : optional
     PushRuntime --> PushCoordinator
     PushCoordinator --> PostgresPushDeviceStore
     PushCoordinator --> PostgresPendingEnvelopeStore
@@ -214,6 +226,10 @@ The diagrams show responsibility/usage relationships, not every constructor para
 
 ## Link preview service
 
-`:server:link-preview` is a separate Ktor service for metadata/image preview fetching. Key classes are `LinkPreviewService`, `LinkPreviewFetcher`, `LinkPreviewHtmlParser` and `LinkPreviewUrlValidator`. It is intentionally separate from the encrypted message-routing services.
+`:server:link-preview` is a separate module for metadata/image preview fetching, mounted in the gateway by `installLinkPreviewRoutes()`. Key classes are `LinkPreviewService`, `LinkPreviewFetcher`, `LinkPreviewHtmlParser` and `LinkPreviewUrlValidator`. It is intentionally separate from the encrypted message-routing code.
 
-For exact Compose topology, unified installer scripts, update semantics and bundle building, see [Server runtime, build and deployment](runtime-build-deployment.md).
+## Exchange rate service
+
+`:server:exchange-rates` serves the exchange rates for group expenses from the gateway (`installExchangeRateRoutes()`, `ExchangeRateCache`): one cached upstream request per day for all clients, configurable with `EXCHANGE_RATES_URL`. See [Community Node](community-node.md#exchange-rates).
+
+For exact Compose topology, installer scripts, update semantics and bundle building, see [Server runtime, build and deployment](runtime-build-deployment.md).

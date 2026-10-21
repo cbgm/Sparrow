@@ -80,6 +80,12 @@ Explicit recovery/reconnection is documented separately in [Identity recovery](i
 
 When direct online routing is unavailable or policy selects mailbox delivery, `OutgoingPacketSender` uses the recipient mailbox route/capability resolved by orchestration/transport. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `HttpMailboxGateway`.
 
+`MailboxRouteProvisioner` decides from the freshly verified, signed node directory, never from a socket failure:
+
+- **Moved node:** a node keeps its node ID when its address changes (for example a new public IP). Saved mailbox credentials whose node ID is in the directory under a new address switch to the node's new mailbox access endpoint. A mailbox whose delivery route still points to the old address is renewed and the new route is shared with the contact (`MailboxRoutePacket`), because contacts keep delivering to the old address until then.
+- **Retired node:** a node ID that is missing from the verified directory means the old mailbox is gone; a replacement is saved without revoking the old one.
+- **Unreachable node:** `DefaultMailboxCapabilityLifecycle.revokeForContact` deletes the remote route and marks the local mailbox revocation pending. If the node cannot be reached (recoverable connectivity failure), the revocation stays pending instead of failing the caller (for example approving an identity change); provisioning retries pending revocations later.
+
 The server `mailbox` service stores opaque encrypted envelopes behind recipient-selected capabilities. Push is a wake-up path, not decryption/interpretation by the server.
 
 ## Delivery/read receipts

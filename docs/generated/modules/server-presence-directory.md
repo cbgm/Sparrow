@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/presence-directory` |
 | Build file | `server/presence-directory/build.gradle.kts` |
-| Kotlin files | 8 |
-| Production Kotlin files | 6 |
-| Test Kotlin files | 2 |
+| Kotlin files | 13 |
+| Production Kotlin files | 9 |
+| Test Kotlin files | 4 |
 | Resource files | 0 |
 | Direct dependencies | 4 |
 | Direct dependents | 0 |

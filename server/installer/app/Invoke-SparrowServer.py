@@ -120,9 +120,9 @@ def enable_firebase_credentials(source_file):
     try:
         update_installed_properties(runtime_file, {"FIREBASE_ADMIN_CREDENTIALS": str(destination)})
         dc("control-plane", "config", "--quiet")
-        # Apply optional Compose secret to the push container only. Normal
-        # backend update may recreate push again, but volumes remain intact.
-        dc("control-plane", "up", "-d", "--no-deps", "--pull", "never", "push")
+        # Apply the optional Compose secret to both services that use it: push (FCM)
+        # and presence-directory (phone verification). Volumes remain intact.
+        dc("control-plane", "up", "-d", "--no-deps", "--pull", "never", "push", "presence-directory")
     except Exception:
         runtime_file.write_bytes(previous_runtime)
         if added:
@@ -463,6 +463,23 @@ def update_installed_properties(path, updates):
     tmp.chmod(path.stat().st_mode & 0o777)
     tmp.replace(path)
     return True
+
+
+def add_exchange_rates_placeholder():
+    """Empty EXCHANGE_RATES_URL in the node's .env.runtime to fill in; empty keeps the default."""
+    path = runtime("node")
+    text = path.read_text(encoding="utf-8")
+    if not re.search(r"^EXCHANGE_RATES_URL=", text, re.M):
+        path.write_text(text.rstrip("\n") + "\nEXCHANGE_RATES_URL=\n", encoding="utf-8")
+
+
+def update_added_nodes():
+    """Running added nodes follow the main installation's server; their failure keeps it online."""
+    if not (ROOT / "node-instances").is_dir():
+        return
+    result = subprocess.run([sys.executable, "-u", str(APP / "Manage-SparrowNodes.py"), "follow-main"], cwd=ROOT)
+    if result.returncode:
+        print("Added nodes were not all updated (see above); use Update for them under Nodes...", flush=True)
 
 
 def sync_installed_node_discovery(directory_url):
@@ -908,9 +925,12 @@ def install(args):
         enable_firebase_credentials(args.firebase_file)
     # Install / Start always refreshes existing Sparrow backend images from GHCR.
     # No database/Redis/Caddy image updates, no re-bootstrap or new identities.
+    if "node" in components and runtime("node").is_file():
+        add_exchange_rates_placeholder()
     for component in components:
         if runtime(component).is_file():
             update_backends(component, args.image_prefix, args.image_tag)
+    update_added_nodes()
     public_addresses()
     start_directory_sync_best_effort()
     refresh_installed_control_plane_directory()

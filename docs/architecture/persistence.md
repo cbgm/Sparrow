@@ -1,6 +1,6 @@
 # Persistence
 
-The Android client uses Room. The current `SparrowDatabase` schema version is **54**.
+The Android client uses Room. The current `SparrowDatabase` schema version is **55**.
 
 ## Message storage
 
@@ -33,9 +33,9 @@ payload?
 
 ## Structured message-part payloads
 
-Schema 54 stores structured part JSON directly in `MessagePartEntity.payload`. `MessagePartPayloadMigration53To54` copies legacy values from `message_structured.json` into that column and drops the legacy table.
+Since schema 54, structured part JSON is stored directly in `MessagePartEntity.payload`. `MessagePartPayloadMigration53To54` copies legacy values from `message_structured.json` into that column and drops the legacy table.
 
-`PollDto` is currently the structured payload user of this mechanism. Its nested images are persisted as separate image parts/blobs and are reattached by `MessagePartPersistenceMapper.withPersistedParts(...)`.
+`PollDto`, the expense parts (`ExpenseBoardDto`, `ExpenseDto`, `ExpenseBoardClosedDto`) and `PaymentTransferDto` use this mechanism. Poll nested images are persisted as separate image parts/blobs and are reattached by `MessagePartPersistenceMapper.withPersistedParts(...)`.
 
 ## Outbox
 
@@ -43,7 +43,7 @@ Schema 54 stores structured part JSON directly in `MessagePartEntity.payload`. `
 
 ## Group state
 
-Group persistence includes `GroupMembershipEntity`, `GroupSecurityStateEntity`, `GroupMemberKeyEntity`, `GroupVerificationPairEntity` and `GroupPinEntity`. Delivery/read aggregation is per recipient through `MessageRecipientStateEntity`.
+Group persistence includes `GroupMembershipEntity`, `GroupSecurityStateEntity`, `GroupMemberKeyEntity`, `GroupVerificationPairEntity`, `GroupPinEntity` and `GroupMetadataEntity` (admin-owned title, description and avatar state with change timestamps). `ContactProfilePictureEntity` records per contact whether a profile picture exists and when it changed. Delivery/read aggregation is per recipient through `MessageRecipientStateEntity`.
 
 ## Identity and recovery
 

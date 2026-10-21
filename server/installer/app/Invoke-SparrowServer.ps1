@@ -476,6 +476,37 @@ function Start-Component([string]$Directory, [string]$Bootstrap) {
         ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) { throw "Component installer failed: $Directory (exit $LASTEXITCODE). Existing volumes were not deleted." }
 }
+# Empty EXCHANGE_RATES_URL in the node's .env.runtime to fill in; empty keeps the default.
+function Add-ExchangeRatesPlaceholder([string]$Directory) {
+    $runtimePath = Join-Path $Directory '.env.runtime'
+    if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { return }
+    if (Select-String -LiteralPath $runtimePath -Pattern '^EXCHANGE_RATES_URL=' -Quiet) { return }
+    $text = [System.IO.File]::ReadAllText($runtimePath)
+    $separator = if ($text.Length -gt 0 -and -not $text.EndsWith("`n")) { [Environment]::NewLine } else { '' }
+    [System.IO.File]::AppendAllText($runtimePath, $separator + 'EXCHANGE_RATES_URL=' + [Environment]::NewLine,
+        [System.Text.UTF8Encoding]::new($false))
+}
+# Running added nodes follow the main installation's server; their failure keeps it online.
+function Update-AddedNodes {
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'node-instances') -PathType Container)) { return }
+    $python = $null
+    foreach ($candidate in @(@('python3'), @('python'), @('py', '-3'))) {
+        $command = Get-Command $candidate[0] -ErrorAction SilentlyContinue
+        if ($command) { $python = @($command.Source) + @($candidate | Select-Object -Skip 1); break }
+    }
+    if (-not $python) { Write-Host 'Added nodes were not updated: Python 3 is missing.'; return }
+    $previous = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $arguments = @($python | Select-Object -Skip 1) + @('-u', (Join-Path $appRoot 'Manage-SparrowNodes.py'), 'follow-main')
+        & $python[0] @arguments 2>&1 | ForEach-Object { Write-Host ([string]$_) }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Added nodes were not all updated (see above); use Update for them under Nodes...'
+        }
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+}
 function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string[]]$BackendServices) {
     $runtimePath = Join-Path $Directory '.env.runtime'
     if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) {
@@ -1673,6 +1704,7 @@ try {
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                 }
             }
+            Add-ExchangeRatesPlaceholder $nodeRoot
             Start-OrUpdateComponent $nodeRoot 'Bootstrap-CommunityNode.ps1' @('mailbox', 'federation', 'gateway')
         }
         if ($shared) {
@@ -1739,6 +1771,7 @@ try {
             }
         }
     }
+    if ($Action -eq 'Start' -and $Component -eq 'Combined') { Update-AddedNodes }
     if ($Action -in @('Start', 'Status')) { Show-PublicEndpoints }
     Write-Host "Completed: $Action ($Component)."
     Write-TaskResult 'SUCCESS'

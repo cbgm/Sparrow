@@ -20,7 +20,7 @@ buildkonfig {
             ),
             const = true
         )
-        // Debug builds only: a fake SMS with this code replaces the Firebase phone verification.
+        // Debug builds only: Firebase test mode with this SMS code, shown as a test notification.
         buildConfigField(
             STRING,
             "DEBUG_SMS_CODE",
