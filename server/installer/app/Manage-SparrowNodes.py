@@ -86,6 +86,67 @@ def properties(path):
     return result
 
 
+def follow_main_installation(directory):
+    """An updated node runs the main installation's server images (also a local build) and routes.
+
+    The node's Caddyfile is the unchanged template, so the current template brings new routes
+    (e.g. /v1/exchange-rates) into its public route on the next publish.
+    """
+    shutil.copy2(TEMPLATE / 'Caddyfile', directory / 'Caddyfile')
+    main = properties(ROOT / 'control-plane' / 'sparrow.conf')
+    selection = {key: main[key] for key in ('SPARROW_IMAGE_PREFIX', 'SPARROW_IMAGE_TAG') if main.get(key)}
+    if len(selection) != 2:
+        return
+    for name in ('sparrow.conf', '.env.runtime'):
+        path = directory / name
+        lines = path.read_text(encoding='utf-8').splitlines()
+        missing = dict(selection)
+        for index, line in enumerate(lines):
+            key = line.split('=', 1)[0].strip()
+            if '=' in line and key in missing:
+                lines[index] = f'{key}={missing.pop(key)}'
+        lines += [f'{key}={value}' for key, value in missing.items()]
+        atomic(path, '\n'.join(lines) + '\n')
+
+
+def follows_main_installation(directory):
+    main = properties(ROOT / 'control-plane' / 'sparrow.conf')
+    node = properties(directory / 'sparrow.conf')
+    same_images = all(node.get(key) == main.get(key) for key in ('SPARROW_IMAGE_PREFIX', 'SPARROW_IMAGE_TAG'))
+    same_routes = (directory / 'Caddyfile').read_bytes() == (TEMPLATE / 'Caddyfile').read_bytes()
+    return same_images and same_routes
+
+
+def running(meta):
+    result = docker('ps', '--filter', f'label=com.docker.compose.project={meta["project"]}',
+                    '--filter', 'label=com.docker.compose.service=gateway', '--filter', 'status=running',
+                    '--format', '{{.ID}}', capture=True, check=False)
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
+def follow_main(args):
+    """Brings every running added node onto the main installation's server (run by its Start)."""
+    failures = []
+    for directory in instance_dirs():
+        meta = metadata(directory)
+        if not installed(directory) or follows_main_installation(directory):
+            continue
+        if not running(meta):
+            print(f'{meta["name"]} [{meta["id"]}] is stopped; click Update for it after starting it.')
+            continue
+        print(f'Updating {meta["name"]} [{meta["id"]}] to the server of the main installation ...', flush=True)
+        try:
+            lifecycle(argparse.Namespace(action='update', id=meta['id']))
+        except NodeError as exc:
+            failures.append(f'{meta["name"]}: {exc}')
+    require(not failures, 'Added nodes could not be updated: ' + '; '.join(failures))
+
+
+def local_images(directory):
+    """Images built from the source code exist only in local Docker; there is nothing to pull."""
+    return properties(directory / 'sparrow.conf').get('SPARROW_IMAGE_PREFIX', '').startswith('local/')
+
+
 def instance_dirs():
     if not INSTANCES.is_dir():
         return []
@@ -1133,7 +1194,8 @@ def install(args):
         publish_route(directory, meta)
     if installed(directory) and args.update:
         # Backend-only updates; Compose project stays fixed and volumes survive.
-        compose(directory, 'pull', *BACKENDS)
+        if not local_images(directory):
+            compose(directory, 'pull', *BACKENDS)
         compose(directory, 'up', '-d', '--no-deps', '--pull', 'never', *BACKENDS)
     print(f'{meta["name"]} [{meta["id"]}] installed. Endpoint: ' +
           (f'https://{meta["hostname"]}' if meta['mode'] == 'public' else f'LAN port {meta["port"]}'))
@@ -1183,6 +1245,7 @@ def lifecycle(args):
     ownership(directory, meta)
     require(installed(directory), 'Node is not installed. Run nodes install first.')
     if args.action == 'update':
+        follow_main_installation(directory)
         args.update = True
         return install(args)
     if args.action == 'start':
@@ -1246,6 +1309,7 @@ def main():
     sub.add_parser('list')
     sub.add_parser('info', help='Read-only detection of the existing Combined installation (JSON)')
     sub.add_parser('diagnose', help='Copyable read-only Docker and local-path detection report')
+    sub.add_parser('follow-main', help='Update running added nodes to the main installation (run by Start)')
     reconcile_cmd = sub.add_parser('reconcile-public-ip', help='Safely update generated sslip.io endpoints for managed nodes')
     reconcile_cmd.add_argument('--public-ip', default='', help='Optional already-detected WAN IPv4; otherwise detected automatically')
     move_cmd = sub.add_parser('relink', help='Explicitly create an original-path junction for a MOVED Windows installation')
@@ -1286,6 +1350,11 @@ def main():
             with manager_lock():
                 require(shutil.which('docker'), 'Docker CLI is required.')
                 reconcile_managed_public_ip(args)
+            return 0
+        if args.action == 'follow-main':
+            with manager_lock():
+                require(shutil.which('docker'), 'Docker CLI is required.')
+                follow_main(args)
             return 0
         if args.action == 'info':
             conf = properties(ROOT / 'control-plane' / 'sparrow.conf')

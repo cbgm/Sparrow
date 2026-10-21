@@ -473,6 +473,15 @@ def add_exchange_rates_placeholder():
         path.write_text(text.rstrip("\n") + "\nEXCHANGE_RATES_URL=\n", encoding="utf-8")
 
 
+def update_added_nodes():
+    """Running added nodes follow the main installation's server; their failure keeps it online."""
+    if not (ROOT / "node-instances").is_dir():
+        return
+    result = subprocess.run([sys.executable, "-u", str(APP / "Manage-SparrowNodes.py"), "follow-main"], cwd=ROOT)
+    if result.returncode:
+        print("Added nodes were not all updated (see above); use Update for them under Nodes...", flush=True)
+
+
 def sync_installed_node_discovery(directory_url):
     """Refresh gateway-advertised Control Planes, not just the initial bootstrap."""
     if not runtime("node").is_file():
@@ -921,6 +930,7 @@ def install(args):
     for component in components:
         if runtime(component).is_file():
             update_backends(component, args.image_prefix, args.image_tag)
+    update_added_nodes()
     public_addresses()
     start_directory_sync_best_effort()
     refresh_installed_control_plane_directory()

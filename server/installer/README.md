@@ -62,7 +62,11 @@ files, cache and named volumes. You can install multiple instances under one
 Docker host; they are **not** multiple unrelated nodes in one container.
 The node manager offers Install, Start, Stop, Update, Status, Logs and Remove (keep data) per selected
 node. Its first row, **Main node (main installation)**, is the Community Node of the Combined
-installation; it is started, stopped and updated in the main window. Public node hostnames share a single Caddy process and distinct virtual host routes. A signed
+installation; it is started, stopped and updated in the main window.
+Every Start of the main installation (also **Build from source**, **Update to latest release** and
+**Apply ZIP**, which end with a Start) brings each running added node onto the main installation's
+server images (a local build without pulling from the registry) and the current routes of the node
+template. A stopped node is left alone; **Update** does the same for a single node. Public node hostnames share a single Caddy process and distinct virtual host routes. A signed
 Directory URL with an independently obtained public key is set through the command line
 (`./Start-SparrowServer.sh nodes --help`, `app/Manage-SparrowNodes.py`); signed directory lookups
 require the Python `cryptography` package. Read `README_RUNTIME.md` for commands,

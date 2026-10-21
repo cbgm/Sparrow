@@ -486,6 +486,27 @@ function Add-ExchangeRatesPlaceholder([string]$Directory) {
     [System.IO.File]::AppendAllText($runtimePath, $separator + 'EXCHANGE_RATES_URL=' + [Environment]::NewLine,
         [System.Text.UTF8Encoding]::new($false))
 }
+# Running added nodes follow the main installation's server; their failure keeps it online.
+function Update-AddedNodes {
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'node-instances') -PathType Container)) { return }
+    $python = $null
+    foreach ($candidate in @(@('python3'), @('python'), @('py', '-3'))) {
+        $command = Get-Command $candidate[0] -ErrorAction SilentlyContinue
+        if ($command) { $python = @($command.Source) + @($candidate | Select-Object -Skip 1); break }
+    }
+    if (-not $python) { Write-Host 'Added nodes were not updated: Python 3 is missing.'; return }
+    $previous = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $arguments = @($python | Select-Object -Skip 1) + @('-u', (Join-Path $appRoot 'Manage-SparrowNodes.py'), 'follow-main')
+        & $python[0] @arguments 2>&1 | ForEach-Object { Write-Host ([string]$_) }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Added nodes were not all updated (see above); use Update for them under Nodes...'
+        }
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+}
 function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string[]]$BackendServices) {
     $runtimePath = Join-Path $Directory '.env.runtime'
     if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) {
@@ -1750,6 +1771,7 @@ try {
             }
         }
     }
+    if ($Action -eq 'Start' -and $Component -eq 'Combined') { Update-AddedNodes }
     if ($Action -in @('Start', 'Status')) { Show-PublicEndpoints }
     Write-Host "Completed: $Action ($Component)."
     Write-TaskResult 'SUCCESS'
