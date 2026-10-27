@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.mapper.toInvitationRecord
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.GroupInvitationIdentityDisposition
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupInvitationTargetUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.EvaluateGroupInvitationIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.InspectIncomingGroupOfferUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
@@ -19,19 +20,21 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveIncomingGroupMe
 import kotlin.reflect.KClass
 
 /**
- * InspectOffer -> CheckRecordable -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity] -> StageOffer
- * -> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
+ * InspectOffer -> CheckRecordable -> CheckTarget -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity]
+ * -> StageOffer -> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
  *
  * Expired or blocked offers are dropped so they never enter the inbox or poison the retry queue. A replayed or
  * no longer stageable offer is still handed to Membership without staging. A signed group offer proves the
  * PROPOSED keys only: changed owner keys become a separate identity review and never touch trusted keys,
- * conversations or profile data.
+ * conversations or profile data. An offer whose group ID names an existing conversation other than its own
+ * pending invitation is rejected before anything is staged.
  */
 @Suppress("LongParameterList")
 class ReceiveGroupInviteWorkflow internal constructor(
     private val inspectIncomingGroupOffer: InspectIncomingGroupOfferUseCase,
     private val shouldRecordPendingInvitation: ShouldRecordPendingInvitationUseCase,
     private val receiveIncomingGroupMembership: ReceiveIncomingGroupMembershipUseCase,
+    private val checkGroupInvitationTarget: CheckGroupInvitationTargetUseCase,
     private val evaluateGroupInvitationIdentity: EvaluateGroupInvitationIdentityUseCase,
     private val conversationRepository: GroupConversationRepository,
     private val stageRemoteIdentity: StageRemoteIdentityUseCase,
@@ -67,6 +70,10 @@ class ReceiveGroupInviteWorkflow internal constructor(
                 Outcome.ReceivedWithoutStaging(step.offer, step.refreshProfilePicture)
             }
             is Step.CheckPinnedOwner -> checkPinnedOwner(step.offer, context.contactId)
+            is Step.CheckTarget -> {
+                checkGroupInvitationTarget(step.offer, context.contactId).getOrThrow()
+                Outcome.TargetAllowed(step.offer)
+            }
             is Step.StageConversation -> stageConversation(step.offer, context.receivedAtEpochMilliseconds)
             is Step.EvaluateOwnerIdentity ->
                 Outcome.OwnerIdentityEvaluated(
@@ -117,7 +124,8 @@ class ReceiveGroupInviteWorkflow internal constructor(
         when (outcome) {
             Outcome.Dropped -> Transition.Complete()
             is Outcome.OfferValid -> Transition.Next(Step.CheckRecordable(outcome.offer, step.command))
-            is Outcome.Recordable -> Transition.Next(Step.StageConversation(outcome.offer, step.command))
+            is Outcome.Recordable -> Transition.Next(Step.CheckTarget(outcome.offer, step.command))
+            is Outcome.TargetAllowed -> Transition.Next(Step.StageConversation(outcome.offer, step.command))
             is Outcome.AlreadyHandled ->
                 Transition.Next(
                     Step.ReceiveWithoutStaging(outcome.offer, refreshProfilePicture = true, command = step.command)
@@ -233,6 +241,11 @@ class ReceiveGroupInviteWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupInvite
         ) : Step
 
+        data class CheckTarget(
+            val offer: IncomingMembershipOffer,
+            override val command: IncomingCommand.ReceiveGroupInvite
+        ) : Step
+
         data class StageConversation(
             val offer: IncomingMembershipOffer,
             override val command: IncomingCommand.ReceiveGroupInvite
@@ -278,6 +291,10 @@ class ReceiveGroupInviteWorkflow internal constructor(
         ) : Outcome
 
         data class Recordable(
+            val offer: IncomingMembershipOffer
+        ) : Outcome
+
+        data class TargetAllowed(
             val offer: IncomingMembershipOffer
         ) : Outcome
 

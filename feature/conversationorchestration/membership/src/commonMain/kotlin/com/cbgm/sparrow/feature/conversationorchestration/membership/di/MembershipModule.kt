@@ -23,6 +23,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmGroupMemberIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmParticipantVerificationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.DiscardDeclinedGroupConversationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindGroupMemberRemovalProgressUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GetTrustedGroupAuthorityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
@@ -87,6 +88,7 @@ private fun Module.registerUseCases() {
     singleOf(::BroadcastGroupVerificationSnapshotUseCase)
     singleOf(::CheckGroupOwnershipUseCase)
     singleOf(::ConfirmParticipantVerificationUseCase)
+    singleOf(::FindGroupMemberRemovalProgressUseCase)
     singleOf(::FindMemberDisplayNameUseCase)
     singleOf(::GroupVerificationInputsUseCase)
     singleOf(::LoadGroupVerificationSignerUseCase)

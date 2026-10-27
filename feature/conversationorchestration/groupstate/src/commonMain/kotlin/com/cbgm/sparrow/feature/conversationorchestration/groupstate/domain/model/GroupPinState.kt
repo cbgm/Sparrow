@@ -3,7 +3,10 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.mod
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 
-/** The persisted pin slot of one group; [messageId] is null while nothing is pinned. */
+/**
+ * The persisted pin slot of one group; [messageId] is null while nothing is pinned. [publishPending] marks a local
+ * change that is shown already but not queued for the members yet.
+ */
 data class GroupPinState(
     val groupId: String,
     val messageId: String?,
@@ -14,7 +17,8 @@ data class GroupPinState(
     val parts: List<MessagePart>?,
     val replyToMessageId: String?,
     val pinnedAtEpochMilliseconds: Long?,
-    val changedAtEpochMilliseconds: Long
+    val changedAtEpochMilliseconds: Long,
+    val publishPending: Boolean = false
 ) {
     /** The pinned expense board that is still open, if any. */
     val activeExpenseBoard: ExpenseBoard?
@@ -35,7 +39,8 @@ data class GroupPinState(
             parts == other.parts &&
             replyToMessageId == other.replyToMessageId &&
             pinnedAtEpochMilliseconds == other.pinnedAtEpochMilliseconds &&
-            changedAtEpochMilliseconds == other.changedAtEpochMilliseconds
+            changedAtEpochMilliseconds == other.changedAtEpochMilliseconds &&
+            publishPending == other.publishPending
 
     override fun hashCode(): Int = 31 * groupId.hashCode() + changedAtEpochMilliseconds.hashCode()
 

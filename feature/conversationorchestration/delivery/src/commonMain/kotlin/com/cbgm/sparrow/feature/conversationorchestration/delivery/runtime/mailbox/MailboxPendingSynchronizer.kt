@@ -10,7 +10,8 @@ import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
 /**
- * Processes the envelopes waiting in every local mailbox.
+ * Processes the envelopes waiting in every local mailbox, including retiring ones a renewal replaced: they keep
+ * receiving until the contact learned the new route, and are revoked only after they expired.
  *
  * An envelope that fails stays in its mailbox and is retried on the next sync; it never stops the envelopes
  * behind it or the other mailboxes.
@@ -24,9 +25,9 @@ class MailboxPendingSynchronizer(
 
     suspend fun synchronize(): Result<Int> =
         safeSuspendCall(logFailure = false) {
-            mailboxRouteRepository
-                .allLocal()
-                .getOrThrow()
+            val current = mailboxRouteRepository.allLocal().getOrThrow()
+            val retiring = mailboxRouteRepository.allRetiring().getOrThrow()
+            (current + retiring)
                 .filterNot(LocalMailboxCredential::revocationPending)
                 .sumOf { credential -> synchronize(credential) }
         }

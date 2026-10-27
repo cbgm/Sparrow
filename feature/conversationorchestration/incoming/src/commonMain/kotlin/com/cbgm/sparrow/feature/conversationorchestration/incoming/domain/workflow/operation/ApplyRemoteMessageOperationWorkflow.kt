@@ -30,9 +30,10 @@ import kotlin.reflect.KClass
  * PollClose: CheckPollCloser -> FindPoll -> SavePoll
  * No target: Park
  *
- * [AuthorizeRemoteMessageOperationUseCase] decides who may change which message. An operation whose
- * message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
- * once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
+ * [AuthorizeRemoteMessageOperationUseCase] decides who may change which message. Edits keep the text with the
+ * latest edit time, not the one that arrived last, because live and mailbox copies can overtake each other.
+ * An operation whose message has not arrived yet, for example an edit that overtook it after a reconnect, is
+ * parked and applied once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
  */
 class ApplyRemoteMessageOperationWorkflow internal constructor(
     private val authorizeOperation: AuthorizeRemoteMessageOperationUseCase,
@@ -64,10 +65,12 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
             }
             is Step.ReplaceText -> {
                 val edit = step.edit
+                val text = edit.text.trim()
                 when (command.conversation) {
                     OperationConversation.DIRECT ->
-                        directMessageRepository.replaceText(edit.messageId, edit.text.trim())
-                    OperationConversation.GROUP -> groupMessageRepository.replaceText(edit.messageId, edit.text.trim())
+                        directMessageRepository.replaceTextIfNewer(edit.messageId, text, edit.editedAtEpochMilliseconds)
+                    OperationConversation.GROUP ->
+                        groupMessageRepository.replaceTextIfNewer(edit.messageId, text, edit.editedAtEpochMilliseconds)
                 }.getOrThrow()
                 Outcome.Applied
             }

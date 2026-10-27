@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.groupAdministrationLockKey
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RecordGroupInvitationUseCase

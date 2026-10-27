@@ -8,11 +8,14 @@ internal class GroupAvatarDataSource(
     private val groupMetadataDao: GroupMetadataDao,
     private val fileStore: GroupAvatarFileStore
 ) {
-    suspend fun get(groupId: String): GroupAvatarDto =
-        GroupAvatarDto(
+    suspend fun get(groupId: String): GroupAvatarDto {
+        val metadata = groupMetadataDao.get(groupId)
+        return GroupAvatarDto(
             bytes = fileStore.read(groupId),
-            changedAtEpochMilliseconds = groupMetadataDao.get(groupId)?.avatarChangedAtEpochMilliseconds ?: 0L
+            changedAtEpochMilliseconds = metadata?.avatarChangedAtEpochMilliseconds ?: 0L,
+            publishPending = metadata?.avatarPublishPending ?: false
         )
+    }
 
     suspend fun save(groupId: String, avatar: GroupAvatarDto) {
         val bytes = avatar.bytes
@@ -20,9 +23,16 @@ internal class GroupAvatarDataSource(
         groupMetadataDao.upsertAvatar(
             groupId = groupId,
             hasAvatar = bytes != null,
-            changedAtEpochMilliseconds = avatar.changedAtEpochMilliseconds
+            changedAtEpochMilliseconds = avatar.changedAtEpochMilliseconds,
+            publishPending = avatar.publishPending
         )
     }
+
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
+        groupMetadataDao.markAvatarPublished(groupId, changedAtEpochMilliseconds)
+    }
+
+    suspend fun findPublishPendingGroupIds(): List<String> = groupMetadataDao.findAvatarPublishPendingGroupIds()
 
     suspend fun deleteLocal(groupId: String) {
         fileStore.delete(groupId)

@@ -63,8 +63,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ToggleLocalReactionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.DeleteDirectMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.DeleteOwnDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.DeliverDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.EditDirectMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.EditOwnDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.MarkDirectConversationReadWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.RetryDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.SendDirectIndicatorWorkflow
@@ -73,10 +75,13 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflo
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.ActivateAuthorizedConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.DiscardWaitingDirectMessagesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.ReleaseWaitingDirectMessagesWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.authorization.StoreWaitingDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.forward.ForwardMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.CloseGroupPollWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.DeleteGroupMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.DeleteUnsentGroupMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.EditGroupMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.EditUnsentGroupMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.FlushQueuedGroupMessagesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.MarkGroupConversationReadWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group.RetryGroupMessageWorkflow
@@ -165,6 +170,9 @@ private fun Module.registerInternalWorkflows() {
     singleOf(::DiscardWaitingDirectMessagesWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ActivateAuthorizedConversationWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::FlushQueuedGroupMessagesWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::StoreWaitingDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::EditUnsentGroupMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::DeleteUnsentGroupMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
 }
 
 /** Every public workflow is reachable only through ConversationOrchestrator.execute. */
@@ -172,6 +180,8 @@ private fun Module.registerPublicWorkflows() {
     singleOf(::SendDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::EditDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::DeleteDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::EditOwnDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::DeleteOwnDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ToggleDirectReactionWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::RetryDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::MarkDirectConversationReadWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }

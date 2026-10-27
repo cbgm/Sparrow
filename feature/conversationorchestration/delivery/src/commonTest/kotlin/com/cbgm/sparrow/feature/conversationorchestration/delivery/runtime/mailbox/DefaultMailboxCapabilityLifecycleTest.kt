@@ -59,10 +59,48 @@ class DefaultMailboxCapabilityLifecycleTest {
             assertFalse(lifecycle.retryPendingRevocations().isFailure)
         }
 
+    @Test
+    fun revokingAContactAlsoRevokesItsRetiringMailbox() =
+        runTest {
+            val old = credential().let { it.copy(deliveryRoute = it.deliveryRoute.copy(routeId = "old-route")) }
+            val repository = FakeMailboxRouteRepository(credential(), mutableListOf(old))
+            val gateway = FakeMailboxGateway(failRevocation = true)
+            val lifecycle = DefaultMailboxCapabilityLifecycle(repository, gateway)
+
+            assertTrue(lifecycle.revokeForContact(CONTACT_ID).isSuccess)
+            // A failed revocation stays pending, so the retiring mailbox is no longer read.
+            assertTrue(repository.retiring.single().revocationPending)
+
+            gateway.failRevocation = false
+            assertEquals(2, lifecycle.retryPendingRevocations().getOrThrow())
+            assertTrue(repository.retiring.isEmpty())
+            assertNull(repository.credential)
+        }
+
     private class FakeMailboxRouteRepository(
-        var credential: LocalMailboxCredential?
+        var credential: LocalMailboxCredential?,
+        val retiring: MutableList<LocalMailboxCredential> = mutableListOf()
     ) : MailboxRouteRepository {
         var remoteDeleted = false
+
+        override suspend fun allRetiring() = Result.success(retiring.toList())
+
+        override suspend fun retireLocal(retiring: LocalMailboxCredential, replacement: LocalMailboxCredential) =
+            error("Not used")
+
+        override suspend fun saveRetiring(credential: LocalMailboxCredential) = error("Not used")
+
+        override suspend fun markRetiringRevocationPending(contactId: String): Result<Unit> {
+            retiring.replaceAll { stored ->
+                if (stored.contactId == contactId) stored.copy(revocationPending = true) else stored
+            }
+            return Result.success(Unit)
+        }
+
+        override suspend fun deleteRetiring(routeId: String): Result<Unit> {
+            retiring.removeAll { stored -> stored.deliveryRoute.routeId == routeId }
+            return Result.success(Unit)
+        }
 
         override suspend fun localForContact(contactId: String) = Result.success(credential)
 

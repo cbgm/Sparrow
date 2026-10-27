@@ -126,7 +126,25 @@ class CreateDirectMessagePacketUseCaseTest {
 
         override suspend fun update(message: StoredMessage): Result<Unit> = error(NOT_USED)
 
-        override suspend fun replaceText(messageId: String, text: String): Result<Unit> = error(NOT_USED)
+        override suspend fun updatePacketIfStatus(
+            messageId: String,
+            expectedStatus: MessageDeliveryStatus,
+            packetId: String,
+            transportMode: String,
+            deliveryStatus: MessageDeliveryStatus
+        ): Result<Boolean> = error(NOT_USED)
+
+        override suspend fun replaceText(
+            messageId: String,
+            text: String,
+            editedAtEpochMilliseconds: Long
+        ): Result<Unit> = error(NOT_USED)
+
+        override suspend fun replaceTextIfNewer(
+            messageId: String,
+            text: String,
+            editedAtEpochMilliseconds: Long
+        ): Result<Boolean> = error(NOT_USED)
 
         override suspend fun delete(messages: List<StoredMessage>): Result<Unit> = error(NOT_USED)
 

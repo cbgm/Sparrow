@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.contacts.data.datasource.ContactByRoutingIdDataS
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactRoutingDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactRoutingReconciliationDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.MailboxContactDataSource
-import com.cbgm.sparrow.feature.contacts.domain.model.MailboxContactState
+import com.cbgm.sparrow.feature.contacts.domain.model.MailboxContactFacts
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepository
 
 class ContactTransportRepositoryImpl(
@@ -29,10 +29,16 @@ class ContactTransportRepositoryImpl(
     override suspend fun reconcileKnownContacts(): Result<Unit> =
         safeSuspendCall { reconciliation.reconcileKnownContacts() }
 
-    override suspend fun getMailboxContactStates(): Result<List<MailboxContactState>> =
+    override suspend fun getMailboxContacts(): Result<List<MailboxContactFacts>> =
         safeSuspendCall {
             mailboxContacts.findContactStates().map { dto ->
-                MailboxContactState(dto.contactId, dto.isProvisioningEligible)
+                MailboxContactFacts(
+                    contactId = dto.contactId,
+                    hasMutualIdentity = dto.hasMutualIdentity,
+                    hasRoutingId = dto.hasRoutingId,
+                    hasDirectConversation = dto.hasDirectConversation,
+                    sharesActiveGroup = dto.sharesActiveGroup
+                )
             }
         }
 

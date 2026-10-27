@@ -18,6 +18,12 @@ internal class GroupPinRepositoryImpl(
     override suspend fun save(pin: GroupPinState): Result<Unit> =
         safeSuspendCall { dataSource.save(pin.toGroupPinEntity(groupMessageContentCodec)) }
 
+    override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
+        safeSuspendCall { dataSource.markPublished(groupId, changedAtEpochMilliseconds) }
+
+    override suspend fun findPublishPendingGroupIds(): Result<List<String>> =
+        safeSuspendCall { dataSource.findPublishPendingGroupIds() }
+
     override suspend fun deleteLocal(groupId: String): Result<Unit> =
         safeSuspendCall { dataSource.delete(groupId) }
 }

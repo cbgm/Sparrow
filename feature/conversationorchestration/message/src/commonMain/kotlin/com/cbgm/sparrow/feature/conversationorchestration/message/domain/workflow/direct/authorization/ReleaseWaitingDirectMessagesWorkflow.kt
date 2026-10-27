@@ -18,11 +18,15 @@ import kotlin.reflect.KClass
 
 /**
  * FindWaitingMessages -> CheckAuthorization -> DiscardExpiredMessages
- * -> (PrepareRelease -> EnqueuePacket [-> MarkSendFailed -> RestoreWaitingMessage])* .
+ * -> (PrepareRelease [-> EnqueuePacket [-> MarkSendFailed -> RestoreWaitingMessage]])* .
  *
  * Release is opportunistic: onboarding, invitation acceptance and restart reconciliation may
  * all try before keys exist. Missing authorization defers the work instead of failing. A message
  * whose packet could not reach the outbox goes back to waiting so a later release retries it.
+ *
+ * Storing a new waiting message and editing or deleting one share the lock, so none of them works on a contact's
+ * waiting messages while they are released. PrepareRelease still reads each message again and skips one that is
+ * gone or no longer waiting.
  */
 class ReleaseWaitingDirectMessagesWorkflow internal constructor(
     private val messageRepository: DirectMessageRepository,
@@ -58,10 +62,7 @@ class ReleaseWaitingDirectMessagesWorkflow internal constructor(
             is Step.DiscardExpiredMessages ->
                 Outcome.ExpiredMessagesDiscarded(discardExpiredWaitingDirectMessages(step.messages).getOrThrow())
             is Step.PrepareRelease ->
-                Outcome.ReleasePrepared(
-                    packet = releaseWaitingDirectMessage(step.remaining.first()).getOrThrow(),
-                    remaining = step.remaining
-                )
+                releasePrepared(releaseWaitingDirectMessage(step.remaining.first().id).getOrThrow(), step.remaining)
             is Step.EnqueuePacket ->
                 protocolOutbox.enqueue(step.command.contactId, step.packet).fold(
                     onSuccess = { Outcome.PacketEnqueued(step.remaining.drop(1)) },
@@ -84,6 +85,7 @@ class ReleaseWaitingDirectMessagesWorkflow internal constructor(
             is Outcome.ExpiredMessagesDiscarded -> nextRelease(outcome.remaining, step.command)
             is Outcome.ReleasePrepared ->
                 Transition.Next(Step.EnqueuePacket(outcome.packet, outcome.remaining, step.command))
+            is Outcome.ReleaseSkipped -> nextRelease(outcome.remaining, step.command)
             is Outcome.PacketEnqueued -> nextRelease(outcome.remaining, step.command)
             is Outcome.EnqueueFailed ->
                 Transition.Next(Step.MarkSendFailed(outcome.packet, outcome.cause, outcome.remaining, step.command))
@@ -105,6 +107,10 @@ class ReleaseWaitingDirectMessagesWorkflow internal constructor(
         command: MessageCommand.ReleaseWaitingDirectMessages
     ): Transition<Step> =
         if (remaining.isEmpty()) Transition.Complete() else Transition.Next(Step.PrepareRelease(remaining, command))
+
+    /** A message deleted, edited away from waiting or released meanwhile has no packet and is skipped. */
+    private fun releasePrepared(packet: ChatMessagePacket?, remaining: List<StoredMessage>): Outcome =
+        if (packet == null) Outcome.ReleaseSkipped(remaining.drop(1)) else Outcome.ReleasePrepared(packet, remaining)
 
     private suspend fun checkAuthorization(step: Step.CheckAuthorization): Outcome {
         if (findDirectAuthorizationBlock(step.command.contactId).getOrThrow() == null) {
@@ -188,6 +194,10 @@ class ReleaseWaitingDirectMessagesWorkflow internal constructor(
 
         data class ReleasePrepared(
             val packet: ChatMessagePacket,
+            val remaining: List<StoredMessage>
+        ) : Outcome
+
+        data class ReleaseSkipped(
             val remaining: List<StoredMessage>
         ) : Outcome
 

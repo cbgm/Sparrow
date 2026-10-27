@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.data.repository
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.DirectMessageDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.mapper.toMessageEntity
@@ -26,8 +27,32 @@ internal class DirectMessageRepositoryImpl(
     override suspend fun update(message: StoredMessage): Result<Unit> =
         safeSuspendCall { dataSource.upsertMessage(message.toMessageEntity()) }
 
-    override suspend fun replaceText(messageId: String, text: String): Result<Unit> =
-        safeSuspendCall { dataSource.replaceMessageText(messageId, text) }
+    override suspend fun updatePacketIfStatus(
+        messageId: String,
+        expectedStatus: MessageDeliveryStatus,
+        packetId: String,
+        transportMode: String,
+        deliveryStatus: MessageDeliveryStatus
+    ): Result<Boolean> =
+        safeSuspendCall {
+            dataSource.updateMessagePacketIfStatus(
+                messageId = messageId,
+                expectedStatus = expectedStatus.name,
+                packetId = packetId,
+                transportMode = transportMode,
+                deliveryStatus = deliveryStatus.name
+            ) == 1
+        }
+
+    override suspend fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Unit> =
+        safeSuspendCall { dataSource.replaceMessageText(messageId, text, editedAtEpochMilliseconds) }
+
+    override suspend fun replaceTextIfNewer(
+        messageId: String,
+        text: String,
+        editedAtEpochMilliseconds: Long
+    ): Result<Boolean> =
+        safeSuspendCall { dataSource.replaceMessageTextIfNewer(messageId, text, editedAtEpochMilliseconds) }
 
     override suspend fun delete(messages: List<StoredMessage>): Result<Unit> =
         safeSuspendCall {

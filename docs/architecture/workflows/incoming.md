@@ -395,16 +395,17 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupInvite`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupInviteWorkflow.kt`
 - **Lock:** none
-- **Uses:** `InspectIncomingGroupOfferUseCase`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `InspectIncomingGroupOfferUseCase`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `CheckGroupInvitationTargetUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
-InspectOffer -> CheckRecordable -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity] -> StageOffer
--> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
+InspectOffer -> CheckRecordable -> CheckTarget -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity]
+-> StageOffer -> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
 
 Expired or blocked offers are dropped so they never enter the inbox or poison the retry queue. A replayed or
 no longer stageable offer is still handed to Membership without staging. A signed group offer proves the
 PROPOSED keys only: changed owner keys become a separate identity review and never touch trusted keys,
-conversations or profile data.
+conversations or profile data. An offer whose group ID names an existing conversation other than its own
+pending invitation is rejected before anything is staged.
 ```
 
 ```mermaid
@@ -413,11 +414,12 @@ stateDiagram-v2
     InspectOffer --> [*] : Dropped
     InspectOffer --> CheckRecordable : OfferValid
     CheckRecordable --> ReceiveWithoutStaging : AlreadyHandled
-    CheckRecordable --> StageConversation : Recordable
+    CheckRecordable --> CheckTarget : Recordable
     ReceiveWithoutStaging --> CheckPinnedOwner : ReceivedWithoutStaging
     ReceiveWithoutStaging --> [*] : ReceivedWithoutStaging
     CheckPinnedOwner --> [*] : Done
     CheckPinnedOwner --> ApplyProfilePicture : OwnerKeysTrusted
+    CheckTarget --> StageConversation : TargetAllowed
     StageConversation --> ReceiveWithoutStaging : ConversationDeletedLocally
     StageConversation --> EvaluateOwnerIdentity : ConversationStaged
     EvaluateOwnerIdentity --> StageOffer : OwnerIdentityEvaluated
@@ -737,9 +739,10 @@ PollVote:  FindPoll -> SavePoll
 PollClose: CheckPollCloser -> FindPoll -> SavePoll
 No target: Park
 
-[AuthorizeRemoteMessageOperationUseCase] decides who may change which message. An operation whose
-message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
-once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
+[AuthorizeRemoteMessageOperationUseCase] decides who may change which message. Edits keep the text with the
+latest edit time, not the one that arrived last, because live and mailbox copies can overtake each other.
+An operation whose message has not arrived yet, for example an edit that overtook it after a reconnect, is
+parked and applied once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
 ```
 
 ```mermaid
@@ -771,16 +774,18 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.RouteIncomingPacket`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/routing/RouteIncomingPacketWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `CheckDirectPeerAuthorizedUseCase`, `DirectConversationRepository`, `ResolveControlConversationIdUseCase`, `CheckGroupPacketAcceptedUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
+- **Uses:** `WorkflowEngine`, `ResolveDirectPeerAccessUseCase`, `DirectConversationRepository`, `ResolveControlConversationIdUseCase`, `CheckGroupPacketAcceptedUseCase`, `CheckGroupPacketReadyUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
 
 ```text
 direct message:  CheckDirectAuthorization -> EnsureDirectConversation -> ReceiveDirectMessage | ApplyDirectOperation
-group packet:    CheckGroupAccepted -> DispatchGroupPacket
+group packet:    CheckGroupAccepted -> CheckGroupReady -> DispatchGroupPacket
 receipt:         ApplyReceipt
 anything else:   FindControlConversation -> DispatchControlPacket
 
 Direct and group packets never share handlers. Messages of a contact whose invitation was not accepted
-are dropped without a chat being created.
+are dropped without a chat being created. Packets that arrived too early — a message of a contact whose
+invitation is still in flight, a group packet before the welcome of its epoch — fail with
+[IncomingPacketDeferredException]: their envelope is parked and processed again later.
 ```
 
 ```mermaid
@@ -789,6 +794,7 @@ stateDiagram-v2
     [*] --> CheckGroupAccepted
     [*] --> ApplyReceipt
     [*] --> FindControlConversation
+    CheckDirectAuthorization --> Rejected : Deferred
     CheckDirectAuthorization --> EnsureDirectConversation : DirectAuthorized
     CheckDirectAuthorization --> [*] : Dropped
     EnsureDirectConversation --> ApplyDirectOperation : DirectConversationResolved
@@ -797,7 +803,9 @@ stateDiagram-v2
     ReceiveDirectMessage --> [*] : Handled
     ApplyDirectOperation --> [*] : Handled
     CheckGroupAccepted --> [*] : Dropped
-    CheckGroupAccepted --> DispatchGroupPacket : GroupAccepted
+    CheckGroupAccepted --> CheckGroupReady : GroupAccepted
+    CheckGroupReady --> Rejected : Deferred
+    CheckGroupReady --> DispatchGroupPacket : GroupReady
     DispatchGroupPacket --> [*] : Handled
     ApplyReceipt --> [*] : Handled
     FindControlConversation --> DispatchControlPacket : ControlConversationResolved

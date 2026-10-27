@@ -124,6 +124,9 @@ stateDiagram-v2
 
 ```text
 LoadContext -> PromoteMember -> ProjectPromotion -> RefreshVerification.
+
+A retry after a crash or a failed later step is safe: Membership returns the promotion of a member who is an
+admin already without rotating again, so the projection and the verification refresh still run.
 ```
 
 ```mermaid
@@ -140,16 +143,22 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.RemoveMember`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/RemoveGroupMemberWorkflow.kt`
 - **Lock:** `groupAdministrationLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupConversationRepository`, `RemoveGroupMemberUseCase`, `FindMemberDisplayNameUseCase`
+- **Uses:** `WorkflowEngine`, `GroupConversationRepository`, `FindGroupMemberRemovalProgressUseCase`, `RemoveGroupMemberUseCase`, `FindMemberDisplayNameUseCase`
 
 ```text
-LoadContext -> RemoveMember -> ResolveMemberName -> ProjectRemoval -> RefreshVerification.
+LoadContext -> FindRemovalProgress -> [RemoveMember] -> ResolveMemberName -> ProjectRemoval -> RefreshVerification.
+
+Membership commits the removal in one step; projection and verification follow. A retry after a crash or a
+failed later step finds the committed removal and continues with the missing steps.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> LoadContext
-    LoadContext --> RemoveMember : ContextLoaded
+    LoadContext --> FindRemovalProgress : ContextLoaded
+    FindRemovalProgress --> RefreshVerification : RemovalProgressFound
+    FindRemovalProgress --> RemoveMember : RemovalProgressFound
+    FindRemovalProgress --> ResolveMemberName : RemovalProgressFound
     RemoveMember --> ResolveMemberName : MemberRemoved
     ResolveMemberName --> ProjectRemoval : MemberNameResolved
     ProjectRemoval --> RefreshVerification : RemovalProjected

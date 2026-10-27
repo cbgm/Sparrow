@@ -9,12 +9,15 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.comm
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.groupAdministrationLockKey
 import kotlin.reflect.KClass
 
 /**
  * SendTitle -> SendDescription -> SendAvatar -> SendPin -> SendExpenses.
  *
- * Every item is replayed independently: a failed item is logged and the next one is still sent.
+ * Every item is replayed independently: a failed item is logged and the next one is still sent. The replay holds
+ * the group administration lock, so no epoch rotation runs between authorizing the member and queueing an item;
+ * the nested pin and expense replays take no lock of their own.
  */
 class SendCurrentGroupMetadataWorkflow internal constructor(
     private val engine: WorkflowEngine,
@@ -30,6 +33,9 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
 
     override val commandType: KClass<GroupStateCommand.SendCurrentGroupMetadata> =
         GroupStateCommand.SendCurrentGroupMetadata::class
+
+    override fun lockKey(command: GroupStateCommand.SendCurrentGroupMetadata): String =
+        groupAdministrationLockKey(command.groupId)
 
     override fun firstStep(command: GroupStateCommand.SendCurrentGroupMetadata): Step = Step.SendTitle(command)
 

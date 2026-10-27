@@ -129,4 +129,18 @@ interface ContactDao {
     """
     )
     suspend fun findPublicIdentityByContactId(contactId: String): ContactPublicIdentityEntity?
+
+    @Query("SELECT contactId FROM conversations WHERE type = 'DIRECT' AND contactId IS NOT NULL")
+    suspend fun findDirectConversationContactIds(): List<String>
+
+    /** Participants of group conversations; leaving or losing a group removes its participants. */
+    @Query(
+        """
+        SELECT DISTINCT conversation_participants.contactId
+        FROM conversation_participants
+        INNER JOIN conversations ON conversations.id = conversation_participants.conversationId
+        WHERE conversations.type = 'GROUP'
+        """
+    )
+    suspend fun findGroupParticipantContactIds(): List<String>
 }

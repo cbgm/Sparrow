@@ -18,5 +18,7 @@ import androidx.room.PrimaryKey
 data class MessageTextEntity(
     @PrimaryKey
     val partId: String,
-    val text: String
+    val text: String,
+    /** When the sender last edited the text; null while it was never edited. */
+    val editedAtEpochMilliseconds: Long? = null
 )

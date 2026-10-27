@@ -17,6 +17,18 @@ interface GroupPinDao {
     @Upsert
     suspend fun upsert(entity: GroupPinEntity)
 
+    /** Marks the pin published only while [changedAtEpochMilliseconds] is still the stored version. */
+    @Query(
+        """
+        UPDATE group_pins SET publishPending = 0
+        WHERE groupId = :groupId AND changedAtEpochMilliseconds = :changedAtEpochMilliseconds
+        """
+    )
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long)
+
+    @Query("SELECT groupId FROM group_pins WHERE publishPending = 1")
+    suspend fun findPublishPendingGroupIds(): List<String>
+
     @Query("DELETE FROM group_pins WHERE groupId = :groupId")
     suspend fun delete(groupId: String)
 }

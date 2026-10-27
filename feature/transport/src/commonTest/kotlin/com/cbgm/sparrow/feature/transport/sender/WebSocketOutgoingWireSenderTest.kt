@@ -261,5 +261,18 @@ class WebSocketOutgoingWireSenderTest {
         override suspend fun deleteRemote(contactId: String) = Result.success(Unit)
 
         override suspend fun deleteAllRemote() = Result.success(Unit)
+
+        override suspend fun allRetiring() = Result.success(emptyList<LocalMailboxCredential>())
+
+        override suspend fun retireLocal(
+            retiring: LocalMailboxCredential,
+            replacement: LocalMailboxCredential
+        ) = Result.success(Unit)
+
+        override suspend fun saveRetiring(credential: LocalMailboxCredential) = Result.success(Unit)
+
+        override suspend fun markRetiringRevocationPending(contactId: String) = Result.success(Unit)
+
+        override suspend fun deleteRetiring(routeId: String) = Result.success(Unit)
     }
 }

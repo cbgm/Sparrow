@@ -273,6 +273,28 @@ interface ChatDao {
     @Upsert
     suspend fun upsertMessage(message: MessageEntity)
 
+    /**
+     * Moves a message to [deliveryStatus] with a new packet only while it is still in [expectedStatus]; a deleted
+     * or concurrently changed message stays as it is. Returns the number of updated rows.
+     */
+    @Query(
+        """
+        UPDATE messages
+        SET packetId = :packetId,
+            transportMode = :transportMode,
+            deliveryStatus = :deliveryStatus
+        WHERE id = :messageId
+          AND deliveryStatus = :expectedStatus
+        """
+    )
+    suspend fun updateMessagePacketIfStatus(
+        messageId: String,
+        expectedStatus: String,
+        packetId: String,
+        transportMode: String,
+        deliveryStatus: String
+    ): Int
+
     @Upsert
     suspend fun upsertMessagePart(part: MessagePartEntity)
 
@@ -283,7 +305,7 @@ interface ChatDao {
     suspend fun deleteMessageTextPart(messageId: String)
 
     @Transaction
-    suspend fun replaceMessageText(messageId: String, text: String) {
+    suspend fun replaceMessageText(messageId: String, text: String, editedAtEpochMilliseconds: Long? = null) {
         deleteMessageTextPart(messageId)
         if (text.isBlank()) return
         upsertMessagePart(
@@ -297,10 +319,35 @@ interface ChatDao {
         upsertMessageText(
             MessageTextEntity(
                 partId = messageId,
-                text = text
+                text = text,
+                editedAtEpochMilliseconds = editedAtEpochMilliseconds
             )
         )
     }
+
+    /**
+     * Replaces the text only when [editedAtEpochMilliseconds] is later than the stored edit, so edits that
+     * arrive out of order keep the newest text. Returns whether the text was replaced.
+     */
+    @Transaction
+    suspend fun replaceMessageTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Boolean {
+        val storedEditedAt = findMessageTextEditedAt(messageId)
+        if (storedEditedAt != null && editedAtEpochMilliseconds <= storedEditedAt) return false
+        replaceMessageText(messageId, text, editedAtEpochMilliseconds)
+        return true
+    }
+
+    @Query(
+        """
+        SELECT message_text.editedAtEpochMilliseconds
+        FROM message_parts
+        INNER JOIN message_text ON message_text.partId = message_parts.id
+        WHERE message_parts.messageId = :messageId
+          AND message_parts.type = 'TEXT'
+        LIMIT 1
+        """
+    )
+    suspend fun findMessageTextEditedAt(messageId: String): Long?
 
     @Transaction
     suspend fun upsertMessageWithText(message: MessageEntity, text: String) {

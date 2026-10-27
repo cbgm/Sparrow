@@ -16,6 +16,12 @@ internal class GroupDescriptionRepositoryImpl(
     override suspend fun save(state: GroupDescriptionState): Result<Unit> =
         safeSuspendCall { dataSource.save(state.groupId, state.toGroupDescriptionDto()) }
 
+    override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
+        safeSuspendCall { dataSource.markPublished(groupId, changedAtEpochMilliseconds) }
+
+    override suspend fun findPublishPendingGroupIds(): Result<List<String>> =
+        safeSuspendCall { dataSource.findPublishPendingGroupIds() }
+
     override suspend fun deleteLocal(groupId: String): Result<Unit> =
         safeSuspendCall { dataSource.deleteLocal(groupId) }
 }

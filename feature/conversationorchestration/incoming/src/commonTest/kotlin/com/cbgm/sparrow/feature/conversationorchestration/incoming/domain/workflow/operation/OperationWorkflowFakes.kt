@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
 import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
@@ -16,8 +17,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.MessageReactionRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
@@ -45,11 +48,25 @@ private const val NOT_USED = "Not used by the operation workflows"
 internal class MessageStore {
     val messages = mutableMapOf<String, StoredMessage>()
     val texts = mutableMapOf<String, String>()
+    val editedAt = mutableMapOf<String, Long>()
     val reactions = mutableSetOf<Triple<String, String?, String>>()
 
     fun store(message: StoredMessage, text: String) {
         messages[message.id] = message
         texts[message.id] = text
+    }
+
+    fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long) {
+        texts[messageId] = text
+        editedAt[messageId] = editedAtEpochMilliseconds
+    }
+
+    /** Like the message table: an edit replaces the text only when it is newer than the stored edit. */
+    fun replaceTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Boolean {
+        val stored = editedAt[messageId]
+        if (stored != null && editedAtEpochMilliseconds <= stored) return false
+        replaceText(messageId, text, editedAtEpochMilliseconds)
+        return true
     }
 }
 
@@ -60,10 +77,16 @@ internal class FakeDirectMessageRepository(
 
     override suspend fun findText(messageId: String): Result<String?> = Result.success(store.texts[messageId])
 
-    override suspend fun replaceText(messageId: String, text: String): Result<Unit> {
-        store.texts[messageId] = text
+    override suspend fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Unit> {
+        store.replaceText(messageId, text, editedAtEpochMilliseconds)
         return Result.success(Unit)
     }
+
+    override suspend fun replaceTextIfNewer(
+        messageId: String,
+        text: String,
+        editedAtEpochMilliseconds: Long
+    ): Result<Boolean> = Result.success(store.replaceTextIfNewer(messageId, text, editedAtEpochMilliseconds))
 
     override suspend fun delete(messages: List<StoredMessage>): Result<Unit> {
         messages.forEach { message -> store.messages.remove(message.id) }
@@ -73,6 +96,14 @@ internal class FakeDirectMessageRepository(
     override suspend fun saveWithText(message: StoredMessage, text: String): Result<Unit> = error(NOT_USED)
 
     override suspend fun update(message: StoredMessage): Result<Unit> = error(NOT_USED)
+
+    override suspend fun updatePacketIfStatus(
+        messageId: String,
+        expectedStatus: MessageDeliveryStatus,
+        packetId: String,
+        transportMode: String,
+        deliveryStatus: MessageDeliveryStatus
+    ): Result<Boolean> = error(NOT_USED)
 
     override suspend fun findWaitingForAuthorization(contactId: String): Result<List<StoredMessage>> = error(NOT_USED)
 
@@ -100,10 +131,16 @@ internal class FakeGroupMessageRepository(
 
     override suspend fun findText(messageId: String): Result<String?> = Result.success(store.texts[messageId])
 
-    override suspend fun replaceText(messageId: String, text: String): Result<Unit> {
-        store.texts[messageId] = text
+    override suspend fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Unit> {
+        store.replaceText(messageId, text, editedAtEpochMilliseconds)
         return Result.success(Unit)
     }
+
+    override suspend fun replaceTextIfNewer(
+        messageId: String,
+        text: String,
+        editedAtEpochMilliseconds: Long
+    ): Result<Boolean> = Result.success(store.replaceTextIfNewer(messageId, text, editedAtEpochMilliseconds))
 
     override suspend fun delete(messages: List<StoredMessage>): Result<Unit> {
         messages.forEach { message -> store.messages.remove(message.id) }
@@ -234,8 +271,15 @@ internal class FakeParkedMessageOperationRepository : ParkedMessageOperationRepo
     }
 }
 
+/**
+ * [currentEpochs] holds the installed epoch per group; [deletedGroups] the groups whose membership was deleted;
+ * [invitationTargets] what the device holds for the groups incoming invitations name.
+ */
 internal class FakeGroupMembershipRepository(
-    private val administration: GroupAdministrationState = GroupAdministrationState()
+    private val administration: GroupAdministrationState = GroupAdministrationState(),
+    val currentEpochs: MutableMap<String, Int> = mutableMapOf(),
+    val deletedGroups: MutableSet<String> = mutableSetOf(),
+    val invitationTargets: MutableMap<String, GroupInvitationTarget> = mutableMapOf()
 ) : GroupMembershipRepository {
     override suspend fun getVerificationMembershipContext(
         groupId: String
@@ -323,11 +367,14 @@ internal class FakeGroupMembershipRepository(
         signingPublicKey: ByteArray
     ): Result<GroupMetadataMessageSender> = error(NOT_USED)
 
-    override suspend fun wasGroupDeleted(groupId: String): Result<Boolean> = error(NOT_USED)
+    override suspend fun wasGroupDeleted(groupId: String): Result<Boolean> = Result.success(groupId in deletedGroups)
 
     override suspend fun inspectMessageAccess(
         groupId: String
     ): Result<GroupMessageMembershipAccess> = error(NOT_USED)
+
+    override suspend fun inspectInvitationTarget(groupId: String): Result<GroupInvitationTarget> =
+        Result.success(invitationTargets[groupId] ?: GroupInvitationTarget(emptySet(), hasLiveMembership = false))
 
     override suspend fun resolvePinnedSenderSigningKey(
         groupId: String,
@@ -348,6 +395,8 @@ internal class FakeGroupMembershipRepository(
     override suspend fun getAllCurrentTransportRoutingMembers(): Result<List<GroupTransportRoutingMember>> = error(NOT_USED)
 
     override suspend fun getCurrentEpoch(groupId: String): Result<Int> = error(NOT_USED)
+
+    override suspend fun findCurrentEpoch(groupId: String): Result<Int?> = Result.success(currentEpochs[groupId])
 
     override suspend fun verifyGroupKeyConfirmation(
         groupId: String,
@@ -378,6 +427,11 @@ internal class FakeGroupMembershipRepository(
     override fun observeVerificationSnapshot(
         groupId: String
     ): Flow<MembershipVerificationSnapshot> = error(NOT_USED)
+
+    override suspend fun findCommittedRemoval(
+        groupId: String,
+        contactId: String
+    ): Result<GroupCommittedMemberRemoval?> = error(NOT_USED)
 
     override suspend fun removeMember(
         groupId: String,

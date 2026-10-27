@@ -1,8 +1,10 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
@@ -111,6 +113,9 @@ interface GroupMembershipRepository {
 
     suspend fun inspectMessageAccess(groupId: String): Result<GroupMessageMembershipAccess>
 
+    /** Pending invitations into [groupId] and whether the device is a live member of it. */
+    suspend fun inspectInvitationTarget(groupId: String): Result<GroupInvitationTarget>
+
     /** Resolves a pinned message sender against the current group epoch.
      * A missing remote member key returns null so Chats can use a known contact identity.
      */
@@ -137,6 +142,9 @@ interface GroupMembershipRepository {
     suspend fun getAllCurrentTransportRoutingMembers(): Result<List<GroupTransportRoutingMember>>
 
     suspend fun getCurrentEpoch(groupId: String): Result<Int>
+
+    /** Null while no welcome installed the group's security state. */
+    suspend fun findCurrentEpoch(groupId: String): Result<Int?>
 
     /** Validate the ready acknowledgement against Membership's installed group key. */
     suspend fun verifyGroupKeyConfirmation(
@@ -167,6 +175,9 @@ interface GroupMembershipRepository {
     fun observeConversationMembership(groupId: String): Flow<GroupConversationMembershipSnapshot>
 
     fun observeVerificationSnapshot(groupId: String): Flow<MembershipVerificationSnapshot>
+
+    /** The removal of [contactId] the local admin already committed; null when it still has to be done. */
+    suspend fun findCommittedRemoval(groupId: String, contactId: String): Result<GroupCommittedMemberRemoval?>
 
     suspend fun removeMember(
         groupId: String,

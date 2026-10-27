@@ -6,41 +6,41 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinSaveResult
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.command.GroupStateCommand
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinPreparation
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindPinnableGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveGroupPinSenderKeyUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
 import kotlin.reflect.KClass
 
 /**
- * FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> SavePin -> CreatePinPackets -> EnqueuePinPackets.
+ * FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> PreparePin -> SavePin -> PublishPin.
  *
- * The pin snapshot keeps the sender's signing key so every member can verify who wrote the message.
+ * The pin snapshot keeps the sender's signing key so every member can verify who wrote the message. The pin is
+ * saved as unpublished right away, so the user sees it at once; only the publishing
+ * ([GroupStateCommand.PublishGroupPin]) waits for the group administration lock. A pin that was never published is
+ * not skipped as "already pinned": pinning it again, or the recovery after the next start, publishes it.
  */
 class PinGroupMessageWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val pinRepository: GroupPinRepository,
     private val findPinnableGroupMessage: FindPinnableGroupMessageUseCase,
     private val resolveGroupPinSenderKey: ResolveGroupPinSenderKeyUseCase,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
-    private val saveGroupPin: SaveGroupPinUseCase,
-    private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
-    private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
+    private val prepareGroupPin: PrepareGroupPinUseCase,
+    private val saveGroupPin: SaveGroupPinUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.PinMessage,
         PinGroupMessageWorkflow.Step,
         PinGroupMessageWorkflow.Outcome
     > {
     override val commandType: KClass<GroupMessageCommand.PinMessage> = GroupMessageCommand.PinMessage::class
-
-    override fun lockKey(command: GroupMessageCommand.PinMessage): String = groupPinLockKey(command.groupId)
 
     override fun firstStep(command: GroupMessageCommand.PinMessage): Step = Step.FindPinTarget(command)
 
@@ -52,22 +52,19 @@ class PinGroupMessageWorkflow internal constructor(
                     step.message,
                     resolveGroupPinSenderKey(step.command.groupId, step.message).getOrThrow()
                 )
-            is Step.AuthorizeAdmin ->
-                Outcome.AdminAuthorized(
-                    context = requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow(),
-                    message = step.message,
-                    senderKey = step.senderKey
-                )
-            is Step.SavePin ->
-                pinSaved(
-                    saveGroupPin(step.command.groupId, step.message, step.senderKey).getOrThrow(),
-                    step.context
-                )
-            is Step.CreatePinPackets ->
-                Outcome.PinPacketsCreated(createGroupPinPackets(step.pin, step.context).getOrThrow())
-            is Step.EnqueuePinPackets -> {
-                enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
-                Outcome.PinPacketsEnqueued
+            is Step.AuthorizeAdmin -> {
+                requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow()
+                Outcome.AdminAuthorized(message = step.message, senderKey = step.senderKey)
+            }
+            is Step.PreparePin ->
+                pinPrepared(prepareGroupPin(step.command.groupId, step.message, step.senderKey).getOrThrow())
+            is Step.SavePin -> {
+                saveGroupPin(step.pin).getOrThrow()
+                Outcome.PinSaved
+            }
+            is Step.PublishPin -> {
+                engine.run(GroupStateCommand.PublishGroupPin(step.command.groupId)).getOrThrow()
+                Outcome.PinPublished
             }
         }
 
@@ -87,22 +84,23 @@ class PinGroupMessageWorkflow internal constructor(
                         "An active expense board occupies the group pin"
                     )
                 )
-            is Outcome.PinSaved -> Transition.Next(Step.CreatePinPackets(outcome.pin, outcome.context, step.command))
-            is Outcome.PinPacketsCreated -> Transition.Next(Step.EnqueuePinPackets(outcome.packets, step.command))
-            Outcome.PinPacketsEnqueued -> Transition.Complete()
+            is Outcome.PinPrepared -> Transition.Next(Step.SavePin(outcome.pin, step.command))
+            Outcome.PinSaved -> Transition.Next(Step.PublishPin(step.command))
+            Outcome.PinPublished -> Transition.Complete()
         }
 
     private suspend fun findPinTarget(command: GroupMessageCommand.PinMessage): Outcome {
         require(command.groupId.isNotBlank()) { "Group ID must not be blank" }
         val message = findPinnableGroupMessage(command.groupId, command.messageId).getOrThrow()
-        return if (pinRepository.find(command.groupId).getOrThrow()?.messageId == message.id) {
+        val current = pinRepository.find(command.groupId).getOrThrow()
+        return if (current?.messageId == message.id && current?.publishPending == false) {
             Outcome.TargetAlreadyPinned
         } else {
             Outcome.TargetFound(message)
         }
     }
 
-    /** A message that was pinned already only needed the admin check. */
+    /** A message that was pinned (and published) already only needed the admin check. */
     private fun afterAdminAuthorized(
         outcome: Outcome.AdminAuthorized,
         command: GroupMessageCommand.PinMessage
@@ -110,14 +108,14 @@ class PinGroupMessageWorkflow internal constructor(
         if (outcome.message == null || outcome.senderKey == null) {
             Transition.Complete()
         } else {
-            Transition.Next(Step.SavePin(outcome.message, outcome.senderKey, outcome.context, command))
+            Transition.Next(Step.PreparePin(outcome.message, outcome.senderKey, command))
         }
 
-    private fun pinSaved(result: GroupPinSaveResult, context: GroupAdminContext): Outcome =
+    private fun pinPrepared(result: GroupPinPreparation): Outcome =
         when (result) {
-            is GroupPinSaveResult.Saved -> Outcome.PinSaved(result.pin, context)
-            GroupPinSaveResult.AlreadyPinned -> Outcome.AlreadyPinned
-            GroupPinSaveResult.SlotHeldByExpenses -> Outcome.SlotOccupiedByExpenses
+            is GroupPinPreparation.Ready -> Outcome.PinPrepared(result.pin)
+            GroupPinPreparation.AlreadyPinned -> Outcome.AlreadyPinned
+            GroupPinPreparation.SlotHeldByExpenses -> Outcome.SlotOccupiedByExpenses
         }
 
     sealed interface Step : WorkflowStep {
@@ -139,21 +137,18 @@ class PinGroupMessageWorkflow internal constructor(
             override val command: GroupMessageCommand.PinMessage
         ) : Step
 
-        data class SavePin(
+        data class PreparePin(
             val message: StoredMessage,
             val senderKey: ByteArray,
-            val context: GroupAdminContext,
             override val command: GroupMessageCommand.PinMessage
         ) : Step
 
-        data class CreatePinPackets(
+        data class SavePin(
             val pin: GroupPinState,
-            val context: GroupAdminContext,
             override val command: GroupMessageCommand.PinMessage
         ) : Step
 
-        data class EnqueuePinPackets(
-            val packets: Map<String, GroupPinUpdatedPacket>,
+        data class PublishPin(
             override val command: GroupMessageCommand.PinMessage
         ) : Step
     }
@@ -171,7 +166,6 @@ class PinGroupMessageWorkflow internal constructor(
         ) : Outcome
 
         data class AdminAuthorized(
-            val context: GroupAdminContext,
             val message: StoredMessage?,
             val senderKey: ByteArray?
         ) : Outcome
@@ -180,16 +174,13 @@ class PinGroupMessageWorkflow internal constructor(
 
         data object SlotOccupiedByExpenses : Outcome
 
-        data class PinSaved(
-            val pin: GroupPinState,
-            val context: GroupAdminContext
+        data class PinPrepared(
+            val pin: GroupPinState
         ) : Outcome
 
-        data class PinPacketsCreated(
-            val packets: Map<String, GroupPinUpdatedPacket>
-        ) : Outcome
+        data object PinSaved : Outcome
 
-        data object PinPacketsEnqueued : Outcome
+        data object PinPublished : Outcome
     }
 
     private companion object {

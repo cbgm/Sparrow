@@ -7,6 +7,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
@@ -18,8 +20,17 @@ import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
 
-/** CheckMembership -> FindEditableMessage -> FindRecipients -> EncryptEdit -> EnqueueEdit -> ReplaceText. */
+/**
+ * CheckMembership -> FindEditableMessage -> FindRecipients -> (EncryptEdit -> EnqueueEdit -> ReplaceText)
+ * | EditUnsentMessage.
+ *
+ * A message nobody can receive or that is still queued unsent is edited locally only; the flush sends the new
+ * text. Only that local edit ([MessageCommand.EditUnsentGroupMessage]) takes the group send lock, so a running
+ * flush never sends the text from before the edit. The edit of a message members already have takes no lock and
+ * never waits for a send or flush of the group.
+ */
 class EditGroupMessageWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val messageRepository: GroupMessageRepository,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
     private val findEditableGroupMessage: FindEditableGroupMessageUseCase,
@@ -49,7 +60,10 @@ class EditGroupMessageWorkflow internal constructor(
                 findEditableGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
                 Outcome.MessageEditable
             }
-            is Step.FindRecipients -> Outcome.RecipientsFound(findGroupRecipients(step.command.groupId).getOrThrow())
+            is Step.FindRecipients ->
+                Outcome.RecipientsFound(
+                    findGroupRecipients.forOwnMessage(step.command.groupId, step.command.messageId).getOrThrow()
+                )
             is Step.EncryptEdit ->
                 Outcome.EditEncrypted(
                     encryptGroupOperation(
@@ -66,8 +80,22 @@ class EditGroupMessageWorkflow internal constructor(
                 enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
                 Outcome.EditEnqueued
             }
+            is Step.EditUnsentMessage -> {
+                engine.run(
+                    MessageCommand.EditUnsentGroupMessage(
+                        groupId = step.command.groupId,
+                        messageId = step.command.messageId,
+                        text = step.command.text
+                    )
+                ).getOrThrow()
+                Outcome.UnsentMessageEdited
+            }
             is Step.ReplaceText -> {
-                messageRepository.replaceText(step.command.messageId, step.command.text.trim()).getOrThrow()
+                messageRepository.replaceText(
+                    step.command.messageId,
+                    step.command.text.trim(),
+                    SystemClock.nowEpochMilliseconds()
+                ).getOrThrow()
                 Outcome.TextReplaced
             }
         }
@@ -78,10 +106,22 @@ class EditGroupMessageWorkflow internal constructor(
             is Outcome.MembershipInactive ->
                 Transition.Reject(ConversationFailure(ConversationFailureReason.NOT_ALLOWED, outcome.reason))
             Outcome.MessageEditable -> Transition.Next(Step.FindRecipients(step.command))
-            is Outcome.RecipientsFound -> Transition.Next(Step.EncryptEdit(outcome.recipients, step.command))
+            is Outcome.RecipientsFound -> encryptOrEditLocally(outcome.recipients, step.command)
             is Outcome.EditEncrypted -> Transition.Next(Step.EnqueueEdit(outcome.packets, step.command))
             Outcome.EditEnqueued -> Transition.Next(Step.ReplaceText(step.command))
             Outcome.TextReplaced -> Transition.Complete()
+            Outcome.UnsentMessageEdited -> Transition.Complete()
+        }
+
+    /** Without a recipient the edit only changes the local text, under the group send lock. */
+    private fun encryptOrEditLocally(
+        recipients: List<String>,
+        command: GroupMessageCommand.EditMessage
+    ): Transition<Step> =
+        if (recipients.isEmpty()) {
+            Transition.Next(Step.EditUnsentMessage(command))
+        } else {
+            Transition.Next(Step.EncryptEdit(recipients, command))
         }
 
     sealed interface Step : WorkflowStep {
@@ -112,6 +152,10 @@ class EditGroupMessageWorkflow internal constructor(
         data class ReplaceText(
             override val command: GroupMessageCommand.EditMessage
         ) : Step
+
+        data class EditUnsentMessage(
+            override val command: GroupMessageCommand.EditMessage
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -134,5 +178,7 @@ class EditGroupMessageWorkflow internal constructor(
         data object EditEnqueued : Outcome
 
         data object TextReplaced : Outcome
+
+        data object UnsentMessageEdited : Outcome
     }
 }

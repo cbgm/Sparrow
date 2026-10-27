@@ -103,6 +103,36 @@ class ParkedMessageOperationsTest {
     }
 
     @Test
+    fun olderEditThatArrivesAfterANewerOneIsIgnored() = runBlocking {
+        store.store(message(), "Original")
+
+        receive(edit("Second edit", sentAt = 3))
+        receive(edit("First edit", sentAt = 2))
+        assertEquals("Second edit", store.texts[MESSAGE_ID])
+        assertEquals(3L, store.editedAt[MESSAGE_ID])
+    }
+
+    @Test
+    fun editWithTheSameEditTimeKeepsTheStoredText() = runBlocking {
+        store.store(message(), "Original")
+
+        receive(edit("Live copy", sentAt = 3))
+        receive(edit("Other text", sentAt = 3))
+        assertEquals("Live copy", store.texts[MESSAGE_ID])
+    }
+
+    @Test
+    fun parkedEditOlderThanTheStoredEditIsIgnoredWhenReplayed() = runBlocking {
+        receive(edit("Old edit", sentAt = 2))
+        store.store(message(), "Original")
+        receive(edit("New edit", sentAt = 3))
+
+        engine.run(IncomingCommand.ApplyParkedMessageOperations(MESSAGE_ID)).getOrThrow()
+        assertEquals("New edit", store.texts[MESSAGE_ID])
+        assertTrue(parked.parked.isEmpty())
+    }
+
+    @Test
     fun parkedOperationSurvivesTheRoundTripThroughItsTableRow() {
         val operation =
             operation(

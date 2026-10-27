@@ -40,6 +40,7 @@ val sharedModule =
                 contactBlockObserver = get(),
                 pendingAuthorizationCleanupRunner = get(),
                 recoverInterruptedDirectSends = get(),
+                unpublishedGroupStateRunner = get(),
                 workflowRegistry = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),

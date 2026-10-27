@@ -47,6 +47,7 @@ class MailboxRouteProvisioner(
                         SparrowLog.diagnostic("MailboxRouteProvisioner", "Retrying mailbox revocations failed", failure)
                     }
                 }
+            revokeExpiredRetiringMailboxes(now, availableNodes)
             val blockedContactIds = contactBlocklistRepository.getBlockedContactIds().getOrThrow()
             var provisioned = 0
 
@@ -125,16 +126,66 @@ class MailboxRouteProvisioner(
     // verified directory has the current address; the saved mailboxes are reached there.
     private suspend fun followMovedNodes(availableNodes: List<NodeEndpoint>) {
         mailboxRouteRepository.allLocal().getOrThrow().forEach { credential ->
-            val accessEndpoint =
-                availableNodes
-                    .firstOrNull { node -> node.nodeId == credential.deliveryRoute.nodeId }
-                    ?.mailboxAccessEndpoint
-            if (accessEndpoint != null && accessEndpoint != credential.accessEndpoint) {
-                mailboxRouteRepository
-                    .saveLocal(credential.copy(accessEndpoint = accessEndpoint))
-                    .getOrThrow()
+            movedAccessEndpoint(credential, availableNodes)?.let { accessEndpoint ->
+                mailboxRouteRepository.saveLocal(credential.copy(accessEndpoint = accessEndpoint)).getOrThrow()
             }
         }
+        mailboxRouteRepository.allRetiring().getOrThrow().forEach { credential ->
+            movedAccessEndpoint(credential, availableNodes)?.let { accessEndpoint ->
+                mailboxRouteRepository.saveRetiring(credential.copy(accessEndpoint = accessEndpoint)).getOrThrow()
+            }
+        }
+    }
+
+    private fun movedAccessEndpoint(credential: LocalMailboxCredential, availableNodes: List<NodeEndpoint>): String? =
+        availableNodes
+            .firstOrNull { node -> node.nodeId == credential.deliveryRoute.nodeId }
+            ?.mailboxAccessEndpoint
+            ?.takeIf { accessEndpoint -> accessEndpoint != credential.accessEndpoint }
+
+    /**
+     * A retiring mailbox is revoked only after it expired, and only once the pending synchronization emptied it
+     * (or it stayed expired for [RETIRING_GRACE_MILLISECONDS]): the node deletes stored envelopes together with
+     * the mailbox. A mailbox whose node left the signed directory is dropped without a revocation, like a current
+     * one. A failed revocation while the node is unreachable is retried by the next provisioning; any other failure
+     * drops the local copy, the node expires the mailbox on its own.
+     */
+    private suspend fun revokeExpiredRetiringMailboxes(now: Long, availableNodes: List<NodeEndpoint>) {
+        mailboxRouteRepository
+            .allRetiring()
+            .getOrThrow()
+            .filter { credential ->
+                !credential.revocationPending && credential.deliveryRoute.expiresAtEpochMilliseconds <= now
+            }.forEach { credential ->
+                if (credential.isRetiredFrom(availableNodes)) {
+                    mailboxRouteRepository.deleteRetiring(credential.deliveryRoute.routeId).getOrThrow()
+                    return@forEach
+                }
+                if (credential.stillHoldsEnvelopes(now)) return@forEach
+                mailboxGateway.revoke(credential)
+                    .onSuccess { mailboxRouteRepository.deleteRetiring(credential.deliveryRoute.routeId).getOrThrow() }
+                    .onFailure { failure ->
+                        if (failure is CancellationException) throw failure
+                        if (failure.isRecoverableConnectivityFailure()) return@onFailure
+                        SparrowLog.diagnostic(
+                            "MailboxRouteProvisioner",
+                            "Expired mailbox of ${credential.contactId} could not be revoked",
+                            failure
+                        )
+                        mailboxRouteRepository.deleteRetiring(credential.deliveryRoute.routeId).getOrThrow()
+                    }
+            }
+    }
+
+    /** Envelopes still wait in the expired mailbox and the grace period is not over: synchronize them first. */
+    private suspend fun LocalMailboxCredential.stillHoldsEnvelopes(now: Long): Boolean {
+        if (deliveryRoute.expiresAtEpochMilliseconds + RETIRING_GRACE_MILLISECONDS <= now) return false
+        val pending = mailboxGateway.pending(this).getOrElse { failure ->
+            if (failure is CancellationException) throw failure
+            // An unreachable node may still hold envelopes; anything else is left to the revocation.
+            return failure.isRecoverableConnectivityFailure()
+        }
+        return pending.isNotEmpty()
     }
 
     private suspend fun replaceCredential(
@@ -156,16 +207,15 @@ class MailboxRouteProvisioner(
             }
             return
         }
-        if (current != null) {
-            // The contact needs the new route either way. An old mailbox that cannot be revoked now expires on
-            // its node; failing here would leave the contact without any route.
-            mailboxGateway.revoke(current).onFailure { failure ->
-                SparrowLog.diagnostic("MailboxRouteProvisioner", "Old mailbox of $contactId could not be revoked", failure)
+        // The old mailbox may still hold envelopes, and the contact keeps sending to it until the queued route
+        // packet arrived. It stays readable as a retiring mailbox and is revoked only after its expiry.
+        val saved =
+            if (current != null) {
+                mailboxRouteRepository.retireLocal(current, replacement)
+            } else {
+                mailboxRouteRepository.saveLocal(replacement)
             }
-            mailboxRouteRepository.deleteLocal(contactId).getOrThrow()
-        }
-
-        mailboxRouteRepository.saveLocal(replacement).getOrElse { persistenceError ->
+        saved.getOrElse { persistenceError ->
             mailboxGateway.revoke(replacement)
                 .onFailure { failure ->
                     SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure)
@@ -177,6 +227,7 @@ class MailboxRouteProvisioner(
     private companion object {
         const val ROUTE_LIFETIME_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
         const val RENEWAL_WINDOW_MILLISECONDS = 3L * 24L * 60L * 60L * 1_000L
+        const val RETIRING_GRACE_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 }
 

@@ -7,6 +7,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
@@ -19,8 +21,16 @@ import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
 
-/** CheckMembership -> FindOwnMessage -> FindRecipients -> EncryptDelete -> EnqueueDelete -> DiscardMessage. */
+/**
+ * CheckMembership -> FindOwnMessage -> FindRecipients -> (EncryptDelete -> EnqueueDelete -> DiscardMessage)
+ * | DeleteUnsentMessage.
+ *
+ * A message nobody can receive or that is still queued unsent is deleted locally only, so it is never flushed.
+ * Only that local delete ([MessageCommand.DeleteUnsentGroupMessage]) takes the group send lock, so a running flush
+ * cannot send it while it is deleted. The delete of a message members already have takes no lock.
+ */
 class DeleteGroupMessageWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
     private val findDeletableGroupMessage: FindDeletableGroupMessageUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
@@ -50,7 +60,10 @@ class DeleteGroupMessageWorkflow internal constructor(
                     findDeletableGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
                 )
             is Step.FindRecipients ->
-                Outcome.RecipientsFound(step.message, findGroupRecipients(step.command.groupId).getOrThrow())
+                Outcome.RecipientsFound(
+                    step.message,
+                    findGroupRecipients.forOwnMessage(step.command.groupId, step.message.id).getOrThrow()
+                )
             is Step.EncryptDelete ->
                 Outcome.DeleteEncrypted(
                     message = step.message,
@@ -67,6 +80,11 @@ class DeleteGroupMessageWorkflow internal constructor(
                 enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
                 Outcome.DeleteEnqueued(step.message)
             }
+            is Step.DeleteUnsentMessage -> {
+                engine.run(MessageCommand.DeleteUnsentGroupMessage(step.command.groupId, step.message.id))
+                    .getOrThrow()
+                Outcome.UnsentMessageDeleted
+            }
             is Step.DiscardMessage -> {
                 discardGroupMessages(listOf(step.message)).getOrThrow()
                 Outcome.MessageDiscarded
@@ -79,12 +97,24 @@ class DeleteGroupMessageWorkflow internal constructor(
             is Outcome.MembershipInactive ->
                 Transition.Reject(ConversationFailure(ConversationFailureReason.NOT_ALLOWED, outcome.reason))
             is Outcome.OwnMessageFound -> Transition.Next(Step.FindRecipients(outcome.message, step.command))
-            is Outcome.RecipientsFound ->
-                Transition.Next(Step.EncryptDelete(outcome.message, outcome.recipients, step.command))
+            is Outcome.RecipientsFound -> encryptOrDeleteLocally(outcome.message, outcome.recipients, step.command)
             is Outcome.DeleteEncrypted ->
                 Transition.Next(Step.EnqueueDelete(outcome.message, outcome.packets, step.command))
             is Outcome.DeleteEnqueued -> Transition.Next(Step.DiscardMessage(outcome.message, step.command))
             Outcome.MessageDiscarded -> Transition.Complete()
+            Outcome.UnsentMessageDeleted -> Transition.Complete()
+        }
+
+    /** Without a recipient the message is only removed locally, under the group send lock. */
+    private fun encryptOrDeleteLocally(
+        message: StoredMessage,
+        recipients: List<String>,
+        command: GroupMessageCommand.DeleteMessage
+    ): Transition<Step> =
+        if (recipients.isEmpty()) {
+            Transition.Next(Step.DeleteUnsentMessage(message, command))
+        } else {
+            Transition.Next(Step.EncryptDelete(message, recipients, command))
         }
 
     sealed interface Step : WorkflowStep {
@@ -119,6 +149,11 @@ class DeleteGroupMessageWorkflow internal constructor(
             val message: StoredMessage,
             override val command: GroupMessageCommand.DeleteMessage
         ) : Step
+
+        data class DeleteUnsentMessage(
+            val message: StoredMessage,
+            override val command: GroupMessageCommand.DeleteMessage
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -147,5 +182,7 @@ class DeleteGroupMessageWorkflow internal constructor(
         ) : Outcome
 
         data object MessageDiscarded : Outcome
+
+        data object UnsentMessageDeleted : Outcome
     }
 }

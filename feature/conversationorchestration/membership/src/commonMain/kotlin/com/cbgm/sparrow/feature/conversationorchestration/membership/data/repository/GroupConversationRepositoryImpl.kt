@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.data.dataso
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupLocalCleanupDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.toGroupConversationEntity
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.toGroupMembershipContext
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupConversationKind
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantActivation
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantAddition
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantRemoval
@@ -36,6 +37,12 @@ internal class GroupConversationRepositoryImpl(
             conversationDataSource.getGroupConversation(groupId)
                 .toGroupMembershipContext(conversationDataSource.getTitle(groupId))
         }
+
+    override suspend fun findKind(groupId: String): Result<GroupConversationKind> =
+        safeSuspendCall { conversationDataSource.findKind(groupId) }
+
+    override suspend fun isParticipant(groupId: String, contactId: String): Result<Boolean> =
+        safeSuspendCall { conversationDataSource.isParticipant(groupId, contactId) }
 
     override suspend fun stageIncoming(
         groupId: String,

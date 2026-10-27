@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -11,35 +10,35 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectInvitationState
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectRecipient
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectSendAuthorization
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.OutgoingMessageContent
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.OutgoingMessageContentPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.port.DirectReauthorizationPort
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.InspectDirectInvitationUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.LoadDirectRecipientUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
 import kotlin.reflect.KClass
 
 /**
  * ValidateContent -> CheckAuthorization -> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
- * -> DeliverMessage | (FindQueueConversation -> LoadQueueRecipient -> StoreWaitingMessage).
+ * -> DeliverMessage | (QueueMessage [-> DeliverMessage]).
  *
  * An authorized contact gets the message immediately. Without authorization the message waits in
  * WAITING_FOR_AUTHORIZATION, and the workflow starts a fresh invitation when none is pending.
+ *
+ * The workflow takes no lock, so a message is stored and shown at once even while an earlier message to the same
+ * contact still uploads its attachments. Only QueueMessage ([MessageCommand.StoreWaitingDirectMessage]) holds the
+ * contact's release lock: otherwise a release could run between "authorization missing" and storing the waiting
+ * message, find nothing, and leave it waiting until the next identity event. When it finds the contact authorized
+ * meanwhile, the message is delivered normally instead.
  */
 class SendDirectMessageWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val inspectDirectInvitation: InspectDirectInvitationUseCase,
     private val reauthorization: DirectReauthorizationPort,
-    private val conversationRepository: DirectConversationRepository,
-    private val loadDirectRecipient: LoadDirectRecipientUseCase,
-    private val storeOutgoingDirectMessage: StoreOutgoingDirectMessageUseCase
+    private val conversationRepository: DirectConversationRepository
 ) : ConversationWorkflow<
         DirectConversationCommand.SendMessage,
         SendDirectMessageWorkflow.Step,
@@ -85,23 +84,19 @@ class SendDirectMessageWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.MessageDelivered
             }
-            is Step.FindQueueConversation ->
-                Outcome.QueueConversationFound(
-                    target = conversationRepository.requireTarget(step.conversationId).getOrThrow(),
-                    content = step.content,
-                    plan = step.plan
+            is Step.QueueMessage ->
+                messageQueued(
+                    engine.run(
+                        MessageCommand.StoreWaitingDirectMessage(
+                            contactId = step.command.contactId,
+                            conversationId = step.conversationId,
+                            content = step.content,
+                            replyToMessageId = step.command.replyToMessageId,
+                            authorizationFailure = step.plan.authorizationFailure
+                        )
+                    ).getOrThrow(),
+                    step
                 )
-            is Step.LoadQueueRecipient ->
-                Outcome.QueueRecipientLoaded(loadDirectRecipient(step.target).getOrThrow(), step.content, step.plan)
-            is Step.StoreWaitingMessage -> {
-                storeOutgoingDirectMessage(
-                    recipient = step.recipient,
-                    content = step.content,
-                    deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
-                    replyToMessageId = step.command.replyToMessageId
-                ).getOrThrow()
-                Outcome.MessageQueued(step.plan.authorizationFailure)
-            }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
@@ -141,23 +136,20 @@ class SendDirectMessageWorkflow internal constructor(
                         Transition.Next(Step.DeliverMessage(outcome.conversationId, outcome.content, step.command))
                     is DeliveryPlan.Queue ->
                         Transition.Next(
-                            Step.FindQueueConversation(
-                                outcome.conversationId,
-                                outcome.content,
-                                outcome.plan,
-                                step.command
-                            )
+                            Step.QueueMessage(outcome.conversationId, outcome.content, outcome.plan, step.command)
                         )
                 }
             Outcome.MessageDelivered -> Transition.Complete(ConversationResult.DirectMessageSent)
-            is Outcome.QueueConversationFound ->
-                Transition.Next(Step.LoadQueueRecipient(outcome.target, outcome.content, outcome.plan, step.command))
-            is Outcome.QueueRecipientLoaded ->
-                Transition.Next(
-                    Step.StoreWaitingMessage(outcome.recipient, outcome.content, outcome.plan, step.command)
-                )
-            is Outcome.MessageQueued ->
-                Transition.Complete(ConversationResult.DirectMessageQueued(outcome.authorizationFailure))
+            is Outcome.AuthorizedWhileQueuing ->
+                Transition.Next(Step.DeliverMessage(outcome.conversationId, outcome.content, step.command))
+            is Outcome.MessageQueued -> Transition.Complete(outcome.result)
+        }
+
+    /** The waiting store completes without a queued result when the contact became authorized meanwhile. */
+    private fun messageQueued(result: ConversationResult, step: Step.QueueMessage): Outcome =
+        when (result) {
+            is ConversationResult.DirectMessageQueued -> Outcome.MessageQueued(result)
+            else -> Outcome.AuthorizedWhileQueuing(step.conversationId, step.content)
         }
 
     private suspend fun checkAuthorization(step: Step.CheckAuthorization): Outcome {
@@ -214,22 +206,8 @@ class SendDirectMessageWorkflow internal constructor(
             override val command: DirectConversationCommand.SendMessage
         ) : Step
 
-        data class FindQueueConversation(
+        data class QueueMessage(
             val conversationId: String,
-            val content: OutgoingMessageContent,
-            val plan: DeliveryPlan.Queue,
-            override val command: DirectConversationCommand.SendMessage
-        ) : Step
-
-        data class LoadQueueRecipient(
-            val target: DirectConversationTarget,
-            val content: OutgoingMessageContent,
-            val plan: DeliveryPlan.Queue,
-            override val command: DirectConversationCommand.SendMessage
-        ) : Step
-
-        data class StoreWaitingMessage(
-            val recipient: DirectRecipient,
             val content: OutgoingMessageContent,
             val plan: DeliveryPlan.Queue,
             override val command: DirectConversationCommand.SendMessage
@@ -287,20 +265,13 @@ class SendDirectMessageWorkflow internal constructor(
 
         data object MessageDelivered : Outcome
 
-        data class QueueConversationFound(
-            val target: DirectConversationTarget,
-            val content: OutgoingMessageContent,
-            val plan: DeliveryPlan.Queue
-        ) : Outcome
-
-        data class QueueRecipientLoaded(
-            val recipient: DirectRecipient,
-            val content: OutgoingMessageContent,
-            val plan: DeliveryPlan.Queue
+        data class AuthorizedWhileQueuing(
+            val conversationId: String,
+            val content: OutgoingMessageContent
         ) : Outcome
 
         data class MessageQueued(
-            val authorizationFailure: ConversationFailure?
+            val result: ConversationResult.DirectMessageQueued
         ) : Outcome
     }
 }

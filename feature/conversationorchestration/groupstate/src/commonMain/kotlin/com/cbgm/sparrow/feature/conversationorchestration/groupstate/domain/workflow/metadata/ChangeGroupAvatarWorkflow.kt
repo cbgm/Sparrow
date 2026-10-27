@@ -7,11 +7,25 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.command.GroupStateCommand
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAvatarState
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupAvatarUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupAvatarUseCase
 import kotlin.reflect.KClass
 
-/** ValidateAvatar -> PublishAvatar. */
+/**
+ * ValidateAvatar -> AuthorizeAdmin -> PrepareAvatar -> SaveAvatar -> PublishAvatar.
+ *
+ * The new avatar is saved as unpublished right away, so the user sees it at once without waiting for a running
+ * membership change. Only the publishing ([GroupStateCommand.PublishGroupAvatar]) waits for the group
+ * administration lock. A failed or interrupted publish leaves the avatar unpublished: the same change again, or the
+ * recovery after the next start, publishes it.
+ */
 class ChangeGroupAvatarWorkflow internal constructor(
-    private val engine: WorkflowEngine
+    private val engine: WorkflowEngine,
+    private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val prepareGroupAvatar: PrepareGroupAvatarUseCase,
+    private val saveGroupAvatar: SaveGroupAvatarUseCase
 ) : ConversationWorkflow<
         GroupAdministrationCommand.ChangeAvatar,
         ChangeGroupAvatarWorkflow.Step,
@@ -28,17 +42,29 @@ class ChangeGroupAvatarWorkflow internal constructor(
                 GroupMetadataPolicy.requireValidAvatar(step.command.bytes)
                 Outcome.AvatarValid
             }
+            is Step.AuthorizeAdmin -> {
+                require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
+                requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow()
+                Outcome.AdminAuthorized
+            }
+            is Step.PrepareAvatar ->
+                Outcome.AvatarPrepared(prepareGroupAvatar(step.command.groupId, step.command.bytes.copyOf()).getOrThrow())
+            is Step.SaveAvatar -> {
+                saveGroupAvatar(step.avatar).getOrThrow()
+                Outcome.AvatarSaved
+            }
             is Step.PublishAvatar -> {
-                engine.run(
-                    GroupStateCommand.PublishGroupAvatar(step.command.groupId, step.command.bytes.copyOf())
-                ).getOrThrow()
+                engine.run(GroupStateCommand.PublishGroupAvatar(step.command.groupId)).getOrThrow()
                 Outcome.AvatarPublished
             }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            Outcome.AvatarValid -> Transition.Next(Step.PublishAvatar(step.command))
+            Outcome.AvatarValid -> Transition.Next(Step.AuthorizeAdmin(step.command))
+            Outcome.AdminAuthorized -> Transition.Next(Step.PrepareAvatar(step.command))
+            is Outcome.AvatarPrepared -> Transition.Next(Step.SaveAvatar(outcome.avatar, step.command))
+            Outcome.AvatarSaved -> Transition.Next(Step.PublishAvatar(step.command))
             Outcome.AvatarPublished -> Transition.Complete()
         }
 
@@ -46,6 +72,19 @@ class ChangeGroupAvatarWorkflow internal constructor(
         val command: GroupAdministrationCommand.ChangeAvatar
 
         data class ValidateAvatar(
+            override val command: GroupAdministrationCommand.ChangeAvatar
+        ) : Step
+
+        data class AuthorizeAdmin(
+            override val command: GroupAdministrationCommand.ChangeAvatar
+        ) : Step
+
+        data class PrepareAvatar(
+            override val command: GroupAdministrationCommand.ChangeAvatar
+        ) : Step
+
+        data class SaveAvatar(
+            val avatar: GroupAvatarState,
             override val command: GroupAdministrationCommand.ChangeAvatar
         ) : Step
 
@@ -57,6 +96,18 @@ class ChangeGroupAvatarWorkflow internal constructor(
     sealed interface Outcome {
         data object AvatarValid : Outcome
 
+        data object AdminAuthorized : Outcome
+
+        data class AvatarPrepared(
+            val avatar: GroupAvatarState
+        ) : Outcome
+
+        data object AvatarSaved : Outcome
+
         data object AvatarPublished : Outcome
+    }
+
+    private companion object {
+        const val ADMIN_ACTION = "group avatar"
     }
 }

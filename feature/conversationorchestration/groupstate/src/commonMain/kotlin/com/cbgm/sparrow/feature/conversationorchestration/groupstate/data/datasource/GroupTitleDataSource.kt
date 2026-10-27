@@ -10,13 +10,20 @@ internal class GroupTitleDataSource(
         val metadata = groupMetadataDao.get(groupId) ?: error("Group conversation was not found")
         return GroupTitleDto(
             title = metadata.title,
-            changedAtEpochMilliseconds = metadata.titleChangedAtEpochMilliseconds
+            changedAtEpochMilliseconds = metadata.titleChangedAtEpochMilliseconds,
+            publishPending = metadata.titlePublishPending
         )
     }
 
     suspend fun save(groupId: String, title: GroupTitleDto) {
-        groupMetadataDao.upsertTitle(groupId, title.title, title.changedAtEpochMilliseconds)
+        groupMetadataDao.upsertTitle(groupId, title.title, title.changedAtEpochMilliseconds, title.publishPending)
     }
+
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
+        groupMetadataDao.markTitlePublished(groupId, changedAtEpochMilliseconds)
+    }
+
+    suspend fun findPublishPendingGroupIds(): List<String> = groupMetadataDao.findTitlePublishPendingGroupIds()
 
     suspend fun deleteLocal(groupId: String) {
         groupMetadataDao.clearTitleChangedAt(groupId)

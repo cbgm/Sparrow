@@ -12,6 +12,12 @@ internal class GroupPinDataSource(
         groupPinDao.upsert(entity)
     }
 
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
+        groupPinDao.markPublished(groupId, changedAtEpochMilliseconds)
+    }
+
+    suspend fun findPublishPendingGroupIds(): List<String> = groupPinDao.findPublishPendingGroupIds()
+
     suspend fun delete(groupId: String) {
         groupPinDao.delete(groupId)
     }

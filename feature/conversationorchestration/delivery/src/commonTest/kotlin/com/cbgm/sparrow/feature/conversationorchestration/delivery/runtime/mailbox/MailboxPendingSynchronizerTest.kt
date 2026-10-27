@@ -35,6 +35,28 @@ class MailboxPendingSynchronizerTest {
             assertEquals(listOf(PROCESSED, REJECTED), gateway.acknowledged)
         }
 
+    @Test
+    fun retiringMailboxIsStillSynchronizedUntilItIsRevoked() =
+        runTest {
+            val gateway =
+                FakeMailboxGateway(
+                    pending = mapOf(REACHABLE to emptyList(), RETIRING to listOf(envelope(PROCESSED)))
+                )
+            val synchronizer =
+                MailboxPendingSynchronizer(
+                    mailboxGateway = gateway,
+                    mailboxRouteRepository =
+                        FakeMailboxRouteRepository(
+                            credentials = listOf(credential(REACHABLE)),
+                            retiring = listOf(credential(RETIRING), credential(REVOKING).copy(revocationPending = true))
+                        ),
+                    incomingEnvelopeProcessor = FakeProcessor
+                )
+
+            assertEquals(1, synchronizer.synchronize().getOrThrow())
+            assertEquals(listOf(PROCESSED), gateway.acknowledged)
+        }
+
     private object FakeProcessor : IncomingEnvelopeProcessor {
         override suspend fun process(
             envelopeId: String,
@@ -75,7 +97,8 @@ class MailboxPendingSynchronizerTest {
     }
 
     private class FakeMailboxRouteRepository(
-        private val credentials: List<LocalMailboxCredential>
+        private val credentials: List<LocalMailboxCredential>,
+        private val retiring: List<LocalMailboxCredential> = emptyList()
     ) : MailboxRouteRepository {
         override suspend fun localForContact(contactId: String) = error("Not used")
 
@@ -94,11 +117,24 @@ class MailboxPendingSynchronizerTest {
         override suspend fun deleteRemote(contactId: String) = error("Not used")
 
         override suspend fun deleteAllRemote() = error("Not used")
+
+        override suspend fun allRetiring() = Result.success(retiring)
+
+        override suspend fun retireLocal(retiring: LocalMailboxCredential, replacement: LocalMailboxCredential) =
+            error("Not used")
+
+        override suspend fun saveRetiring(credential: LocalMailboxCredential) = error("Not used")
+
+        override suspend fun markRetiringRevocationPending(contactId: String) = error("Not used")
+
+        override suspend fun deleteRetiring(routeId: String) = error("Not used")
     }
 
     private companion object {
         const val UNREACHABLE = "contact-unreachable"
         const val REACHABLE = "contact-reachable"
+        const val RETIRING = "contact-retiring"
+        const val REVOKING = "contact-revoking"
         const val FAILING = "envelope-failing"
         const val PROCESSED = "envelope-processed"
         const val REJECTED = "envelope-rejected"

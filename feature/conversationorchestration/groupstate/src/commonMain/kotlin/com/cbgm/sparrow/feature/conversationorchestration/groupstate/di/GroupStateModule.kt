@@ -22,19 +22,25 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupTitleRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupStateUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupAvatarPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupDescriptionPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupTitlePacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindExpenseBoardClosureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindPinnableGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindUnpublishedGroupStateUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.LoadGroupExpenseMessagesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareEmptyGroupPinUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupAvatarUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseDeletionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseRevisionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupPinUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupTitleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupPaymentTransferUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveGroupPinSenderKeyUseCase
@@ -55,13 +61,17 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.work
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.ChangeGroupDescriptionWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.ChangeGroupTitleWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.PublishGroupAvatarWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.PublishGroupDescriptionWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.PublishGroupTitleWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.RemoveGroupAvatarWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.metadata.SendCurrentGroupMetadataWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.payment.SendGroupPaymentWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.CloseGroupExpensesWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.PinGroupMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.PublishGroupPinWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.SendCurrentGroupPinWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin.UnpinGroupMessageWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.runtime.UnpublishedGroupStateRunner
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -73,6 +83,7 @@ val conversationGroupStateModule =
         registerUseCases()
         registerInternalWorkflows()
         registerPublicWorkflows()
+        singleOf(::UnpublishedGroupStateRunner)
     }
 
 private fun Module.registerData() {
@@ -103,13 +114,19 @@ private fun Module.registerUseCases() {
     singleOf(::SendCurrentGroupAvatarUseCase)
     singleOf(::SendCurrentGroupDescriptionUseCase)
     singleOf(::SendCurrentGroupTitleUseCase)
-    singleOf(::ClearGroupPinUseCase)
     singleOf(::CreateExpenseBoardUseCase)
+    singleOf(::FindExpenseBoardClosureUseCase)
     singleOf(::FindPinnableGroupMessageUseCase)
+    singleOf(::FindUnpublishedGroupStateUseCase)
     singleOf(::LoadGroupExpenseMessagesUseCase)
+    singleOf(::PrepareEmptyGroupPinUseCase)
+    singleOf(::PrepareGroupAvatarUseCase)
+    singleOf(::PrepareGroupDescriptionUseCase)
     singleOf(::PrepareGroupExpenseDeletionUseCase)
     singleOf(::PrepareGroupExpenseRevisionUseCase)
     singleOf(::PrepareGroupExpenseUseCase)
+    singleOf(::PrepareGroupPinUseCase)
+    singleOf(::PrepareGroupTitleUseCase)
     singleOf(::ResolveGroupPinSenderKeyUseCase)
     singleOf(::ResolveIncomingPinSenderUseCase)
     singleOf(::SaveGroupAvatarUseCase)
@@ -120,6 +137,9 @@ private fun Module.registerUseCases() {
 
 private fun Module.registerInternalWorkflows() {
     singleOf(::PublishGroupAvatarWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::PublishGroupDescriptionWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::PublishGroupPinWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::PublishGroupTitleWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::SendCurrentGroupMetadataWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::SendCurrentGroupPinWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
 }

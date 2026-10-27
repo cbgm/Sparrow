@@ -5,6 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConv
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
@@ -16,11 +18,15 @@ import com.cbgm.sparrow.protocol.message.MessageOperation
 import kotlin.reflect.KClass
 
 /**
- * FindConversation -> FindEditableMessage -> (ReplaceText) | (CheckAuthorization -> SendEdit -> ReplaceText).
+ * FindConversation -> FindEditableMessage -> (EditWaitingMessage) | (CheckAuthorization -> SendEdit -> ReplaceText).
  *
- * A message still waiting for authorization was never sent, so it is edited locally only.
+ * A message still waiting for authorization was never sent, so it is edited locally only; that edit runs as
+ * [MessageCommand.EditOwnDirectMessage] under the contact's release lock, which checks the message again, so a
+ * release never sends the old text. A sent message cannot become waiting again, so its edit takes no lock and never
+ * waits for a release or a send to the same contact.
  */
 class EditDirectMessageWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val conversationRepository: DirectConversationRepository,
     private val messageRepository: DirectMessageRepository,
     private val findEditableDirectMessage: FindEditableDirectMessageUseCase,
@@ -50,6 +56,12 @@ class EditDirectMessageWorkflow internal constructor(
                     findEditableDirectMessage(step.command.conversationId, step.command.messageId).getOrThrow(),
                     step.target
                 )
+            is Step.EditWaitingMessage -> {
+                engine.run(
+                    MessageCommand.EditOwnDirectMessage(step.target, step.command.messageId, step.command.text)
+                ).getOrThrow()
+                Outcome.WaitingMessageEdited
+            }
             is Step.CheckAuthorization -> {
                 requireDirectChatAuthorization(step.target.contactId).getOrThrow()
                 Outcome.Authorized(step.target)
@@ -66,7 +78,11 @@ class EditDirectMessageWorkflow internal constructor(
                 Outcome.EditSent
             }
             is Step.ReplaceText -> {
-                messageRepository.replaceText(step.command.messageId, step.command.text.trim()).getOrThrow()
+                messageRepository.replaceText(
+                    step.command.messageId,
+                    step.command.text.trim(),
+                    SystemClock.nowEpochMilliseconds()
+                ).getOrThrow()
                 Outcome.TextReplaced
             }
         }
@@ -74,7 +90,9 @@ class EditDirectMessageWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ConversationFound -> Transition.Next(Step.FindEditableMessage(outcome.target, step.command))
-            Outcome.MessageWaitingForAuthorization -> Transition.Next(Step.ReplaceText(step.command))
+            is Outcome.MessageWaitingForAuthorization ->
+                Transition.Next(Step.EditWaitingMessage(outcome.target, step.command))
+            Outcome.WaitingMessageEdited -> Transition.Complete()
             is Outcome.MessageSent -> Transition.Next(Step.CheckAuthorization(outcome.target, step.command))
             is Outcome.Authorized -> Transition.Next(Step.SendEdit(outcome.target, step.command))
             Outcome.EditSent -> Transition.Next(Step.ReplaceText(step.command))
@@ -83,7 +101,7 @@ class EditDirectMessageWorkflow internal constructor(
 
     /** A message still waiting for authorization was never sent, so it is edited locally only. */
     private fun editableMessageFound(message: StoredMessage, target: DirectConversationTarget): Outcome =
-        if (message.wasNeverSent) Outcome.MessageWaitingForAuthorization else Outcome.MessageSent(target)
+        if (message.wasNeverSent) Outcome.MessageWaitingForAuthorization(target) else Outcome.MessageSent(target)
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.EditMessage
@@ -93,6 +111,11 @@ class EditDirectMessageWorkflow internal constructor(
         ) : Step
 
         data class FindEditableMessage(
+            val target: DirectConversationTarget,
+            override val command: DirectConversationCommand.EditMessage
+        ) : Step
+
+        data class EditWaitingMessage(
             val target: DirectConversationTarget,
             override val command: DirectConversationCommand.EditMessage
         ) : Step
@@ -117,7 +140,11 @@ class EditDirectMessageWorkflow internal constructor(
             val target: DirectConversationTarget
         ) : Outcome
 
-        data object MessageWaitingForAuthorization : Outcome
+        data class MessageWaitingForAuthorization(
+            val target: DirectConversationTarget
+        ) : Outcome
+
+        data object WaitingMessageEdited : Outcome
 
         data class MessageSent(
             val target: DirectConversationTarget

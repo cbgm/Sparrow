@@ -10,6 +10,7 @@ import com.cbgm.sparrow.runtime.startup.task.LoadControlPlaneConfigurationStartu
 import com.cbgm.sparrow.runtime.startup.task.MaintainControlPlaneDirectoryStartupTask
 import com.cbgm.sparrow.runtime.startup.task.MaintainControlPlaneHealthStartupTask
 import com.cbgm.sparrow.runtime.startup.task.ObserveControlPlaneRegistrationTargetsStartupTask
+import com.cbgm.sparrow.runtime.startup.task.PublishUnpublishedGroupStateStartupTask
 import com.cbgm.sparrow.runtime.startup.task.RecoverInterruptedDirectSendsStartupTask
 import com.cbgm.sparrow.runtime.startup.task.ResolveIdentityStatusStartupTask
 import com.cbgm.sparrow.runtime.startup.task.RestoreControlPlaneDirectoryStartupTask
@@ -46,6 +47,7 @@ fun createApplicationStartupTasks(
         StartContactBlockObserverStartupTask(initialization),
         StartPendingAuthorizationCleanupStartupTask(initialization),
         RecoverInterruptedDirectSendsStartupTask(initialization),
+        PublishUnpublishedGroupStateStartupTask(initialization),
         StartApprovedIdentityReconnectionObserverStartupTask(initialization),
         MaintainControlPlaneDirectoryStartupTask(initialization),
         MaintainControlPlaneHealthStartupTask(initialization),

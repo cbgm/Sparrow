@@ -134,8 +134,13 @@ Expense and payment parts cannot be edited like ordinary messages (`MessageEditP
 | `GroupMessageCommand.CreateExpense` | `CreateGroupExpenseWorkflow` | FindExpenseMembers → CreateExpense → SendExpense |
 | `GroupMessageCommand.EditExpense` | `EditGroupExpenseWorkflow` | FindExpenseMembers → ReviseExpense → SendExpense → DeleteReplacedReceipts |
 | `GroupMessageCommand.DeleteExpense` | `DeleteGroupExpenseWorkflow` | FindExpenseMembers → MarkExpenseDeleted → SendExpense → DeleteReceipts |
-| `GroupMessageCommand.CloseExpenses` | `CloseGroupExpensesWorkflow` | AuthorizeAdmin → FindPin → SendBoardClosedMessage → DeleteReceipts → SaveEmptyPin → CreatePinPackets → EnqueuePinPackets |
+| `GroupMessageCommand.CloseExpenses` | `CloseGroupExpensesWorkflow` | AuthorizeAdmin → FindPin → FindBoardClosure → [SendBoardClosedMessage] → DeleteReceipts → PrepareEmptyPin → CreatePinPackets → EnqueuePinPackets → SaveEmptyPin |
 | `GroupStateCommand.SendCurrentGroupExpenses` | `SendCurrentGroupExpensesWorkflow` | FindBoard → LoadExpenseMessages → EnqueueExpenseMessages |
+
+Closing is safe to repeat after a failure: the closing message is not sent again when a stored
+`ExpenseBoardClosed` part for the board already exists, receipts are deleted idempotently, and the
+pin is cleared locally only after its packets are queued, so the retry still releases it for every
+member.
 
 While a board is active, `PinGroupMessageWorkflow` refuses to replace it with another pin.
 `SendCurrentGroupExpensesWorkflow` is started from `SendCurrentGroupMetadataWorkflow`, so a member

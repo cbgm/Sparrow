@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
-import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
@@ -24,10 +23,11 @@ import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
 
 /**
- * CheckMembership -> FindPollMessage -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
- * -> EncryptClose -> EnqueueClose.
+ * CheckMembership -> FindPollMessage -> CheckClosePermission -> FindRecipients -> FindPoll -> EncryptClose
+ * -> EnqueueClose -> SaveClosedPoll.
  *
- * Only the poll creator or a group admin may close a poll.
+ * Only the poll creator or a group admin may close a poll. The poll is closed locally only after the close is
+ * queued: a failed send leaves it open, so a retry closes and sends again.
  */
 class CloseGroupPollWorkflow internal constructor(
     private val attachmentRepository: MessageAttachmentOperationsRepository,
@@ -72,22 +72,18 @@ class CloseGroupPollWorkflow internal constructor(
                 )
             is Step.FindPoll ->
                 Outcome.PollFound(
-                    poll = findGroupPoll(step.command.messageId, step.command.pollId).getOrThrow(),
+                    closedPoll = findGroupPoll.closing(
+                        messageId = step.command.messageId,
+                        pollId = step.command.pollId,
+                        closedAtEpochMilliseconds = step.closedAtEpochMilliseconds
+                    ).getOrThrow(),
                     recipients = step.recipients,
                     closedAtEpochMilliseconds = step.closedAtEpochMilliseconds
                 )
-            is Step.SaveClosedPoll -> {
-                attachmentRepository
-                    .updateMessagePart(
-                        step.command.messageId,
-                        PollPolicy.close(step.poll, step.closedAtEpochMilliseconds)
-                    )
-                    .getOrThrow()
-                Outcome.ClosedPollSaved(step.recipients, step.closedAtEpochMilliseconds)
-            }
             is Step.EncryptClose ->
                 Outcome.CloseEncrypted(
-                    encryptGroupOperation(
+                    closedPoll = step.closedPoll,
+                    packets = encryptGroupOperation(
                         groupId = step.command.groupId,
                         operation = MessageOperation.PollClose(
                             messageId = step.command.messageId,
@@ -99,7 +95,11 @@ class CloseGroupPollWorkflow internal constructor(
                 )
             is Step.EnqueueClose -> {
                 enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
-                Outcome.CloseEnqueued
+                Outcome.CloseEnqueued(step.closedPoll)
+            }
+            is Step.SaveClosedPoll -> {
+                attachmentRepository.updateMessagePart(step.command.messageId, step.closedPoll).getOrThrow()
+                Outcome.ClosedPollSaved
             }
         }
 
@@ -126,17 +126,17 @@ class CloseGroupPollWorkflow internal constructor(
                 Transition.Next(Step.FindPoll(outcome.recipients, outcome.closedAtEpochMilliseconds, step.command))
             is Outcome.PollFound ->
                 Transition.Next(
-                    Step.SaveClosedPoll(
-                        outcome.poll,
+                    Step.EncryptClose(
+                        outcome.closedPoll,
                         outcome.recipients,
                         outcome.closedAtEpochMilliseconds,
                         step.command
                     )
                 )
-            is Outcome.ClosedPollSaved ->
-                Transition.Next(Step.EncryptClose(outcome.recipients, outcome.closedAtEpochMilliseconds, step.command))
-            is Outcome.CloseEncrypted -> Transition.Next(Step.EnqueueClose(outcome.packets, step.command))
-            Outcome.CloseEnqueued -> Transition.Complete()
+            is Outcome.CloseEncrypted ->
+                Transition.Next(Step.EnqueueClose(outcome.closedPoll, outcome.packets, step.command))
+            is Outcome.CloseEnqueued -> Transition.Next(Step.SaveClosedPoll(outcome.closedPoll, step.command))
+            Outcome.ClosedPollSaved -> Transition.Complete()
         }
 
     private fun closePermissionChecked(allowed: Boolean, closedAtEpochMilliseconds: Long): Outcome =
@@ -172,21 +172,21 @@ class CloseGroupPollWorkflow internal constructor(
             override val command: GroupMessageCommand.ClosePoll
         ) : Step
 
-        data class SaveClosedPoll(
-            val poll: Poll,
-            val recipients: List<String>,
-            val closedAtEpochMilliseconds: Long,
-            override val command: GroupMessageCommand.ClosePoll
-        ) : Step
-
         data class EncryptClose(
+            val closedPoll: Poll,
             val recipients: List<String>,
             val closedAtEpochMilliseconds: Long,
             override val command: GroupMessageCommand.ClosePoll
         ) : Step
 
         data class EnqueueClose(
+            val closedPoll: Poll,
             val packets: Map<String, GroupChatMessagePacket>,
+            override val command: GroupMessageCommand.ClosePoll
+        ) : Step
+
+        data class SaveClosedPoll(
+            val closedPoll: Poll,
             override val command: GroupMessageCommand.ClosePoll
         ) : Step
     }
@@ -217,20 +217,20 @@ class CloseGroupPollWorkflow internal constructor(
         ) : Outcome
 
         data class PollFound(
-            val poll: Poll,
-            val recipients: List<String>,
-            val closedAtEpochMilliseconds: Long
-        ) : Outcome
-
-        data class ClosedPollSaved(
+            val closedPoll: Poll,
             val recipients: List<String>,
             val closedAtEpochMilliseconds: Long
         ) : Outcome
 
         data class CloseEncrypted(
+            val closedPoll: Poll,
             val packets: Map<String, GroupChatMessagePacket>
         ) : Outcome
 
-        data object CloseEnqueued : Outcome
+        data class CloseEnqueued(
+            val closedPoll: Poll
+        ) : Outcome
+
+        data object ClosedPollSaved : Outcome
     }
 }

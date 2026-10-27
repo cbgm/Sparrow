@@ -5,6 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConv
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
@@ -16,9 +18,14 @@ import com.cbgm.sparrow.protocol.message.MessageOperation
 import kotlin.reflect.KClass
 
 /**
- * FindConversation -> FindOwnMessage -> (DiscardMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
+ * FindConversation -> FindOwnMessage -> (DeleteWaitingMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
+ *
+ * A message still waiting for authorization was never sent, so it is deleted locally only; that delete runs as
+ * [MessageCommand.DeleteOwnDirectMessage] under the contact's release lock, which checks the message again, so a
+ * release never revives it. A sent message cannot become waiting again, so its delete takes no lock.
  */
 class DeleteDirectMessageWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val conversationRepository: DirectConversationRepository,
     private val findDeletableDirectMessage: FindDeletableDirectMessageUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
@@ -47,6 +54,10 @@ class DeleteDirectMessageWorkflow internal constructor(
                     findDeletableDirectMessage(step.command.conversationId, step.command.messageId).getOrThrow(),
                     step.target
                 )
+            is Step.DeleteWaitingMessage -> {
+                engine.run(MessageCommand.DeleteOwnDirectMessage(step.target, step.message.id)).getOrThrow()
+                Outcome.WaitingMessageDeleted
+            }
             is Step.CheckAuthorization -> {
                 requireDirectChatAuthorization(step.target.contactId).getOrThrow()
                 Outcome.Authorized(step.message, step.target)
@@ -70,7 +81,9 @@ class DeleteDirectMessageWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.ConversationFound -> Transition.Next(Step.FindOwnMessage(outcome.target, step.command))
-            is Outcome.MessageNeverSent -> Transition.Next(Step.DiscardMessage(outcome.message, step.command))
+            is Outcome.MessageNeverSent ->
+                Transition.Next(Step.DeleteWaitingMessage(outcome.message, outcome.target, step.command))
+            Outcome.WaitingMessageDeleted -> Transition.Complete()
             is Outcome.MessageSent ->
                 Transition.Next(Step.CheckAuthorization(outcome.message, outcome.target, step.command))
             is Outcome.Authorized -> Transition.Next(Step.SendDelete(outcome.message, outcome.target, step.command))
@@ -80,7 +93,7 @@ class DeleteDirectMessageWorkflow internal constructor(
 
     /** A message still waiting for authorization was never sent, so it is deleted locally only. */
     private fun ownMessageFound(message: StoredMessage, target: DirectConversationTarget): Outcome =
-        if (message.wasNeverSent) Outcome.MessageNeverSent(message) else Outcome.MessageSent(message, target)
+        if (message.wasNeverSent) Outcome.MessageNeverSent(message, target) else Outcome.MessageSent(message, target)
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.DeleteMessage
@@ -90,6 +103,12 @@ class DeleteDirectMessageWorkflow internal constructor(
         ) : Step
 
         data class FindOwnMessage(
+            val target: DirectConversationTarget,
+            override val command: DirectConversationCommand.DeleteMessage
+        ) : Step
+
+        data class DeleteWaitingMessage(
+            val message: StoredMessage,
             val target: DirectConversationTarget,
             override val command: DirectConversationCommand.DeleteMessage
         ) : Step
@@ -118,8 +137,11 @@ class DeleteDirectMessageWorkflow internal constructor(
         ) : Outcome
 
         data class MessageNeverSent(
-            val message: StoredMessage
+            val message: StoredMessage,
+            val target: DirectConversationTarget
         ) : Outcome
+
+        data object WaitingMessageDeleted : Outcome
 
         data class MessageSent(
             val message: StoredMessage,

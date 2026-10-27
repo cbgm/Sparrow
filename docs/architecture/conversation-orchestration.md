@@ -386,7 +386,7 @@ flowchart LR
 
 ```text
 direct message:  CheckDirectAuthorization -> EnsureDirectConversation -> ReceiveDirectMessage | ApplyDirectOperation
-group packet:    CheckGroupAccepted -> DispatchGroupPacket
+group packet:    CheckGroupAccepted -> CheckGroupReady -> DispatchGroupPacket
 receipt:         ApplyReceipt
 anything else:   FindControlConversation -> DispatchControlPacket
 ```
@@ -410,6 +410,40 @@ and removes each one. An operation that is not allowed is dropped as it would ha
 operations whose message never arrives are deleted after 7 days. `ParkedMessageOperationsTest` covers these
 cases.
 
+Edits are ordered by their `editedAtEpochMilliseconds`, not by arrival: `ReplaceText` calls
+`replaceTextIfNewer`, which keeps the stored text when its edit time is the same or later (a live copy of
+edit 2 followed by a mailbox copy of edit 1 keeps edit 2). Local edits always replace the text and record the
+local time.
+
+### Packets that arrive too early
+
+Some packets are valid but cannot be handled yet, and failing them would lose them (a live envelope that is
+not acknowledged is gone) or block a mailbox for 7 days:
+
+- a group packet whose epoch is not installed yet: `CheckGroupReady` asks `CheckGroupPacketReadyUseCase`, which
+  uses `GroupPacketEpochPolicy` (messages, metadata, pins, activations and acknowledgements need their epoch;
+  verification packets need any installed epoch; welcomes, deletions and removals never wait). This covers a
+  packet of a future epoch and any group packet before the first welcome of a group the user just joined.
+- a direct message or operation of a contact whose invitation is still in flight (sent, or accepted and
+  waiting for READY): `ResolveDirectPeerAccessUseCase` returns `PENDING`. Unknown, blocked and revoked
+  contacts stay `DROPPED`.
+
+`RouteIncomingPacketWorkflow` then rejects the transition with `IncomingPacketDeferredException(wait)`, where
+the `DeferredPacketWait` is `GroupEpoch(groupId, epoch)` or `ContactExchange(contactId)`.
+`IncomingEnvelopeProcessorImpl` parks the whole envelope in `parked_envelopes` under the wait's key
+(deduplicated by envelope ID, entries older than 7 days are purged) and reports it as processed, so every
+transport acknowledges it. After each envelope that was handled, the processor runs
+`ReplayParkedEnvelopesUseCase`: for every key whose wait is met (`CheckDeferredPacketReadyUseCase`: the epoch
+or a later one is installed, or the group membership was deleted; the exchange is no longer pending) it runs
+the parked envelopes through the same processing path in arrival order. A replay that is handled, rejected or
+whose sender is unknown removes the envelope; one that has to wait again is parked again under its new key and
+keeps its place; one that fails stays for the next replay. A welcome envelope therefore releases the group's
+early packets, a `ContactInviteAccepted` or `ContactReady` envelope the contact's early messages.
+
+Replays run in the processor, outside every workflow, and one at a time (`ReplayParkedEnvelopesUseCase` holds
+its own mutex, never a `WorkflowLocks` key), so they cannot nest inside the lock of the workflow that met the
+wait. `ParkedEnvelopesTest` covers parking, readiness and replay.
+
 Every packet type has its own command, for example `IncomingCommand.ReceiveGroupTitle(context: IncomingPacketContext, packet: GroupTitleUpdatedPacket)`. `IncomingPacketCommandMapper` (`toGroupCommand()`, `toControlCommand()`) maps a `ReceivedPacket` to that command; the dispatchers only submit it with `engine.run(command)`. Direct and Group packets never share a workflow.
 
 ## Runtime observers
@@ -427,6 +461,16 @@ Durable result streams of other features and of the outbox enter orchestration t
 | `OutboxDeliveryStateRouter` | `delivery` | outbox state changes | `DeliveryCommand.RecordPreparedTransport`, `ApplyDeliveryEvent` |
 | `PendingAuthorizationCleanupRunner` | `message` | direct messages waiting for authorization | discards expired ones (`DiscardDirectMessagesUseCase`) |
 
+The observers run for the app's lifetime, so a failure must not end them. Each subscribes again after a failed
+observation with backoff (`retryWithBackoff` in `core.util.flow`: 1 s doubling up to one minute). The result
+observers (`IdentityResultObserver`, `InvitationResultObserver`, `MembershipResultObserver`, `ContactBlockObserver`)
+collect with `collectUntilHandled`: a result counts as seen only once its workflow succeeded, and a snapshot with a
+failed result is handled again after the backoff or as soon as a newer snapshot arrives; a running workflow is never
+cancelled by a newer snapshot. What a result present at start triggers (recovery instead of the normal handling) is
+decided once for that start snapshot and kept for its retries. `MessagingTransportResultObserver` keeps its own
+5-second retry for unacknowledged failures. `PendingAuthorizationCleanupRunner` logs a failed discard and keeps
+running.
+
 Startup order (`ApplicationStartupTasks`): `ValidateConversationWorkflowsStartupTask` runs right after the crypto runtime and calls `WorkflowRegistry.validate()`; the `Start*ObserverStartupTask`s then start the observers once the local identity is ready.
 
 ## Locking
@@ -435,13 +479,65 @@ Startup order (`ApplicationStartupTasks`): `ValidateConversationWorkflowsStartup
 
 | Key helper | Key | Serializes |
 |---|---|---|
-| `groupSendLockKey` | `group-send:<groupId>` | handing group messages to the outbox (send, flush), keeps their order |
-| `groupAdministrationLockKey` | `group-administration:<groupId>` | membership changes of one group |
-| `groupMetadataLockKey` | `group-metadata:<groupId>` | title, description and avatar changes |
-| `groupPinLockKey` | `group-pin:<groupId>` | pin, unpin, close expense board |
+| `groupSendLockKey` | `group-send:<groupId>` | handing group messages to the outbox (send, flush), keeps their order; editing and deleting an own group message nobody has received yet (`EditUnsentGroupMessage`, `DeleteUnsentGroupMessage`), so a running flush never sends a queued message from before the change |
+| `groupAdministrationLockKey` (`groupstate`) | `group-administration:<groupId>` | everything an admin publishes to the members: membership changes that rotate the epoch (add, remove, promote, transfer, leave, delete), publishing a locally saved title, description, avatar or pin (`PublishGroupTitle`, `PublishGroupDescription`, `PublishGroupAvatar`, `PublishGroupPin`), closing the expense board and the replay of the current metadata to a new member |
 | `groupVerificationLockKey` | `group-verification:<groupId>` | verification changes, also from incoming packets |
-| `"direct-release:<contactId>"` | — | releasing or discarding queued Direct messages |
+| `directReleaseLockKey` | `direct-release:<contactId>` | releasing or discarding a contact's waiting Direct messages, storing a new waiting message (`StoreWaitingDirectMessage`) and editing or deleting an own Direct message that was never sent (`EditOwnDirectMessage`, `DeleteOwnDirectMessage`) |
 | `DELIVERY_LOCK_KEY` | `message-delivery` | all delivery-state updates |
+
+A lock serializes only the sending part of a user's change, never the local change itself: the user sees the new
+message, the edit or delete, the new title or pin at once, even while a send uploads attachments under `group-send`
+or a membership change holds `group-administration`. Long operations that hold a key: a group send or flush
+(attachment uploads) holds `group-send`; a membership change holds `group-administration`; a release of waiting
+Direct messages holds `direct-release`.
+
+Group state shares the administration key so a metadata packet is always signed for the epoch and the recipients that
+are current when it is queued: before, a removal could rotate the epoch between `AuthorizeAdmin` and the enqueue, the
+packet went out at the old epoch to the removed member and members on the new epoch dropped it. The public
+`ChangeTitle`, `ChangeDescription`, `ChangeAvatar`, `RemoveAvatar`, `PinMessage` and `UnpinMessage` take no key: they
+authorize the admin, save the new state locally as unpublished (`publishPending`) and then nest the `Publish*` command,
+which alone holds the key. It loads the unpublished state (nothing to do when it is published or was replaced by a
+newer remote state), signs it with the current epoch, queues it and marks it published only while it is still the
+stored version. A failed or interrupted publish leaves the state unpublished; the same change again (the "unchanged"
+short-cut does not apply to an unpublished state) or `UnpublishedGroupStateRunner` after the next start publishes it.
+Nesting under this key (checked over every `engine.run`): the admin workflows nest only
+`RefreshOwnedGroupVerification` (`group-verification`); `CloseGroupExpensesWorkflow` nests `SendMessage` (`group-send`,
+which nests the flush with `acquireLock = false` and delivery events under `message-delivery`);
+`SendCurrentGroupMetadataWorkflow` (run by `ReceiveGroupReadyAcknowledgementWorkflow`, which has no key) nests
+`SendCurrentGroupPin`/`SendCurrentGroupExpenses`, which take no key; the four `Publish*` workflows nest nothing (their
+enqueue does not record delivery events). The `Publish*` commands are nested only by the public workflows above and by
+`UnpublishedGroupStateRunner`, none of which holds a key; `PinMessage` itself is nested only by
+`ActivateGroupExpenses`, which takes no key. No holder of `group-send`, `group-verification` or `message-delivery`
+runs an administration-keyed workflow, so the keys are only ever taken in the order administration → verification or
+administration → send → delivery.
+
+Group edits and deletes take the send key only for a message nobody has received yet (no recipient states): the
+public `EditMessage`/`DeleteMessage` take no key and send the operation of a message members already have right away;
+for an unsent one they nest `EditUnsentGroupMessage`/`DeleteUnsentGroupMessage`, which hold `group-send`, look at the
+recipients again (a flush may have sent the message meanwhile, then the change is sent like any other) and otherwise
+change the message locally only, so the flush sends the new text or nothing. A sent message never becomes unsent
+again, so the unlocked path cannot race a flush. Nesting: the two unsent workflows nest nothing; the public edit and
+delete are nested by no workflow.
+
+The release key protects waiting Direct messages: before, a send could decide "authorization missing", a release run
+in between found nothing, and the stored WAITING message stayed until the next identity event; an edit or delete of a
+WAITING message could land between the release reading the message and sending it, so the old text went out or a
+deleted message was written back. `SendDirectMessageWorkflow` takes no key, so a message to an authorized contact is
+stored and delivered without waiting for an earlier send (attachment upload) or a release. Only the waiting path nests
+`StoreWaitingDirectMessage`, which holds the key and checks authorization again with the rule the release uses: if the
+contact became authorized meanwhile nothing is stored and the send delivers normally, otherwise the WAITING message
+is stored before any later release can look for it. The public `EditMessage`/`DeleteMessage` take no key either: a
+sent message cannot become waiting again, so its edit or delete is sent right away; only a message that was never sent
+nests `EditOwnDirectMessage`/`DeleteOwnDirectMessage`, which hold the key and read the message again (one released
+just before gets a normal edit or delete). The release additionally reads each message again and moves it to QUEUED
+with a conditional update, skipping one that is gone or no longer waiting. Nesting under this key (checked over every
+`engine.run`): Release and Discard nest only delivery events (`message-delivery`); `StoreWaitingDirectMessage` and the
+edit and delete workflows nest nothing. `SendDirectMessageWorkflow` (no key) nests `StoreWaitingDirectMessage`,
+`DeliverDirectMessage` (no key, nests only delivery events) and `RequestReauthorization` (no key; it nests
+`ReconnectConversation`, `StartDirectInvitation` and `RevokePeerExchange`, none keyed and none submitting a message
+command). `ActivateAuthorizedConversation`, which nests the release, is run only by identity/invitation result
+handling and recovery, never by a holder of the key; the direct send is nested only by forwarding and auto replies,
+which hold no key. The order is always direct-release → delivery.
 
 Locks are not reentrant. A workflow that submits a nested command with the same key passes `acquireLock = false`. The full mapping of workflows to locks is in the [catalog](workflows/index.md#locks).
 

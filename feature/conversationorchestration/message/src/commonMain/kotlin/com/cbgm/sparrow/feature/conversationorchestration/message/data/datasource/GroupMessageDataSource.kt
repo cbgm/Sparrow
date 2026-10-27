@@ -49,9 +49,12 @@ internal class GroupMessageDataSource(
     suspend fun findRecipientByPacketId(packetId: String): MessageRecipientStateEntity? =
         messageRecipientStateDao.findByPacketId(packetId)
 
-    suspend fun replaceMessageText(messageId: String, text: String) {
-        chatDao.replaceMessageText(messageId, text)
+    suspend fun replaceMessageText(messageId: String, text: String, editedAtEpochMilliseconds: Long) {
+        chatDao.replaceMessageText(messageId, text, editedAtEpochMilliseconds)
     }
+
+    suspend fun replaceMessageTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Boolean =
+        chatDao.replaceMessageTextIfNewer(messageId, text, editedAtEpochMilliseconds)
 
     suspend fun deleteMessages(messages: List<MessageEntity>) {
         chatDao.deleteMessagesAndRefreshConversations(messages)

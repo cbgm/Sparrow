@@ -5,21 +5,28 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdmin
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
+import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.command.GroupStateCommand
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupTitleState
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupTitlePacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupTitleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupTitleUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
 import kotlin.reflect.KClass
 
-/** AuthorizeAdmin -> SaveTitle -> CreateTitlePackets -> EnqueueTitlePackets. An unchanged title stops after SaveTitle. */
+/**
+ * AuthorizeAdmin -> PrepareTitle -> SaveTitle -> PublishTitle.
+ * An unchanged title that was published already stops after PrepareTitle.
+ *
+ * The new title is saved as unpublished right away, so the user sees it at once without waiting for a running
+ * membership change. Only the publishing ([GroupStateCommand.PublishGroupTitle]) waits for the group administration
+ * lock. A failed or interrupted publish leaves the title unpublished: the same change again, or the recovery after
+ * the next start, publishes it.
+ */
 class ChangeGroupTitleWorkflow internal constructor(
+    private val engine: WorkflowEngine,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
-    private val saveGroupTitle: SaveGroupTitleUseCase,
-    private val createGroupTitlePackets: CreateGroupTitlePacketsUseCase,
-    private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
+    private val prepareGroupTitle: PrepareGroupTitleUseCase,
+    private val saveGroupTitle: SaveGroupTitleUseCase
 ) : ConversationWorkflow<
         GroupAdministrationCommand.ChangeTitle,
         ChangeGroupTitleWorkflow.Step,
@@ -28,9 +35,6 @@ class ChangeGroupTitleWorkflow internal constructor(
     override val commandType: KClass<GroupAdministrationCommand.ChangeTitle> =
         GroupAdministrationCommand.ChangeTitle::class
 
-    override fun lockKey(command: GroupAdministrationCommand.ChangeTitle): String =
-        groupMetadataLockKey(command.groupId)
-
     override fun firstStep(command: GroupAdministrationCommand.ChangeTitle): Step = Step.AuthorizeAdmin(command)
 
     override suspend fun perform(step: Step): Outcome =
@@ -38,31 +42,32 @@ class ChangeGroupTitleWorkflow internal constructor(
             is Step.AuthorizeAdmin -> {
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
                 GroupMetadataPolicy.requireValidTitle(step.command.title)
-                Outcome.AdminAuthorized(requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow())
+                requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow()
+                Outcome.AdminAuthorized
             }
-            is Step.SaveTitle ->
-                titleSaved(saveGroupTitle(step.command.groupId, step.command.title).getOrThrow(), step.context)
-            is Step.CreateTitlePackets ->
-                Outcome.TitlePacketsCreated(createGroupTitlePackets(step.title, step.context).getOrThrow())
-            is Step.EnqueueTitlePackets -> {
-                enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
-                Outcome.TitlePacketsEnqueued
+            is Step.PrepareTitle ->
+                titlePrepared(prepareGroupTitle(step.command.groupId, step.command.title).getOrThrow())
+            is Step.SaveTitle -> {
+                saveGroupTitle(step.title).getOrThrow()
+                Outcome.TitleSaved
+            }
+            is Step.PublishTitle -> {
+                engine.run(GroupStateCommand.PublishGroupTitle(step.command.groupId)).getOrThrow()
+                Outcome.TitlePublished
             }
         }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.AdminAuthorized -> Transition.Next(Step.SaveTitle(outcome.context, step.command))
+            Outcome.AdminAuthorized -> Transition.Next(Step.PrepareTitle(step.command))
             Outcome.TitleUnchanged -> Transition.Complete()
-            is Outcome.TitleSaved ->
-                Transition.Next(Step.CreateTitlePackets(outcome.title, outcome.context, step.command))
-            is Outcome.TitlePacketsCreated ->
-                Transition.Next(Step.EnqueueTitlePackets(outcome.packets, step.command))
-            Outcome.TitlePacketsEnqueued -> Transition.Complete()
+            is Outcome.TitlePrepared -> Transition.Next(Step.SaveTitle(outcome.title, step.command))
+            Outcome.TitleSaved -> Transition.Next(Step.PublishTitle(step.command))
+            Outcome.TitlePublished -> Transition.Complete()
         }
 
-    private fun titleSaved(title: GroupTitleState?, context: GroupAdminContext): Outcome =
-        title?.let { saved -> Outcome.TitleSaved(saved, context) } ?: Outcome.TitleUnchanged
+    private fun titlePrepared(title: GroupTitleState?): Outcome =
+        title?.let(Outcome::TitlePrepared) ?: Outcome.TitleUnchanged
 
     sealed interface Step : WorkflowStep {
         val command: GroupAdministrationCommand.ChangeTitle
@@ -71,40 +76,32 @@ class ChangeGroupTitleWorkflow internal constructor(
             override val command: GroupAdministrationCommand.ChangeTitle
         ) : Step
 
+        data class PrepareTitle(
+            override val command: GroupAdministrationCommand.ChangeTitle
+        ) : Step
+
         data class SaveTitle(
-            val context: GroupAdminContext,
-            override val command: GroupAdministrationCommand.ChangeTitle
-        ) : Step
-
-        data class CreateTitlePackets(
             val title: GroupTitleState,
-            val context: GroupAdminContext,
             override val command: GroupAdministrationCommand.ChangeTitle
         ) : Step
 
-        data class EnqueueTitlePackets(
-            val packets: Map<String, GroupTitleUpdatedPacket>,
+        data class PublishTitle(
             override val command: GroupAdministrationCommand.ChangeTitle
         ) : Step
     }
 
     sealed interface Outcome {
-        data class AdminAuthorized(
-            val context: GroupAdminContext
-        ) : Outcome
+        data object AdminAuthorized : Outcome
 
         data object TitleUnchanged : Outcome
 
-        data class TitleSaved(
-            val title: GroupTitleState,
-            val context: GroupAdminContext
+        data class TitlePrepared(
+            val title: GroupTitleState
         ) : Outcome
 
-        data class TitlePacketsCreated(
-            val packets: Map<String, GroupTitleUpdatedPacket>
-        ) : Outcome
+        data object TitleSaved : Outcome
 
-        data object TitlePacketsEnqueued : Outcome
+        data object TitlePublished : Outcome
     }
 
     private companion object {
