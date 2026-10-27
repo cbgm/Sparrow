@@ -330,7 +330,10 @@ Start here:
 
 Copyright © 2026 Christian Bergmann. All Rights Reserved.
 
-This software and its source code are proprietary and confidential.
-Unauthorized copying, modification, distribution, sublicensing, or use
-of this software, in whole or in part, is prohibited without prior
-written permission from the copyright holder.
+This software and its source code are proprietary.
+
+Permission is granted to download, install, compile, run, and test this software for personal, educational, or internal evaluation purposes, free of charge.
+
+This permission does not include commercial exploitation, production use, modification, redistribution, sublicensing, resale, or incorporation into other products without prior written permission from the copyright holder.
+
+All intellectual property rights remain exclusively with the copyright holder.
