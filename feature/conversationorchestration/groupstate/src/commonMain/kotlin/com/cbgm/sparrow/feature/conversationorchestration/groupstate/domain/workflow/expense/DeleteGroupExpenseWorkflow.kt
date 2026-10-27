@@ -1,25 +1,21 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
 import com.cbgm.sparrow.core.base.messagepart.domain.model.expenseId
-import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseDeletionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import kotlin.reflect.KClass
 
-/** FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipts. */
+/** PrepareDeletion -> SendExpense -> DeleteReceipts. */
 class DeleteGroupExpenseWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val findGroupExpenseMembers: FindGroupExpenseMembersUseCase,
+    private val prepareGroupExpenseDeletion: PrepareGroupExpenseDeletionUseCase,
     private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.DeleteExpense,
@@ -28,13 +24,14 @@ class DeleteGroupExpenseWorkflow internal constructor(
     > {
     override val commandType: KClass<GroupMessageCommand.DeleteExpense> = GroupMessageCommand.DeleteExpense::class
 
-    override fun firstStep(command: GroupMessageCommand.DeleteExpense): Step = Step.FindExpenseMembers(command)
+    override fun firstStep(command: GroupMessageCommand.DeleteExpense): Step = Step.PrepareDeletion(command)
 
     override suspend fun perform(step: Step): Outcome =
         when (step) {
-            is Step.FindExpenseMembers ->
-                Outcome.ExpenseMembersFound(findGroupExpenseMembers(step.command.groupId).getOrThrow())
-            is Step.MarkExpenseDeleted -> Outcome.ExpenseMarkedDeleted(markDeleted(step.members, step.command.expense))
+            is Step.PrepareDeletion ->
+                Outcome.DeletionPrepared(
+                    prepareGroupExpenseDeletion(step.command.groupId, step.command.expense).getOrThrow()
+                )
             is Step.SendExpense -> {
                 val result =
                     engine.run(GroupMessageCommand.SendMessage(step.command.groupId, listOf(step.expense)))
@@ -50,38 +47,15 @@ class DeleteGroupExpenseWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.ExpenseMembersFound -> Transition.Next(Step.MarkExpenseDeleted(outcome.members, step.command))
-            is Outcome.ExpenseMarkedDeleted -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
+            is Outcome.DeletionPrepared -> Transition.Next(Step.SendExpense(outcome.expense, step.command))
             is Outcome.ExpenseSent -> Transition.Next(Step.DeleteReceipts(outcome.result, step.command))
             is Outcome.ReceiptsDeleted -> Transition.Complete(outcome.result)
         }
 
-    private fun markDeleted(members: GroupExpenseMembers, expense: Expense): Expense {
-        check(members.board.id == expense.boardId) { "Expense board has changed" }
-        check(expense.deletedAtEpochMilliseconds == null) { "Expense is already deleted" }
-        check(members.isLocalAdmin || expense.createdByMemberId == members.localMemberId) {
-            "Only the creator or an admin can delete this expense"
-        }
-        val deleted = expense.copy(
-            id = IdGenerator.generate(prefix = "expense"),
-            revisionOf = expense.expenseId,
-            receipt = null,
-            editedAtEpochMilliseconds = null,
-            deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-        )
-        ExpensePolicy.requireValid(deleted)
-        return deleted
-    }
-
     sealed interface Step : WorkflowStep {
         val command: GroupMessageCommand.DeleteExpense
 
-        data class FindExpenseMembers(
-            override val command: GroupMessageCommand.DeleteExpense
-        ) : Step
-
-        data class MarkExpenseDeleted(
-            val members: GroupExpenseMembers,
+        data class PrepareDeletion(
             override val command: GroupMessageCommand.DeleteExpense
         ) : Step
 
@@ -97,11 +71,7 @@ class DeleteGroupExpenseWorkflow internal constructor(
     }
 
     sealed interface Outcome {
-        data class ExpenseMembersFound(
-            val members: GroupExpenseMembers
-        ) : Outcome
-
-        data class ExpenseMarkedDeleted(
+        data class DeletionPrepared(
             val expense: Expense
         ) : Outcome
 

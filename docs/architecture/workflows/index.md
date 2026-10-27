@@ -118,9 +118,9 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `MembershipCommand.ResumeApprovedGroupJoin` | [`ResumeApprovedGroupJoinWorkflow`](membership.md#resumeapprovedgroupjoinworkflow) | `membership` | — |
 | `MessageCommand.ActivateAuthorizedConversation` | [`ActivateAuthorizedConversationWorkflow`](message.md#activateauthorizedconversationworkflow) | `message` | — |
 | `MessageCommand.DeliverDirectMessage` | [`DeliverDirectMessageWorkflow`](message.md#deliverdirectmessageworkflow) | `message` | — |
-| `MessageCommand.DiscardWaitingDirectMessages` | [`DiscardWaitingDirectMessagesWorkflow`](message.md#discardwaitingdirectmessagesworkflow) | `message` | `"direct-release:${command.contactId}"` |
+| `MessageCommand.DiscardWaitingDirectMessages` | [`DiscardWaitingDirectMessagesWorkflow`](message.md#discardwaitingdirectmessagesworkflow) | `message` | `directReleaseLockKey(command.contactId)` |
 | `MessageCommand.FlushQueuedGroupMessages` | [`FlushQueuedGroupMessagesWorkflow`](message.md#flushqueuedgroupmessagesworkflow) | `message` | `groupSendLockKey(command.groupId)` |
-| `MessageCommand.ReleaseWaitingDirectMessages` | [`ReleaseWaitingDirectMessagesWorkflow`](message.md#releasewaitingdirectmessagesworkflow) | `message` | `"direct-release:${command.contactId}"` |
+| `MessageCommand.ReleaseWaitingDirectMessages` | [`ReleaseWaitingDirectMessagesWorkflow`](message.md#releasewaitingdirectmessagesworkflow) | `message` | `directReleaseLockKey(command.contactId)` |
 
 ## Locks
 
@@ -128,9 +128,9 @@ Workflows that share a lock key never run at the same time (`WorkflowLocks`). Lo
 
 | Lock key | Workflows |
 |---|---|
-| `"direct-release:${command.contactId}"` | `DiscardWaitingDirectMessagesWorkflow`, `ReleaseWaitingDirectMessagesWorkflow` |
 | `"payment:${command.groupId}"` | `SendGroupPaymentWorkflow` |
 | `DELIVERY_LOCK_KEY` | `ApplyDeliveryEventWorkflow` |
+| `directReleaseLockKey` | `DiscardWaitingDirectMessagesWorkflow`, `ReleaseWaitingDirectMessagesWorkflow` |
 | `groupAdministrationLockKey` | `AddGroupMembersWorkflow`, `DeleteGroupWorkflow`, `LeaveGroupWorkflow`, `PromoteGroupMemberWorkflow`, `RemoveGroupMemberWorkflow`, `TransferGroupAdminAndLeaveWorkflow` |
 | `groupMetadataLockKey` | `ChangeGroupDescriptionWorkflow`, `ChangeGroupTitleWorkflow`, `PublishGroupAvatarWorkflow` |
 | `groupPinLockKey` | `CloseGroupExpensesWorkflow`, `PinGroupMessageWorkflow`, `UnpinGroupMessageWorkflow` |

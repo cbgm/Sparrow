@@ -157,13 +157,10 @@ class MailboxRouteProvisioner(
             return
         }
         if (current != null) {
-            mailboxRouteRepository.markLocalRevocationPending(contactId).getOrThrow()
-            mailboxGateway.revoke(current).getOrElse { revocationError ->
-                mailboxGateway.revoke(replacement)
-                    .onFailure { failure ->
-                        SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure)
-                    }
-                throw revocationError
+            // The contact needs the new route either way. An old mailbox that cannot be revoked now expires on
+            // its node; failing here would leave the contact without any route.
+            mailboxGateway.revoke(current).onFailure { failure ->
+                SparrowLog.diagnostic("MailboxRouteProvisioner", "Old mailbox of $contactId could not be revoked", failure)
             }
             mailboxRouteRepository.deleteLocal(contactId).getOrThrow()
         }

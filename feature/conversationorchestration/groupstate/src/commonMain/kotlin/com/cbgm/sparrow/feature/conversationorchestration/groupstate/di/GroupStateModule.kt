@@ -21,14 +21,28 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupDescriptionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupTitleRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupStateUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupAvatarPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupDescriptionPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupTitlePacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindGroupExpenseMembersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindPinnableGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.LoadGroupExpenseMessagesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseDeletionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseRevisionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareGroupExpenseUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupPaymentTransferUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveGroupPinSenderKeyUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveIncomingPinSenderUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupAvatarUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupDescriptionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupPinUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupTitleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SendCurrentGroupTitleUseCase
@@ -77,6 +91,7 @@ private fun Module.registerData() {
 }
 
 private fun Module.registerUseCases() {
+    singleOf(::CheckIncomingGroupStateVersionUseCase)
     singleOf(::ClearGroupStateUseCase)
     singleOf(::CreateGroupAvatarPacketsUseCase)
     singleOf(::CreateGroupDescriptionPacketsUseCase)
@@ -88,6 +103,19 @@ private fun Module.registerUseCases() {
     singleOf(::SendCurrentGroupAvatarUseCase)
     singleOf(::SendCurrentGroupDescriptionUseCase)
     singleOf(::SendCurrentGroupTitleUseCase)
+    singleOf(::ClearGroupPinUseCase)
+    singleOf(::CreateExpenseBoardUseCase)
+    singleOf(::FindPinnableGroupMessageUseCase)
+    singleOf(::LoadGroupExpenseMessagesUseCase)
+    singleOf(::PrepareGroupExpenseDeletionUseCase)
+    singleOf(::PrepareGroupExpenseRevisionUseCase)
+    singleOf(::PrepareGroupExpenseUseCase)
+    singleOf(::ResolveGroupPinSenderKeyUseCase)
+    singleOf(::ResolveIncomingPinSenderUseCase)
+    singleOf(::SaveGroupAvatarUseCase)
+    singleOf(::SaveGroupDescriptionUseCase)
+    singleOf(::SaveGroupPinUseCase)
+    singleOf(::SaveGroupTitleUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {

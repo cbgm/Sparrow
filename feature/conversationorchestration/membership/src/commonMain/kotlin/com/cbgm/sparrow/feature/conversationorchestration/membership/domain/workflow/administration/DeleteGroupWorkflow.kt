@@ -11,7 +11,12 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeleteGroupMembershipUseCase
 import kotlin.reflect.KClass
 
-/** LoadContext -> DeleteAttachments -> DeleteMembership -> DeleteLocalConversation -> ClearGroupState. */
+/**
+ * LoadContext -> DeleteMembership -> DeleteAttachments -> DeleteLocalConversation -> ClearGroupState.
+ *
+ * Membership goes first because it can refuse, e.g. a sole admin of a group with members; the attachments are
+ * only deleted once the group is really gone.
+ */
 class DeleteGroupWorkflow internal constructor(
     private val conversationRepository: GroupConversationRepository,
     private val attachmentRepository: MessageAttachmentRepository,
@@ -36,7 +41,7 @@ class DeleteGroupWorkflow internal constructor(
                 Outcome.ContextLoaded(conversationRepository.getMembershipContext(step.command.groupId).getOrThrow())
             is Step.DeleteAttachments -> {
                 attachmentRepository.deleteLocalAttachmentsForConversation(step.command.groupId).getOrThrow()
-                Outcome.AttachmentsDeleted(step.context)
+                Outcome.AttachmentsDeleted(step.deletedAtEpochMilliseconds)
             }
             is Step.DeleteMembership ->
                 Outcome.MembershipDeleted(deleteGroupMembership(step.command.groupId, step.context).getOrThrow())
@@ -55,9 +60,10 @@ class DeleteGroupWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.ContextLoaded -> Transition.Next(Step.DeleteAttachments(outcome.context, step.command))
-            is Outcome.AttachmentsDeleted -> Transition.Next(Step.DeleteMembership(outcome.context, step.command))
+            is Outcome.ContextLoaded -> Transition.Next(Step.DeleteMembership(outcome.context, step.command))
             is Outcome.MembershipDeleted ->
+                Transition.Next(Step.DeleteAttachments(outcome.deletedAtEpochMilliseconds, step.command))
+            is Outcome.AttachmentsDeleted ->
                 Transition.Next(Step.DeleteLocalConversation(outcome.deletedAtEpochMilliseconds, step.command))
             Outcome.LocalConversationDeleted -> Transition.Next(Step.ClearGroupState(step.command))
             Outcome.GroupStateCleared -> Transition.Complete()
@@ -70,13 +76,13 @@ class DeleteGroupWorkflow internal constructor(
             override val command: GroupAdministrationCommand.DeleteGroup
         ) : Step
 
-        data class DeleteAttachments(
+        data class DeleteMembership(
             val context: GroupMembershipContext,
             override val command: GroupAdministrationCommand.DeleteGroup
         ) : Step
 
-        data class DeleteMembership(
-            val context: GroupMembershipContext,
+        data class DeleteAttachments(
+            val deletedAtEpochMilliseconds: Long,
             override val command: GroupAdministrationCommand.DeleteGroup
         ) : Step
 
@@ -95,11 +101,11 @@ class DeleteGroupWorkflow internal constructor(
             val context: GroupMembershipContext
         ) : Outcome
 
-        data class AttachmentsDeleted(
-            val context: GroupMembershipContext
+        data class MembershipDeleted(
+            val deletedAtEpochMilliseconds: Long
         ) : Outcome
 
-        data class MembershipDeleted(
+        data class AttachmentsDeleted(
             val deletedAtEpochMilliseconds: Long
         ) : Outcome
 

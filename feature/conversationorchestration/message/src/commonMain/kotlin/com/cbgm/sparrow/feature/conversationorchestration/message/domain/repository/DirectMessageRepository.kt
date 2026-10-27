@@ -21,6 +21,9 @@ interface DirectMessageRepository {
 
     fun observeWaitingForAuthorization(): Flow<List<StoredMessage>>
 
+    /** Queued outgoing messages created before [createdBeforeEpochMilliseconds] whose packet is not in the outbox. */
+    suspend fun findAwaitingOutbox(createdBeforeEpochMilliseconds: Long): Result<List<StoredMessage>>
+
     suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>>
 
     suspend fun markReadReceiptSent(messageId: String): Result<Boolean>

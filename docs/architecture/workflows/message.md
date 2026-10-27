@@ -17,8 +17,8 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | [`SendDirectMessageWorkflow`](#senddirectmessageworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.SendMessage` | — |
 | [`ToggleDirectReactionWorkflow`](#toggledirectreactionworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.ToggleReaction` | — |
 | [`ActivateAuthorizedConversationWorkflow`](#activateauthorizedconversationworkflow) | orchestration (`engine.run`) | `MessageCommand.ActivateAuthorizedConversation` | — |
-| [`DiscardWaitingDirectMessagesWorkflow`](#discardwaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.DiscardWaitingDirectMessages` | `"direct-release:${command.contactId}"` |
-| [`ReleaseWaitingDirectMessagesWorkflow`](#releasewaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.ReleaseWaitingDirectMessages` | `"direct-release:${command.contactId}"` |
+| [`DiscardWaitingDirectMessagesWorkflow`](#discardwaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.DiscardWaitingDirectMessages` | `directReleaseLockKey(command.contactId)` |
+| [`ReleaseWaitingDirectMessagesWorkflow`](#releasewaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.ReleaseWaitingDirectMessages` | `directReleaseLockKey(command.contactId)` |
 | [`ForwardMessageWorkflow`](#forwardmessageworkflow) | Chats (`ConversationOrchestrator`) | `ForwardMessage` | — |
 | [`CloseGroupPollWorkflow`](#closegrouppollworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ClosePoll` | — |
 | [`DeleteGroupMessageWorkflow`](#deletegroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteMessage` | — |
@@ -38,7 +38,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 - **Kind:** public — Chats submits `DirectConversationCommand.DeleteMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeleteDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`, `DiscardDirectMessagesUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDeletableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`, `DiscardDirectMessagesUseCase`
 
 ```text
 FindConversation -> FindOwnMessage -> (DiscardMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
@@ -60,13 +60,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DeliverDirectMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeliverDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `DirectMessagePacketFactory`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
 
 ```text
-FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket
--> LinkPacket -> EnqueuePacket.
+FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket -> EnqueuePacket.
 
-A packet that cannot be created or linked discards the stored message again; a packet the
+A packet that cannot be created or linked to the message discards the stored message again; a packet the
 outbox rejects keeps the message and marks it failed so the user can retry.
 ```
 
@@ -78,10 +77,8 @@ stateDiagram-v2
     CheckAuthorization --> LoadRecipient : Authorized
     LoadRecipient --> StoreMessage : RecipientLoaded
     StoreMessage --> CreatePacket : MessageStored
-    CreatePacket --> LinkPacket : PacketCreated
+    CreatePacket --> EnqueuePacket : PacketCreated
     CreatePacket --> DiscardMessage : PacketPreparationFailed
-    LinkPacket --> EnqueuePacket : PacketLinked
-    LinkPacket --> DiscardMessage : PacketPreparationFailed
     DiscardMessage --> Rejected : MessageDiscarded
     EnqueuePacket --> MarkSendFailed : EnqueueFailed
     EnqueuePacket --> [*] : PacketEnqueued
@@ -96,7 +93,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.EditMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/EditDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
+- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `FindEditableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
 
 ```text
 FindConversation -> FindEditableMessage -> (ReplaceText) | (CheckAuthorization -> SendEdit -> ReplaceText).
@@ -120,11 +117,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.MarkConversationRead`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/MarkDirectConversationReadWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ConversationUnseenCountRepository`, `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `SendReadReceiptUseCase`
+- **Uses:** `ConversationUnseenCountRepository`, `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `AcknowledgeIncomingMessageUseCase`
 
 ```text
-ClearUnseenCount -> FindConversation -> FindUnreadMessages -> CheckAuthorization
--> (SendReadReceipt -> MarkReceiptSent)* .
+ClearUnseenCount -> FindConversation -> FindUnreadMessages -> CheckAuthorization -> (AcknowledgeMessage)* .
 
 Read receipts are opportunistic: while authorization is missing (e.g. during onboarding) the
 receipts stay pending in the database and are sent the next time the chat is read.
@@ -137,11 +133,11 @@ stateDiagram-v2
     FindConversation --> FindUnreadMessages : ConversationFound
     FindUnreadMessages --> CheckAuthorization : UnreadMessagesFound
     FindUnreadMessages --> [*] : UnreadMessagesFound
-    CheckAuthorization --> SendReadReceipt : Authorized
+    CheckAuthorization --> AcknowledgeMessage : Authorized
+    CheckAuthorization --> [*] : Authorized
     CheckAuthorization --> [*] : ReceiptsDeferred
-    SendReadReceipt --> MarkReceiptSent : ReadReceiptSent
-    MarkReceiptSent --> SendReadReceipt : ReceiptMarked
-    MarkReceiptSent --> [*] : ReceiptMarked
+    AcknowledgeMessage --> AcknowledgeMessage : MessageAcknowledged
+    AcknowledgeMessage --> [*] : MessageAcknowledged
 ```
 
 ### RetryDirectMessageWorkflow
@@ -149,21 +145,27 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.RetryMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/RetryDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `ProtocolOutbox`, `RequireDirectChatAuthorizationUseCase`, `RecordRetryRequestedUseCase`
+- **Uses:** `DirectConversationRepository`, `FindRetryableDirectMessageUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RequireDirectChatAuthorizationUseCase`, `RecordRetryRequestedUseCase`
 
 ```text
-FindRetryableMessage -> FindConversation -> CheckPacketIdentity -> CheckAuthorization
--> ResendPacket -> RecordRetry.
+FindRetryableMessage -> FindConversation -> CheckAuthorization -> FindPacket
+-> (ResendPacket | CreatePacket -> EnqueuePacket) -> RecordRetry.
+
+A message whose packet never reached the outbox, or is no longer in it, gets a new packet; resending a packet
+the outbox does not know would do nothing and leave the message queued forever.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindRetryableMessage
     FindRetryableMessage --> FindConversation : RetryableMessageFound
-    FindConversation --> CheckPacketIdentity : ConversationFound
-    CheckPacketIdentity --> CheckAuthorization : PacketCurrent
-    CheckAuthorization --> ResendPacket : Authorized
+    FindConversation --> CheckAuthorization : ConversationFound
+    CheckAuthorization --> FindPacket : Authorized
+    FindPacket --> ResendPacket : PacketInOutbox
+    FindPacket --> CreatePacket : PacketMissing
     ResendPacket --> RecordRetry : PacketResent
+    CreatePacket --> EnqueuePacket : PacketCreated
+    EnqueuePacket --> RecordRetry : PacketResent
     RecordRetry --> [*] : RetryRecorded
 ```
 
@@ -189,11 +191,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.SendMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/SendDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `ObservePendingRemoteIdentityChangesUseCase`, `RequireDirectChatAuthorizationUseCase`, `InspectDirectInvitationUseCase`, `DirectReauthorizationPort`, `DirectConversationRepository`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`
+- **Uses:** `WorkflowEngine`, `RequireDirectChatAuthorizationUseCase`, `InspectDirectInvitationUseCase`, `DirectReauthorizationPort`, `DirectConversationRepository`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`
 
 ```text
-ValidateContent -> CheckBlockedContact -> CheckPendingIdentityChange -> CheckAuthorization
--> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
+ValidateContent -> CheckAuthorization -> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
 -> DeliverMessage | (FindQueueConversation -> LoadQueueRecipient -> StoreWaitingMessage).
 
 An authorized contact gets the message immediately. Without authorization the message waits in
@@ -203,13 +204,11 @@ WAITING_FOR_AUTHORIZATION, and the workflow starts a fresh invitation when none 
 ```mermaid
 stateDiagram-v2
     [*] --> ValidateContent
-    ValidateContent --> CheckBlockedContact : ContentValidated
-    CheckBlockedContact --> Rejected : ContactBlocked
-    CheckBlockedContact --> CheckPendingIdentityChange : ContactNotBlocked
-    CheckPendingIdentityChange --> ResolveConversation : IdentityChangePending
-    CheckPendingIdentityChange --> CheckAuthorization : NoIdentityChangePending
+    ValidateContent --> CheckAuthorization : ContentValidated
     CheckAuthorization --> InspectInvitation : AuthorizationMissing
     CheckAuthorization --> ResolveConversation : Authorized
+    CheckAuthorization --> Rejected : ContactBlocked
+    CheckAuthorization --> ResolveConversation : IdentityChangePending
     InspectInvitation --> ResolveConversation : InvitationPending
     InspectInvitation --> RequestReauthorization : InvitationRetryable
     InspectInvitation --> Rejected : InvitationUnavailable
@@ -231,10 +230,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.ToggleReaction`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/ToggleDirectReactionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `MessageReactionRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDirectMessageUseCase`, `ToggleLocalReactionUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
 
 ```text
-FindConversation -> CheckAuthorization -> FindMessage -> (AddReaction | RemoveReaction) -> SendReaction.
+FindConversation -> CheckAuthorization -> FindMessage -> ToggleReaction -> SendReaction.
 ```
 
 ```mermaid
@@ -242,10 +241,8 @@ stateDiagram-v2
     [*] --> FindConversation
     FindConversation --> CheckAuthorization : ConversationFound
     CheckAuthorization --> FindMessage : Authorized
-    FindMessage --> AddReaction : ReactionAbsent
-    FindMessage --> RemoveReaction : ReactionPresent
-    RemoveReaction --> SendReaction : ReactionChanged
-    AddReaction --> SendReaction : ReactionChanged
+    FindMessage --> ToggleReaction : MessageFound
+    ToggleReaction --> SendReaction : ReactionChanged
     SendReaction --> [*] : ReactionSent
 ```
 
@@ -273,7 +270,7 @@ stateDiagram-v2
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DiscardWaitingDirectMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/authorization/DiscardWaitingDirectMessagesWorkflow.kt`
-- **Lock:** `"direct-release:${command.contactId}"`
+- **Lock:** `directReleaseLockKey(command.contactId)`
 - **Uses:** `DirectMessageRepository`, `DiscardDirectMessagesUseCase`
 
 ```text
@@ -292,8 +289,8 @@ stateDiagram-v2
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.ReleaseWaitingDirectMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/authorization/ReleaseWaitingDirectMessagesWorkflow.kt`
-- **Lock:** `"direct-release:${command.contactId}"`
-- **Uses:** `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `FindDirectAuthorizationBlockUseCase`, `DiscardDirectMessagesUseCase`, `DirectMessagePacketFactory`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
+- **Lock:** `directReleaseLockKey(command.contactId)`
+- **Uses:** `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `DiscardExpiredWaitingDirectMessagesUseCase`, `ReleaseWaitingDirectMessageUseCase`, `RestoreWaitingDirectMessageUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
 
 ```text
 FindWaitingMessages -> CheckAuthorization -> DiscardExpiredMessages
@@ -313,19 +310,7 @@ stateDiagram-v2
     CheckAuthorization --> [*] : ReleaseDeferred
     DiscardExpiredMessages --> PrepareRelease : ExpiredMessagesDiscarded
     DiscardExpiredMessages --> [*] : ExpiredMessagesDiscarded
-    PrepareRelease --> DiscardExpiredMessages : Authorized
-    PrepareRelease --> MarkSendFailed : EnqueueFailed
-    PrepareRelease --> PrepareRelease : ExpiredMessagesDiscarded
-    PrepareRelease --> [*] : ExpiredMessagesDiscarded
-    PrepareRelease --> PrepareRelease : PacketEnqueued
-    PrepareRelease --> [*] : PacketEnqueued
-    PrepareRelease --> [*] : ReleaseDeferred
     PrepareRelease --> EnqueuePacket : ReleasePrepared
-    PrepareRelease --> RestoreWaitingMessage : SendFailureRecorded
-    PrepareRelease --> PrepareRelease : WaitingMessageRestored
-    PrepareRelease --> [*] : WaitingMessageRestored
-    PrepareRelease --> CheckAuthorization : WaitingMessagesFound
-    PrepareRelease --> [*] : WaitingMessagesFound
     EnqueuePacket --> MarkSendFailed : EnqueueFailed
     EnqueuePacket --> PrepareRelease : PacketEnqueued
     EnqueuePacket --> [*] : PacketEnqueued
@@ -369,10 +354,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.ClosePoll`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/CloseGroupPollWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageAttachmentOperationsRepository`, `ObserveGroupAdministrationUseCase`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupPollMessageUseCase`, `CheckPollClosePermissionUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-CheckMembership -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
+CheckMembership -> FindPollMessage -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
 -> EncryptClose -> EnqueueClose.
 
 Only the poll creator or a group admin may close a poll.
@@ -381,8 +366,9 @@ Only the poll creator or a group admin may close a poll.
 ```mermaid
 stateDiagram-v2
     [*] --> CheckMembership
-    CheckMembership --> CheckClosePermission : MembershipActive
+    CheckMembership --> FindPollMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
+    FindPollMessage --> CheckClosePermission : PollMessageFound
     CheckClosePermission --> FindRecipients : CloseAllowed
     CheckClosePermission --> Rejected : CloseNotAllowed
     FindRecipients --> FindPoll : RecipientsFound
@@ -400,7 +386,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/DeleteGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`, `RequireMessageWithoutPaymentUseCase`
+- **Uses:** `CheckGroupMessageAccessUseCase`, `FindDeletableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`
 
 ```text
 CheckMembership -> FindOwnMessage -> FindRecipients -> EncryptDelete -> EnqueueDelete -> DiscardMessage.
@@ -426,7 +412,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/EditGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `FindEditableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 CheckMembership -> FindEditableMessage -> FindRecipients -> EncryptEdit -> EnqueueEdit -> ReplaceText.
@@ -452,7 +438,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.FlushQueuedGroupMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/FlushQueuedGroupMessagesWorkflow.kt`
 - **Lock:** `groupSendLockKey(command.groupId)`
-- **Uses:** `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `ProtocolOutbox`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupMessageRepository`, `FindGroupMessagesToFlushUseCase`, `FindUndeliveredGroupRecipientsUseCase`, `EncryptGroupMessageUseCase`, `SaveQueuedGroupRecipientsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 FindRecipients -> FindQueuedMessages
@@ -493,7 +479,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.MarkConversationRead`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/MarkGroupConversationReadWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ConversationUnseenCountRepository`, `GroupMessageRepository`, `SendReadReceiptUseCase`
+- **Uses:** `ConversationUnseenCountRepository`, `GroupMessageRepository`, `RequireGroupConversationUseCase`, `AcknowledgeIncomingMessageUseCase`
 
 ```text
 ClearUnseenCount -> FindUnreadMessages -> (AcknowledgeMessage)* .
@@ -521,7 +507,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.RetryMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/RetryGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupMessageRepository`, `ProtocolOutbox`, `RecordRetryRequestedUseCase`
+- **Uses:** `FindRetryableGroupRecipientsUseCase`, `ProtocolOutbox`, `RecordRetryRequestedUseCase`
 
 ```text
 FindFailedRecipients -> (ResendToRecipient)* .
@@ -564,7 +550,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.SendMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/SendGroupMessageWorkflow.kt`
 - **Lock:** `groupSendLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `StoreOutgoingGroupMessageUseCase`, `DiscardGroupMessagesUseCase`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `StoreOutgoingGroupMessageUseCase`, `DiscardGroupMessagesUseCase`, `EncryptGroupMessageUseCase`, `SaveQueuedGroupRecipientsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 ValidateContent -> CheckMembership -> FindRecipients -> [FlushQueuedMessages] -> StoreMessage
@@ -600,11 +586,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.ToggleReaction`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/ToggleGroupReactionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageReactionRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `ToggleLocalReactionUseCase`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-CheckMembership -> FindMessage -> FindRecipients -> FindLocalReaction -> (AddReaction | RemoveReaction)
--> EncryptReaction -> EnqueueReaction.
+CheckMembership -> FindMessage -> FindRecipients -> ToggleReaction -> EncryptReaction -> EnqueueReaction.
 ```
 
 ```mermaid
@@ -613,11 +598,8 @@ stateDiagram-v2
     CheckMembership --> FindMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
     FindMessage --> FindRecipients : MessageFound
-    FindRecipients --> FindLocalReaction : RecipientsFound
-    FindLocalReaction --> AddReaction : ReactionAbsent
-    FindLocalReaction --> RemoveReaction : ReactionPresent
-    RemoveReaction --> EncryptReaction : ReactionChanged
-    AddReaction --> EncryptReaction : ReactionChanged
+    FindRecipients --> ToggleReaction : RecipientsFound
+    ToggleReaction --> EncryptReaction : ReactionChanged
     EncryptReaction --> EnqueueReaction : ReactionEncrypted
     EnqueueReaction --> [*] : ReactionEnqueued
     Rejected --> [*]
@@ -630,7 +612,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.VotePoll`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/VoteGroupPollWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupPollMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 CheckMembership -> FindPollMessage -> FindRecipients -> FindPoll -> SaveVote -> EncryptVote -> EnqueueVote.

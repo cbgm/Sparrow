@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data.protocol
 
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
+import com.cbgm.sparrow.feature.membership.domain.model.GroupWelcomePacketIds
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
@@ -23,7 +24,7 @@ internal class GroupMembershipPacketProtocol(
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
 ) {
     fun welcomePacketId(groupId: String, invitationId: String, epoch: Int): String =
-        "group-welcome-$groupId-$invitationId-$epoch"
+        GroupWelcomePacketIds.of(groupId, invitationId, epoch)
 
     suspend fun verifyConversationDeleted(
         packet: GroupConversationDeletedPacket,

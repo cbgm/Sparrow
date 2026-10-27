@@ -77,13 +77,15 @@ class HandleDirectInvitationResultWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.ExchangeAccepted -> Transition.Next(Step.ActivateConversation(step.command))
-            Outcome.ExchangeDeclined ->
-                if (step.command.result.action == InvitationResultAction.BLOCK_PEER) {
-                    Transition.Next(Step.BlockContact(step.command))
-                } else {
-                    Transition.Complete()
-                }
+            Outcome.ExchangeDeclined -> afterExchangeDeclined(step.command)
             Outcome.Done -> Transition.Complete()
+        }
+
+    private fun afterExchangeDeclined(command: LifecycleCommand.HandleDirectInvitationResult): Transition<Step> =
+        if (command.result.action == InvitationResultAction.BLOCK_PEER) {
+            Transition.Next(Step.BlockContact(command))
+        } else {
+            Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {

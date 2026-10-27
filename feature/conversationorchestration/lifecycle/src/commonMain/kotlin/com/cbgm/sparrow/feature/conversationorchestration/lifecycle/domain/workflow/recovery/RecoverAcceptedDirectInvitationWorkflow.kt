@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
@@ -29,20 +28,7 @@ class RecoverAcceptedDirectInvitationWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val result = step.command.result
         return when (step) {
-            is Step.CheckExchangeStillOpen -> {
-                if (
-                    result.direction != InvitationDirection.INCOMING || result.response != InvitationResponse.ACCEPTED
-                ) {
-                    return Outcome.NothingToRecover
-                }
-                val exchange = getIdentityExchangeClosure(result.peerId).getOrThrow()
-                val open =
-                    exchange != null &&
-                        exchange.exchangeId == result.invitationId &&
-                        exchange.phase != IdentityExchangeClosurePhase.TERMINAL &&
-                        exchange.phase != IdentityExchangeClosurePhase.ALREADY_CLOSED
-                if (open) Outcome.ExchangeStillOpen else Outcome.NothingToRecover
-            }
+            is Step.CheckExchangeStillOpen -> checkExchangeStillOpen(step.command)
             is Step.HandleResult -> {
                 engine.run(LifecycleCommand.HandleDirectInvitationResult(result)).getOrThrow()
                 Outcome.ResultHandled
@@ -56,6 +42,16 @@ class RecoverAcceptedDirectInvitationWorkflow internal constructor(
             Outcome.NothingToRecover -> Transition.Complete()
             Outcome.ResultHandled -> Transition.Complete()
         }
+
+    /** Only an incoming acceptance of the peer's still open exchange is replayed. */
+    private suspend fun checkExchangeStillOpen(command: LifecycleCommand.RecoverAcceptedDirectInvitation): Outcome {
+        val result = command.result
+        if (result.direction != InvitationDirection.INCOMING || result.response != InvitationResponse.ACCEPTED) {
+            return Outcome.NothingToRecover
+        }
+        val exchange = getIdentityExchangeClosure(result.peerId).getOrThrow()
+        return if (exchange?.isOpenFor(result.invitationId) == true) Outcome.ExchangeStillOpen else Outcome.NothingToRecover
+    }
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.RecoverAcceptedDirectInvitation

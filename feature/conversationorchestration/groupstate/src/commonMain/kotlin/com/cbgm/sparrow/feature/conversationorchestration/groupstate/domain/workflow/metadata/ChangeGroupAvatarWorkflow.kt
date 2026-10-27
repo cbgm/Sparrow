@@ -25,10 +25,7 @@ class ChangeGroupAvatarWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.ValidateAvatar -> {
-                require(step.command.bytes.isNotEmpty()) { "Group avatar must not be empty" }
-                require(step.command.bytes.size <= GroupMetadataPolicy.MAX_AVATAR_BYTES) {
-                    "Group avatar must not exceed ${GroupMetadataPolicy.MAX_AVATAR_BYTES} bytes"
-                }
+                GroupMetadataPolicy.requireValidAvatar(step.command.bytes)
                 Outcome.AvatarValid
             }
             is Step.PublishAvatar -> {

@@ -19,28 +19,49 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.MessageReactionRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.AcknowledgeIncomingMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckMessageEditableUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckPollClosePermissionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CreateDirectMessagePacketUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardExpiredWaitingDirectMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupPayloadUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDeletableDirectMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDeletableGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDirectAuthorizationBlockUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDirectMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindEditableDirectMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindEditableGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessagesToFlushUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindRetryableDirectMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindRetryableGroupRecipientsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindUndeliveredGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.InspectDirectInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.LoadDirectRecipientUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordPacketSendFailureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordRetryRequestedUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecoverInterruptedDirectSendsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ReleaseWaitingDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireGroupConversationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RestoreWaitingDirectMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SaveQueuedGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendReadReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ToggleLocalReactionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.DeleteDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.DeliverDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct.EditDirectMessageWorkflow
@@ -110,11 +131,32 @@ private fun Module.registerUseCases() {
     singleOf(::LoadDirectRecipientUseCase)
     singleOf(::RecordPacketSendFailureUseCase)
     singleOf(::RecordRetryRequestedUseCase)
+    singleOf(::RecoverInterruptedDirectSendsUseCase)
     singleOf(::RequireDirectChatAuthorizationUseCase)
     singleOf(::SendDirectOperationUseCase)
     singleOf(::SendReadReceiptUseCase)
     singleOf(::StoreOutgoingDirectMessageUseCase)
     singleOf(::StoreOutgoingGroupMessageUseCase)
+    singleOf(::AcknowledgeIncomingMessageUseCase)
+    singleOf(::CheckMessageEditableUseCase)
+    singleOf(::CheckPollClosePermissionUseCase)
+    singleOf(::CreateDirectMessagePacketUseCase)
+    singleOf(::DiscardExpiredWaitingDirectMessagesUseCase)
+    singleOf(::FindDeletableDirectMessageUseCase)
+    singleOf(::FindDeletableGroupMessageUseCase)
+    singleOf(::FindDirectMessageUseCase)
+    singleOf(::FindEditableDirectMessageUseCase)
+    singleOf(::FindEditableGroupMessageUseCase)
+    singleOf(::FindGroupMessagesToFlushUseCase)
+    singleOf(::FindGroupPollMessageUseCase)
+    singleOf(::FindRetryableDirectMessageUseCase)
+    singleOf(::FindRetryableGroupRecipientsUseCase)
+    singleOf(::FindUndeliveredGroupRecipientsUseCase)
+    singleOf(::ReleaseWaitingDirectMessageUseCase)
+    singleOf(::RequireGroupConversationUseCase)
+    singleOf(::RestoreWaitingDirectMessageUseCase)
+    singleOf(::SaveQueuedGroupRecipientsUseCase)
+    singleOf(::ToggleLocalReactionUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {

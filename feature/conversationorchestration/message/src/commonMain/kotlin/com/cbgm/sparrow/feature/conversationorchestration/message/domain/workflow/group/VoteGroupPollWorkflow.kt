@@ -14,7 +14,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.G
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
 class VoteGroupPollWorkflow internal constructor(
     private val attachmentRepository: MessageAttachmentOperationsRepository,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
-    private val findGroupMessage: FindGroupMessageUseCase,
+    private val findGroupPollMessage: FindGroupPollMessageUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
     private val findGroupPoll: FindGroupPollUseCase,
     private val encryptGroupOperation: EncryptGroupOperationUseCase,
@@ -43,8 +43,7 @@ class VoteGroupPollWorkflow internal constructor(
                     is GroupMessageAccess.Denied -> Outcome.MembershipInactive(access.reason)
                 }
             is Step.FindPollMessage -> {
-                val message = findGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
-                check(message.isGroupUserMessage) { "Poll target is not a user message" }
+                findGroupPollMessage(step.command.groupId, step.command.messageId).getOrThrow()
                 Outcome.PollMessageFound
             }
             is Step.FindRecipients -> Outcome.RecipientsFound(findGroupRecipients(step.command.groupId).getOrThrow())

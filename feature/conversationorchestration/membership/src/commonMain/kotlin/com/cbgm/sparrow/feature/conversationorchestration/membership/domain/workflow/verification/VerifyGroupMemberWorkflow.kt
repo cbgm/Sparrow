@@ -6,9 +6,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationRole
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.BroadcastGroupVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmParticipantVerificationUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveGroupVerificationRoleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.SendAdminVerificationReceiptUseCase
 import kotlin.reflect.KClass
 
@@ -17,7 +18,7 @@ import kotlin.reflect.KClass
  * LoadSecurity -> SendReceipt                               (a member verified the admin)
  */
 class VerifyGroupMemberWorkflow internal constructor(
-    private val verificationInputs: GroupVerificationInputsUseCase,
+    private val resolveGroupVerificationRole: ResolveGroupVerificationRoleUseCase,
     private val confirmParticipantVerification: ConfirmParticipantVerificationUseCase,
     private val broadcastGroupVerificationSnapshot: BroadcastGroupVerificationSnapshotUseCase,
     private val sendAdminVerificationReceipt: SendAdminVerificationReceiptUseCase
@@ -39,14 +40,7 @@ class VerifyGroupMemberWorkflow internal constructor(
             is Step.LoadSecurity -> {
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
                 require(step.command.contactId.isNotBlank()) { "Contact ID must not be blank" }
-                val security =
-                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
-                        ?: error("Group security state was not found")
-                when {
-                    security.isLocalAdmin -> Outcome.LocalAdmin
-                    security.ownerContactId == step.command.contactId -> Outcome.TargetIsAdmin
-                    else -> Outcome.TargetIsNotAdmin
-                }
+                roleResolved(resolveGroupVerificationRole(step.command.groupId).getOrThrow(), step.command.contactId)
             }
             is Step.ConfirmParticipant -> {
                 confirmParticipantVerification(step.command.groupId, step.command.contactId).getOrThrow()
@@ -77,6 +71,15 @@ class VerifyGroupMemberWorkflow internal constructor(
             Outcome.SnapshotBroadcast -> Transition.Complete()
             Outcome.ReceiptSent -> Transition.Complete()
         }
+
+    private fun roleResolved(role: GroupVerificationRole, contactId: String): Outcome {
+        role.requireSecurity()
+        return when {
+            role == GroupVerificationRole.Admin -> Outcome.LocalAdmin
+            role is GroupVerificationRole.Member && role.isAdmin(contactId) -> Outcome.TargetIsAdmin
+            else -> Outcome.TargetIsNotAdmin
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: GroupAdministrationCommand.VerifyMember

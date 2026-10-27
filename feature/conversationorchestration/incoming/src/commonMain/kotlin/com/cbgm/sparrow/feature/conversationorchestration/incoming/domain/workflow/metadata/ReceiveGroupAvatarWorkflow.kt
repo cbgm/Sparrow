@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAvatarState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupAvatarPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupAvatarRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
@@ -14,7 +15,8 @@ import kotlin.reflect.KClass
 class ReceiveGroupAvatarWorkflow internal constructor(
     private val packetCodec: GroupAvatarPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val avatarRepository: GroupAvatarRepository
+    private val avatarRepository: GroupAvatarRepository,
+    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupAvatar,
         ReceiveGroupAvatarWorkflow.Step,
@@ -31,30 +33,8 @@ class ReceiveGroupAvatarWorkflow internal constructor(
                 packetCodec.verify(packet).getOrThrow()
                 Outcome.SignatureValid
             }
-            is Step.AuthorizeAdmin ->
-                if (
-                    authorizeGroupMetadata.receive(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        contactId = step.command.context.contactId,
-                        adminSigningPublicKey = packet.adminSigningPublicKey,
-                        action = ACTION
-                    ).getOrThrow()
-                ) {
-                    Outcome.AdminAuthorized
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.LoadAvatar ->
-                if (
-                    packet.avatar.changedAtEpochMilliseconds > avatarRepository.get(
-                        packet.groupId
-                    ).getOrThrow().changedAtEpochMilliseconds
-                ) {
-                    Outcome.UpdateIsNewer
-                } else {
-                    Outcome.Ignored
-                }
+            is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
+            is Step.LoadAvatar -> checkNewer(step.command)
             is Step.SaveAvatar -> {
                 avatarRepository.save(
                     GroupAvatarState(
@@ -76,6 +56,34 @@ class ReceiveGroupAvatarWorkflow internal constructor(
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
+
+    private suspend fun authorizeAdmin(command: IncomingCommand.ReceiveGroupAvatar): Outcome {
+        val packet = command.packet
+        return if (
+            authorizeGroupMetadata.receive(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                contactId = command.context.contactId,
+                adminSigningPublicKey = packet.adminSigningPublicKey,
+                action = ACTION
+            ).getOrThrow()
+        ) {
+            Outcome.AdminAuthorized
+        } else {
+            Outcome.Ignored
+        }
+    }
+
+    private suspend fun checkNewer(command: IncomingCommand.ReceiveGroupAvatar): Outcome {
+        val packet = command.packet
+        return if (
+            checkIncomingGroupStateVersion.isNewerAvatar(packet.groupId, packet.avatar.changedAtEpochMilliseconds).getOrThrow()
+        ) {
+            Outcome.UpdateIsNewer
+        } else {
+            Outcome.Ignored
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupAvatar

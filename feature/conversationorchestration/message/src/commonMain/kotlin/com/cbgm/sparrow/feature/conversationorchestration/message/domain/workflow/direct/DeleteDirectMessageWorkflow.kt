@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
@@ -9,8 +8,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDeletableDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
@@ -21,7 +20,7 @@ import kotlin.reflect.KClass
  */
 class DeleteDirectMessageWorkflow internal constructor(
     private val conversationRepository: DirectConversationRepository,
-    private val messageRepository: DirectMessageRepository,
+    private val findDeletableDirectMessage: FindDeletableDirectMessageUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val sendDirectOperation: SendDirectOperationUseCase,
     private val discardDirectMessages: DiscardDirectMessagesUseCase
@@ -43,19 +42,11 @@ class DeleteDirectMessageWorkflow internal constructor(
                     conversationRepository.requireTarget(step.command.conversationId).getOrThrow()
                 )
             }
-            is Step.FindOwnMessage -> {
-                val message =
-                    messageRepository.find(step.command.messageId).getOrThrow() ?: error("Message was not found")
-                check(message.conversationId == step.command.conversationId) {
-                    "Message does not belong to this conversation"
-                }
-                check(message.isMine) { "Only your own messages can be deleted for everyone" }
-                if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
-                    Outcome.MessageNeverSent(message)
-                } else {
-                    Outcome.MessageSent(message, step.target)
-                }
-            }
+            is Step.FindOwnMessage ->
+                ownMessageFound(
+                    findDeletableDirectMessage(step.command.conversationId, step.command.messageId).getOrThrow(),
+                    step.target
+                )
             is Step.CheckAuthorization -> {
                 requireDirectChatAuthorization(step.target.contactId).getOrThrow()
                 Outcome.Authorized(step.message, step.target)
@@ -86,6 +77,10 @@ class DeleteDirectMessageWorkflow internal constructor(
             is Outcome.DeleteSent -> Transition.Next(Step.DiscardMessage(outcome.message, step.command))
             Outcome.MessageDiscarded -> Transition.Complete()
         }
+
+    /** A message still waiting for authorization was never sent, so it is deleted locally only. */
+    private fun ownMessageFound(message: StoredMessage, target: DirectConversationTarget): Outcome =
+        if (message.wasNeverSent) Outcome.MessageNeverSent(message) else Outcome.MessageSent(message, target)
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.DeleteMessage

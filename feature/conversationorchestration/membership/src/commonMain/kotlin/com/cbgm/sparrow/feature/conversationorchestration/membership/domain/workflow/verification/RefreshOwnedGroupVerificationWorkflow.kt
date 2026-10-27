@@ -4,10 +4,11 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationRole
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.BroadcastGroupVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.CheckGroupOwnershipUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RefreshOwnedGroupVerificationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveGroupVerificationRoleUseCase
 import kotlin.reflect.KClass
 
 /**
@@ -15,7 +16,7 @@ import kotlin.reflect.KClass
  * LoadSecurity -> CheckOwnership -> RefreshRows      (owner without security state, e.g. before the first member joined)
  */
 class RefreshOwnedGroupVerificationWorkflow internal constructor(
-    private val verificationInputs: GroupVerificationInputsUseCase,
+    private val resolveGroupVerificationRole: ResolveGroupVerificationRoleUseCase,
     private val checkGroupOwnership: CheckGroupOwnershipUseCase,
     private val refreshOwnedGroupVerification: RefreshOwnedGroupVerificationUseCase,
     private val broadcastGroupVerificationSnapshot: BroadcastGroupVerificationSnapshotUseCase
@@ -34,19 +35,9 @@ class RefreshOwnedGroupVerificationWorkflow internal constructor(
 
     override suspend fun perform(step: Step): Outcome =
         when (step) {
-            is Step.LoadSecurity -> {
-                val security =
-                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
-                when {
-                    security == null -> Outcome.NoSecurityState
-                    security.isLocalAdmin -> Outcome.LocalAdmin
-                    else -> error("Only a group admin may publish membership verification state")
-                }
-            }
+            is Step.LoadSecurity -> roleResolved(resolveGroupVerificationRole(step.command.groupId).getOrThrow())
             is Step.CheckOwnership -> {
-                check(checkGroupOwnership(step.command.groupId).getOrThrow()) {
-                    "Only the group owner may update membership verification state"
-                }
+                checkGroupOwnership.require(step.command.groupId).getOrThrow()
                 Outcome.OwnershipConfirmed
             }
             is Step.RefreshRows -> {
@@ -65,16 +56,20 @@ class RefreshOwnedGroupVerificationWorkflow internal constructor(
             Outcome.LocalAdmin -> Transition.Next(Step.RefreshRows(broadcastAfterwards = true, command = step.command))
             Outcome.OwnershipConfirmed ->
                 Transition.Next(Step.RefreshRows(broadcastAfterwards = false, command = step.command))
-            is Outcome.RowsRefreshed ->
-                if (outcome.broadcastAfterwards) {
-                    Transition.Next(
-                        Step.BroadcastSnapshot(step.command)
-                    )
-                } else {
-                    Transition.Complete()
-                }
+            is Outcome.RowsRefreshed -> afterRowsRefreshed(outcome, step.command)
             Outcome.SnapshotBroadcast -> Transition.Complete()
         }
+
+    private fun roleResolved(role: GroupVerificationRole): Outcome {
+        role.requireMayPublish()
+        return if (role == GroupVerificationRole.Admin) Outcome.LocalAdmin else Outcome.NoSecurityState
+    }
+
+    private fun afterRowsRefreshed(
+        outcome: Outcome.RowsRefreshed,
+        command: MembershipCommand.RefreshOwnedGroupVerification
+    ): Transition<Step> =
+        if (outcome.broadcastAfterwards) Transition.Next(Step.BroadcastSnapshot(command)) else Transition.Complete()
 
     sealed interface Step : WorkflowStep {
         val command: MembershipCommand.RefreshOwnedGroupVerification

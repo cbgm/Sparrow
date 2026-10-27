@@ -8,19 +8,17 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupIncomingConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GetTrustedGroupAuthorityUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
-import com.cbgm.sparrow.feature.membership.domain.model.GroupWelcomeMemberKey
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedIncomingGroupWelcome
-import com.cbgm.sparrow.feature.membership.domain.model.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.domain.model.welcomePersistedAt
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.OpenIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.PersistIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
-import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 import kotlin.reflect.KClass
 
 /**
@@ -33,7 +31,7 @@ import kotlin.reflect.KClass
 @Suppress("LongParameterList")
 class ReceiveGroupWelcomeWorkflow internal constructor(
     private val authorizeIncomingGroupWelcome: AuthorizeIncomingGroupWelcomeUseCase,
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val getTrustedGroupAuthority: GetTrustedGroupAuthorityUseCase,
     private val openIncomingGroupWelcome: OpenIncomingGroupWelcomeUseCase,
     private val incomingConversationRepository: GroupIncomingConversationRepository,
     private val resolveIncomingPeerContacts: ResolveIncomingPeerContactsUseCase,
@@ -67,21 +65,17 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
                         Outcome.Advanced(
                             Welcome(
                                 authorization = authorization,
-                                persistedAt =
-                                    maxOf(packet.createdAtEpochMilliseconds, context.receivedAtEpochMilliseconds)
+                                persistedAt = packet.welcomePersistedAt(context.receivedAtEpochMilliseconds)
                             )
                         )
                     }
                     ?: Outcome.NotApplicable
             is Step.LoadAuthority -> {
                 val authority =
-                    if (step.welcome.authorization.isFirstWelcome) {
-                        getRemoteIdentity(context.contactId).getOrThrow() ?: error(
-                            "Inviting group admin has no accepted Sparrow identity"
-                        )
-                    } else {
-                        null
-                    }
+                    getTrustedGroupAuthority.forWelcome(
+                        context.contactId,
+                        step.welcome.authorization.isFirstWelcome
+                    ).getOrThrow()
                 Outcome.Advanced(step.welcome.copy(firstWelcomeAuthority = authority))
             }
             is Step.OpenWelcome -> {
@@ -90,11 +84,9 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
                     openIncomingGroupWelcome(
                         packet = packet,
                         senderContactId = context.contactId,
-                        isFirstWelcome = welcome.authorization.isFirstWelcome,
-                        previousAuthorityEncryptionPublicKey =
-                            welcome.firstWelcomeAuthority?.encryptionPublicKey ?: welcome.authorization.priorAdminEncryptionPublicKey,
-                        previousAuthoritySigningPublicKey =
-                            welcome.firstWelcomeAuthority?.signingPublicKey ?: welcome.authorization.priorAdminSigningPublicKey
+                        authorization = welcome.authorization,
+                        pinnedAuthorityEncryptionPublicKey = welcome.firstWelcomeAuthority?.encryptionPublicKey,
+                        pinnedAuthoritySigningPublicKey = welcome.firstWelcomeAuthority?.signingPublicKey
                     ).getOrThrow()
                 Outcome.Advanced(welcome.copy(opened = opened))
             }
@@ -122,8 +114,9 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
             is Step.PersistWelcome -> {
                 persistIncomingGroupWelcome(
                     welcome = step.welcome.requireOpened(),
-                    ownerContactId = continuingAdminId(packet, step.welcome) ?: context.contactId,
-                    memberKeys = memberKeys(packet, step.welcome.contactIdsByMember),
+                    packet = packet,
+                    senderContactId = context.contactId,
+                    contactIdsByMember = step.welcome.contactIdsByMember,
                     receivedAtEpochMilliseconds = step.welcome.persistedAt
                 ).getOrThrow()
                 Outcome.Advanced(step.welcome)
@@ -194,37 +187,18 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
             is Step.ResolveMemberContacts -> Step.PersistWelcome(welcome, step.command)
             is Step.PersistWelcome -> Step.ResolveMemberNames(welcome, step.command)
             is Step.ResolveMemberNames -> Step.InstallWelcome(welcome, step.command)
-            is Step.InstallWelcome ->
-                if (welcome.authorization.isFirstWelcome) {
-                    Step.EstablishMutualIdentity(welcome, step.command)
-                } else {
-                    Step.SendReadyAcknowledgement(welcome, step.command)
-                }
+            is Step.InstallWelcome -> afterInstall(welcome, step.command)
             is Step.EstablishMutualIdentity -> Step.SendReadyAcknowledgement(welcome, step.command)
             is Step.SendReadyAcknowledgement -> Step.CompleteWelcome(welcome, step.command)
             is Step.CompleteWelcome -> error("CompleteWelcome is the last step")
         }
 
-    /** When the admin left with this welcome, the member it named admin keeps the group. */
-    private fun continuingAdminId(packet: GroupCreatedPacket, welcome: Welcome): String? {
-        if (!welcome.requireOpened().authorityLeft) return null
-        return packet.members.indices.firstNotNullOfOrNull { index ->
-            welcome.contactIdsByMember[index]?.takeIf { packet.members[index].role.isGroupAdminRole() }
-        }
-    }
-
-    private fun memberKeys(packet: GroupCreatedPacket, contactIds: List<String?>): List<GroupWelcomeMemberKey> =
-        packet.members.mapIndexedNotNull { index, member ->
-            val contactId = contactIds[index] ?: return@mapIndexedNotNull null
-            GroupWelcomeMemberKey(
-                groupId = packet.groupId,
-                epoch = packet.epoch,
-                contactId = contactId,
-                encryptionPublicKey = member.encryptionPublicKey.copyOf(),
-                signingPublicKey = member.signingPublicKey.copyOf(),
-                role = member.role,
-                phoneNumber = member.phoneNumber
-            )
+    /** Only the first welcome establishes the mutual identity of the inviting admin. */
+    private fun afterInstall(welcome: Welcome, command: IncomingCommand.ReceiveGroupWelcome): Step =
+        if (welcome.authorization.isFirstWelcome) {
+            Step.EstablishMutualIdentity(welcome, command)
+        } else {
+            Step.SendReadyAcknowledgement(welcome, command)
         }
 
     /** What the workflow learned about the welcome so far. */

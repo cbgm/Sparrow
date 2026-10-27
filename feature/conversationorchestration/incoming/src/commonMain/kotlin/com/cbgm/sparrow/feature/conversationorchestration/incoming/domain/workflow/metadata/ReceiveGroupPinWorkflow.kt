@@ -5,8 +5,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupPinPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveIncomingPinSenderUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
-import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
 
@@ -19,7 +20,8 @@ class ReceiveGroupPinWorkflow internal constructor(
     private val packetCodec: GroupPinPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
     private val pinRepository: GroupPinRepository,
-    private val findRemoteIdentityPeerId: FindRemoteIdentityPeerIdUseCase
+    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase,
+    private val resolveIncomingPinSender: ResolveIncomingPinSenderUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupPin,
         ReceiveGroupPinWorkflow.Step,
@@ -36,48 +38,16 @@ class ReceiveGroupPinWorkflow internal constructor(
                 packetCodec.verify(packet).getOrThrow()
                 Outcome.SignatureValid
             }
-            is Step.AuthorizeAdmin ->
-                if (
-                    authorizeGroupMetadata.receive(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        contactId = step.command.context.contactId,
-                        adminSigningPublicKey = packet.adminSigningPublicKey,
-                        action = ACTION
-                    ).getOrThrow()
-                ) {
-                    Outcome.AdminAuthorized
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.CheckPinSlot -> {
-                val current = pinRepository.find(packet.groupId).getOrThrow()
-                val newer = packet.changedAtEpochMilliseconds > (current?.changedAtEpochMilliseconds ?: 0L)
-                val expensesKeepSlot =
-                    current?.hasActiveExpenseBoard == true && packet.messageId != null && packet.messageId != current.messageId
-                when {
-                    !newer || expensesKeepSlot -> Outcome.Ignored
-                    packet.hasPinnedMessage -> Outcome.SlotAvailable
-                    else -> Outcome.SenderResolved(senderContactId = null, isMine = false)
-                }
-            }
+            is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
+            is Step.CheckPinSlot -> checkPinSlot(step.command)
             is Step.ResolveMessageSender -> {
                 val sender =
-                    authorizeGroupMetadata.resolveMessageSender(
+                    resolveIncomingPinSender(
                         packet.groupId,
                         packet.epoch,
                         packet.messageSenderSigningPublicKey
-                    )
-                        .getOrThrow()
-                val senderContactId =
-                    if (sender.isLocal) {
-                        null
-                    } else {
-                        sender.memberContactId ?: findRemoteIdentityPeerId(
-                            packet.messageSenderSigningPublicKey
-                        ).getOrThrow()
-                    }
-                Outcome.SenderResolved(senderContactId, sender.isLocal)
+                    ).getOrThrow()
+                Outcome.SenderResolved(sender.memberContactId, sender.isLocal)
             }
             is Step.SavePin -> {
                 pinRepository.save(packetCodec.toGroupPinState(packet, step.senderContactId, step.isMine)).getOrThrow()
@@ -96,6 +66,37 @@ class ReceiveGroupPinWorkflow internal constructor(
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
+
+    private suspend fun authorizeAdmin(command: IncomingCommand.ReceiveGroupPin): Outcome {
+        val packet = command.packet
+        return if (
+            authorizeGroupMetadata.receive(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                contactId = command.context.contactId,
+                adminSigningPublicKey = packet.adminSigningPublicKey,
+                action = ACTION
+            ).getOrThrow()
+        ) {
+            Outcome.AdminAuthorized
+        } else {
+            Outcome.Ignored
+        }
+    }
+
+    /** A cleared slot needs no message sender. */
+    private suspend fun checkPinSlot(command: IncomingCommand.ReceiveGroupPin): Outcome {
+        val packet = command.packet
+        return when {
+            !checkIncomingGroupStateVersion.acceptsPin(
+                packet.groupId,
+                packet.changedAtEpochMilliseconds,
+                packet.messageId
+            ).getOrThrow() -> Outcome.Ignored
+            packet.hasPinnedMessage -> Outcome.SlotAvailable
+            else -> Outcome.SenderResolved(senderContactId = null, isMine = false)
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupPin

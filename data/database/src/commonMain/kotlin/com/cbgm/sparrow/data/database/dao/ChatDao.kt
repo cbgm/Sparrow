@@ -360,6 +360,25 @@ interface ChatDao {
         deliveryStatus: String
     ): List<MessageEntity>
 
+    /** Queued outgoing direct messages whose packet never reached the outbox, e.g. after a crash mid-send. */
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = 'QUEUED'
+          AND messages.createdAtEpochMilliseconds < :createdBefore
+          AND (
+            messages.packetId IS NULL
+            OR messages.packetId NOT IN (SELECT protocol_outbox.packetId FROM protocol_outbox)
+          )
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    suspend fun findDirectMessagesAwaitingOutbox(createdBefore: Long): List<MessageEntity>
+
     @Query(
         """
         SELECT messages.*

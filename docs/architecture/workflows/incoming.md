@@ -47,19 +47,23 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveDirectMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/direct/ReceiveDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `DirectMessagePacketReader`, `ApplyPeerProfilePictureUseCase`, `ContactRepository`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `ResolveSenderDisplayNameUseCase`, `SendDeliveryReceiptUseCase`, `ClaimAutoReplyForContactUseCase`, `ReleaseAutoReplyRecipientUseCase`
+- **Uses:** `WorkflowEngine`, `DirectMessagePacketReader`, `UpdateIncomingSenderProfileUseCase`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `StoreIncomingDirectAttachmentsUseCase`, `SendDeliveryReceiptUseCase`, `ClaimAutoReplyForContactUseCase`, `ReleaseAutoReplyRecipientUseCase`
 
 ```text
-ReadMessage -> UpdateSenderProfile -> StoreMessage -> StoreAttachments -> SendDeliveryReceipt -> ClaimAutoReply
--> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments -> ApplyParkedOperations
+ReadMessage -> FindExisting -> [UpdateSenderProfile -> StoreMessage] -> StoreAttachments -> SendDeliveryReceipt
+-> ClaimAutoReply -> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments -> ApplyParkedOperations
 
-The router created the conversation and checked the authorization before this workflow starts.
+The router created the conversation and checked the authorization before this workflow starts. A redelivered
+message keeps its row, so edits, deletions and the read state applied since are not undone; only attachments
+and the receipt are repeated. A message ID that belongs to another message is rejected.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> ReadMessage
-    ReadMessage --> UpdateSenderProfile : MessageRead
+    ReadMessage --> FindExisting : MessageRead
+    FindExisting --> StoreAttachments : MessageStored
+    FindExisting --> UpdateSenderProfile : NewMessage
     UpdateSenderProfile --> StoreMessage : SenderProfileUpdated
     StoreMessage --> StoreAttachments : MessageStored
     StoreAttachments --> SendDeliveryReceipt : AttachmentsStored
@@ -80,7 +84,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/group/ReceiveGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`, `DeleteReplacedExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `RequireGroupConversationUseCase`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`, `DeleteReplacedExpenseReceiptsUseCase`
 
 ```text
 FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
@@ -119,7 +123,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.CompleteManualIdentity`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/CompleteManualIdentityWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetIdentityPeerStateUseCase`, `SendIdentityVerificationReceiptUseCase`
+- **Uses:** `WorkflowEngine`, `CheckDirectPeerAuthorizedUseCase`, `SendIdentityVerificationReceiptUseCase`
 
 ```text
 LoadAuthorization -> [ActivateConversation] -> SendVerificationReceipt
@@ -166,7 +170,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactInviteAccepted`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactInviteAcceptedWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactInvitationHandshakeProtocol`, `GetIdentityExchangeBindingUseCase`, `ReceiveIdentityExchangeAcceptedUseCase`, `ContactBlocklistRepository`, `StagePendingRemoteIdentityChangeUseCase`, `HandleInvitationResponseUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `WorkflowEngine`, `ContactInvitationHandshakeProtocol`, `GetIdentityExchangeBindingUseCase`, `ReceiveIdentityExchangeAcceptedUseCase`, `StageIncomingIdentityReviewUseCase`, `HandleInvitationResponseUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
 VerifyAcceptance -> FindExchange -> ReceiveAcceptance -> ActivateConversation -> MarkInvitationAccepted
@@ -214,7 +218,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactInvite`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactInviteWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactInvitationRequestProtocol`, `PhoneNumberNormalizer`, `ResolveIncomingIdentityPeerUseCase`, `ContactBlocklistRepository`, `StagePendingRemoteIdentityChangeUseCase`, `ReassignIdentityExchangePeerUseCase`, `ApplyIdentityPeerMergeUseCase`, `UpdateIncomingIdentityPeerMetadataUseCase`, `ReceiveIdentityExchangeUseCase`, `ApplyPeerProfilePictureUseCase`, `GetIdentityPeerDisplayNameUseCase`
+- **Uses:** `WorkflowEngine`, `VerifyIncomingContactInvitationUseCase`, `ResolveIncomingIdentityPeerUseCase`, `StageIncomingIdentityReviewUseCase`, `MergeIncomingIdentityPeersUseCase`, `UpdateIncomingIdentityPeerMetadataUseCase`, `ReceiveIdentityExchangeUseCase`, `ApplyPeerProfilePictureUseCase`, `ResolveContactInvitationDisplayNameUseCase`
 
 ```text
 VerifyInvitation -> ResolvePeer -> MergePeers -> [UpdatePeerPhoneNumber] -> ReceiveExchange -> ApplyProfilePicture
@@ -322,7 +326,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDeletion`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupDeletionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`
+- **Uses:** `GetTrustedGroupAuthorityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`
 
 ```text
 LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> PrepareDeletion -> CompleteDeletion -> FinishDeletion.
@@ -391,7 +395,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupInvite`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupInviteWorkflow.kt`
 - **Lock:** none
-- **Uses:** `InspectIncomingGroupMembershipUseCase`, `ContactBlocklistRepository`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `GetRemoteIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StagePendingRemoteIdentityChangeUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `InspectIncomingGroupOfferUseCase`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
 InspectOffer -> CheckRecordable -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity] -> StageOffer
@@ -432,7 +436,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupJoinRequest`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupJoinRequestWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ReceiveGroupMembershipJoinRequestUseCase`, `GetRemoteIdentityUseCase`, `GetMembershipHandshakeUseCase`, `StagePendingRemoteIdentityChangeUseCase`, `StageRemoteIdentityUseCase`, `EstablishMutualIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `ReceiveGroupMembershipJoinRequestUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `StageRemoteIdentityUseCase`, `EstablishMutualIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
 ReceiveJoin -> EvaluateMemberIdentity -> StageIdentityReview                          (changed keys)
@@ -484,7 +488,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMemberActivation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupMemberActivationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupActivationUseCase`, `ResolveSigningIdentityContactUseCase`, `ApplyIncomingGroupActivationUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
+- **Uses:** `WorkflowEngine`, `GetTrustedGroupAuthorityUseCase`, `AuthorizeIncomingGroupActivationUseCase`, `ResolveSigningIdentityContactUseCase`, `ApplyIncomingGroupActivationUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
 
 ```text
 LoadOwner -> AuthorizeActivation -> [ResolveMemberContact] -> ApplyActivation, then
@@ -536,7 +540,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupReadyAcknowledgement`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupReadyAcknowledgementWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetGroupCurrentEpochUseCase`, `ReceiveGroupReadyAcknowledgementUseCase`, `GetMembershipHandshakeUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
+- **Uses:** `WorkflowEngine`, `CheckReadyAcknowledgementEpochUseCase`, `ReceiveGroupReadyAcknowledgementUseCase`, `FindReadyAcknowledgedMembershipUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
 
 ```text
 CheckEpochCurrent -> ReceiveAcknowledgement -> CheckEpochStillCurrent -> FindActivatedMembership
@@ -569,7 +573,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupWelcome`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupWelcomeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetRemoteIdentityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`
+- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`
 
 ```text
 AuthorizeWelcome -> LoadAuthority -> OpenWelcome -> RecordRestart -> ResolveMemberContacts -> PersistWelcome
@@ -604,7 +608,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupAvatar`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupAvatarWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupAvatarRepository`
+- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupAvatarRepository`, `CheckIncomingGroupStateVersionUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> LoadAvatar -> SaveAvatar. Older or unauthorized updates are dropped.
@@ -626,7 +630,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDescription`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupDescriptionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupDescriptionRepository`
+- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupDescriptionRepository`, `CheckIncomingGroupStateVersionUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> LoadDescription -> SaveDescription. Older or unauthorized updates are dropped.
@@ -648,7 +652,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupPin`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupPinWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupPinRepository`, `FindRemoteIdentityPeerIdUseCase`
+- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupPinRepository`, `CheckIncomingGroupStateVersionUseCase`, `ResolveIncomingPinSenderUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> CheckPinSlot -> [ResolveMessageSender] -> SavePin
@@ -674,7 +678,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupTitle`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupTitleWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupTitleRepository`
+- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupTitleRepository`, `CheckIncomingGroupStateVersionUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> LoadTitle -> SaveTitle. Older or unauthorized updates are dropped.
@@ -722,7 +726,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyRemoteMessageOperation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyRemoteMessageOperationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`, `RequireMessageWithoutPaymentUseCase`, `ParkedMessageOperationRepository`
+- **Uses:** `AuthorizeRemoteMessageOperationUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `ParkedMessageOperationRepository`
 
 ```text
 FindTarget, then by operation:
@@ -733,7 +737,7 @@ PollVote:  FindPoll -> SavePoll
 PollClose: CheckPollCloser -> FindPoll -> SavePoll
 No target: Park
 
-Only the original sender edits or deletes; group operations only touch user messages. An operation whose
+[AuthorizeRemoteMessageOperationUseCase] decides who may change which message. An operation whose
 message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
 once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
 ```
@@ -767,7 +771,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.RouteIncomingPacket`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/routing/RouteIncomingPacketWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `CheckGroupPacketAcceptedUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
+- **Uses:** `WorkflowEngine`, `CheckDirectPeerAuthorizedUseCase`, `DirectConversationRepository`, `ResolveControlConversationIdUseCase`, `CheckGroupPacketAcceptedUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
 
 ```text
 direct message:  CheckDirectAuthorization -> EnsureDirectConversation -> ReceiveDirectMessage | ApplyDirectOperation

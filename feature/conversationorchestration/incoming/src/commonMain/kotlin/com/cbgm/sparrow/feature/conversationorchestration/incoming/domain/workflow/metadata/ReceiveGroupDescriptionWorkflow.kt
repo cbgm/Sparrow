@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupDescriptionState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupDescriptionPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupDescriptionRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
@@ -14,7 +15,8 @@ import kotlin.reflect.KClass
 class ReceiveGroupDescriptionWorkflow internal constructor(
     private val packetCodec: GroupDescriptionPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val descriptionRepository: GroupDescriptionRepository
+    private val descriptionRepository: GroupDescriptionRepository,
+    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupDescription,
         ReceiveGroupDescriptionWorkflow.Step,
@@ -32,30 +34,8 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
                 packetCodec.verify(packet).getOrThrow()
                 Outcome.SignatureValid
             }
-            is Step.AuthorizeAdmin ->
-                if (
-                    authorizeGroupMetadata.receive(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        contactId = step.command.context.contactId,
-                        adminSigningPublicKey = packet.adminSigningPublicKey,
-                        action = ACTION
-                    ).getOrThrow()
-                ) {
-                    Outcome.AdminAuthorized
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.LoadDescription ->
-                if (
-                    packet.changedAtEpochMilliseconds > descriptionRepository.get(
-                        packet.groupId
-                    ).getOrThrow().changedAtEpochMilliseconds
-                ) {
-                    Outcome.UpdateIsNewer
-                } else {
-                    Outcome.Ignored
-                }
+            is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
+            is Step.LoadDescription -> checkNewer(step.command)
             is Step.SaveDescription -> {
                 descriptionRepository.save(
                     GroupDescriptionState(packet.groupId, packet.description, packet.changedAtEpochMilliseconds)
@@ -73,6 +53,34 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
+
+    private suspend fun authorizeAdmin(command: IncomingCommand.ReceiveGroupDescription): Outcome {
+        val packet = command.packet
+        return if (
+            authorizeGroupMetadata.receive(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                contactId = command.context.contactId,
+                adminSigningPublicKey = packet.adminSigningPublicKey,
+                action = ACTION
+            ).getOrThrow()
+        ) {
+            Outcome.AdminAuthorized
+        } else {
+            Outcome.Ignored
+        }
+    }
+
+    private suspend fun checkNewer(command: IncomingCommand.ReceiveGroupDescription): Outcome {
+        val packet = command.packet
+        return if (
+            checkIncomingGroupStateVersion.isNewerDescription(packet.groupId, packet.changedAtEpochMilliseconds).getOrThrow()
+        ) {
+            Outcome.UpdateIsNewer
+        } else {
+            Outcome.Ignored
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupDescription

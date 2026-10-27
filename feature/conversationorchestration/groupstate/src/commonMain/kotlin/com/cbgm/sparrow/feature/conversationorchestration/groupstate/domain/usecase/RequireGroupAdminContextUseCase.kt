@@ -26,4 +26,12 @@ class RequireGroupAdminContextUseCase(
                 recipientContactIds = authorized.recipientContactIds
             )
         }
+
+    /** Like [invoke] for metadata addressed to one member, who must be an active recipient. */
+    suspend fun forRecipient(groupId: String, action: String, contactId: String): Result<GroupAdminContext> =
+        safeSuspendCall(logFailure = false) {
+            val context = invoke(groupId, action).getOrThrow()
+            check(contactId in context.recipientContactIds) { "Contact is not an active group member" }
+            context
+        }
 }

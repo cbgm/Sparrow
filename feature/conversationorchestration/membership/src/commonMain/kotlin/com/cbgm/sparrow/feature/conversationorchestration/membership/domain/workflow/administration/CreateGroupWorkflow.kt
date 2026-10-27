@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.administration
 
+import com.cbgm.sparrow.core.base.group.domain.model.GroupMetadataPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
@@ -36,8 +37,7 @@ class CreateGroupWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.CreateConversation -> {
-                val title = step.command.title.trim()
-                require(title.isNotEmpty()) { "Group title must not be blank" }
+                val title = GroupMetadataPolicy.requireValidTitle(step.command.title)
                 require(step.command.contactIds.isNotEmpty()) { "A group requires at least one contact" }
                 Outcome.ConversationCreated(conversationRepository.create(title).getOrThrow())
             }

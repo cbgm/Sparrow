@@ -11,29 +11,29 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckPollClosePermissionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.ObserveGroupAdministrationUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
-import kotlinx.coroutines.flow.first
 import kotlin.reflect.KClass
 
 /**
- * CheckMembership -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
+ * CheckMembership -> FindPollMessage -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
  * -> EncryptClose -> EnqueueClose.
  *
  * Only the poll creator or a group admin may close a poll.
  */
 class CloseGroupPollWorkflow internal constructor(
     private val attachmentRepository: MessageAttachmentOperationsRepository,
-    private val observeGroupAdministration: ObserveGroupAdministrationUseCase,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
-    private val findGroupMessage: FindGroupMessageUseCase,
+    private val findGroupPollMessage: FindGroupPollMessageUseCase,
+    private val checkPollClosePermission: CheckPollClosePermissionUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
     private val findGroupPoll: FindGroupPollUseCase,
     private val encryptGroupOperation: EncryptGroupOperationUseCase,
@@ -51,16 +51,20 @@ class CloseGroupPollWorkflow internal constructor(
                     GroupMessageAccess.Granted -> Outcome.MembershipActive(step.closedAtEpochMilliseconds)
                     is GroupMessageAccess.Denied -> Outcome.MembershipInactive(access.reason)
                 }
-            is Step.CheckClosePermission -> {
-                val message = findGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
-                check(message.isGroupUserMessage) { "Poll target is not a user message" }
-                val isLocalAdmin = observeGroupAdministration(step.command.groupId).first().isLocalAdmin
-                if (message.isMine || isLocalAdmin) {
-                    Outcome.CloseAllowed(step.closedAtEpochMilliseconds)
-                } else {
-                    Outcome.CloseNotAllowed
-                }
-            }
+            is Step.FindPollMessage ->
+                Outcome.PollMessageFound(
+                    message = findGroupPollMessage(step.command.groupId, step.command.messageId).getOrThrow(),
+                    closedAtEpochMilliseconds = step.closedAtEpochMilliseconds
+                )
+            is Step.CheckClosePermission ->
+                closePermissionChecked(
+                    allowed = checkPollClosePermission(
+                        groupId = step.command.groupId,
+                        pollMessage = step.message,
+                        closerContactId = null
+                    ).getOrThrow(),
+                    closedAtEpochMilliseconds = step.closedAtEpochMilliseconds
+                )
             is Step.FindRecipients ->
                 Outcome.RecipientsFound(
                     findGroupRecipients(step.command.groupId).getOrThrow(),
@@ -102,7 +106,11 @@ class CloseGroupPollWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             is Outcome.MembershipActive ->
-                Transition.Next(Step.CheckClosePermission(outcome.closedAtEpochMilliseconds, step.command))
+                Transition.Next(Step.FindPollMessage(outcome.closedAtEpochMilliseconds, step.command))
+            is Outcome.PollMessageFound ->
+                Transition.Next(
+                    Step.CheckClosePermission(outcome.message, outcome.closedAtEpochMilliseconds, step.command)
+                )
             is Outcome.MembershipInactive ->
                 Transition.Reject(ConversationFailure(ConversationFailureReason.NOT_ALLOWED, outcome.reason))
             is Outcome.CloseAllowed ->
@@ -131,6 +139,9 @@ class CloseGroupPollWorkflow internal constructor(
             Outcome.CloseEnqueued -> Transition.Complete()
         }
 
+    private fun closePermissionChecked(allowed: Boolean, closedAtEpochMilliseconds: Long): Outcome =
+        if (allowed) Outcome.CloseAllowed(closedAtEpochMilliseconds) else Outcome.CloseNotAllowed
+
     sealed interface Step : WorkflowStep {
         val command: GroupMessageCommand.ClosePoll
 
@@ -139,7 +150,13 @@ class CloseGroupPollWorkflow internal constructor(
             override val command: GroupMessageCommand.ClosePoll
         ) : Step
 
+        data class FindPollMessage(
+            val closedAtEpochMilliseconds: Long,
+            override val command: GroupMessageCommand.ClosePoll
+        ) : Step
+
         data class CheckClosePermission(
+            val message: StoredMessage,
             val closedAtEpochMilliseconds: Long,
             override val command: GroupMessageCommand.ClosePoll
         ) : Step
@@ -181,6 +198,11 @@ class CloseGroupPollWorkflow internal constructor(
 
         data class MembershipInactive(
             val reason: String
+        ) : Outcome
+
+        data class PollMessageFound(
+            val message: StoredMessage,
+            val closedAtEpochMilliseconds: Long
         ) : Outcome
 
         data class CloseAllowed(

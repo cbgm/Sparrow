@@ -22,7 +22,7 @@ class DiscardWaitingDirectMessagesWorkflow internal constructor(
         MessageCommand.DiscardWaitingDirectMessages::class
 
     override fun lockKey(command: MessageCommand.DiscardWaitingDirectMessages): String =
-        "direct-release:${command.contactId}"
+        directReleaseLockKey(command.contactId)
 
     override fun firstStep(command: MessageCommand.DiscardWaitingDirectMessages): Step =
         Step.FindWaitingMessages(command)
@@ -41,14 +41,15 @@ class DiscardWaitingDirectMessagesWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.WaitingMessagesFound ->
-                if (outcome.messages.isEmpty()) {
-                    Transition.Complete()
-                } else {
-                    Transition.Next(Step.DiscardMessages(outcome.messages, step.command))
-                }
+            is Outcome.WaitingMessagesFound -> discardFound(outcome.messages, step.command)
             Outcome.MessagesDiscarded -> Transition.Complete()
         }
+
+    private fun discardFound(
+        messages: List<StoredMessage>,
+        command: MessageCommand.DiscardWaitingDirectMessages
+    ): Transition<Step> =
+        if (messages.isEmpty()) Transition.Complete() else Transition.Next(Step.DiscardMessages(messages, command))
 
     sealed interface Step : WorkflowStep {
         val command: MessageCommand.DiscardWaitingDirectMessages

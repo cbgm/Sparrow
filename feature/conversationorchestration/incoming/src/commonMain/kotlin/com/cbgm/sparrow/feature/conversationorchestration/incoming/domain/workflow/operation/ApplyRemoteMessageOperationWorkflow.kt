@@ -7,9 +7,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.rejectInvalid
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeRemoteMessageOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
@@ -17,10 +18,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
-import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.protocol.message.MessageOperation
-import kotlinx.coroutines.flow.first
 import kotlin.reflect.KClass
 
 /**
@@ -32,12 +30,12 @@ import kotlin.reflect.KClass
  * PollClose: CheckPollCloser -> FindPoll -> SavePoll
  * No target: Park
  *
- * Only the original sender edits or deletes; group operations only touch user messages. An operation whose
+ * [AuthorizeRemoteMessageOperationUseCase] decides who may change which message. An operation whose
  * message has not arrived yet, for example an edit that overtook it after a reconnect, is parked and applied
  * once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
  */
 class ApplyRemoteMessageOperationWorkflow internal constructor(
-    private val findOperationTarget: FindOperationTargetUseCase,
+    private val authorizeOperation: AuthorizeRemoteMessageOperationUseCase,
     private val directMessageRepository: DirectMessageRepository,
     private val groupMessageRepository: GroupMessageRepository,
     private val attachmentRepository: MessageAttachmentOperationsRepository,
@@ -45,8 +43,6 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
     private val discardDirectMessages: DiscardDirectMessagesUseCase,
     private val discardGroupMessages: DiscardGroupMessagesUseCase,
     private val findGroupPoll: FindGroupPollUseCase,
-    private val membershipRepository: GroupMembershipRepository,
-    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase,
     private val parkedOperations: ParkedMessageOperationRepository
 ) : WorkflowStateMachine<
         IncomingCommand.ApplyRemoteMessageOperation,
@@ -63,12 +59,7 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
         return when (step) {
             is Step.FindTarget -> findTarget(command)
             is Step.CheckEditable -> {
-                requireSenderOwns(step.target, command)
-                val text = messageTextOf(step.target, command)
-                check(!text.isNullOrBlank()) { "Only text messages can be edited" }
-                check(attachmentRepository.messageParts(step.target.id).getOrThrow().isEmpty()) {
-                    "Messages with attachments cannot be edited"
-                }
+                authorizeOperation.requireEditable(step.target, command).getOrThrow()
                 Outcome.Editable(step.edit)
             }
             is Step.ReplaceText -> {
@@ -81,8 +72,7 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
                 Outcome.Applied
             }
             is Step.CheckSender -> {
-                requireMessageWithoutPayment(step.target.id).getOrThrow()
-                requireSenderOwns(step.target, command)
+                authorizeOperation.requireDeletable(step.target, command).getOrThrow()
                 Outcome.SenderOwnsTarget(step.target)
             }
             is Step.DeleteMessage -> {
@@ -108,19 +98,14 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
                 Outcome.Applied
             }
             is Step.CheckPollCloser -> {
-                val administration = membershipRepository.observeAdministration(command.conversationId).first()
-                check(
-                    step.target.senderContactId == command.senderContactId || command.senderContactId in administration.adminContactIds
-                ) {
-                    "Only the poll creator or a group admin can close the poll"
-                }
+                authorizeOperation.requirePollCloser(step.target, command).getOrThrow()
                 Outcome.PollCloserAllowed
             }
             is Step.FindPoll -> Outcome.PollFound(findGroupPoll(command.operation.messageId, step.pollId).getOrThrow())
             is Step.SavePoll -> {
                 attachmentRepository.updateMessagePart(
                     command.operation.messageId,
-                    updatedPoll(step.poll, command)
+                    rejectInvalid { updatedPoll(step.poll, command) }
                 ).getOrThrow()
                 Outcome.Applied
             }
@@ -143,21 +128,8 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
             Outcome.Parked -> Transition.Complete()
         }
 
-    private suspend fun findTarget(command: IncomingCommand.ApplyRemoteMessageOperation): Outcome {
-        val operation = command.operation
-        if (operation is MessageOperation.PollVote || operation is MessageOperation.PollClose) {
-            check(command.conversation == OperationConversation.GROUP) {
-                "Poll operations are only supported in groups"
-            }
-        }
-        val target =
-            findOperationTarget(command.conversation, operation.messageId).getOrThrow() ?: return Outcome.TargetMissing
-        check(target.conversationId == command.conversationId) { "Operation target belongs to another conversation" }
-        if (command.conversation == OperationConversation.GROUP && operation !is MessageOperation.Reaction) {
-            check(target.isGroupUserMessage) { "Operation target is not a user message" }
-        }
-        return Outcome.TargetFound(target)
-    }
+    private suspend fun findTarget(command: IncomingCommand.ApplyRemoteMessageOperation): Outcome =
+        authorizeOperation.findTarget(command).getOrThrow()?.let(Outcome::TargetFound) ?: Outcome.TargetMissing
 
     private fun nextForOperation(
         target: StoredMessage,
@@ -166,35 +138,20 @@ class ApplyRemoteMessageOperationWorkflow internal constructor(
         when (val operation = command.operation) {
             is MessageOperation.Edit -> Transition.Next(Step.CheckEditable(target, operation, command))
             is MessageOperation.Delete -> Transition.Next(Step.CheckSender(target, command))
-            is MessageOperation.Reaction ->
-                Transition.Next(
-                    if (operation.removed) {
-                        Step.RemoveReaction(operation, command)
-                    } else {
-                        Step.SaveReaction(
-                            operation,
-                            command
-                        )
-                    }
-                )
+            is MessageOperation.Reaction -> Transition.Next(reactionStep(operation, command))
             is MessageOperation.PollVote -> Transition.Next(Step.FindPoll(operation.pollId, command))
             is MessageOperation.PollClose -> Transition.Next(Step.CheckPollCloser(target, command))
         }
 
-    private fun requireSenderOwns(target: StoredMessage, command: IncomingCommand.ApplyRemoteMessageOperation) {
-        check(!target.isMine && target.senderContactId == command.senderContactId) {
-            "Only the original sender can change a message"
-        }
-    }
-
-    private suspend fun messageTextOf(
-        target: StoredMessage,
+    private fun reactionStep(
+        reaction: MessageOperation.Reaction,
         command: IncomingCommand.ApplyRemoteMessageOperation
-    ): String? =
-        when (command.conversation) {
-            OperationConversation.DIRECT -> directMessageRepository.findText(target.id)
-            OperationConversation.GROUP -> groupMessageRepository.findText(target.id)
-        }.getOrThrow()
+    ): Step =
+        if (reaction.removed) {
+            Step.RemoveReaction(reaction, command)
+        } else {
+            Step.SaveReaction(reaction, command)
+        }
 
     private fun updatedPoll(poll: Poll, command: IncomingCommand.ApplyRemoteMessageOperation): Poll =
         when (val operation = command.operation) {

@@ -8,7 +8,7 @@ Select a module to open its generated detail page with source sets, file counts,
 |---|---|---:|---:|---:|---:|---:|
 | [`:androidApp`](modules/androidApp.md) | `androidApp` | 2 | 0 | 11 | 1 | 0 |
 | [`:core`](modules/core.md) | `core` | 0 | 0 | 0 | 0 | 0 |
-| [`:core:base`](modules/core-base.md) | `core` | 31 | 10 | 0 | 0 | 13 |
+| [`:core:base`](modules/core-base.md) | `core` | 32 | 10 | 0 | 0 | 13 |
 | [`:core:crypto`](modules/core-crypto.md) | `core` | 25 | 3 | 1 | 0 | 16 |
 | [`:core:ui`](modules/core-ui.md) | `core` | 51 | 1 | 0 | 1 | 22 |
 | [`:core:util`](modules/core-util.md) | `core` | 29 | 2 | 1 | 0 | 36 |
@@ -25,20 +25,20 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 124 | 3 | 1 | 8 | 12 |
 | [`:feature:conversationorchestration`](modules/feature-conversationorchestration.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
 | [`:feature:conversationorchestration:api`](modules/feature-conversationorchestration-api.md) | `feature` | 12 | 0 | 0 | 1 | 3 |
-| [`:feature:conversationorchestration:delivery`](modules/feature-conversationorchestration-delivery.md) | `feature` | 45 | 6 | 0 | 11 | 2 |
+| [`:feature:conversationorchestration:delivery`](modules/feature-conversationorchestration-delivery.md) | `feature` | 46 | 7 | 0 | 11 | 2 |
 | [`:feature:conversationorchestration:engine`](modules/feature-conversationorchestration-engine.md) | `feature` | 14 | 2 | 0 | 2 | 2 |
-| [`:feature:conversationorchestration:groupstate`](modules/feature-conversationorchestration-groupstate.md) | `feature` | 61 | 0 | 0 | 12 | 2 |
-| [`:feature:conversationorchestration:incoming`](modules/feature-conversationorchestration-incoming.md) | `feature` | 67 | 6 | 0 | 14 | 1 |
-| [`:feature:conversationorchestration:lifecycle`](modules/feature-conversationorchestration-lifecycle.md) | `feature` | 29 | 1 | 0 | 11 | 2 |
-| [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 64 | 1 | 0 | 13 | 2 |
-| [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 84 | 1 | 0 | 11 | 2 |
+| [`:feature:conversationorchestration:groupstate`](modules/feature-conversationorchestration-groupstate.md) | `feature` | 79 | 0 | 0 | 12 | 2 |
+| [`:feature:conversationorchestration:incoming`](modules/feature-conversationorchestration-incoming.md) | `feature` | 80 | 6 | 0 | 14 | 1 |
+| [`:feature:conversationorchestration:lifecycle`](modules/feature-conversationorchestration-lifecycle.md) | `feature` | 32 | 1 | 0 | 11 | 2 |
+| [`:feature:conversationorchestration:membership`](modules/feature-conversationorchestration-membership.md) | `feature` | 69 | 1 | 0 | 13 | 2 |
+| [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 108 | 1 | 0 | 11 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
 | [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 79 | 13 | 0 | 8 | 3 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 218 | 12 | 1 | 8 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |
 | [`:feature:media`](modules/feature-media.md) | `feature` | 104 | 5 | 2 | 2 | 11 |
-| [`:feature:membership`](modules/feature-membership.md) | `feature` | 125 | 9 | 0 | 5 | 9 |
+| [`:feature:membership`](modules/feature-membership.md) | `feature` | 129 | 9 | 0 | 5 | 9 |
 | [`:feature:messaging`](modules/feature-messaging.md) | `feature` | 26 | 7 | 1 | 2 | 6 |
 | [`:feature:notification`](modules/feature-notification.md) | `feature` | 28 | 1 | 1 | 7 | 2 |
 | [`:feature:ocr`](modules/feature-ocr.md) | `feature` | 14 | 1 | 0 | 1 | 2 |
@@ -68,5 +68,5 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:server:protocol`](modules/server-protocol.md) | `server` | 7 | 1 | 0 | 0 | 9 |
 | [`:server:push`](modules/server-push.md) | `server` | 17 | 4 | 0 | 4 | 0 |
 | [`:server:security`](modules/server-security.md) | `server` | 19 | 4 | 0 | 1 | 6 |
-| [`:shared`](modules/shared.md) | `shared` | 40 | 0 | 0 | 41 | 1 |
+| [`:shared`](modules/shared.md) | `shared` | 41 | 0 | 0 | 41 | 1 |
 | [`:startup`](modules/startup.md) | `startup` | 10 | 0 | 1 | 9 | 2 |

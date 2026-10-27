@@ -32,7 +32,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 - **Kind:** public — Chats submits `GroupMessageCommand.ActivateExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/ActivateGroupExpensesWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateExpenseBoardUseCase`
 
 ```text
 AuthorizeAdmin -> CheckNoActiveBoard -> CreateBoard -> SendBoard -> PinBoard.
@@ -55,17 +55,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CreateExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/CreateGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseUseCase`
 
 ```text
-FindExpenseMembers -> CreateExpense -> SendExpense.
+PrepareExpense -> SendExpense.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> CreateExpense : ExpenseMembersFound
-    CreateExpense --> SendExpense : ExpenseCreated
+    [*] --> PrepareExpense
+    PrepareExpense --> SendExpense : ExpensePrepared
     SendExpense --> [*] : ExpenseSent
 ```
 
@@ -74,17 +73,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/DeleteGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `DeleteLocalExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseDeletionUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipts.
+PrepareDeletion -> SendExpense -> DeleteReceipts.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> MarkExpenseDeleted : ExpenseMembersFound
-    MarkExpenseDeleted --> SendExpense : ExpenseMarkedDeleted
+    [*] --> PrepareDeletion
+    PrepareDeletion --> SendExpense : DeletionPrepared
     SendExpense --> DeleteReceipts : ExpenseSent
     DeleteReceipts --> [*] : ReceiptsDeleted
 ```
@@ -94,17 +92,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/EditGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `MessageAttachmentOperationsRepository`, `MessageAttachmentRepository`, `DeleteLocalExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseRevisionUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> ReviseExpense -> SendExpense -> DeleteReplacedReceipts.
+PrepareRevision -> SendExpense -> DeleteReplacedReceipts.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> ReviseExpense : ExpenseMembersFound
-    ReviseExpense --> SendExpense : ExpenseRevised
+    [*] --> PrepareRevision
+    PrepareRevision --> SendExpense : RevisionPrepared
     SendExpense --> DeleteReplacedReceipts : ExpenseSent
     DeleteReplacedReceipts --> [*] : ReplacedReceiptsDeleted
 ```
@@ -114,17 +111,18 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.SendCurrentGroupExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/SendCurrentGroupExpensesWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `MessageAttachmentOperationsRepository`, `GroupMessageRepository`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `LoadGroupExpenseMessagesUseCase`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-FindBoard -> LoadExpenseMessages -> EnqueueExpenseMessages.
+FindBoard -> AuthorizeRecipient -> LoadExpenseMessages -> EnqueueExpenseMessages.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindBoard
-    FindBoard --> LoadExpenseMessages : BoardFound
+    FindBoard --> AuthorizeRecipient : BoardFound
     FindBoard --> [*] : NoOpenBoard
+    AuthorizeRecipient --> LoadExpenseMessages : RecipientAuthorized
     LoadExpenseMessages --> EnqueueExpenseMessages : ExpenseMessagesLoaded
     EnqueueExpenseMessages --> [*] : ExpenseMessagesEnqueued
 ```
@@ -154,19 +152,19 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.ChangeDescription`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/ChangeGroupDescriptionWorkflow.kt`
 - **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupDescriptionRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupDescriptionPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `RequireGroupAdminContextUseCase`, `SaveGroupDescriptionUseCase`, `CreateGroupDescriptionPacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-AuthorizeAdmin -> LoadDescription -> SaveDescription -> CreateDescriptionPackets -> EnqueueDescriptionPackets. An unchanged description stops after LoadDescription.
+AuthorizeAdmin -> SaveDescription -> CreateDescriptionPackets -> EnqueueDescriptionPackets.
+An unchanged description stops after SaveDescription.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadDescription : AdminAuthorized
-    LoadDescription --> SaveDescription : DescriptionLoaded
-    LoadDescription --> [*] : DescriptionUnchanged
+    AuthorizeAdmin --> SaveDescription : AdminAuthorized
     SaveDescription --> CreateDescriptionPackets : DescriptionSaved
+    SaveDescription --> [*] : DescriptionUnchanged
     CreateDescriptionPackets --> EnqueueDescriptionPackets : DescriptionPacketsCreated
     EnqueueDescriptionPackets --> [*] : DescriptionPacketsEnqueued
 ```
@@ -176,19 +174,18 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.ChangeTitle`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/ChangeGroupTitleWorkflow.kt`
 - **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupTitleRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupTitlePacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `RequireGroupAdminContextUseCase`, `SaveGroupTitleUseCase`, `CreateGroupTitlePacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-AuthorizeAdmin -> LoadTitle -> SaveTitle -> CreateTitlePackets -> EnqueueTitlePackets. An unchanged title stops after LoadTitle.
+AuthorizeAdmin -> SaveTitle -> CreateTitlePackets -> EnqueueTitlePackets. An unchanged title stops after SaveTitle.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadTitle : AdminAuthorized
-    LoadTitle --> SaveTitle : TitleLoaded
-    LoadTitle --> [*] : TitleUnchanged
+    AuthorizeAdmin --> SaveTitle : AdminAuthorized
     SaveTitle --> CreateTitlePackets : TitleSaved
+    SaveTitle --> [*] : TitleUnchanged
     CreateTitlePackets --> EnqueueTitlePackets : TitlePacketsCreated
     EnqueueTitlePackets --> [*] : TitlePacketsEnqueued
 ```
@@ -198,17 +195,16 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.PublishGroupAvatar`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/PublishGroupAvatarWorkflow.kt`
 - **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupAvatarRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupAvatarPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `RequireGroupAdminContextUseCase`, `SaveGroupAvatarUseCase`, `CreateGroupAvatarPacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-AuthorizeAdmin -> LoadAvatar -> SaveAvatar -> CreateAvatarPackets -> EnqueueAvatarPackets.
+AuthorizeAdmin -> SaveAvatar -> CreateAvatarPackets -> EnqueueAvatarPackets.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadAvatar : AdminAuthorized
-    LoadAvatar --> SaveAvatar : AvatarLoaded
+    AuthorizeAdmin --> SaveAvatar : AdminAuthorized
     SaveAvatar --> CreateAvatarPackets : AvatarSaved
     CreateAvatarPackets --> EnqueueAvatarPackets : AvatarPacketsCreated
     EnqueueAvatarPackets --> [*] : AvatarPacketsEnqueued
@@ -282,7 +278,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CloseExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/CloseGroupExpensesWorkflow.kt`
 - **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `DeleteLocalExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateExpenseBoardUseCase`, `ClearGroupPinUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
 Closes the open expense board: announces the closing as an ordinary encrypted group message,
@@ -316,11 +312,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.PinMessage`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/PinGroupMessageWorkflow.kt`
 - **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `GroupMessageRepository`, `GroupPinRepository`, `MessageAttachmentOperationsRepository`, `FindGroupMessageUseCase`, `GetGroupPinSenderSigningKeyUseCase`, `GetRemoteIdentityUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupPinRepository`, `FindPinnableGroupMessageUseCase`, `ResolveGroupPinSenderKeyUseCase`, `RequireGroupAdminContextUseCase`, `SaveGroupPinUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> CheckPinSlot -> SavePin -> CreatePinPackets
--> EnqueuePinPackets.
+FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> SavePin -> CreatePinPackets -> EnqueuePinPackets.
 
 The pin snapshot keeps the sender's signing key so every member can verify who wrote the message.
 ```
@@ -331,12 +326,11 @@ stateDiagram-v2
     FindPinTarget --> AuthorizeAdmin : TargetAlreadyPinned
     FindPinTarget --> ResolveSenderKey : TargetFound
     ResolveSenderKey --> AuthorizeAdmin : SenderKeyResolved
-    AuthorizeAdmin --> CheckPinSlot : AdminAuthorized
+    AuthorizeAdmin --> SavePin : AdminAuthorized
     AuthorizeAdmin --> [*] : AdminAuthorized
-    CheckPinSlot --> [*] : AlreadyPinned
-    CheckPinSlot --> SavePin : SlotFree
-    CheckPinSlot --> Rejected : SlotOccupiedByExpenses
+    SavePin --> [*] : AlreadyPinned
     SavePin --> CreatePinPackets : PinSaved
+    SavePin --> Rejected : SlotOccupiedByExpenses
     CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
     EnqueuePinPackets --> [*] : PinPacketsEnqueued
     Rejected --> [*]
@@ -369,7 +363,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.UnpinMessage`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/UnpinGroupMessageWorkflow.kt`
 - **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `ClearGroupPinUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 Removes a pinned message; an open expense board must be closed instead.

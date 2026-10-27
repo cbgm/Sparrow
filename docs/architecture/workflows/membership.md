@@ -79,15 +79,18 @@ stateDiagram-v2
 - **Uses:** `GroupConversationRepository`, `MessageAttachmentRepository`, `DeleteGroupMembershipUseCase`, `ClearGroupStateUseCase`
 
 ```text
-LoadContext -> DeleteAttachments -> DeleteMembership -> DeleteLocalConversation -> ClearGroupState.
+LoadContext -> DeleteMembership -> DeleteAttachments -> DeleteLocalConversation -> ClearGroupState.
+
+Membership goes first because it can refuse, e.g. a sole admin of a group with members; the attachments are
+only deleted once the group is really gone.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> LoadContext
-    LoadContext --> DeleteAttachments : ContextLoaded
-    DeleteAttachments --> DeleteMembership : AttachmentsDeleted
-    DeleteMembership --> DeleteLocalConversation : MembershipDeleted
+    LoadContext --> DeleteMembership : ContextLoaded
+    DeleteMembership --> DeleteAttachments : MembershipDeleted
+    DeleteAttachments --> DeleteLocalConversation : AttachmentsDeleted
     DeleteLocalConversation --> ClearGroupState : LocalConversationDeleted
     ClearGroupState --> [*] : GroupStateCleared
 ```
@@ -180,7 +183,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MembershipCommand.HandleGroupInvitationResult`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/join/HandleGroupInvitationResultWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetMembershipHandshakeUseCase`, `StageRemoteIdentityUseCase`, `AcceptRemoteIdentityHandshakeUseCase`, `AcceptGroupMembershipUseCase`, `DeclineGroupMembershipUseCase`, `GroupConversationRepository`
+- **Uses:** `GetMembershipHandshakeUseCase`, `StageRemoteIdentityUseCase`, `AcceptRemoteIdentityHandshakeUseCase`, `AcceptGroupMembershipUseCase`, `DeclineGroupMembershipUseCase`, `GroupConversationRepository`, `DiscardDeclinedGroupConversationUseCase`
 
 ```text
 accepted, staged:  FindHandshake -> StageOwnerIdentity -> AcceptOwnerIdentity -> AcceptMembership -> ShowConversation
@@ -212,7 +215,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MembershipCommand.HandleMembershipResult`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/join/HandleMembershipResultWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `HandleInvitationResponseUseCase`, `GetRemoteIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `FindMemberDisplayNameUseCase`, `GetGroupCurrentEpochUseCase`, `GroupConversationRepository`
+- **Uses:** `WorkflowEngine`, `HandleInvitationResponseUseCase`, `LoadMutualMemberIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `FindMemberDisplayNameUseCase`, `GetGroupCurrentEpochUseCase`, `GroupConversationRepository`
 
 ```text
 IDENTITY_READY: MarkInvitationAccepted -> LoadMemberIdentity -> ConfirmMemberIdentity
@@ -295,7 +298,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MembershipCommand.RefreshOwnedGroupVerification`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/verification/RefreshOwnedGroupVerificationWorkflow.kt`
 - **Lock:** `groupVerificationLockKey(command.groupId)`
-- **Uses:** `GroupVerificationInputsUseCase`, `CheckGroupOwnershipUseCase`, `RefreshOwnedGroupVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`
+- **Uses:** `ResolveGroupVerificationRoleUseCase`, `CheckGroupOwnershipUseCase`, `RefreshOwnedGroupVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`
 
 ```text
 LoadSecurity -> RefreshRows -> BroadcastSnapshot   (local admin)
@@ -318,7 +321,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.SynchronizeVerification`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/verification/SynchronizeGroupVerificationWorkflow.kt`
 - **Lock:** `groupVerificationLockKey(command.groupId)`
-- **Uses:** `GroupVerificationInputsUseCase`, `CheckGroupOwnershipUseCase`, `RefreshOwnedGroupVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`, `RequestGroupVerificationSnapshotUseCase`
+- **Uses:** `ResolveGroupVerificationRoleUseCase`, `CheckGroupOwnershipUseCase`, `RefreshOwnedGroupVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`, `RequestGroupVerificationSnapshotUseCase`
 
 ```text
 LoadSecurity -> RefreshRows -> BroadcastSnapshot   (local admin)
@@ -346,7 +349,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.VerifyMember`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/verification/VerifyGroupMemberWorkflow.kt`
 - **Lock:** `groupVerificationLockKey(command.groupId)`
-- **Uses:** `GroupVerificationInputsUseCase`, `ConfirmParticipantVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`, `SendAdminVerificationReceiptUseCase`
+- **Uses:** `ResolveGroupVerificationRoleUseCase`, `ConfirmParticipantVerificationUseCase`, `BroadcastGroupVerificationSnapshotUseCase`, `SendAdminVerificationReceiptUseCase`
 
 ```text
 LoadSecurity -> ConfirmParticipant -> BroadcastSnapshot   (the admin verified a member)

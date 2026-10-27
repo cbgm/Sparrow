@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -14,7 +12,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindEditableGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
@@ -23,9 +21,8 @@ import kotlin.reflect.KClass
 /** CheckMembership -> FindEditableMessage -> FindRecipients -> EncryptEdit -> EnqueueEdit -> ReplaceText. */
 class EditGroupMessageWorkflow internal constructor(
     private val messageRepository: GroupMessageRepository,
-    private val attachmentRepository: MessageAttachmentOperationsRepository,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
-    private val findGroupMessage: FindGroupMessageUseCase,
+    private val findEditableGroupMessage: FindEditableGroupMessageUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
     private val encryptGroupOperation: EncryptGroupOperationUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
@@ -48,7 +45,10 @@ class EditGroupMessageWorkflow internal constructor(
                     is GroupMessageAccess.Denied -> Outcome.MembershipInactive(access.reason)
                 }
             }
-            is Step.FindEditableMessage -> findEditableMessage(step.command)
+            is Step.FindEditableMessage -> {
+                findEditableGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
+                Outcome.MessageEditable
+            }
             is Step.FindRecipients -> Outcome.RecipientsFound(findGroupRecipients(step.command.groupId).getOrThrow())
             is Step.EncryptEdit ->
                 Outcome.EditEncrypted(
@@ -83,23 +83,6 @@ class EditGroupMessageWorkflow internal constructor(
             Outcome.EditEnqueued -> Transition.Next(Step.ReplaceText(step.command))
             Outcome.TextReplaced -> Transition.Complete()
         }
-
-    private suspend fun findEditableMessage(command: GroupMessageCommand.EditMessage): Outcome {
-        val message = findGroupMessage(command.groupId, command.messageId).getOrThrow()
-        check(message.isGroupUserMessage) { "Only user messages can be edited" }
-        check(message.isMine) { "Only your own messages can be edited" }
-        check(
-            !messageRepository.findText(message.id).getOrThrow().isNullOrBlank()
-        ) { "Only text messages can be edited" }
-        check(attachmentRepository.messageParts(message.id).getOrThrow().isEmpty()) {
-            "Messages with attachments cannot be edited"
-        }
-        check(
-            messageRepository.findRecipientStates(message.id).getOrThrow()
-                .none { state -> state.deliveryStatus == MessageDeliveryStatus.READ }
-        ) { "Read messages cannot be edited" }
-        return Outcome.MessageEditable
-    }
 
     sealed interface Step : WorkflowStep {
         val command: GroupMessageCommand.EditMessage

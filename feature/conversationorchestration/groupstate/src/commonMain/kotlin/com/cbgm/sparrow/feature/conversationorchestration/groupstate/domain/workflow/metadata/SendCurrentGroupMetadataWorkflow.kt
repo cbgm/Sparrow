@@ -54,14 +54,13 @@ class SendCurrentGroupMetadataWorkflow internal constructor(
             is Step.SendTitle -> Transition.Next(Step.SendDescription(step.command))
             is Step.SendDescription -> Transition.Next(Step.SendAvatar(step.command))
             is Step.SendAvatar -> Transition.Next(Step.SendPin(step.command))
-            is Step.SendPin ->
-                if (step.command.includeExpenseHistory) {
-                    Transition.Next(Step.SendExpenses(step.command))
-                } else {
-                    Transition.Complete()
-                }
+            is Step.SendPin -> afterPin(step.command)
             is Step.SendExpenses -> Transition.Complete()
         }
+
+    /** Expense history is replayed only to members that join while expenses are open. */
+    private fun afterPin(command: GroupStateCommand.SendCurrentGroupMetadata): Transition<Step> =
+        if (command.includeExpenseHistory) Transition.Next(Step.SendExpenses(command)) else Transition.Complete()
 
     sealed interface Step : WorkflowStep {
         val command: GroupStateCommand.SendCurrentGroupMetadata

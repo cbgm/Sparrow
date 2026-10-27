@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -14,6 +11,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.Workflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupPinUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
@@ -34,6 +33,8 @@ class CloseGroupExpensesWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val pinRepository: GroupPinRepository,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val createExpenseBoard: CreateExpenseBoardUseCase,
+    private val clearGroupPin: ClearGroupPinUseCase,
     private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
     private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
@@ -52,20 +53,12 @@ class CloseGroupExpensesWorkflow internal constructor(
         when (step) {
             is Step.AuthorizeAdmin ->
                 Outcome.AdminAuthorized(requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow())
-            is Step.FindPin -> {
-                val pin = pinRepository.find(step.command.groupId).getOrThrow()
-                val board = pin?.activeExpenseBoard
-                when {
-                    pin?.messageId == null -> Outcome.NothingPinned
-                    board == null -> Outcome.NoActiveExpenseBoard
-                    else -> Outcome.ExpenseBoardFound(pin, board, step.context)
-                }
-            }
+            is Step.FindPin -> pinFound(pinRepository.find(step.command.groupId).getOrThrow(), step.context)
             is Step.SendBoardClosedMessage -> {
                 engine.run(
                     GroupMessageCommand.SendMessage(
                         groupId = step.command.groupId,
-                        parts = listOf(step.board.toClosedPart())
+                        parts = listOf(createExpenseBoard.closing(step.board).getOrThrow())
                     )
                 ).getOrThrow()
                 Outcome.BoardClosedMessageSent(step.pin, step.board, step.context)
@@ -74,17 +67,8 @@ class CloseGroupExpensesWorkflow internal constructor(
                 deleteLocalExpenseReceipts.forBoard(step.command.groupId, step.board.id).getOrThrow()
                 Outcome.ReceiptsDeleted(step.pin, step.context)
             }
-            is Step.SaveEmptyPin -> {
-                val emptyPin = GroupPinState.unpinned(
-                    groupId = step.command.groupId,
-                    changedAtEpochMilliseconds = maxOf(
-                        SystemClock.nowEpochMilliseconds(),
-                        step.pin.changedAtEpochMilliseconds + 1L
-                    )
-                )
-                pinRepository.save(emptyPin).getOrThrow()
-                Outcome.EmptyPinSaved(emptyPin, step.context)
-            }
+            is Step.SaveEmptyPin ->
+                Outcome.EmptyPinSaved(clearGroupPin(step.command.groupId, step.pin).getOrThrow(), step.context)
             is Step.CreatePinPackets ->
                 Outcome.PinPacketsCreated(createGroupPinPackets(step.pin, step.context).getOrThrow())
             is Step.EnqueuePinPackets -> {
@@ -112,6 +96,15 @@ class CloseGroupExpensesWorkflow internal constructor(
             is Outcome.PinPacketsCreated -> Transition.Next(Step.EnqueuePinPackets(outcome.packets, step.command))
             Outcome.PinPacketsEnqueued -> Transition.Complete()
         }
+
+    private fun pinFound(pin: GroupPinState?, context: GroupAdminContext): Outcome {
+        val board = pin?.activeExpenseBoard
+        return when {
+            pin?.messageId == null -> Outcome.NothingPinned
+            board == null -> Outcome.NoActiveExpenseBoard
+            else -> Outcome.ExpenseBoardFound(pin, board, context)
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: GroupMessageCommand.CloseExpenses
@@ -194,13 +187,6 @@ class CloseGroupExpensesWorkflow internal constructor(
 
         data object PinPacketsEnqueued : Outcome
     }
-
-    private fun ExpenseBoard.toClosedPart(): ExpenseBoardClosed =
-        ExpenseBoardClosed(
-            id = IdGenerator.generate(prefix = "expense-closed"),
-            boardId = id,
-            closedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-        )
 
     private companion object {
         const val ADMIN_ACTION = "pinned message"

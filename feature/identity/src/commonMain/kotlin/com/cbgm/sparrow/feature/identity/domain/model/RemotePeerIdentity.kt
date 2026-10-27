@@ -12,6 +12,10 @@ class RemotePeerIdentity(
     val updatedAtEpochMilliseconds: Long
 )
 
+/** Whether these are exactly the given keys; differing keys are a key change, never the same identity. */
+fun RemotePeerIdentity.hasKeys(encryptionPublicKey: ByteArray, signingPublicKey: ByteArray): Boolean =
+    this.encryptionPublicKey.contentEquals(encryptionPublicKey) && this.signingPublicKey.contentEquals(signingPublicKey)
+
 /**
  * Direct message content must never fall back to plaintext when contact keys or
  * mutual authorization are absent. Verification is intentionally independent:

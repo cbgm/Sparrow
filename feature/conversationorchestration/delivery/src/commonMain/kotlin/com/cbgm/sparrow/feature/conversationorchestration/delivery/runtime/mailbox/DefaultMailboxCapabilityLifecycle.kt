@@ -1,37 +1,42 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
-import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
+/**
+ * Revokes mailbox capabilities on their node. Once a revocation is marked pending it is never lost: a node that is
+ * unreachable or refuses is retried by the provisioning, and the caller (deleting a chat, approving an identity
+ * change) is not blocked by it.
+ */
 class DefaultMailboxCapabilityLifecycle(
     private val repository: MailboxRouteRepository,
     private val gateway: MailboxGateway
 ) : MailboxCapabilityLifecycle {
+    private val logger = SparrowLog.withTag("DefaultMailboxCapabilityLifecycle")
+
     override suspend fun revokeForContact(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
             repository.deleteRemote(contactId).getOrThrow()
-            val credential = repository.localForContact(contactId).getOrThrow() ?: return@runCatching
+            val credential = repository.localForContact(contactId).getOrThrow() ?: return@safeSuspendCall
             repository.markLocalRevocationPending(contactId).getOrThrow()
-            // An unreachable node must not block the caller (e.g. approving an identity change):
-            // the revocation stays pending and the mailbox provisioning retries it.
-            runCatching { revokeAndDelete(credential) }.onFailure { failure ->
-                if (!failure.isRecoverableConnectivityFailure()) throw failure
+            revokeAndDelete(credential).onFailure { failure ->
+                logger.warn(failure) { "Mailbox revocation for $contactId stays pending" }
             }
         }
 
     override suspend fun revokeAll(): Result<Unit> =
-        runCatching {
+        safeSuspendCall(logFailure = false) {
             repository.deleteAllRemote().getOrThrow()
-            val failures = mutableListOf<Throwable>()
-            repository.allLocal().getOrThrow().forEach { credential ->
-                repository.markLocalRevocationPending(credential.contactId).getOrThrow()
-                runCatching { revokeAndDelete(credential) }
-                    .onFailure(failures::add)
-            }
+            val failures =
+                repository.allLocal().getOrThrow().mapNotNull { credential ->
+                    repository.markLocalRevocationPending(credential.contactId).getOrThrow()
+                    revokeAndDelete(credential).exceptionOrNull()
+                }
             if (failures.isNotEmpty()) {
                 throw IllegalStateException(
                     "${failures.size} mailbox capability revocation(s) remain pending",
@@ -40,22 +45,24 @@ class DefaultMailboxCapabilityLifecycle(
             }
         }
 
+    /** Every pending revocation is tried; one that fails stays pending without holding up the others. */
     override suspend fun retryPendingRevocations(): Result<Int> =
-        runCatching {
-            var revoked = 0
+        safeSuspendCall(logFailure = false) {
             repository
                 .allLocal()
                 .getOrThrow()
                 .filter(LocalMailboxCredential::revocationPending)
-                .forEach { credential ->
+                .count { credential ->
                     revokeAndDelete(credential)
-                    revoked += 1
+                        .onFailure { failure ->
+                            logger.warn(failure) { "Mailbox revocation for ${credential.contactId} stays pending" }
+                        }.isSuccess
                 }
-            revoked
         }
 
-    private suspend fun revokeAndDelete(credential: LocalMailboxCredential) {
-        gateway.revoke(credential).getOrThrow()
-        repository.deleteLocal(credential.contactId).getOrThrow()
-    }
+    private suspend fun revokeAndDelete(credential: LocalMailboxCredential): Result<Unit> =
+        safeSuspendCall(logFailure = false) {
+            gateway.revoke(credential).getOrThrow()
+            repository.deleteLocal(credential.contactId).getOrThrow()
+        }
 }

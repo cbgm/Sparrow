@@ -13,4 +13,10 @@ class CheckGroupOwnershipUseCase(
             verificationRepository.findRows(groupId).getOrThrow().any { it.contactId != null } ||
                 verificationInputs.membershipContext(groupId).getOrThrow().ownsGroup
         }
+
+    /** Fails unless the local device owns the group. */
+    suspend fun require(groupId: String): Result<Unit> =
+        safeSuspendCall(logFailure = false) {
+            check(invoke(groupId).getOrThrow()) { "Only the group owner may update membership verification state" }
+        }
 }

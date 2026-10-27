@@ -8,7 +8,7 @@ This page explains the engine and how the modules fit together. The [workflow ca
 
 1. Chats depends only on `:feature:conversationorchestration:api` (plus read-only feature dependencies). It never writes conversation data itself.
 2. Every write has exactly one entry: `ConversationOrchestrator.execute(command): Flow<ConversationState>`.
-3. A workflow **owns the sequence, not the functionality**. Each step performs one operation by calling a feature use case or repository and reports an `Outcome`; the transition decides the next step.
+3. A workflow **owns the sequence, not the functionality**. Each step performs one operation by calling a feature use case or repository and reports an `Outcome`; the transition decides the next step. Business rules (who may do what, validation, building domain objects or packets, conflict, time and versioning rules) live in use cases or policies of the module that owns the concept, never in the workflow. A workflow keeps only private functions that choose the next step or map a result to an `Outcome`, and no `if` sits directly in a `when` branch.
 4. `perform(step)` never decides what happens next; `transition(step, outcome)` never has side effects.
 5. Nobody holds a workflow instance. Callers create a command and hand it to the engine, which finds the one workflow registered for that command type.
 6. Modules form a strict line (below); a lower module never depends on a higher one.
@@ -176,7 +176,7 @@ sequenceDiagram
     else workflow found
         E->>L: withLock(workflow.lockKey(command))
         E->>W: firstStep(command)
-        loop until Complete or Reject (max 256 steps)
+        loop until Complete or Reject (max 100,000 steps)
             E-->>C: Running(step.name)
             E->>W: perform(step)
             W-->>E: outcome
@@ -199,7 +199,7 @@ sequenceDiagram
 | `IllegalStateException` (`check`, `error`) | `NOT_ALLOWED` |
 | anything else | `UNEXPECTED` |
 
-- A workflow that exceeds 256 steps fails; this guards against a transition loop.
+- A workflow that exceeds 100,000 steps fails; this only guards against a transition cycle, because workflows that walk a list (read receipts, queued messages) take a few steps per item.
 
 ## Anatomy of a workflow
 
@@ -391,6 +391,13 @@ receipt:         ApplyReceipt
 anything else:   FindControlConversation -> DispatchControlPacket
 ```
 
+### Rejected packets
+
+A workflow step that finds an incoming packet not allowed or invalid rejects it with `rejectUnless`, `rejectIfNull`
+or `rejectInvalid` (`incoming/domain/error/IncomingRejection.kt`). They throw `IncomingMessageRejectedException`,
+so the envelope is acknowledged and dropped. Every other failure keeps the envelope for redelivery, so a step must
+only reject what can never succeed.
+
 ### Operations that overtake their message
 
 An edit, delete, reaction, poll vote or poll close can arrive before the message it refers to, for example
@@ -455,7 +462,7 @@ singleOf(::SendDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
    - user action → a new `data class` in the matching `ConversationCommand` family in `api`;
    - internal job → a new nested `data class` in the module's `<Module>Command`;
    - new packet type → a new `IncomingCommand.Receive*` plus a branch in `IncomingPacketCommandMapper`.
-3. Write `<Name>Workflow` implementing `ConversationWorkflow` (public) or `WorkflowStateMachine` (internal) with nested sealed `Step` and `Outcome`. One operation per `perform` branch, pure `transition`, step chain in the KDoc.
+3. Write `<Name>Workflow` implementing `ConversationWorkflow` (public) or `WorkflowStateMachine` (internal) with nested sealed `Step` and `Outcome`. One operation per `perform` branch, pure `transition`, step chain in the KDoc. Put any rule the step needs into a use case or policy of the owning module first (rule 3).
 4. Add a `lockKey` if it must not overlap with other workflows of the same group or contact.
 5. Register it: `singleOf(::<Name>Workflow) { bind<WorkflowStateMachine<*, *, *>>() }`.
 6. Test the transitions and the workflow end to end through `WorkflowEngine` (see `WorkflowEngineTest`).

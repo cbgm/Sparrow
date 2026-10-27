@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -11,6 +9,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.D
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindEditableDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
@@ -24,7 +23,7 @@ import kotlin.reflect.KClass
 class EditDirectMessageWorkflow internal constructor(
     private val conversationRepository: DirectConversationRepository,
     private val messageRepository: DirectMessageRepository,
-    private val attachmentRepository: MessageAttachmentOperationsRepository,
+    private val findEditableDirectMessage: FindEditableDirectMessageUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val sendDirectOperation: SendDirectOperationUseCase
 ) : ConversationWorkflow<
@@ -46,7 +45,11 @@ class EditDirectMessageWorkflow internal constructor(
                     conversationRepository.requireTarget(step.command.conversationId).getOrThrow()
                 )
             }
-            is Step.FindEditableMessage -> findEditableMessage(step)
+            is Step.FindEditableMessage ->
+                editableMessageFound(
+                    findEditableDirectMessage(step.command.conversationId, step.command.messageId).getOrThrow(),
+                    step.target
+                )
             is Step.CheckAuthorization -> {
                 requireDirectChatAuthorization(step.target.contactId).getOrThrow()
                 Outcome.Authorized(step.target)
@@ -78,27 +81,9 @@ class EditDirectMessageWorkflow internal constructor(
             Outcome.TextReplaced -> Transition.Complete()
         }
 
-    private suspend fun findEditableMessage(step: Step.FindEditableMessage): Outcome {
-        val messageId = step.command.messageId
-        val message = messageRepository.find(messageId).getOrThrow() ?: error("Message was not found")
-        check(message.conversationId == step.command.conversationId) { "Message does not belong to this conversation" }
-        check(message.isMine) { "Only your own messages can be edited" }
-        check(message.deliveryStatus != MessageDeliveryStatus.READ) { "Read messages cannot be edited" }
-        check(
-            !messageRepository.findText(messageId).getOrThrow().isNullOrBlank()
-        ) { "Only text messages can be edited" }
-        check(attachmentRepository.messageParts(messageId).getOrThrow().isEmpty()) {
-            "Messages with attachments cannot be edited"
-        }
-        return if (message.isWaitingForAuthorization()) {
-            Outcome.MessageWaitingForAuthorization
-        } else {
-            Outcome.MessageSent(step.target)
-        }
-    }
-
-    private fun StoredMessage.isWaitingForAuthorization(): Boolean =
-        deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION
+    /** A message still waiting for authorization was never sent, so it is edited locally only. */
+    private fun editableMessageFound(message: StoredMessage, target: DirectConversationTarget): Outcome =
+        if (message.wasNeverSent) Outcome.MessageWaitingForAuthorization else Outcome.MessageSent(target)
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.EditMessage

@@ -9,13 +9,24 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispat
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.packet.DirectMessagePacketReader
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeRemoteMessageOperationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckDirectPeerAuthorizedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketAcceptedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.DeleteReplacedExpenseReceiptsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.EvaluateGroupInvitationIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.InspectIncomingGroupOfferUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.MergeIncomingIdentityPeersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveContactInvitationDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveControlConversationIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveSenderDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.SendDeliveryReceiptUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StoreIncomingDirectAttachmentsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StoreUnreadableMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.UpdateIncomingSenderProfileUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.VerifyIncomingContactInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.direct.ReceiveDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.group.ReceiveGroupMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity.CompleteManualIdentityWorkflow
@@ -75,13 +86,24 @@ private fun Module.registerData() {
 
 private fun Module.registerUseCases() {
     singleOf(::AuthorizeIncomingExpensesUseCase)
-    singleOf(::DeleteReplacedExpenseReceiptsUseCase)
+    singleOf(::AuthorizeRemoteMessageOperationUseCase)
+    singleOf(::CheckDirectPeerAuthorizedUseCase)
     singleOf(::CheckGroupPacketAcceptedUseCase)
+    singleOf(::DeleteReplacedExpenseReceiptsUseCase)
+    singleOf(::EvaluateGroupInvitationIdentityUseCase)
     singleOf(::FindOperationTargetUseCase)
+    singleOf(::InspectIncomingGroupOfferUseCase)
+    singleOf(::MergeIncomingIdentityPeersUseCase)
+    singleOf(::ResolveContactInvitationDisplayNameUseCase)
+    singleOf(::ResolveControlConversationIdUseCase)
     singleOf(::ResolveIncomingIdentityPeerUseCase)
     singleOf(::ResolveSenderDisplayNameUseCase)
     singleOf(::SendDeliveryReceiptUseCase)
+    singleOf(::StageIncomingIdentityReviewUseCase)
+    singleOf(::StoreIncomingDirectAttachmentsUseCase)
     singleOf(::StoreUnreadableMessageUseCase)
+    singleOf(::UpdateIncomingSenderProfileUseCase)
+    singleOf(::VerifyIncomingContactInvitationUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {

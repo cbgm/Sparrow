@@ -100,6 +100,10 @@ class WorkflowEngine(
     }
 
     private companion object {
-        const val MAX_STEPS = 256
+        /**
+         * Only stops a transition cycle. Workflows that walk a list take a few steps per item (a read receipt per
+         * unread message, a pipeline per queued message), so this is far above any real list.
+         */
+        const val MAX_STEPS = 100_000
     }
 }

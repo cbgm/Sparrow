@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupTitleState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupTitlePacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupTitleRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
@@ -14,7 +15,8 @@ import kotlin.reflect.KClass
 class ReceiveGroupTitleWorkflow internal constructor(
     private val packetCodec: GroupTitlePacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val titleRepository: GroupTitleRepository
+    private val titleRepository: GroupTitleRepository,
+    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupTitle,
         ReceiveGroupTitleWorkflow.Step,
@@ -31,30 +33,8 @@ class ReceiveGroupTitleWorkflow internal constructor(
                 packetCodec.verify(packet).getOrThrow()
                 Outcome.SignatureValid
             }
-            is Step.AuthorizeAdmin ->
-                if (
-                    authorizeGroupMetadata.receive(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        contactId = step.command.context.contactId,
-                        adminSigningPublicKey = packet.adminSigningPublicKey,
-                        action = ACTION
-                    ).getOrThrow()
-                ) {
-                    Outcome.AdminAuthorized
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.LoadTitle ->
-                if (
-                    packet.changedAtEpochMilliseconds > titleRepository.get(
-                        packet.groupId
-                    ).getOrThrow().changedAtEpochMilliseconds
-                ) {
-                    Outcome.UpdateIsNewer
-                } else {
-                    Outcome.Ignored
-                }
+            is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
+            is Step.LoadTitle -> checkNewer(step.command)
             is Step.SaveTitle -> {
                 titleRepository.save(
                     GroupTitleState(packet.groupId, packet.title, packet.changedAtEpochMilliseconds)
@@ -72,6 +52,34 @@ class ReceiveGroupTitleWorkflow internal constructor(
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
+
+    private suspend fun authorizeAdmin(command: IncomingCommand.ReceiveGroupTitle): Outcome {
+        val packet = command.packet
+        return if (
+            authorizeGroupMetadata.receive(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                contactId = command.context.contactId,
+                adminSigningPublicKey = packet.adminSigningPublicKey,
+                action = ACTION
+            ).getOrThrow()
+        ) {
+            Outcome.AdminAuthorized
+        } else {
+            Outcome.Ignored
+        }
+    }
+
+    private suspend fun checkNewer(command: IncomingCommand.ReceiveGroupTitle): Outcome {
+        val packet = command.packet
+        return if (
+            checkIncomingGroupStateVersion.isNewerTitle(packet.groupId, packet.changedAtEpochMilliseconds).getOrThrow()
+        ) {
+            Outcome.UpdateIsNewer
+        } else {
+            Outcome.Ignored
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupTitle

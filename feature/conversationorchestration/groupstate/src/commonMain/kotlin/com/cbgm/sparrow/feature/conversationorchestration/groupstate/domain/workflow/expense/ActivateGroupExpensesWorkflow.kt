@@ -1,16 +1,15 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
-import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinSlotPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import kotlin.reflect.KClass
 
@@ -22,7 +21,8 @@ import kotlin.reflect.KClass
 class ActivateGroupExpensesWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val pinRepository: GroupPinRepository,
-    private val requireGroupAdminContext: RequireGroupAdminContextUseCase
+    private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val createExpenseBoard: CreateExpenseBoardUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.ActivateExpenses,
         ActivateGroupExpensesWorkflow.Step,
@@ -40,21 +40,10 @@ class ActivateGroupExpensesWorkflow internal constructor(
                 Outcome.AdminAuthorized
             }
             is Step.CheckNoActiveBoard -> {
-                check(pinRepository.find(step.command.groupId).getOrThrow()?.hasActiveExpenseBoard != true) {
-                    "Group expenses are already active"
-                }
+                GroupPinSlotPolicy.checkNoActiveExpenseBoard(pinRepository.find(step.command.groupId).getOrThrow())
                 Outcome.NoActiveBoard
             }
-            is Step.CreateBoard -> {
-                val board =
-                    ExpenseBoard(
-                        id = IdGenerator.generate(prefix = "expense-board"),
-                        currencyCode = step.command.currencyCode,
-                        activatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                    )
-                ExpensePolicy.requireValid(board)
-                Outcome.BoardCreated(board)
-            }
+            is Step.CreateBoard -> Outcome.BoardCreated(createExpenseBoard(step.command.currencyCode).getOrThrow())
             is Step.SendBoard -> {
                 val result =
                     engine.run(

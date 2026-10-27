@@ -13,9 +13,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDeletableGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
@@ -23,12 +22,11 @@ import kotlin.reflect.KClass
 /** CheckMembership -> FindOwnMessage -> FindRecipients -> EncryptDelete -> EnqueueDelete -> DiscardMessage. */
 class DeleteGroupMessageWorkflow internal constructor(
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
-    private val findGroupMessage: FindGroupMessageUseCase,
+    private val findDeletableGroupMessage: FindDeletableGroupMessageUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
     private val encryptGroupOperation: EncryptGroupOperationUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
-    private val discardGroupMessages: DiscardGroupMessagesUseCase,
-    private val requireMessageWithoutPayment: RequireMessageWithoutPaymentUseCase
+    private val discardGroupMessages: DiscardGroupMessagesUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.DeleteMessage,
         DeleteGroupMessageWorkflow.Step,
@@ -47,13 +45,10 @@ class DeleteGroupMessageWorkflow internal constructor(
                     is GroupMessageAccess.Denied -> Outcome.MembershipInactive(access.reason)
                 }
             }
-            is Step.FindOwnMessage -> {
-                val message = findGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
-                check(message.isGroupUserMessage) { "Only user messages can be deleted" }
-                requireMessageWithoutPayment(message.id).getOrThrow()
-                check(message.isMine) { "Only your own messages can be deleted for everyone" }
-                Outcome.OwnMessageFound(message)
-            }
+            is Step.FindOwnMessage ->
+                Outcome.OwnMessageFound(
+                    findDeletableGroupMessage(step.command.groupId, step.command.messageId).getOrThrow()
+                )
             is Step.FindRecipients ->
                 Outcome.RecipientsFound(step.message, findGroupRecipients(step.command.groupId).getOrThrow())
             is Step.EncryptDelete ->

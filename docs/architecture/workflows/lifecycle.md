@@ -76,7 +76,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.ReconnectConversation`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/direct/ReconnectDirectConversationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `DirectConversationRepository`, `GetIdentityExchangeClosureUseCase`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerStateUseCase`
+- **Uses:** `WorkflowEngine`, `RequireDirectReconnectAllowedUseCase`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerStateUseCase`
 
 ```text
 CheckReconnectable -> PreflightRouting -> LoadAuthorization -> [RevokeExchange] -> StartInvitation
@@ -157,7 +157,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.StartDirectInvitation`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/direct/StartDirectInvitationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberProvider`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
+- **Uses:** `WorkflowEngine`, `RequireContactInvitableUseCase`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberProvider`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
 
 ```text
 CheckNotBlocked -> LoadAuthorization -> LoadLabels -> StartExchange -> RecordInvitation
@@ -190,7 +190,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.AcceptApprovedIdentityChange`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/recovery/AcceptApprovedIdentityChangeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `ReceiveIdentityExchangeUseCase`, `InvalidatePendingInvitationUseCase`
+- **Uses:** `RequireApprovedIdentityPinnedUseCase`, `ReceiveIdentityExchangeUseCase`, `InvalidatePendingInvitationUseCase`
 
 ```text
 ValidateApproval -> CheckPinnedIdentity -> AcceptOriginalInvitation -> InvalidateStaleInvitation
@@ -357,8 +357,6 @@ released in both modes.
 ```mermaid
 stateDiagram-v2
     [*] --> ResolveDisplayName
-    [*] --> MarkInvitationAccepted
-    [*] --> ActivateConversation
     [*] --> MarkInvitationDeclined
     [*] --> MarkTransportFailed
     [*] --> InvalidateInvitation

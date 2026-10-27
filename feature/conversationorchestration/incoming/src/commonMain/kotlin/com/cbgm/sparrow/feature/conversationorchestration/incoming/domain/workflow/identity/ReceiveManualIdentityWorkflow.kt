@@ -24,12 +24,7 @@ class ReceiveManualIdentityWorkflow internal constructor(
 
     override suspend fun perform(step: Step): Outcome =
         when (step) {
-            is Step.Receive ->
-                if (receiveManualIdentity(step.command.context, step.command.packet).getOrThrow()) {
-                    Outcome.IdentityMutual
-                } else {
-                    Outcome.IdentityOneWay
-                }
+            is Step.Receive -> receive(step.command)
             is Step.CompleteIdentity -> {
                 engine.run(IncomingCommand.CompleteManualIdentity(step.command.context.contactId)).getOrThrow()
                 Outcome.IdentityCompleted
@@ -41,6 +36,13 @@ class ReceiveManualIdentityWorkflow internal constructor(
             Outcome.IdentityMutual -> Transition.Next(Step.CompleteIdentity(step.command))
             Outcome.IdentityOneWay,
             Outcome.IdentityCompleted -> Transition.Complete()
+        }
+
+    private suspend fun receive(command: IncomingCommand.ReceiveManualIdentity): Outcome =
+        if (receiveManualIdentity(command.context, command.packet).getOrThrow()) {
+            Outcome.IdentityMutual
+        } else {
+            Outcome.IdentityOneWay
         }
 
     sealed interface Step : WorkflowStep {

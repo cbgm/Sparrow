@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct
 
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -10,6 +9,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RecordOutgoingDirectInvitationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireContactInvitableUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
@@ -26,7 +26,7 @@ import kotlin.reflect.KClass
  */
 class StartDirectInvitationWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val blocklistRepository: ContactBlocklistRepository,
+    private val requireContactInvitable: RequireContactInvitableUseCase,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val conversationRepository: DirectConversationRepository,
     private val resolveContactInvitationRoutingId: ResolveContactInvitationRoutingIdUseCase,
@@ -48,23 +48,13 @@ class StartDirectInvitationWorkflow internal constructor(
         when (step) {
             is Step.CheckNotBlocked -> {
                 require(step.command.contactId.isNotBlank()) { "Peer ID must not be blank" }
-                check(!blocklistRepository.isBlocked(step.command.contactId).getOrThrow()) {
-                    "Blocked contacts cannot be invited"
-                }
+                requireContactInvitable(step.command.contactId).getOrThrow()
                 Outcome.NotBlocked
             }
             is Step.LoadAuthorization ->
-                if (getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange) {
-                    Outcome.Authorized
-                } else {
-                    Outcome.NotAuthorized
-                }
+                authorizationLoaded(getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange)
             is Step.FindConversation ->
-                if (conversationRepository.findConversationId(step.command.contactId).getOrThrow() != null) {
-                    Outcome.ConversationExists
-                } else {
-                    Outcome.ConversationMissing
-                }
+                conversationFound(conversationRepository.findConversationId(step.command.contactId).getOrThrow())
             is Step.PreflightRouting -> {
                 // Do not revoke a still valid authorization when the contact cannot be reached anyway.
                 resolveContactInvitationRoutingId(step.command.contactId).getOrThrow()
@@ -107,6 +97,12 @@ class StartDirectInvitationWorkflow internal constructor(
                 Transition.Next(Step.RecordInvitation(outcome.exchange, outcome.peerDisplayName, step.command))
             Outcome.InvitationRecorded -> Transition.Complete()
         }
+
+    private fun authorizationLoaded(hasEstablishedExchange: Boolean): Outcome =
+        if (hasEstablishedExchange) Outcome.Authorized else Outcome.NotAuthorized
+
+    private fun conversationFound(conversationId: String?): Outcome =
+        if (conversationId != null) Outcome.ConversationExists else Outcome.ConversationMissing
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.StartDirectInvitation

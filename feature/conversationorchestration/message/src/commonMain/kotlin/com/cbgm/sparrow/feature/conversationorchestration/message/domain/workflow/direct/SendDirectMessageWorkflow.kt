@@ -1,13 +1,11 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.direct
 
 import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.ConversationFailureMapper
-import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
@@ -16,6 +14,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectInvitationState
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectRecipient
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectSendAuthorization
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.OutgoingMessageContent
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.OutgoingMessageContentPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.port.DirectReauthorizationPort
@@ -24,13 +23,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.LoadDirectRecipientUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
-import kotlinx.coroutines.flow.first
 import kotlin.reflect.KClass
 
 /**
- * ValidateContent -> CheckBlockedContact -> CheckPendingIdentityChange -> CheckAuthorization
- * -> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
+ * ValidateContent -> CheckAuthorization -> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
  * -> DeliverMessage | (FindQueueConversation -> LoadQueueRecipient -> StoreWaitingMessage).
  *
  * An authorized contact gets the message immediately. Without authorization the message waits in
@@ -38,8 +34,6 @@ import kotlin.reflect.KClass
  */
 class SendDirectMessageWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val contactBlocklistRepository: ContactBlocklistRepository,
-    private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val inspectDirectInvitation: InspectDirectInvitationUseCase,
     private val reauthorization: DirectReauthorizationPort,
@@ -62,20 +56,6 @@ class SendDirectMessageWorkflow internal constructor(
                 require(step.command.contactId.isNotBlank()) { "Contact ID must not be blank" }
                 Outcome.ContentValidated(OutgoingMessageContentPolicy.requireDirectContent(step.command.parts))
             }
-            is Step.CheckBlockedContact ->
-                if (contactBlocklistRepository.isBlocked(step.command.contactId).getOrThrow()) {
-                    Outcome.ContactBlocked
-                } else {
-                    Outcome.ContactNotBlocked(step.content)
-                }
-            is Step.CheckPendingIdentityChange ->
-                if (observePendingRemoteIdentityChanges().first().any { it.peerId == step.command.contactId }) {
-                    // The previous exchange can remain MUTUAL until the user reviews the new
-                    // identity. Never encrypt for those obsolete keys; keep the message waiting.
-                    Outcome.IdentityChangePending(step.content)
-                } else {
-                    Outcome.NoIdentityChangePending(step.content)
-                }
             is Step.CheckAuthorization -> checkAuthorization(step)
             is Step.InspectInvitation ->
                 when (inspectDirectInvitation(step.command.contactId).getOrThrow()) {
@@ -126,20 +106,16 @@ class SendDirectMessageWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.ContentValidated -> Transition.Next(Step.CheckBlockedContact(outcome.content, step.command))
-            Outcome.ContactBlocked ->
+            is Outcome.ContentValidated -> Transition.Next(Step.CheckAuthorization(outcome.content, step.command))
+            is Outcome.ContactBlocked ->
                 Transition.Reject(
                     ConversationFailure(
                         reason = ConversationFailureReason.AUTHORIZATION_REQUIRED,
-                        message = "Blocked contacts cannot send or receive direct messages"
+                        message = outcome.reason
                     )
                 )
-            is Outcome.ContactNotBlocked ->
-                Transition.Next(Step.CheckPendingIdentityChange(outcome.content, step.command))
             is Outcome.IdentityChangePending ->
                 Transition.Next(Step.ResolveConversation(outcome.content, DeliveryPlan.Queue(), step.command))
-            is Outcome.NoIdentityChangePending ->
-                Transition.Next(Step.CheckAuthorization(outcome.content, step.command))
             is Outcome.Authorized ->
                 Transition.Next(Step.ResolveConversation(outcome.content, DeliveryPlan.Send, step.command))
             is Outcome.AuthorizationMissing ->
@@ -185,10 +161,13 @@ class SendDirectMessageWorkflow internal constructor(
         }
 
     private suspend fun checkAuthorization(step: Step.CheckAuthorization): Outcome {
-        val error = requireDirectChatAuthorization(step.command.contactId).exceptionOrNull()
-            ?: return Outcome.Authorized(step.content)
-        if (error !is DirectChatAuthorizationRequiredException) throw error
-        return Outcome.AuthorizationMissing(step.content, error)
+        val authorization = requireDirectChatAuthorization.checkForNewMessage(step.command.contactId).getOrThrow()
+        return when (authorization) {
+            DirectSendAuthorization.Granted -> Outcome.Authorized(step.content)
+            is DirectSendAuthorization.ContactBlocked -> Outcome.ContactBlocked(authorization.reason)
+            DirectSendAuthorization.IdentityChangePending -> Outcome.IdentityChangePending(step.content)
+            is DirectSendAuthorization.Missing -> Outcome.AuthorizationMissing(step.content, authorization.error)
+        }
     }
 
     /** How the message leaves the device once its conversation is known. */
@@ -204,16 +183,6 @@ class SendDirectMessageWorkflow internal constructor(
         val command: DirectConversationCommand.SendMessage
 
         data class ValidateContent(
-            override val command: DirectConversationCommand.SendMessage
-        ) : Step
-
-        data class CheckBlockedContact(
-            val content: OutgoingMessageContent,
-            override val command: DirectConversationCommand.SendMessage
-        ) : Step
-
-        data class CheckPendingIdentityChange(
-            val content: OutgoingMessageContent,
             override val command: DirectConversationCommand.SendMessage
         ) : Step
 
@@ -272,17 +241,11 @@ class SendDirectMessageWorkflow internal constructor(
             val content: OutgoingMessageContent
         ) : Outcome
 
-        data object ContactBlocked : Outcome
-
-        data class ContactNotBlocked(
-            val content: OutgoingMessageContent
+        data class ContactBlocked(
+            val reason: String
         ) : Outcome
 
         data class IdentityChangePending(
-            val content: OutgoingMessageContent
-        ) : Outcome
-
-        data class NoIdentityChangePending(
             val content: OutgoingMessageContent
         ) : Outcome
 

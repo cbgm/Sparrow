@@ -39,6 +39,7 @@ val sharedModule =
                 approvedIdentityReconnectionObserver = get(),
                 contactBlockObserver = get(),
                 pendingAuthorizationCleanupRunner = get(),
+                recoverInterruptedDirectSends = get(),
                 workflowRegistry = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),

@@ -40,6 +40,11 @@ internal class DirectMessageRepositoryImpl(
     override fun observeWaitingForAuthorization(): Flow<List<StoredMessage>> =
         dataSource.observeMessagesWaitingForAuthorization().map { messages -> messages.map { it.toStoredMessage() } }
 
+    override suspend fun findAwaitingOutbox(createdBeforeEpochMilliseconds: Long): Result<List<StoredMessage>> =
+        safeSuspendCall {
+            dataSource.findMessagesAwaitingOutbox(createdBeforeEpochMilliseconds).map { it.toStoredMessage() }
+        }
+
     override suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>> =
         safeSuspendCall {
             dataSource.findMessagesAwaitingReadReceipt(conversationId).map { it.toUnreadIncomingMessage() }

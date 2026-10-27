@@ -14,20 +14,23 @@ import kotlin.test.assertTrue
 
 class DefaultMailboxCapabilityLifecycleTest {
     @Test
-    fun failedRevocationIsPersistedAndRetried() =
+    fun failedRevocationIsPersistedAndRetriedWithoutFailingTheCaller() =
         runTest {
             val repository = FakeMailboxRouteRepository(credential())
             val gateway = FakeMailboxGateway(failRevocation = true)
             val lifecycle = DefaultMailboxCapabilityLifecycle(repository, gateway)
 
-            assertTrue(lifecycle.revokeForContact(CONTACT_ID).isFailure)
+            assertTrue(lifecycle.revokeForContact(CONTACT_ID).isSuccess)
             assertTrue(repository.remoteDeleted)
+            assertTrue(repository.credential?.revocationPending == true)
+
+            assertEquals(0, lifecycle.retryPendingRevocations().getOrThrow())
             assertTrue(repository.credential?.revocationPending == true)
 
             gateway.failRevocation = false
             assertEquals(1, lifecycle.retryPendingRevocations().getOrThrow())
             assertNull(repository.credential)
-            assertEquals(2, gateway.revocationAttempts)
+            assertEquals(3, gateway.revocationAttempts)
         }
 
     @Test

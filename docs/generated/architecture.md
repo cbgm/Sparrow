@@ -9,8 +9,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Modules | 64 |
 | Module groups | 11 |
 | Project dependencies | 325 |
-| Kotlin files | 2492 |
-| Test Kotlin files | 187 |
+| Kotlin files | 2562 |
+| Test Kotlin files | 188 |
 | Resource files | 59 |
 
 ## Module groups

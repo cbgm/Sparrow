@@ -9,13 +9,12 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupMessageMembers
 /** Decides whether the local member may currently write to a group conversation. */
 class CheckGroupMessageAccessUseCase(
     private val groupMessageRepository: GroupMessageRepository,
+    private val requireGroupConversation: RequireGroupConversationUseCase,
     private val getMessageMembershipAccess: GetGroupMessageMembershipAccessUseCase
 ) {
     suspend operator fun invoke(groupId: String): Result<GroupMessageAccess> =
         safeSuspendCall(logFailure = false) {
-            val conversation = groupMessageRepository.findConversation(groupId).getOrThrow()
-                ?: error("Group conversation was not found")
-            check(conversation.isGroup) { "Conversation is not a group" }
+            requireGroupConversation(groupId).getOrThrow()
 
             val access = getMessageMembershipAccess(groupId).getOrThrow()
             when {

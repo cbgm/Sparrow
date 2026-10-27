@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.Workflow
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
@@ -39,30 +38,14 @@ class RecoverAuthorizedConversationWorkflow internal constructor(
 
     override suspend fun perform(step: Step): Outcome =
         when (step) {
-            is Step.LoadAuthorization ->
-                if (step.command.result.status == IdentityResultStatus.ESTABLISHED &&
-                    getIdentityPeerState(step.command.result.peerId).getOrThrow().hasEstablishedExchange
-                ) {
-                    Outcome.Authorized
-                } else {
-                    Outcome.NothingToRecover
-                }
+            is Step.LoadAuthorization -> loadAuthorization(step.command)
             is Step.FindConversation ->
-                if (conversationRepository.findConversationId(step.command.result.peerId).getOrThrow() != null) {
-                    Outcome.ConversationExists
-                } else {
-                    Outcome.ConversationMissing
-                }
-            is Step.CheckExchangeStillActive -> {
-                val current = getIdentityExchangeClosure(step.command.result.peerId).getOrThrow()
-                if (current?.exchangeId == step.command.result.exchangeId &&
-                    current.phase == IdentityExchangeClosurePhase.ACTIVE
-                ) {
-                    Outcome.ExchangeStillActive
-                } else {
-                    Outcome.NothingToRecover
-                }
-            }
+                conversationFound(conversationRepository.findConversationId(step.command.result.peerId).getOrThrow())
+            is Step.CheckExchangeStillActive ->
+                exchangeChecked(
+                    getIdentityExchangeClosure(step.command.result.peerId).getOrThrow()
+                        ?.isActiveFor(step.command.result.exchangeId) == true
+                )
             is Step.ActivateConversation -> {
                 engine.run(
                     MessageCommand.ActivateAuthorizedConversation(step.command.result.peerId)
@@ -80,6 +63,22 @@ class RecoverAuthorizedConversationWorkflow internal constructor(
             Outcome.ExchangeStillActive -> Transition.Next(Step.ActivateConversation(step.command))
             Outcome.ConversationActivated -> Transition.Complete()
         }
+
+    /** Only an established result whose exchange Identity still holds as established can be recovered. */
+    private suspend fun loadAuthorization(command: LifecycleCommand.RecoverAuthorizedConversation): Outcome =
+        if (command.result.status == IdentityResultStatus.ESTABLISHED &&
+            getIdentityPeerState(command.result.peerId).getOrThrow().hasEstablishedExchange
+        ) {
+            Outcome.Authorized
+        } else {
+            Outcome.NothingToRecover
+        }
+
+    private fun conversationFound(conversationId: String?): Outcome =
+        if (conversationId != null) Outcome.ConversationExists else Outcome.ConversationMissing
+
+    private fun exchangeChecked(active: Boolean): Outcome =
+        if (active) Outcome.ExchangeStillActive else Outcome.NothingToRecover
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.RecoverAuthorizedConversation

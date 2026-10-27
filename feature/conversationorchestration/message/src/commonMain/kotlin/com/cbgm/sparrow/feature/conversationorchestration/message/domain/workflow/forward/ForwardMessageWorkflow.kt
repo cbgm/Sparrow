@@ -1,11 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.forward
 
-import com.cbgm.sparrow.core.base.messagepart.domain.model.Expense
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
-import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
-import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessageForwardPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardMessage
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ForwardTarget
@@ -34,10 +29,7 @@ class ForwardMessageWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.ValidateParts -> {
-                require(step.command.parts.isNotEmpty()) { "Message has no forwardable content" }
-                require(step.command.parts.none(MessagePart::isNotForwardable)) {
-                    "Polls and expenses cannot be forwarded"
-                }
+                MessageForwardPolicy.requireForwardable(step.command.parts)
                 Outcome.PartsValid
             }
             is Step.FindContact -> {
@@ -153,6 +145,3 @@ class ForwardMessageWorkflow internal constructor(
         data object UnseenIncremented : Outcome
     }
 }
-
-private fun MessagePart.isNotForwardable(): Boolean =
-    this is PaymentTransfer || this is Poll || this is Expense || this is ExpenseBoard || this is ExpenseBoardClosed

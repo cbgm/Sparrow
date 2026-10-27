@@ -26,14 +26,13 @@ class RecordIncomingDirectInvitationWorkflow internal constructor(
 
     override suspend fun perform(step: Step): Outcome =
         when (step) {
-            is Step.CheckAllowed -> {
-                val result = step.command.result
-                if (checkIncomingInvitationAllowed(result.peerId, result.wasKnownPeerAtReceive).getOrThrow()) {
-                    Outcome.Allowed
-                } else {
-                    Outcome.Rejected
-                }
-            }
+            is Step.CheckAllowed ->
+                allowedChecked(
+                    checkIncomingInvitationAllowed(
+                        step.command.result.peerId,
+                        step.command.result.wasKnownPeerAtReceive
+                    ).getOrThrow()
+                )
             is Step.RecordInvitation -> {
                 recordIncomingDirectInvitation(step.command.result, step.command.peerDisplayName).getOrThrow()
                 Outcome.InvitationRecorded
@@ -47,17 +46,15 @@ class RecordIncomingDirectInvitationWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.Allowed -> Transition.Next(Step.RecordInvitation(step.command))
-            Outcome.Rejected ->
-                if (step.command.declineIfRejected) {
-                    Transition.Next(
-                        Step.DeclineExchange(step.command)
-                    )
-                } else {
-                    Transition.Complete()
-                }
+            Outcome.Rejected -> afterRejected(step.command)
             Outcome.InvitationRecorded -> Transition.Complete()
             Outcome.ExchangeDeclined -> Transition.Complete()
         }
+
+    private fun allowedChecked(allowed: Boolean): Outcome = if (allowed) Outcome.Allowed else Outcome.Rejected
+
+    private fun afterRejected(command: LifecycleCommand.RecordIncomingDirectInvitation): Transition<Step> =
+        if (command.declineIfRejected) Transition.Next(Step.DeclineExchange(command)) else Transition.Complete()
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.RecordIncomingDirectInvitation

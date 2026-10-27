@@ -22,6 +22,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipJoinRequest
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipSourceIds
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
@@ -65,8 +66,8 @@ internal class MembershipRepositoryImpl(
             val now = SystemClock.nowEpochMilliseconds()
             resendPendingHandshake(groupId, peerId, now)?.let { return@runCatching it }
 
-            val sourceId = IdGenerator.generate(prefix = "group-membership")
-            val expiresAt = now + HANDSHAKE_VALIDITY_MILLISECONDS
+            val sourceId = IdGenerator.generate(prefix = MembershipSourceIds.PREFIX)
+            val expiresAt = now + MembershipHandshake.VALIDITY_MILLISECONDS
             val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
             val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
             val packet =
@@ -394,7 +395,7 @@ internal class MembershipRepositoryImpl(
         val queuedPacket = protocolOutbox.findByPacketId(packetId).getOrThrow()
         val expiresAt =
             queuedPacket?.expiresAtEpochMilliseconds
-                ?: (membership.createdAtEpochMilliseconds + HANDSHAKE_VALIDITY_MILLISECONDS)
+                ?: (membership.createdAtEpochMilliseconds + MembershipHandshake.VALIDITY_MILLISECONDS)
         if (queuedPacket == null || now > expiresAt) {
             membershipStore.deleteBySourceInvitationId(membership.sourceInvitationId)
             return null
@@ -581,6 +582,5 @@ internal class MembershipRepositoryImpl(
 
     private companion object {
         const val INVITE_PACKET_ID_PREFIX = "group-invite-"
-        const val HANDSHAKE_VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 }

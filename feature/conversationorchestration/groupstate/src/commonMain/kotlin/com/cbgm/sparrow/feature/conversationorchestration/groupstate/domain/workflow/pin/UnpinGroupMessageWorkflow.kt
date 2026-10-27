@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.pin
 
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -8,8 +7,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinSlotPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ClearGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
@@ -24,6 +25,7 @@ import kotlin.reflect.KClass
 class UnpinGroupMessageWorkflow internal constructor(
     private val pinRepository: GroupPinRepository,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val clearGroupPin: ClearGroupPinUseCase,
     private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
 ) : ConversationWorkflow<
@@ -41,25 +43,9 @@ class UnpinGroupMessageWorkflow internal constructor(
         when (step) {
             is Step.AuthorizeAdmin ->
                 Outcome.AdminAuthorized(requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow())
-            is Step.FindPin -> {
-                val pin = pinRepository.find(step.command.groupId).getOrThrow()
-                when {
-                    pin?.messageId == null -> Outcome.NothingPinned
-                    pin.hasActiveExpenseBoard != EXPECTS_ACTIVE_EXPENSE_BOARD -> Outcome.PinNotRemovable
-                    else -> Outcome.PinFound(pin, step.context)
-                }
-            }
-            is Step.SaveEmptyPin -> {
-                val emptyPin = GroupPinState.unpinned(
-                    groupId = step.command.groupId,
-                    changedAtEpochMilliseconds = maxOf(
-                        SystemClock.nowEpochMilliseconds(),
-                        step.pin.changedAtEpochMilliseconds + 1L
-                    )
-                )
-                pinRepository.save(emptyPin).getOrThrow()
-                Outcome.EmptyPinSaved(emptyPin, step.context)
-            }
+            is Step.FindPin -> pinFound(pinRepository.find(step.command.groupId).getOrThrow(), step.context)
+            is Step.SaveEmptyPin ->
+                Outcome.EmptyPinSaved(clearGroupPin(step.command.groupId, step.pin).getOrThrow(), step.context)
             is Step.CreatePinPackets ->
                 Outcome.PinPacketsCreated(createGroupPinPackets(step.pin, step.context).getOrThrow())
             is Step.EnqueuePinPackets -> {
@@ -84,6 +70,14 @@ class UnpinGroupMessageWorkflow internal constructor(
                 Transition.Next(Step.CreatePinPackets(outcome.pin, outcome.context, step.command))
             is Outcome.PinPacketsCreated -> Transition.Next(Step.EnqueuePinPackets(outcome.packets, step.command))
             Outcome.PinPacketsEnqueued -> Transition.Complete()
+        }
+
+    /** An open expense board holds the slot until the expenses are closed. */
+    private fun pinFound(pin: GroupPinState?, context: GroupAdminContext): Outcome =
+        when {
+            pin?.messageId == null -> Outcome.NothingPinned
+            GroupPinSlotPolicy.isHeldByExpenses(pin) -> Outcome.PinNotRemovable
+            else -> Outcome.PinFound(pin, context)
         }
 
     sealed interface Step : WorkflowStep {
@@ -144,6 +138,5 @@ class UnpinGroupMessageWorkflow internal constructor(
 
     private companion object {
         const val ADMIN_ACTION = "pinned message"
-        const val EXPECTS_ACTIVE_EXPENSE_BOARD = false
     }
 }

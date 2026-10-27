@@ -1,21 +1,17 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.membership
 
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.GroupInvitationIdentityDisposition
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.GroupInvitationIdentityPolicy
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.EvaluateGroupInvitationIdentityUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmGroupMemberIdentityUseCase
-import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipJoinRequest
-import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupMembershipJoinRequestUseCase
 import kotlin.reflect.KClass
 
@@ -31,9 +27,8 @@ import kotlin.reflect.KClass
 @Suppress("LongParameterList")
 class ReceiveGroupJoinRequestWorkflow internal constructor(
     private val receiveGroupMembershipJoinRequest: ReceiveGroupMembershipJoinRequestUseCase,
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
-    private val getMembershipHandshake: GetMembershipHandshakeUseCase,
-    private val stagePendingRemoteIdentityChange: StagePendingRemoteIdentityChangeUseCase,
+    private val evaluateGroupInvitationIdentity: EvaluateGroupInvitationIdentityUseCase,
+    private val stageIncomingIdentityReview: StageIncomingIdentityReviewUseCase,
     private val stageRemoteIdentity: StageRemoteIdentityUseCase,
     private val establishMutualIdentity: EstablishMutualIdentityUseCase,
     private val confirmGroupMemberIdentity: ConfirmGroupMemberIdentityUseCase,
@@ -56,23 +51,9 @@ class ReceiveGroupJoinRequestWorkflow internal constructor(
                     ?.takeUnless(MembershipJoinRequest::alreadyAccepted)
                     ?.let(Outcome::JoinReceived)
                     ?: Outcome.Done
-            is Step.EvaluateMemberIdentity -> {
-                val stored = getRemoteIdentity(step.join.peerId).getOrThrow()
-                val disposition =
-                    GroupInvitationIdentityPolicy.evaluate(
-                        storedEncryptionPublicKey = stored?.encryptionPublicKey,
-                        storedSigningPublicKey = stored?.signingPublicKey,
-                        offeredEncryptionPublicKey = step.join.memberEncryptionPublicKey,
-                        offeredSigningPublicKey = step.join.memberSigningPublicKey
-                    )
-                if (disposition == GroupInvitationIdentityDisposition.REQUIRES_REVIEW) {
-                    Outcome.IdentityChanged(step.join)
-                } else {
-                    Outcome.IdentityAcceptable(step.join)
-                }
-            }
+            is Step.EvaluateMemberIdentity -> evaluateMemberIdentity(step.join)
             is Step.StageIdentityReview -> {
-                stageIdentityReview(step.join, context.receivedAtEpochMilliseconds)
+                stageIncomingIdentityReview.forGroupJoin(step.join, context.receivedAtEpochMilliseconds).getOrThrow()
                 Outcome.Done
             }
             is Step.StageIdentity -> {
@@ -121,33 +102,18 @@ class ReceiveGroupJoinRequestWorkflow internal constructor(
             Outcome.Done -> Transition.Complete()
         }
 
-    /** The verified JOIN is the evidence for the review; it must belong to our own pending invitation. */
-    private suspend fun stageIdentityReview(join: MembershipJoinRequest, receivedAtEpochMilliseconds: Long) {
-        val handshake =
-            requireNotNull(getMembershipHandshake(join.sourceId).getOrThrow()) {
-                "Verified JOIN has no pending group membership"
-            }
-        check(
-            handshake.peerId == join.peerId && handshake.groupId == join.groupId && handshake.ownerSigningPublicKey == null
+    private suspend fun evaluateMemberIdentity(join: MembershipJoinRequest): Outcome =
+        when (
+            evaluateGroupInvitationIdentity(
+                join.peerId,
+                join.memberEncryptionPublicKey,
+                join.memberSigningPublicKey
+            ).getOrThrow()
         ) {
-            "Verified JOIN does not belong to the owner-side group invitation"
+            GroupInvitationIdentityDisposition.REQUIRES_REVIEW -> Outcome.IdentityChanged(join)
+            GroupInvitationIdentityDisposition.FIRST_CONTACT,
+            GroupInvitationIdentityDisposition.MATCHES_STORED_IDENTITY -> Outcome.IdentityAcceptable(join)
         }
-        val expiresAt = handshake.createdAtEpochMilliseconds + GROUP_INVITATION_VALIDITY_MILLISECONDS
-        check(expiresAt > SystemClock.nowEpochMilliseconds()) {
-            "Group invitation expired before identity change could be approved"
-        }
-        stagePendingRemoteIdentityChange(
-            PendingRemoteIdentityChange(
-                peerId = join.peerId,
-                sourcePeerId = join.peerId,
-                invitationId = join.sourceId,
-                proposedEncryptionPublicKey = join.memberEncryptionPublicKey.copyOf(),
-                proposedSigningPublicKey = join.memberSigningPublicKey.copyOf(),
-                receivedAtEpochMilliseconds = receivedAtEpochMilliseconds,
-                expiresAtEpochMilliseconds = expiresAt
-            )
-        ).getOrThrow()
-    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupJoinRequest
@@ -210,9 +176,5 @@ class ReceiveGroupJoinRequestWorkflow internal constructor(
         data object MemberIdentityConfirmed : Outcome
 
         data object Done : Outcome
-    }
-
-    private companion object {
-        const val GROUP_INVITATION_VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 }
