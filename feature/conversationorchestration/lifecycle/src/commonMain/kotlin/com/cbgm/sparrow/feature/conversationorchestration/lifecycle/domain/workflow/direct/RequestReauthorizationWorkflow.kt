@@ -35,18 +35,10 @@ class RequestReauthorizationWorkflow internal constructor(
         when (step) {
             is Step.FindConversation -> {
                 require(step.command.contactId.isNotBlank()) { "Peer ID must not be blank" }
-                if (conversationRepository.findConversationId(step.command.contactId).getOrThrow() != null) {
-                    Outcome.ConversationExists
-                } else {
-                    Outcome.ConversationMissing
-                }
+                conversationFound(conversationRepository.findConversationId(step.command.contactId).getOrThrow())
             }
             is Step.LoadAuthorization ->
-                if (getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange) {
-                    Outcome.Authorized
-                } else {
-                    Outcome.NotAuthorized
-                }
+                authorizationLoaded(getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange)
             is Step.Reconnect -> {
                 engine.run(
                     DirectConversationCommand.ReconnectConversation(step.command.contactId)
@@ -68,6 +60,12 @@ class RequestReauthorizationWorkflow internal constructor(
             Outcome.NotAuthorized -> Transition.Next(Step.StartInvitation(step.command))
             Outcome.InvitationStarted -> Transition.Complete()
         }
+
+    private fun authorizationLoaded(hasEstablishedExchange: Boolean): Outcome =
+        if (hasEstablishedExchange) Outcome.Authorized else Outcome.NotAuthorized
+
+    private fun conversationFound(conversationId: String?): Outcome =
+        if (conversationId != null) Outcome.ConversationExists else Outcome.ConversationMissing
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.RequestReauthorization

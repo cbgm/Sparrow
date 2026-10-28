@@ -38,6 +38,10 @@ object GroupMessageDeliveryStateMachine {
             else -> current
         }
 
+    /** A recipient keeps an error message only while its delivery failed. */
+    fun lastError(next: MessageDeliveryStatus, errorMessage: String?): String? =
+        errorMessage.takeIf { next == MessageDeliveryStatus.FAILED }
+
     fun canTransition(
         current: MessageDeliveryStatus,
         event: MessageDeliveryEvent

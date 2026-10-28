@@ -74,6 +74,10 @@ object ExpensePolicy {
         }
     }
 
+    /** Only the creator of an expense or a group admin may edit or delete it. */
+    fun canChange(expense: Expense, memberId: String, isAdmin: Boolean): Boolean =
+        isAdmin || expense.createdByMemberId == memberId
+
     private val RATE = Regex("\\d{1,12}(\\.\\d{1,12})?")
 
     private fun requireCurrency(code: String) {

@@ -17,9 +17,7 @@ class FindDirectAuthorizationBlockUseCase(
         safeSuspendCall(logFailure = false) {
             // A prior MUTUAL exchange can remain in the database while a new
             // identity-change request awaits explicit verification.
-            if (observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }) {
-                return@safeSuspendCall PENDING_IDENTITY_CHANGE
-            }
+            if (isIdentityChangePending(contactId)) return@safeSuspendCall PENDING_IDENTITY_CHANGE
             val state = getIdentityPeerState(contactId).getOrThrow()
             if (!state.hasEstablishedExchange ||
                 !getRemoteIdentity(contactId).getOrThrow().hasDirectMessageEncryptionKeys()
@@ -28,6 +26,13 @@ class FindDirectAuthorizationBlockUseCase(
             }
             null
         }
+
+    /** A new identity of the contact awaits verification; nothing may be encrypted for the old keys. */
+    suspend fun hasPendingIdentityChange(contactId: String): Result<Boolean> =
+        safeSuspendCall(logFailure = false) { isIdentityChangePending(contactId) }
+
+    private suspend fun isIdentityChangePending(contactId: String): Boolean =
+        observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }
 
     private companion object {
         const val PENDING_IDENTITY_CHANGE = "Identity change pending verification; messages must wait for recovery"

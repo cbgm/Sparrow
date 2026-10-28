@@ -37,6 +37,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroup
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupRemovalUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupWelcomeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.CheckReadyAcknowledgementEpochUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ClearMembershipHandshakeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupRemovalUseCase
@@ -45,12 +46,16 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ConfirmGroupMembership
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeleteGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DiscardSupersededMembershipsUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindCommittedGroupMemberRemovalUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindGroupCurrentEpochUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindReadyAcknowledgedMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupCurrentEpochUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupMessageMembershipAccessUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupPinSenderSigningKeyUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupTransportRoutingMembersUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.InspectGroupInvitationTargetUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.InspectIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.MarkMembershipRemovedUseCase
@@ -136,6 +141,7 @@ val membershipModule =
         singleOf(::AuthorizeIncomingGroupDeletionUseCase)
         singleOf(::CompleteIncomingGroupDeletionUseCase)
         singleOf(::RemoveGroupMemberUseCase)
+        singleOf(::FindCommittedGroupMemberRemovalUseCase)
         singleOf(::PromoteGroupMemberUseCase)
         singleOf(::TransferGroupAdminAndLeaveUseCase)
         singleOf(::GetGroupLeaveRequirementUseCase)
@@ -147,6 +153,7 @@ val membershipModule =
         singleOf(::ReceiveGroupLeaveRequestUseCase)
         singleOf(::StartGroupMembershipUseCase)
         singleOf(::InspectIncomingGroupMembershipUseCase)
+        singleOf(::InspectGroupInvitationTargetUseCase)
         singleOf(::ReceiveIncomingGroupMembershipUseCase)
         singleOf(::DiscardSupersededMembershipsUseCase)
         singleOf(::GetMembershipHandshakeUseCase)
@@ -155,7 +162,10 @@ val membershipModule =
         singleOf(::WasGroupMembershipDeletedUseCase)
         singleOf(::GetGroupMessageMembershipAccessUseCase)
         singleOf(::GetGroupPinSenderSigningKeyUseCase)
+        singleOf(::FindGroupCurrentEpochUseCase)
         singleOf(::GetGroupCurrentEpochUseCase)
+        singleOf(::CheckReadyAcknowledgementEpochUseCase)
+        singleOf(::FindReadyAcknowledgedMembershipUseCase)
         singleOf(::ResolveGroupTransportEncryptionPublicKeyUseCase)
         singleOf(::GetGroupTransportRoutingMembersUseCase)
         singleOf(::DeclineGroupMembershipUseCase)

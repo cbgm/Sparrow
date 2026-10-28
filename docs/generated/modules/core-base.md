@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/base` |
 | Build file | `core/base/build.gradle.kts` |
-| Kotlin files | 31 |
-| Production Kotlin files | 21 |
+| Kotlin files | 32 |
+| Production Kotlin files | 22 |
 | Test Kotlin files | 10 |
 | Resource files | 0 |
 | Direct dependencies | 0 |

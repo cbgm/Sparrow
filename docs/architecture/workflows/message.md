@@ -9,20 +9,25 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | Workflow | Started by | Command | Lock |
 |---|---|---|---|
 | [`DeleteDirectMessageWorkflow`](#deletedirectmessageworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.DeleteMessage` | — |
+| [`DeleteOwnDirectMessageWorkflow`](#deleteowndirectmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.DeleteOwnDirectMessage` | `directReleaseLockKey(command.target.contactId)` |
 | [`DeliverDirectMessageWorkflow`](#deliverdirectmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.DeliverDirectMessage` | — |
 | [`EditDirectMessageWorkflow`](#editdirectmessageworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.EditMessage` | — |
+| [`EditOwnDirectMessageWorkflow`](#editowndirectmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.EditOwnDirectMessage` | `directReleaseLockKey(command.target.contactId)` |
 | [`MarkDirectConversationReadWorkflow`](#markdirectconversationreadworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.MarkConversationRead` | — |
 | [`RetryDirectMessageWorkflow`](#retrydirectmessageworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.RetryMessage` | — |
 | [`SendDirectIndicatorWorkflow`](#senddirectindicatorworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.SendIndicator` | — |
 | [`SendDirectMessageWorkflow`](#senddirectmessageworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.SendMessage` | — |
 | [`ToggleDirectReactionWorkflow`](#toggledirectreactionworkflow) | Chats (`ConversationOrchestrator`) | `DirectConversationCommand.ToggleReaction` | — |
 | [`ActivateAuthorizedConversationWorkflow`](#activateauthorizedconversationworkflow) | orchestration (`engine.run`) | `MessageCommand.ActivateAuthorizedConversation` | — |
-| [`DiscardWaitingDirectMessagesWorkflow`](#discardwaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.DiscardWaitingDirectMessages` | `"direct-release:${command.contactId}"` |
-| [`ReleaseWaitingDirectMessagesWorkflow`](#releasewaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.ReleaseWaitingDirectMessages` | `"direct-release:${command.contactId}"` |
+| [`DiscardWaitingDirectMessagesWorkflow`](#discardwaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.DiscardWaitingDirectMessages` | `directReleaseLockKey(command.contactId)` |
+| [`ReleaseWaitingDirectMessagesWorkflow`](#releasewaitingdirectmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.ReleaseWaitingDirectMessages` | `directReleaseLockKey(command.contactId)` |
+| [`StoreWaitingDirectMessageWorkflow`](#storewaitingdirectmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.StoreWaitingDirectMessage` | `directReleaseLockKey(command.contactId)` |
 | [`ForwardMessageWorkflow`](#forwardmessageworkflow) | Chats (`ConversationOrchestrator`) | `ForwardMessage` | — |
 | [`CloseGroupPollWorkflow`](#closegrouppollworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ClosePoll` | — |
 | [`DeleteGroupMessageWorkflow`](#deletegroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteMessage` | — |
+| [`DeleteUnsentGroupMessageWorkflow`](#deleteunsentgroupmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.DeleteUnsentGroupMessage` | `groupSendLockKey(command.groupId)` |
 | [`EditGroupMessageWorkflow`](#editgroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.EditMessage` | — |
+| [`EditUnsentGroupMessageWorkflow`](#editunsentgroupmessageworkflow) | orchestration (`engine.run`) | `MessageCommand.EditUnsentGroupMessage` | `groupSendLockKey(command.groupId)` |
 | [`FlushQueuedGroupMessagesWorkflow`](#flushqueuedgroupmessagesworkflow) | orchestration (`engine.run`) | `MessageCommand.FlushQueuedGroupMessages` | `groupSendLockKey(command.groupId)` |
 | [`MarkGroupConversationReadWorkflow`](#markgroupconversationreadworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.MarkConversationRead` | — |
 | [`RetryGroupMessageWorkflow`](#retrygroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.RetryMessage` | — |
@@ -38,16 +43,46 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 - **Kind:** public — Chats submits `DirectConversationCommand.DeleteMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeleteDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`, `DiscardDirectMessagesUseCase`
+- **Uses:** `WorkflowEngine`, `DirectConversationRepository`, `FindDeletableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`, `DiscardDirectMessagesUseCase`
 
 ```text
-FindConversation -> FindOwnMessage -> (DiscardMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
+FindConversation -> FindOwnMessage -> (DeleteWaitingMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
+
+A message still waiting for authorization was never sent, so it is deleted locally only; that delete runs as
+[MessageCommand.DeleteOwnDirectMessage] under the contact's release lock, which checks the message again, so a
+release never revives it. A sent message cannot become waiting again, so its delete takes no lock.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindConversation
     FindConversation --> FindOwnMessage : ConversationFound
+    FindOwnMessage --> DeleteWaitingMessage : MessageNeverSent
+    FindOwnMessage --> CheckAuthorization : MessageSent
+    DeleteWaitingMessage --> [*] : WaitingMessageDeleted
+    CheckAuthorization --> SendDelete : Authorized
+    SendDelete --> DiscardMessage : DeleteSent
+    DiscardMessage --> [*] : MessageDiscarded
+```
+
+### DeleteOwnDirectMessageWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DeleteOwnDirectMessage`
+- **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeleteOwnDirectMessageWorkflow.kt`
+- **Lock:** `directReleaseLockKey(command.target.contactId)`
+- **Uses:** `FindDeletableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`, `DiscardDirectMessagesUseCase`
+
+```text
+FindOwnMessage -> (DiscardMessage) | (CheckAuthorization -> SendDelete -> DiscardMessage).
+
+Runs only for a message that was still waiting when the public delete looked at it. The workflow holds the
+contact's release lock, so a waiting message cannot be released (and written back) between the check and the
+local delete; one that was released just before gets a normal delete.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindOwnMessage
     FindOwnMessage --> DiscardMessage : MessageNeverSent
     FindOwnMessage --> CheckAuthorization : MessageSent
     CheckAuthorization --> SendDelete : Authorized
@@ -60,13 +95,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DeliverDirectMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeliverDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `DirectMessagePacketFactory`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
 
 ```text
-FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket
--> LinkPacket -> EnqueuePacket.
+FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket -> EnqueuePacket.
 
-A packet that cannot be created or linked discards the stored message again; a packet the
+A packet that cannot be created or linked to the message discards the stored message again; a packet the
 outbox rejects keeps the message and marks it failed so the user can retry.
 ```
 
@@ -78,10 +112,8 @@ stateDiagram-v2
     CheckAuthorization --> LoadRecipient : Authorized
     LoadRecipient --> StoreMessage : RecipientLoaded
     StoreMessage --> CreatePacket : MessageStored
-    CreatePacket --> LinkPacket : PacketCreated
+    CreatePacket --> EnqueuePacket : PacketCreated
     CreatePacket --> DiscardMessage : PacketPreparationFailed
-    LinkPacket --> EnqueuePacket : PacketLinked
-    LinkPacket --> DiscardMessage : PacketPreparationFailed
     DiscardMessage --> Rejected : MessageDiscarded
     EnqueuePacket --> MarkSendFailed : EnqueueFailed
     EnqueuePacket --> [*] : PacketEnqueued
@@ -96,18 +128,48 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.EditMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/EditDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
+- **Uses:** `WorkflowEngine`, `DirectConversationRepository`, `DirectMessageRepository`, `FindEditableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
 
 ```text
-FindConversation -> FindEditableMessage -> (ReplaceText) | (CheckAuthorization -> SendEdit -> ReplaceText).
+FindConversation -> FindEditableMessage -> (EditWaitingMessage) | (CheckAuthorization -> SendEdit -> ReplaceText).
 
-A message still waiting for authorization was never sent, so it is edited locally only.
+A message still waiting for authorization was never sent, so it is edited locally only; that edit runs as
+[MessageCommand.EditOwnDirectMessage] under the contact's release lock, which checks the message again, so a
+release never sends the old text. A sent message cannot become waiting again, so its edit takes no lock and never
+waits for a release or a send to the same contact.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindConversation
     FindConversation --> FindEditableMessage : ConversationFound
+    FindEditableMessage --> CheckAuthorization : MessageSent
+    FindEditableMessage --> EditWaitingMessage : MessageWaitingForAuthorization
+    EditWaitingMessage --> [*] : WaitingMessageEdited
+    CheckAuthorization --> SendEdit : Authorized
+    SendEdit --> ReplaceText : EditSent
+    ReplaceText --> [*] : TextReplaced
+```
+
+### EditOwnDirectMessageWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.EditOwnDirectMessage`
+- **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/EditOwnDirectMessageWorkflow.kt`
+- **Lock:** `directReleaseLockKey(command.target.contactId)`
+- **Uses:** `DirectMessageRepository`, `FindEditableDirectMessageUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
+
+```text
+FindEditableMessage -> (ReplaceText) | (CheckAuthorization -> SendEdit -> ReplaceText).
+
+Runs only for a message that was still waiting when the public edit looked at it. A message still waiting for
+authorization was never sent, so it is edited locally only. The workflow holds the contact's release lock, so a
+waiting message cannot be released with its old text between the check and the edit; one that was released
+just before gets a normal edit.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindEditableMessage
     FindEditableMessage --> CheckAuthorization : MessageSent
     FindEditableMessage --> ReplaceText : MessageWaitingForAuthorization
     CheckAuthorization --> SendEdit : Authorized
@@ -120,11 +182,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.MarkConversationRead`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/MarkDirectConversationReadWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ConversationUnseenCountRepository`, `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `SendReadReceiptUseCase`
+- **Uses:** `ConversationUnseenCountRepository`, `DirectConversationRepository`, `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `AcknowledgeIncomingMessageUseCase`
 
 ```text
-ClearUnseenCount -> FindConversation -> FindUnreadMessages -> CheckAuthorization
--> (SendReadReceipt -> MarkReceiptSent)* .
+ClearUnseenCount -> FindConversation -> FindUnreadMessages -> CheckAuthorization -> (AcknowledgeMessage)* .
 
 Read receipts are opportunistic: while authorization is missing (e.g. during onboarding) the
 receipts stay pending in the database and are sent the next time the chat is read.
@@ -137,11 +198,11 @@ stateDiagram-v2
     FindConversation --> FindUnreadMessages : ConversationFound
     FindUnreadMessages --> CheckAuthorization : UnreadMessagesFound
     FindUnreadMessages --> [*] : UnreadMessagesFound
-    CheckAuthorization --> SendReadReceipt : Authorized
+    CheckAuthorization --> AcknowledgeMessage : Authorized
+    CheckAuthorization --> [*] : Authorized
     CheckAuthorization --> [*] : ReceiptsDeferred
-    SendReadReceipt --> MarkReceiptSent : ReadReceiptSent
-    MarkReceiptSent --> SendReadReceipt : ReceiptMarked
-    MarkReceiptSent --> [*] : ReceiptMarked
+    AcknowledgeMessage --> AcknowledgeMessage : MessageAcknowledged
+    AcknowledgeMessage --> [*] : MessageAcknowledged
 ```
 
 ### RetryDirectMessageWorkflow
@@ -149,21 +210,27 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.RetryMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/RetryDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `ProtocolOutbox`, `RequireDirectChatAuthorizationUseCase`, `RecordRetryRequestedUseCase`
+- **Uses:** `DirectConversationRepository`, `FindRetryableDirectMessageUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RequireDirectChatAuthorizationUseCase`, `RecordRetryRequestedUseCase`
 
 ```text
-FindRetryableMessage -> FindConversation -> CheckPacketIdentity -> CheckAuthorization
--> ResendPacket -> RecordRetry.
+FindRetryableMessage -> FindConversation -> CheckAuthorization -> FindPacket
+-> (ResendPacket | CreatePacket -> EnqueuePacket) -> RecordRetry.
+
+A message whose packet never reached the outbox, or is no longer in it, gets a new packet; resending a packet
+the outbox does not know would do nothing and leave the message queued forever.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindRetryableMessage
     FindRetryableMessage --> FindConversation : RetryableMessageFound
-    FindConversation --> CheckPacketIdentity : ConversationFound
-    CheckPacketIdentity --> CheckAuthorization : PacketCurrent
-    CheckAuthorization --> ResendPacket : Authorized
+    FindConversation --> CheckAuthorization : ConversationFound
+    CheckAuthorization --> FindPacket : Authorized
+    FindPacket --> ResendPacket : PacketInOutbox
+    FindPacket --> CreatePacket : PacketMissing
     ResendPacket --> RecordRetry : PacketResent
+    CreatePacket --> EnqueuePacket : PacketCreated
+    EnqueuePacket --> RecordRetry : PacketResent
     RecordRetry --> [*] : RetryRecorded
 ```
 
@@ -189,38 +256,40 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.SendMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/SendDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `ObservePendingRemoteIdentityChangesUseCase`, `RequireDirectChatAuthorizationUseCase`, `InspectDirectInvitationUseCase`, `DirectReauthorizationPort`, `DirectConversationRepository`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`
+- **Uses:** `WorkflowEngine`, `RequireDirectChatAuthorizationUseCase`, `InspectDirectInvitationUseCase`, `DirectReauthorizationPort`, `DirectConversationRepository`
 
 ```text
-ValidateContent -> CheckBlockedContact -> CheckPendingIdentityChange -> CheckAuthorization
--> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
--> DeliverMessage | (FindQueueConversation -> LoadQueueRecipient -> StoreWaitingMessage).
+ValidateContent -> CheckAuthorization -> [InspectInvitation -> RequestReauthorization] -> ResolveConversation
+-> DeliverMessage | (QueueMessage [-> DeliverMessage]).
 
 An authorized contact gets the message immediately. Without authorization the message waits in
 WAITING_FOR_AUTHORIZATION, and the workflow starts a fresh invitation when none is pending.
+
+The workflow takes no lock, so a message is stored and shown at once even while an earlier message to the same
+contact still uploads its attachments. Only QueueMessage ([MessageCommand.StoreWaitingDirectMessage]) holds the
+contact's release lock: otherwise a release could run between "authorization missing" and storing the waiting
+message, find nothing, and leave it waiting until the next identity event. When it finds the contact authorized
+meanwhile, the message is delivered normally instead.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> ValidateContent
-    ValidateContent --> CheckBlockedContact : ContentValidated
-    CheckBlockedContact --> Rejected : ContactBlocked
-    CheckBlockedContact --> CheckPendingIdentityChange : ContactNotBlocked
-    CheckPendingIdentityChange --> ResolveConversation : IdentityChangePending
-    CheckPendingIdentityChange --> CheckAuthorization : NoIdentityChangePending
+    ValidateContent --> CheckAuthorization : ContentValidated
     CheckAuthorization --> InspectInvitation : AuthorizationMissing
     CheckAuthorization --> ResolveConversation : Authorized
+    CheckAuthorization --> Rejected : ContactBlocked
+    CheckAuthorization --> ResolveConversation : IdentityChangePending
     InspectInvitation --> ResolveConversation : InvitationPending
     InspectInvitation --> RequestReauthorization : InvitationRetryable
     InspectInvitation --> Rejected : InvitationUnavailable
     RequestReauthorization --> ResolveConversation : ReauthorizationFailed
     RequestReauthorization --> ResolveConversation : Reauthorized
     ResolveConversation --> DeliverMessage : ConversationResolved
-    ResolveConversation --> FindQueueConversation : ConversationResolved
+    ResolveConversation --> QueueMessage : ConversationResolved
     DeliverMessage --> [*] : MessageDelivered
-    FindQueueConversation --> LoadQueueRecipient : QueueConversationFound
-    LoadQueueRecipient --> StoreWaitingMessage : QueueRecipientLoaded
-    StoreWaitingMessage --> [*] : MessageQueued
+    QueueMessage --> DeliverMessage : AuthorizedWhileQueuing
+    QueueMessage --> [*] : MessageQueued
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
@@ -231,10 +300,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.ToggleReaction`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/ToggleDirectReactionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `DirectMessageRepository`, `MessageReactionRepository`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDirectMessageUseCase`, `ToggleLocalReactionUseCase`, `RequireDirectChatAuthorizationUseCase`, `SendDirectOperationUseCase`
 
 ```text
-FindConversation -> CheckAuthorization -> FindMessage -> (AddReaction | RemoveReaction) -> SendReaction.
+FindConversation -> CheckAuthorization -> FindMessage -> ToggleReaction -> SendReaction.
 ```
 
 ```mermaid
@@ -242,10 +311,8 @@ stateDiagram-v2
     [*] --> FindConversation
     FindConversation --> CheckAuthorization : ConversationFound
     CheckAuthorization --> FindMessage : Authorized
-    FindMessage --> AddReaction : ReactionAbsent
-    FindMessage --> RemoveReaction : ReactionPresent
-    RemoveReaction --> SendReaction : ReactionChanged
-    AddReaction --> SendReaction : ReactionChanged
+    FindMessage --> ToggleReaction : MessageFound
+    ToggleReaction --> SendReaction : ReactionChanged
     SendReaction --> [*] : ReactionSent
 ```
 
@@ -273,7 +340,7 @@ stateDiagram-v2
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DiscardWaitingDirectMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/authorization/DiscardWaitingDirectMessagesWorkflow.kt`
-- **Lock:** `"direct-release:${command.contactId}"`
+- **Lock:** `directReleaseLockKey(command.contactId)`
 - **Uses:** `DirectMessageRepository`, `DiscardDirectMessagesUseCase`
 
 ```text
@@ -292,16 +359,20 @@ stateDiagram-v2
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.ReleaseWaitingDirectMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/authorization/ReleaseWaitingDirectMessagesWorkflow.kt`
-- **Lock:** `"direct-release:${command.contactId}"`
-- **Uses:** `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `FindDirectAuthorizationBlockUseCase`, `DiscardDirectMessagesUseCase`, `DirectMessagePacketFactory`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
+- **Lock:** `directReleaseLockKey(command.contactId)`
+- **Uses:** `DirectMessageRepository`, `FindDirectAuthorizationBlockUseCase`, `DiscardExpiredWaitingDirectMessagesUseCase`, `ReleaseWaitingDirectMessageUseCase`, `RestoreWaitingDirectMessageUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
 
 ```text
 FindWaitingMessages -> CheckAuthorization -> DiscardExpiredMessages
--> (PrepareRelease -> EnqueuePacket [-> MarkSendFailed -> RestoreWaitingMessage])* .
+-> (PrepareRelease [-> EnqueuePacket [-> MarkSendFailed -> RestoreWaitingMessage]])* .
 
 Release is opportunistic: onboarding, invitation acceptance and restart reconciliation may
 all try before keys exist. Missing authorization defers the work instead of failing. A message
 whose packet could not reach the outbox goes back to waiting so a later release retries it.
+
+Storing a new waiting message and editing or deleting one share the lock, so none of them works on a contact's
+waiting messages while they are released. PrepareRelease still reads each message again and skips one that is
+gone or no longer waiting.
 ```
 
 ```mermaid
@@ -313,25 +384,41 @@ stateDiagram-v2
     CheckAuthorization --> [*] : ReleaseDeferred
     DiscardExpiredMessages --> PrepareRelease : ExpiredMessagesDiscarded
     DiscardExpiredMessages --> [*] : ExpiredMessagesDiscarded
-    PrepareRelease --> DiscardExpiredMessages : Authorized
-    PrepareRelease --> MarkSendFailed : EnqueueFailed
-    PrepareRelease --> PrepareRelease : ExpiredMessagesDiscarded
-    PrepareRelease --> [*] : ExpiredMessagesDiscarded
-    PrepareRelease --> PrepareRelease : PacketEnqueued
-    PrepareRelease --> [*] : PacketEnqueued
-    PrepareRelease --> [*] : ReleaseDeferred
     PrepareRelease --> EnqueuePacket : ReleasePrepared
-    PrepareRelease --> RestoreWaitingMessage : SendFailureRecorded
-    PrepareRelease --> PrepareRelease : WaitingMessageRestored
-    PrepareRelease --> [*] : WaitingMessageRestored
-    PrepareRelease --> CheckAuthorization : WaitingMessagesFound
-    PrepareRelease --> [*] : WaitingMessagesFound
+    PrepareRelease --> PrepareRelease : ReleaseSkipped
+    PrepareRelease --> [*] : ReleaseSkipped
     EnqueuePacket --> MarkSendFailed : EnqueueFailed
     EnqueuePacket --> PrepareRelease : PacketEnqueued
     EnqueuePacket --> [*] : PacketEnqueued
     MarkSendFailed --> RestoreWaitingMessage : SendFailureRecorded
     RestoreWaitingMessage --> PrepareRelease : WaitingMessageRestored
     RestoreWaitingMessage --> [*] : WaitingMessageRestored
+```
+
+### StoreWaitingDirectMessageWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.StoreWaitingDirectMessage`
+- **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/authorization/StoreWaitingDirectMessageWorkflow.kt`
+- **Lock:** `directReleaseLockKey(command.contactId)`
+- **Uses:** `FindDirectAuthorizationBlockUseCase`, `DirectConversationRepository`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`
+
+```text
+CheckAuthorization -> (FindConversation -> LoadRecipient -> StoreWaitingMessage).
+
+Holds the contact's release lock and checks authorization again under it with the same rule the release uses:
+either the contact became authorized meanwhile and nothing is stored (the caller sends the message normally), or
+the message is stored as waiting before any later release can look for it. Only messages for contacts without
+authorization take the lock, so authorized sends never wait for each other.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> CheckAuthorization
+    CheckAuthorization --> [*] : AuthorizedMeanwhile
+    CheckAuthorization --> FindConversation : StillUnauthorized
+    FindConversation --> LoadRecipient : ConversationFound
+    LoadRecipient --> StoreWaitingMessage : RecipientLoaded
+    StoreWaitingMessage --> [*] : MessageStored
 ```
 
 ## `forward`
@@ -369,27 +456,29 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.ClosePoll`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/CloseGroupPollWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageAttachmentOperationsRepository`, `ObserveGroupAdministrationUseCase`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupPollMessageUseCase`, `CheckPollClosePermissionUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-CheckMembership -> CheckClosePermission -> FindRecipients -> FindPoll -> SaveClosedPoll
--> EncryptClose -> EnqueueClose.
+CheckMembership -> FindPollMessage -> CheckClosePermission -> FindRecipients -> FindPoll -> EncryptClose
+-> EnqueueClose -> SaveClosedPoll.
 
-Only the poll creator or a group admin may close a poll.
+Only the poll creator or a group admin may close a poll. The poll is closed locally only after the close is
+queued: a failed send leaves it open, so a retry closes and sends again.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> CheckMembership
-    CheckMembership --> CheckClosePermission : MembershipActive
+    CheckMembership --> FindPollMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
+    FindPollMessage --> CheckClosePermission : PollMessageFound
     CheckClosePermission --> FindRecipients : CloseAllowed
     CheckClosePermission --> Rejected : CloseNotAllowed
     FindRecipients --> FindPoll : RecipientsFound
-    FindPoll --> SaveClosedPoll : PollFound
-    SaveClosedPoll --> EncryptClose : ClosedPollSaved
+    FindPoll --> EncryptClose : PollFound
     EncryptClose --> EnqueueClose : CloseEncrypted
-    EnqueueClose --> [*] : CloseEnqueued
+    EnqueueClose --> SaveClosedPoll : CloseEnqueued
+    SaveClosedPoll --> [*] : ClosedPollSaved
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
@@ -400,10 +489,15 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/DeleteGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`, `RequireMessageWithoutPaymentUseCase`
+- **Uses:** `WorkflowEngine`, `CheckGroupMessageAccessUseCase`, `FindDeletableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`
 
 ```text
-CheckMembership -> FindOwnMessage -> FindRecipients -> EncryptDelete -> EnqueueDelete -> DiscardMessage.
+CheckMembership -> FindOwnMessage -> FindRecipients -> (EncryptDelete -> EnqueueDelete -> DiscardMessage)
+| DeleteUnsentMessage.
+
+A message nobody can receive or that is still queued unsent is deleted locally only, so it is never flushed.
+Only that local delete ([MessageCommand.DeleteUnsentGroupMessage]) takes the group send lock, so a running flush
+cannot send it while it is deleted. The delete of a message members already have takes no lock.
 ```
 
 ```mermaid
@@ -412,13 +506,41 @@ stateDiagram-v2
     CheckMembership --> FindOwnMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
     FindOwnMessage --> FindRecipients : OwnMessageFound
+    FindRecipients --> DeleteUnsentMessage : RecipientsFound
     FindRecipients --> EncryptDelete : RecipientsFound
     EncryptDelete --> EnqueueDelete : DeleteEncrypted
     EnqueueDelete --> DiscardMessage : DeleteEnqueued
     DiscardMessage --> [*] : MessageDiscarded
+    DeleteUnsentMessage --> [*] : UnsentMessageDeleted
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
+```
+
+### DeleteUnsentGroupMessageWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DeleteUnsentGroupMessage`
+- **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/DeleteUnsentGroupMessageWorkflow.kt`
+- **Lock:** `groupSendLockKey(command.groupId)`
+- **Uses:** `FindDeletableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`, `DiscardGroupMessagesUseCase`
+
+```text
+FindOwnMessage -> FindRecipients -> [EncryptDelete -> EnqueueDelete] -> DiscardMessage.
+
+Runs only for a message nobody had received when the public delete looked at it. It holds the group send lock and
+checks the recipients again, so a running flush either finished (and the delete is sent like any other) or never
+sends the message.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindOwnMessage
+    FindOwnMessage --> FindRecipients : OwnMessageFound
+    FindRecipients --> DiscardMessage : RecipientsFound
+    FindRecipients --> EncryptDelete : RecipientsFound
+    EncryptDelete --> EnqueueDelete : DeleteEncrypted
+    EnqueueDelete --> DiscardMessage : DeleteEnqueued
+    DiscardMessage --> [*] : MessageDiscarded
 ```
 
 ### EditGroupMessageWorkflow
@@ -426,10 +548,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/EditGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `FindEditableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-CheckMembership -> FindEditableMessage -> FindRecipients -> EncryptEdit -> EnqueueEdit -> ReplaceText.
+CheckMembership -> FindEditableMessage -> FindRecipients -> (EncryptEdit -> EnqueueEdit -> ReplaceText)
+| EditUnsentMessage.
+
+A message nobody can receive or that is still queued unsent is edited locally only; the flush sends the new
+text. Only that local edit ([MessageCommand.EditUnsentGroupMessage]) takes the group send lock, so a running
+flush never sends the text from before the edit. The edit of a message members already have takes no lock and
+never waits for a send or flush of the group.
 ```
 
 ```mermaid
@@ -438,13 +566,41 @@ stateDiagram-v2
     CheckMembership --> FindEditableMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
     FindEditableMessage --> FindRecipients : MessageEditable
+    FindRecipients --> EditUnsentMessage : RecipientsFound
     FindRecipients --> EncryptEdit : RecipientsFound
     EncryptEdit --> EnqueueEdit : EditEncrypted
     EnqueueEdit --> ReplaceText : EditEnqueued
     ReplaceText --> [*] : TextReplaced
+    EditUnsentMessage --> [*] : UnsentMessageEdited
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
+```
+
+### EditUnsentGroupMessageWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.EditUnsentGroupMessage`
+- **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/EditUnsentGroupMessageWorkflow.kt`
+- **Lock:** `groupSendLockKey(command.groupId)`
+- **Uses:** `GroupMessageRepository`, `FindEditableGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+
+```text
+FindEditableMessage -> FindRecipients -> [EncryptEdit -> EnqueueEdit] -> ReplaceText.
+
+Runs only for a message nobody had received when the public edit looked at it. It holds the group send lock and
+checks the recipients again, so a running flush either finished (and the edit is sent like any other) or sends the
+new text later; it never sends the text from before the edit.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindEditableMessage
+    FindEditableMessage --> FindRecipients : MessageEditable
+    FindRecipients --> EncryptEdit : RecipientsFound
+    FindRecipients --> ReplaceText : RecipientsFound
+    EncryptEdit --> EnqueueEdit : EditEncrypted
+    EnqueueEdit --> ReplaceText : EditEnqueued
+    ReplaceText --> [*] : TextReplaced
 ```
 
 ### FlushQueuedGroupMessagesWorkflow
@@ -452,7 +608,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.FlushQueuedGroupMessages`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/FlushQueuedGroupMessagesWorkflow.kt`
 - **Lock:** `groupSendLockKey(command.groupId)`
-- **Uses:** `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `ProtocolOutbox`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupMessageRepository`, `FindGroupMessagesToFlushUseCase`, `FindUndeliveredGroupRecipientsUseCase`, `EncryptGroupMessageUseCase`, `SaveQueuedGroupRecipientsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 FindRecipients -> FindQueuedMessages
@@ -493,7 +649,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.MarkConversationRead`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/MarkGroupConversationReadWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ConversationUnseenCountRepository`, `GroupMessageRepository`, `SendReadReceiptUseCase`
+- **Uses:** `ConversationUnseenCountRepository`, `GroupMessageRepository`, `RequireGroupConversationUseCase`, `AcknowledgeIncomingMessageUseCase`
 
 ```text
 ClearUnseenCount -> FindUnreadMessages -> (AcknowledgeMessage)* .
@@ -521,7 +677,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.RetryMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/RetryGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupMessageRepository`, `ProtocolOutbox`, `RecordRetryRequestedUseCase`
+- **Uses:** `FindRetryableGroupRecipientsUseCase`, `ProtocolOutbox`, `RecordRetryRequestedUseCase`
 
 ```text
 FindFailedRecipients -> (ResendToRecipient)* .
@@ -564,7 +720,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.SendMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/SendGroupMessageWorkflow.kt`
 - **Lock:** `groupSendLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `StoreOutgoingGroupMessageUseCase`, `DiscardGroupMessagesUseCase`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `CheckGroupMessageAccessUseCase`, `StoreOutgoingGroupMessageUseCase`, `DiscardGroupMessagesUseCase`, `EncryptGroupMessageUseCase`, `SaveQueuedGroupRecipientsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 ValidateContent -> CheckMembership -> FindRecipients -> [FlushQueuedMessages] -> StoreMessage
@@ -600,11 +756,10 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.ToggleReaction`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/ToggleGroupReactionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageReactionRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `ToggleLocalReactionUseCase`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-CheckMembership -> FindMessage -> FindRecipients -> FindLocalReaction -> (AddReaction | RemoveReaction)
--> EncryptReaction -> EnqueueReaction.
+CheckMembership -> FindMessage -> FindRecipients -> ToggleReaction -> EncryptReaction -> EnqueueReaction.
 ```
 
 ```mermaid
@@ -613,11 +768,8 @@ stateDiagram-v2
     CheckMembership --> FindMessage : MembershipActive
     CheckMembership --> Rejected : MembershipInactive
     FindMessage --> FindRecipients : MessageFound
-    FindRecipients --> FindLocalReaction : RecipientsFound
-    FindLocalReaction --> AddReaction : ReactionAbsent
-    FindLocalReaction --> RemoveReaction : ReactionPresent
-    RemoveReaction --> EncryptReaction : ReactionChanged
-    AddReaction --> EncryptReaction : ReactionChanged
+    FindRecipients --> ToggleReaction : RecipientsFound
+    ToggleReaction --> EncryptReaction : ReactionChanged
     EncryptReaction --> EnqueueReaction : ReactionEncrypted
     EnqueueReaction --> [*] : ReactionEnqueued
     Rejected --> [*]
@@ -630,7 +782,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.VotePoll`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/group/VoteGroupPollWorkflow.kt`
 - **Lock:** none
-- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `MessageAttachmentOperationsRepository`, `CheckGroupMessageAccessUseCase`, `FindGroupPollMessageUseCase`, `FindGroupRecipientsUseCase`, `FindGroupPollUseCase`, `EncryptGroupOperationUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
 CheckMembership -> FindPollMessage -> FindRecipients -> FindPoll -> SaveVote -> EncryptVote -> EnqueueVote.

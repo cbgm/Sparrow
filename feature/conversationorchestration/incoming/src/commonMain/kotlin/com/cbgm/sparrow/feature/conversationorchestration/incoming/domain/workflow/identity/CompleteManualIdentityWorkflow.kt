@@ -5,8 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckDirectPeerAuthorizedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
 import kotlin.reflect.KClass
 
@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
  */
 class CompleteManualIdentityWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val getIdentityPeerState: GetIdentityPeerStateUseCase,
+    private val checkDirectPeerAuthorized: CheckDirectPeerAuthorizedUseCase,
     private val sendIdentityVerificationReceipt: SendIdentityVerificationReceiptUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.CompleteManualIdentity,
@@ -33,12 +33,7 @@ class CompleteManualIdentityWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val contactId = step.command.contactId
         return when (step) {
-            is Step.LoadAuthorization ->
-                if (getIdentityPeerState(contactId).getOrThrow().hasEstablishedExchange) {
-                    Outcome.Authorized
-                } else {
-                    Outcome.NotAuthorized
-                }
+            is Step.LoadAuthorization -> loadAuthorization(contactId)
             is Step.ActivateConversation -> {
                 engine.run(MessageCommand.ActivateAuthorizedConversation(contactId)).getOrThrow()
                 Outcome.ConversationActivated
@@ -57,6 +52,9 @@ class CompleteManualIdentityWorkflow internal constructor(
             Outcome.ConversationActivated -> Transition.Next(Step.SendVerificationReceipt(step.command))
             Outcome.ReceiptSent -> Transition.Complete()
         }
+
+    private suspend fun loadAuthorization(contactId: String): Outcome =
+        if (checkDirectPeerAuthorized(contactId).getOrThrow()) Outcome.Authorized else Outcome.NotAuthorized
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.CompleteManualIdentity

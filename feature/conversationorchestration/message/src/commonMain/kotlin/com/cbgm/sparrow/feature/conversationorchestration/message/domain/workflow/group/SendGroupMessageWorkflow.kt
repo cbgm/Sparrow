@@ -1,7 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -12,7 +10,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupRecipientState
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.OutgoingMessageContent
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredOutgoingMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.OutgoingMessageContentPolicy
@@ -21,6 +18,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SaveQueuedGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingGroupMessageUseCase
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
@@ -39,6 +37,7 @@ class SendGroupMessageWorkflow internal constructor(
     private val storeOutgoingGroupMessage: StoreOutgoingGroupMessageUseCase,
     private val discardGroupMessages: DiscardGroupMessagesUseCase,
     private val encryptGroupMessage: EncryptGroupMessageUseCase,
+    private val saveQueuedGroupRecipients: SaveQueuedGroupRecipientsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.SendMessage,
@@ -98,19 +97,7 @@ class SendGroupMessageWorkflow internal constructor(
                 Outcome.MessageDiscarded(step.cause)
             }
             is Step.SaveRecipientStates -> {
-                val now = SystemClock.nowEpochMilliseconds()
-                messageRepository.saveRecipientStates(
-                    step.packets.map { (contactId, packet) ->
-                        GroupRecipientState(
-                            messageId = step.stored.message.id,
-                            contactId = contactId,
-                            packetId = packet.packetId,
-                            deliveryStatus = MessageDeliveryStatus.QUEUED,
-                            lastError = null,
-                            updatedAtEpochMilliseconds = now
-                        )
-                    }
-                ).getOrThrow()
+                saveQueuedGroupRecipients(step.stored.message.id, step.packets).getOrThrow()
                 Outcome.RecipientStatesSaved(step.stored, step.packets)
             }
             is Step.EnqueuePackets -> {
@@ -125,20 +112,10 @@ class SendGroupMessageWorkflow internal constructor(
             is Outcome.MembershipActive -> Transition.Next(Step.FindRecipients(outcome.content, step.command))
             is Outcome.MembershipInactive ->
                 Transition.Reject(ConversationFailure(ConversationFailureReason.NOT_ALLOWED, outcome.reason))
-            is Outcome.RecipientsFound ->
-                if (outcome.recipients.isEmpty()) {
-                    Transition.Next(Step.StoreMessage(outcome.content, outcome.recipients, step.command))
-                } else {
-                    Transition.Next(Step.FlushQueuedMessages(outcome.content, outcome.recipients, step.command))
-                }
+            is Outcome.RecipientsFound -> flushOrStore(outcome.content, outcome.recipients, step.command)
             is Outcome.QueueFlushed ->
                 Transition.Next(Step.StoreMessage(outcome.content, outcome.recipients, step.command))
-            is Outcome.MessageStored ->
-                if (outcome.recipients.isEmpty()) {
-                    Transition.Complete(ConversationResult.GroupMessageSent(outcome.stored.message.id))
-                } else {
-                    Transition.Next(Step.EncryptMessage(outcome.stored, outcome.recipients, step.command))
-                }
+            is Outcome.MessageStored -> sendOrKeepQueued(outcome.stored, outcome.recipients, step.command)
             is Outcome.EncryptionFailed ->
                 Transition.Next(Step.DiscardMessage(outcome.stored, outcome.cause, step.command))
             is Outcome.MessageDiscarded -> Transition.Reject.because(outcome.cause)
@@ -148,6 +125,30 @@ class SendGroupMessageWorkflow internal constructor(
                 Transition.Next(Step.EnqueuePackets(outcome.stored, outcome.packets, step.command))
             is Outcome.PacketsEnqueued ->
                 Transition.Complete(ConversationResult.GroupMessageSent(outcome.stored.message.id))
+        }
+
+    /** Older queued messages go first, but only when someone can receive them. */
+    private fun flushOrStore(
+        content: OutgoingMessageContent,
+        recipients: List<String>,
+        command: GroupMessageCommand.SendMessage
+    ): Transition<Step> =
+        if (recipients.isEmpty()) {
+            Transition.Next(Step.StoreMessage(content, recipients, command))
+        } else {
+            Transition.Next(Step.FlushQueuedMessages(content, recipients, command))
+        }
+
+    /** Without an active recipient the stored message stays queued until a member activates. */
+    private fun sendOrKeepQueued(
+        stored: StoredOutgoingMessage,
+        recipients: List<String>,
+        command: GroupMessageCommand.SendMessage
+    ): Transition<Step> =
+        if (recipients.isEmpty()) {
+            Transition.Complete(ConversationResult.GroupMessageSent(stored.message.id))
+        } else {
+            Transition.Next(Step.EncryptMessage(stored, recipients, command))
         }
 
     sealed interface Step : WorkflowStep {

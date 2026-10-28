@@ -75,8 +75,13 @@ class HttpMailboxGateway(
                 httpClient.delete(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}"
                 ) { bearerAuth(credential.retrievalCapability) }
-            check(response.status == HttpStatusCode.NoContent) {
+            check(response.status == HttpStatusCode.NoContent || response.status in MAILBOX_GONE) {
                 "Mailbox revocation failed with ${response.status}"
             }
         }
+
+    private companion object {
+        /** The mailbox no longer exists for this capability; revoking it again can never succeed. */
+        val MAILBOX_GONE = setOf(HttpStatusCode.NotFound, HttpStatusCode.Gone, HttpStatusCode.Unauthorized)
+    }
 }

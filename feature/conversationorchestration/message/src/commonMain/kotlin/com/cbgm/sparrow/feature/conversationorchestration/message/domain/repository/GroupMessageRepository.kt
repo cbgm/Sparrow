@@ -32,7 +32,15 @@ interface GroupMessageRepository {
 
     suspend fun findRecipientByPacketId(packetId: String): Result<GroupRecipientState?>
 
-    suspend fun replaceText(messageId: String, text: String): Result<Unit>
+    /** A local edit: the text and its edit time are always replaced. */
+    suspend fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Unit>
+
+    /**
+     * A remote edit: replaces the text only when [editedAtEpochMilliseconds] is later than the stored edit, so
+     * edits that arrive out of order keep the newest text (equal times keep the stored text). Returns whether
+     * the text was replaced.
+     */
+    suspend fun replaceTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Boolean>
 
     suspend fun delete(messages: List<StoredMessage>): Result<Unit>
 

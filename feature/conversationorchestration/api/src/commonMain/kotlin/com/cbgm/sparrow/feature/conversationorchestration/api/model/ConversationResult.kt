@@ -19,7 +19,12 @@ sealed interface ConversationResult {
         val messageId: String
     ) : ConversationResult
 
+    /**
+     * The group exists. [failedContactIds] are the contacts whose invitation failed; they are not members and can
+     * be added again.
+     */
     data class GroupCreated(
-        val groupId: String
+        val groupId: String,
+        val failedContactIds: List<String> = emptyList()
     ) : ConversationResult
 }

@@ -412,7 +412,10 @@ internal class IdentityExchangeDataSource(
                     peerIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name
             IdentityPeerState(
                 hasEstablishedExchange = hasEstablishedExchange,
-                hasMutualIdentity = hasMutualIdentity
+                hasMutualIdentity = hasMutualIdentity,
+                hasPendingExchange =
+                    !hasEstablishedExchange &&
+                        store.findLatestForContact(contactId)?.let { it.stage in PENDING_EXCHANGE_STAGES } == true
             )
         }
 
@@ -1393,6 +1396,13 @@ internal class IdentityExchangeDataSource(
             setOf(
                 IdentityHandshakeState.WAITING_FOR_READY,
                 IdentityHandshakeState.MUTUAL_UNVERIFIED
+            )
+
+        /** The invitation was sent, or accepted and the acceptance is on its way; the exchange is not closed. */
+        val PENDING_EXCHANGE_STAGES =
+            setOf(
+                IdentityExchangeStage.OUTGOING_CHALLENGE_SENT.persistedValue,
+                IdentityExchangeStage.ACCEPTANCE_SENT.persistedValue
             )
 
         val EXCHANGE_EVENT_STAGES =

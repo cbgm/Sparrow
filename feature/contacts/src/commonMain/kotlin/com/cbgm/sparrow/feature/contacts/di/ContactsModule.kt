@@ -77,7 +77,7 @@ val contactsModule =
         factory { ResolveContactInvitationRoutingIdUseCase(repository = get()) }
         factory { ResolveContactIdByRoutingIdUseCase(repository = get()) }
         factory { ReconcileContactTransportRoutingUseCase(repository = get()) }
-        factory { GetMailboxContactStatesUseCase(repository = get()) }
+        factory { GetMailboxContactStatesUseCase(repository = get(), getIdentityPeerState = get()) }
         factory { GetMutualContactSigningPublicKeyUseCase(repository = get()) }
 
         singleOf(::IdentityPeerRepositoryImpl) { bind<IdentityPeerRepository>() }

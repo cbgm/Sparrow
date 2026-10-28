@@ -8,22 +8,25 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 
 | Workflow | Started by | Command | Lock |
 |---|---|---|---|
-| [`ActivateGroupExpensesWorkflow`](#activategroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ActivateExpenses` | — |
+| [`ActivateGroupExpensesWorkflow`](#activategroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ActivateExpenses` | `"group-expense:${command.groupId}"` |
 | [`CreateGroupExpenseWorkflow`](#creategroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CreateExpense` | — |
 | [`DeleteGroupExpenseWorkflow`](#deletegroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteExpense` | — |
 | [`EditGroupExpenseWorkflow`](#editgroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.EditExpense` | — |
 | [`SendCurrentGroupExpensesWorkflow`](#sendcurrentgroupexpensesworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupExpenses` | — |
 | [`ChangeGroupAvatarWorkflow`](#changegroupavatarworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeAvatar` | — |
-| [`ChangeGroupDescriptionWorkflow`](#changegroupdescriptionworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeDescription` | `groupMetadataLockKey(command.groupId)` |
-| [`ChangeGroupTitleWorkflow`](#changegrouptitleworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeTitle` | `groupMetadataLockKey(command.groupId)` |
-| [`PublishGroupAvatarWorkflow`](#publishgroupavatarworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupAvatar` | `groupMetadataLockKey(command.groupId)` |
+| [`ChangeGroupDescriptionWorkflow`](#changegroupdescriptionworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeDescription` | — |
+| [`ChangeGroupTitleWorkflow`](#changegrouptitleworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.ChangeTitle` | — |
+| [`PublishGroupAvatarWorkflow`](#publishgroupavatarworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupAvatar` | `groupAdministrationLockKey(command.groupId)` |
+| [`PublishGroupDescriptionWorkflow`](#publishgroupdescriptionworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupDescription` | `groupAdministrationLockKey(command.groupId)` |
+| [`PublishGroupTitleWorkflow`](#publishgrouptitleworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupTitle` | `groupAdministrationLockKey(command.groupId)` |
 | [`RemoveGroupAvatarWorkflow`](#removegroupavatarworkflow) | Chats (`ConversationOrchestrator`) | `GroupAdministrationCommand.RemoveAvatar` | — |
-| [`SendCurrentGroupMetadataWorkflow`](#sendcurrentgroupmetadataworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupMetadata` | — |
+| [`SendCurrentGroupMetadataWorkflow`](#sendcurrentgroupmetadataworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupMetadata` | `groupAdministrationLockKey(command.groupId)` |
 | [`SendGroupPaymentWorkflow`](#sendgrouppaymentworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.SendPaymentTransfer` | `"payment:${command.groupId}"` |
-| [`CloseGroupExpensesWorkflow`](#closegroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CloseExpenses` | `groupPinLockKey(command.groupId)` |
-| [`PinGroupMessageWorkflow`](#pingroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.PinMessage` | `groupPinLockKey(command.groupId)` |
+| [`CloseGroupExpensesWorkflow`](#closegroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CloseExpenses` | `groupAdministrationLockKey(command.groupId)` |
+| [`PinGroupMessageWorkflow`](#pingroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.PinMessage` | — |
+| [`PublishGroupPinWorkflow`](#publishgrouppinworkflow) | orchestration (`engine.run`) | `GroupStateCommand.PublishGroupPin` | `groupAdministrationLockKey(command.groupId)` |
 | [`SendCurrentGroupPinWorkflow`](#sendcurrentgrouppinworkflow) | orchestration (`engine.run`) | `GroupStateCommand.SendCurrentGroupPin` | — |
-| [`UnpinGroupMessageWorkflow`](#unpingroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.UnpinMessage` | `groupPinLockKey(command.groupId)` |
+| [`UnpinGroupMessageWorkflow`](#unpingroupmessageworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.UnpinMessage` | — |
 
 ## `expense`
 
@@ -31,13 +34,16 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 
 - **Kind:** public — Chats submits `GroupMessageCommand.ActivateExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/ActivateGroupExpensesWorkflow.kt`
-- **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`
+- **Lock:** `"group-expense:${command.groupId}"`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateExpenseBoardUseCase`
 
 ```text
 AuthorizeAdmin -> CheckNoActiveBoard -> CreateBoard -> SendBoard -> PinBoard.
 
-An expense board is an ordinary group message part that occupies the group's pin slot.
+An expense board is an ordinary group message part that occupies the group's pin slot. Activations of one group
+run one after another under their own lock ([lockKey]), so a second tap sees the board the first one pinned in
+CheckNoActiveBoard instead of sending a second board. The nested SendMessage (group send lock) and PinMessage
+(whose publishing takes the group administration lock) never take this key, so the nesting cannot deadlock.
 ```
 
 ```mermaid
@@ -55,17 +61,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.CreateExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/CreateGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseUseCase`
 
 ```text
-FindExpenseMembers -> CreateExpense -> SendExpense.
+PrepareExpense -> SendExpense.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> CreateExpense : ExpenseMembersFound
-    CreateExpense --> SendExpense : ExpenseCreated
+    [*] --> PrepareExpense
+    PrepareExpense --> SendExpense : ExpensePrepared
     SendExpense --> [*] : ExpenseSent
 ```
 
@@ -74,17 +79,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.DeleteExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/DeleteGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `DeleteLocalExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseDeletionUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> MarkExpenseDeleted -> SendExpense -> DeleteReceipts.
+PrepareDeletion -> SendExpense -> DeleteReceipts.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> MarkExpenseDeleted : ExpenseMembersFound
-    MarkExpenseDeleted --> SendExpense : ExpenseMarkedDeleted
+    [*] --> PrepareDeletion
+    PrepareDeletion --> SendExpense : DeletionPrepared
     SendExpense --> DeleteReceipts : ExpenseSent
     DeleteReceipts --> [*] : ReceiptsDeleted
 ```
@@ -94,17 +98,16 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupMessageCommand.EditExpense`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/EditGroupExpenseWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `FindGroupExpenseMembersUseCase`, `MessageAttachmentOperationsRepository`, `MessageAttachmentRepository`, `DeleteLocalExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `PrepareGroupExpenseRevisionUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
-FindExpenseMembers -> ReviseExpense -> SendExpense -> DeleteReplacedReceipts.
+PrepareRevision -> SendExpense -> DeleteReplacedReceipts.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FindExpenseMembers
-    FindExpenseMembers --> ReviseExpense : ExpenseMembersFound
-    ReviseExpense --> SendExpense : ExpenseRevised
+    [*] --> PrepareRevision
+    PrepareRevision --> SendExpense : RevisionPrepared
     SendExpense --> DeleteReplacedReceipts : ExpenseSent
     DeleteReplacedReceipts --> [*] : ReplacedReceiptsDeleted
 ```
@@ -114,17 +117,18 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.SendCurrentGroupExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/SendCurrentGroupExpensesWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `MessageAttachmentOperationsRepository`, `GroupMessageRepository`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
+- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `LoadGroupExpenseMessagesUseCase`, `EncryptGroupMessageUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-FindBoard -> LoadExpenseMessages -> EnqueueExpenseMessages.
+FindBoard -> AuthorizeRecipient -> LoadExpenseMessages -> EnqueueExpenseMessages.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> FindBoard
-    FindBoard --> LoadExpenseMessages : BoardFound
+    FindBoard --> AuthorizeRecipient : BoardFound
     FindBoard --> [*] : NoOpenBoard
+    AuthorizeRecipient --> LoadExpenseMessages : RecipientAuthorized
     LoadExpenseMessages --> EnqueueExpenseMessages : ExpenseMessagesLoaded
     EnqueueExpenseMessages --> [*] : ExpenseMessagesEnqueued
 ```
@@ -136,16 +140,24 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.ChangeAvatar`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/ChangeGroupAvatarWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`
+- **Uses:** `WorkflowEngine`, `RequireGroupAdminContextUseCase`, `PrepareGroupAvatarUseCase`, `SaveGroupAvatarUseCase`
 
 ```text
-ValidateAvatar -> PublishAvatar.
+ValidateAvatar -> AuthorizeAdmin -> PrepareAvatar -> SaveAvatar -> PublishAvatar.
+
+The new avatar is saved as unpublished right away, so the user sees it at once without waiting for a running
+membership change. Only the publishing ([GroupStateCommand.PublishGroupAvatar]) waits for the group
+administration lock. A failed or interrupted publish leaves the avatar unpublished: the same change again, or the
+recovery after the next start, publishes it.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> ValidateAvatar
-    ValidateAvatar --> PublishAvatar : AvatarValid
+    ValidateAvatar --> AuthorizeAdmin : AvatarValid
+    AuthorizeAdmin --> PrepareAvatar : AdminAuthorized
+    PrepareAvatar --> SaveAvatar : AvatarPrepared
+    SaveAvatar --> PublishAvatar : AvatarSaved
     PublishAvatar --> [*] : AvatarPublished
 ```
 
@@ -153,65 +165,138 @@ stateDiagram-v2
 
 - **Kind:** public — Chats submits `GroupAdministrationCommand.ChangeDescription`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/ChangeGroupDescriptionWorkflow.kt`
-- **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupDescriptionRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupDescriptionPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `RequireGroupAdminContextUseCase`, `PrepareGroupDescriptionUseCase`, `SaveGroupDescriptionUseCase`
 
 ```text
-AuthorizeAdmin -> LoadDescription -> SaveDescription -> CreateDescriptionPackets -> EnqueueDescriptionPackets. An unchanged description stops after LoadDescription.
+AuthorizeAdmin -> PrepareDescription -> SaveDescription -> PublishDescription.
+An unchanged description that was published already stops after PrepareDescription.
+
+The new description is saved as unpublished right away, so the user sees it at once without waiting for a running
+membership change. Only the publishing ([GroupStateCommand.PublishGroupDescription]) waits for the group administration
+lock. A failed or interrupted publish leaves the description unpublished: the same change again, or the recovery after
+the next start, publishes it.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadDescription : AdminAuthorized
-    LoadDescription --> SaveDescription : DescriptionLoaded
-    LoadDescription --> [*] : DescriptionUnchanged
-    SaveDescription --> CreateDescriptionPackets : DescriptionSaved
-    CreateDescriptionPackets --> EnqueueDescriptionPackets : DescriptionPacketsCreated
-    EnqueueDescriptionPackets --> [*] : DescriptionPacketsEnqueued
+    AuthorizeAdmin --> PrepareDescription : AdminAuthorized
+    PrepareDescription --> SaveDescription : DescriptionPrepared
+    PrepareDescription --> [*] : DescriptionUnchanged
+    SaveDescription --> PublishDescription : DescriptionSaved
+    PublishDescription --> [*] : DescriptionPublished
 ```
 
 ### ChangeGroupTitleWorkflow
 
 - **Kind:** public — Chats submits `GroupAdministrationCommand.ChangeTitle`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/ChangeGroupTitleWorkflow.kt`
-- **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupTitleRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupTitlePacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `RequireGroupAdminContextUseCase`, `PrepareGroupTitleUseCase`, `SaveGroupTitleUseCase`
 
 ```text
-AuthorizeAdmin -> LoadTitle -> SaveTitle -> CreateTitlePackets -> EnqueueTitlePackets. An unchanged title stops after LoadTitle.
+AuthorizeAdmin -> PrepareTitle -> SaveTitle -> PublishTitle.
+An unchanged title that was published already stops after PrepareTitle.
+
+The new title is saved as unpublished right away, so the user sees it at once without waiting for a running
+membership change. Only the publishing ([GroupStateCommand.PublishGroupTitle]) waits for the group administration
+lock. A failed or interrupted publish leaves the title unpublished: the same change again, or the recovery after
+the next start, publishes it.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadTitle : AdminAuthorized
-    LoadTitle --> SaveTitle : TitleLoaded
-    LoadTitle --> [*] : TitleUnchanged
-    SaveTitle --> CreateTitlePackets : TitleSaved
-    CreateTitlePackets --> EnqueueTitlePackets : TitlePacketsCreated
-    EnqueueTitlePackets --> [*] : TitlePacketsEnqueued
+    AuthorizeAdmin --> PrepareTitle : AdminAuthorized
+    PrepareTitle --> SaveTitle : TitlePrepared
+    PrepareTitle --> [*] : TitleUnchanged
+    SaveTitle --> PublishTitle : TitleSaved
+    PublishTitle --> [*] : TitlePublished
 ```
 
 ### PublishGroupAvatarWorkflow
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.PublishGroupAvatar`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/PublishGroupAvatarWorkflow.kt`
-- **Lock:** `groupMetadataLockKey(command.groupId)`
-- **Uses:** `GroupAvatarRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupAvatarPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
+- **Uses:** `GroupAvatarRepository`, `FindUnpublishedGroupStateUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupAvatarPacketsUseCase`, `EnqueueGroupPacketsUseCase`
 
 ```text
-AuthorizeAdmin -> LoadAvatar -> SaveAvatar -> CreateAvatarPackets -> EnqueueAvatarPackets.
+FindUnpublishedAvatar -> AuthorizeAdmin -> CreateAvatarPackets -> EnqueueAvatarPackets -> MarkAvatarPublished.
+Without an unpublished avatar (published already, or replaced by a newer one from another admin) it stops
+after FindUnpublishedAvatar.
+
+The avatar or its removal was saved locally before; this workflow only sends it. It holds the group administration lock, so the
+packets are signed for the epoch and recipients that are current when they are queued. The avatar is marked
+published only while it is still the stored version; a failed send leaves it unpublished for the next attempt.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> AuthorizeAdmin
-    AuthorizeAdmin --> LoadAvatar : AdminAuthorized
-    LoadAvatar --> SaveAvatar : AvatarLoaded
-    SaveAvatar --> CreateAvatarPackets : AvatarSaved
+    [*] --> FindUnpublishedAvatar
+    FindUnpublishedAvatar --> [*] : NothingToPublish
+    FindUnpublishedAvatar --> AuthorizeAdmin : UnpublishedAvatarFound
+    AuthorizeAdmin --> CreateAvatarPackets : AdminAuthorized
     CreateAvatarPackets --> EnqueueAvatarPackets : AvatarPacketsCreated
-    EnqueueAvatarPackets --> [*] : AvatarPacketsEnqueued
+    EnqueueAvatarPackets --> MarkAvatarPublished : AvatarPacketsEnqueued
+    MarkAvatarPublished --> [*] : AvatarPublished
+```
+
+### PublishGroupDescriptionWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.PublishGroupDescription`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/PublishGroupDescriptionWorkflow.kt`
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
+- **Uses:** `GroupDescriptionRepository`, `FindUnpublishedGroupStateUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupDescriptionPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+
+```text
+FindUnpublishedDescription -> AuthorizeAdmin -> CreateDescriptionPackets -> EnqueueDescriptionPackets -> MarkDescriptionPublished.
+Without an unpublished description (published already, or replaced by a newer one from another admin) it stops
+after FindUnpublishedDescription.
+
+The description was saved locally before; this workflow only sends it. It holds the group administration lock, so the
+packets are signed for the epoch and recipients that are current when they are queued. The description is marked
+published only while it is still the stored version; a failed send leaves it unpublished for the next attempt.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindUnpublishedDescription
+    FindUnpublishedDescription --> [*] : NothingToPublish
+    FindUnpublishedDescription --> AuthorizeAdmin : UnpublishedDescriptionFound
+    AuthorizeAdmin --> CreateDescriptionPackets : AdminAuthorized
+    CreateDescriptionPackets --> EnqueueDescriptionPackets : DescriptionPacketsCreated
+    EnqueueDescriptionPackets --> MarkDescriptionPublished : DescriptionPacketsEnqueued
+    MarkDescriptionPublished --> [*] : DescriptionPublished
+```
+
+### PublishGroupTitleWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.PublishGroupTitle`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/PublishGroupTitleWorkflow.kt`
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
+- **Uses:** `GroupTitleRepository`, `FindUnpublishedGroupStateUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupTitlePacketsUseCase`, `EnqueueGroupPacketsUseCase`
+
+```text
+FindUnpublishedTitle -> AuthorizeAdmin -> CreateTitlePackets -> EnqueueTitlePackets -> MarkTitlePublished.
+Without an unpublished title (published already, or replaced by a newer one from another admin) it stops
+after FindUnpublishedTitle.
+
+The title was saved locally before; this workflow only sends it. It holds the group administration lock, so the
+packets are signed for the epoch and recipients that are current when they are queued. The title is marked
+published only while it is still the stored version; a failed send leaves it unpublished for the next attempt.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindUnpublishedTitle
+    FindUnpublishedTitle --> [*] : NothingToPublish
+    FindUnpublishedTitle --> AuthorizeAdmin : UnpublishedTitleFound
+    AuthorizeAdmin --> CreateTitlePackets : AdminAuthorized
+    CreateTitlePackets --> EnqueueTitlePackets : TitlePacketsCreated
+    EnqueueTitlePackets --> MarkTitlePublished : TitlePacketsEnqueued
+    MarkTitlePublished --> [*] : TitlePublished
 ```
 
 ### RemoveGroupAvatarWorkflow
@@ -219,29 +304,39 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.RemoveAvatar`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/RemoveGroupAvatarWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`
+- **Uses:** `WorkflowEngine`, `RequireGroupAdminContextUseCase`, `PrepareGroupAvatarUseCase`, `SaveGroupAvatarUseCase`
 
 ```text
-PublishRemoval: the removal is published like any other avatar change.
+AuthorizeAdmin -> PrepareAvatar -> SaveAvatar -> PublishAvatar. The removal is a new avatar version without an image.
+
+The new avatar is saved as unpublished right away, so the user sees it at once without waiting for a running
+membership change. Only the publishing ([GroupStateCommand.PublishGroupAvatar]) waits for the group
+administration lock. A failed or interrupted publish leaves the avatar unpublished: the same change again, or the
+recovery after the next start, publishes it.
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PublishRemoval
-    PublishRemoval --> [*] : RemovalPublished
+    [*] --> AuthorizeAdmin
+    AuthorizeAdmin --> PrepareAvatar : AdminAuthorized
+    PrepareAvatar --> SaveAvatar : AvatarPrepared
+    SaveAvatar --> PublishAvatar : AvatarSaved
+    PublishAvatar --> [*] : AvatarPublished
 ```
 
 ### SendCurrentGroupMetadataWorkflow
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.SendCurrentGroupMetadata`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/metadata/SendCurrentGroupMetadataWorkflow.kt`
-- **Lock:** none
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
 - **Uses:** `WorkflowEngine`, `SendCurrentGroupTitleUseCase`, `SendCurrentGroupDescriptionUseCase`, `SendCurrentGroupAvatarUseCase`
 
 ```text
 SendTitle -> SendDescription -> SendAvatar -> SendPin -> SendExpenses.
 
-Every item is replayed independently: a failed item is logged and the next one is still sent.
+Every item is replayed independently: a failed item is logged and the next one is still sent. The replay holds
+the group administration lock, so no epoch rotation runs between authorizing the member and queueing an item;
+the nested pin and expense replays take no lock of their own.
 ```
 
 ```mermaid
@@ -281,31 +376,36 @@ stateDiagram-v2
 
 - **Kind:** public — Chats submits `GroupMessageCommand.CloseExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/CloseGroupExpensesWorkflow.kt`
-- **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `DeleteLocalExpenseReceiptsUseCase`
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `FindExpenseBoardClosureUseCase`, `CreateExpenseBoardUseCase`, `PrepareEmptyGroupPinUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`, `SaveGroupPinUseCase`, `DeleteLocalExpenseReceiptsUseCase`
 
 ```text
 Closes the open expense board: announces the closing as an ordinary encrypted group message,
 then clears the pin slot the board occupies.
 
-AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> DeleteReceipts -> SaveEmptyPin -> CreatePinPackets
-  -> EnqueuePinPackets.
+AuthorizeAdmin -> FindPin -> FindBoardClosure -> [SendBoardClosedMessage] -> DeleteReceipts -> PrepareEmptyPin
+  -> CreatePinPackets -> EnqueuePinPackets -> SaveEmptyPin.
 
-The closing message is queued before the pin is released, so a failed send never closes the board.
+The closing message is queued before the pin is released, so a failed send never closes the board. Every step
+can run again: a retry after a failure finds the stored closing message and does not announce it twice, and the
+pin stays until its packets are queued, so the retry still releases it for every member.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> AuthorizeAdmin
     AuthorizeAdmin --> FindPin : AdminAuthorized
-    FindPin --> SendBoardClosedMessage : ExpenseBoardFound
+    FindPin --> FindBoardClosure : ExpenseBoardFound
     FindPin --> Rejected : NoActiveExpenseBoard
     FindPin --> [*] : NothingPinned
+    FindBoardClosure --> DeleteReceipts : BoardClosedMessageSent
+    FindBoardClosure --> SendBoardClosedMessage : BoardNotAnnounced
     SendBoardClosedMessage --> DeleteReceipts : BoardClosedMessageSent
-    DeleteReceipts --> SaveEmptyPin : ReceiptsDeleted
-    SaveEmptyPin --> CreatePinPackets : EmptyPinSaved
+    DeleteReceipts --> PrepareEmptyPin : ReceiptsDeleted
+    PrepareEmptyPin --> CreatePinPackets : EmptyPinPrepared
     CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
-    EnqueuePinPackets --> [*] : PinPacketsEnqueued
+    EnqueuePinPackets --> SaveEmptyPin : PinPacketsEnqueued
+    SaveEmptyPin --> [*] : EmptyPinSaved
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
@@ -315,14 +415,16 @@ stateDiagram-v2
 
 - **Kind:** public — Chats submits `GroupMessageCommand.PinMessage`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/PinGroupMessageWorkflow.kt`
-- **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `GroupMessageRepository`, `GroupPinRepository`, `MessageAttachmentOperationsRepository`, `FindGroupMessageUseCase`, `GetGroupPinSenderSigningKeyUseCase`, `GetRemoteIdentityUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `FindPinnableGroupMessageUseCase`, `ResolveGroupPinSenderKeyUseCase`, `RequireGroupAdminContextUseCase`, `PrepareGroupPinUseCase`, `SaveGroupPinUseCase`
 
 ```text
-FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> CheckPinSlot -> SavePin -> CreatePinPackets
--> EnqueuePinPackets.
+FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> PreparePin -> SavePin -> PublishPin.
 
-The pin snapshot keeps the sender's signing key so every member can verify who wrote the message.
+The pin snapshot keeps the sender's signing key so every member can verify who wrote the message. The pin is
+saved as unpublished right away, so the user sees it at once; only the publishing
+([GroupStateCommand.PublishGroupPin]) waits for the group administration lock. A pin that was never published is
+not skipped as "already pinned": pinning it again, or the recovery after the next start, publishes it.
 ```
 
 ```mermaid
@@ -331,17 +433,44 @@ stateDiagram-v2
     FindPinTarget --> AuthorizeAdmin : TargetAlreadyPinned
     FindPinTarget --> ResolveSenderKey : TargetFound
     ResolveSenderKey --> AuthorizeAdmin : SenderKeyResolved
-    AuthorizeAdmin --> CheckPinSlot : AdminAuthorized
+    AuthorizeAdmin --> PreparePin : AdminAuthorized
     AuthorizeAdmin --> [*] : AdminAuthorized
-    CheckPinSlot --> [*] : AlreadyPinned
-    CheckPinSlot --> SavePin : SlotFree
-    CheckPinSlot --> Rejected : SlotOccupiedByExpenses
-    SavePin --> CreatePinPackets : PinSaved
-    CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
-    EnqueuePinPackets --> [*] : PinPacketsEnqueued
+    PreparePin --> [*] : AlreadyPinned
+    PreparePin --> SavePin : PinPrepared
+    PreparePin --> Rejected : SlotOccupiedByExpenses
+    SavePin --> PublishPin : PinSaved
+    PublishPin --> [*] : PinPublished
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject
+```
+
+### PublishGroupPinWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `GroupStateCommand.PublishGroupPin`
+- **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/PublishGroupPinWorkflow.kt`
+- **Lock:** `groupAdministrationLockKey(command.groupId)`
+- **Uses:** `GroupPinRepository`, `FindUnpublishedGroupStateUseCase`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+
+```text
+FindUnpublishedPin -> AuthorizeAdmin -> CreatePinPackets -> EnqueuePinPackets -> MarkPinPublished.
+Without an unpublished pin (published already, or replaced by a newer one from another admin) it stops
+after FindUnpublishedPin.
+
+The pin slot was saved locally before; this workflow only sends it. It holds the group administration lock, so the
+packets are signed for the epoch and recipients that are current when they are queued. The pin is marked
+published only while it is still the stored version; a failed send leaves it unpublished for the next attempt.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindUnpublishedPin
+    FindUnpublishedPin --> [*] : NothingToPublish
+    FindUnpublishedPin --> AuthorizeAdmin : UnpublishedPinFound
+    AuthorizeAdmin --> CreatePinPackets : AdminAuthorized
+    CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
+    EnqueuePinPackets --> MarkPinPublished : PinPacketsEnqueued
+    MarkPinPublished --> [*] : PinPublished
 ```
 
 ### SendCurrentGroupPinWorkflow
@@ -368,13 +497,17 @@ stateDiagram-v2
 
 - **Kind:** public — Chats submits `GroupMessageCommand.UnpinMessage`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/pin/UnpinGroupMessageWorkflow.kt`
-- **Lock:** `groupPinLockKey(command.groupId)`
-- **Uses:** `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateGroupPinPacketsUseCase`, `EnqueueGroupPacketsUseCase`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `PrepareEmptyGroupPinUseCase`, `SaveGroupPinUseCase`
 
 ```text
 Removes a pinned message; an open expense board must be closed instead.
 
-AuthorizeAdmin -> FindPin -> SaveEmptyPin -> CreatePinPackets -> EnqueuePinPackets.
+AuthorizeAdmin -> FindPin -> [PrepareEmptyPin -> SaveEmptyPin] -> PublishPin.
+
+The slot is cleared locally right away as unpublished, so the user sees it at once; only the publishing
+([GroupStateCommand.PublishGroupPin]) waits for the group administration lock. An empty slot that was never
+published is published again instead of reported as "nothing pinned".
 ```
 
 ```mermaid
@@ -382,11 +515,12 @@ stateDiagram-v2
     [*] --> AuthorizeAdmin
     AuthorizeAdmin --> FindPin : AdminAuthorized
     FindPin --> [*] : NothingPinned
-    FindPin --> SaveEmptyPin : PinFound
+    FindPin --> PrepareEmptyPin : PinFound
     FindPin --> Rejected : PinNotRemovable
-    SaveEmptyPin --> CreatePinPackets : EmptyPinSaved
-    CreatePinPackets --> EnqueuePinPackets : PinPacketsCreated
-    EnqueuePinPackets --> [*] : PinPacketsEnqueued
+    FindPin --> PublishPin : UnpinNotPublished
+    PrepareEmptyPin --> SaveEmptyPin : EmptyPinPrepared
+    SaveEmptyPin --> PublishPin : EmptyPinSaved
+    PublishPin --> [*] : PinPublished
     Rejected --> [*]
     classDef reject fill:#f8d7da,stroke:#b02a37,color:#58151c
     class Rejected reject

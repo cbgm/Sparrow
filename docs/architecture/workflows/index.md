@@ -7,8 +7,8 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | Module | Workflows | Public | Internal |
 |---|---|---|---|
 | [Delivery workflows](delivery.md) | 2 | 0 | 2 |
-| [Message workflows](message.md) | 22 | 17 | 5 |
-| [Group state workflows](groupstate.md) | 16 | 12 | 4 |
+| [Message workflows](message.md) | 27 | 17 | 10 |
+| [Group state workflows](groupstate.md) | 19 | 12 | 7 |
 | [Membership workflows](membership.md) | 14 | 9 | 5 |
 | [Direct chat lifecycle workflows](lifecycle.md) | 14 | 3 | 11 |
 | [Incoming packet workflows](incoming.md) | 31 | 0 | 31 |
@@ -30,8 +30,8 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `ForwardMessage` | [`ForwardMessageWorkflow`](message.md#forwardmessageworkflow) | `message` | — |
 | `GroupAdministrationCommand.AddMembers` | [`AddGroupMembersWorkflow`](membership.md#addgroupmembersworkflow) | `membership` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.ChangeAvatar` | [`ChangeGroupAvatarWorkflow`](groupstate.md#changegroupavatarworkflow) | `groupstate` | — |
-| `GroupAdministrationCommand.ChangeDescription` | [`ChangeGroupDescriptionWorkflow`](groupstate.md#changegroupdescriptionworkflow) | `groupstate` | `groupMetadataLockKey(command.groupId)` |
-| `GroupAdministrationCommand.ChangeTitle` | [`ChangeGroupTitleWorkflow`](groupstate.md#changegrouptitleworkflow) | `groupstate` | `groupMetadataLockKey(command.groupId)` |
+| `GroupAdministrationCommand.ChangeDescription` | [`ChangeGroupDescriptionWorkflow`](groupstate.md#changegroupdescriptionworkflow) | `groupstate` | — |
+| `GroupAdministrationCommand.ChangeTitle` | [`ChangeGroupTitleWorkflow`](groupstate.md#changegrouptitleworkflow) | `groupstate` | — |
 | `GroupAdministrationCommand.CreateGroup` | [`CreateGroupWorkflow`](membership.md#creategroupworkflow) | `membership` | — |
 | `GroupAdministrationCommand.DeleteGroup` | [`DeleteGroupWorkflow`](membership.md#deletegroupworkflow) | `membership` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.LeaveGroup` | [`LeaveGroupWorkflow`](membership.md#leavegroupworkflow) | `membership` | `groupAdministrationLockKey(command.groupId)` |
@@ -41,8 +41,8 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupAdministrationCommand.SynchronizeVerification` | [`SynchronizeGroupVerificationWorkflow`](membership.md#synchronizegroupverificationworkflow) | `membership` | `groupVerificationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.TransferAdminAndLeave` | [`TransferGroupAdminAndLeaveWorkflow`](membership.md#transfergroupadminandleaveworkflow) | `membership` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.VerifyMember` | [`VerifyGroupMemberWorkflow`](membership.md#verifygroupmemberworkflow) | `membership` | `groupVerificationLockKey(command.groupId)` |
-| `GroupMessageCommand.ActivateExpenses` | [`ActivateGroupExpensesWorkflow`](groupstate.md#activategroupexpensesworkflow) | `groupstate` | — |
-| `GroupMessageCommand.CloseExpenses` | [`CloseGroupExpensesWorkflow`](groupstate.md#closegroupexpensesworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |
+| `GroupMessageCommand.ActivateExpenses` | [`ActivateGroupExpensesWorkflow`](groupstate.md#activategroupexpensesworkflow) | `groupstate` | `"group-expense:${command.groupId}"` |
+| `GroupMessageCommand.CloseExpenses` | [`CloseGroupExpensesWorkflow`](groupstate.md#closegroupexpensesworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupMessageCommand.ClosePoll` | [`CloseGroupPollWorkflow`](message.md#closegrouppollworkflow) | `message` | — |
 | `GroupMessageCommand.CreateExpense` | [`CreateGroupExpenseWorkflow`](groupstate.md#creategroupexpenseworkflow) | `groupstate` | — |
 | `GroupMessageCommand.DeleteExpense` | [`DeleteGroupExpenseWorkflow`](groupstate.md#deletegroupexpenseworkflow) | `groupstate` | — |
@@ -50,13 +50,13 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupMessageCommand.EditExpense` | [`EditGroupExpenseWorkflow`](groupstate.md#editgroupexpenseworkflow) | `groupstate` | — |
 | `GroupMessageCommand.EditMessage` | [`EditGroupMessageWorkflow`](message.md#editgroupmessageworkflow) | `message` | — |
 | `GroupMessageCommand.MarkConversationRead` | [`MarkGroupConversationReadWorkflow`](message.md#markgroupconversationreadworkflow) | `message` | — |
-| `GroupMessageCommand.PinMessage` | [`PinGroupMessageWorkflow`](groupstate.md#pingroupmessageworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |
+| `GroupMessageCommand.PinMessage` | [`PinGroupMessageWorkflow`](groupstate.md#pingroupmessageworkflow) | `groupstate` | — |
 | `GroupMessageCommand.RetryMessage` | [`RetryGroupMessageWorkflow`](message.md#retrygroupmessageworkflow) | `message` | — |
 | `GroupMessageCommand.SendIndicator` | [`SendGroupIndicatorWorkflow`](message.md#sendgroupindicatorworkflow) | `message` | — |
 | `GroupMessageCommand.SendMessage` | [`SendGroupMessageWorkflow`](message.md#sendgroupmessageworkflow) | `message` | `groupSendLockKey(command.groupId)` |
 | `GroupMessageCommand.SendPaymentTransfer` | [`SendGroupPaymentWorkflow`](groupstate.md#sendgrouppaymentworkflow) | `groupstate` | `"payment:${command.groupId}"` |
 | `GroupMessageCommand.ToggleReaction` | [`ToggleGroupReactionWorkflow`](message.md#togglegroupreactionworkflow) | `message` | — |
-| `GroupMessageCommand.UnpinMessage` | [`UnpinGroupMessageWorkflow`](groupstate.md#unpingroupmessageworkflow) | `groupstate` | `groupPinLockKey(command.groupId)` |
+| `GroupMessageCommand.UnpinMessage` | [`UnpinGroupMessageWorkflow`](groupstate.md#unpingroupmessageworkflow) | `groupstate` | — |
 | `GroupMessageCommand.VotePoll` | [`VoteGroupPollWorkflow`](message.md#votegrouppollworkflow) | `message` | — |
 
 ## Internal commands (`engine.run(command)`)
@@ -65,9 +65,12 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 |---|---|---|---|
 | `DeliveryCommand.ApplyDeliveryEvent` | [`ApplyDeliveryEventWorkflow`](delivery.md#applydeliveryeventworkflow) | `delivery` | `DELIVERY_LOCK_KEY` |
 | `DeliveryCommand.RecordPreparedTransport` | [`RecordPreparedTransportWorkflow`](delivery.md#recordpreparedtransportworkflow) | `delivery` | — |
-| `GroupStateCommand.PublishGroupAvatar` | [`PublishGroupAvatarWorkflow`](groupstate.md#publishgroupavatarworkflow) | `groupstate` | `groupMetadataLockKey(command.groupId)` |
+| `GroupStateCommand.PublishGroupAvatar` | [`PublishGroupAvatarWorkflow`](groupstate.md#publishgroupavatarworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
+| `GroupStateCommand.PublishGroupDescription` | [`PublishGroupDescriptionWorkflow`](groupstate.md#publishgroupdescriptionworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
+| `GroupStateCommand.PublishGroupPin` | [`PublishGroupPinWorkflow`](groupstate.md#publishgrouppinworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
+| `GroupStateCommand.PublishGroupTitle` | [`PublishGroupTitleWorkflow`](groupstate.md#publishgrouptitleworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupStateCommand.SendCurrentGroupExpenses` | [`SendCurrentGroupExpensesWorkflow`](groupstate.md#sendcurrentgroupexpensesworkflow) | `groupstate` | — |
-| `GroupStateCommand.SendCurrentGroupMetadata` | [`SendCurrentGroupMetadataWorkflow`](groupstate.md#sendcurrentgroupmetadataworkflow) | `groupstate` | — |
+| `GroupStateCommand.SendCurrentGroupMetadata` | [`SendCurrentGroupMetadataWorkflow`](groupstate.md#sendcurrentgroupmetadataworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupStateCommand.SendCurrentGroupPin` | [`SendCurrentGroupPinWorkflow`](groupstate.md#sendcurrentgrouppinworkflow) | `groupstate` | — |
 | `IncomingCommand.ApplyParkedMessageOperations` | [`ApplyParkedMessageOperationsWorkflow`](incoming.md#applyparkedmessageoperationsworkflow) | `incoming` | — |
 | `IncomingCommand.ApplyRemoteMessageOperation` | [`ApplyRemoteMessageOperationWorkflow`](incoming.md#applyremotemessageoperationworkflow) | `incoming` | — |
@@ -117,10 +120,15 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `MembershipCommand.RefreshOwnedGroupVerification` | [`RefreshOwnedGroupVerificationWorkflow`](membership.md#refreshownedgroupverificationworkflow) | `membership` | `groupVerificationLockKey(command.groupId)` |
 | `MembershipCommand.ResumeApprovedGroupJoin` | [`ResumeApprovedGroupJoinWorkflow`](membership.md#resumeapprovedgroupjoinworkflow) | `membership` | — |
 | `MessageCommand.ActivateAuthorizedConversation` | [`ActivateAuthorizedConversationWorkflow`](message.md#activateauthorizedconversationworkflow) | `message` | — |
+| `MessageCommand.DeleteOwnDirectMessage` | [`DeleteOwnDirectMessageWorkflow`](message.md#deleteowndirectmessageworkflow) | `message` | `directReleaseLockKey(command.target.contactId)` |
+| `MessageCommand.DeleteUnsentGroupMessage` | [`DeleteUnsentGroupMessageWorkflow`](message.md#deleteunsentgroupmessageworkflow) | `message` | `groupSendLockKey(command.groupId)` |
 | `MessageCommand.DeliverDirectMessage` | [`DeliverDirectMessageWorkflow`](message.md#deliverdirectmessageworkflow) | `message` | — |
-| `MessageCommand.DiscardWaitingDirectMessages` | [`DiscardWaitingDirectMessagesWorkflow`](message.md#discardwaitingdirectmessagesworkflow) | `message` | `"direct-release:${command.contactId}"` |
+| `MessageCommand.DiscardWaitingDirectMessages` | [`DiscardWaitingDirectMessagesWorkflow`](message.md#discardwaitingdirectmessagesworkflow) | `message` | `directReleaseLockKey(command.contactId)` |
+| `MessageCommand.EditOwnDirectMessage` | [`EditOwnDirectMessageWorkflow`](message.md#editowndirectmessageworkflow) | `message` | `directReleaseLockKey(command.target.contactId)` |
+| `MessageCommand.EditUnsentGroupMessage` | [`EditUnsentGroupMessageWorkflow`](message.md#editunsentgroupmessageworkflow) | `message` | `groupSendLockKey(command.groupId)` |
 | `MessageCommand.FlushQueuedGroupMessages` | [`FlushQueuedGroupMessagesWorkflow`](message.md#flushqueuedgroupmessagesworkflow) | `message` | `groupSendLockKey(command.groupId)` |
-| `MessageCommand.ReleaseWaitingDirectMessages` | [`ReleaseWaitingDirectMessagesWorkflow`](message.md#releasewaitingdirectmessagesworkflow) | `message` | `"direct-release:${command.contactId}"` |
+| `MessageCommand.ReleaseWaitingDirectMessages` | [`ReleaseWaitingDirectMessagesWorkflow`](message.md#releasewaitingdirectmessagesworkflow) | `message` | `directReleaseLockKey(command.contactId)` |
+| `MessageCommand.StoreWaitingDirectMessage` | [`StoreWaitingDirectMessageWorkflow`](message.md#storewaitingdirectmessageworkflow) | `message` | `directReleaseLockKey(command.contactId)` |
 
 ## Locks
 
@@ -128,11 +136,10 @@ Workflows that share a lock key never run at the same time (`WorkflowLocks`). Lo
 
 | Lock key | Workflows |
 |---|---|
-| `"direct-release:${command.contactId}"` | `DiscardWaitingDirectMessagesWorkflow`, `ReleaseWaitingDirectMessagesWorkflow` |
+| `"group-expense:${command.groupId}"` | `ActivateGroupExpensesWorkflow` |
 | `"payment:${command.groupId}"` | `SendGroupPaymentWorkflow` |
 | `DELIVERY_LOCK_KEY` | `ApplyDeliveryEventWorkflow` |
-| `groupAdministrationLockKey` | `AddGroupMembersWorkflow`, `DeleteGroupWorkflow`, `LeaveGroupWorkflow`, `PromoteGroupMemberWorkflow`, `RemoveGroupMemberWorkflow`, `TransferGroupAdminAndLeaveWorkflow` |
-| `groupMetadataLockKey` | `ChangeGroupDescriptionWorkflow`, `ChangeGroupTitleWorkflow`, `PublishGroupAvatarWorkflow` |
-| `groupPinLockKey` | `CloseGroupExpensesWorkflow`, `PinGroupMessageWorkflow`, `UnpinGroupMessageWorkflow` |
-| `groupSendLockKey` | `FlushQueuedGroupMessagesWorkflow`, `SendGroupMessageWorkflow` |
+| `directReleaseLockKey` | `DeleteOwnDirectMessageWorkflow`, `DiscardWaitingDirectMessagesWorkflow`, `EditOwnDirectMessageWorkflow`, `ReleaseWaitingDirectMessagesWorkflow`, `StoreWaitingDirectMessageWorkflow` |
+| `groupAdministrationLockKey` | `AddGroupMembersWorkflow`, `CloseGroupExpensesWorkflow`, `DeleteGroupWorkflow`, `LeaveGroupWorkflow`, `PromoteGroupMemberWorkflow`, `PublishGroupAvatarWorkflow`, `PublishGroupDescriptionWorkflow`, `PublishGroupPinWorkflow`, `PublishGroupTitleWorkflow`, `RemoveGroupMemberWorkflow`, `SendCurrentGroupMetadataWorkflow`, `TransferGroupAdminAndLeaveWorkflow` |
+| `groupSendLockKey` | `DeleteUnsentGroupMessageWorkflow`, `EditUnsentGroupMessageWorkflow`, `FlushQueuedGroupMessagesWorkflow`, `SendGroupMessageWorkflow` |
 | `groupVerificationLockKey` | `ReceiveVerificationReceiptWorkflow`, `ReceiveVerificationSnapshotRequestWorkflow`, `ReceiveVerificationSnapshotWorkflow`, `RefreshOwnedGroupVerificationWorkflow`, `SynchronizeGroupVerificationWorkflow`, `VerifyGroupMemberWorkflow` |

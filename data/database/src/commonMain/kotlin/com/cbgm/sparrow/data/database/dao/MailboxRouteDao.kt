@@ -2,9 +2,11 @@ package com.cbgm.sparrow.data.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
+import com.cbgm.sparrow.data.database.entity.RetiringMailboxCredentialEntity
 
 @Dao
 interface MailboxRouteDao {
@@ -46,4 +48,23 @@ interface MailboxRouteDao {
 
     @Query("DELETE FROM remote_mailbox_routes")
     suspend fun deleteAllRemote()
+
+    @Query("SELECT * FROM retiring_mailbox_credentials")
+    suspend fun allRetiring(): List<RetiringMailboxCredentialEntity>
+
+    @Upsert
+    suspend fun upsertRetiring(entity: RetiringMailboxCredentialEntity)
+
+    /** The renewed credential replaces the current one only together with keeping the old one as retiring. */
+    @Transaction
+    suspend fun retireLocal(retiring: RetiringMailboxCredentialEntity, replacement: LocalMailboxCredentialEntity) {
+        upsertRetiring(retiring)
+        upsertLocal(replacement)
+    }
+
+    @Query("UPDATE retiring_mailbox_credentials SET revocationPending = 1 WHERE contactId = :contactId")
+    suspend fun markRetiringRevocationPending(contactId: String)
+
+    @Query("DELETE FROM retiring_mailbox_credentials WHERE routeId = :routeId")
+    suspend fun deleteRetiring(routeId: String)
 }

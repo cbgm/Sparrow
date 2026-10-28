@@ -54,6 +54,7 @@ internal class GroupIncomingConversationRepositoryImpl(
         previousSigningKeysByContactId: Map<String, ByteArray>,
         contactIdsByMember: List<String?>,
         contactDisplayNames: Map<String, String>,
+        isFirstWelcome: Boolean,
         persistedAt: Long
     ): Result<Set<String>> = runCatching {
         require(contactIdsByMember.size == packet.members.size) {
@@ -80,7 +81,7 @@ internal class GroupIncomingConversationRepositoryImpl(
             contactDisplayNames = contactDisplayNames,
             persistedAt = persistedAt
         )
-        dataSource.upsertConversation(
+        dataSource.upsertWelcomeConversation(
             ConversationEntity(
                 id = packet.groupId,
                 contactId = null,
@@ -89,7 +90,8 @@ internal class GroupIncomingConversationRepositoryImpl(
                 updatedAtEpochMilliseconds = persistedAt,
                 isVisible = true
             ),
-            title = packet.title
+            title = packet.title,
+            isFirstWelcome = isFirstWelcome
         )
         removed
     }

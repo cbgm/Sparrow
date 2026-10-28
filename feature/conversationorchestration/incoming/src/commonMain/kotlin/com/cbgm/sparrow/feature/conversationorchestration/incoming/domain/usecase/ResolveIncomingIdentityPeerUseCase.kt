@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.RemoteIdentityReplacementRequiredException
-import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
+import com.cbgm.sparrow.feature.identity.domain.model.hasKeys
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 
@@ -57,14 +57,14 @@ class ResolveIncomingIdentityPeerUseCase(
         // of a self-declared phone number. The separate, explicit recovery flow
         // will need to authorize replacement of the exact previous key binding.
         identities[targetPeerId]?.let { stored ->
-            if (!stored.matches(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
+            if (!stored.hasKeys(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
                 throw RemoteIdentityReplacementRequiredException(targetPeerId)
             }
         }
 
         suspend fun mayMerge(peerId: String): Boolean =
             inspectContactPeer.canMergeRoutingDuplicate(peerId, remotePhoneNumber).getOrThrow() &&
-                (identities[peerId]?.matches(remoteEncryptionPublicKey, remoteSigningPublicKey) != false)
+                (identities[peerId]?.hasKeys(remoteEncryptionPublicKey, remoteSigningPublicKey) != false)
 
         val canMergeResolved = targetPeerId != resolvedPeerId && mayMerge(resolvedPeerId)
         val canMergeIdentity = identityPeerId != null && identityPeerId != targetPeerId &&
@@ -85,6 +85,3 @@ class ResolveIncomingIdentityPeerUseCase(
         )
     }
 }
-
-private fun RemotePeerIdentity.matches(encryption: ByteArray, signing: ByteArray): Boolean =
-    encryptionPublicKey.contentEquals(encryption) && signingPublicKey.contentEquals(signing)

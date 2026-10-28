@@ -65,8 +65,15 @@ internal class GroupMessageRepositoryImpl(
     override suspend fun findRecipientByPacketId(packetId: String): Result<GroupRecipientState?> =
         safeSuspendCall { dataSource.findRecipientByPacketId(packetId)?.toGroupRecipientState() }
 
-    override suspend fun replaceText(messageId: String, text: String): Result<Unit> =
-        safeSuspendCall { dataSource.replaceMessageText(messageId, text) }
+    override suspend fun replaceText(messageId: String, text: String, editedAtEpochMilliseconds: Long): Result<Unit> =
+        safeSuspendCall { dataSource.replaceMessageText(messageId, text, editedAtEpochMilliseconds) }
+
+    override suspend fun replaceTextIfNewer(
+        messageId: String,
+        text: String,
+        editedAtEpochMilliseconds: Long
+    ): Result<Boolean> =
+        safeSuspendCall { dataSource.replaceMessageTextIfNewer(messageId, text, editedAtEpochMilliseconds) }
 
     override suspend fun delete(messages: List<StoredMessage>): Result<Unit> =
         safeSuspendCall {

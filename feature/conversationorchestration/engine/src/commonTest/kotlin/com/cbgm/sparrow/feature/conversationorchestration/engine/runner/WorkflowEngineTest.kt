@@ -4,6 +4,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureException
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
+import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.ConversationFailureMapper
+import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.WorkflowEngineException
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
@@ -61,6 +63,21 @@ class WorkflowEngineTest {
         }
 
     @Test
+    fun endlessWorkflowFailsAsAnEngineErrorNotAsAForbiddenCommand() =
+        runTest {
+            val engine = engine(LoopingMachine())
+
+            val error = engine.run(Loop).exceptionOrNull()
+
+            assertTrue(error is WorkflowEngineException)
+            assertEquals(ConversationFailureReason.UNEXPECTED, ConversationFailureMapper.toFailure(error).reason)
+            assertEquals(
+                ConversationFailureReason.NOT_ALLOWED,
+                ConversationFailureMapper.toFailure(IllegalStateException("not allowed")).reason
+            )
+        }
+
+    @Test
     fun twoWorkflowsForTheSameCommandAreRejectedByValidation() {
         val registry = WorkflowRegistry { listOf(CountingMachine(), CountingMachine()) }
 
@@ -93,6 +110,8 @@ class WorkflowEngineTest {
     ) : WorkflowCommand
 
     private data object Throw : WorkflowCommand
+
+    private data object Loop : WorkflowCommand
 
     private data class Suspend(
         val label: String
@@ -151,6 +170,19 @@ class WorkflowEngineTest {
         override suspend fun perform(step: Step): Unit = throw error
 
         override fun transition(step: Step, outcome: Unit): Transition<Step> = Transition.Complete()
+
+        data object Step : WorkflowStep
+    }
+
+    /** Never completes, like a transition cycle. */
+    private class LoopingMachine : WorkflowStateMachine<Loop, LoopingMachine.Step, Unit> {
+        override val commandType = Loop::class
+
+        override fun firstStep(command: Loop): Step = Step
+
+        override suspend fun perform(step: Step) = Unit
+
+        override fun transition(step: Step, outcome: Unit): Transition<Step> = Transition.Next(Step)
 
         data object Step : WorkflowStep
     }

@@ -18,13 +18,25 @@ internal class DirectMessageDataSource(
         chatDao.upsertMessage(message)
     }
 
+    suspend fun updateMessagePacketIfStatus(
+        messageId: String,
+        expectedStatus: String,
+        packetId: String,
+        transportMode: String,
+        deliveryStatus: String
+    ): Int =
+        chatDao.updateMessagePacketIfStatus(messageId, expectedStatus, packetId, transportMode, deliveryStatus)
+
     suspend fun upsertMessageWithText(message: MessageEntity, text: String) {
         chatDao.upsertMessageWithText(message, text)
     }
 
-    suspend fun replaceMessageText(messageId: String, text: String) {
-        chatDao.replaceMessageText(messageId, text)
+    suspend fun replaceMessageText(messageId: String, text: String, editedAtEpochMilliseconds: Long) {
+        chatDao.replaceMessageText(messageId, text, editedAtEpochMilliseconds)
     }
+
+    suspend fun replaceMessageTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Boolean =
+        chatDao.replaceMessageTextIfNewer(messageId, text, editedAtEpochMilliseconds)
 
     suspend fun deleteMessages(messages: List<MessageEntity>) {
         chatDao.deleteMessagesAndRefreshConversations(messages)
@@ -38,6 +50,9 @@ internal class DirectMessageDataSource(
 
     fun observeMessagesWaitingForAuthorization(): Flow<List<MessageEntity>> =
         chatDao.observeDirectMessagesByDeliveryStatus(MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name)
+
+    suspend fun findMessagesAwaitingOutbox(createdBefore: Long): List<MessageEntity> =
+        chatDao.findDirectMessagesAwaitingOutbox(createdBefore)
 
     suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessageDto> =
         chatDao.findMessagesAwaitingReadReceipt(conversationId)

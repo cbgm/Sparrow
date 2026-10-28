@@ -10,17 +10,23 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.mapper.t
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.mapper.toParkedEntity
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeRemoteMessageOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckMessageEditableUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckPollClosePermissionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupPollUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireMessageWithoutPaymentUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.ObserveGroupAdministrationUseCase
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
@@ -79,11 +85,50 @@ class ParkedMessageOperationsTest {
     }
 
     @Test
+    fun operationThatIsNotAllowedIsRejectedSoItsEnvelopeIsDropped() = runBlocking {
+        store.store(message(), "Original")
+
+        val error = engine.run(edit("Edited by someone else", sentAt = 2, sender = "mallory")).exceptionOrNull()
+        assertIs<IncomingMessageRejectedException>(error)
+        assertEquals("Original", store.texts[MESSAGE_ID])
+    }
+
+    @Test
     fun operationOnAStoredMessageIsAppliedWithoutParking() = runBlocking {
         store.store(message(), "Original")
 
         receive(edit("Edited", sentAt = 2))
         assertEquals("Edited", store.texts[MESSAGE_ID])
+        assertTrue(parked.parked.isEmpty())
+    }
+
+    @Test
+    fun olderEditThatArrivesAfterANewerOneIsIgnored() = runBlocking {
+        store.store(message(), "Original")
+
+        receive(edit("Second edit", sentAt = 3))
+        receive(edit("First edit", sentAt = 2))
+        assertEquals("Second edit", store.texts[MESSAGE_ID])
+        assertEquals(3L, store.editedAt[MESSAGE_ID])
+    }
+
+    @Test
+    fun editWithTheSameEditTimeKeepsTheStoredText() = runBlocking {
+        store.store(message(), "Original")
+
+        receive(edit("Live copy", sentAt = 3))
+        receive(edit("Other text", sentAt = 3))
+        assertEquals("Live copy", store.texts[MESSAGE_ID])
+    }
+
+    @Test
+    fun parkedEditOlderThanTheStoredEditIsIgnoredWhenReplayed() = runBlocking {
+        receive(edit("Old edit", sentAt = 2))
+        store.store(message(), "Original")
+        receive(edit("New edit", sentAt = 3))
+
+        engine.run(IncomingCommand.ApplyParkedMessageOperations(MESSAGE_ID)).getOrThrow()
+        assertEquals("New edit", store.texts[MESSAGE_ID])
         assertTrue(parked.parked.isEmpty())
     }
 
@@ -117,7 +162,16 @@ class ParkedMessageOperationsTest {
             WorkflowRegistry {
                 listOf(
                     ApplyRemoteMessageOperationWorkflow(
-                        findOperationTarget = FindOperationTargetUseCase(direct, group),
+                        authorizeOperation =
+                            AuthorizeRemoteMessageOperationUseCase(
+                                findOperationTarget = FindOperationTargetUseCase(direct, group),
+                                checkMessageEditable = CheckMessageEditableUseCase(direct, group, attachments),
+                                requireMessageWithoutPayment = RequireMessageWithoutPaymentUseCase(attachments),
+                                checkPollClosePermission =
+                                    CheckPollClosePermissionUseCase(
+                                        ObserveGroupAdministrationUseCase(FakeGroupMembershipRepository())
+                                    )
+                            ),
                         directMessageRepository = direct,
                         groupMessageRepository = group,
                         attachmentRepository = attachments,
@@ -125,8 +179,6 @@ class ParkedMessageOperationsTest {
                         discardDirectMessages = DiscardDirectMessagesUseCase(direct, attachments),
                         discardGroupMessages = DiscardGroupMessagesUseCase(group, attachments),
                         findGroupPoll = FindGroupPollUseCase(attachments),
-                        membershipRepository = FakeGroupMembershipRepository(),
-                        requireMessageWithoutPayment = RequireMessageWithoutPaymentUseCase(attachments),
                         parkedOperations = parked
                     ),
                     ApplyParkedMessageOperationsWorkflow(engine, parked)

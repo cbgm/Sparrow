@@ -11,5 +11,9 @@ enum class MessageDeliveryEvent {
     RETRY_REQUESTED,
     DELIVERY_CONFIRMED,
     DELIVERY_EXPIRED,
-    READ_CONFIRMED
+    READ_CONFIRMED;
+
+    /** A receipt from the recipient, which can be matched by message ID instead of packet ID. */
+    val isReceipt: Boolean
+        get() = this == DELIVERY_CONFIRMED || this == READ_CONFIRMED
 }

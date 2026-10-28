@@ -10,11 +10,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.comman
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantActivation
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GetTrustedGroupAuthorityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveSigningIdentityContactUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ApplyIncomingGroupActivationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupActivationUseCase
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
@@ -28,7 +27,7 @@ import kotlin.reflect.KClass
  */
 class ReceiveGroupMemberActivationWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val getTrustedGroupAuthority: GetTrustedGroupAuthorityUseCase,
     private val authorizeIncomingGroupActivation: AuthorizeIncomingGroupActivationUseCase,
     private val resolveSigningIdentityContact: ResolveSigningIdentityContactUseCase,
     private val applyIncomingGroupActivation: ApplyIncomingGroupActivationUseCase,
@@ -50,25 +49,9 @@ class ReceiveGroupMemberActivationWorkflow internal constructor(
         val context = step.command.context
         val packet = step.command.packet
         return when (step) {
-            is Step.LoadOwner -> {
-                val owner =
-                    getRemoteIdentity(context.contactId).getOrThrow() ?: error("Group owner has no Sparrow identity")
-                check(owner.keyExchangeStatus == KeyExchangeStatus.MUTUAL) { "Group owner key exchange is not mutual" }
-                Outcome.OwnerLoaded(owner)
-            }
-            is Step.AuthorizeActivation ->
-                if (
-                    authorizeIncomingGroupActivation(
-                        packet,
-                        context.contactId,
-                        step.owner.signingPublicKey,
-                        context.transportMode
-                    ).getOrThrow()
-                ) {
-                    Outcome.LocalMemberActivated(step.owner)
-                } else {
-                    Outcome.RemoteMemberActivated(step.owner)
-                }
+            is Step.LoadOwner ->
+                Outcome.OwnerLoaded(getTrustedGroupAuthority.forActivation(context.contactId).getOrThrow())
+            is Step.AuthorizeActivation -> authorizeActivation(step)
             is Step.ResolveMemberContact ->
                 Outcome.MemberContactResolved(
                     step.owner,
@@ -78,24 +61,7 @@ class ReceiveGroupMemberActivationWorkflow internal constructor(
                         phoneNumber = packet.member.phoneNumber
                     ).getOrThrow()
                 )
-            is Step.ApplyActivation -> {
-                val appliedLocal =
-                    applyIncomingGroupActivation(
-                        packet = packet,
-                        ownerContactId = context.contactId,
-                        ownerSigningPublicKey = step.owner.signingPublicKey,
-                        transportMode = context.transportMode,
-                        memberContactId = step.memberContactId,
-                        receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
-                    ).getOrThrow()
-                if (appliedLocal) {
-                    Outcome.AppliedForLocalMember
-                } else {
-                    Outcome.AppliedForMember(
-                        requireNotNull(step.memberContactId)
-                    )
-                }
-            }
+            is Step.ApplyActivation -> applyActivation(step)
             is Step.SynchronizeVerification -> {
                 engine.run(
                     GroupAdministrationCommand.SynchronizeVerification(packet.groupId)
@@ -133,21 +99,64 @@ class ReceiveGroupMemberActivationWorkflow internal constructor(
             is Outcome.MemberContactResolved ->
                 Transition.Next(Step.ApplyActivation(outcome.owner, outcome.memberContactId, step.command))
             Outcome.AppliedForLocalMember -> Transition.Next(Step.SynchronizeVerification(step.command))
-            is Outcome.AppliedForMember ->
-                when (step.command.packet.activationRound) {
-                    GroupMemberActivatedPacket.DISCOVERY_ROUND,
-                    GroupMemberActivatedPacket.FINAL_ROUND ->
-                        Transition.Next(Step.ResolveMemberName(outcome.memberContactId, step.command))
-                    else -> Transition.Complete()
-                }
-            is Outcome.MemberNameResolved ->
-                if (step.command.packet.activationRound == GroupMemberActivatedPacket.DISCOVERY_ROUND) {
-                    Transition.Next(Step.RecordMemberAdded(outcome.activation, step.command))
-                } else {
-                    Transition.Next(Step.ActivateParticipant(outcome.activation, step.command))
-                }
+            is Outcome.AppliedForMember -> afterAppliedForMember(outcome.memberContactId, step.command)
+            is Outcome.MemberNameResolved -> afterMemberNameResolved(outcome.activation, step.command)
             Outcome.ParticipantActivated -> Transition.Next(Step.FlushQueuedMessages(step.command))
             Outcome.Done -> Transition.Complete()
+        }
+
+    private suspend fun authorizeActivation(step: Step.AuthorizeActivation): Outcome {
+        val context = step.command.context
+        return if (
+            authorizeIncomingGroupActivation(
+                step.command.packet,
+                context.contactId,
+                step.owner.signingPublicKey,
+                context.transportMode
+            ).getOrThrow()
+        ) {
+            Outcome.LocalMemberActivated(step.owner)
+        } else {
+            Outcome.RemoteMemberActivated(step.owner)
+        }
+    }
+
+    private suspend fun applyActivation(step: Step.ApplyActivation): Outcome {
+        val context = step.command.context
+        val appliedLocal =
+            applyIncomingGroupActivation(
+                packet = step.command.packet,
+                ownerContactId = context.contactId,
+                ownerSigningPublicKey = step.owner.signingPublicKey,
+                transportMode = context.transportMode,
+                memberContactId = step.memberContactId,
+                receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
+            ).getOrThrow()
+        return if (appliedLocal) {
+            Outcome.AppliedForLocalMember
+        } else {
+            Outcome.AppliedForMember(requireNotNull(step.memberContactId))
+        }
+    }
+
+    private fun afterAppliedForMember(
+        memberContactId: String,
+        command: IncomingCommand.ReceiveGroupMemberActivation
+    ): Transition<Step> =
+        when (command.packet.activationRound) {
+            GroupMemberActivatedPacket.DISCOVERY_ROUND,
+            GroupMemberActivatedPacket.FINAL_ROUND -> Transition.Next(Step.ResolveMemberName(memberContactId, command))
+            else -> Transition.Complete()
+        }
+
+    private fun afterMemberNameResolved(
+        activation: GroupParticipantActivation,
+        command: IncomingCommand.ReceiveGroupMemberActivation
+    ): Transition<Step> =
+        if (command.packet.activationRound == GroupMemberActivatedPacket.DISCOVERY_ROUND) {
+            Transition.Next(Step.RecordMemberAdded(activation, command))
+        } else {
+            Transition.Next(Step.ActivateParticipant(activation, command))
         }
 
     sealed interface Step : WorkflowStep {

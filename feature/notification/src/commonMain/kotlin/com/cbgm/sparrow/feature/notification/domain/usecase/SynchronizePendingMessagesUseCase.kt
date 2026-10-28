@@ -71,12 +71,15 @@ class SynchronizePendingMessagesUseCase(
                         encodedTransportPayload = envelope.payload
                     ).getOrThrow()
 
-            if (result == IncomingEnvelopeProcessingResult.Processed) {
+            // A rejected envelope can never succeed, so it is acknowledged instead of retried on every wake-up.
+            if (result != IncomingEnvelopeProcessingResult.UnknownSender) {
                 pendingEnvelopeGateway
                     .acknowledge(
                         wakeUpId = wakeUpId,
                         envelopeId = envelope.envelopeId
                     ).getOrThrow()
+            }
+            if (result == IncomingEnvelopeProcessingResult.Processed) {
                 processedEnvelopeCount += 1
             }
         }

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository
 
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupConversationKind
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantActivation
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantAddition
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupParticipantRemoval
@@ -11,6 +12,11 @@ interface GroupConversationRepository {
     suspend fun create(title: String): Result<String>
 
     suspend fun getMembershipContext(groupId: String): Result<GroupMembershipContext>
+
+    /** What the conversation row with ID [groupId] is; an invitation must not overwrite a foreign one. */
+    suspend fun findKind(groupId: String): Result<GroupConversationKind>
+
+    suspend fun isParticipant(groupId: String, contactId: String): Result<Boolean>
 
     /** False when the user deleted this group after the offer was created; it must not reappear. */
     suspend fun stageIncoming(

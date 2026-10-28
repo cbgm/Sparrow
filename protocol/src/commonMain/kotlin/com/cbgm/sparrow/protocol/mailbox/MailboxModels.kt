@@ -85,4 +85,22 @@ interface MailboxRouteRepository {
     suspend fun deleteRemote(contactId: String): Result<Unit>
 
     suspend fun deleteAllRemote(): Result<Unit>
+
+    /**
+     * Local credentials replaced by a renewal. They stay readable until they expire, so envelopes still in them and
+     * those the contact sends before it learned the new route are not lost.
+     */
+    suspend fun allRetiring(): Result<List<LocalMailboxCredential>>
+
+    /** Keeps [retiring] as a retiring credential and makes [replacement] the contact's credential, atomically. */
+    suspend fun retireLocal(
+        retiring: LocalMailboxCredential,
+        replacement: LocalMailboxCredential
+    ): Result<Unit>
+
+    suspend fun saveRetiring(credential: LocalMailboxCredential): Result<Unit>
+
+    suspend fun markRetiringRevocationPending(contactId: String): Result<Unit>
+
+    suspend fun deleteRetiring(routeId: String): Result<Unit>
 }

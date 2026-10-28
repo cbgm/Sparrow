@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.DirectMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.GroupRecipientDelivery
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository.DirectMessageDeliveryRepository
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository.GroupRecipientDeliveryRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -77,7 +76,7 @@ class ApplyDeliveryEventWorkflow internal constructor(
             groupDeliveryRepository.updateRecipientStatus(
                 recipient = step.recipient,
                 status = next,
-                lastError = step.command.errorMessage.takeIf { next == MessageDeliveryStatus.FAILED }
+                lastError = GroupMessageDeliveryStateMachine.lastError(next, step.command.errorMessage)
             ).getOrThrow()
         }
         return Outcome.GroupRecipientUpdated(step.recipient.messageId)
@@ -96,7 +95,7 @@ class ApplyDeliveryEventWorkflow internal constructor(
             when (val target = command.target) {
                 is DeliveryEventTarget.Packet -> directDeliveryRepository.findStatusByPacketId(target.packetId)
                 is DeliveryEventTarget.Recipient -> {
-                    require(command.event.isReceipt()) { "Only receipt events can be applied by message ID" }
+                    require(command.event.isReceipt) { "Only receipt events can be applied by message ID" }
                     directDeliveryRepository.findStatusByRecipient(target.messageId, target.contactId)
                 }
                 is DeliveryEventTarget.DirectMessage -> directDeliveryRepository.findStatusByMessageId(target.messageId)
@@ -115,9 +114,6 @@ class ApplyDeliveryEventWorkflow internal constructor(
         }.getOrThrow()
         return Outcome.StatusUpdated
     }
-
-    private fun MessageDeliveryEvent.isReceipt(): Boolean =
-        this == MessageDeliveryEvent.DELIVERY_CONFIRMED || this == MessageDeliveryEvent.READ_CONFIRMED
 
     sealed interface Step : WorkflowStep {
         val command: DeliveryCommand.ApplyDeliveryEvent

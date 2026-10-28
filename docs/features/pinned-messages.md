@@ -21,7 +21,7 @@ Read side (`:feature:chats`):
 
 ## Snapshot model
 
-`PinGroupMessageWorkflow` (`FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> CheckPinSlot -> SavePin -> CreatePinPackets -> EnqueuePinPackets`) validates that the target is a readable group user message, resolves the sender signing key, builds `GroupMessageContent` from text plus message parts, stores the pin and sends the new state to the group.
+`PinGroupMessageWorkflow` (`FindPinTarget -> [ResolveSenderKey] -> AuthorizeAdmin -> PreparePin -> SavePin -> PublishPin`) validates that the target is a readable group user message, resolves the sender signing key, builds `GroupMessageContent` from text plus message parts and stores the pin right away as unpublished, so it shows at once. `PublishGroupPinWorkflow` then queues it for the group under the administration lock and marks it published; a pin whose publish failed is published again when it is pinned again or after the next start (`UnpublishedGroupStateRunner`). A stored version never replaces a newer one that arrived meanwhile (`GroupStateVersionPolicy`).
 
 ```mermaid
 sequenceDiagram
@@ -32,12 +32,12 @@ sequenceDiagram
     participant OUT as ProtocolOutbox
 
     UI->>ORCH: awaitResult(GroupMessageCommand.PinMessage)
-    ORCH->>WF: FindPinTarget / AuthorizeAdmin / CheckPinSlot
-    WF->>R: SavePin (GroupPinEntity + encoded GroupMessageContent)
+    ORCH->>WF: FindPinTarget / AuthorizeAdmin / PreparePin
     WF->>OUT: CreatePinPackets / EnqueuePinPackets
+    WF->>R: SavePin (GroupPinEntity + encoded GroupMessageContent)
 ```
 
-`GroupPinEntity` stores the message ID, sent/pinned/change timestamps, sender identity metadata and encoded message content. Unpinning (`UnpinGroupMessageWorkflow`) writes an unpinned state with a monotonically increasing `changedAtEpochMilliseconds` and sends it to the group.
+`GroupPinEntity` stores the message ID, sent/pinned/change timestamps, sender identity metadata and encoded message content. Unpinning (`UnpinGroupMessageWorkflow`) stores an unpinned state with a monotonically increasing `changedAtEpochMilliseconds` right away as unpublished and publishes it like a pin (`PublishGroupPin`); an unpin that was never published is published again instead of being reported as "nothing pinned". `GroupPinEntity.publishPending` marks a pin slot that is not queued yet.
 
 ## Attachments
 

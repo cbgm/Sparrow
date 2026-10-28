@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.routing
 
-import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.command.DeliveryCommand
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.DeliveryEventTarget
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.model.MessageDeliveryEvent
@@ -12,11 +11,17 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.comman
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.ControlPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.GroupPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.groupIdOrNull
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.IncomingPacketDeferredException
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.DeferredPacketWait
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.DirectPeerAccess
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.ReceivedPacket
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.IncomingDirectTransportPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketAcceptedUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketReadyUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveControlConversationIdUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveDirectPeerAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.protocol.packet.DeliveryReceiptPacket
@@ -27,19 +32,23 @@ import kotlin.reflect.KClass
 
 /**
  * direct message:  CheckDirectAuthorization -> EnsureDirectConversation -> ReceiveDirectMessage | ApplyDirectOperation
- * group packet:    CheckGroupAccepted -> DispatchGroupPacket
+ * group packet:    CheckGroupAccepted -> CheckGroupReady -> DispatchGroupPacket
  * receipt:         ApplyReceipt
  * anything else:   FindControlConversation -> DispatchControlPacket
  *
  * Direct and group packets never share handlers. Messages of a contact whose invitation was not accepted
- * are dropped without a chat being created.
+ * are dropped without a chat being created. Packets that arrived too early — a message of a contact whose
+ * invitation is still in flight, a group packet before the welcome of its epoch — fail with
+ * [IncomingPacketDeferredException]: their envelope is parked and processed again later.
  */
 @Suppress("LongParameterList")
 class RouteIncomingPacketWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val getIdentityPeerState: GetIdentityPeerStateUseCase,
+    private val resolveDirectPeerAccess: ResolveDirectPeerAccessUseCase,
     private val directConversationRepository: DirectConversationRepository,
+    private val resolveControlConversationId: ResolveControlConversationIdUseCase,
     private val checkGroupPacketAccepted: CheckGroupPacketAcceptedUseCase,
+    private val checkGroupPacketReady: CheckGroupPacketReadyUseCase,
     private val groupPacketDispatcher: GroupPacketDispatcher,
     private val controlPacketDispatcher: ControlPacketDispatcher
 ) : WorkflowStateMachine<
@@ -63,12 +72,7 @@ class RouteIncomingPacketWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val command = step.command
         return when (step) {
-            is Step.CheckDirectAuthorization ->
-                if (getIdentityPeerState(command.contactId).getOrThrow().hasEstablishedExchange) {
-                    Outcome.DirectAuthorized
-                } else {
-                    Outcome.Dropped
-                }
+            is Step.CheckDirectAuthorization -> checkDirectAuthorization(command)
             is Step.EnsureDirectConversation ->
                 Outcome.DirectConversationResolved(
                     directConversationRepository.getOrCreate(command.contactId).getOrThrow()
@@ -80,9 +84,7 @@ class RouteIncomingPacketWorkflow internal constructor(
                 Outcome.Handled
             }
             is Step.ApplyDirectOperation -> {
-                check(command.transportMode == TransportEncryptionMode.SEALED_BOX.name) {
-                    "Direct message operations require an encrypted Sparrow transport"
-                }
+                IncomingDirectTransportPolicy.checkOperationAllowed(command.transportMode)
                 engine.run(
                     IncomingCommand.ApplyRemoteMessageOperation(
                         conversationId = step.conversationId,
@@ -94,14 +96,8 @@ class RouteIncomingPacketWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.Handled
             }
-            is Step.CheckGroupAccepted ->
-                if (checkGroupPacketAccepted(step.groupId, command.packet).getOrThrow()) {
-                    Outcome.GroupAccepted(
-                        step.groupId
-                    )
-                } else {
-                    Outcome.Dropped
-                }
+            is Step.CheckGroupAccepted -> checkGroupAccepted(step.groupId, command)
+            is Step.CheckGroupReady -> checkGroupReady(step.groupId, command)
             is Step.DispatchGroupPacket -> {
                 groupPacketDispatcher.dispatch(
                     ReceivedPacket(command.toContext(step.groupId), command.packet)
@@ -114,7 +110,7 @@ class RouteIncomingPacketWorkflow internal constructor(
             }
             is Step.FindControlConversation ->
                 Outcome.ControlConversationResolved(
-                    directConversationRepository.findConversationId(command.contactId).getOrThrow() ?: "control-${command.packet.packetId}"
+                    resolveControlConversationId(command.contactId, command.packet.packetId).getOrThrow()
                 )
             is Step.DispatchControlPacket -> {
                 controlPacketDispatcher.dispatch(
@@ -138,10 +134,31 @@ class RouteIncomingPacketWorkflow internal constructor(
                 }
             is Outcome.ControlConversationResolved ->
                 Transition.Next(Step.DispatchControlPacket(outcome.conversationId, step.command))
-            is Outcome.GroupAccepted -> Transition.Next(Step.DispatchGroupPacket(outcome.groupId, step.command))
+            is Outcome.GroupAccepted -> Transition.Next(Step.CheckGroupReady(outcome.groupId, step.command))
+            is Outcome.GroupReady -> Transition.Next(Step.DispatchGroupPacket(outcome.groupId, step.command))
+            is Outcome.Deferred -> Transition.Reject.because(IncomingPacketDeferredException(outcome.wait))
             Outcome.Dropped,
             Outcome.Handled -> Transition.Complete()
         }
+
+    private suspend fun checkDirectAuthorization(command: IncomingCommand.RouteIncomingPacket): Outcome =
+        when (resolveDirectPeerAccess(command.contactId).getOrThrow()) {
+            DirectPeerAccess.AUTHORIZED -> Outcome.DirectAuthorized
+            DirectPeerAccess.PENDING -> Outcome.Deferred(DeferredPacketWait.ContactExchange(command.contactId))
+            DirectPeerAccess.DROPPED -> Outcome.Dropped
+        }
+
+    private suspend fun checkGroupAccepted(groupId: String, command: IncomingCommand.RouteIncomingPacket): Outcome =
+        if (checkGroupPacketAccepted(groupId, command.packet).getOrThrow()) {
+            Outcome.GroupAccepted(groupId)
+        } else {
+            Outcome.Dropped
+        }
+
+    private suspend fun checkGroupReady(groupId: String, command: IncomingCommand.RouteIncomingPacket): Outcome =
+        checkGroupPacketReady(groupId, command.packet).getOrThrow()
+            ?.let(Outcome::Deferred)
+            ?: Outcome.GroupReady(groupId)
 
     private fun IncomingCommand.RouteIncomingPacket.toContext(conversationId: String): IncomingPacketContext =
         IncomingPacketContext(
@@ -195,6 +212,12 @@ class RouteIncomingPacketWorkflow internal constructor(
             override val command: IncomingCommand.RouteIncomingPacket
         ) : Step
 
+        /** A group packet waits until the welcome of its epoch is installed. */
+        data class CheckGroupReady(
+            val groupId: String,
+            override val command: IncomingCommand.RouteIncomingPacket
+        ) : Step
+
         data class DispatchGroupPacket(
             val groupId: String,
             override val command: IncomingCommand.RouteIncomingPacket
@@ -228,6 +251,15 @@ class RouteIncomingPacketWorkflow internal constructor(
 
         data class GroupAccepted(
             val groupId: String
+        ) : Outcome
+
+        data class GroupReady(
+            val groupId: String
+        ) : Outcome
+
+        /** Arrived too early: the envelope is parked until [wait] is met. */
+        data class Deferred(
+            val wait: DeferredPacketWait
         ) : Outcome
 
         /** Not authorized, or the group was deleted locally: the packet is acknowledged without effect. */

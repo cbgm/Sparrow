@@ -111,6 +111,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().parkedEnvelopeDao()
+        }
+
+        single {
             get<SparrowDatabase>().messageSearchDao()
         }
 

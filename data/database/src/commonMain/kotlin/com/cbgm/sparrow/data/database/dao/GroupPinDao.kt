@@ -2,6 +2,7 @@ package com.cbgm.sparrow.data.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,27 @@ interface GroupPinDao {
 
     @Upsert
     suspend fun upsert(entity: GroupPinEntity)
+
+    /** Saves the pin slot only while [expectedChangedAtEpochMilliseconds] is still the stored version. */
+    @Transaction
+    suspend fun replaceIfVersion(entity: GroupPinEntity, expectedChangedAtEpochMilliseconds: Long): Boolean {
+        val currentChangedAt = get(entity.groupId)?.changedAtEpochMilliseconds ?: 0L
+        if (currentChangedAt != expectedChangedAtEpochMilliseconds) return false
+        upsert(entity)
+        return true
+    }
+
+    /** Marks the pin published only while [changedAtEpochMilliseconds] is still the stored version. */
+    @Query(
+        """
+        UPDATE group_pins SET publishPending = 0
+        WHERE groupId = :groupId AND changedAtEpochMilliseconds = :changedAtEpochMilliseconds
+        """
+    )
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long)
+
+    @Query("SELECT groupId FROM group_pins WHERE publishPending = 1")
+    suspend fun findPublishPendingGroupIds(): List<String>
 
     @Query("DELETE FROM group_pins WHERE groupId = :groupId")
     suspend fun delete(groupId: String)

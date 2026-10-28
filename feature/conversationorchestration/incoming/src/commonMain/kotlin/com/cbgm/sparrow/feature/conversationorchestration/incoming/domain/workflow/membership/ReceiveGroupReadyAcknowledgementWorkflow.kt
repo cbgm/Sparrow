@@ -13,11 +13,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
-import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
-import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupCurrentEpochUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.CheckReadyAcknowledgementEpochUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindReadyAcknowledgedMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupReadyAcknowledgementUseCase
-import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import kotlin.reflect.KClass
 
 /**
@@ -31,9 +29,9 @@ import kotlin.reflect.KClass
 @Suppress("LongParameterList")
 class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val getGroupCurrentEpoch: GetGroupCurrentEpochUseCase,
+    private val checkReadyAcknowledgementEpoch: CheckReadyAcknowledgementEpochUseCase,
     private val receiveGroupReadyAcknowledgement: ReceiveGroupReadyAcknowledgementUseCase,
-    private val getMembershipHandshake: GetMembershipHandshakeUseCase,
+    private val findReadyAcknowledgedMembership: FindReadyAcknowledgedMembershipUseCase,
     private val findMemberDisplayName: FindMemberDisplayNameUseCase,
     private val conversationRepository: GroupConversationRepository
 ) : WorkflowStateMachine<
@@ -53,12 +51,7 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
         val context = step.command.context
         val packet = step.command.packet
         return when (step) {
-            is Step.CheckEpochCurrent ->
-                if (packet.epoch < getGroupCurrentEpoch(packet.groupId).getOrThrow()) {
-                    Outcome.Obsolete
-                } else {
-                    Outcome.EpochCurrent
-                }
+            is Step.CheckEpochCurrent -> checkEpochCurrent(step.command)
             is Step.ReceiveAcknowledgement -> {
                 receiveGroupReadyAcknowledgement(
                     context.contactId,
@@ -67,23 +60,13 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.AcknowledgementReceived
             }
-            is Step.CheckEpochStillCurrent ->
-                if (packet.epoch == getGroupCurrentEpoch(packet.groupId).getOrThrow()) {
-                    Outcome.EpochStillCurrent
-                } else {
-                    Outcome.Obsolete
-                }
-            is Step.FindActivatedMembership -> {
-                val handshake =
-                    packet.welcomeSourceId()?.let { sourceId -> getMembershipHandshake(sourceId).getOrThrow() }
-                if (handshake != null && handshake.activates(packet, context.contactId)) {
-                    Outcome.MembershipActivated(handshake.sourceId)
-                } else {
-                    Outcome.NoActivatedMembership
-                }
-            }
+            is Step.CheckEpochStillCurrent -> checkEpochStillCurrent(step.command)
+            is Step.FindActivatedMembership ->
+                findReadyAcknowledgedMembership(context.contactId, packet).getOrThrow()
+                    ?.let(Outcome::MembershipActivated)
+                    ?: Outcome.NoActivatedMembership
             is Step.ResolveMemberName ->
-                Outcome.MemberNameResolved(step.eventId, findMemberDisplayName(context.contactId).getOrThrow())
+                Outcome.MemberNameResolved(step.membership, findMemberDisplayName(context.contactId).getOrThrow())
             is Step.AddParticipant -> {
                 conversationRepository.addParticipant(
                     GroupParticipantAddition(
@@ -91,8 +74,9 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
                         contactId = context.contactId,
                         memberDisplayName = step.memberDisplayName,
                         epoch = packet.epoch,
-                        joinedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                        eventId = step.eventId
+                        // Membership activated the member then: the later of invitation and acknowledgement.
+                        joinedAtEpochMilliseconds = step.membership.updatedAtEpochMilliseconds,
+                        eventId = step.membership.sourceId
                     )
                 ).getOrThrow()
                 Outcome.ParticipantAdded
@@ -129,10 +113,10 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
             Outcome.EpochCurrent -> Transition.Next(Step.ReceiveAcknowledgement(step.command))
             Outcome.EpochStillCurrent -> Transition.Next(Step.FindActivatedMembership(step.command))
             Outcome.AcknowledgementReceived -> Transition.Next(Step.CheckEpochStillCurrent(step.command))
-            is Outcome.MembershipActivated -> Transition.Next(Step.ResolveMemberName(outcome.eventId, step.command))
+            is Outcome.MembershipActivated -> Transition.Next(Step.ResolveMemberName(outcome.membership, step.command))
             Outcome.NoActivatedMembership -> Transition.Next(Step.RefreshVerification(step.command, includeExpenseHistory = false))
             is Outcome.MemberNameResolved ->
-                Transition.Next(Step.AddParticipant(outcome.eventId, outcome.memberDisplayName, step.command))
+                Transition.Next(Step.AddParticipant(outcome.membership, outcome.memberDisplayName, step.command))
             Outcome.ParticipantAdded -> Transition.Next(Step.FlushQueuedMessages(step.command))
             Outcome.QueueFlushed -> Transition.Next(Step.RefreshVerification(step.command, includeExpenseHistory = true))
             is Outcome.VerificationRefreshed ->
@@ -140,17 +124,19 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
             Outcome.MetadataSent -> Transition.Complete()
         }
 
-    /** The welcome packet ID is "group-welcome-<groupId>-<sourceId>-<epoch>". */
-    private fun GroupReadyAcknowledgementPacket.welcomeSourceId(): String? {
-        val prefix = "group-welcome-$groupId-"
-        val suffix = "-$epoch"
-        return welcomePacketId.takeIf { it.startsWith(prefix) && it.endsWith(suffix) }?.removePrefix(
-            prefix
-        )?.removeSuffix(suffix)
-    }
+    private suspend fun checkEpochCurrent(command: IncomingCommand.ReceiveGroupReadyAcknowledgement): Outcome =
+        if (checkReadyAcknowledgementEpoch.isObsolete(command.packet).getOrThrow()) {
+            Outcome.Obsolete
+        } else {
+            Outcome.EpochCurrent
+        }
 
-    private fun MembershipHandshake.activates(packet: GroupReadyAcknowledgementPacket, contactId: String): Boolean =
-        status == MembershipStatus.ACTIVE && groupId == packet.groupId && peerId == contactId
+    private suspend fun checkEpochStillCurrent(command: IncomingCommand.ReceiveGroupReadyAcknowledgement): Outcome =
+        if (checkReadyAcknowledgementEpoch.isStillCurrent(command.packet).getOrThrow()) {
+            Outcome.EpochStillCurrent
+        } else {
+            Outcome.Obsolete
+        }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupReadyAcknowledgement
@@ -172,12 +158,12 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
         ) : Step
 
         data class ResolveMemberName(
-            val eventId: String,
+            val membership: MembershipHandshake,
             override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement
         ) : Step
 
         data class AddParticipant(
-            val eventId: String,
+            val membership: MembershipHandshake,
             val memberDisplayName: String,
             override val command: IncomingCommand.ReceiveGroupReadyAcknowledgement
         ) : Step
@@ -208,13 +194,13 @@ class ReceiveGroupReadyAcknowledgementWorkflow internal constructor(
         data object AcknowledgementReceived : Outcome
 
         data class MembershipActivated(
-            val eventId: String
+            val membership: MembershipHandshake
         ) : Outcome
 
         data object NoActivatedMembership : Outcome
 
         data class MemberNameResolved(
-            val eventId: String,
+            val membership: MembershipHandshake,
             val memberDisplayName: String
         ) : Outcome
 

@@ -6,14 +6,14 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupIncomingConversationRepository
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GetTrustedGroupAuthorityUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupDeletionUseCase
 import kotlin.reflect.KClass
 
 /** LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> PrepareDeletion -> CompleteDeletion -> FinishDeletion. */
 class ReceiveGroupDeletionWorkflow internal constructor(
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val getTrustedGroupAuthority: GetTrustedGroupAuthorityUseCase,
     private val authorizeIncomingGroupDeletion: AuthorizeIncomingGroupDeletionUseCase,
     private val attachmentRepository: MessageAttachmentRepository,
     private val incomingConversationRepository: GroupIncomingConversationRepository,
@@ -33,9 +33,7 @@ class ReceiveGroupDeletionWorkflow internal constructor(
         return when (step) {
             is Step.LoadOwnerKey ->
                 Outcome.OwnerKeyLoaded(
-                    getRemoteIdentity(context.contactId).getOrThrow()?.signingPublicKey ?: error(
-                        "Group owner identity was not found"
-                    )
+                    getTrustedGroupAuthority.forDeletion(context.contactId).getOrThrow().signingPublicKey
                 )
             is Step.AuthorizeDeletion -> {
                 authorizeIncomingGroupDeletion(packet, context.contactId, step.ownerSigningPublicKey).getOrThrow()

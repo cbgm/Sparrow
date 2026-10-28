@@ -5,16 +5,16 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAvatarState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupAvatarPacketCodec
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupAvatarRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
 
-/** VerifySignature -> AuthorizeAdmin -> LoadAvatar -> SaveAvatar. Older or unauthorized updates are dropped. */
+/** VerifySignature -> AuthorizeAdmin -> SaveAvatar. Older or unauthorized updates are dropped. */
 class ReceiveGroupAvatarWorkflow internal constructor(
     private val packetCodec: GroupAvatarPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val avatarRepository: GroupAvatarRepository
+    private val saveGroupAvatar: SaveGroupAvatarUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupAvatar,
         ReceiveGroupAvatarWorkflow.Step,
@@ -31,51 +31,49 @@ class ReceiveGroupAvatarWorkflow internal constructor(
                 packetCodec.verify(packet).getOrThrow()
                 Outcome.SignatureValid
             }
-            is Step.AuthorizeAdmin ->
-                if (
-                    authorizeGroupMetadata.receive(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        contactId = step.command.context.contactId,
-                        adminSigningPublicKey = packet.adminSigningPublicKey,
-                        action = ACTION
-                    ).getOrThrow()
-                ) {
-                    Outcome.AdminAuthorized
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.LoadAvatar ->
-                if (
-                    packet.avatar.changedAtEpochMilliseconds > avatarRepository.get(
-                        packet.groupId
-                    ).getOrThrow().changedAtEpochMilliseconds
-                ) {
-                    Outcome.UpdateIsNewer
-                } else {
-                    Outcome.Ignored
-                }
-            is Step.SaveAvatar -> {
-                avatarRepository.save(
-                    GroupAvatarState(
-                        groupId = packet.groupId,
-                        bytes = packet.avatar.payload?.bytes,
-                        changedAtEpochMilliseconds = packet.avatar.changedAtEpochMilliseconds
-                    )
-                ).getOrThrow()
-                Outcome.Saved
-            }
+            is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
+            is Step.SaveAvatar -> save(step.command)
         }
     }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.SignatureValid -> Transition.Next(Step.AuthorizeAdmin(step.command))
-            Outcome.AdminAuthorized -> Transition.Next(Step.LoadAvatar(step.command))
-            Outcome.UpdateIsNewer -> Transition.Next(Step.SaveAvatar(step.command))
+            Outcome.AdminAuthorized -> Transition.Next(Step.SaveAvatar(step.command))
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
+
+    private suspend fun authorizeAdmin(command: IncomingCommand.ReceiveGroupAvatar): Outcome {
+        val packet = command.packet
+        return if (
+            authorizeGroupMetadata.receive(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                contactId = command.context.contactId,
+                adminSigningPublicKey = packet.adminSigningPublicKey,
+                action = ACTION
+            ).getOrThrow()
+        ) {
+            Outcome.AdminAuthorized
+        } else {
+            Outcome.Ignored
+        }
+    }
+
+    /** Stores the version only while it is newer than the stored one, atomically against a local change. */
+    private suspend fun save(command: IncomingCommand.ReceiveGroupAvatar): Outcome {
+        val packet = command.packet
+        val saved =
+            saveGroupAvatar(
+                GroupAvatarState(
+                    groupId = packet.groupId,
+                    bytes = packet.avatar.payload?.bytes,
+                    changedAtEpochMilliseconds = packet.avatar.changedAtEpochMilliseconds
+                )
+            ).getOrThrow()
+        return if (saved) Outcome.Saved else Outcome.Ignored
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveGroupAvatar
@@ -88,10 +86,6 @@ class ReceiveGroupAvatarWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupAvatar
         ) : Step
 
-        data class LoadAvatar(
-            override val command: IncomingCommand.ReceiveGroupAvatar
-        ) : Step
-
         data class SaveAvatar(
             override val command: IncomingCommand.ReceiveGroupAvatar
         ) : Step
@@ -101,8 +95,6 @@ class ReceiveGroupAvatarWorkflow internal constructor(
         data object SignatureValid : Outcome
 
         data object AdminAuthorized : Outcome
-
-        data object UpdateIsNewer : Outcome
 
         data object Ignored : Outcome
 

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.domain.repository
 
-import com.cbgm.sparrow.feature.contacts.domain.model.MailboxContactState
+import com.cbgm.sparrow.feature.contacts.domain.model.MailboxContactFacts
 
 /** All transport-related contact lookups remain owned and implemented by Contacts. */
 interface ContactTransportRepository {
@@ -15,7 +15,7 @@ interface ContactTransportRepository {
 
     suspend fun reconcileKnownContacts(): Result<Unit>
 
-    suspend fun getMailboxContactStates(): Result<List<MailboxContactState>>
+    suspend fun getMailboxContacts(): Result<List<MailboxContactFacts>>
 
     suspend fun getMutualSigningPublicKey(contactId: String): Result<ByteArray?>
 }

@@ -10,6 +10,37 @@ data class MembershipHandshake(
     val ownerEncryptionPublicKey: ByteArray? = null,
     val ownerSigningPublicKey: ByteArray? = null
 ) {
+    /** The owner created this membership: only a member-side handshake stores the owner's keys. */
+    val isOwnerSide: Boolean
+        get() = ownerSigningPublicKey == null && ownerEncryptionPublicKey == null
+
+    /** Our own invitation of [peerId] to [groupId]. */
+    fun isOwnerSideInvitationOf(groupId: String, peerId: String): Boolean =
+        this.peerId == peerId && this.groupId == groupId && isOwnerSide
+
+    /** The active membership of [peerId] in [groupId]. */
+    fun isActiveMembershipOf(groupId: String, peerId: String): Boolean =
+        status == MembershipStatus.ACTIVE && this.groupId == groupId && this.peerId == peerId
+
+    /** The handshake, and the keys proposed under it, are valid for [VALIDITY_MILLISECONDS] after it was created. */
+    val expiresAtEpochMilliseconds: Long
+        get() = createdAtEpochMilliseconds + VALIDITY_MILLISECONDS
+
+    /** An approved identity resumes only the owner-side join of its own peer. */
+    fun requireOwnerSideJoinOf(peerId: String) {
+        check(this.peerId == peerId && isOwnerSide) {
+            "Approved identity does not belong to the owner-side group join"
+        }
+    }
+
+    /** The owner identity that was verified when the offer was staged. */
+    fun requireOwnerKeys(): MembershipOwnerKeys =
+        MembershipOwnerKeys(
+            encryptionPublicKey =
+                requireNotNull(ownerEncryptionPublicKey) { "Group owner encryption identity was not staged" },
+            signingPublicKey = requireNotNull(ownerSigningPublicKey) { "Group owner signing identity was not staged" }
+        )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MembershipHandshake) return false
@@ -34,7 +65,29 @@ data class MembershipHandshake(
         result = 31 * result + (ownerSigningPublicKey?.contentHashCode() ?: 0)
         return result
     }
+
+    companion object {
+        const val VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
+    }
 }
+
+/**
+ * An accepted invitation must still have its handshake, belong to [groupId] and [peerId] and carry the owner keys
+ * staged with the offer.
+ */
+fun MembershipHandshake?.requireAcceptableFor(groupId: String, peerId: String): MembershipHandshake {
+    val accepted = requireNotNull(this) { "Group membership handshake was not found" }
+    check(accepted.groupId == groupId) { "Invitation belongs to the wrong group" }
+    check(accepted.peerId == peerId) { "Invitation belongs to the wrong peer" }
+    accepted.requireOwnerKeys()
+    return accepted
+}
+
+/** The group owner's keys as a member staged them from the signed offer. */
+class MembershipOwnerKeys(
+    val encryptionPublicKey: ByteArray,
+    val signingPublicKey: ByteArray
+)
 
 data class StartedMembershipHandshake(
     val sourceId: String,

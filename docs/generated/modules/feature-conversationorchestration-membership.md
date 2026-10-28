@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/conversationorchestration/membership` |
 | Build file | `feature/conversationorchestration/membership/build.gradle.kts` |
-| Kotlin files | 64 |
-| Production Kotlin files | 63 |
+| Kotlin files | 69 |
+| Production Kotlin files | 68 |
 | Test Kotlin files | 1 |
 | Resource files | 0 |
 | Direct dependencies | 13 |

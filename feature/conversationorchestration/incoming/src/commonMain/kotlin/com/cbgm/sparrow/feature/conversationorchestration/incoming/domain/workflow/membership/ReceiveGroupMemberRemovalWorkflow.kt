@@ -25,10 +25,7 @@ class ReceiveGroupMemberRemovalWorkflow internal constructor(
     override fun firstStep(command: IncomingCommand.ReceiveGroupMemberRemoval): Step = Step.AuthorizeRemoval(command)
 
     override suspend fun perform(step: Step): Outcome = when (step) {
-        is Step.AuthorizeRemoval -> {
-            val authorized = authorizeIncomingGroupRemoval(step.command.packet, step.command.context.contactId).getOrThrow()
-            if (authorized) Outcome.RemovalAuthorized else Outcome.NotApplicable
-        }
+        is Step.AuthorizeRemoval -> authorizeRemoval(step.command)
         is Step.ApplyRemoval -> {
             applyIncomingGroupRemoval(step.command.packet).getOrThrow()
             Outcome.RemovalApplied
@@ -43,6 +40,11 @@ class ReceiveGroupMemberRemovalWorkflow internal constructor(
         Outcome.RemovalAuthorized -> Transition.Next(Step.ApplyRemoval(step.command))
         Outcome.RemovalApplied -> Transition.Next(Step.CompleteRemoval(step.command))
         Outcome.NotApplicable, Outcome.Completed -> Transition.Complete()
+    }
+
+    private suspend fun authorizeRemoval(command: IncomingCommand.ReceiveGroupMemberRemoval): Outcome {
+        val authorized = authorizeIncomingGroupRemoval(command.packet, command.context.contactId).getOrThrow()
+        return if (authorized) Outcome.RemovalAuthorized else Outcome.NotApplicable
     }
 
     sealed interface Step : WorkflowStep {

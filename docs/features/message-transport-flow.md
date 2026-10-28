@@ -27,11 +27,26 @@ sequenceDiagram
         RUN->>SEND: process persisted packet
         SEND->>WS: send
     else not authorized
-        WF->>DB: persist WAITING_FOR_AUTHORIZATION (optionally request reauthorization)
+        WF->>WF: StoreWaitingDirectMessage (release lock): authorized now?
+        alt still not authorized
+            WF->>DB: persist WAITING_FOR_AUTHORIZATION (optionally request reauthorization)
+        else authorized meanwhile
+            WF->>DEL: DeliverMessage step
+        end
     end
 ```
 
+A send takes no lock, so a message to an authorized contact is stored and shown at once even while an earlier
+message to the same contact still uploads its attachments. Only storing a waiting message holds the contact's release
+lock and checks the authorization again under it, so a release running at the same time never misses it. Editing or
+deleting a sent message takes no lock either; only a message that was never sent is edited or deleted under the
+release lock, so it is never released with its old text or written back. In groups, editing or deleting a message the
+members have is sent right away; only a message nobody has received yet waits for the group send lock, so a running
+flush sends the new text or nothing. See [Locking](../architecture/conversation-orchestration.md#locking).
+
 A queued Direct message is released by `ReleaseWaitingDirectMessagesWorkflow` (via `ActivateAuthorizedConversationWorkflow`) only after orchestration establishes fresh authorization. There is no plaintext fallback.
+
+Retrying a failed Direct message (`RetryDirectMessageWorkflow`) resends its packet when the outbox still has it and otherwise creates a new packet, for example when the outbox insert failed. A send interrupted between storing the message and queuing its packet (the app was closed or crashed) is found at the next app start (`RecoverInterruptedDirectSendsUseCase`) and marked failed, so the user can retry it.
 
 ## Incoming delivery
 
@@ -54,10 +69,24 @@ sequenceDiagram
     ROUTE->>CTRL: identity/invite packets -> ReceiveContact*/ReceiveGroupInvite*Workflow
 ```
 
+A packet that is not allowed or invalid (an edit by someone other than the sender, a vote on a closed poll, an expense change by a non-creator, an expired group JOIN, a message ID that belongs to another message) is rejected with `IncomingMessageRejectedException`: its envelope is acknowledged and dropped instead of being redelivered until it expires. Failures that can succeed later (database, network, an expense revision whose original has not arrived) keep the envelope for redelivery. A redelivered direct or group message keeps its stored row, so edits, deletions and the read state applied since are not undone.
+
 Delivery paths do not guarantee order: after a reconnect, an edit, delete, reaction or poll operation can
 arrive before the message it refers to. Such an operation is parked locally and applied right after the
 message is stored; it is deleted after 7 days if the message never arrives
 ([Conversation orchestration](../architecture/conversation-orchestration.md#operations-that-overtake-their-message)).
+Edits are ordered by their edit time, not by arrival: an older edit that arrives after a newer one is ignored
+(equal times keep the stored text).
+
+Whole packets can also arrive too early: a group packet before the welcome of its epoch (or before the first
+welcome of a group the user just joined), or a direct message or operation of a contact whose invitation is
+still in flight (the accepter sends `ContactInviteAccepted` and then a message, and the message is processed
+first). `RouteIncomingPacketWorkflow` then fails with `IncomingPacketDeferredException`;
+`IncomingEnvelopeProcessorImpl` parks the envelope and acknowledges it, because an unacknowledged live envelope
+is lost and a mailbox envelope would be redelivered until it expires. After each envelope that was handled, the
+parked envelopes whose wait is met are processed again in arrival order
+([Conversation orchestration](../architecture/conversation-orchestration.md#packets-that-arrive-too-early)).
+Messages of unknown, blocked or revoked contacts are still dropped.
 
 ## Direct invitation/authorization
 
@@ -89,7 +118,12 @@ When direct online routing is unavailable or policy selects mailbox delivery, `O
 
 - **Moved node:** a node keeps its node ID when its address changes (for example a new public IP). Saved mailbox credentials whose node ID is in the directory under a new address switch to the node's new mailbox access endpoint. A mailbox whose delivery route still points to the old address is renewed and the new route is shared with the contact (`MailboxRoutePacket`), because contacts keep delivering to the old address until then.
 - **Retired node:** a node ID that is missing from the verified directory means the old mailbox is gone; a replacement is saved without revoking the old one.
-- **Unreachable node:** `DefaultMailboxCapabilityLifecycle.revokeForContact` deletes the remote route and marks the local mailbox revocation pending. If the node cannot be reached (recoverable connectivity failure), the revocation stays pending instead of failing the caller (for example approving an identity change); provisioning retries pending revocations later.
+- **Unreachable or refusing node:** `DefaultMailboxCapabilityLifecycle.revokeForContact` deletes the remote route and marks the local mailbox revocation pending. If the revocation fails for any reason, it stays pending instead of failing the caller (for example deleting a chat or approving an identity change); provisioning retries every pending revocation, and one that keeps failing does not hold up the others. A node that answers 404, 410 or 401 no longer has the mailbox, so the revocation counts as done.
+- **Renewal:** the replacement is saved and its route shared (`MailboxRoutePacket`, queued in the outbox), but the old mailbox is not revoked yet: it may still hold envelopes, and the contact keeps sending to the old route until the packet arrived. The old credential becomes a *retiring* credential (`retiring_mailbox_credentials`, one row per route, saved together with the replacement in one transaction). It stays readable until it expires; after its expiry provisioning revokes it once the pending synchronization emptied it (or after a grace period of 7 days). A revocation that fails because the node is unreachable is retried by the next provisioning; any other failure drops the local copy and the node expires the mailbox itself. A retiring mailbox on a retired node is dropped without revocation.
+- **Eligibility:** `GetMailboxContactStatesUseCase` (Contacts) gives a contact a mailbox only with a mutual identity and a routing ID, and only while it is someone we still talk to: a direct conversation with an established identity exchange, or an active group we share (group packets also arrive through the mailbox). A contact whose direct chat was deleted (exchange revoked, conversation removed, mailbox revoked) therefore never gets a fresh mailbox or route, even though it stays MUTUAL.
+- **Blocked contact / deleted chat:** `revokeForContact` revokes the current and every retiring mailbox of the contact; `revokeAll` and the pending-revocation retry cover retiring mailboxes too.
+
+`MailboxPendingSynchronizer` processes every local mailbox, current and retiring (except those whose revocation is pending). An envelope that fails stays in its mailbox for the next sync and does not stop the envelopes behind it or the other mailboxes; a mailbox that cannot be read is skipped. Rejected envelopes are acknowledged and dropped, on the mailbox path and on the push-store path.
 
 The server `mailbox` service stores opaque encrypted envelopes behind recipient-selected capabilities. Push is a wake-up path, not decryption/interpretation by the server.
 

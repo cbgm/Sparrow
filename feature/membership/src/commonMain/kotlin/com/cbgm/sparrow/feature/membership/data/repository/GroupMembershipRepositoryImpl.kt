@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
+import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
@@ -20,12 +21,15 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalReason
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
@@ -287,6 +291,10 @@ internal class GroupMembershipRepositoryImpl(
             }
         }
 
+    override suspend fun findCurrentEpoch(groupId: String): Result<Int?> = runCatching {
+        securityStore.findState(groupId)?.currentEpoch
+    }
+
     override suspend fun getCurrentEpoch(groupId: String): Result<Int> = runCatching {
         securityStore.findState(groupId)?.currentEpoch
             ?: error("Group security state was not found")
@@ -309,6 +317,19 @@ internal class GroupMembershipRepositoryImpl(
                 it.status != GroupMembershipStatus.REMOVED.name &&
                     it.status != GroupMembershipStatus.GROUP_DELETED.name
             }
+        )
+    }
+
+    override suspend fun inspectInvitationTarget(groupId: String): Result<GroupInvitationTarget> = runCatching {
+        val securityState = securityStore.findState(groupId)
+        GroupInvitationTarget(
+            pendingInviterContactIds = membershipStore.findByGroupId(groupId)
+                .filter { membership ->
+                    membership.perspective == GroupMembershipPerspective.MEMBER.name &&
+                        membership.status in PENDING_JOIN_STATUSES
+                }
+                .mapTo(mutableSetOf()) { membership -> membership.contactId },
+            hasLiveMembership = securityState != null && securityState.localRole != GROUP_LEFT_ROLE
         )
     }
 
@@ -477,6 +498,40 @@ internal class GroupMembershipRepositoryImpl(
             )
         }
 
+    /**
+     * The removal committed the rotation without the member and marked the owner-side membership REMOVED. A
+     * member another admin invited has no such row; its removal shows only as its absence from the current epoch.
+     */
+    override suspend fun findCommittedRemoval(
+        groupId: String,
+        contactId: String
+    ): Result<GroupCommittedMemberRemoval?> = runCatching {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        val state = securityStore.findState(groupId)
+        if (state == null || !state.localRole.isGroupAdminRole()) return@runCatching null
+        if (securityStore.findCurrentRemoteMemberKey(groupId, contactId) != null) return@runCatching null
+        val membership =
+            membershipStore.findByGroupContactAndPerspective(
+                groupId = groupId,
+                contactId = contactId,
+                perspective = GroupMembershipPerspective.OWNER.name
+            )
+        if (membership != null && membership.status != GroupMembershipStatus.REMOVED.name) return@runCatching null
+        GroupCommittedMemberRemoval(
+            result = GroupMemberRemovalResult(
+                groupId = groupId,
+                contactId = contactId,
+                epoch = state.currentEpoch,
+                eventId = membership?.sourceInvitationId ?: "member-$contactId",
+                updatedAtEpochMilliseconds =
+                    membership?.updatedAtEpochMilliseconds ?: SystemClock.nowEpochMilliseconds(),
+                reason = GroupMemberRemovalReason.REMOVED
+            ),
+            isRecorded = membership != null
+        )
+    }
+
     override suspend fun removeMember(
         groupId: String,
         contactId: String,
@@ -532,3 +587,11 @@ internal class GroupMembershipRepositoryImpl(
         context: GroupMembershipContext
     ): Result<Long> = operations.deleteGroupConversation(groupId, context)
 }
+
+/** Member-side statuses of an invitation the local user has not completed yet. */
+private val PENDING_JOIN_STATUSES =
+    setOf(
+        GroupMembershipStatus.STAGED.name,
+        GroupMembershipStatus.JOIN_REQUEST_SENT.name,
+        GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
+    )

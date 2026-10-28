@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
@@ -25,7 +26,10 @@ data class GroupPinEntity(
     val isMine: Boolean?,
     val messageContent: String?,
     val pinnedAtEpochMilliseconds: Long?,
-    val changedAtEpochMilliseconds: Long
+    val changedAtEpochMilliseconds: Long,
+    /** The local pin version was saved but its packets are not queued for the members yet. */
+    @ColumnInfo(defaultValue = "0")
+    val publishPending: Boolean = false
 ) {
     init {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
@@ -58,7 +62,8 @@ data class GroupPinEntity(
             isMine == other.isMine &&
             messageContent == other.messageContent &&
             pinnedAtEpochMilliseconds == other.pinnedAtEpochMilliseconds &&
-            changedAtEpochMilliseconds == other.changedAtEpochMilliseconds
+            changedAtEpochMilliseconds == other.changedAtEpochMilliseconds &&
+            publishPending == other.publishPending
     }
 
     override fun hashCode(): Int {
@@ -71,6 +76,7 @@ data class GroupPinEntity(
         result = 31 * result + (messageContent?.hashCode() ?: 0)
         result = 31 * result + (pinnedAtEpochMilliseconds?.hashCode() ?: 0)
         result = 31 * result + changedAtEpochMilliseconds.hashCode()
+        result = 31 * result + publishPending.hashCode()
         return result
     }
 }

@@ -10,17 +10,29 @@ internal class GroupDescriptionDataSource(
         val metadata = groupMetadataDao.get(groupId)
         return GroupDescriptionDto(
             description = metadata?.description,
-            changedAtEpochMilliseconds = metadata?.descriptionChangedAtEpochMilliseconds ?: 0L
+            changedAtEpochMilliseconds = metadata?.descriptionChangedAtEpochMilliseconds ?: 0L,
+            publishPending = metadata?.descriptionPublishPending ?: false
         )
     }
 
-    suspend fun save(groupId: String, description: GroupDescriptionDto) {
-        groupMetadataDao.upsertDescription(
+    suspend fun saveIfVersion(
+        groupId: String,
+        description: GroupDescriptionDto,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Boolean =
+        groupMetadataDao.replaceDescriptionIfVersion(
             groupId = groupId,
+            expectedChangedAtEpochMilliseconds = expectedChangedAtEpochMilliseconds,
             description = description.description,
-            changedAtEpochMilliseconds = description.changedAtEpochMilliseconds
+            changedAtEpochMilliseconds = description.changedAtEpochMilliseconds,
+            publishPending = description.publishPending
         )
+
+    suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
+        groupMetadataDao.markDescriptionPublished(groupId, changedAtEpochMilliseconds)
     }
+
+    suspend fun findPublishPendingGroupIds(): List<String> = groupMetadataDao.findDescriptionPublishPendingGroupIds()
 
     suspend fun deleteLocal(groupId: String) {
         groupMetadataDao.clearDescription(groupId)
