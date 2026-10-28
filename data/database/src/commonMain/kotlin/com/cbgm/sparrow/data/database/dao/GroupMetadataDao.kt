@@ -23,36 +23,56 @@ interface GroupMetadataDao {
         upsert(current(groupId).copy(title = title))
     }
 
+    /**
+     * Sets the title of a welcome only while no admin version is stored, so a rotation welcome never rolls back
+     * a newer published or local title.
+     */
     @Transaction
-    suspend fun upsertTitle(
+    suspend fun upsertTitleValueIfUnversioned(groupId: String, title: String) {
+        val current = current(groupId)
+        if (current.titleChangedAtEpochMilliseconds == 0L) upsert(current.copy(title = title))
+    }
+
+    /** Saves the title only while [expectedChangedAtEpochMilliseconds] is still the stored version. */
+    @Transaction
+    suspend fun replaceTitleIfVersion(
         groupId: String,
+        expectedChangedAtEpochMilliseconds: Long,
         title: String,
         changedAtEpochMilliseconds: Long,
         publishPending: Boolean
-    ) {
+    ): Boolean {
+        val current = current(groupId)
+        if (current.titleChangedAtEpochMilliseconds != expectedChangedAtEpochMilliseconds) return false
         upsert(
-            current(groupId).copy(
+            current.copy(
                 title = title,
                 titleChangedAtEpochMilliseconds = changedAtEpochMilliseconds,
                 titlePublishPending = publishPending
             )
         )
+        return true
     }
 
+    /** Saves the description only while [expectedChangedAtEpochMilliseconds] is still the stored version. */
     @Transaction
-    suspend fun upsertDescription(
+    suspend fun replaceDescriptionIfVersion(
         groupId: String,
+        expectedChangedAtEpochMilliseconds: Long,
         description: String?,
         changedAtEpochMilliseconds: Long,
         publishPending: Boolean
-    ) {
+    ): Boolean {
+        val current = current(groupId)
+        if (current.descriptionChangedAtEpochMilliseconds != expectedChangedAtEpochMilliseconds) return false
         upsert(
-            current(groupId).copy(
+            current.copy(
                 description = description,
                 descriptionChangedAtEpochMilliseconds = changedAtEpochMilliseconds,
                 descriptionPublishPending = publishPending
             )
         )
+        return true
     }
 
     @Transaction

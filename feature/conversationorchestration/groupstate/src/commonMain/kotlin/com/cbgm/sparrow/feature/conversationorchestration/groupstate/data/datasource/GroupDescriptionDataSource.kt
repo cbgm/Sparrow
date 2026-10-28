@@ -15,14 +15,18 @@ internal class GroupDescriptionDataSource(
         )
     }
 
-    suspend fun save(groupId: String, description: GroupDescriptionDto) {
-        groupMetadataDao.upsertDescription(
+    suspend fun saveIfVersion(
+        groupId: String,
+        description: GroupDescriptionDto,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Boolean =
+        groupMetadataDao.replaceDescriptionIfVersion(
             groupId = groupId,
+            expectedChangedAtEpochMilliseconds = expectedChangedAtEpochMilliseconds,
             description = description.description,
             changedAtEpochMilliseconds = description.changedAtEpochMilliseconds,
             publishPending = description.publishPending
         )
-    }
 
     suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
         groupMetadataDao.markDescriptionPublished(groupId, changedAtEpochMilliseconds)

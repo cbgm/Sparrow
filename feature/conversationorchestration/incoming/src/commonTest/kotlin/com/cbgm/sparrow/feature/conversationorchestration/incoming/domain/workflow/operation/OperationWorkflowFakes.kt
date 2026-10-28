@@ -121,7 +121,10 @@ internal class FakeDirectMessageRepository(
         message: StoredMessage,
         text: String,
         receivedAtEpochMilliseconds: Long
-    ): Result<Unit> = error(NOT_USED)
+    ): Result<Unit> {
+        store.store(message, text)
+        return Result.success(Unit)
+    }
 }
 
 internal class FakeGroupMessageRepository(

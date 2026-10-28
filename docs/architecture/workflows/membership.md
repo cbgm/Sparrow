@@ -57,9 +57,11 @@ stateDiagram-v2
 - **Uses:** `WorkflowEngine`, `GroupConversationRepository`, `GroupSecurityRepository`, `LocalSigningKeyPairProvider`, `RefreshOwnedGroupVerificationUseCase`
 
 ```text
-CreateConversation -> InitializeSecurity -> InitializeVerification -> InviteMembers.
+CreateConversation -> InitializeSecurity -> InitializeVerification -> InviteMember for every contact.
 
-No invitation may be created before the owner's epoch and group key exist.
+No invitation may be created before the owner's epoch and group key exist. Once they do, the group exists: a
+contact whose invitation fails is logged and returned in [ConversationResult.GroupCreated.failedContactIds]
+instead of failing the creation, so a retry does not create a second group; the admin can add that contact again.
 ```
 
 ```mermaid
@@ -67,8 +69,10 @@ stateDiagram-v2
     [*] --> CreateConversation
     CreateConversation --> InitializeSecurity : ConversationCreated
     InitializeSecurity --> InitializeVerification : SecurityInitialized
-    InitializeVerification --> InviteMembers : VerificationInitialized
-    InviteMembers --> [*] : MembersInvited
+    InitializeVerification --> InviteMember : VerificationInitialized
+    InitializeVerification --> [*] : VerificationInitialized
+    InviteMember --> InviteMember : InvitationAttempted
+    InviteMember --> [*] : InvitationAttempted
 ```
 
 ### DeleteGroupWorkflow
@@ -362,7 +366,9 @@ stateDiagram-v2
 
 ```text
 LoadSecurity -> ConfirmParticipant -> BroadcastSnapshot   (the admin verified a member)
-LoadSecurity -> SendReceipt                               (a member verified the admin)
+LoadSecurity -> SendReceipt                               (a member verified an admin)
+
+A member may verify any admin of the current epoch, also one promoted after its welcome.
 ```
 
 ```mermaid

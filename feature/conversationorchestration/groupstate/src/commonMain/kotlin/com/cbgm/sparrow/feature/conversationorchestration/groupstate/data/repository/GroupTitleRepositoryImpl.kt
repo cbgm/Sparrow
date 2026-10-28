@@ -13,8 +13,13 @@ internal class GroupTitleRepositoryImpl(
     override suspend fun get(groupId: String): Result<GroupTitleState> =
         safeSuspendCall { dataSource.get(groupId).toGroupTitleState(groupId) }
 
-    override suspend fun save(state: GroupTitleState): Result<Unit> =
-        safeSuspendCall { dataSource.save(state.groupId, state.toGroupTitleDto()) }
+    override suspend fun saveIfVersion(
+        state: GroupTitleState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> =
+        safeSuspendCall {
+            dataSource.saveIfVersion(state.groupId, state.toGroupTitleDto(), expectedChangedAtEpochMilliseconds)
+        }
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
         safeSuspendCall { dataSource.markPublished(groupId, changedAtEpochMilliseconds) }

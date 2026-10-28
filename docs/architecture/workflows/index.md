@@ -41,7 +41,7 @@ Every command has exactly one workflow. Public commands (`ConversationCommand` i
 | `GroupAdministrationCommand.SynchronizeVerification` | [`SynchronizeGroupVerificationWorkflow`](membership.md#synchronizegroupverificationworkflow) | `membership` | `groupVerificationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.TransferAdminAndLeave` | [`TransferGroupAdminAndLeaveWorkflow`](membership.md#transfergroupadminandleaveworkflow) | `membership` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupAdministrationCommand.VerifyMember` | [`VerifyGroupMemberWorkflow`](membership.md#verifygroupmemberworkflow) | `membership` | `groupVerificationLockKey(command.groupId)` |
-| `GroupMessageCommand.ActivateExpenses` | [`ActivateGroupExpensesWorkflow`](groupstate.md#activategroupexpensesworkflow) | `groupstate` | — |
+| `GroupMessageCommand.ActivateExpenses` | [`ActivateGroupExpensesWorkflow`](groupstate.md#activategroupexpensesworkflow) | `groupstate` | `"group-expense:${command.groupId}"` |
 | `GroupMessageCommand.CloseExpenses` | [`CloseGroupExpensesWorkflow`](groupstate.md#closegroupexpensesworkflow) | `groupstate` | `groupAdministrationLockKey(command.groupId)` |
 | `GroupMessageCommand.ClosePoll` | [`CloseGroupPollWorkflow`](message.md#closegrouppollworkflow) | `message` | — |
 | `GroupMessageCommand.CreateExpense` | [`CreateGroupExpenseWorkflow`](groupstate.md#creategroupexpenseworkflow) | `groupstate` | — |
@@ -136,6 +136,7 @@ Workflows that share a lock key never run at the same time (`WorkflowLocks`). Lo
 
 | Lock key | Workflows |
 |---|---|
+| `"group-expense:${command.groupId}"` | `ActivateGroupExpensesWorkflow` |
 | `"payment:${command.groupId}"` | `SendGroupPaymentWorkflow` |
 | `DELIVERY_LOCK_KEY` | `ApplyDeliveryEventWorkflow` |
 | `directReleaseLockKey` | `DeleteOwnDirectMessageWorkflow`, `DiscardWaitingDirectMessagesWorkflow`, `EditOwnDirectMessageWorkflow`, `ReleaseWaitingDirectMessagesWorkflow`, `StoreWaitingDirectMessageWorkflow` |

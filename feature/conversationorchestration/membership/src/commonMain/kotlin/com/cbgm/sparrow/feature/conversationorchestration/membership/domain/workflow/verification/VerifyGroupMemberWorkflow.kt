@@ -15,7 +15,9 @@ import kotlin.reflect.KClass
 
 /**
  * LoadSecurity -> ConfirmParticipant -> BroadcastSnapshot   (the admin verified a member)
- * LoadSecurity -> SendReceipt                               (a member verified the admin)
+ * LoadSecurity -> SendReceipt                               (a member verified an admin)
+ *
+ * A member may verify any admin of the current epoch, also one promoted after its welcome.
  */
 class VerifyGroupMemberWorkflow internal constructor(
     private val resolveGroupVerificationRole: ResolveGroupVerificationRoleUseCase,
@@ -64,7 +66,7 @@ class VerifyGroupMemberWorkflow internal constructor(
                 Transition.Reject(
                     ConversationFailure(
                         ConversationFailureReason.NOT_ALLOWED,
-                        "A group participant may verify only the group admin"
+                        "A group participant may verify only a group admin"
                     )
                 )
             Outcome.ParticipantConfirmed -> Transition.Next(Step.BroadcastSnapshot(step.command))

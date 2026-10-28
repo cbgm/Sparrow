@@ -119,15 +119,19 @@ internal object FakeSigningKeys : LocalSigningKeyPairProvider {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = Result.success(ADMIN_KEYS)
 }
 
-/** The title of [GROUP_ID]; marking it published honours the version like the database does. */
+/** The title of [GROUP_ID]; saving and marking it published honour the version like the database does. */
 internal class FakeTitleRepository(
     var stored: GroupTitleState
 ) : GroupTitleRepository {
     override suspend fun get(groupId: String): Result<GroupTitleState> = Result.success(stored)
 
-    override suspend fun save(state: GroupTitleState): Result<Unit> {
+    override suspend fun saveIfVersion(
+        state: GroupTitleState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> {
+        if (stored.changedAtEpochMilliseconds != expectedChangedAtEpochMilliseconds) return Result.success(false)
         stored = state
-        return Result.success(Unit)
+        return Result.success(true)
     }
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> {
@@ -141,15 +145,20 @@ internal class FakeTitleRepository(
     override suspend fun deleteLocal(groupId: String): Result<Unit> = error(NOT_USED)
 }
 
-/** The pin slot of [GROUP_ID]; marking it published honours the version like the database does. */
+/** The pin slot of [GROUP_ID]; saving and marking it published honour the version like the database does. */
 internal class FakePinRepository(
     var stored: GroupPinState?
 ) : GroupPinRepository {
     override suspend fun find(groupId: String): Result<GroupPinState?> = Result.success(stored)
 
-    override suspend fun save(pin: GroupPinState): Result<Unit> {
+    override suspend fun saveIfVersion(
+        pin: GroupPinState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> {
+        val storedChangedAt = stored?.changedAtEpochMilliseconds ?: 0L
+        if (storedChangedAt != expectedChangedAtEpochMilliseconds) return Result.success(false)
         stored = pin
-        return Result.success(Unit)
+        return Result.success(true)
     }
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> {
@@ -170,7 +179,10 @@ internal object FakeDescriptionRepository : GroupDescriptionRepository {
     override suspend fun get(groupId: String): Result<GroupDescriptionState> =
         Result.success(GroupDescriptionState(groupId, description = null, changedAtEpochMilliseconds = 0L))
 
-    override suspend fun save(state: GroupDescriptionState): Result<Unit> = error(NOT_USED)
+    override suspend fun saveIfVersion(
+        state: GroupDescriptionState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> = error(NOT_USED)
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
         error(NOT_USED)
@@ -185,7 +197,10 @@ internal object FakeAvatarRepository : GroupAvatarRepository {
     override suspend fun get(groupId: String): Result<GroupAvatarState> =
         Result.success(GroupAvatarState(groupId, bytes = null, changedAtEpochMilliseconds = 0L))
 
-    override suspend fun save(state: GroupAvatarState): Result<Unit> = error(NOT_USED)
+    override suspend fun saveIfVersion(
+        state: GroupAvatarState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> = error(NOT_USED)
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
         error(NOT_USED)

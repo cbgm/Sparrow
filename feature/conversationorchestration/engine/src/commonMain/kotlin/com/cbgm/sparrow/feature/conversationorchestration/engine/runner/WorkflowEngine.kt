@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationState
 import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.ConversationFailureMapper
+import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.WorkflowEngineException
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
@@ -53,7 +54,7 @@ class WorkflowEngine(
             is ConversationState.Completed -> Result.success(finalState.result)
             is ConversationState.Failed ->
                 Result.failure(finalState.failure.cause ?: ConversationFailureException(finalState.failure))
-            is ConversationState.Running -> error("A running state is never final")
+            is ConversationState.Running -> throw WorkflowEngineException("A running state is never final")
         }
 
     private fun executeCommand(command: Any, acquireLock: Boolean): Flow<ConversationState> {
@@ -70,6 +71,7 @@ class WorkflowEngine(
         }
     }
 
+    /** Already UNEXPECTED without a cause, so [run] keeps failing with a ConversationFailureException. */
     private fun unsupported(command: Any): ConversationFailure =
         ConversationFailure(
             reason = ConversationFailureReason.UNEXPECTED,
@@ -96,7 +98,7 @@ class WorkflowEngine(
                 }
             }
         }
-        error("Workflow ${workflow::class.simpleName} exceeded $MAX_STEPS steps")
+        throw WorkflowEngineException("Workflow ${workflow::class.simpleName} exceeded $MAX_STEPS steps")
     }
 
     private companion object {

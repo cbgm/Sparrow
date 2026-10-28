@@ -5,7 +5,11 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.mode
 interface GroupTitleRepository {
     suspend fun get(groupId: String): Result<GroupTitleState>
 
-    suspend fun save(state: GroupTitleState): Result<Unit>
+    /**
+     * Saves [state] only while [expectedChangedAtEpochMilliseconds] is still the stored version, atomically against
+     * other saves; false when another version was stored meanwhile.
+     */
+    suspend fun saveIfVersion(state: GroupTitleState, expectedChangedAtEpochMilliseconds: Long): Result<Boolean>
 
     /** Clears the unpublished mark only while [changedAtEpochMilliseconds] is still the stored version. */
     suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit>

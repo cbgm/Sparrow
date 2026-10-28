@@ -5,18 +5,16 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupDescriptionState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupDescriptionPacketCodec
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupDescriptionRepository
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupDescriptionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
 
-/** VerifySignature -> AuthorizeAdmin -> LoadDescription -> SaveDescription. Older or unauthorized updates are dropped. */
+/** VerifySignature -> AuthorizeAdmin -> SaveDescription. Older or unauthorized updates are dropped. */
 class ReceiveGroupDescriptionWorkflow internal constructor(
     private val packetCodec: GroupDescriptionPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val descriptionRepository: GroupDescriptionRepository,
-    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase
+    private val saveGroupDescription: SaveGroupDescriptionUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupDescription,
         ReceiveGroupDescriptionWorkflow.Step,
@@ -35,21 +33,14 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
                 Outcome.SignatureValid
             }
             is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
-            is Step.LoadDescription -> checkNewer(step.command)
-            is Step.SaveDescription -> {
-                descriptionRepository.save(
-                    GroupDescriptionState(packet.groupId, packet.description, packet.changedAtEpochMilliseconds)
-                ).getOrThrow()
-                Outcome.Saved
-            }
+            is Step.SaveDescription -> save(step.command)
         }
     }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.SignatureValid -> Transition.Next(Step.AuthorizeAdmin(step.command))
-            Outcome.AdminAuthorized -> Transition.Next(Step.LoadDescription(step.command))
-            Outcome.UpdateIsNewer -> Transition.Next(Step.SaveDescription(step.command))
+            Outcome.AdminAuthorized -> Transition.Next(Step.SaveDescription(step.command))
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
@@ -71,15 +62,14 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
         }
     }
 
-    private suspend fun checkNewer(command: IncomingCommand.ReceiveGroupDescription): Outcome {
+    /** Stores the version only while it is newer than the stored one, atomically against a local change. */
+    private suspend fun save(command: IncomingCommand.ReceiveGroupDescription): Outcome {
         val packet = command.packet
-        return if (
-            checkIncomingGroupStateVersion.isNewerDescription(packet.groupId, packet.changedAtEpochMilliseconds).getOrThrow()
-        ) {
-            Outcome.UpdateIsNewer
-        } else {
-            Outcome.Ignored
-        }
+        val saved =
+            saveGroupDescription(
+                GroupDescriptionState(packet.groupId, packet.description, packet.changedAtEpochMilliseconds)
+            ).getOrThrow()
+        return if (saved) Outcome.Saved else Outcome.Ignored
     }
 
     sealed interface Step : WorkflowStep {
@@ -93,10 +83,6 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupDescription
         ) : Step
 
-        data class LoadDescription(
-            override val command: IncomingCommand.ReceiveGroupDescription
-        ) : Step
-
         data class SaveDescription(
             override val command: IncomingCommand.ReceiveGroupDescription
         ) : Step
@@ -106,8 +92,6 @@ class ReceiveGroupDescriptionWorkflow internal constructor(
         data object SignatureValid : Outcome
 
         data object AdminAuthorized : Outcome
-
-        data object UpdateIsNewer : Outcome
 
         data object Ignored : Outcome
 

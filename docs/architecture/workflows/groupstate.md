@@ -8,7 +8,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 
 | Workflow | Started by | Command | Lock |
 |---|---|---|---|
-| [`ActivateGroupExpensesWorkflow`](#activategroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ActivateExpenses` | — |
+| [`ActivateGroupExpensesWorkflow`](#activategroupexpensesworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.ActivateExpenses` | `"group-expense:${command.groupId}"` |
 | [`CreateGroupExpenseWorkflow`](#creategroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.CreateExpense` | — |
 | [`DeleteGroupExpenseWorkflow`](#deletegroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.DeleteExpense` | — |
 | [`EditGroupExpenseWorkflow`](#editgroupexpenseworkflow) | Chats (`ConversationOrchestrator`) | `GroupMessageCommand.EditExpense` | — |
@@ -34,13 +34,16 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 
 - **Kind:** public — Chats submits `GroupMessageCommand.ActivateExpenses`
 - **Source:** `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/domain/workflow/expense/ActivateGroupExpensesWorkflow.kt`
-- **Lock:** none
+- **Lock:** `"group-expense:${command.groupId}"`
 - **Uses:** `WorkflowEngine`, `GroupPinRepository`, `RequireGroupAdminContextUseCase`, `CreateExpenseBoardUseCase`
 
 ```text
 AuthorizeAdmin -> CheckNoActiveBoard -> CreateBoard -> SendBoard -> PinBoard.
 
-An expense board is an ordinary group message part that occupies the group's pin slot.
+An expense board is an ordinary group message part that occupies the group's pin slot. Activations of one group
+run one after another under their own lock ([lockKey]), so a second tap sees the board the first one pinned in
+CheckNoActiveBoard instead of sending a second board. The nested SendMessage (group send lock) and PinMessage
+(whose publishing takes the group administration lock) never take this key, so the nesting cannot deadlock.
 ```
 
 ```mermaid

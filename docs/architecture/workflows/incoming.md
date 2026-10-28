@@ -610,20 +610,19 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupAvatar`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupAvatarWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupAvatarRepository`, `CheckIncomingGroupStateVersionUseCase`
+- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupAvatarUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadAvatar -> SaveAvatar. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveAvatar. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadAvatar : AdminAuthorized
+    AuthorizeAdmin --> SaveAvatar : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadAvatar --> [*] : Ignored
-    LoadAvatar --> SaveAvatar : UpdateIsNewer
+    SaveAvatar --> [*] : Ignored
     SaveAvatar --> [*] : Saved
 ```
 
@@ -632,20 +631,19 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDescription`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupDescriptionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupDescriptionRepository`, `CheckIncomingGroupStateVersionUseCase`
+- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupDescriptionUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadDescription -> SaveDescription. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveDescription. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadDescription : AdminAuthorized
+    AuthorizeAdmin --> SaveDescription : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadDescription --> [*] : Ignored
-    LoadDescription --> SaveDescription : UpdateIsNewer
+    SaveDescription --> [*] : Ignored
     SaveDescription --> [*] : Saved
 ```
 
@@ -654,12 +652,13 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupPin`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupPinWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupPinRepository`, `CheckIncomingGroupStateVersionUseCase`, `ResolveIncomingPinSenderUseCase`
+- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `CheckIncomingGroupStateVersionUseCase`, `ResolveIncomingPinSenderUseCase`, `SaveGroupPinUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> CheckPinSlot -> [ResolveMessageSender] -> SavePin
 
-Older updates are dropped, and an active expense board keeps the pin slot against other messages.
+Older updates are dropped, and an active expense board keeps the pin slot against other messages. SavePin checks
+both again atomically with the save, because a local pin may be saved while the sender is resolved.
 ```
 
 ```mermaid
@@ -672,6 +671,7 @@ stateDiagram-v2
     CheckPinSlot --> SavePin : SenderResolved
     CheckPinSlot --> ResolveMessageSender : SlotAvailable
     ResolveMessageSender --> SavePin : SenderResolved
+    SavePin --> [*] : Ignored
     SavePin --> [*] : Saved
 ```
 
@@ -680,20 +680,19 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupTitle`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupTitleWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupTitleRepository`, `CheckIncomingGroupStateVersionUseCase`
+- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupTitleUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadTitle -> SaveTitle. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveTitle. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadTitle : AdminAuthorized
+    AuthorizeAdmin --> SaveTitle : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadTitle --> [*] : Ignored
-    LoadTitle --> SaveTitle : UpdateIsNewer
+    SaveTitle --> [*] : Ignored
     SaveTitle --> [*] : Saved
 ```
 

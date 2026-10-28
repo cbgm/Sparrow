@@ -15,9 +15,18 @@ internal class GroupTitleDataSource(
         )
     }
 
-    suspend fun save(groupId: String, title: GroupTitleDto) {
-        groupMetadataDao.upsertTitle(groupId, title.title, title.changedAtEpochMilliseconds, title.publishPending)
-    }
+    suspend fun saveIfVersion(
+        groupId: String,
+        title: GroupTitleDto,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Boolean =
+        groupMetadataDao.replaceTitleIfVersion(
+            groupId = groupId,
+            expectedChangedAtEpochMilliseconds = expectedChangedAtEpochMilliseconds,
+            title = title.title,
+            changedAtEpochMilliseconds = title.changedAtEpochMilliseconds,
+            publishPending = title.publishPending
+        )
 
     suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
         groupMetadataDao.markTitlePublished(groupId, changedAtEpochMilliseconds)

@@ -72,7 +72,9 @@ internal class GroupConversationDataSource(
                 isVisible = existing?.isVisible == true && hasHistory
             )
         )
-        groupMetadataDao.upsertTitleValue(groupId, title)
+        // An invitation is unsigned by the group's admin history; it never replaces a versioned title, the
+        // welcome sets the title of a re-joined group.
+        groupMetadataDao.upsertTitleValueIfUnversioned(groupId, title)
         return true
     }
 

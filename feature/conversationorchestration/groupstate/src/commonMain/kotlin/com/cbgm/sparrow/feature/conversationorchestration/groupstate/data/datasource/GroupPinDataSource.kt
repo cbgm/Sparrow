@@ -8,9 +8,8 @@ internal class GroupPinDataSource(
 ) {
     suspend fun get(groupId: String): GroupPinEntity? = groupPinDao.get(groupId)
 
-    suspend fun save(entity: GroupPinEntity) {
-        groupPinDao.upsert(entity)
-    }
+    suspend fun saveIfVersion(entity: GroupPinEntity, expectedChangedAtEpochMilliseconds: Long): Boolean =
+        groupPinDao.replaceIfVersion(entity, expectedChangedAtEpochMilliseconds)
 
     suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long) {
         groupPinDao.markPublished(groupId, changedAtEpochMilliseconds)

@@ -9,6 +9,7 @@ object ConversationFailureMapper {
     fun toFailure(error: Throwable): ConversationFailure =
         when (error) {
             is ConversationFailureException -> error.failure
+            is WorkflowEngineException -> failure(ConversationFailureReason.UNEXPECTED, error)
             is DirectChatAuthorizationRequiredException ->
                 failure(ConversationFailureReason.AUTHORIZATION_REQUIRED, error)
             is IllegalArgumentException -> failure(ConversationFailureReason.INVALID_INPUT, error)

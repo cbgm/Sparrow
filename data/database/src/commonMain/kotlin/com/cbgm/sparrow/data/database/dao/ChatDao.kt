@@ -31,6 +31,21 @@ interface ChatDao {
     @Upsert
     suspend fun upsertConversation(conversation: ConversationEntity)
 
+    /**
+     * Upserts [conversation] but keeps the unseen count of a stored row, and its visibility when [keepVisibility]
+     * is set, so a repeated write never resets what the user has not read or has hidden.
+     */
+    @Transaction
+    suspend fun upsertConversationKeepingLocalState(conversation: ConversationEntity, keepVisibility: Boolean) {
+        val existing = findConversationById(conversation.id)
+        upsertConversation(
+            conversation.copy(
+                unseenLocalMessageCount = existing?.unseenLocalMessageCount ?: conversation.unseenLocalMessageCount,
+                isVisible = existing?.isVisible?.takeIf { keepVisibility } ?: conversation.isVisible
+            )
+        )
+    }
+
     @Upsert
     suspend fun upsertConversationParticipant(participant: ConversationParticipantEntity)
 

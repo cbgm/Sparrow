@@ -16,7 +16,10 @@ import kotlin.reflect.KClass
 /**
  * AuthorizeAdmin -> CheckNoActiveBoard -> CreateBoard -> SendBoard -> PinBoard.
  *
- * An expense board is an ordinary group message part that occupies the group's pin slot.
+ * An expense board is an ordinary group message part that occupies the group's pin slot. Activations of one group
+ * run one after another under their own lock ([lockKey]), so a second tap sees the board the first one pinned in
+ * CheckNoActiveBoard instead of sending a second board. The nested SendMessage (group send lock) and PinMessage
+ * (whose publishing takes the group administration lock) never take this key, so the nesting cannot deadlock.
  */
 class ActivateGroupExpensesWorkflow internal constructor(
     private val engine: WorkflowEngine,
@@ -29,6 +32,8 @@ class ActivateGroupExpensesWorkflow internal constructor(
         ActivateGroupExpensesWorkflow.Outcome
     > {
     override val commandType: KClass<GroupMessageCommand.ActivateExpenses> = GroupMessageCommand.ActivateExpenses::class
+
+    override fun lockKey(command: GroupMessageCommand.ActivateExpenses): String = "group-expense:${command.groupId}"
 
     override fun firstStep(command: GroupMessageCommand.ActivateExpenses): Step = Step.AuthorizeAdmin(command)
 

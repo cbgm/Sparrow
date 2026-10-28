@@ -5,18 +5,16 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupTitleState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupTitlePacketCodec
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupTitleRepository
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupTitleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
 
-/** VerifySignature -> AuthorizeAdmin -> LoadTitle -> SaveTitle. Older or unauthorized updates are dropped. */
+/** VerifySignature -> AuthorizeAdmin -> SaveTitle. Older or unauthorized updates are dropped. */
 class ReceiveGroupTitleWorkflow internal constructor(
     private val packetCodec: GroupTitlePacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val titleRepository: GroupTitleRepository,
-    private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase
+    private val saveGroupTitle: SaveGroupTitleUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupTitle,
         ReceiveGroupTitleWorkflow.Step,
@@ -34,21 +32,14 @@ class ReceiveGroupTitleWorkflow internal constructor(
                 Outcome.SignatureValid
             }
             is Step.AuthorizeAdmin -> authorizeAdmin(step.command)
-            is Step.LoadTitle -> checkNewer(step.command)
-            is Step.SaveTitle -> {
-                titleRepository.save(
-                    GroupTitleState(packet.groupId, packet.title, packet.changedAtEpochMilliseconds)
-                ).getOrThrow()
-                Outcome.Saved
-            }
+            is Step.SaveTitle -> save(step.command)
         }
     }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.SignatureValid -> Transition.Next(Step.AuthorizeAdmin(step.command))
-            Outcome.AdminAuthorized -> Transition.Next(Step.LoadTitle(step.command))
-            Outcome.UpdateIsNewer -> Transition.Next(Step.SaveTitle(step.command))
+            Outcome.AdminAuthorized -> Transition.Next(Step.SaveTitle(step.command))
             Outcome.Ignored,
             Outcome.Saved -> Transition.Complete()
         }
@@ -70,15 +61,14 @@ class ReceiveGroupTitleWorkflow internal constructor(
         }
     }
 
-    private suspend fun checkNewer(command: IncomingCommand.ReceiveGroupTitle): Outcome {
+    /** Stores the version only while it is newer than the stored one, atomically against a local change. */
+    private suspend fun save(command: IncomingCommand.ReceiveGroupTitle): Outcome {
         val packet = command.packet
-        return if (
-            checkIncomingGroupStateVersion.isNewerTitle(packet.groupId, packet.changedAtEpochMilliseconds).getOrThrow()
-        ) {
-            Outcome.UpdateIsNewer
-        } else {
-            Outcome.Ignored
-        }
+        val saved =
+            saveGroupTitle(
+                GroupTitleState(packet.groupId, packet.title, packet.changedAtEpochMilliseconds)
+            ).getOrThrow()
+        return if (saved) Outcome.Saved else Outcome.Ignored
     }
 
     sealed interface Step : WorkflowStep {
@@ -92,10 +82,6 @@ class ReceiveGroupTitleWorkflow internal constructor(
             override val command: IncomingCommand.ReceiveGroupTitle
         ) : Step
 
-        data class LoadTitle(
-            override val command: IncomingCommand.ReceiveGroupTitle
-        ) : Step
-
         data class SaveTitle(
             override val command: IncomingCommand.ReceiveGroupTitle
         ) : Step
@@ -105,8 +91,6 @@ class ReceiveGroupTitleWorkflow internal constructor(
         data object SignatureValid : Outcome
 
         data object AdminAuthorized : Outcome
-
-        data object UpdateIsNewer : Outcome
 
         data object Ignored : Outcome
 

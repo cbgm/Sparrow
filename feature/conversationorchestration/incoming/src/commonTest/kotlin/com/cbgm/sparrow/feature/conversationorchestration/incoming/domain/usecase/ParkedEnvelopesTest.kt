@@ -225,7 +225,8 @@ class ParkedEnvelopesTest {
         }
     }
 
-    private class FakeIdentities : IdentityExchangeRepository {
+    /** Also used by [StoreUnreadableMessageUseCaseTest]. */
+    internal class FakeIdentities : IdentityExchangeRepository {
         val states = mutableMapOf<String, IdentityPeerState>()
 
         override suspend fun getPeerState(peerId: String): Result<IdentityPeerState> =
@@ -323,7 +324,8 @@ class ParkedEnvelopesTest {
         ): Result<Boolean> = error(NOT_USED)
     }
 
-    private class NoPendingChanges : PendingRemoteIdentityChangeRepository {
+    /** Also used by [StoreUnreadableMessageUseCaseTest]. */
+    internal class NoPendingChanges : PendingRemoteIdentityChangeRepository {
         override fun observeAll(): Flow<List<PendingRemoteIdentityChange>> = flowOf(emptyList())
 
         override suspend fun stage(candidate: PendingRemoteIdentityChange): Result<Unit> = error(NOT_USED)
@@ -338,7 +340,8 @@ class ParkedEnvelopesTest {
         ): Result<Unit> = error(NOT_USED)
     }
 
-    private class FakeBlocklist : ContactBlocklistRepository {
+    /** Also used by [StoreUnreadableMessageUseCaseTest]. */
+    internal class FakeBlocklist : ContactBlocklistRepository {
         val blocked = mutableSetOf<String>()
 
         override suspend fun isBlocked(contactId: String): Result<Boolean> = Result.success(contactId in blocked)

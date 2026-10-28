@@ -194,12 +194,13 @@ sequenceDiagram
 | Exception | `ConversationFailureReason` |
 |---|---|
 | `ConversationFailureException` | its own failure |
+| `WorkflowEngineException` (the engine's own invariants: step limit, a running state taken as final) | `UNEXPECTED` |
 | `DirectChatAuthorizationRequiredException` | `AUTHORIZATION_REQUIRED` |
 | `IllegalArgumentException` (`require`) | `INVALID_INPUT` |
 | `IllegalStateException` (`check`, `error`) | `NOT_ALLOWED` |
 | anything else | `UNEXPECTED` |
 
-- A workflow that exceeds 100,000 steps fails; this only guards against a transition cycle, because workflows that walk a list (read receipts, queued messages) take a few steps per item.
+- A workflow that exceeds 100,000 steps fails with `WorkflowEngineException` (`UNEXPECTED`, not `NOT_ALLOWED`); this only guards against a transition cycle, because workflows that walk a list (read receipts, queued messages) take a few steps per item. A command no workflow handles fails as `UNEXPECTED` too. Chats does not branch on the reason; it only shows the message.
 
 ## Anatomy of a workflow
 
@@ -415,6 +416,15 @@ Edits are ordered by their `editedAtEpochMilliseconds`, not by arrival: `Replace
 edit 2 followed by a mailbox copy of edit 1 keeps edit 2). Local edits always replace the text and record the
 local time.
 
+### Unreadable envelopes
+
+An envelope that cannot be decrypted or decoded is kept as a placeholder ("Unable to decrypt secure message") by
+`StoreUnreadableMessageUseCase`, under the same rule as readable direct messages: only a contact with an
+established exchange (`ResolveDirectPeerAccessUseCase` returns `AUTHORIZED`) gets it, and only in its existing
+direct chat. A group-only member, a pending, unknown or blocked contact gets no new chat; the envelope is dropped
+and logged (a pending one is not parked, because the key that failed would fail again on replay). The
+placeholder ID is derived from the SHA-256 of contact and payload, so a redelivered envelope adds no second row.
+
 ### Packets that arrive too early
 
 Some packets are valid but cannot be handled yet, and failing them would lose them (a live envelope that is
@@ -484,6 +494,7 @@ Startup order (`ApplicationStartupTasks`): `ValidateConversationWorkflowsStartup
 | `groupVerificationLockKey` | `group-verification:<groupId>` | verification changes, also from incoming packets |
 | `directReleaseLockKey` | `direct-release:<contactId>` | releasing or discarding a contact's waiting Direct messages, storing a new waiting message (`StoreWaitingDirectMessage`) and editing or deleting an own Direct message that was never sent (`EditOwnDirectMessage`, `DeleteOwnDirectMessage`) |
 | `DELIVERY_LOCK_KEY` | `message-delivery` | all delivery-state updates |
+| `ActivateGroupExpensesWorkflow.lockKey` | `group-expense:<groupId>` | activating group expenses, so a second tap sees the board the first one pinned instead of sending a second board |
 
 A lock serializes only the sending part of a user's change, never the local change itself: the user sees the new
 message, the edit or delete, the new title or pin at once, even while a send uploads attachments under `group-send`
@@ -500,6 +511,10 @@ which alone holds the key. It loads the unpublished state (nothing to do when it
 newer remote state), signs it with the current epoch, queues it and marks it published only while it is still the
 stored version. A failed or interrupted publish leaves the state unpublished; the same change again (the "unchanged"
 short-cut does not apply to an unpublished state) or `UnpublishedGroupStateRunner` after the next start publishes it.
+Because local saves take no lock, every save of a title, description, avatar or pin, local or received, is a
+compare-and-set (`SaveGroupTitleUseCase` and the like, `GroupTitleRepository.saveIfVersion`): it stores the version
+only while the stored version is still the one it checked as older, and checks again when another save won the
+race, so a concurrent older save can never overwrite a newer one. A received pin also re-checks the expense slot.
 Nesting under this key (checked over every `engine.run`): the admin workflows nest only
 `RefreshOwnedGroupVerification` (`group-verification`); `CloseGroupExpensesWorkflow` nests `SendMessage` (`group-send`,
 which nests the flush with `acquireLock = false` and delivery events under `message-delivery`);
@@ -507,7 +522,9 @@ which nests the flush with `acquireLock = false` and delivery events under `mess
 `SendCurrentGroupPin`/`SendCurrentGroupExpenses`, which take no key; the four `Publish*` workflows nest nothing (their
 enqueue does not record delivery events). The `Publish*` commands are nested only by the public workflows above and by
 `UnpublishedGroupStateRunner`, none of which holds a key; `PinMessage` itself is nested only by
-`ActivateGroupExpenses`, which takes no key. No holder of `group-send`, `group-verification` or `message-delivery`
+`ActivateGroupExpenses`, which holds `group-expense` (taken by nothing else; it nests `SendMessage` under `group-send`
+and `PinMessage`, whose `PublishGroupPin` takes `group-administration`, so the order is group-expense → send or
+group-expense → administration). No holder of `group-send`, `group-verification` or `message-delivery`
 runs an administration-keyed workflow, so the keys are only ever taken in the order administration → verification or
 administration → send → delivery.
 

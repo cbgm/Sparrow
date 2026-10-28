@@ -137,6 +137,10 @@ Expense and payment parts cannot be edited like ordinary messages (`MessageEditP
 | `GroupMessageCommand.CloseExpenses` | `CloseGroupExpensesWorkflow` | AuthorizeAdmin → FindPin → FindBoardClosure → [SendBoardClosedMessage] → DeleteReceipts → PrepareEmptyPin → CreatePinPackets → EnqueuePinPackets → SaveEmptyPin |
 | `GroupStateCommand.SendCurrentGroupExpenses` | `SendCurrentGroupExpensesWorkflow` | FindBoard → LoadExpenseMessages → EnqueueExpenseMessages |
 
+Activations of one group run one after another under the `group-expense:<groupId>` lock, so a double tap
+opens one board: the second activation finds the board the first one pinned in CheckNoActiveBoard and fails with
+"Group expenses are already active".
+
 Closing is safe to repeat after a failure: the closing message is not sent again when a stored
 `ExpenseBoardClosed` part for the board already exists, receipts are deleted idempotently, and the
 pin is cleared locally only after its packets are queued, so the retry still releases it for every

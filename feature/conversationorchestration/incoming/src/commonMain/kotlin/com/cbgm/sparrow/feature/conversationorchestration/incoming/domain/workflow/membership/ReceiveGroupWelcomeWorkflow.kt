@@ -136,6 +136,7 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
                         previousSigningKeysByContactId = step.welcome.authorization.previousSigningKeysByContactId,
                         contactIdsByMember = step.welcome.contactIdsByMember,
                         contactDisplayNames = step.welcome.memberDisplayNames,
+                        isFirstWelcome = step.welcome.authorization.isFirstWelcome,
                         persistedAt = step.welcome.persistedAt
                     ).getOrThrow()
                 Outcome.Advanced(step.welcome.copy(removedContactIds = removed))

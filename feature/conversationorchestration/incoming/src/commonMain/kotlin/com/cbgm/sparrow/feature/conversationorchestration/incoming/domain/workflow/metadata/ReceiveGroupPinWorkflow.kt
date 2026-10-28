@@ -4,9 +4,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.packet.GroupPinPacketCodec
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CheckIncomingGroupStateVersionUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.ResolveIncomingPinSenderUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 import kotlin.reflect.KClass
@@ -14,14 +14,15 @@ import kotlin.reflect.KClass
 /**
  * VerifySignature -> AuthorizeAdmin -> CheckPinSlot -> [ResolveMessageSender] -> SavePin
  *
- * Older updates are dropped, and an active expense board keeps the pin slot against other messages.
+ * Older updates are dropped, and an active expense board keeps the pin slot against other messages. SavePin checks
+ * both again atomically with the save, because a local pin may be saved while the sender is resolved.
  */
 class ReceiveGroupPinWorkflow internal constructor(
     private val packetCodec: GroupPinPacketCodec,
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val pinRepository: GroupPinRepository,
     private val checkIncomingGroupStateVersion: CheckIncomingGroupStateVersionUseCase,
-    private val resolveIncomingPinSender: ResolveIncomingPinSenderUseCase
+    private val resolveIncomingPinSender: ResolveIncomingPinSenderUseCase,
+    private val saveGroupPin: SaveGroupPinUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupPin,
         ReceiveGroupPinWorkflow.Step,
@@ -49,10 +50,7 @@ class ReceiveGroupPinWorkflow internal constructor(
                     ).getOrThrow()
                 Outcome.SenderResolved(sender.memberContactId, sender.isLocal)
             }
-            is Step.SavePin -> {
-                pinRepository.save(packetCodec.toGroupPinState(packet, step.senderContactId, step.isMine)).getOrThrow()
-                Outcome.Saved
-            }
+            is Step.SavePin -> savePin(step)
         }
     }
 
@@ -96,6 +94,11 @@ class ReceiveGroupPinWorkflow internal constructor(
             packet.hasPinnedMessage -> Outcome.SlotAvailable
             else -> Outcome.SenderResolved(senderContactId = null, isMine = false)
         }
+    }
+
+    private suspend fun savePin(step: Step.SavePin): Outcome {
+        val pin = packetCodec.toGroupPinState(step.command.packet, step.senderContactId, step.isMine)
+        return if (saveGroupPin.received(pin).getOrThrow()) Outcome.Saved else Outcome.Ignored
     }
 
     sealed interface Step : WorkflowStep {

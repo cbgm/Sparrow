@@ -13,8 +13,13 @@ internal class GroupAvatarRepositoryImpl(
     override suspend fun get(groupId: String): Result<GroupAvatarState> =
         safeSuspendCall { dataSource.get(groupId).toGroupAvatarState(groupId) }
 
-    override suspend fun save(state: GroupAvatarState): Result<Unit> =
-        safeSuspendCall { dataSource.save(state.groupId, state.toGroupAvatarDto()) }
+    override suspend fun saveIfVersion(
+        state: GroupAvatarState,
+        expectedChangedAtEpochMilliseconds: Long
+    ): Result<Boolean> =
+        safeSuspendCall {
+            dataSource.saveIfVersion(state.groupId, state.toGroupAvatarDto(), expectedChangedAtEpochMilliseconds)
+        }
 
     override suspend fun markPublished(groupId: String, changedAtEpochMilliseconds: Long): Result<Unit> =
         safeSuspendCall { dataSource.markPublished(groupId, changedAtEpochMilliseconds) }
