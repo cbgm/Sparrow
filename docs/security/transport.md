@@ -5,6 +5,10 @@ Transport security has two layers:
 1. the public HTTP/WSS transport provided by Caddy/TLS where configured;
 2. application-level identity/group encryption and signatures, so server routing is not the sole confidentiality boundary.
 
+## Client session sign-in
+
+A WebSocket session is bound to a routing ID only after challenge-response: the gateway sends a single-use 32-byte nonce and its node ID, and the client signs a domain-separated, length-prefixed payload over routing ID, connection ID, node ID and nonce with its identity signing key. The gateway checks that the routing ID is derived from the presented key and that the signature is valid for this connection's nonce and its own node ID (`GatewaySessionValidator`, `ProtocolSignatures.verifyGatewaySession`); otherwise it answers `INVALID_SESSION` and closes the connection. The client in turn refuses a challenge from a node other than the one it chose from the signed directory. Without a valid proof nobody can receive, acknowledge (delete) or send envelopes as another routing ID. See [Session sign-in](../api/websocket.md#session-sign-in-challenge-response).
+
 ## Client route registration
 
 Clients register a signed, expiring presence route through the Community Node gateway. Route refreshes include freshness/generation checks. The gateway validates them with `GatewayRouteValidator`; the Control Plane presence service parses the signed request with `nodeRequestAuthentication()` and authorizes it through `PresenceRuntime.nodeRequestAuthorizer` (`NodeRequestAuthorizer`).

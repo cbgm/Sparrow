@@ -133,6 +133,7 @@ private fun createGatewayHandler(
             ),
         legacyPush = pushClient,
         routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
+        signInTimeoutMilliseconds = config.signInTimeoutMilliseconds,
         blobUploadTicketIssuer =
             GatewayBlobUploadTicketIssuer(
                 nodeId = identity.nodeId,

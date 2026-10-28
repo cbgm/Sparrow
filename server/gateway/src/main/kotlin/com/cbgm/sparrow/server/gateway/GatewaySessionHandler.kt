@@ -1,17 +1,20 @@
 package com.cbgm.sparrow.server.gateway
 
-import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.GatewayClientMessage
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.serverJson
-import com.cbgm.sparrow.server.security.ClientRoutingIds
 import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.consumeEach
-import java.util.UUID
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.security.SecureRandom
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class GatewaySessionHandler(
     private val nodeId: String,
@@ -19,12 +22,16 @@ internal class GatewaySessionHandler(
     private val presence: PresenceClient,
     private val pushActions: GatewayPushActions,
     private val routeValidator: GatewayRouteValidator,
+    private val signInTimeoutMilliseconds: Long,
     private val actions: GatewayMessageActions
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
-        val state = GatewaySessionState()
+        val nonce = newChallengeNonce()
+        val state = GatewaySessionState(challengeNonce = nonce)
         val workDispatcher = GatewaySessionWorkDispatcher()
+        val signInDeadline = session.launch { closeIfNotSignedIn(session, state) }
         try {
+            session.sendServerMessage(GatewayServerMessage.Challenge(nonce = nonce, nodeId = nodeId))
             session.incoming.consumeEach { frame ->
                 handleFrame(
                     session = session,
@@ -34,8 +41,21 @@ internal class GatewaySessionHandler(
                 )
             }
         } finally {
+            signInDeadline.cancel()
             workDispatcher.close()
             cleanup(state.connection)
+        }
+    }
+
+    // An unauthenticated socket would otherwise hold a connection slot until the transport timeout.
+    private suspend fun closeIfNotSignedIn(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState
+    ) {
+        delay(signInTimeoutMilliseconds.milliseconds)
+        if (state.connection == null) {
+            state.challengeNonce = null
+            session.rejectSession("Sign-in timed out")
         }
     }
 
@@ -46,7 +66,7 @@ internal class GatewaySessionHandler(
         workDispatcher: GatewaySessionWorkDispatcher
     ) {
         if (frame is Frame.Text) {
-            decodeMessage(session, frame)?.let { message ->
+            decodeMessage(session, state, frame)?.let { message ->
                 handleMessage(
                     session = session,
                     state = state,
@@ -55,7 +75,19 @@ internal class GatewaySessionHandler(
                 )
             }
         } else {
-            state.connection?.sendError(
+            rejectUnsupportedFrame(session, state)
+        }
+    }
+
+    private suspend fun rejectUnsupportedFrame(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState
+    ) {
+        val connection = state.connection
+        if (connection == null) {
+            rejectBeforeSignIn(session, state)
+        } else {
+            connection.sendError(
                 code = "UNSUPPORTED_FRAME",
                 message = "Text frames are required"
             )
@@ -64,91 +96,81 @@ internal class GatewaySessionHandler(
 
     private suspend fun decodeMessage(
         session: DefaultWebSocketServerSession,
+        state: GatewaySessionState,
         frame: Frame.Text
     ): GatewayClientMessage? =
         runCatching {
             serverJson.decodeFromString<GatewayClientMessage>(frame.readText())
         }.getOrElse {
+            rejectInvalidMessage(session, state)
+            null
+        }
+
+    // Before sign-in an undecodable frame is most likely a Register without proof, so the session
+    // is closed instead of being left open unauthenticated.
+    private suspend fun rejectInvalidMessage(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState
+    ) {
+        if (state.connection == null) {
+            rejectBeforeSignIn(session, state)
+        } else {
             session.sendError(
                 code = "INVALID_MESSAGE",
                 message = "Invalid message"
             )
-            null
         }
+    }
 
+    // Nothing but Register is accepted before sign-in, so an unauthenticated socket can never
+    // send, acknowledge, refresh a route or obtain an upload ticket.
     private suspend fun handleMessage(
         session: DefaultWebSocketServerSession,
         state: GatewaySessionState,
         message: GatewayClientMessage,
         workDispatcher: GatewaySessionWorkDispatcher
     ) {
+        val connection = state.connection
+        when {
+            message is GatewayClientMessage.Register -> handleRegistration(session, state, message)
+            connection == null -> rejectBeforeSignIn(session, state)
+            else -> handleSignedInMessage(connection, message, workDispatcher)
+        }
+    }
+
+    private suspend fun rejectBeforeSignIn(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState
+    ) {
+        state.challengeNonce = null
+        session.rejectSession("Register with a session proof first")
+    }
+
+    private suspend fun handleSignedInMessage(
+        connection: GatewayConnection,
+        message: GatewayClientMessage,
+        workDispatcher: GatewaySessionWorkDispatcher
+    ) {
         when (message) {
-            is GatewayClientMessage.Register -> handleRegistration(session, state, message)
+            is GatewayClientMessage.Register -> Unit
             is GatewayClientMessage.SendEnvelope ->
-                handleSendEnvelope(session, state, message, workDispatcher)
+                workDispatcher.dispatch(key = "envelope:${message.envelope.recipientId}") {
+                    actions.sendEnvelope(connection, message)
+                }
             is GatewayClientMessage.SendFederatedEnvelope ->
-                handleSendFederatedEnvelope(session, state, message, workDispatcher)
+                workDispatcher.dispatch(key = "envelope:${message.envelope.recipientDeviceRoutingId}") {
+                    actions.sendFederatedEnvelope(connection, message)
+                }
             is GatewayClientMessage.IndicatorState ->
-                handleIndicatorState(state, message, workDispatcher)
-            is GatewayClientMessage.AcknowledgeEnvelope -> handleAcknowledge(state, message)
-            is GatewayClientMessage.RefreshRoute ->
-                refreshRoute(state.connection, message.registration)
+                workDispatcher.dispatch(key = "indicator:${message.recipientId}") {
+                    actions.deliverIndicator(connection, message)
+                }
+            is GatewayClientMessage.AcknowledgeEnvelope ->
+                pushActions.acknowledge(connection, message.envelopeId)
+            is GatewayClientMessage.RefreshRoute -> refreshRoute(connection, message.registration)
             is GatewayClientMessage.RequestBlobUploadTicket ->
-                handleBlobUploadTicket(session, state, message)
+                actions.issueBlobUploadTicket(connection, message)
         }
-    }
-
-    private suspend fun handleSendEnvelope(
-        session: DefaultWebSocketServerSession,
-        state: GatewaySessionState,
-        message: GatewayClientMessage.SendEnvelope,
-        workDispatcher: GatewaySessionWorkDispatcher
-    ) {
-        val connection = state.connection ?: return session.sendNotRegistered()
-        workDispatcher.dispatch(key = "envelope:${message.envelope.recipientId}") {
-            actions.sendEnvelope(connection, message)
-        }
-    }
-
-    private suspend fun handleSendFederatedEnvelope(
-        session: DefaultWebSocketServerSession,
-        state: GatewaySessionState,
-        message: GatewayClientMessage.SendFederatedEnvelope,
-        workDispatcher: GatewaySessionWorkDispatcher
-    ) {
-        val connection = state.connection ?: return session.sendNotRegistered()
-        workDispatcher.dispatch(key = "envelope:${message.envelope.recipientDeviceRoutingId}") {
-            actions.sendFederatedEnvelope(connection, message)
-        }
-    }
-
-    private fun handleIndicatorState(
-        state: GatewaySessionState,
-        message: GatewayClientMessage.IndicatorState,
-        workDispatcher: GatewaySessionWorkDispatcher
-    ) {
-        val connection = state.connection ?: return
-        workDispatcher.dispatch(key = "indicator:${message.recipientId}") {
-            actions.deliverIndicator(connection, message)
-        }
-    }
-
-    private fun handleAcknowledge(
-        state: GatewaySessionState,
-        message: GatewayClientMessage.AcknowledgeEnvelope
-    ) {
-        state.connection?.let { connection ->
-            pushActions.acknowledge(connection, message.envelopeId)
-        }
-    }
-
-    private suspend fun handleBlobUploadTicket(
-        session: DefaultWebSocketServerSession,
-        state: GatewaySessionState,
-        message: GatewayClientMessage.RequestBlobUploadTicket
-    ) {
-        val connection = state.connection ?: return session.sendNotRegistered()
-        actions.issueBlobUploadTicket(connection, message)
     }
 
     private suspend fun handleRegistration(
@@ -158,7 +180,7 @@ internal class GatewaySessionHandler(
     ) {
         val current = state.connection
         if (current == null) {
-            state.connection = register(session, message)
+            state.connection = register(session, state, message)
         } else {
             current.sendError(
                 code = "ALREADY_REGISTERED",
@@ -167,43 +189,28 @@ internal class GatewaySessionHandler(
         }
     }
 
+    // The challenge nonce is consumed by the first attempt, so a failed proof cannot be retried and
+    // a signature can never be used twice.
     private suspend fun register(
         session: DefaultWebSocketServerSession,
+        state: GatewaySessionState,
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
-        val connection = message.toGatewayConnection(session)
-        if (ClientRoutingIds.isBootstrapRoutingId(message.routingId)) {
-            connection.sendError("INVALID_ROUTE", "Register a signing-key routing identity")
-            return null
-        }
-        val registration = message.toClientRouteRegistration(connection, nodeId)
-        val routeValidationFailure =
-            registration?.let { currentRegistration ->
-                routeValidator.validationFailure(
-                    registration = currentRegistration,
-                    connectionRoutingId = connection.routingId,
-                    connectionId = connection.connectionId,
-                    expectedNodeId = nodeId
-                )
-            }
-
-        if (routeValidationFailure != null) {
-            connection.sendError(
-                code = "INVALID_ROUTE",
-                message = "Signed route is invalid: ${routeValidationFailure.name}"
+        val nonce = state.challengeNonce.also { state.challengeNonce = null }
+        val failure =
+            GatewaySessionValidator.validationFailure(
+                message = message,
+                nonce = nonce,
+                expectedNodeId = nodeId
             )
+        if (failure != null) {
+            session.rejectSession("Session proof is invalid: ${failure.name}")
             return null
         }
 
-        val presenceResult =
-            registration?.let { synchronizePresence(it) } ?: PresenceRegistrationResult.ACCEPTED
-        return if (presenceResult == PresenceRegistrationResult.ACCEPTED) {
-            activateConnection(connection)
-            connection
-        } else {
-            connection.sendRouteRejected(presenceResult)
-            null
-        }
+        val connection = message.toGatewayConnection(session)
+        activateConnection(connection)
+        return connection
     }
 
     private suspend fun activateConnection(connection: GatewayConnection) {
@@ -217,13 +224,9 @@ internal class GatewaySessionHandler(
     }
 
     private suspend fun refreshRoute(
-        connection: GatewayConnection?,
+        connection: GatewayConnection,
         registration: ClientRouteRegistration
     ) {
-        if (connection == null) {
-            return
-        }
-
         val routeValidationFailure =
             routeValidator.validationFailure(
                 registration = registration,
@@ -319,72 +322,50 @@ internal data class GatewayMessageActions(
         suspend (GatewayConnection, GatewayClientMessage.RequestBlobUploadTicket) -> Unit
 )
 
-private data class GatewaySessionState(
-    var connection: GatewayConnection? = null
+// Read by the sign-in deadline coroutine as well as the frame loop.
+private class GatewaySessionState(
+    @Volatile var challengeNonce: ByteArray?,
+    @Volatile var connection: GatewayConnection? = null
 )
+
+private val challengeRandom = SecureRandom()
+
+private fun newChallengeNonce(): ByteArray =
+    ByteArray(CHALLENGE_NONCE_BYTES).also(challengeRandom::nextBytes)
+
+private const val CHALLENGE_NONCE_BYTES = 32
 
 private fun GatewayClientMessage.Register.toGatewayConnection(
     session: DefaultWebSocketServerSession
 ): GatewayConnection =
     GatewayConnection(
         routingId = routingId,
-        connectionId = connectionId ?: UUID.randomUUID().toString(),
-        routingAliases = aliases?.takeIf { generation != null }.orEmpty().toSet(),
+        connectionId = connectionId,
         session = session
     )
-
-private fun GatewayClientMessage.Register.toClientRouteRegistration(
-    connection: GatewayConnection,
-    nodeId: String
-): ClientRouteRegistration? {
-    val routeGeneration = generation
-    val routeExpiration = expiresAtEpochMilliseconds
-    val signingPublicKey = clientSigningPublicKey
-    val routeSignature = clientSignature
-
-    return when {
-        routeGeneration == null -> null
-        routeExpiration == null -> null
-        signingPublicKey == null -> null
-        routeSignature == null -> null
-        else ->
-            ClientRouteRegistration(
-                route =
-                    ClientRoute(
-                        routingId = routingId,
-                        nodeId = nodeId,
-                        connectionId = connection.connectionId,
-                        generation = routeGeneration,
-                        expiresAtEpochMilliseconds = routeExpiration,
-                        aliases = aliases,
-                        clientSignature = routeSignature
-                    ),
-                clientSigningPublicKey = signingPublicKey
-            )
-    }
-}
-
-private suspend fun DefaultWebSocketServerSession.sendNotRegistered() {
-    sendError(
-        code = "NOT_REGISTERED",
-        message = "Register first"
-    )
-}
 
 private suspend fun DefaultWebSocketServerSession.sendError(
     code: String,
     message: String
 ) {
-    send(
-        Frame.Text(
-            serverJson.encodeToString<GatewayServerMessage>(
-                GatewayServerMessage.Error(
-                    code = code,
-                    message = message
-                )
-            )
+    sendServerMessage(
+        GatewayServerMessage.Error(
+            code = code,
+            message = message
         )
     )
+}
+
+private suspend fun DefaultWebSocketServerSession.sendServerMessage(message: GatewayServerMessage) {
+    send(Frame.Text(serverJson.encodeToString<GatewayServerMessage>(message)))
+}
+
+// The peer may already be gone; closing must not fail the session handler.
+private suspend fun DefaultWebSocketServerSession.rejectSession(reason: String) {
+    runCatching {
+        sendError(code = "INVALID_SESSION", message = reason)
+        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid session"))
+    }
 }
 
 private suspend fun GatewayConnection.sendError(

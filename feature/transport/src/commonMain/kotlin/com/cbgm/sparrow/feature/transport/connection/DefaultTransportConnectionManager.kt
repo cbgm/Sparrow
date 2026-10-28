@@ -277,7 +277,8 @@ class DefaultTransportConnectionManager(
         }
         webSocketTransportClient.connect(
             serverUrl = endpoint.websocketUrl,
-            localRoutingId = routingId
+            localRoutingId = routingId,
+            expectedNodeId = endpoint.nodeId
         )
     }
 

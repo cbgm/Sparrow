@@ -14,6 +14,7 @@ class GatewayWebSocketHandler(
     presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long,
+    private val signInTimeoutMilliseconds: Long,
     private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
 ) {
     private val boundedPresence = BoundedPresenceClient(presence)
@@ -34,6 +35,7 @@ class GatewayWebSocketHandler(
                     acknowledge = pushDispatcher::acknowledge
                 ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
+            signInTimeoutMilliseconds = signInTimeoutMilliseconds,
             actions =
                 GatewayMessageActions(
                     sendEnvelope = { connection, message ->

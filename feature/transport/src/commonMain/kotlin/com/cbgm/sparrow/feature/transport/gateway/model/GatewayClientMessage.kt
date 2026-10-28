@@ -7,54 +7,33 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface GatewayClientMessage {
     /**
-     * Sent immediately after opening the WebSocket.
+     * Signs in after the gateway's [GatewayServerMessage.Challenge]. [clientSignature] covers
+     * [gatewaySessionPayload], so the gateway only accepts the routing ID of the key holder.
      */
     @Serializable
     @SerialName("register")
     data class Register(
         @SerialName("routingId")
         val routingId: String,
-        val connectionId: String? = null,
-        val generation: Long? = null,
-        val expiresAtEpochMilliseconds: Long? = null,
-        val aliases: List<String>? = null,
-        val clientSigningPublicKey: ByteArray? = null,
-        val clientSignature: ByteArray? = null
+        val connectionId: String,
+        val clientSigningPublicKey: ByteArray,
+        val clientSignature: ByteArray
     ) : GatewayClientMessage {
         init {
             require(routingId.isNotBlank()) {
                 "Routing ID must not be blank"
             }
-            require(connectionId == null || connectionId.isNotBlank()) {
+            require(connectionId.isNotBlank()) {
                 "Connection ID must not be blank"
-            }
-
-            val proofFields =
-                listOf(
-                    generation,
-                    expiresAtEpochMilliseconds,
-                    clientSigningPublicKey,
-                    clientSignature
-                )
-            require(proofFields.all { it == null } || proofFields.all { it != null }) {
-                "Route proof fields must either all be present or all be absent"
-            }
-            require(generation == null || connectionId != null) {
-                "A signed route requires a connection ID"
             }
         }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+            if (other !is Register) return false
 
-            other as Register
-
-            if (generation != other.generation) return false
-            if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
             if (routingId != other.routingId) return false
             if (connectionId != other.connectionId) return false
-            if (aliases != other.aliases) return false
             if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
             if (!clientSignature.contentEquals(other.clientSignature)) return false
 
@@ -62,13 +41,10 @@ sealed interface GatewayClientMessage {
         }
 
         override fun hashCode(): Int {
-            var result = generation?.hashCode() ?: 0
-            result = 31 * result + (expiresAtEpochMilliseconds?.hashCode() ?: 0)
-            result = 31 * result + routingId.hashCode()
-            result = 31 * result + (connectionId?.hashCode() ?: 0)
-            result = 31 * result + (aliases?.hashCode() ?: 0)
-            result = 31 * result + (clientSigningPublicKey?.contentHashCode() ?: 0)
-            result = 31 * result + (clientSignature?.contentHashCode() ?: 0)
+            var result = routingId.hashCode()
+            result = 31 * result + connectionId.hashCode()
+            result = 31 * result + clientSigningPublicKey.contentHashCode()
+            result = 31 * result + clientSignature.contentHashCode()
             return result
         }
     }

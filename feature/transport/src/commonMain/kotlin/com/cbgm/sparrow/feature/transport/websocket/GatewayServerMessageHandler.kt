@@ -17,6 +17,19 @@ internal class GatewayServerMessageHandler(
 ) {
     private val logger = SparrowLog.withTag("GatewayServerMessageHandler")
 
+    /**
+     * Reads the first gateway frame. Sign-in needs the challenge before anything else, so any other
+     * frame fails the connection and the normal reconnect path takes over.
+     */
+    fun decodeChallenge(encodedMessage: String): GatewayServerMessage.Challenge =
+        when (val message = decode(encodedMessage)) {
+            is GatewayServerMessage.Challenge -> message
+            is GatewayServerMessage.Error ->
+                throw IllegalStateException("Gateway rejected the session: ${message.code}")
+
+            else -> throw IllegalStateException("Gateway did not send a session challenge")
+        }
+
     suspend fun handle(
         encodedMessage: String,
         expectedRoutingId: String,
@@ -26,15 +39,10 @@ internal class GatewayServerMessageHandler(
         onIncomingEnvelope: suspend (TransportEnvelope) -> Unit,
         onIndicatorEvent: suspend (GatewayIndicatorEvent) -> Unit
     ) {
-        val message =
-            runCatching {
-                json.decodeFromString<GatewayServerMessage>(encodedMessage)
-            }.getOrElse { error ->
-                logger.error(error) { "Invalid gateway response" }
-                throw IllegalStateException("Invalid gateway response", error)
-            }
+        when (val message = decode(encodedMessage)) {
+            is GatewayServerMessage.Challenge ->
+                throw IllegalStateException("Gateway sent a second session challenge")
 
-        when (message) {
             is GatewayServerMessage.Registered -> {
                 check(message.routingId == expectedRoutingId) {
                     "Gateway registered an unexpected routing identity"
@@ -100,6 +108,14 @@ internal class GatewayServerMessageHandler(
         }
     }
 
+    private fun decode(encodedMessage: String): GatewayServerMessage =
+        runCatching {
+            json.decodeFromString<GatewayServerMessage>(encodedMessage)
+        }.getOrElse { error ->
+            logger.error(error) { "Invalid gateway response" }
+            throw IllegalStateException("Invalid gateway response", error)
+        }
+
     private fun handleGatewayError(
         message: GatewayServerMessage.Error,
         onRouteRejected: (Throwable) -> Unit
@@ -116,6 +132,7 @@ internal class GatewayServerMessageHandler(
                 )
 
             "INVALID_ROUTE",
+            "INVALID_SESSION",
             "ALREADY_REGISTERED" ->
                 throw IllegalStateException(
                     "Gateway registration rejected: ${message.code}"

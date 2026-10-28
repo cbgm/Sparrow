@@ -31,6 +31,7 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
@@ -56,6 +57,7 @@ import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -129,9 +131,12 @@ val transportModule =
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 presenceRouteCoordinator = get<ClientPresenceRouteCoordinator>(),
                 serverMessageHandler = get<GatewayServerMessageHandler>(),
-                pendingRequestRegistry = get<GatewayPendingRequestRegistry>()
+                pendingRequestRegistry = get<GatewayPendingRequestRegistry>(),
+                createGatewaySessionProof = get<CreateGatewaySessionProofUseCase>()
             )
         }
+
+        singleOf(::CreateGatewaySessionProofUseCase)
 
         single<ClientRouteRegistrationFactory> {
             ClientRouteRegistrationFactory(

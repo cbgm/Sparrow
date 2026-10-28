@@ -98,7 +98,7 @@ Key classes:
 
 ### `gateway`
 
-Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store.
+Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store. Each WebSocket starts with a signed challenge-response sign-in (`GatewaySessionValidator`); see [Session sign-in](../api/websocket.md#session-sign-in-challenge-response).
 
 Key classes:
 
@@ -106,6 +106,7 @@ Key classes:
 - `installGatewayRoutes()`
 - `GatewayWebSocketHandler`
 - `GatewaySessionHandler`
+- `GatewaySessionValidator`
 - `ConnectionRegistry`
 - `BlobStore` / `BlobUploadPermitStore` / `GatewayBlobUploadTicketIssuer`
 

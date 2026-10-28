@@ -5,12 +5,14 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.PresenceRouteConnection
@@ -35,7 +37,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,7 +54,8 @@ class DefaultWebSocketTransportClient internal constructor(
     private val json: Json,
     private val presenceRouteCoordinator: ClientPresenceRouteCoordinator,
     private val serverMessageHandler: GatewayServerMessageHandler,
-    private val pendingRequestRegistry: GatewayPendingRequestRegistry
+    private val pendingRequestRegistry: GatewayPendingRequestRegistry,
+    private val createGatewaySessionProof: CreateGatewaySessionProofUseCase
 ) : WebSocketTransportClient {
     private val logger = SparrowLog.withTag("DefaultWebSocketTransportClient")
 
@@ -63,6 +68,10 @@ class DefaultWebSocketTransportClient internal constructor(
         mutableConnectionState.asStateFlow()
 
     private val mutableRegisteredRoutingAliases = MutableStateFlow<Set<String>>(emptySet())
+
+    // The gateway closes a socket that sends anything but Register before Registered, so other
+    // frames (for example a late acknowledgement from the previous session) wait for sign-in.
+    private val gatewaySignedIn = MutableStateFlow(false)
 
     private val mutableIncomingEnvelopes =
         MutableSharedFlow<TransportEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
@@ -81,7 +90,8 @@ class DefaultWebSocketTransportClient internal constructor(
 
     override fun connect(
         serverUrl: String,
-        localRoutingId: String
+        localRoutingId: String,
+        expectedNodeId: String
     ) {
         require(serverUrl.isNotBlank()) {
             "Gateway WebSocket URL must not be blank"
@@ -89,13 +99,17 @@ class DefaultWebSocketTransportClient internal constructor(
         require(localRoutingId.isNotBlank()) {
             "Local routing ID must not be blank"
         }
+        require(expectedNodeId.isNotBlank()) {
+            "Expected gateway node ID must not be blank"
+        }
         if (connectionJob?.isActive == true) return
 
         connectionJob =
             clientScope.launch {
                 runConnection(
                     serverUrl = serverUrl,
-                    localRoutingId = localRoutingId
+                    localRoutingId = localRoutingId,
+                    expectedNodeId = expectedNodeId
                 )
             }
     }
@@ -234,9 +248,11 @@ class DefaultWebSocketTransportClient internal constructor(
     @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     private suspend fun runConnection(
         serverUrl: String,
-        localRoutingId: String
+        localRoutingId: String,
+        expectedNodeId: String
     ) {
         mutableConnectionState.value = TransportConnectionState.Connecting
+        gatewaySignedIn.value = false
 
         val connectionId = IdGenerator.generate()
         val generation = SystemClock.nowEpochMilliseconds()
@@ -250,6 +266,8 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 logger.info { "WebSocket session opened" }
                 sendRegistration(
+                    challenge = awaitChallenge(),
+                    expectedNodeId = expectedNodeId,
                     localRoutingId = localRoutingId,
                     connectionId = connectionId
                 )
@@ -296,6 +314,7 @@ class DefaultWebSocketTransportClient internal constructor(
                     consumeIncomingFrames(
                         expectedRoutingId = localRoutingId,
                         onGatewayRegistered = {
+                            gatewaySignedIn.value = true
                             mutableRegisteredRoutingAliases.value = emptySet()
                             presenceSession.onGatewayRegistered()
                         },
@@ -335,6 +354,7 @@ class DefaultWebSocketTransportClient internal constructor(
                     message = error.message ?: "WebSocket connection failed"
                 )
         } finally {
+            gatewaySignedIn.value = false
             gatewayInformation.cancel()
             mutableRegisteredRoutingAliases.value = emptySet()
             sessionMutex.withLock {
@@ -388,22 +408,46 @@ class DefaultWebSocketTransportClient internal constructor(
         }
     }
 
+    // A gateway that does not challenge in time is treated like any other connect timeout: the
+    // TimeoutCancellationException fails this attempt and the connection manager retries.
+    private suspend fun DefaultClientWebSocketSession.awaitChallenge(): GatewayServerMessage.Challenge =
+        withTimeout(CHALLENGE_TIMEOUT_MILLISECONDS.milliseconds) {
+            val frame = incoming.receiveAsFlow().filterIsInstance<Frame.Text>().first()
+            serverMessageHandler.decodeChallenge(frame.readText())
+        }
+
+    // The session proof is sent before anything else; the presence route follows later as a
+    // separately signed route refresh.
     private suspend fun sendRegistration(
+        challenge: GatewayServerMessage.Challenge,
+        expectedNodeId: String,
         localRoutingId: String,
         connectionId: String
     ) {
+        val proof =
+            createGatewaySessionProof(
+                challenge = challenge,
+                expectedNodeId = expectedNodeId,
+                routingId = localRoutingId,
+                connectionId = connectionId
+            ).getOrThrow()
         sendClientMessage(
             GatewayClientMessage.Register(
                 routingId = localRoutingId,
-                connectionId = connectionId
+                connectionId = connectionId,
+                clientSigningPublicKey = proof.clientSigningPublicKey,
+                clientSignature = proof.clientSignature
             )
         )
         logger.debug {
-            "Gateway registration sent for $localRoutingId; presenceDeferred=true"
+            "Gateway sign-in sent for $localRoutingId on ${challenge.nodeId}; presenceDeferred=true"
         }
     }
 
     private suspend fun sendClientMessage(message: GatewayClientMessage) {
+        check(message is GatewayClientMessage.Register || gatewaySignedIn.value) {
+            "Gateway session is not signed in"
+        }
         sendMutex.withLock {
             val activeSession =
                 sessionMutex.withLock { session }
@@ -433,5 +477,6 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private companion object {
         const val INCOMING_BUFFER_CAPACITY = 64
+        const val CHALLENGE_TIMEOUT_MILLISECONDS = 10_000L
     }
 }

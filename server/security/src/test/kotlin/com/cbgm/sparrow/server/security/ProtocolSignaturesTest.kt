@@ -126,4 +126,51 @@ class ProtocolSignaturesTest {
             ClientRoutingIds.fromSigningPublicKey(byteArrayOf(1, 2, 3))
         )
     }
+
+    @Test
+    fun gatewaySessionContentMatchesTheSharedWireVector() {
+        val content =
+            ProtocolSignatures.gatewaySessionContent(
+                GatewaySessionBinding(
+                    routingId = "r",
+                    connectionId = "c",
+                    nodeId = "n",
+                    nonce = byteArrayOf(1, 2)
+                )
+            )
+
+        // The app builds the same bytes in feature/transport; both tests pin this vector.
+        assertEquals(GATEWAY_SESSION_VECTOR, content.toHexString())
+    }
+
+    @Test
+    fun gatewaySessionSignatureIsBoundToEveryField() {
+        val identity = NodeIdentity.generate()
+        val session =
+            GatewaySessionBinding(
+                routingId = "ab",
+                connectionId = "c",
+                nodeId = "node-a",
+                nonce = ByteArray(32) { 1 }
+            )
+        val signature = Signatures.sign(ProtocolSignatures.gatewaySessionContent(session), identity.privateKey)
+
+        assertTrue(ProtocolSignatures.verifyGatewaySession(session, identity.encodedPublicKey, signature))
+        listOf(
+            GatewaySessionBinding("a", "bc", session.nodeId, session.nonce),
+            GatewaySessionBinding(session.routingId, session.connectionId, "node-b", session.nonce),
+            GatewaySessionBinding(session.routingId, session.connectionId, session.nodeId, ByteArray(32))
+        ).forEach { other ->
+            assertFalse(ProtocolSignatures.verifyGatewaySession(other, identity.encodedPublicKey, signature))
+        }
+        assertFalse(
+            ProtocolSignatures.verifyGatewaySession(session, NodeIdentity.generate().encodedPublicKey, signature)
+        )
+    }
+
+    private companion object {
+        const val GATEWAY_SESSION_VECTOR =
+            "0000001a73706172726f772d676174657761792d73657373696f6e2d7631" +
+                "00000001720000000163000000016e000000020102"
+    }
 }

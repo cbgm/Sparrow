@@ -8,6 +8,8 @@ The design aims to protect against:
 
 - a server reading encrypted Direct/Group message plaintext in the normal encrypted path;
 - an unauthenticated party forging registered Community Node requests;
+- a client signing in to a gateway as another user's routing ID (sessions need a signature over a
+  single-use gateway challenge with the key the routing ID is derived from);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
 - offline-message storage that requires server plaintext;
