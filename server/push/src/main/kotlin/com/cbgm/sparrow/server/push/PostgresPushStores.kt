@@ -16,7 +16,11 @@ internal fun createPostgresPushStores(config: PushConfig): PushStores {
         )
 
     return PushStores(
-        devices = PostgresPushDeviceStore(database),
+        devices =
+            PostgresPushDeviceStore(
+                database = database,
+                lifetimeMilliseconds = config.deviceRegistrationLifetimeMilliseconds
+            ),
         pendingEnvelopes =
             PostgresPendingEnvelopeStore(
                 database = database,

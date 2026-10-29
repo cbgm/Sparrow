@@ -38,7 +38,7 @@ The verifier is enabled when `GOOGLE_APPLICATION_CREDENTIALS` points at a Fireba
 
 ### `:server:push`
 
-The push service stores the registration state required for wake-ups and coordinates Android FCM notification delivery. Important types include `PushCoordinator` and `FirebasePushSender`. Push wakes a client so it can fetch encrypted mailbox traffic; it is not a plaintext message-delivery channel.
+The push service stores the registration state required for wake-ups and coordinates Android FCM notification delivery. Important types include `PushCoordinator` and `FirebasePushSender`. Push wakes a client so it can fetch encrypted mailbox traffic; it is not a plaintext message-delivery channel. Device registrations must be signed with the routing ID's identity key and expire 30 days after the last registration; see [Push API](../api/push.md).
 
 ## Control Plane vs. independent directory
 

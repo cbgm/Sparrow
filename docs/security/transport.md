@@ -9,6 +9,16 @@ Transport security has two layers:
 
 A WebSocket session is bound to a routing ID only after challenge-response: the gateway sends a single-use 32-byte nonce and its node ID, and the client signs a domain-separated, length-prefixed payload over routing ID, connection ID, node ID and nonce with its identity signing key. The gateway checks that the routing ID is derived from the presented key and that the signature is valid for this connection's nonce and its own node ID (`GatewaySessionValidator`, `ProtocolSignatures.verifyGatewaySession`); otherwise it answers `INVALID_SESSION` and closes the connection. The client in turn refuses a challenge from a node other than the one it chose from the signed directory. Without a valid proof nobody can receive, acknowledge (delete) or send envelopes as another routing ID. See [Session sign-in](../api/websocket.md#session-sign-in-challenge-response).
 
+## Push device registration
+
+`POST /push/devices` binds a push token to a routing ID only with a proof: the client signs a
+domain-separated (`sparrow-push-device-v1`), length-prefixed payload over routing ID, token, platform and
+issue time with its identity signing key. The push service requires a non-alias routing ID derived from the
+presented key, an issue time within ±5 minutes and a valid signature (`PushDeviceRegistrationValidator`,
+`ProtocolSignatures.verifyPushDevice`). A token is bound to one routing ID at a time and the binding
+expires 30 days after the last registration. Wake-up IDs are 256-bit random values valid for 15 minutes.
+See [Push API](../api/push.md).
+
 ## Client route registration
 
 Clients register a signed, expiring presence route through the Community Node gateway. Route refreshes include freshness/generation checks. The gateway validates them with `GatewayRouteValidator`; the Control Plane presence service parses the signed request with `nodeRequestAuthentication()` and authorizes it through `PresenceRuntime.nodeRequestAuthorizer` (`NodeRequestAuthorizer`).

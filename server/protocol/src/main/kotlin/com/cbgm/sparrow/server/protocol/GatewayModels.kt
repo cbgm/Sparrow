@@ -13,13 +13,47 @@ data class TransportEnvelope(
     val createdAtEpochMilliseconds: Long
 )
 
+/**
+ * Binds a push token to a routing ID. The client signs routing ID, token, platform and issue time with the
+ * identity key the routing ID is derived from. The proof fields default to empty so an unsigned request
+ * from an old app gets a clear rejection instead of a parse error.
+ */
 @Serializable
 data class PushDeviceRegistrationRequest(
     @SerialName("routingId")
     val routingId: String,
     val token: String,
-    val platform: String
-)
+    val platform: String,
+    val issuedAtEpochMilliseconds: Long = 0L,
+    val clientSigningPublicKey: ByteArray = byteArrayOf(),
+    val clientSignature: ByteArray = byteArrayOf()
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PushDeviceRegistrationRequest
+
+        if (routingId != other.routingId) return false
+        if (token != other.token) return false
+        if (platform != other.platform) return false
+        if (issuedAtEpochMilliseconds != other.issuedAtEpochMilliseconds) return false
+        if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
+        if (!clientSignature.contentEquals(other.clientSignature)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = routingId.hashCode()
+        result = 31 * result + token.hashCode()
+        result = 31 * result + platform.hashCode()
+        result = 31 * result + issuedAtEpochMilliseconds.hashCode()
+        result = 31 * result + clientSigningPublicKey.contentHashCode()
+        result = 31 * result + clientSignature.contentHashCode()
+        return result
+    }
+}
 
 @Serializable
 data class PendingTransportEnvelopesResponse(

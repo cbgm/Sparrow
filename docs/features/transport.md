@@ -79,6 +79,8 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 - `HttpPushTokenRegistrationGateway`
 - `HttpPendingEnvelopeGateway`
 
+`HttpPushTokenRegistrationGateway` signs every registration with `CreatePushDeviceRegistrationUseCase` (identity signing key, payload `pushDeviceRegistrationPayload`, see [Push API](../api/push.md)). The shared HTTP client uses `expectSuccess`, so the gateway turns a 4xx (`ClientRequestException`) into `ControlPlaneRequestRejectedException` with the server's error code; the endpoint stays marked reachable.
+
 Mailbox provisioning, renewal and revocation are driven from `:feature:conversationorchestration:delivery` (`MailboxRouteProvisioner`, `DefaultMailboxCapabilityLifecycle`); see [Offline mailbox](message-transport-flow.md#offline-mailbox).
 
 ## WebSocket connection

@@ -83,7 +83,9 @@ Key classes:
 ### `push`
 
 Stores Android device registrations and wake-up/pending fallback information. It integrates with Firebase Admin
-when credentials are configured (the same service account as phone verification).
+when credentials are configured (the same service account as phone verification). A device registration
+needs a signature with the routing ID's identity key and expires 30 days after the last registration
+(`PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS`); see [Push API](../api/push.md).
 
 Key classes:
 
@@ -93,6 +95,7 @@ Key classes:
 - `PostgresPendingEnvelopeStore`
 - `PostgresWakeUpStore`
 - `FirebasePushSender`
+- `PushDeviceRegistrationValidator`
 
 ## Community Node services
 

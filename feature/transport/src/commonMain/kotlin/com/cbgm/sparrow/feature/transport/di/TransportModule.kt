@@ -32,6 +32,8 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
@@ -275,9 +277,13 @@ val transportModule =
             HttpPushTokenRegistrationGateway(
                 httpClient = get<HttpClient>(),
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
+                createPushDeviceRegistration = get<CreatePushDeviceRegistrationUseCase>()
             )
         }
+
+        singleOf(::CreatePushDeviceRegistrationUseCase)
+        singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {
             WebSocketOutgoingWireSender(

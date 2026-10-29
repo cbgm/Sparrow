@@ -38,6 +38,7 @@ data class PushConfig(
     val maximumEnvelopes: Int,
     val envelopeRetentionMilliseconds: Long,
     val wakeUpLifetimeMilliseconds: Long,
+    val deviceRegistrationLifetimeMilliseconds: Long = DEFAULT_DEVICE_LIFETIME_MILLISECONDS,
     val deviceRegistrationRateLimit: RateLimitPolicy =
         RateLimitPolicy(
             maximumRequests = DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS,
@@ -57,6 +58,9 @@ data class PushConfig(
         }
         require(wakeUpLifetimeMilliseconds > 0L) {
             "Wake-up lifetime must be positive"
+        }
+        require(deviceRegistrationLifetimeMilliseconds > 0L) {
+            "Push device lifetime must be positive"
         }
     }
 
@@ -86,6 +90,11 @@ data class PushConfig(
                 wakeUpLifetimeMilliseconds =
                     System.getenv("PUSH_WAKE_UP_LIFETIME_MILLISECONDS")?.toLongOrNull()
                         ?: DEFAULT_WAKE_UP_LIFETIME_MILLISECONDS,
+                deviceRegistrationLifetimeMilliseconds =
+                    ServiceEnvironment.long(
+                        "PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS",
+                        DEFAULT_DEVICE_LIFETIME_MILLISECONDS
+                    ),
                 deviceRegistrationRateLimit =
                     RateLimitPolicy(
                         maximumRequests =

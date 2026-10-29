@@ -15,6 +15,7 @@ Android implementation:
 
 - `SparrowFirebaseMessagingService`
 - `PushTokenRegistrationWorker`
+- `PushTokenRenewalWorker`
 - `PendingMessageSyncWorker`
 - `AndroidNotificationRuntime`
 - `SparrowNotificationManager`
@@ -33,6 +34,14 @@ Server:
 - `PostgresPendingEnvelopeStore`
 - `PostgresWakeUpStore`
 - `MailboxPushNotifier`
+
+## Device registration
+
+The app binds its FCM token to its device routing ID with `POST /push/devices`, signed with the identity
+key (see [Push API](api/push.md)). It registers again on every app start (once the identity is ready),
+on every return to the foreground, on every FCM token refresh (`SparrowFirebaseMessagingService.onNewToken`)
+and every 7 days in the background (`PushTokenRenewalWorker`), because the server forgets a binding 30 days
+after its last registration. A new proof is signed for every attempt; nothing about the proof is stored.
 
 ## Normal offline flow
 
@@ -54,6 +63,13 @@ sequenceDiagram
     R->>R: decrypt/process locally
     R->>M: acknowledge
 ```
+
+On the phone, `SparrowFirebaseMessagingService` schedules `PendingMessageSyncWorker` as urgent work. The worker
+first prepares the control planes (`PrepareControlPlaneUseCase`), because a push can start the app's process while
+the app is closed and then none of the app's startup has run. On Android 10 and 11 urgent work runs as a foreground
+job and shows a silent "Checking for new messages" notification while it runs. A sync that is running is never
+cancelled by the next push (its notifications would be lost); the next push runs right after it. A sync that only
+waits for a retry is replaced by the new push.
 
 Legacy/compatibility pending-envelope behavior can exist for clients that do not yet have a usable mailbox route, but the preferred model is recipient-selected mailbox delivery.
 

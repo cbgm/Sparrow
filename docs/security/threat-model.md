@@ -10,6 +10,8 @@ The design aims to protect against:
 - an unauthenticated party forging registered Community Node requests;
 - a client signing in to a gateway as another user's routing ID (sessions need a signature over a
   single-use gateway challenge with the key the routing ID is derived from);
+- binding one's own push token to another user's routing ID to receive their wake-ups and read or delete
+  their pending envelopes (push registrations need a fresh signature with the routing ID's key);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
 - offline-message storage that requires server plaintext;
