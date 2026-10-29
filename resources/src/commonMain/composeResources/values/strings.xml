@@ -506,6 +506,16 @@
     <string name="feature_settings_control_plane_error_keep_one">At least one control plane must remain.</string>
     <string name="feature_settings_control_plane_error_save_failed">The control-plane list could not be saved.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
+    <string name="feature_settings_preferred_node">Preferred node</string>
+    <string name="feature_settings_preferred_node_subtitle">Automatic or one favourite node</string>
+    <string name="feature_settings_preferred_node_automatic">Automatic</string>
+    <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
+    <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>
+    <string name="feature_settings_preferred_node_search">Search address, IP or node ID</string>
+    <string name="feature_settings_preferred_node_connections">%1$d connections</string>
+    <string name="feature_settings_preferred_node_none_found">No node matches your search</string>
+    <string name="feature_settings_preferred_node_load_failed">Nodes could not be loaded</string>
+    <string name="feature_settings_preferred_node_unlisted">Your favourite node is not in the current list. Sparrow uses other nodes until it is back.</string>
     <string name="feature_settings_control_plane_directory_title">Control-plane directory</string>
     <string name="feature_settings_control_plane_directory_description">Optional URL that publishes the current control-plane list. Sparrow syncs it automatically and keeps the last successful list if the directory is unavailable.</string>
     <string name="feature_settings_control_plane_directory_url">Directory URL</string>

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import kotlinx.coroutines.currentCoroutineContext
@@ -21,5 +22,9 @@ class DeveloperNodesViewModel(
 
     fun onBackClicked() {
         navigator.popBackStack()
+    }
+
+    fun onPreferredNodeClicked() {
+        navigator.navigateTo(AppRoute.PreferredNode)
     }
 }

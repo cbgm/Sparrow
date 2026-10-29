@@ -76,3 +76,11 @@ in the FCM data message to that recipient's registered devices and valid for
 `/v1/node-push/*` need a signed Community Node request (and, for recipient data, a node that owns the
 routing ID in the presence directory). `/internal/v1/*` need the internal API token. Neither changes
 device bindings.
+
+`POST /v1/node-push/wake-ups/{routingId}` carries the device's `MailboxWakeTicket` as its body. Anyone can
+run a mailbox node, so a MAILBOX node may only wake a device that allowed exactly this node: the app signs
+the ticket (`sparrow-mailbox-wake-v1`: routing ID, mailbox node ID, expiry) with the key the routing ID is
+derived from when it creates a mailbox, and the mailbox node keeps it with the mailbox. Push answers `403`
+when the ticket is for another device or node, has expired or is not signed by the routing ID's key. A
+mailbox created without a ticket (by an older app) never wakes anyone; the app replaces it within the
+mailbox's 30-day lifetime.

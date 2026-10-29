@@ -84,6 +84,10 @@ internal class PostgresMailboxDatabase(
                 ADD COLUMN IF NOT EXISTS owner_key_hash TEXT NOT NULL DEFAULT ''
                 """.trimIndent(),
                 """
+                ALTER TABLE mailboxes
+                ADD COLUMN IF NOT EXISTS wake_ticket_json TEXT
+                """.trimIndent(),
+                """
                 CREATE INDEX IF NOT EXISTS mailboxes_expiry_idx
                 ON mailboxes (expires_at_epoch_milliseconds)
                 """.trimIndent(),

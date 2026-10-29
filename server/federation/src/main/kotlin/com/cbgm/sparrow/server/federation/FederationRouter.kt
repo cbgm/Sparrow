@@ -4,6 +4,7 @@ import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -128,6 +129,19 @@ class FederationRouter(
     suspend fun markStored(envelopeId: String) {
         queue.markStored(envelopeId)
     }
+
+    /** True when [routingId] has a live route at [nodeId], i.e. the client is connected through that node. */
+    suspend fun isConnectedThrough(
+        routingId: String,
+        nodeId: String
+    ): Boolean =
+        try {
+            presenceDirectory.resolve(routingId).routes.any { route -> route.nodeId == nodeId }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            false
+        }
 
     suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean {
         val localRoutingId =

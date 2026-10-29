@@ -2,11 +2,13 @@ package com.cbgm.sparrow.server.mailbox
 
 import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
+import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class MailboxStoreTest {
@@ -76,6 +78,36 @@ class MailboxStoreTest {
                     mailbox.retrievalCapability
                 )
             )
+        }
+
+    @Test
+    fun storedEnvelopeCarriesTheOwnersWakeTicket() =
+        runTest {
+            val store = MailboxStore(now = { 1_000L })
+            val ticket = MailboxWakeTicket("owner", "node-a", 10_000L, byteArrayOf(1), byteArrayOf(2))
+            val mailbox =
+                store.create(
+                    CreateMailboxRequest(
+                        nodeId = "node-a",
+                        nodeEndpoint = "http://mailbox",
+                        expiresAtEpochMilliseconds = 10_000L,
+                        wakeTicket = ticket
+                    )
+                )
+            val route = mailbox.deliveryRoute
+            val envelope =
+                FederatedEnvelope(
+                    envelopeId = "envelope-1",
+                    senderRoutingId = "sender",
+                    recipientDeviceRoutingId = "someone-else",
+                    mailboxRoute = route,
+                    encryptedPayload = "ciphertext",
+                    createdAtEpochMilliseconds = 1_000L,
+                    expiresAtEpochMilliseconds = 9_000L
+                )
+
+            val stored = assertIs<MailboxResult.Stored>(store.store(route.mailboxId, route.sendCapability, envelope))
+            assertSame(ticket, stored.wakeTicket)
         }
 
     @Test

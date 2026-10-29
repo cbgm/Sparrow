@@ -10,6 +10,8 @@ import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscovery
 import com.cbgm.sparrow.feature.transport.discovery.FailedNodeTracker
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
+import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeReturnPolicy
+import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.CancellationException
@@ -36,7 +38,8 @@ class DefaultTransportConnectionManager(
     private val transportConfig: TransportConfig,
     private val nodeEndpointResolver: NodeEndpointResolver,
     private val controlPlaneConfiguration: ControlPlaneConfiguration,
-    private val controlPlaneDiscoverySynchronizer: NodeControlPlaneDiscoverySynchronizer
+    private val controlPlaneDiscoverySynchronizer: NodeControlPlaneDiscoverySynchronizer,
+    private val preferredNodeStore: PreferredNodeStore? = null
 ) : TransportConnectionManager,
     TransportDiagnosticsProvider {
     private val logger = SparrowLog.withTag("DefaultTransportConnectionManager")
@@ -46,6 +49,7 @@ class DefaultTransportConnectionManager(
     private var connectionLoopJob: Job? = null
     private var directoryRefreshJob: Job? = null
     private var resolvedEndpoints: List<NodeEndpoint> = emptyList()
+    private var connectedNodeId: String? = null
 
     private val failedNodeTracker =
         FailedNodeTracker(
@@ -119,6 +123,33 @@ class DefaultTransportConnectionManager(
             cooldownUntilEpochMillisecondsByNodeId =
                 failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
+    }
+
+    override suspend fun moveTo(nodeId: String) {
+        val connectedElsewhere = connectedNodeId?.let { connected -> connected != nodeId } ?: false
+        if (connectionLoopJob?.isActive == true && connectedElsewhere) {
+            logger.info { "Reconnecting to move to the preferred node $nodeId" }
+            webSocketTransportClient.disconnect()
+        }
+    }
+
+    // Ends the session on a fallback node so the loop reconnects, favourite first.
+    private suspend fun returnToPreferredNode(
+        connected: NodeEndpoint,
+        endpoints: List<NodeEndpoint>
+    ) {
+        val preferredNodeId = preferredNodeStore?.get()
+        val shouldReturn =
+            PreferredNodeReturnPolicy.shouldReturn(
+                preferredNodeId = preferredNodeId,
+                connectedNodeId = connected.nodeId,
+                endpoints = endpoints,
+                coolingDownNodeIds = failedNodeTracker.unavailableNodeIds(endpoints)
+            )
+        if (shouldReturn) {
+            logger.info { "Preferred node $preferredNodeId is back; reconnecting to it" }
+            webSocketTransportClient.disconnect()
+        }
     }
 
     private suspend fun runConnectionLoop() {
@@ -297,6 +328,7 @@ class DefaultTransportConnectionManager(
         routingId: String
     ) {
         failedNodeTracker.recordSuccess(endpoint.nodeId)
+        connectedNodeId = endpoint.nodeId
         diagnosticsState.connected(
             endpoint = endpoint,
             cooldownUntilEpochMillisecondsByNodeId =
@@ -323,6 +355,7 @@ class DefaultTransportConnectionManager(
         endpoint: NodeEndpoint,
         state: TransportConnectionState
     ) {
+        connectedNodeId = null
         mutableConnectionState.value =
             if (state is TransportConnectionState.Failed) {
                 state
@@ -383,6 +416,7 @@ class DefaultTransportConnectionManager(
                                     registryAuthorityVerified = true,
                                     registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
                                 )
+                                returnToPreferredNode(connected = endpoint, endpoints = endpoints)
                             },
                             onFailure = { error ->
                                 if (error is CancellationException) throw error

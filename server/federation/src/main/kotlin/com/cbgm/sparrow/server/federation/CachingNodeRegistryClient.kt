@@ -18,13 +18,18 @@ internal class CachingNodeRegistryClient(
     private val httpClient: HttpClient,
     private val endpointPool: ControlPlaneEndpointPool,
     private val refreshIntervalMilliseconds: Long = DEFAULT_REFRESH_INTERVAL_MILLISECONDS,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = System::currentTimeMillis,
+    private val configuredRootNodeIds: Set<String> = emptySet()
 ) : NodeRegistryClient,
     PeerNodeDirectory {
     // Each Control Plane signs its own node directory. Do not let the first
     // reachable plane replace every other plane's nodes; preserve the last
     // verified, still-valid descriptors if one plane is temporarily offline.
     private val directories = ConcurrentHashMap<String, Map<String, SparrowNodeDescriptor>>()
+
+    // Without a configured root, the first verified root of a configured plane is kept for the
+    // lifetime of the process, so a later directory cannot switch it.
+    private val firstSeenRoots = ConcurrentHashMap<String, String>()
 
     init {
         require(refreshIntervalMilliseconds > 0L)
@@ -113,12 +118,29 @@ internal class CachingNodeRegistryClient(
                     "Control Plane registry root does not match the discovered identity"
                 }
             }
-            check(ProtocolSignatures.verifyDirectory(signedDirectory)) {
+            check(ProtocolSignatures.verifyDirectory(signedDirectory, now())) {
                 "Node directory signature is invalid"
+            }
+            // Pinned only after the signature verified, so a forged directory can never be the first.
+            if (expectedRoot == null) {
+                checkConfiguredRoot(baseUrl, ProtocolSignatures.directoryRootNodeId(signedDirectory))
             }
             check(signedDirectory.directory.validUntilEpochMilliseconds > now()) {
                 "Node directory is expired"
             }
+        }
+    }
+
+    private fun checkConfiguredRoot(
+        baseUrl: String,
+        rootNodeId: String
+    ) {
+        val trusted =
+            configuredRootNodeIds.ifEmpty {
+                setOf(firstSeenRoots.putIfAbsent(baseUrl, rootNodeId) ?: rootNodeId)
+            }
+        check(rootNodeId in trusted) {
+            "Control Plane registry root does not match the configured identity"
         }
     }
 

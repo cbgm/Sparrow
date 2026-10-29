@@ -16,9 +16,16 @@ The design aims to protect against:
 - silent substitution of a contact identity without surfacing security state;
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
-- advertising a phone alias with a phone verification token for a different number (the one-time
-  token from sign-up must match the alias when the presence directory has a verifier
-  configured).
+- taking over a phone alias another device holds (an alias stays with the first device that claims
+  it; only a phone verification token for that number moves it);
+- a Community Node waking devices whose mailbox it does not hold (push wake-ups need the device's
+  signed wake ticket for that node) or sending indicator events for clients that are not connected
+  through it;
+- a node directory with an expired registry certificate, or one signed under a different registry
+  root than the configured or first-seen one.
+
+Anyone can run a Community Node; registering one gives no power over other nodes' clients. Whoever runs
+the gateway a client connects through still sees that client's network address.
 
 ## Infrastructure can still observe metadata
 

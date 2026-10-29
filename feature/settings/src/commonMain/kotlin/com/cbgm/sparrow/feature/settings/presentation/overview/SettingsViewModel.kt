@@ -148,6 +148,7 @@ class SettingsViewModel(
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
             SettingsUiEvent.AutoReplyClicked -> navigator.navigateTo(AppRoute.AutoReplySettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
+            SettingsUiEvent.PreferredNodeClicked -> navigator.navigateTo(AppRoute.PreferredNode)
             SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }

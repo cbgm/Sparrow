@@ -506,6 +506,16 @@
     <string name="feature_settings_control_plane_error_keep_one">Mindestens eine Control Plane muss erhalten bleiben.</string>
     <string name="feature_settings_control_plane_error_save_failed">Die Control-Plane-Liste konnte nicht gespeichert werden.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
+    <string name="feature_settings_preferred_node">Bevorzugte Node</string>
+    <string name="feature_settings_preferred_node_subtitle">Automatisch oder ein Lieblings-Node</string>
+    <string name="feature_settings_preferred_node_automatic">Automatisch</string>
+    <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
+    <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>
+    <string name="feature_settings_preferred_node_search">Adresse, IP oder Node-ID suchen</string>
+    <string name="feature_settings_preferred_node_connections">%1$d Verbindungen</string>
+    <string name="feature_settings_preferred_node_none_found">Kein Node passt zu deiner Suche</string>
+    <string name="feature_settings_preferred_node_load_failed">Nodes konnten nicht geladen werden</string>
+    <string name="feature_settings_preferred_node_unlisted">Deine bevorzugte Node ist gerade nicht in der Liste. Sparrow nutzt andere Nodes, bis sie wieder da ist.</string>
     <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
     <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
     <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>

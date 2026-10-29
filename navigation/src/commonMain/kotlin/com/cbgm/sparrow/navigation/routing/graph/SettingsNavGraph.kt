@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.Disclaime
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogRoute
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesRoute
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsRoute
+import com.cbgm.sparrow.feature.settings.presentation.network.node.PreferredNodeRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
 
@@ -69,5 +70,12 @@ fun NavGraphBuilder.settingsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) {
         ControlPlaneSettingsRoute()
+    }
+
+    composable<AppRoute.PreferredNode>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        PreferredNodeRoute()
     }
 }

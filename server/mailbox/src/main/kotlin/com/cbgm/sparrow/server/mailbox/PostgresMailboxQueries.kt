@@ -1,11 +1,34 @@
 package com.cbgm.sparrow.server.mailbox
 
+import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
+import com.cbgm.sparrow.server.protocol.serverJson
 import java.sql.Connection
 
 internal data class MailboxAuthorization(
     val sendCapabilityHash: ByteArray,
-    val retrievalCapabilityHash: ByteArray
-)
+    val retrievalCapabilityHash: ByteArray,
+    val wakeTicket: MailboxWakeTicket? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as MailboxAuthorization
+
+        if (!sendCapabilityHash.contentEquals(other.sendCapabilityHash)) return false
+        if (!retrievalCapabilityHash.contentEquals(other.retrievalCapabilityHash)) return false
+        if (wakeTicket != other.wakeTicket) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = sendCapabilityHash.contentHashCode()
+        result = 31 * result + retrievalCapabilityHash.contentHashCode()
+        result = 31 * result + (wakeTicket?.hashCode() ?: 0)
+        return result
+    }
+}
 
 internal class PostgresMailboxQueries(
     private val now: () -> Long
@@ -18,7 +41,7 @@ internal class PostgresMailboxQueries(
         return connection
             .prepareStatement(
                 """
-                SELECT send_capability_hash, retrieval_capability_hash
+                SELECT send_capability_hash, retrieval_capability_hash, wake_ticket_json
                 FROM mailboxes
                 WHERE mailbox_id = ? AND expires_at_epoch_milliseconds > ?
                 FOR UPDATE
@@ -30,7 +53,11 @@ internal class PostgresMailboxQueries(
                     if (results.next()) {
                         MailboxAuthorization(
                             sendCapabilityHash = results.getBytes(1),
-                            retrievalCapabilityHash = results.getBytes(2)
+                            retrievalCapabilityHash = results.getBytes(2),
+                            wakeTicket =
+                                results.getString(3)?.let { encoded ->
+                                    serverJson.decodeFromString<MailboxWakeTicket>(encoded)
+                                }
                         )
                     } else {
                         null

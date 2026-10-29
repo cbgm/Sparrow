@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
@@ -110,6 +111,8 @@ import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
 import com.cbgm.sparrow.resources.feature_settings_messaging
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
+import com.cbgm.sparrow.resources.feature_settings_preferred_node
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_subtitle
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
@@ -178,6 +181,15 @@ fun SettingsScreen(
                 title = stringResource(Res.string.feature_settings_control_planes),
                 subtitle = stringResource(Res.string.feature_settings_control_planes_settings_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.ControlPlanesClicked) }
+            )
+
+            SettingsDivider()
+
+            SettingsRow(
+                icon = Icons.Default.Dns,
+                title = stringResource(Res.string.feature_settings_preferred_node),
+                subtitle = stringResource(Res.string.feature_settings_preferred_node_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.PreferredNodeClicked) }
             )
         }
 

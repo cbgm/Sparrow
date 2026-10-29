@@ -112,10 +112,10 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     val request = receive<MailboxEnvelopeRequest>()
     when (val result = store.store(mailboxId, capability, request.envelope)) {
         is MailboxResult.Stored -> {
-            if (!result.duplicate) {
-                runCatching {
-                    pushNotifier.notify(request.envelope.recipientDeviceRoutingId)
-                }
+            // Only the owner's ticket decides whom to wake; the sender's recipient field does not.
+            val wakeTicket = result.wakeTicket
+            if (!result.duplicate && wakeTicket != null) {
+                runCatching { pushNotifier.notify(wakeTicket) }
             }
             respond(
                 HttpStatusCode.Accepted,

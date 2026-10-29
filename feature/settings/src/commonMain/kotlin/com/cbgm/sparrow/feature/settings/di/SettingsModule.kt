@@ -37,6 +37,7 @@ import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerViewM
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogViewModel
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesViewModel
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsViewModel
+import com.cbgm.sparrow.feature.settings.presentation.network.node.PreferredNodeViewModel
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -197,6 +198,14 @@ val settingsModule =
 
         viewModel {
             DeveloperNodesViewModel(transportDiagnosticsProvider = get())
+        }
+
+        viewModel {
+            PreferredNodeViewModel(
+                getGatewayNodes = get(),
+                observePreferredNode = get(),
+                setPreferredNode = get()
+            )
         }
 
         viewModel {

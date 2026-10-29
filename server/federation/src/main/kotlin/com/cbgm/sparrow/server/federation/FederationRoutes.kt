@@ -141,6 +141,15 @@ private fun Routing.installIncomingFederationRoutes(runtime: FederationRuntime) 
             call.respondInvalidNodeAuthentication()
             return@post
         }
+        // Indicators carry no client signature, so a node may only send them for its own clients.
+        val senderNodeId = requireNotNull(call.requestAuthentication()).nodeId
+        if (!runtime.router.isConnectedThrough(event.senderRoutingId, senderNodeId)) {
+            call.respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse("SENDER_NOT_CONNECTED", "Sender is not connected through this node")
+            )
+            return@post
+        }
 
         val delivered = runtime.router.routeIndicator(event)
         call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)

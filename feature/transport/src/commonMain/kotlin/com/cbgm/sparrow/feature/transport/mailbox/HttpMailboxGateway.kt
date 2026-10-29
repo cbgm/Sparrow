@@ -22,13 +22,14 @@ class HttpMailboxGateway(
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long
+        expiresAtEpochMilliseconds: Long,
+        wakeTicket: MailboxWakeTicket
     ): Result<LocalMailboxCredential> =
         runCatching {
             val response =
                 httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
                     contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds))
+                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket))
                 }
             check(response.status == HttpStatusCode.Created) {
                 "Mailbox creation failed with ${response.status}"
@@ -51,7 +52,7 @@ class HttpMailboxGateway(
                 ) { bearerAuth(credential.retrievalCapability) }
             check(response.status.isSuccess()) { "Mailbox retrieval failed with ${response.status}" }
             response.body<MailboxEnvelopesResponse>().envelopes
-        }
+        }.markingNodeUnavailable()
 
     override suspend fun acknowledge(
         credential: LocalMailboxCredential,
@@ -66,7 +67,7 @@ class HttpMailboxGateway(
             check(response.status == HttpStatusCode.NoContent) {
                 "Mailbox acknowledgement failed with ${response.status}"
             }
-        }
+        }.markingNodeUnavailable()
 
     override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> =
         runCatching {

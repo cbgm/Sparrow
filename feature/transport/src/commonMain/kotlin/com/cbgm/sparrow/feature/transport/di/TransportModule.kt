@@ -24,6 +24,7 @@ import com.cbgm.sparrow.feature.transport.controlplane.SignedControlPlaneDirecto
 import com.cbgm.sparrow.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
 import com.cbgm.sparrow.feature.transport.device.createPlatformHttpClient
 import com.cbgm.sparrow.feature.transport.discovery.DataStoreNodeDirectoryCache
+import com.cbgm.sparrow.feature.transport.discovery.DataStorePreferredNodeStore
 import com.cbgm.sparrow.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.HttpNodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
@@ -31,9 +32,14 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
+import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
@@ -164,7 +170,8 @@ val transportModule =
                 transportConfig = get<TransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
-                controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>()
+                controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>(),
+                preferredNodeStore = get<PreferredNodeStore>()
             )
         }
 
@@ -198,9 +205,12 @@ val transportModule =
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneStatusStore = get<ControlPlaneStatusStore>(),
                 endpointSelector = get<NodeEndpointSelector>(),
-                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>()
+                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>(),
+                preferredNodeStore = get<PreferredNodeStore>()
             )
         }
+
+        single<PreferredNodeStore> { DataStorePreferredNodeStore(dataStore = get()) }
 
         single<NodeDirectorySource> {
             HttpNodeDirectorySource(httpClient = get<HttpClient>())
@@ -283,6 +293,10 @@ val transportModule =
         }
 
         singleOf(::CreatePushDeviceRegistrationUseCase)
+        singleOf(::CreateMailboxWakeTicketUseCase)
+        singleOf(::GetGatewayNodesUseCase)
+        singleOf(::ObservePreferredNodeUseCase)
+        singleOf(::SetPreferredNodeUseCase)
         singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {

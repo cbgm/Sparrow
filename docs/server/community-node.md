@@ -60,9 +60,13 @@ existing main node. An empty value uses the default.
 
 A node registers/publishes itself through selected Control Plane infrastructure, learns other signed node descriptors, and can route an envelope to a peer node without either server needing the plaintext conversation content.
 
+Anyone can run a node, so a node may only act for its own clients. Typing and other indicator events carry no client signature; an incoming one is refused (`403 SENDER_NOT_CONNECTED`) unless the sender's presence route points at the node that sent it.
+
+`CachingNodeRegistryClient` accepts a signed node directory only while its authority and signing certificates are within their validity dates. A Control Plane found through the signed Control Plane directory must match the root published there. For configured Control Planes, `CONTROL_PLANE_ROOT_NODE_IDS` (comma-separated registry root node IDs) pins the trusted roots; without it the first verified root of each configured plane is kept until the service restarts, so a later directory cannot switch it.
+
 ## Offline mailbox
 
-`:server:mailbox` provides durable recipient-selected offline delivery. `MailboxStore` / `PostgresMailboxStore` own mailbox persistence and `MailboxPushNotifier` coordinates wake-ups after mailbox insertion. Mailbox capability/create/revoke/fetch routes are defined by the mailbox HTTP routing layer.
+`:server:mailbox` provides durable recipient-selected offline delivery. `MailboxStore` / `PostgresMailboxStore` own mailbox persistence and `MailboxPushNotifier` coordinates wake-ups after mailbox insertion. A wake-up goes to the mailbox owner named in the wake ticket the app handed over at creation (column `wake_ticket_json`), never to the recipient field a sender put on the envelope; see [Push API](../api/push.md#node-and-internal-endpoints). Mailbox capability/create/revoke/fetch routes are defined by the mailbox HTTP routing layer.
 
 At the client, mailbox fetch ultimately enters the same incoming-envelope processing pipeline as live WebSocket delivery; the message is not treated as a different plaintext protocol.
 

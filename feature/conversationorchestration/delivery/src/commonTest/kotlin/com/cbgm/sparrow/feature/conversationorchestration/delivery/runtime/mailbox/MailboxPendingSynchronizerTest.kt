@@ -4,6 +4,7 @@ import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProce
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -81,7 +82,8 @@ class MailboxPendingSynchronizerTest {
             routeEndpoint: String,
             accessEndpoint: String,
             sequence: Long,
-            expiresAtEpochMilliseconds: Long
+            expiresAtEpochMilliseconds: Long,
+            wakeTicket: MailboxWakeTicket
         ): Result<LocalMailboxCredential> = error("Not used")
 
         override suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>> =
