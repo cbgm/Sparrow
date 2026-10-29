@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.notification.domain.model.AppVisibilityState
 import com.cbgm.sparrow.feature.notification.domain.usecase.SynchronizePendingMessagesUseCase
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationPresenter
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.protocol.identity.LocalIdentityUnavailableException
 
 class PendingMessageSyncWorker(
     appContext: Context,
@@ -47,6 +48,11 @@ class PendingMessageSyncWorker(
                     error !is kotlinx.coroutines.TimeoutCancellationException
                 ) {
                     throw error
+                }
+                // Without usable keys nothing can be decrypted; the envelopes wait until the identity is restored.
+                if (error is LocalIdentityUnavailableException) {
+                    logger.info { "Pending-message sync skipped until the local identity is usable" }
+                    return Result.success()
                 }
                 logger.error(error) { "Pending-message sync failed; attempt=$runAttemptCount" }
                 return if (runAttemptCount >= MAX_RETRY_COUNT) Result.failure() else Result.retry()

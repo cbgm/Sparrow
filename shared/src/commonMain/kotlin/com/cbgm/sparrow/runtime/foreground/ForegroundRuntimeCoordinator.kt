@@ -10,6 +10,8 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class ForegroundRuntimeCoordinator(
@@ -46,12 +48,15 @@ class ForegroundRuntimeCoordinator(
         isForeground.value = false
     }
 
+    // Without usable identity keys the connection and runners pause until the keys are restored.
     private suspend fun observeForegroundState() {
-        isForeground.collectLatest { shouldRun ->
-            if (shouldRun) {
-                runForegroundSession()
+        combine(isForeground, foreground.observeIdentityKeysUsable()) { visible, keysUsable -> visible && keysUsable }
+            .distinctUntilChanged()
+            .collectLatest { shouldRun ->
+                if (shouldRun) {
+                    runForegroundSession()
+                }
             }
-        }
     }
 
     private suspend fun runForegroundSession() {

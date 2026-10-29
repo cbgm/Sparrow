@@ -193,7 +193,8 @@ val settingsModule =
                 getBuildInfoUseCase = get(),
                 observeDeveloperErrorsUseCase = get(),
                 setDeveloperEnabledUseCase = get(),
-                transportDiagnosticsProvider = get()
+                transportDiagnosticsProvider = get(),
+                discardIdentityKeyStoreKey = get()
             )
         }
 

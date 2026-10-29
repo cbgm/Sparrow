@@ -63,6 +63,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseC
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclinePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.DiscardIdentityKeyStoreKeyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DismissPendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EnsureRemoteSigningIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
@@ -84,6 +85,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.MarkIdentityBackupExport
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveApprovedIdentityReconnectionsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityKeysUsableUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
@@ -102,6 +104,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDecl
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ResolveIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendPhoneVerificationCodeUseCase
@@ -113,11 +116,13 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExcha
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityRestoreDocumentUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.RepairIdentityFromBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.SaveRestoredIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.backup.IdentityBackupViewModel
 import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
 import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsViewModel
 import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewViewModel
+import com.cbgm.sparrow.feature.identity.presentation.repair.IdentityRepairViewModel
 import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
@@ -316,6 +321,26 @@ val identityModule =
         }
 
         single {
+            ResolveIdentityStatusUseCase(
+                identityRepository = get<IdentityRepository>(),
+                localIdentityChangeHandler = get(),
+                recoverIncompleteIdentity = get()
+            )
+        }
+
+        single {
+            ObserveIdentityKeysUsableUseCase(identityRepository = get<IdentityRepository>())
+        }
+
+        single {
+            DiscardIdentityKeyStoreKeyUseCase(identityRepository = get<IdentityRepository>())
+        }
+
+        single {
+            RepairIdentityFromBackupUseCase(identityRepository = get<IdentityRepository>(), backupRepository = get())
+        }
+
+        single {
             GetPublicIdentityUseCase(repository = get<IdentityRepository>())
         }
 
@@ -420,6 +445,15 @@ val identityModule =
                 normalizePhoneNumber = get(),
                 readBackup = get(),
                 saveRestoredIdentity = get()
+            )
+        }
+
+        viewModel {
+            IdentityRepairViewModel(
+                filePicker = FilePickerLauncher(sessions = get()),
+                readDocument = get(),
+                repairIdentityFromBackup = get(),
+                resetIdentity = get()
             )
         }
 

@@ -28,6 +28,7 @@ import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockRequiredUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityKeysUsableUseCase
 import com.cbgm.sparrow.feature.notification.domain.model.NotificationConversationTarget
 import com.cbgm.sparrow.feature.notification.domain.usecase.ResolveNotificationConversationUseCase
 import com.cbgm.sparrow.feature.notification.presentation.navigation.NotificationNavigationController
@@ -75,7 +76,8 @@ fun AppNavigation(
     resolveNotificationConversation: ResolveNotificationConversationUseCase = koinInject(),
     navigator: AppNavigator = koinInject(),
     observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject(),
-    observeAppLockRequired: ObserveAppLockRequiredUseCase = koinInject()
+    observeAppLockRequired: ObserveAppLockRequiredUseCase = koinInject(),
+    observeIdentityKeysUsable: ObserveIdentityKeysUsableUseCase = koinInject()
 ) {
     val navController = rememberNavController()
 
@@ -96,6 +98,14 @@ fun AppNavigation(
     ObserveGlobalFeedback(snackbarHostState)
 
     val lockRequired by observeAppLockRequired().collectAsStateWithLifecycle(initialValue = false)
+    val identityKeysUsable by observeIdentityKeysUsable().collectAsStateWithLifecycle(initialValue = true)
+
+    // Keys lost while running: startup runs again and offers restore or reset.
+    LaunchedEffect(startupComplete, identityKeysUsable) {
+        if (startupComplete && !identityKeysUsable) {
+            navigator.navigateTo(AppRoute.Startup, popUpTo = AppRoute.Main, inclusive = true)
+        }
+    }
     val currentEntry by navController.currentBackStackEntryAsState()
     val lockShown = currentEntry?.destination?.hasRoute<AppRoute.AppLock>() == true
 

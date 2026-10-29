@@ -24,8 +24,7 @@ val sharedModule =
         single {
             AppInitializationDependencies(
                 initializeCryptoRuntime = get(),
-                getIdentityStatus = get(),
-                recoverIncompleteIdentity = get(),
+                resolveIdentityStatus = get(),
                 initializeLocalEmbedding = get(),
                 initializeSemanticSearch = get(),
                 initializeMessageSafety = get(),
@@ -58,7 +57,8 @@ val sharedModule =
                 incomingEnvelopeRunner = get(),
                 transportConnectionManager = get(),
                 outboxRunner = get(),
-                mailboxCoordinator = get()
+                mailboxCoordinator = get(),
+                observeIdentityKeysUsable = get()
             )
         }
 

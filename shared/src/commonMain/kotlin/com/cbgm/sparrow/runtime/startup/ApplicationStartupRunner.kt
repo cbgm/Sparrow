@@ -117,7 +117,8 @@ class ApplicationStartupRunner(
         val identityResults =
             results.filter { result ->
                 result == StartupTaskResult.IdentityReady ||
-                    result == StartupTaskResult.IdentityRequired
+                    result == StartupTaskResult.IdentityRequired ||
+                    result == StartupTaskResult.IdentityUnusable
             }
 
         check(identityResults.size == 1) {
@@ -127,6 +128,7 @@ class ApplicationStartupRunner(
         return when (identityResults.single()) {
             StartupTaskResult.IdentityReady -> StartupResult.Ready
             StartupTaskResult.IdentityRequired -> StartupResult.IdentityRequired
+            StartupTaskResult.IdentityUnusable -> StartupResult.IdentityUnusable
             StartupTaskResult.Completed -> error("Unexpected completed identity result")
         }
     }

@@ -312,6 +312,8 @@
     <string name="feature_settings_build_info">Build info</string>
     <string name="feature_settings_danger_zone">Danger zone</string>
     <string name="feature_settings_danger_zone_description">These actions are destructive and only intended for local debugging.</string>
+    <string name="feature_settings_simulate_key_loss">Simulate lost identity key</string>
+    <string name="feature_settings_simulate_key_loss_done">Key-store key removed.</string>
     <string name="feature_settings_data_disclaimer">Data disclaimer</string>
     <string name="feature_settings_data_disclaimer_subtitle">What Sparrow stores locally and in the server infrastructure</string>
     <string name="feature_settings_developer_menu">Developer menu</string>
@@ -935,6 +937,16 @@
     <string name="feature_identity_phone_verification_wrong_code">The code is not correct.</string>
     <string name="feature_identity_setup_load_failed">Identity setup could not be loaded. Please restart Sparrow.</string>
     <string name="feature_identity_restore_failed">The identity could not be restored. Check the backup and password, then try again.</string>
+    <string name="feature_identity_repair_title">Your identity can no longer be used on this device</string>
+    <string name="feature_identity_repair_message">The keys of your identity on this phone are lost, for example after the app data was moved to another phone or the screen lock of the phone changed. Your chats and contacts are still here. Restore the keys from your identity backup to keep everything. Without a backup, only a reset is possible, which deletes all chats and contacts.</string>
+    <string name="feature_identity_repair_restore">Restore from backup</string>
+    <string name="feature_identity_repair_password_hint">Enter the password of your identity backup. Only a backup of this identity is accepted.</string>
+    <string name="feature_identity_repair_reset">Reset</string>
+    <string name="feature_identity_repair_reset_message">This deletes all chats and contacts on this device and starts with a new identity. Your contacts have to accept you again. This cannot be undone.</string>
+    <string name="feature_identity_repair_reset_confirm">Delete and reset</string>
+    <string name="feature_identity_repair_backup_mismatch">This backup belongs to a different identity. Choose the backup of the identity used on this device.</string>
+    <string name="feature_identity_repair_failed">The keys could not be restored. Check the backup and password, then try again.</string>
+    <string name="feature_identity_repair_reset_failed">The identity could not be reset. Try again.</string>
     <string name="feature_identity_restore_invalid_phone">Enter a valid phone number before restoring your identity.</string>
     <string name="feature_identity_restore_read_failed">The identity backup could not be read. Select a valid backup file.</string>
     <string name="feature_identity_overview_load_failed">Your identity could not be loaded. Please try again.</string>

@@ -314,6 +314,8 @@
     <string name="feature_settings_build_info">Build-Informationen</string>
     <string name="feature_settings_danger_zone">Gefahrenbereich</string>
     <string name="feature_settings_danger_zone_description">Diese Aktionen sind destruktiv und nur für lokale Debugging-Zwecke vorgesehen.</string>
+    <string name="feature_settings_simulate_key_loss">Verlust des Identitätsschlüssels simulieren</string>
+    <string name="feature_settings_simulate_key_loss_done">Keystore-Schlüssel entfernt.</string>
     <string name="feature_settings_data_disclaimer">Datenschutzhinweis</string>
     <string name="feature_settings_data_disclaimer_subtitle">Welche Daten Sparrow lokal und in der Server-Infrastruktur speichert</string>
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
@@ -939,6 +941,16 @@
     <string name="feature_identity_phone_verification_wrong_code">Der Code ist nicht korrekt.</string>
     <string name="feature_identity_setup_load_failed">Die Einrichtung konnte nicht geladen werden. Bitte starte Sparrow neu.</string>
     <string name="feature_identity_restore_failed">Die Identität konnte nicht wiederhergestellt werden. Prüfe das Backup und das Passwort und versuche es erneut.</string>
+    <string name="feature_identity_repair_title">Deine Identität kann auf diesem Gerät nicht mehr verwendet werden</string>
+    <string name="feature_identity_repair_message">Die Schlüssel deiner Identität auf diesem Telefon sind verloren, zum Beispiel nachdem die App-Daten auf ein anderes Telefon übertragen wurden oder sich die Displaysperre geändert hat. Deine Chats und Kontakte sind noch da. Stelle die Schlüssel aus deinem Identitäts-Backup wieder her, um alles zu behalten. Ohne Backup ist nur ein Zurücksetzen möglich, das alle Chats und Kontakte löscht.</string>
+    <string name="feature_identity_repair_restore">Aus Backup wiederherstellen</string>
+    <string name="feature_identity_repair_password_hint">Gib das Passwort deines Identitäts-Backups ein. Nur ein Backup dieser Identität wird angenommen.</string>
+    <string name="feature_identity_repair_reset">Zurücksetzen</string>
+    <string name="feature_identity_repair_reset_message">Dadurch werden alle Chats und Kontakte auf diesem Gerät gelöscht und eine neue Identität begonnen. Deine Kontakte müssen dich erneut annehmen. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="feature_identity_repair_reset_confirm">Löschen und zurücksetzen</string>
+    <string name="feature_identity_repair_backup_mismatch">Dieses Backup gehört zu einer anderen Identität. Wähle das Backup der Identität, die auf diesem Gerät verwendet wird.</string>
+    <string name="feature_identity_repair_failed">Die Schlüssel konnten nicht wiederhergestellt werden. Prüfe Backup und Passwort und versuche es erneut.</string>
+    <string name="feature_identity_repair_reset_failed">Die Identität konnte nicht zurückgesetzt werden. Versuche es erneut.</string>
     <string name="feature_identity_restore_invalid_phone">Gib eine gültige Telefonnummer ein, bevor du deine Identität wiederherstellst.</string>
     <string name="feature_identity_restore_read_failed">Das Identitäts-Backup konnte nicht gelesen werden. Wähle eine gültige Backup-Datei aus.</string>
     <string name="feature_identity_overview_load_failed">Deine Identität konnte nicht geladen werden. Bitte versuche es erneut.</string>

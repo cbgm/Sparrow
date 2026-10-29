@@ -55,6 +55,7 @@ import com.cbgm.sparrow.resources.feature_settings_danger_zone
 import com.cbgm.sparrow.resources.feature_settings_danger_zone_description
 import com.cbgm.sparrow.resources.feature_settings_developer_menu
 import com.cbgm.sparrow.resources.feature_settings_disable_developer_mode
+import com.cbgm.sparrow.resources.feature_settings_simulate_key_loss
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -101,7 +102,8 @@ fun DeveloperMenuScreen(
             DangerZoneCard(
                 isClearingLocalData = uiState.isClearingLocalData,
                 onClearLocalData = { onUiEvent(DeveloperMenuUiEvent.ClearLocalDataClicked) },
-                onDisableDeveloperMode = { onUiEvent(DeveloperMenuUiEvent.DisableDeveloperModeClicked) }
+                onDisableDeveloperMode = { onUiEvent(DeveloperMenuUiEvent.DisableDeveloperModeClicked) },
+                onSimulateKeyLoss = { onUiEvent(DeveloperMenuUiEvent.SimulateKeyLossClicked) }
             )
         }
     }
@@ -182,7 +184,8 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
 private fun DangerZoneCard(
     isClearingLocalData: Boolean,
     onClearLocalData: () -> Unit,
-    onDisableDeveloperMode: () -> Unit
+    onDisableDeveloperMode: () -> Unit,
+    onSimulateKeyLoss: () -> Unit
 ) {
     SparrowCardNoAnimation {
         Column(
@@ -225,6 +228,16 @@ private fun DangerZoneCard(
                     }
                 }
             )
+
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+
+            OutlinedButton(
+                onClick = onSimulateKeyLoss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(text = stringResource(Res.string.feature_settings_simulate_key_loss))
+            }
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 

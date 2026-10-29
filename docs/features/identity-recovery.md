@@ -100,7 +100,16 @@ The backup restores identity key material; it is not a database backup of conver
 
 ## Incomplete identity recovery
 
-`RecoverIncompleteIdentityUseCase` and `RecoverManualIdentityExchangeUseCase` recover interrupted identity setup/exchange state. `IdentityExchangeDataSource` persists the exchange state machine and contains replay helpers such as `recoverIncomingInviteReplay()`, `queueAcceptanceReplay()` and `queueReadyReplay()`.
+`ResolveIdentityStatusUseCase` decides at startup what happens with the local identity; nothing is deleted on a read error:
+
+- `PrivateKeyStorage.privateKeyState()` reports `ABSENT`, `PARTIAL`, `AVAILABLE` or `UNUSABLE`. `UNUSABLE` is only reported when the keys can never be decrypted again: the key-store wrapping key is gone or invalidated (`KeyPermanentlyInvalidatedException`), or the stored data is damaged (`AEADBadTagException`, unrecoverable entry, bad Base64). Any other error is thrown.
+- A thrown error is retried (3 attempts with growing delay; for example the key store right after a reboot). If it lasts, startup shows the error screen with **Try again**; nothing is deleted.
+- `INCOMPLETE` (public identity or keys positively missing or unusable, or keys that do not match) is reset silently with `RecoverIncompleteIdentityUseCase` only when there are no chats (`LocalIdentityChangeHandler.hasConversations()`), as after an interrupted setup.
+- With chats, startup shows `IdentityRepairRoute`: **Restore from backup** (`RepairIdentityFromBackupUseCase` / `IdentityRepository.repairIdentityKeys`) puts the private keys of a backup of the *same* identity back under a new key-store key and keeps chats and contacts; a backup of another identity fails with `IdentityBackupMismatchException`. **Reset** deletes chats, contacts and keys after a confirmation and goes to onboarding.
+
+Missing private keys are a state, not an error: key access fails with `LocalIdentityUnavailableException` without an error log. Background work stops quietly (push-token registration, pending-message sync; envelopes wait until the keys are back). When the keys of the stored identity turn out to be gone while the app runs (`IdentityRepository.observeKeysUsable()`, also the developer button "Simulate lost identity key"), the foreground runtime pauses and `AppNavigation` runs startup again, which shows the restore-or-reset screen; restoring resumes the runtime.
+
+`RecoverManualIdentityExchangeUseCase` recovers interrupted identity exchange state. `IdentityExchangeDataSource` persists the exchange state machine and contains replay helpers such as `recoverIncomingInviteReplay()`, `queueAcceptanceReplay()` and `queueReadyReplay()`.
 
 ## Detecting a changed remote identity
 

@@ -14,9 +14,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.runtime.Mem
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecoverInterruptedDirectSendsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.runtime.PendingAuthorizationCleanupRunner
 import com.cbgm.sparrow.feature.embedding.domain.usecase.InitializeLocalEmbeddingUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ResolveIdentityStatusUseCase
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationCoordinator
 import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
@@ -29,8 +28,7 @@ import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
 data class AppInitializationDependencies(
     val initializeCryptoRuntime: InitializeCryptoRuntime,
-    val getIdentityStatus: GetIdentityStatusUseCase,
-    val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase,
+    val resolveIdentityStatus: ResolveIdentityStatusUseCase,
     val initializeLocalEmbedding: InitializeLocalEmbeddingUseCase,
     val initializeSemanticSearch: InitializeSemanticSearchUseCase,
     val initializeMessageSafety: InitializeMessageSafetyUseCase,
