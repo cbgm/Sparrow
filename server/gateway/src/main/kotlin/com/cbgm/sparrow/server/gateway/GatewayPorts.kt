@@ -20,8 +20,14 @@ enum class PresenceRegistrationResult {
     PHONE_VERIFICATION_FAILED
 }
 
+/** [aliases] are the route's phone aliases the presence directory accepted. */
+data class PresenceRegistration(
+    val result: PresenceRegistrationResult,
+    val aliases: List<String> = emptyList()
+)
+
 interface PresenceClient {
-    suspend fun register(registration: ClientRouteRegistration): PresenceRegistrationResult
+    suspend fun register(registration: ClientRouteRegistration): PresenceRegistration
 
     suspend fun remove(
         routingId: String,

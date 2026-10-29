@@ -21,7 +21,8 @@ internal class RedisPresenceStore(
     private data class RoutingKeys(
         val generation: String,
         val routes: String,
-        val expiries: String
+        val expiries: String,
+        val owner: String
     )
 
     private val pool: JedisPool
@@ -44,19 +45,22 @@ internal class RedisPresenceStore(
         }
     }
 
-    override suspend fun register(registration: ClientRouteRegistration): PresenceResult {
+    override suspend fun register(
+        registration: ClientRouteRegistration,
+        claims: AliasClaims
+    ): PresenceResult {
         val currentTime = now()
         validatePresenceRegistration(registration, maximumTtlMilliseconds, currentTime)?.let { return it }
         val route = registration.route
         val routingIds = listOf(route.routingId) + route.aliases.orEmpty()
         val encodedRoute = serverJson.encodeToString(route)
         val results =
-            routingIds.map { routingId ->
+            routingIds.associateWith { routingId ->
                 val keys = routingKeys(routingId)
                 withJedis { jedis ->
                     jedis.eval(
                         REGISTER_SCRIPT,
-                        listOf(keys.generation, keys.routes, keys.expiries, routingIdsKey),
+                        listOf(keys.generation, keys.routes, keys.expiries, routingIdsKey, keys.owner),
                         listOf(
                             routingId,
                             currentTime.toString(),
@@ -64,15 +68,20 @@ internal class RedisPresenceStore(
                             route.connectionId,
                             encodedRoute,
                             route.expiresAtEpochMilliseconds.toString(),
-                            if (routingId == route.routingId) "1" else "0"
+                            if (routingId == route.routingId) "1" else "0",
+                            route.routingId,
+                            if (claims.isProven(routingId)) "1" else "0",
+                            if (claims.allowsFreeAlias(routingId)) "1" else "0",
+                            ALIAS_BINDING_LIFETIME_MILLISECONDS.toString()
                         )
                     ) as Long
                 }
             }
-        return if (results.all { result -> result == REGISTERED_RESULT }) {
-            PresenceResult.Accepted
+        val registeredIds = results.filterValues { result -> result == REGISTERED_RESULT }.keys
+        return if (results.values.none { result -> result == STALE_RESULT }) {
+            PresenceResult.Accepted(registeredIds.filter { routingId -> routingId != route.routingId })
         } else {
-            routingIds.distinct().forEach { routingId ->
+            registeredIds.forEach { routingId ->
                 removeRoute(routingId, route.connectionId, currentTime)
             }
             PresenceResult.Rejected("STALE_GENERATION")
@@ -81,9 +90,16 @@ internal class RedisPresenceStore(
 
     override suspend fun remove(routingId: String, connectionId: String) {
         val route = resolve(routingId).routes.firstOrNull { candidate -> candidate.connectionId == connectionId }
-        val routingIds = listOf(route?.routingId ?: routingId) + route?.aliases.orEmpty()
+        val deviceRoutingId = route?.routingId ?: routingId
+        // Connection IDs are chosen by clients, so an alias only loses a route its own device stored.
+        val aliases =
+            route?.aliases.orEmpty().filter { alias ->
+                resolve(alias).routes.any { candidate ->
+                    candidate.connectionId == connectionId && candidate.routingId == deviceRoutingId
+                }
+            }
         val currentTime = now()
-        routingIds.distinct().forEach { currentRoutingId ->
+        (listOf(deviceRoutingId) + aliases).distinct().forEach { currentRoutingId ->
             removeRoute(currentRoutingId, connectionId, currentTime)
         }
     }
@@ -151,7 +167,8 @@ internal class RedisPresenceStore(
         return RoutingKeys(
             generation = "$routingPrefix:generation",
             routes = "$routingPrefix:routes",
-            expiries = "$routingPrefix:expiries"
+            expiries = "$routingPrefix:expiries",
+            owner = "$routingPrefix:owner"
         )
     }
 
@@ -181,8 +198,13 @@ internal class RedisPresenceStore(
     }
 
     private companion object {
+        const val STALE_RESULT = 0L
         const val REGISTERED_RESULT = 1L
 
+        // ARGV[7] marks the device's own routing ID; aliases also need the owner check:
+        // ARGV[8] device routing ID, ARGV[9] alias proven, ARGV[10] free alias allowed,
+        // ARGV[11] owner binding lifetime. Returns 0 for a stale generation, 1 when registered and
+        // 2 when the alias is refused.
         val REGISTER_SCRIPT =
             """
             local expired = redis.call('ZRANGEBYSCORE', KEYS[3], '-inf', ARGV[2])
@@ -195,6 +217,21 @@ internal class RedisPresenceStore(
             if redis.call('ZCARD', KEYS[3]) == 0 then
                 redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
                 redis.call('SREM', KEYS[4], ARGV[1])
+            end
+
+            if ARGV[7] == '0' then
+                local owner = redis.call('GET', KEYS[5])
+                if not owner then
+                    if ARGV[10] ~= '1' then
+                        return 2
+                    end
+                    redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
+                elseif owner ~= ARGV[8] then
+                    if ARGV[9] ~= '1' then
+                        return 2
+                    end
+                    redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
+                end
             end
 
             local currentGeneration = redis.call('GET', KEYS[1])
@@ -215,6 +252,9 @@ internal class RedisPresenceStore(
             redis.call('PEXPIREAT', KEYS[1], latest[2])
             redis.call('PEXPIREAT', KEYS[2], latest[2])
             redis.call('PEXPIREAT', KEYS[3], latest[2])
+            if ARGV[7] == '0' then
+                redis.call('SET', KEYS[5], ARGV[8], 'PX', ARGV[11])
+            end
             return 1
             """.trimIndent()
 

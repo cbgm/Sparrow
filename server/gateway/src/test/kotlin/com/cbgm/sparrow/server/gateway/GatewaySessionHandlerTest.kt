@@ -254,7 +254,10 @@ class GatewaySessionHandlerTest {
             presence =
                 object : PresenceClient {
                     override suspend fun register(registration: ClientRouteRegistration) =
-                        PresenceRegistrationResult.ACCEPTED
+                        PresenceRegistration(
+                            result = PresenceRegistrationResult.ACCEPTED,
+                            aliases = registration.route.aliases.orEmpty()
+                        )
 
                     override suspend fun remove(
                         routingId: String,

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
+import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
 import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.serverJson
@@ -69,17 +70,26 @@ private fun Route.installRouteRegistration(runtime: PresenceRuntime) {
             !authorized ->
                 call.respond(HttpStatusCode.Unauthorized)
 
-            !runtime.phoneVerification.accepts(registration) ->
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
-                )
-
-            else ->
-                call.respondToRegistration(
-                    runtime.store.register(registration.copy(phoneVerificationToken = null))
-                )
+            else -> call.registerRoute(registration, runtime)
         }
+    }
+}
+
+private suspend fun ApplicationCall.registerRoute(
+    registration: ClientRouteRegistration,
+    runtime: PresenceRuntime
+) {
+    when (val claims = runtime.phoneVerification.claims(registration)) {
+        null ->
+            respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
+            )
+
+        else ->
+            respondToRegistration(
+                runtime.store.register(registration.copy(phoneVerificationToken = null), claims)
+            )
     }
 }
 
@@ -132,8 +142,8 @@ private fun Route.installRouteResolution(runtime: PresenceRuntime) {
 
 private suspend fun ApplicationCall.respondToRegistration(result: PresenceResult) {
     when (result) {
-        PresenceResult.Accepted ->
-            respond(HttpStatusCode.NoContent)
+        is PresenceResult.Accepted ->
+            respond(ClientRouteRegistrationResult(aliases = result.aliases))
 
         is PresenceResult.Rejected ->
             respond(

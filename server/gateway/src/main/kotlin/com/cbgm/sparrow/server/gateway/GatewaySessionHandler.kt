@@ -243,9 +243,10 @@ internal class GatewaySessionHandler(
             return
         }
 
-        when (val presenceResult = synchronizePresence(registration)) {
+        val presenceRegistration = synchronizePresence(registration)
+        when (val presenceResult = presenceRegistration.result) {
             PresenceRegistrationResult.ACCEPTED -> {
-                val aliases = registration.route.aliases.orEmpty()
+                val aliases = presenceRegistration.aliases
                 connections.updateRoutingAliases(
                     connection = connection,
                     routingAliases = aliases
@@ -265,7 +266,7 @@ internal class GatewaySessionHandler(
 
     private suspend fun synchronizePresence(
         registration: ClientRouteRegistration
-    ): PresenceRegistrationResult =
+    ): PresenceRegistration =
         synchronizePresenceRegistration(
             presence = presence,
             registration = registration
@@ -287,13 +288,13 @@ internal class GatewaySessionHandler(
 internal suspend fun synchronizePresenceRegistration(
     presence: PresenceClient,
     registration: ClientRouteRegistration
-): PresenceRegistrationResult =
+): PresenceRegistration =
     try {
         presence.register(registration)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (_: Exception) {
-        PresenceRegistrationResult.REJECTED
+        PresenceRegistration(PresenceRegistrationResult.REJECTED)
     }
 
 private suspend fun GatewayConnection.sendRouteRejected(result: PresenceRegistrationResult) {

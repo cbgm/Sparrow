@@ -120,6 +120,12 @@ data class ClientRouteRegistration(
     }
 }
 
+/** The phone aliases the presence directory stored a route under; the route's other aliases were refused. */
+@Serializable
+data class ClientRouteRegistrationResult(
+    val aliases: List<String> = emptyList()
+)
+
 @Serializable
 data class ClientRoutingResult(
     val routingId: String,

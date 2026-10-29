@@ -18,7 +18,7 @@ internal class BoundedPresenceClient(
 
     override suspend fun register(
         registration: ClientRouteRegistration
-    ): PresenceRegistrationResult =
+    ): PresenceRegistration =
         slots.withPermit { delegate.register(registration) }
 
     override suspend fun remove(
