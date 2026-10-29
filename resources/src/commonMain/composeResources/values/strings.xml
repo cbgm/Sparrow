@@ -694,6 +694,12 @@
     <string name="feature_applock_unavailable">Device authentication is unavailable. Set up biometrics or a secure screen lock and try again.</string>
     <string name="feature_applock_authentication_failed">Authentication failed. Try again.</string>
     <string name="feature_applock_unlock_sparrow">Unlock Sparrow</string>
+    <string name="feature_applock_timeout">Lock after</string>
+    <string name="feature_applock_timeout_immediately">Immediately after leaving the app</string>
+    <string name="feature_applock_timeout_one_minute">1 minute in the background</string>
+    <string name="feature_applock_timeout_five_minutes">5 minutes in the background</string>
+    <string name="feature_applock_timeout_thirty_minutes">30 minutes in the background</string>
+    <string name="feature_applock_timeout_on_restart">Only when the app restarts</string>
 
     <!-- Feature: polls -->
     <string name="feature_polls_create_title">Create poll</string>

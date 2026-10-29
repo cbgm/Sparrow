@@ -18,7 +18,16 @@ class AppLockSettingsDataSource(
         }
     }
 
+    fun observeTimeout(): Flow<String?> = dataStore.observeString(KEY_APP_LOCK_TIMEOUT)
+
+    suspend fun setTimeout(timeout: String) {
+        dataStore.edit {
+            putString(KEY_APP_LOCK_TIMEOUT, timeout)
+        }
+    }
+
     private companion object {
         const val KEY_APP_LOCK_ENABLED = "security.app_lock_enabled"
+        const val KEY_APP_LOCK_TIMEOUT = "security.app_lock_timeout"
     }
 }

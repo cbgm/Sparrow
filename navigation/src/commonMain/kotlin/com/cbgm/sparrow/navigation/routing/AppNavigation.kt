@@ -20,11 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockRequiredUseCase
 import com.cbgm.sparrow.feature.notification.domain.model.NotificationConversationTarget
 import com.cbgm.sparrow.feature.notification.domain.usecase.ResolveNotificationConversationUseCase
 import com.cbgm.sparrow.feature.notification.presentation.navigation.NotificationNavigationController
@@ -71,7 +74,8 @@ fun AppNavigation(
     notificationNavigationController: NotificationNavigationController = koinInject(),
     resolveNotificationConversation: ResolveNotificationConversationUseCase = koinInject(),
     navigator: AppNavigator = koinInject(),
-    observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject()
+    observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject(),
+    observeAppLockRequired: ObserveAppLockRequiredUseCase = koinInject()
 ) {
     val navController = rememberNavController()
 
@@ -91,14 +95,24 @@ fun AppNavigation(
 
     ObserveGlobalFeedback(snackbarHostState)
 
+    val lockRequired by observeAppLockRequired().collectAsStateWithLifecycle(initialValue = false)
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val lockShown = currentEntry?.destination?.hasRoute<AppRoute.AppLock>() == true
+
+    // Startup shows the first lock itself; afterwards a lock that comes back covers the current screen.
+    LaunchedEffect(startupComplete, lockRequired) {
+        if (startupComplete && lockRequired) navigator.navigateTo(AppRoute.AppLock)
+    }
+
     ObserveConnectionSnackbar(
         startupComplete = startupComplete,
         observeAppConnectionAvailability = observeAppConnectionAvailability
     )
 
+    // A notification opens its chat only once the app is unlocked.
     HandlePendingNotificationNavigation(
         pendingNotificationTarget = pendingNotificationTarget,
-        startupComplete = startupComplete,
+        startupComplete = startupComplete && !lockRequired && !lockShown,
         notificationNavigationController = notificationNavigationController,
         resolveNotificationConversation = resolveNotificationConversation,
         navigator = navigator

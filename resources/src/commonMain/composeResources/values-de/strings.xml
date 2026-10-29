@@ -698,6 +698,12 @@
     <string name="feature_applock_unavailable">Geräteauthentifizierung ist nicht verfügbar. Richte Biometrie oder eine sichere Gerätesperre ein und versuche es erneut.</string>
     <string name="feature_applock_authentication_failed">Authentifizierung fehlgeschlagen. Versuche es erneut.</string>
     <string name="feature_applock_unlock_sparrow">Entsperre Sparrow</string>
+    <string name="feature_applock_timeout">Sperren nach</string>
+    <string name="feature_applock_timeout_immediately">Sofort nach Verlassen der App</string>
+    <string name="feature_applock_timeout_one_minute">1 Minute im Hintergrund</string>
+    <string name="feature_applock_timeout_five_minutes">5 Minuten im Hintergrund</string>
+    <string name="feature_applock_timeout_thirty_minutes">30 Minuten im Hintergrund</string>
+    <string name="feature_applock_timeout_on_restart">Nur beim Neustart der App</string>
 
     <!-- Feature: polls -->
     <string name="feature_polls_create_title">Umfrage erstellen</string>

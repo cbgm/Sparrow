@@ -86,7 +86,10 @@ val sharedModule =
 
         viewModel {
             AppViewModel(
-                foregroundRuntime = get()
+                foregroundRuntime = get(),
+                recordAppHidden = get(),
+                recordAppVisible = get(),
+                observeAppLockEnabled = get()
             )
         }
     }

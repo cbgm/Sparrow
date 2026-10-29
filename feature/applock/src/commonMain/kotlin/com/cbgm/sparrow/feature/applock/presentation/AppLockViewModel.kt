@@ -4,7 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationResult
-import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockRequiredUseCase
+import com.cbgm.sparrow.feature.applock.domain.usecase.UnlockAppUseCase
 import com.cbgm.sparrow.feature.applock.presentation.model.AppLockUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class AppLockViewModel(
-    private val observeAppLockEnabled: ObserveAppLockEnabledUseCase
+    private val observeAppLockRequired: ObserveAppLockRequiredUseCase,
+    private val unlockApp: UnlockAppUseCase
 ) : BaseViewModel() {
     private val logger = SparrowLog.withTag("AppLockViewModel")
     private val _uiState = MutableStateFlow<AppLockUiState>(AppLockUiState.Loading)
@@ -35,7 +37,7 @@ class AppLockViewModel(
 
     fun onAuthenticationResult(result: AppLockAuthenticationResult) {
         when (result) {
-            AppLockAuthenticationResult.Authenticated -> _uiState.value = AppLockUiState.Unlocked
+            AppLockAuthenticationResult.Authenticated -> unlock()
             AppLockAuthenticationResult.Cancelled -> stopAuthenticating()
             AppLockAuthenticationResult.Unavailable -> {
                 logger.error { "Device-owner authentication is unavailable" }
@@ -50,12 +52,18 @@ class AppLockViewModel(
 
     private fun resolveLockState() {
         viewModelScope.launch {
-            _uiState.value = if (observeAppLockEnabled().first()) {
-                AppLockUiState.Locked(isAuthenticating = true, authenticationRequestId = 1)
+            // Without a lock the process counts as unlocked, so turning the lock on later does not lock at once.
+            if (observeAppLockRequired().first()) {
+                _uiState.value = AppLockUiState.Locked(isAuthenticating = true, authenticationRequestId = 1)
             } else {
-                AppLockUiState.Unlocked
+                unlock()
             }
         }
+    }
+
+    private fun unlock() {
+        unlockApp()
+        _uiState.value = AppLockUiState.Unlocked
     }
 
     private fun stopAuthenticating() {

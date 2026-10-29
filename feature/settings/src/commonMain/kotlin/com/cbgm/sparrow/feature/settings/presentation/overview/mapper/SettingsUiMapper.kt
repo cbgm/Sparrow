@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockSettings
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
@@ -13,7 +14,7 @@ internal fun BuildInfo.toSettingsUiState(
     activeAutoReplyName: String?,
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,
-    appLockEnabled: Boolean,
+    appLockSettings: AppLockSettings,
     blockedContactCount: Int,
     localEmbeddingState: LocalEmbeddingState,
     semanticSearchState: SemanticSearchState,
@@ -21,14 +22,17 @@ internal fun BuildInfo.toSettingsUiState(
     voiceTranscriptionEnabled: Boolean,
     isDeveloperModeEnabled: Boolean,
     developerModeTapCount: Int,
-    showLanguagePicker: Boolean
+    showLanguagePicker: Boolean,
+    showAppLockTimeoutPicker: Boolean
 ): SettingsUiState =
     SettingsUiState(
         currentLanguage = currentLanguage,
         activeAutoReplyName = activeAutoReplyName,
         directIdentitySetupMode = identitySetupMode,
         blockUnknownContactInvites = blockUnknownContactInvites,
-        appLockEnabled = appLockEnabled,
+        appLockEnabled = appLockSettings.enabled,
+        appLockTimeout = appLockSettings.timeout,
+        showAppLockTimeoutPicker = showAppLockTimeoutPicker,
         blockedContactCount = blockedContactCount,
         localEmbeddingState = localEmbeddingState,
         semanticSearchState = semanticSearchState,

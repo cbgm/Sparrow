@@ -5,8 +5,10 @@ import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
+import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockSettingsUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockTimeoutUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingFeature
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
@@ -48,8 +50,9 @@ class SettingsViewModel(
     observeSettingsDomainContext: ObserveSettingsDomainContextUseCase,
     private val setDirectIdentitySetupMode: SetDirectIdentitySetupModeUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
-    observeAppLockEnabled: ObserveAppLockEnabledUseCase,
+    observeAppLockSettings: ObserveAppLockSettingsUseCase,
     private val setAppLockEnabled: SetAppLockEnabledUseCase,
+    private val setAppLockTimeout: SetAppLockTimeoutUseCase,
     private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase,
     private val setLocalEmbeddingFeatureEnabled: SetLocalEmbeddingFeatureEnabledUseCase,
     observeVoiceTranscriptionEnabled: ObserveVoiceTranscriptionEnabledUseCase,
@@ -85,14 +88,14 @@ class SettingsViewModel(
             localState,
             observeVoiceTranscriptionEnabled(),
             observeActiveAutoReply(),
-            observeAppLockEnabled()
-        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply, appLockEnabled ->
+            observeAppLockSettings()
+        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply, appLockSettings ->
             buildInfo.toSettingsUiState(
                 currentLanguage = local.currentLanguage,
                 activeAutoReplyName = activeAutoReply?.name,
                 identitySetupMode = domain.identitySetupMode,
                 blockUnknownContactInvites = domain.blockUnknownContactInvites,
-                appLockEnabled = appLockEnabled,
+                appLockSettings = appLockSettings,
                 blockedContactCount = domain.blockedContactCount,
                 localEmbeddingState = domain.localEmbeddingState,
                 semanticSearchState = domain.semanticSearchState,
@@ -100,7 +103,8 @@ class SettingsViewModel(
                 voiceTranscriptionEnabled = voiceTranscriptionEnabled,
                 isDeveloperModeEnabled = local.isDeveloperModeEnabled,
                 developerModeTapCount = local.developerModeTapCount,
-                showLanguagePicker = local.showLanguagePicker
+                showLanguagePicker = local.showLanguagePicker,
+                showAppLockTimeoutPicker = local.showAppLockTimeoutPicker
             )
         }.map { state ->
             // Keep download *status* in the screen state, but remove the
@@ -138,6 +142,9 @@ class SettingsViewModel(
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
             is SettingsUiEvent.AppLockEnabledChanged -> changeAppLockEnabled(event.enabled)
+            SettingsUiEvent.AppLockTimeoutClicked -> localState.update { it.copy(showAppLockTimeoutPicker = true) }
+            SettingsUiEvent.AppLockTimeoutPickerDismissed -> localState.update { it.copy(showAppLockTimeoutPicker = false) }
+            is SettingsUiEvent.AppLockTimeoutSelected -> changeAppLockTimeout(event.timeout)
             is SettingsUiEvent.SemanticSearchEnabledChanged -> changeSemanticSearchEnabled(event.enabled)
             is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             is SettingsUiEvent.VoiceTranscriptionEnabledChanged -> changeVoiceTranscriptionEnabled(event.enabled)
@@ -220,6 +227,15 @@ class SettingsViewModel(
         }
     }
 
+    private fun changeAppLockTimeout(timeout: AppLockTimeout) {
+        localState.update { it.copy(showAppLockTimeoutPicker = false) }
+        viewModelScope.launch {
+            setAppLockTimeout(timeout).onFailure { error ->
+                SparrowLog.error(TAG, "App lock timeout could not be changed", error)
+            }
+        }
+    }
+
     private fun changeDirectIdentitySetupMode(mode: DirectIdentitySetupMode) {
         viewModelScope.launch {
             setDirectIdentitySetupMode(mode).onFailure { error ->
@@ -288,7 +304,8 @@ class SettingsViewModel(
         val currentLanguage: AppLanguage = AppLanguage.ENGLISH,
         val isDeveloperModeEnabled: Boolean = false,
         val developerModeTapCount: Int = 0,
-        val showLanguagePicker: Boolean = false
+        val showLanguagePicker: Boolean = false,
+        val showAppLockTimeoutPicker: Boolean = false
     )
 }
 

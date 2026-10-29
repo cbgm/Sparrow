@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 
 sealed interface SettingsUiEvent {
@@ -22,6 +23,14 @@ sealed interface SettingsUiEvent {
 
     data class AppLockEnabledChanged(
         val enabled: Boolean
+    ) : SettingsUiEvent
+
+    data object AppLockTimeoutClicked : SettingsUiEvent
+
+    data object AppLockTimeoutPickerDismissed : SettingsUiEvent
+
+    data class AppLockTimeoutSelected(
+        val timeout: AppLockTimeout
     ) : SettingsUiEvent
 
     data class SemanticSearchEnabledChanged(
