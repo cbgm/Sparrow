@@ -88,12 +88,38 @@ class PhoneVerificationTest {
     }
 
     @Test
+    fun testNumbersMoveToTheDeviceThatRegistersThemLast() =
+        runTest {
+            val otherAlias = ClientRoutingIds.fromPhoneNumber("+491709999999")
+            val verification =
+                createPhoneVerification { name ->
+                    when (name) {
+                        "GOOGLE_APPLICATION_CREDENTIALS" -> null
+                        "PRESENCE_TEST_PHONE_ALIASES" -> " $alias , "
+                        else -> null
+                    }
+                }
+            val claims = assertNotNull(verification.claims(registration(null)))
+
+            assertTrue(claims.allows(alias, deviceRoutingId = "device-b", currentOwner = "device-a"))
+            assertFalse(claims.allows(otherAlias, deviceRoutingId = "device-b", currentOwner = "device-a"))
+        }
+
+    @Test
+    fun testNumbersMustBePhoneAliases() {
+        // Same vector as server/installer/app/test_phone_numbers.py derives for the installer.
+        assertEquals("scphone1_tCZ6IjTiBy-k0ujYn75yfFD8QUcx1uyswu09APBQONE", alias)
+        assertEquals(emptySet(), testPhoneAliases(null))
+        assertFailsWith<IllegalArgumentException> { testPhoneAliases(phone) }
+    }
+
+    @Test
     fun tokensAreRedactedFromRegistrationStrings() {
         assertFalse(registration("sensitive-token").toString().contains("sensitive-token"))
     }
 
     private fun verification(phoneNumber: suspend (String) -> String) =
-        PhoneVerification { token -> VerifiedPhone(phoneNumber(token), Long.MAX_VALUE) }
+        PhoneVerification(verifier = { token -> VerifiedPhone(phoneNumber(token), Long.MAX_VALUE) })
 
     private fun registration(token: String?, aliases: List<String> = listOf(alias)) =
         ClientRouteRegistration(

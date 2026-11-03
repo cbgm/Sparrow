@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ResolveIncomingIdentityPeerUseCaseTest {
@@ -111,15 +112,74 @@ class ResolveIncomingIdentityPeerUseCaseTest {
     }
 
     @Test
-    fun phonePeerTakesPrecedenceOverIdentityPeer() = runBlocking {
-        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "phone", "identity"), phonePeerId = "phone")
+    fun keysTakePrecedenceOverTheClaimedPhoneNumber() = runBlocking {
+        val contacts = FakeContacts(
+            existingPeerIds = setOf("incoming", "phone", "identity"),
+            phonePeerId = "phone",
+            linkablePeerIds = setOf("phone")
+        )
         val result = resolve(contacts, FakeIdentities(keyPeerId = "identity"))(
             "incoming",
             "+491234567890",
             byteArrayOf(1),
             byteArrayOf(2)
         ).getOrThrow()
-        assertEquals("phone", result.peerId)
+        assertEquals("identity", result.peerId)
+        assertEquals("phone", result.phoneContactPeerId)
+    }
+
+    @Test
+    fun claimedPhoneNumberOnlyOffersThePhoneBookContactForLinking() = runBlocking {
+        val contacts = FakeContacts(
+            existingPeerIds = setOf("incoming", "alice"),
+            phonePeerId = "alice",
+            knownPeerIds = setOf("alice"),
+            linkablePeerIds = setOf("alice")
+        )
+        val result = resolve(contacts, FakeIdentities())(
+            "incoming",
+            "+491234567890",
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertEquals("incoming", result.peerId)
+        assertFalse(result.wasKnownPeer)
+        assertEquals(emptyList(), result.merges)
+        assertEquals("alice", result.phoneContactPeerId)
+    }
+
+    @Test
+    fun phoneContactInUseIsNotOfferedForLinking() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "alice"), phonePeerId = "alice")
+        val result = resolve(contacts, FakeIdentities())(
+            "incoming",
+            "+491234567890",
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertEquals("incoming", result.peerId)
+        assertNull(result.phoneContactPeerId)
+    }
+
+    @Test
+    fun contactKnownWithoutMatchingKeysDoesNotMakeTheSenderKnown() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming"), knownPeerIds = setOf("incoming"))
+        val result = resolve(contacts, FakeIdentities())(
+            "incoming",
+            "+491234567890",
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertFalse(result.wasKnownPeer)
+    }
+
+    @Test
+    fun knownContactProvenByKeysStaysKnown() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "bob"), knownPeerIds = setOf("bob"))
+        val identities = FakeIdentities(keyPeerId = "bob", records = mapOf("bob" to identity("bob")))
+        val result = resolve(contacts, identities)("incoming", null, byteArrayOf(1), byteArrayOf(2)).getOrThrow()
+        assertEquals("bob", result.peerId)
+        assertTrue(result.wasKnownPeer)
     }
 
     private fun resolve(contacts: FakeContacts, identities: FakeIdentities) =
@@ -150,14 +210,16 @@ class ResolveIncomingIdentityPeerUseCaseTest {
 
     private class FakeContacts(
         val existingPeerIds: Set<String>,
-        val phonePeerId: String? = null
+        val phonePeerId: String? = null,
+        val knownPeerIds: Set<String> = emptySet(),
+        val linkablePeerIds: Set<String> = emptySet()
     ) : IdentityPeerRepository {
         override suspend fun getDisplayName(peerId: String): Result<String?> = Result.success(null)
 
         override suspend fun containsPeer(peerId: String): Result<Boolean> =
             Result.success(peerId in existingPeerIds)
 
-        override suspend fun isKnownContact(peerId: String): Result<Boolean> = Result.success(false)
+        override suspend fun isKnownContact(peerId: String): Result<Boolean> = Result.success(peerId in knownPeerIds)
 
         override suspend fun findEquivalentPhonePeerId(phoneNumber: String): Result<String?> =
             Result.success(phonePeerId)
@@ -169,9 +231,19 @@ class ResolveIncomingIdentityPeerUseCaseTest {
 
         override suspend fun applyMerge(merge: IdentityPeerMerge): Result<Unit> = Result.success(Unit)
 
+        override suspend fun isLinkablePhoneContact(peerId: String): Result<Boolean> =
+            Result.success(peerId in linkablePeerIds)
+
+        override suspend fun linkPhoneContact(
+            peerId: String,
+            phoneContactPeerId: String,
+            updatedAtEpochMilliseconds: Long
+        ): Result<Unit> = Result.success(Unit)
+
         override suspend fun updateIncomingMetadata(
             peerId: String,
             phoneNumber: String,
+            storePhoneNumber: Boolean,
             updatedAtEpochMilliseconds: Long
         ): Result<Unit> = Result.success(Unit)
     }

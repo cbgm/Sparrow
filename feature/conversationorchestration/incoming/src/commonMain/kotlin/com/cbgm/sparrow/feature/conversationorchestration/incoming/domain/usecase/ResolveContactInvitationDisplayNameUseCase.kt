@@ -12,4 +12,7 @@ class ResolveContactInvitationDisplayNameUseCase(
         safeSuspendCall(logFailure = false) {
             getIdentityPeerDisplayName(peerId).getOrThrow() ?: packet.claimedDisplayName()
         }
+
+    /** The name of the phone book contact whose number the invitation claims. */
+    suspend fun ofPhoneContact(peerId: String): Result<String?> = getIdentityPeerDisplayName(peerId)
 }

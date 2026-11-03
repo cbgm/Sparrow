@@ -481,6 +481,7 @@
     <string name="feature_settings_blocked_contacts_count">%1$d blockiert</string>
     <string name="feature_contacts_blocked_contacts_title">Blockierte Kontakte</string>
     <string name="feature_contacts_blocked_contacts_empty">Es sind keine Kontakte blockiert.</string>
+    <string name="feature_chats_contact_blocked">Dieser Kontakt ist blockiert. Entsperre ihn, um zu chatten.</string>
     <string name="feature_contacts_block_contact">Kontakt blockieren</string>
     <string name="feature_contacts_add_blocked_contact">Blockierten Kontakt hinzufügen</string>
     <string name="feature_contacts_add_blocked_contact_description">Gib eine Telefonnummer ein oder wähle einen bestehenden Kontakt aus. Eine bestehende Direktchat-Berechtigung wird entzogen.</string>
@@ -690,6 +691,8 @@
     <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
     <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
+    <string name="feature_invite_peer_unverified">Name und Nummer nicht bestätigt</string>
+    <string name="feature_invite_peer_matches_phone_contact">Passt zu deinem Kontakt %1$s · Nummer nicht bestätigt</string>
 
     <string name="feature_applock_title">App-Sperre</string>
     <string name="feature_applock_subtitle">Beim Öffnen von Sparrow Biometrie oder die Gerätesperre verlangen.</string>

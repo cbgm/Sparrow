@@ -19,13 +19,15 @@ internal fun interface PhoneTokenVerifier {
  * it only proves one alias for the registration it arrives with (see [AliasClaims]).
  */
 internal class PhoneVerification(
-    private val verifier: PhoneTokenVerifier?
+    private val verifier: PhoneTokenVerifier?,
+    private val testAliases: Set<String> = emptySet()
 ) {
     /** Returns null when a token was sent but proves nothing; such a registration is refused. */
     suspend fun claims(registration: ClientRouteRegistration): AliasClaims? {
         val aliases = registration.route.aliases.orEmpty()
         val token = registration.phoneVerificationToken
-        val unverified = AliasClaims(provenAlias = null, unprovenClaimsAllowed = verifier == null)
+        val unverified =
+            AliasClaims(provenAlias = null, unprovenClaimsAllowed = verifier == null, testAliases = testAliases)
         return when {
             aliases.isEmpty() || token == null || verifier == null -> unverified
             token.isBlank() -> null
@@ -48,13 +50,15 @@ internal class PhoneVerification(
  * claims it and stays bound to it while that device keeps registering (see
  * [ALIAS_BINDING_LIFETIME_MILLISECONDS]). A free alias needs a phone proof when the server can
  * verify phones; without phone verification the first claim wins. Only a proof moves an alias
- * that is bound to another device.
+ * that is bound to another device. The operator's test numbers ([testAliases]) count as proven for every
+ * registration: the device that registers one last holds it, so reinstalled test devices need no SMS.
  */
 data class AliasClaims(
     val provenAlias: String?,
-    val unprovenClaimsAllowed: Boolean
+    val unprovenClaimsAllowed: Boolean,
+    val testAliases: Set<String> = emptySet()
 ) {
-    fun isProven(alias: String): Boolean = alias == provenAlias
+    fun isProven(alias: String): Boolean = alias == provenAlias || alias in testAliases
 
     fun allowsFreeAlias(alias: String): Boolean = unprovenClaimsAllowed || isProven(alias)
 
@@ -69,6 +73,15 @@ data class AliasClaims(
             else -> isProven(alias)
         }
 }
+
+/** Reads the operator's test numbers as phone aliases (`scphone1_...`, comma-separated); never raw numbers. */
+internal fun testPhoneAliases(value: String?): Set<String> =
+    value.orEmpty()
+        .split(',')
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .onEach { alias -> require(ClientRoutingIds.isBootstrapRoutingId(alias)) { "Invalid test phone alias" } }
+        .toSet()
 
 /** An alias binding is renewed by every registration and forgotten this long after the last one. */
 internal const val ALIAS_BINDING_LIFETIME_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L

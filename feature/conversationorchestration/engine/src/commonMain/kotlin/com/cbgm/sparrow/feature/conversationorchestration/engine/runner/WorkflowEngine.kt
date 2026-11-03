@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.engine.runner
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.ExpectedFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureException
@@ -66,8 +67,16 @@ class WorkflowEngine(
             }
         }.catch { error ->
             if (error is CancellationException) throw error
-            logger.warn(error) { "Workflow ${workflow::class.simpleName} failed" }
+            logFailure(workflow, error)
             emit(ConversationState.Failed(ConversationFailureMapper.toFailure(error)))
+        }
+    }
+
+    private fun logFailure(workflow: WorkflowStateMachine<*, *, *>, error: Throwable) {
+        if (error is ExpectedFailure) {
+            logger.info { "Workflow ${workflow::class.simpleName} stopped: ${error.message}" }
+        } else {
+            logger.warn(error) { "Workflow ${workflow::class.simpleName} failed" }
         }
     }
 

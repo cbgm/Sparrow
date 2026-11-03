@@ -226,6 +226,8 @@ VerifyInvitation -> ResolvePeer -> MergePeers -> [UpdatePeerPhoneNumber] -> Rece
 
 Signature and time bounds are verified BEFORE contacts are looked up or merged. Keys that differ from a
 known contact's are proof of the proposed keys only: they become an identity review, never a merge.
+The claimed phone number never files the invitation under a contact; a matching phone book contact is
+only offered for linking, which happens when the user accepts.
 The Identity result observer restores the inbox record after a restart; it alone declines rejected senders.
 ```
 

@@ -96,6 +96,7 @@ services:
       PRESENCE_REDIS_URL: redis://presence-redis:6379
       PRESENCE_REDIS_PASSWORD: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
       PRESENCE_MAXIMUM_TTL_MILLISECONDS: 120000
+      PRESENCE_TEST_PHONE_ALIASES: ${PRESENCE_TEST_PHONE_ALIASES:-}
     volumes:
       - type: bind
         source: ${FIREBASE_ADMIN_CREDENTIALS:?Define FIREBASE_ADMIN_CREDENTIALS in server/.env}

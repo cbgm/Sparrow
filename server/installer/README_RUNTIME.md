@@ -343,3 +343,13 @@ stores nothing about it:
 There is no server setting that makes verified phone numbers mandatory. The
 Firebase project is `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`); the
 service account needs Firebase Authentication access to it in addition to FCM.
+
+#### Test phone numbers
+
+A phone number stays with the device that registered it until 30 days after that device's last registration;
+only a verified number moves it to another device. For test devices that are reinstalled often, enter their
+numbers under **Test phone numbers** (text menu: Settings) and click **Start / apply settings**. A test number
+moves to the device that registers it last, even without SMS verification. Start writes only the numbers' phone
+aliases (`PRESENCE_TEST_PHONE_ALIASES` in `control-plane/.env.runtime`), never the numbers, and recreates the
+`presence-directory`. Leave the field empty to remove all test numbers. Never enter real users' numbers: anyone
+could take them over.

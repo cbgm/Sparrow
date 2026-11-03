@@ -41,47 +41,42 @@ class ResolveIncomingIdentityPeerUseCase(
         // An orphaned Identity record must not be selected as a nonexistent Contacts peer.
         val identityPeerId = findRemoteIdentityPeerId(remoteSigningPublicKey).getOrThrow()
             ?.takeIf { inspectContactPeer.containsPeer(it).getOrThrow() }
-        val targetPeerId = phonePeerId ?: identityPeerId ?: resolvedPeerId
-        val identities = setOfNotNull(resolvedPeerId, identityPeerId, targetPeerId).mapNotNull { peerId ->
+        // Only keys select an existing contact. The phone number is the sender's own claim: it never files
+        // the invitation under a contact, nor makes the sender count as known.
+        val targetPeerId = identityPeerId ?: resolvedPeerId
+        val identities = setOfNotNull(resolvedPeerId, identityPeerId, phonePeerId).mapNotNull { peerId ->
             getRemoteIdentity(peerId).getOrThrow()?.let { identity -> peerId to identity }
         }.toMap()
 
-        // A phone-number match is a contact lookup, NOT evidence of cryptographic
-        // continuity. In particular, when a peer reinstalls with fresh keys the
-        // phone match is often the *only* way to find their existing contact and
-        // conversation. Check it before returning any merge or applying metadata:
-        // the caller merges/deletes duplicate Contacts rows before Identity handles
-        // the packet, so detecting the mismatch later is too late.
-        //
-        // Even a ONE_WAY/unverified key must not be overwritten as a side effect
-        // of a self-declared phone number. The separate, explicit recovery flow
-        // will need to authorize replacement of the exact previous key binding.
-        identities[targetPeerId]?.let { stored ->
-            if (!stored.hasKeys(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
-                throw RemoteIdentityReplacementRequiredException(targetPeerId)
+        // A Sparrow contact with this number but other keys is never taken over as a side effect of the claim,
+        // not even a ONE_WAY/unverified one: the user reviews the proposed keys instead. This check precedes
+        // any merge, because the caller merges/deletes duplicate Contacts rows before Identity sees the packet.
+        setOfNotNull(phonePeerId, targetPeerId).forEach { peerId ->
+            if (identities[peerId]?.hasKeys(remoteEncryptionPublicKey, remoteSigningPublicKey) == false) {
+                throw RemoteIdentityReplacementRequiredException(peerId)
             }
         }
+        val phoneContactPeerId =
+            phonePeerId?.takeIf { peerId ->
+                peerId != targetPeerId && inspectContactPeer.isLinkablePhoneContact(peerId).getOrThrow()
+            }
 
         suspend fun mayMerge(peerId: String): Boolean =
             inspectContactPeer.canMergeRoutingDuplicate(peerId, remotePhoneNumber).getOrThrow() &&
                 (identities[peerId]?.hasKeys(remoteEncryptionPublicKey, remoteSigningPublicKey) != false)
 
         val canMergeResolved = targetPeerId != resolvedPeerId && mayMerge(resolvedPeerId)
-        val canMergeIdentity = identityPeerId != null && identityPeerId != targetPeerId &&
-            identityPeerId != resolvedPeerId && mayMerge(identityPeerId)
-        val merges = buildList {
-            if (canMergeResolved) {
-                add(IdentityPeerMerge(resolvedPeerId, targetPeerId, moveBootstrapRouting = true))
-            }
-            if (canMergeIdentity) {
-                add(IdentityPeerMerge(requireNotNull(identityPeerId), targetPeerId, moveBootstrapRouting = false))
-            }
-        }
+        val merges =
+            listOfNotNull(
+                IdentityPeerMerge(resolvedPeerId, targetPeerId, moveBootstrapRouting = true).takeIf { canMergeResolved }
+            )
+        val keysProveKnownContact =
+            targetPeerId == identityPeerId && inspectContactPeer.isKnownContact(targetPeerId).getOrThrow()
         return IdentityPeerResolution(
             peerId = targetPeerId,
-            wasKnownPeer = inspectContactPeer.isKnownContact(targetPeerId).getOrThrow() ||
-                identities[targetPeerId]?.locallyImported == true,
-            merges = merges
+            wasKnownPeer = keysProveKnownContact || identities[targetPeerId]?.locallyImported == true,
+            merges = merges,
+            phoneContactPeerId = phoneContactPeerId
         )
     }
 }

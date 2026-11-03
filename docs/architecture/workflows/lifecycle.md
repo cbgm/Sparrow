@@ -311,14 +311,15 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.HandleDirectInvitationResult`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/result/HandleDirectInvitationResultWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `AcceptIdentityExchangeUseCase`, `DeclineIdentityExchangeUseCase`, `BlockContactUseCase`
+- **Uses:** `WorkflowEngine`, `AcceptIdentityExchangeUseCase`, `DeclineIdentityExchangeUseCase`, `BlockContactUseCase`, `LinkPhoneContactUseCase`
 
 ```text
-incoming, accepted: AcceptExchange -> ActivateConversation
+incoming, accepted: AcceptExchange -> [LinkPhoneContact] -> ActivateConversation
 incoming, declined: DeclineExchange -> [BlockContact]
 outgoing, declined: DiscardWaitingMessages
 
 Both identity setup modes create the receiver's chat and release its queued messages on acceptance.
+Accepting an invitation that matched a phone book contact by its claimed number links the two.
 ```
 
 ```mermaid
@@ -328,6 +329,8 @@ stateDiagram-v2
     [*] --> DiscardWaitingMessages
     [*] --> IgnoreResult
     AcceptExchange --> ActivateConversation : ExchangeAccepted
+    AcceptExchange --> LinkPhoneContact : ExchangeAccepted
+    LinkPhoneContact --> ActivateConversation : PhoneContactLinked
     ActivateConversation --> [*] : Done
     DeclineExchange --> BlockContact : ExchangeDeclined
     DeclineExchange --> [*] : ExchangeDeclined

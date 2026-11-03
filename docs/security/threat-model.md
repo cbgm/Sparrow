@@ -14,10 +14,14 @@ The design aims to protect against:
   their pending envelopes (push registrations need a fresh signature with the routing ID's key);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
+- posing as a phone book contact by claiming their number in an invitation (only keys file an invitation
+  under a known contact; a claimed number is shown as unverified, the invitation counts as unknown, and
+  a matching phone book contact is linked only when the user accepts);
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
 - taking over a phone alias another device holds (an alias stays with the first device that claims
-  it; only a phone verification token for that number moves it);
+  it; only a phone verification token for that number moves it). The exception are the operator's
+  configured test numbers, which any device can take;
 - a Community Node waking devices whose mailbox it does not hold (push wake-ups need the device's
   signed wake ticket for that node) or sending indicator events for clients that are not connected
   through it;

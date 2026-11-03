@@ -152,6 +152,9 @@ def edit_settings(settings: dict, preferences: dict) -> None:
                 print(bad("File not found.")); pause()
             else:
                 settings["firebaseFile"] = str(Path(path).expanduser().resolve()) if path else ""
+        elif label == "Test phone numbers":
+            numbers = ask("Test phone numbers, comma-separated (- = none)", settings["testPhoneNumbers"])
+            settings["testPhoneNumbers"] = "" if numbers == "-" else numbers
         elif label == "Images":
             if local_build_tag():
                 print(warn("A local build is installed; its images are used.")); pause()
