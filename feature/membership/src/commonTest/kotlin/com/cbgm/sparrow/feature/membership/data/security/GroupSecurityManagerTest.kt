@@ -14,6 +14,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
@@ -30,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -403,6 +405,82 @@ class GroupSecurityManagerTest {
             assertEquals(3, opened.packet.epoch)
             assertContentEquals(GROUP_KEY, opened.groupKey)
         }
+
+    @Test
+    fun anotherAdminsVersionOfTheEpochWithTheLowerKeyReplacesTheInstalledOne() =
+        runTest {
+            seedContestedEpoch(installedSigner = byteArrayOf(9))
+            val localEncryptionKey = byteArrayOf(8)
+
+            val opened = manager.openWelcome(
+                packet = contestingWelcome(localEncryptionKey),
+                senderContactId = REMOTE_CONTACT_ID,
+                expectedOwnerEncryptionPublicKey = byteArrayOf(5),
+                expectedOwnerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localEncryptionKeyPair = LocalEncryptionKeyPair(localEncryptionKey, localEncryptionKey),
+                localSigningPublicKey = LOCAL_SIGNING_KEY
+            ).getOrThrow()
+
+            assertTrue(opened.replacesContestedEpoch)
+            assertFalse(opened.dropsLocalChange)
+            assertContentEquals(GROUP_KEY, opened.groupKey)
+        }
+
+    @Test
+    fun anotherAdminsVersionOfTheEpochWithTheHigherKeyIsRefused() =
+        runTest {
+            seedContestedEpoch(installedSigner = byteArrayOf(5))
+            val localEncryptionKey = byteArrayOf(8)
+
+            val result = manager.openWelcome(
+                packet = contestingWelcome(localEncryptionKey),
+                senderContactId = REMOTE_CONTACT_ID,
+                expectedOwnerEncryptionPublicKey = byteArrayOf(5),
+                expectedOwnerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localEncryptionKeyPair = LocalEncryptionKeyPair(localEncryptionKey, localEncryptionKey),
+                localSigningPublicKey = LOCAL_SIGNING_KEY
+            )
+
+            assertIs<IncomingMessageRejectedException>(result.exceptionOrNull())
+        }
+
+    /** Epoch 2 is installed, signed by [installedSigner]; the remote admin was an admin of epoch 1. */
+    private suspend fun seedContestedEpoch(installedSigner: ByteArray) {
+        dao.upsertState(
+            GroupSecurityStateEntity(
+                groupId = GROUP_ID,
+                currentEpoch = 2,
+                welcomePacketId = null,
+                ownerContactId = REMOTE_CONTACT_ID,
+                ownerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localSigningPublicKey = LOCAL_SIGNING_KEY,
+                localRole = GROUP_ADMIN_ROLE,
+                updatedAtEpochMilliseconds = 100L,
+                epochSignerSigningPublicKey = installedSigner
+            )
+        )
+        dao.upsertMemberKeys(listOf(memberKey(epoch = 1).copy(role = GROUP_ADMIN_ROLE)))
+        keyStorage.save(GROUP_ID, 2, byteArrayOf(42))
+    }
+
+    private fun contestingWelcome(localEncryptionKey: ByteArray): GroupCreatedPacket {
+        val unsigned =
+            GroupCreatedPacket(
+                packetId = manager.welcomePacketId(GROUP_ID, INVITATION_ID, 2),
+                groupId = GROUP_ID,
+                title = "Group",
+                createdAtEpochMilliseconds = 100L,
+                epoch = 2,
+                members =
+                    listOf(
+                        GroupMemberPayload(null, byteArrayOf(5), REMOTE_SIGNING_KEY, GROUP_ADMIN_ROLE, "+491"),
+                        GroupMemberPayload(null, localEncryptionKey, LOCAL_SIGNING_KEY, GROUP_ADMIN_ROLE, "+492")
+                    ),
+                wrappedGroupKey = GROUP_KEY + localEncryptionKey,
+                ownerSignature = byteArrayOf(0)
+            )
+        return unsigned.copy(ownerSignature = encoder.encodeWelcome(unsigned) + REMOTE_SIGNING_KEY)
+    }
 
     @Test
     fun retiringThenDeletingLocalMembershipRemovesKeysAndSecurityState() =
@@ -825,6 +903,10 @@ class GroupSecurityManagerTest {
 
         override suspend fun deleteMemberKeys(groupId: String) {
             memberKeys.removeAll { member -> member.groupId == groupId }
+        }
+
+        override suspend fun deleteMemberKeysOfEpoch(groupId: String, epoch: Int) {
+            memberKeys.removeAll { member -> member.groupId == groupId && member.epoch == epoch }
         }
 
         override suspend fun findMemberKey(

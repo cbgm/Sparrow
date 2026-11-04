@@ -26,7 +26,10 @@ data class GroupSecurityStateEntity(
     val localSigningPublicKey: ByteArray,
     @ColumnInfo(defaultValue = "'MEMBER'")
     val localRole: String,
-    val updatedAtEpochMilliseconds: Long
+    val updatedAtEpochMilliseconds: Long,
+    /** The admin who signed the current epoch, so two admins' versions of the same epoch can be told apart. */
+    @ColumnInfo(defaultValue = "NULL")
+    val epochSignerSigningPublicKey: ByteArray? = null
 ) {
     init {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
@@ -48,7 +51,8 @@ data class GroupSecurityStateEntity(
             ownerSigningPublicKey.contentEquals(other.ownerSigningPublicKey) &&
             localSigningPublicKey.contentEquals(other.localSigningPublicKey) &&
             localRole == other.localRole &&
-            updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds
+            updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds &&
+            epochSignerSigningPublicKey.contentEquals(other.epochSignerSigningPublicKey)
     }
 
     override fun hashCode(): Int {
@@ -60,6 +64,7 @@ data class GroupSecurityStateEntity(
         result = 31 * result + localSigningPublicKey.contentHashCode()
         result = 31 * result + localRole.hashCode()
         result = 31 * result + updatedAtEpochMilliseconds.hashCode()
+        result = 31 * result + (epochSignerSigningPublicKey?.contentHashCode() ?: 0)
         return result
     }
 }

@@ -22,6 +22,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_group_change_dropped_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_added_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_left_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_removed_message
@@ -98,6 +99,9 @@ private fun getSystemMessage(
 
     ChatMessageType.LOCAL_GROUP_MEMBERSHIP_LEFT ->
         stringResource(Res.string.feature_chats_group_you_left_message)
+
+    ChatMessageType.LOCAL_GROUP_CHANGE_DROPPED ->
+        stringResource(Res.string.feature_chats_group_change_dropped_message)
 
     ChatMessageType.USER -> ""
 }

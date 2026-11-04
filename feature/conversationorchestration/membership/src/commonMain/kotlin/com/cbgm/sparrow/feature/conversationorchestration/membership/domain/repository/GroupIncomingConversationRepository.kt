@@ -17,7 +17,8 @@ interface GroupIncomingConversationRepository {
     /**
      * Returns the contact IDs that are no longer participants after this welcome. Only the first welcome shows the
      * conversation and sets the title unconditionally; a rotation welcome keeps the unseen count, the visibility
-     * and a title that an admin version replaced.
+     * and a title that an admin version replaced. When the welcome dropped this device's own change, the history
+     * says so ([dropsLocalChange]).
      */
     suspend fun installWelcome(
         packet: GroupCreatedPacket,
@@ -25,7 +26,8 @@ interface GroupIncomingConversationRepository {
         contactIdsByMember: List<String?>,
         contactDisplayNames: Map<String, String>,
         isFirstWelcome: Boolean,
-        persistedAt: Long
+        persistedAt: Long,
+        dropsLocalChange: Boolean
     ): Result<Set<String>>
 
     suspend fun applyRemoval(packet: GroupMemberRemovedPacket): Result<Unit>

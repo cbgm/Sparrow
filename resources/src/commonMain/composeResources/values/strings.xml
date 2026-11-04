@@ -459,6 +459,7 @@
     <string name="feature_chats_group_member_removed_message">%1$s was removed from the group</string>
     <string name="feature_chats_group_you_were_removed_message">You were removed from this group</string>
     <string name="feature_chats_group_member_left_message">%1$s left the group</string>
+    <string name="feature_chats_group_change_dropped_message">Your change could not be applied because another admin changed the group at the same time. Please try again.</string>
     <string name="feature_chats_group_you_left_message">You left this group</string>
     <string name="feature_chats_group_unknown_member">A member</string>
     <string name="feature_chats_group_removed_hint_title">You are no longer a member</string>

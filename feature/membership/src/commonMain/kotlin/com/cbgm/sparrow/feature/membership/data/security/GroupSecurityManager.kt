@@ -124,7 +124,8 @@ internal class GroupSecurityManager internal constructor(
                         ownerSigningPublicKey = localSigningKeyPair.publicKey.copyOf(),
                         localSigningPublicKey = localSigningKeyPair.publicKey.copyOf(),
                         localRole = GROUP_OWNER_ROLE,
-                        updatedAtEpochMilliseconds = createdAtEpochMilliseconds
+                        updatedAtEpochMilliseconds = createdAtEpochMilliseconds,
+                        epochSignerSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
                     )
                 } else {
                     check(
@@ -230,7 +231,8 @@ internal class GroupSecurityManager internal constructor(
                 existingState.copy(
                     currentEpoch = nextEpoch,
                     welcomePacketId = null,
-                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
+                    epochSignerSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
                 )
             groupSecurityStore.replaceCurrentEpoch(
                 state = nextState,

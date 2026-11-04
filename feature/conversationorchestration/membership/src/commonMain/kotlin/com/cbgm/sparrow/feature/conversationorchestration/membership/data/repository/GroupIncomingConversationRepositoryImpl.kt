@@ -55,7 +55,8 @@ internal class GroupIncomingConversationRepositoryImpl(
         contactIdsByMember: List<String?>,
         contactDisplayNames: Map<String, String>,
         isFirstWelcome: Boolean,
-        persistedAt: Long
+        persistedAt: Long,
+        dropsLocalChange: Boolean
     ): Result<Set<String>> = runCatching {
         require(contactIdsByMember.size == packet.members.size) {
             "Group welcome contact mapping is incomplete"
@@ -79,7 +80,8 @@ internal class GroupIncomingConversationRepositoryImpl(
             previous = previous,
             current = current,
             contactDisplayNames = contactDisplayNames,
-            persistedAt = persistedAt
+            persistedAt = persistedAt,
+            dropsLocalChange = dropsLocalChange
         )
         dataSource.upsertWelcomeConversation(
             ConversationEntity(
@@ -147,12 +149,20 @@ internal class GroupIncomingConversationRepositoryImpl(
         )
     }
 
+    private fun droppedChangeMessages(packet: GroupCreatedPacket, persistedAt: Long, dropsLocalChange: Boolean) =
+        listOfNotNull(
+            GroupSystemMessageFactory
+                .localChangeDropped(packet.groupId, packet.epoch, persistedAt)
+                .takeIf { dropsLocalChange }
+        )
+
     private suspend fun replaceMembership(
         packet: GroupCreatedPacket,
         previous: PreviousGroupMembershipDto,
         current: List<ConversationParticipantEntity>,
         contactDisplayNames: Map<String, String>,
-        persistedAt: Long
+        persistedAt: Long,
+        dropsLocalChange: Boolean
     ): Set<String> {
         val currentParticipantIds = current.mapTo(mutableSetOf()) { it.contactId }
         val previousParticipantIds = previous.participants.mapTo(mutableSetOf()) { it.contactId }
@@ -194,7 +204,7 @@ internal class GroupIncomingConversationRepositoryImpl(
         dataSource.replaceConversationParticipantsWithMessages(
             conversationId = packet.groupId,
             participants = current,
-            messages = removedMessages + addedMessages
+            messages = removedMessages + addedMessages + droppedChangeMessages(packet, persistedAt, dropsLocalChange)
         )
         return removedParticipantIds
     }

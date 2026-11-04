@@ -10,6 +10,7 @@ internal fun String.toChatMessageType(): ChatMessageType =
         MessageTransportMode.LOCAL_GROUP_MEMBERSHIP_REMOVED -> ChatMessageType.LOCAL_GROUP_MEMBERSHIP_REMOVED
         MessageTransportMode.GROUP_MEMBER_LEFT -> ChatMessageType.GROUP_MEMBER_LEFT
         MessageTransportMode.LOCAL_GROUP_MEMBERSHIP_LEFT -> ChatMessageType.LOCAL_GROUP_MEMBERSHIP_LEFT
+        MessageTransportMode.LOCAL_GROUP_CHANGE_DROPPED -> ChatMessageType.LOCAL_GROUP_CHANGE_DROPPED
         else -> ChatMessageType.USER
     }
 

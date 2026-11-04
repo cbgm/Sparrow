@@ -13,4 +13,7 @@ object MessageTransportMode {
     const val LOCAL_GROUP_MEMBERSHIP_REMOVED = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_REMOVED"
     const val LOCAL_GROUP_MEMBERSHIP_LEFT = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_LEFT"
     const val LOCAL_CONVERSATION_DELETED = "SYSTEM_LOCAL_CONVERSATION_DELETED"
+
+    /** This admin's group change lost against another admin's change at the same moment and was dropped. */
+    const val LOCAL_GROUP_CHANGE_DROPPED = "SYSTEM_LOCAL_GROUP_CHANGE_DROPPED"
 }

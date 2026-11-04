@@ -140,7 +140,8 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
                         contactIdsByMember = step.welcome.contactIdsByMember,
                         contactDisplayNames = step.welcome.memberDisplayNames,
                         isFirstWelcome = step.welcome.authorization.isFirstWelcome,
-                        persistedAt = step.welcome.persistedAt
+                        persistedAt = step.welcome.persistedAt,
+                        dropsLocalChange = step.welcome.requireOpened().openedWelcome.dropsLocalChange
                     ).getOrThrow()
                 Outcome.Advanced(step.welcome.copy(removedContactIds = removed))
             }

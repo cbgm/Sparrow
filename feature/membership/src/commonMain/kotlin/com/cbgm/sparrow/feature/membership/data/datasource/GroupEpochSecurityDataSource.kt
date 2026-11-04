@@ -78,7 +78,8 @@ internal class GroupEpochSecurityDataSource(
                 existingState.copy(
                     currentEpoch = nextEpoch,
                     welcomePacketId = null,
-                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
+                    epochSignerSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
                 )
 
             val packets =
