@@ -29,7 +29,14 @@ The design aims to protect against:
   signed wake ticket for that node) or sending indicator events for clients that are not connected
   through it;
 - a node directory with an expired registry certificate, or one signed under a different registry
-  root than the configured or first-seen one.
+  root than the configured or first-seen one;
+- looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
+  signed node requests and the Control Plane's push service, and never return a device's phone aliases.
+
+Servers keep as little about users as they can: mailboxes store no client address (the per-client creation
+quota uses an HMAC of the address with an in-memory key that changes daily), mailboxes live at most 31 days
+and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
+container logs are capped at 3 × 10 MB per service.
 
 Anyone can run a Community Node; registering one gives no power over other nodes' clients. Whoever runs
 the gateway a client connects through still sees that client's network address.

@@ -95,6 +95,11 @@ internal class PostgresMailboxDatabase(
                 CREATE INDEX IF NOT EXISTS mailboxes_owner_idx
                 ON mailboxes (owner_key_hash)
                 """.trimIndent(),
+                // Owner keys only count mailboxes per client while the in-memory key that made them lives. Older
+                // versions stored a reversible SHA-256 of the client IP here; nothing from before a start is kept.
+                """
+                UPDATE mailboxes SET owner_key_hash = '' WHERE owner_key_hash <> ''
+                """.trimIndent(),
                 """
                 CREATE TABLE IF NOT EXISTS mailbox_envelopes (
                     mailbox_id TEXT NOT NULL REFERENCES mailboxes(mailbox_id) ON DELETE CASCADE,

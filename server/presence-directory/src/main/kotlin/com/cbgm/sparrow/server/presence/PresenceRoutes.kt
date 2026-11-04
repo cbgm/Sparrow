@@ -2,9 +2,11 @@ package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
+import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizationRequirements
 import com.cbgm.sparrow.server.security.nodeRequestAuthentication
 import io.ktor.http.HttpStatusCode
@@ -129,16 +131,42 @@ private fun Route.installRouteRemoval(runtime: PresenceRuntime) {
     }
 }
 
+/**
+ * Only nodes (signed request) and the control plane's push service (internal token) resolve routes. Open lookups
+ * would let anyone hash a list of phone numbers and learn who uses Sparrow, their device and when they are online.
+ * Aliases are left out: a node needs the routes, not the phone aliases of a device.
+ */
 private fun Route.installRouteResolution(runtime: PresenceRuntime) {
     get("/v1/routes/{routingId}") {
         val routingId = call.parameters["routingId"]
-        if (routingId.isNullOrBlank()) {
-            call.respond(HttpStatusCode.BadRequest)
-        } else {
-            call.respond(runtime.store.resolve(routingId))
+        when {
+            routingId.isNullOrBlank() -> call.respond(HttpStatusCode.BadRequest)
+            !call.isAuthorizedResolution(routingId, runtime) -> call.respond(HttpStatusCode.Unauthorized)
+            else -> call.respond(runtime.store.resolve(routingId).withoutAliases())
         }
     }
 }
+
+private suspend fun ApplicationCall.isAuthorizedResolution(
+    routingId: String,
+    runtime: PresenceRuntime
+): Boolean {
+    val token = runtime.internalApiToken
+    val presented = request.headers[InternalApiAuthentication.TOKEN_HEADER]
+    if (token != null && presented != null) {
+        return InternalApiAuthentication.isAuthorized(token, presented)
+    }
+    return runtime.nodeRequestAuthorizer.isAuthorized(
+        authentication = nodeRequestAuthentication(),
+        method = "GET",
+        path = "/v1/routes/$routingId",
+        body = "",
+        requirements = NodeRequestAuthorizationRequirements(requiredCapability = NodeCapability.FEDERATION)
+    )
+}
+
+private fun ClientRoutingResult.withoutAliases(): ClientRoutingResult =
+    copy(routes = routes.map { route -> route.copy(aliases = null) })
 
 private suspend fun ApplicationCall.respondToRegistration(result: PresenceResult) {
     when (result) {

@@ -79,7 +79,7 @@ internal fun createFederationRuntime(
         FederationRouter(
             localNodeId = identity.nodeId,
             presenceDirectory =
-                HttpPresenceDirectoryClient(httpClient, presenceEndpointPool),
+                HttpPresenceDirectoryClient(httpClient, presenceEndpointPool, NodeRequestSigner(identity)),
             nodeRegistry = registry,
             localGateway = localGateway,
             remoteFederation = remoteFederation,

@@ -5,12 +5,14 @@ import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.BoundedRateLimiter
+import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeDescriptorResolver
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -50,7 +52,7 @@ internal fun createPushRuntime(config: PushConfig): PushRuntime {
     val messaging = FirebasePushSender.createMessagingOrNull()
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val coordinator = createPushCoordinator(stores, messaging, scope)
-    val nodeApi = createNodeApiRuntime(config.nodeRegistryUrl, config.presenceDirectoryUrl)
+    val nodeApi = createNodeApiRuntime(config.nodeRegistryUrl, config.presenceDirectoryUrl, config.pushInternalApiToken)
     coordinator.resumePendingNotifications()
 
     return PushRuntime(
@@ -94,7 +96,8 @@ private fun createPushCoordinator(
 
 private fun createNodeApiRuntime(
     registryUrl: String?,
-    presenceDirectoryUrl: String?
+    presenceDirectoryUrl: String?,
+    internalApiToken: String?
 ): PushNodeApiRuntime? {
     if (registryUrl == null || presenceDirectoryUrl == null) {
         return null
@@ -107,7 +110,7 @@ private fun createNodeApiRuntime(
         }
     val routeOwnershipResolver =
         NodeRouteOwnershipResolver { routingId, nodeId ->
-            fetchRouteOwnership(httpClient, presenceDirectoryUrl, routingId, nodeId)
+            fetchRouteOwnership(httpClient, presenceDirectoryUrl, internalApiToken, routingId, nodeId)
         }
     return PushNodeApiRuntime(
         httpClient = httpClient,
@@ -142,13 +145,17 @@ private suspend fun fetchNodeDescriptor(
 private suspend fun fetchRouteOwnership(
     httpClient: HttpClient,
     presenceDirectoryUrl: String,
+    internalApiToken: String?,
     routingId: String,
     nodeId: String
 ): Boolean {
+    // The presence directory answers route lookups only for nodes and the push service.
     val response =
         httpClient.get(
             "${presenceDirectoryUrl.trimEnd('/')}/v1/routes/$routingId"
-        )
+        ) {
+            internalApiToken?.let { token -> header(InternalApiAuthentication.TOKEN_HEADER, token) }
+        }
     return response.status == HttpStatusCode.OK &&
         response.body<ClientRoutingResult>().routes.any { route -> route.nodeId == nodeId }
 }

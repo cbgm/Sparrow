@@ -1,6 +1,14 @@
 name: sparrow-central-directory
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   directory:
+    logging: *default-logging
     image: sparrow-central-directory:local
     build:
       context: .
@@ -21,6 +29,7 @@ services:
     cap_drop:
       - ALL
   directory-caddy:
+    logging: *default-logging
     profiles: [standalone]
     image: caddy:2-alpine
     container_name: sparrow-central-directory-caddy

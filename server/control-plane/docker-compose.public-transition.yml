@@ -1,8 +1,16 @@
 # In-place LAN -> public exposure: use existing credentials and named volumes.
 # Do NOT include docker-compose.production.yml: it changes the database/Redis
 # authentication mode and can invalidate a LAN deployment's existing secrets.
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     ports: !override
       - "127.0.0.1:${CONTROL_PLANE_HTTP_PORT:-8390}:80"
     networks:
@@ -11,18 +19,21 @@ services:
         aliases:
           - sparrow-control-edge
   node-registry:
+    logging: *default-logging
     networks:
       default:
       public-edge:
         aliases:
           - sparrow-control-registry
   presence-directory:
+    logging: *default-logging
     networks:
       default:
       public-edge:
         aliases:
           - sparrow-control-presence
   push:
+    logging: *default-logging
     networks:
       default:
       public-edge:

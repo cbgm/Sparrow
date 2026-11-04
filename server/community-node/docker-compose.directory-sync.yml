@@ -1,8 +1,16 @@
 # Optional per-node signed-directory client. It owns no identity keys, Docker
 # socket, administrative credentials or public listeners. Each Compose project
 # already namespaces node-directory-cache and the second cache below.
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   directory-sync:
+    logging: *default-logging
     profiles: [directory]
     image: sparrow-directory-sync:local
     build:
