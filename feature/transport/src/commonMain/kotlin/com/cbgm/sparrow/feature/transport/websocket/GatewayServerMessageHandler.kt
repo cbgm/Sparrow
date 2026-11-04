@@ -102,16 +102,7 @@ internal class GatewayServerMessageHandler(
                 )
             }
 
-            is GatewayServerMessage.Error -> {
-                if (message.code == "INVALID_ROUTE_REFRESH" || message.code == "ROUTE_REJECTED") {
-                    // Presence housekeeping can fail while message delivery still
-                    // works. Reconnect/retry internally; no global error snackbar.
-                    logger.debug { "Gateway presence response ${message.code}: ${message.message}" }
-                } else {
-                    logger.error { "Gateway error ${message.code}: ${message.message}" }
-                }
-                handleGatewayError(message, onRouteRejected)
-            }
+            is GatewayServerMessage.Error -> handleErrorMessage(message, onRouteRejected)
         }
     }
 
@@ -130,6 +121,30 @@ internal class GatewayServerMessageHandler(
         val frame = runCatching { json.parseToJsonElement(encodedMessage).jsonObject }.getOrNull() ?: return
         if ((frame["type"] as? JsonPrimitive)?.content != INCOMING_ENVELOPE_TYPE) return
         (frame["envelope"] as? JsonObject)?.envelopeIdOrNull()?.let { envelopeId -> onUnreadableEnvelope(envelopeId) }
+    }
+
+    private suspend fun handleErrorMessage(
+        message: GatewayServerMessage.Error,
+        onRouteRejected: (Throwable) -> Unit
+    ) {
+        val refusedEnvelopeId = message.envelopeId
+        if (refusedEnvelopeId != null) {
+            // A refused envelope is one failed send; the outbox retries or reports it.
+            logger.warn { "Gateway refused envelope $refusedEnvelopeId: ${message.code}" }
+            pendingRequestRegistry.rejectEnvelopeAcceptance(
+                refusedEnvelopeId,
+                IllegalStateException("${message.code}: ${message.message}")
+            )
+            return
+        }
+        if (message.code == "INVALID_ROUTE_REFRESH" || message.code == "ROUTE_REJECTED") {
+            // Presence housekeeping can fail while message delivery still
+            // works. Reconnect/retry internally; no global error snackbar.
+            logger.debug { "Gateway presence response ${message.code}: ${message.message}" }
+        } else {
+            logger.error { "Gateway error ${message.code}: ${message.message}" }
+        }
+        handleGatewayError(message, onRouteRejected)
     }
 
     private fun handleGatewayError(

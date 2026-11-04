@@ -248,6 +248,8 @@ sealed interface GatewayServerMessage {
     @SerialName("error")
     data class Error(
         val code: String,
-        val message: String
+        val message: String,
+        /** Set when the error refuses one sent envelope, so the client fails that send at once. */
+        val envelopeId: String? = null
     ) : GatewayServerMessage
 }

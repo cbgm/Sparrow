@@ -82,7 +82,8 @@ class GatewayWebSocketHandler(
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
-                    message = "Envelope sender differs from connection"
+                    message = "Envelope sender differs from connection",
+                    envelopeId = envelope.envelopeId
                 )
             )
             return
@@ -113,7 +114,8 @@ class GatewayWebSocketHandler(
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
-                    message = "Envelope sender differs from connection"
+                    message = "Envelope sender differs from connection",
+                    envelopeId = envelope.envelopeId
                 )
             )
             return
@@ -153,7 +155,8 @@ class GatewayWebSocketHandler(
             sender.send(
                 GatewayServerMessage.Error(
                     code = "ENVELOPE_REJECTED",
-                    message = "Envelope could not be stored or queued"
+                    message = "Envelope could not be stored or queued",
+                    envelopeId = envelopeId
                 )
             )
         }

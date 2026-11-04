@@ -41,7 +41,7 @@ len | "sparrow-gateway-session-v1" | len | routingId (UTF-8) | len | connectionI
 
 Both sides build it in one place (`gatewaySessionPayload` in `:feature:transport`, `ProtocolSignatures.gatewaySessionContent` in `:server:security`) and both test suites pin the same byte vector.
 
-After sign-in every envelope must name the signed-in routing ID (or one of the bootstrap aliases the gateway accepted from a signed route refresh) as sender, otherwise the gateway answers `SENDER_MISMATCH`. Acknowledgements, route refreshes and blob-upload tickets are only handled for a signed-in session and only delete pending envelopes of that session's routing IDs.
+After sign-in every envelope must name the signed-in routing ID (or one of the bootstrap aliases the gateway accepted from a signed route refresh) as sender, otherwise the gateway answers `SENDER_MISMATCH`. `SENDER_MISMATCH` and `ENVELOPE_REJECTED` errors carry the refused `envelopeId`, so the app fails exactly that send at once; a missing acknowledgement fails the send after the timeout like any other send error, and the outbox retries it. Acknowledgements, route refreshes and blob-upload tickets are only handled for a signed-in session and only delete pending envelopes of that session's routing IDs.
 
 ## Route registration and phone verification
 

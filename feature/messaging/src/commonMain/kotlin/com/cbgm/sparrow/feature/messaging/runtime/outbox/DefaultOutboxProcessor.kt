@@ -11,6 +11,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -74,7 +76,9 @@ class DefaultOutboxProcessor(
             }
         if (sendResult.isFailure) {
             val failure = sendResult.exceptionOrNull()
-            if (failure is CancellationException) throw failure
+            // Only a real cancellation of this coroutine leaves the packet PROCESSING for the next start; a
+            // cancellation that merely surfaced from a failed send (for example a timeout) fails this packet.
+            if (failure is CancellationException) currentCoroutineContext().ensureActive()
             return markFailed(item, failure)
         }
 
