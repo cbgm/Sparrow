@@ -150,6 +150,7 @@ val contactsModule =
             BlockContactUseCase(
                 blocklistRepository = get(),
                 contactRepository = get(),
+                identityPeerRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }

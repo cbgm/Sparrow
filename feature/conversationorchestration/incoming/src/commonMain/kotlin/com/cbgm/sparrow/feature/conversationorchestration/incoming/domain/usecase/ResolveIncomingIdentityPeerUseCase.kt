@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.useca
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.RemoteIdentityReplacementRequiredException
 import com.cbgm.sparrow.feature.identity.domain.model.hasKeys
@@ -13,7 +14,8 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 class ResolveIncomingIdentityPeerUseCase(
     private val inspectContactPeer: InspectContactPeerUseCase,
     private val findRemoteIdentityPeerId: FindRemoteIdentityPeerIdUseCase,
-    private val getRemoteIdentity: GetRemoteIdentityUseCase
+    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val blocklistRepository: ContactBlocklistRepository
 ) {
     suspend operator fun invoke(
         resolvedPeerId: String,
@@ -70,13 +72,19 @@ class ResolveIncomingIdentityPeerUseCase(
             listOfNotNull(
                 IdentityPeerMerge(resolvedPeerId, targetPeerId, moveBootstrapRouting = true).takeIf { canMergeResolved }
             )
+        // A claim is enough to block: an honest sender never claims a blocked contact's number. Keys that prove a
+        // known contact outweigh the claim. A merged-away contact hands its block to the contact that remains.
+        val claimsBlockedNumber =
+            identityPeerId == null && phonePeerId != null && blocklistRepository.isBlocked(phonePeerId).getOrThrow()
+        val mergesBlockedContact = merges.any { merge -> blocklistRepository.isBlocked(merge.fromPeerId).getOrThrow() }
         val keysProveKnownContact =
             targetPeerId == identityPeerId && inspectContactPeer.isKnownContact(targetPeerId).getOrThrow()
         return IdentityPeerResolution(
             peerId = targetPeerId,
             wasKnownPeer = keysProveKnownContact || identities[targetPeerId]?.locallyImported == true,
             merges = merges,
-            phoneContactPeerId = phoneContactPeerId
+            phoneContactPeerId = phoneContactPeerId.takeUnless { claimsBlockedNumber },
+            inheritsBlock = claimsBlockedNumber || mergesBlockedContact
         )
     }
 }

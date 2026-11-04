@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityPeerRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.RemoteIdentityReplacementRequiredException
@@ -182,12 +183,79 @@ class ResolveIncomingIdentityPeerUseCaseTest {
         assertTrue(result.wasKnownPeer)
     }
 
-    private fun resolve(contacts: FakeContacts, identities: FakeIdentities) =
+    @Test
+    fun claimingABlockedContactsNumberBlocksTheSender() = runBlocking {
+        val contacts = FakeContacts(
+            existingPeerIds = setOf("incoming", "carol"),
+            phonePeerId = "carol",
+            linkablePeerIds = setOf("carol")
+        )
+        val result = resolve(contacts, FakeIdentities(), blocked = setOf("carol"))(
+            "incoming",
+            "+491234567890",
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertEquals("incoming", result.peerId)
+        assertTrue(result.inheritsBlock)
+        assertNull(result.phoneContactPeerId)
+    }
+
+    @Test
+    fun keysOfAKnownContactOutweighABlockedClaim() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "bob", "carol"), phonePeerId = "carol")
+        val identities = FakeIdentities(keyPeerId = "bob", records = mapOf("bob" to identity("bob")))
+        val result = resolve(contacts, identities, blocked = setOf("carol"))(
+            "incoming",
+            "+491234567890",
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertEquals("bob", result.peerId)
+        assertFalse(result.inheritsBlock)
+    }
+
+    @Test
+    fun mergingABlockedContactKeepsTheBlock() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "existing"))
+        val identities = FakeIdentities(keyPeerId = "existing")
+        val result = resolve(contacts, identities, blocked = setOf("incoming"))(
+            "incoming",
+            null,
+            byteArrayOf(1),
+            byteArrayOf(2)
+        ).getOrThrow()
+        assertEquals(listOf(IdentityPeerMerge("incoming", "existing", true)), result.merges)
+        assertTrue(result.inheritsBlock)
+    }
+
+    private fun resolve(contacts: FakeContacts, identities: FakeIdentities, blocked: Set<String> = emptySet()) =
         ResolveIncomingIdentityPeerUseCase(
             InspectContactPeerUseCase(contacts),
             FindRemoteIdentityPeerIdUseCase(identities),
-            GetRemoteIdentityUseCase(identities)
+            GetRemoteIdentityUseCase(identities),
+            FakeBlocklist(blocked)
         )
+
+    private class FakeBlocklist(
+        val blocked: Set<String>
+    ) : ContactBlocklistRepository {
+        override suspend fun isBlocked(contactId: String): Result<Boolean> = Result.success(contactId in blocked)
+
+        override fun observeBlockUnknownContactInvites(): Flow<Boolean> = emptyFlow()
+
+        override suspend fun getBlockUnknownContactInvites(): Result<Boolean> = Result.success(false)
+
+        override suspend fun setBlockUnknownContactInvites(enabled: Boolean): Result<Unit> = Result.success(Unit)
+
+        override fun observeBlockedContactIds(): Flow<Set<String>> = emptyFlow()
+
+        override suspend fun getBlockedContactIds(): Result<Set<String>> = Result.success(blocked)
+
+        override suspend fun block(contactId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun unblock(contactId: String): Result<Unit> = Result.success(Unit)
+    }
 
     private fun identity(
         id: String,

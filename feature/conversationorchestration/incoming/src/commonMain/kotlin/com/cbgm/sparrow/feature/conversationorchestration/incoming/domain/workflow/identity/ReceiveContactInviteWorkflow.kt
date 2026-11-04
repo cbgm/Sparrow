@@ -98,7 +98,7 @@ class ReceiveContactInviteWorkflow internal constructor(
                 Outcome.Done
             }
             is Step.MergePeers -> {
-                mergeIncomingIdentityPeers(step.resolution.merges).getOrThrow()
+                mergeIncomingIdentityPeers(step.resolution).getOrThrow()
                 Outcome.PeersMerged(step.resolution, step.remotePhoneNumber)
             }
             is Step.UpdatePeerPhoneNumber -> {

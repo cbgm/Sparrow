@@ -17,6 +17,9 @@ The design aims to protect against:
 - posing as a phone book contact by claiming their number in an invitation (only keys file an invitation
   under a known contact; a claimed number is shown as unverified, the invitation counts as unknown, and
   a matching phone book contact is linked only when the user accepts);
+- getting around a block by writing the blocked number differently (`0151...`, `+49151...`) or by claiming it
+  from a new installation (both resolve to the blocked contact; a sender that claims no number or another one
+  still arrives as unknown, which "block unknown invites" covers);
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
 - taking over a phone alias another device holds (an alias stays with the first device that claims
