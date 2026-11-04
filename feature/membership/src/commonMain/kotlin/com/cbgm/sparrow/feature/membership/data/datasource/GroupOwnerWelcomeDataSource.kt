@@ -75,7 +75,7 @@ internal class GroupOwnerWelcomeDataSource(
         val phone = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
         val payloads = epoch.createMemberPayloads(handshake.groupId, identity, phone, participants)
         val recipients = epoch.createRecipients(handshake.groupId, participants)
-        val secured = if (currentState == null) {
+        if (currentState == null) {
             initialSecurity.createOwnedGroup(
                 groupId = handshake.groupId,
                 title = title,
@@ -84,7 +84,7 @@ internal class GroupOwnerWelcomeDataSource(
                 memberKeys = epoch.createMemberKeys(handshake.groupId, 1, participants),
                 recipients = recipients,
                 localSigningKeyPair = localSigning
-            ).getOrThrow()
+            ).getOrThrow().also { created -> broadcaster.enqueueAll(created.welcomePacketsByContactId).getOrThrow() }
         } else if (current.isEmpty() && currentState.currentEpoch == 1) {
             // Creation has already persisted the owner-only first epoch and key.
             // Admit the first member to that SAME epoch, including recovery if
@@ -97,8 +97,9 @@ internal class GroupOwnerWelcomeDataSource(
                 memberKeys = epoch.createMemberKeys(handshake.groupId, 1, participants),
                 recipients = recipients,
                 localSigningKeyPair = localSigning
-            ).getOrThrow()
+            ).getOrThrow().also { created -> broadcaster.enqueueAll(created.welcomePacketsByContactId).getOrThrow() }
         } else {
+            // The rotation queues its welcomes in the same transaction as the new epoch.
             epochSecurity.rotateOwnedGroup(
                 groupId = handshake.groupId,
                 title = title,
@@ -110,7 +111,6 @@ internal class GroupOwnerWelcomeDataSource(
                 localSigningKeyPair = localSigning
             ).getOrThrow()
         }
-        broadcaster.enqueueAll(secured.welcomePacketsByContactId).getOrThrow()
         check(
             store.updateStatus(
                 membershipId = handshake.membershipId,

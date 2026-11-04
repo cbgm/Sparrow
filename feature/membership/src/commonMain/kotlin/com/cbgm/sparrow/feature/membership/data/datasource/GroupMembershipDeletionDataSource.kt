@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
@@ -21,7 +22,8 @@ internal class GroupMembershipDeletionDataSource(
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
     private val administration: GroupMembershipAdministrationDataSource,
-    private val membershipLock: GroupMembershipLock
+    private val membershipLock: GroupMembershipLock,
+    private val groupKeyStore: GroupKeyStore
 ) {
     suspend fun deleteGroupConversation(
         groupId: String,
@@ -83,6 +85,7 @@ internal class GroupMembershipDeletionDataSource(
             packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
 
             securityStore.deleteGroup(groupId)
+            groupKeyStore.deleteGroup(groupId)
             membershipStore.deleteByGroupId(groupId)
             now
         }
@@ -126,6 +129,7 @@ internal class GroupMembershipDeletionDataSource(
             memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
         )
         securityStore.deleteGroup(groupId)
+        groupKeyStore.deleteGroup(groupId)
         membershipStore.deleteByGroupId(groupId)
         return deletedAt
     }

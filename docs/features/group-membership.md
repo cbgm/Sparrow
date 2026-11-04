@@ -149,3 +149,9 @@ A title, description, avatar, pin or unpin is saved locally first, marked as not
 ## Security epoch
 
 `GroupSecurityManager` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
+
+- **Rotation and welcomes commit together.** `GroupEpochSecurityDataSource.rotateOwnedGroup` stores the new epoch and queues its welcomes in one database transaction (`DatabaseTransactionRunner`), so no member is left without the new key after a crash or a failed enqueue.
+- **Welcomes install one epoch at a time.** A welcome that skips an epoch waits (`GroupPacketEpochPolicy`) until the welcome before it is installed, the same way early group messages wait for their epoch.
+- **The previous epoch stays readable.** The previous epoch's key is kept, and a message of that epoch is accepted from a sender who is still a member of the current epoch. A removed member cannot use the old key.
+- **No key outlives the membership.** Leaving or deleting a group deletes its keys from `GroupKeyStore`. An admin who leaves generates the epoch it leaves with, so the first admin named in that welcome rotates once more right away (`RotateGroupKeyAfterAdminLeftUseCase`).
+- **Not handled yet:** two admins rotating at the same moment each create their own next epoch.

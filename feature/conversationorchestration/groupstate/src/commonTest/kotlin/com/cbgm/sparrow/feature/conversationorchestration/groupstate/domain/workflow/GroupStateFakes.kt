@@ -488,6 +488,12 @@ internal class FakeGroupMembershipRepository(
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult> = error(NOT_USED)
 
+    override suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit> = error(NOT_USED)
+
     override suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,

@@ -577,11 +577,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupWelcome`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupWelcomeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`
+- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`, `RotateGroupKeyAfterAdminLeftUseCase`
 
 ```text
 AuthorizeWelcome -> LoadAuthority -> OpenWelcome -> RecordRestart -> ResolveMemberContacts -> PersistWelcome
 -> ResolveMemberNames -> InstallWelcome -> [EstablishMutualIdentity] -> SendReadyAcknowledgement -> CompleteWelcome
+-> RotateAfterAdminLeft
 
 The first welcome must come from the accepted, pinned inviter identity; later welcomes are checked against
 Membership's prior epoch. Contacts are resolved only after Membership verified and decrypted the welcome.
@@ -602,7 +603,8 @@ stateDiagram-v2
     InstallWelcome --> SendReadyAcknowledgement : Advanced
     EstablishMutualIdentity --> SendReadyAcknowledgement : Advanced
     SendReadyAcknowledgement --> CompleteWelcome : Advanced
-    CompleteWelcome --> [*] : Completed
+    CompleteWelcome --> RotateAfterAdminLeft : Advanced
+    RotateAfterAdminLeft --> [*] : Completed
 ```
 
 ## `metadata`

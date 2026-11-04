@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.util.time.SystemClock
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
@@ -31,7 +32,7 @@ internal class GroupLeaveDataSource(
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val groupKeyStore: GroupKeyStore
 ) {
     suspend fun transferAdminAndLeave(
         groupId: String,
@@ -136,33 +137,31 @@ internal class GroupLeaveDataSource(
                 ?.let { participant -> mapOf(participant.contactId to GROUP_ADMIN_ROLE) }
                 .orEmpty()
 
-        val securedGroup =
-            groupEpochSecurity
-                .rotateOwnedGroup(
-                    groupId = groupId,
-                    title = context.title,
-                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
-                    updatedAtEpochMilliseconds = now,
-                    memberPayloads =
-                        epochDataSource.createMemberPayloads(
-                            groupId = groupId,
-                            localIdentity = localIdentity,
-                            localPhoneNumber = localPhoneNumber,
-                            contacts = contacts,
-                            roleOverrides = roleOverrides
-                        ).filterNot { member ->
-                            member.signingPublicKey.contentEquals(localSigningKeyPair.publicKey)
-                        },
-                    memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
-                    recipients = epochDataSource.createRecipients(groupId, contacts),
-                    localSigningKeyPair = localSigningKeyPair,
-                    membershipChange =
-                        GroupMembershipChangePayload(
-                            reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT,
-                            memberSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
-                        )
-                ).getOrThrow()
-        packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
+        groupEpochSecurity
+            .rotateOwnedGroup(
+                groupId = groupId,
+                title = context.title,
+                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                updatedAtEpochMilliseconds = now,
+                memberPayloads =
+                    epochDataSource.createMemberPayloads(
+                        groupId = groupId,
+                        localIdentity = localIdentity,
+                        localPhoneNumber = localPhoneNumber,
+                        contacts = contacts,
+                        roleOverrides = roleOverrides
+                    ).filterNot { member ->
+                        member.signingPublicKey.contentEquals(localSigningKeyPair.publicKey)
+                    },
+                memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
+                recipients = epochDataSource.createRecipients(groupId, contacts),
+                localSigningKeyPair = localSigningKeyPair,
+                membershipChange =
+                    GroupMembershipChangePayload(
+                        reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT,
+                        memberSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
+                    )
+            ).getOrThrow()
         return endLocalMembership(
             groupId = groupId,
             referenceId = "local-admin-leave-$groupId",
@@ -233,6 +232,8 @@ internal class GroupLeaveDataSource(
         endedAtEpochMilliseconds: Long
     ): GroupLocalMembershipEndDto {
         securityStore.retireLocalMembership(groupId, endedAtEpochMilliseconds)
+        // A group the user left keeps no key on the device.
+        groupKeyStore.deleteGroup(groupId)
         membershipStore.deleteByGroupId(groupId)
         return GroupLocalMembershipEndDto(
             groupId = groupId,

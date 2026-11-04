@@ -15,8 +15,9 @@ class CheckGroupPacketReadyUseCase(
 ) {
     suspend operator fun invoke(groupId: String, packet: SparrowPacket): Result<DeferredPacketWait.GroupEpoch?> =
         safeSuspendCall(logFailure = false) {
-            val requiredEpoch = GroupPacketEpochPolicy.requiredEpoch(packet) ?: return@safeSuspendCall null
             val currentEpoch = findGroupCurrentEpoch(groupId).getOrThrow()
+            val requiredEpoch =
+                GroupPacketEpochPolicy.requiredEpoch(packet, currentEpoch) ?: return@safeSuspendCall null
             if (GroupPacketEpochPolicy.isInstalled(currentEpoch, requiredEpoch)) {
                 null
             } else {

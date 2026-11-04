@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.data.database.transaction.DatabaseTransactionRunner
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
@@ -15,13 +16,21 @@ import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.protocol.packet.GroupProtocolPayloadEncoder
 
-/** Group epoch changes are Membership-owned. No Chats-implemented datasource or callback. */
+/**
+ * Group epoch changes are Membership-owned. No Chats-implemented datasource or callback.
+ *
+ * A rotation commits the new epoch and queues its welcomes in one database transaction: a crash or a failed
+ * enqueue in between would otherwise leave members without the key, and the next rotation would skip an epoch
+ * for them. The previous epoch's key stays, so messages sent just before the change can still be read.
+ */
 internal class GroupEpochSecurityDataSource(
     private val groupCrypto: GroupCrypto,
     private val cryptoHash: CryptoHash,
     private val payloadEncoder: GroupProtocolPayloadEncoder,
     private val securityStore: GroupSecurityStoreDataSource,
-    private val groupKeyDataSource: GroupKeyStore
+    private val groupKeyDataSource: GroupKeyStore,
+    private val packetBroadcaster: GroupPacketBroadcaster,
+    private val transactions: DatabaseTransactionRunner
 ) {
     suspend fun verifyKeyConfirmation(groupId: String, epoch: Int, confirmation: ByteArray) {
         val key = groupKeyDataSource.load(groupId, epoch)
@@ -71,10 +80,6 @@ internal class GroupEpochSecurityDataSource(
                     welcomePacketId = null,
                     updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
                 )
-            securityStore.replaceCurrentEpoch(
-                state = nextState,
-                memberKeys = memberKeys
-            )
 
             val packets =
                 recipients.associate { recipient ->
@@ -106,10 +111,18 @@ internal class GroupEpochSecurityDataSource(
                     recipient.contactId to unsignedPacket.copy(ownerSignature = signature)
                 }
 
+            transactions.inTransaction {
+                securityStore.replaceCurrentEpoch(
+                    state = nextState,
+                    memberKeys = memberKeys
+                )
+                packetBroadcaster.enqueueAll(packets).getOrThrow()
+            }
+
             groupKeyDataSource
                 .deleteBefore(
                     groupId = groupId,
-                    epoch = nextEpoch
+                    epoch = nextEpoch - 1
                 )
 
             CreatedGroupSecurityDto(welcomePacketsByContactId = packets)

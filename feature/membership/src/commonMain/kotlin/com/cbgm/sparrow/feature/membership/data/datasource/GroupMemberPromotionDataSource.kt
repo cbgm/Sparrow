@@ -18,8 +18,7 @@ internal class GroupMemberPromotionDataSource(
     private val groupEpochSecurity: GroupEpochSecurityDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val epochDataSource: GroupEpochDataSource
 ) {
     suspend fun promoteMember(
         groupId: String,
@@ -56,45 +55,68 @@ internal class GroupMemberPromotionDataSource(
         }
 
         requireCurrentMemberKey(groupId, contactId)
+        val updatedAt = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
+        rotateLocked(groupId, currentEpoch, context, mapOf(contactId to GROUP_ADMIN_ROLE), updatedAt)
+        return GroupMemberPromotionResult(
+            groupId = groupId,
+            contactId = contactId,
+            epoch = currentEpoch + 1,
+            updatedAtEpochMilliseconds = updatedAt
+        )
+    }
+
+    /**
+     * The member an admin named when leaving rotates once more: the departed admin generated the epoch it left
+     * with and still knows that key. Only an admin that is still on [expectedEpoch] rotates, so a repeated
+     * welcome never rotates twice.
+     */
+    suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit> =
+        runCatching {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            membershipLock.withLock {
+                val state = securityStore.findState(groupId) ?: return@withLock
+                if (!state.localRole.isGroupAdminRole() || state.currentEpoch != expectedEpoch) return@withLock
+                val updatedAt = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
+                rotateLocked(groupId, state.currentEpoch, context, emptyMap(), updatedAt)
+            }
+        }
+
+    private suspend fun rotateLocked(
+        groupId: String,
+        currentEpoch: Int,
+        context: GroupMembershipContext,
+        roleOverrides: Map<String, String>,
+        updatedAt: Long
+    ) {
         val contacts =
             epochDataSource
                 .loadCurrentParticipantContacts(groupId)
                 .sortedBy(GroupMembershipPeerDto::id)
-
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
-        val nextEpoch = currentEpoch + 1
-        val roleOverrides = mapOf(contactId to GROUP_ADMIN_ROLE)
-        val updatedAt = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
-        val securedGroup =
-            groupEpochSecurity
-                .rotateOwnedGroup(
-                    groupId = groupId,
-                    title = context.title,
-                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
-                    updatedAtEpochMilliseconds = updatedAt,
-                    memberPayloads =
-                        epochDataSource.createMemberPayloads(
-                            groupId = groupId,
-                            localIdentity = localIdentity,
-                            localPhoneNumber = localPhoneNumber,
-                            contacts = contacts,
-                            roleOverrides = roleOverrides
-                        ),
-                    memberKeys = epochDataSource.createMemberKeys(groupId, nextEpoch, contacts, roleOverrides),
-                    recipients = epochDataSource.createRecipients(groupId, contacts),
-                    localSigningKeyPair = localSigningKeyPair
-                ).getOrThrow()
-
-        packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
-
-        return GroupMemberPromotionResult(
-            groupId = groupId,
-            contactId = contactId,
-            epoch = nextEpoch,
-            updatedAtEpochMilliseconds = updatedAt
-        )
+        groupEpochSecurity
+            .rotateOwnedGroup(
+                groupId = groupId,
+                title = context.title,
+                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                updatedAtEpochMilliseconds = updatedAt,
+                memberPayloads =
+                    epochDataSource.createMemberPayloads(
+                        groupId = groupId,
+                        localIdentity = localIdentity,
+                        localPhoneNumber = localPhoneNumber,
+                        contacts = contacts,
+                        roleOverrides = roleOverrides
+                    ),
+                memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
+                recipients = epochDataSource.createRecipients(groupId, contacts),
+                localSigningKeyPair = localSigningKeyPair
+            ).getOrThrow()
     }
 
     private suspend fun requireCurrentMemberKey(

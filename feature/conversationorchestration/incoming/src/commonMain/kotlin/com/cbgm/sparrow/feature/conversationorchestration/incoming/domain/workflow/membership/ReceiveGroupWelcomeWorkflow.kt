@@ -18,12 +18,14 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroup
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.OpenIncomingGroupWelcomeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.PersistIncomingGroupWelcomeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.RotateGroupKeyAfterAdminLeftUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import kotlin.reflect.KClass
 
 /**
  * AuthorizeWelcome -> LoadAuthority -> OpenWelcome -> RecordRestart -> ResolveMemberContacts -> PersistWelcome
  * -> ResolveMemberNames -> InstallWelcome -> [EstablishMutualIdentity] -> SendReadyAcknowledgement -> CompleteWelcome
+ * -> RotateAfterAdminLeft
  *
  * The first welcome must come from the accepted, pinned inviter identity; later welcomes are checked against
  * Membership's prior epoch. Contacts are resolved only after Membership verified and decrypted the welcome.
@@ -39,7 +41,8 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
     private val findMemberDisplayName: FindMemberDisplayNameUseCase,
     private val establishMutualIdentity: EstablishMutualIdentityUseCase,
     private val sendGroupReadyAcknowledgement: SendGroupReadyAcknowledgementUseCase,
-    private val completeIncomingGroupWelcome: CompleteIncomingGroupWelcomeUseCase
+    private val completeIncomingGroupWelcome: CompleteIncomingGroupWelcomeUseCase,
+    private val rotateGroupKeyAfterAdminLeft: RotateGroupKeyAfterAdminLeftUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveGroupWelcome,
         ReceiveGroupWelcomeWorkflow.Step,
@@ -167,6 +170,10 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
                     removedContactIds = step.welcome.removedContactIds,
                     persistedAt = step.welcome.persistedAt
                 ).getOrThrow()
+                Outcome.Advanced(step.welcome)
+            }
+            is Step.RotateAfterAdminLeft -> {
+                rotateGroupKeyAfterAdminLeft(step.welcome.requireOpened(), packet).getOrThrow()
                 Outcome.Completed
             }
         }
@@ -191,7 +198,8 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
             is Step.InstallWelcome -> afterInstall(welcome, step.command)
             is Step.EstablishMutualIdentity -> Step.SendReadyAcknowledgement(welcome, step.command)
             is Step.SendReadyAcknowledgement -> Step.CompleteWelcome(welcome, step.command)
-            is Step.CompleteWelcome -> error("CompleteWelcome is the last step")
+            is Step.CompleteWelcome -> Step.RotateAfterAdminLeft(welcome, step.command)
+            is Step.RotateAfterAdminLeft -> error("RotateAfterAdminLeft is the last step")
         }
 
     /** Only the first welcome establishes the mutual identity of the inviting admin. */
@@ -268,6 +276,11 @@ class ReceiveGroupWelcomeWorkflow internal constructor(
         ) : Step
 
         data class CompleteWelcome(
+            val welcome: Welcome,
+            override val command: IncomingCommand.ReceiveGroupWelcome
+        ) : Step
+
+        data class RotateAfterAdminLeft(
             val welcome: Welcome,
             override val command: IncomingCommand.ReceiveGroupWelcome
         ) : Step

@@ -189,10 +189,11 @@ internal class GroupWelcomeSecurity(
                 groupSecurityStore.upsertMemberKeys(memberKeys)
             }
 
+            // The previous epoch's key stays for messages that were sent just before the change.
             groupKeyDataSource
                 .deleteBefore(
                     groupId = packet.groupId,
-                    epoch = packet.epoch
+                    epoch = packet.epoch - 1
                 )
         }
 

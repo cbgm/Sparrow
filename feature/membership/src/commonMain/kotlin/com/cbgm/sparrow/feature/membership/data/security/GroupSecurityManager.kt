@@ -270,11 +270,23 @@ internal class GroupSecurityManager internal constructor(
             groupKeyDataSource
                 .deleteBefore(
                     groupId = groupId,
-                    epoch = nextEpoch
+                    epoch = nextEpoch - 1
                 )
 
             CreatedGroupSecurityDto(welcomePacketsByContactId = packets)
         }
+
+    /**
+     * A message sent just before a membership change still uses the previous epoch. It is read with that epoch's
+     * key, but only from a sender who is still a member, so a removed member cannot use the old key.
+     */
+    private suspend fun isPreviousEpochOfCurrentMember(
+        packet: GroupChatMessagePacket,
+        senderContactId: String,
+        currentEpoch: Int
+    ): Boolean =
+        packet.epoch == currentEpoch - 1 &&
+            groupSecurityStore.findMemberKey(packet.groupId, currentEpoch, senderContactId) != null
 
     fun welcomePacketId(
         groupId: String,
@@ -395,7 +407,10 @@ internal class GroupSecurityManager internal constructor(
             val state =
                 groupSecurityStore.findState(packet.groupId)
                     ?: error("Group security state was not found")
-            check(packet.epoch == state.currentEpoch) {
+            check(
+                packet.epoch == state.currentEpoch ||
+                    isPreviousEpochOfCurrentMember(packet, senderContactId, state.currentEpoch)
+            ) {
                 "Group message uses epoch ${packet.epoch}, expected ${state.currentEpoch}"
             }
             val memberKey =

@@ -7,6 +7,8 @@ import com.cbgm.sparrow.data.database.identity.LocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.identity.RoomLocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.mailbox.RoomMailboxRouteRepository
 import com.cbgm.sparrow.data.database.outbox.DefaultProtocolOutbox
+import com.cbgm.sparrow.data.database.transaction.DatabaseTransactionRunner
+import com.cbgm.sparrow.data.database.transaction.RoomDatabaseTransactionRunner
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import org.koin.android.ext.koin.androidContext
@@ -20,6 +22,10 @@ val androidDatabaseModule =
 
         single<SparrowDatabase> {
             buildSparrowDatabase(builder = createAndroidDatabaseBuilder(context = androidContext()))
+        }
+
+        single<DatabaseTransactionRunner> {
+            RoomDatabaseTransactionRunner(database = get())
         }
 
         single<LocalIdentityDataResetter> {

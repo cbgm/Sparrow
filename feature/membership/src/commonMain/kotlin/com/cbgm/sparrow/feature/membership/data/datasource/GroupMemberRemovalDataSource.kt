@@ -31,8 +31,7 @@ internal class GroupMemberRemovalDataSource(
     private val groupEpochSecurity: GroupEpochSecurityDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val epochDataSource: GroupEpochDataSource
 ) {
     suspend fun removeMember(
         groupId: String,
@@ -227,27 +226,25 @@ internal class GroupMemberRemovalDataSource(
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
         val nextEpoch = currentEpoch + 1
-        val securedGroup =
-            groupEpochSecurity
-                .rotateOwnedGroup(
-                    groupId = groupId,
-                    title = context.title,
-                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
-                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
-                    memberPayloads =
-                        epochDataSource.createMemberPayloads(
-                            groupId = groupId,
-                            localIdentity = localIdentity,
-                            localPhoneNumber = localPhoneNumber,
-                            contacts = remainingContacts
-                        ),
-                    memberKeys = epochDataSource.createMemberKeys(groupId, nextEpoch, remainingContacts),
-                    recipients = epochDataSource.createRecipients(groupId, remainingContacts),
-                    localSigningKeyPair = localSigningKeyPair,
-                    membershipChange = membershipChange
-                ).getOrThrow()
+        groupEpochSecurity
+            .rotateOwnedGroup(
+                groupId = groupId,
+                title = context.title,
+                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
+                memberPayloads =
+                    epochDataSource.createMemberPayloads(
+                        groupId = groupId,
+                        localIdentity = localIdentity,
+                        localPhoneNumber = localPhoneNumber,
+                        contacts = remainingContacts
+                    ),
+                memberKeys = epochDataSource.createMemberKeys(groupId, nextEpoch, remainingContacts),
+                recipients = epochDataSource.createRecipients(groupId, remainingContacts),
+                localSigningKeyPair = localSigningKeyPair,
+                membershipChange = membershipChange
+            ).getOrThrow()
 
-        packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
         return nextEpoch
     }
 
