@@ -43,6 +43,10 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - routing IDs and delivery timing within the protocol's needs;
 - node connection counts/load;
 - encrypted envelope sizes;
+- the first contact invite, which is unencrypted because the recipient's key is not known yet: the sender's
+  phone number, public keys and invite challenge (no profile picture; it follows in the encrypted ready packet);
+- group invites, join requests and their answers sent to a contact whose key is not known yet. Answers to a
+  contact invite, and group invite packets to a contact with a known key, are encrypted;
 - encrypted attachment/blob sizes and blob-transfer timing.
 
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase

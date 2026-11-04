@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -51,6 +52,24 @@ class OutgoingPacketTransportPolicyTest {
 
         assertTrue(requirement.requiresEncryption)
         assertFalse(requirement.forcePlaintext)
+    }
+
+    @Test
+    fun onlyTheFirstContactInviteIsForcedToPlaintext() {
+        val declined =
+            ContactInviteDeclinedPacket(
+                packetId = "contact-invite-declined-i",
+                invitationId = "i",
+                declinedAtEpochMilliseconds = 1L,
+                inviteChallenge = ByteArray(32),
+                declinerSigningPublicKey = ByteArray(32),
+                signature = ByteArray(64)
+            )
+        val answer = policy.resolve(declined, contact).getOrThrow()
+
+        assertFalse(answer.forcePlaintext)
+        assertFalse(answer.requiresEncryption)
+        assertTrue(answer.allowsEncryptionBeforeMutualIdentity)
     }
 
     private fun chatPacket() = ChatMessagePacket(

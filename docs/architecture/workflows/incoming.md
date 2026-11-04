@@ -252,10 +252,11 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactReady`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactReadyWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`
+- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
-FindExchange -> VerifyReady -> ReceiveReady. READY completes the inviter's side of the exchange.
+FindExchange -> VerifyReady -> ReceiveReady -> ApplyProfilePicture. READY completes the inviter's side of the
+exchange and carries the inviter's picture, which the unencrypted first invite leaves out.
 ```
 
 ```mermaid
@@ -263,7 +264,8 @@ stateDiagram-v2
     [*] --> FindExchange
     FindExchange --> VerifyReady : ExchangeFound
     VerifyReady --> ReceiveReady : ReadyVerified
-    ReceiveReady --> [*] : ReadyReceived
+    ReceiveReady --> ApplyProfilePicture : ReadyReceived
+    ApplyProfilePicture --> [*] : ProfilePictureApplied
 ```
 
 ### ReceiveIdentityAcknowledgementWorkflow

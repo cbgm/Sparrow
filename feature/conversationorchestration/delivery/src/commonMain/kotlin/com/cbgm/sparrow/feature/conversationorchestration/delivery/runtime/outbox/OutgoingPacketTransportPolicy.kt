@@ -33,17 +33,28 @@ class OutgoingPacketTransportPolicy {
     ): Result<OutgoingTransportRequirement> =
         runCatching {
             when (packet) {
-                is ContactInvitePacket,
-                is ContactInviteAcceptedPacket,
-                is ContactInviteDeclinedPacket,
-                is GroupInvitePacket,
-                is GroupInviteReceivedPacket,
-                is GroupJoinRequestPacket,
-                is GroupInviteDeclinedPacket ->
+                // The recipient's key is not known yet; the invite carries no profile picture for that reason.
+                is ContactInvitePacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = false,
                         forcePlaintext = true
                     )
+
+                // The answer goes to the inviter, whose key the invite carried.
+                is ContactInviteAcceptedPacket,
+                is ContactInviteDeclinedPacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = false,
+                        allowsEncryptionBeforeMutualIdentity = true
+                    )
+
+                // Encrypted when the recipient's key is already known, otherwise plaintext as before: a group can
+                // be offered to a contact without a direct key exchange.
+                is GroupInvitePacket,
+                is GroupInviteReceivedPacket,
+                is GroupJoinRequestPacket,
+                is GroupInviteDeclinedPacket ->
+                    OutgoingTransportRequirement(requiresEncryption = false)
 
                 is ContactReadyPacket -> {
                     validateContactReadyIdentity(packet, contact)
