@@ -275,12 +275,13 @@ val transportModule =
         single<PendingEnvelopeGateway> {
             HttpPendingEnvelopeGateway(
                 httpClient = get<HttpClient>(),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
         single<MailboxGateway> {
-            HttpMailboxGateway(httpClient = get<HttpClient>())
+            HttpMailboxGateway(httpClient = get<HttpClient>(), json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)))
         }
 
         single<PushTokenRegistrationGateway> {

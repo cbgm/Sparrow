@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.protocol
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/** Checked like the app checks it, so an envelope no app can read is refused instead of stored and replayed. */
 @Serializable
 data class TransportEnvelope(
     val version: Int = 1,
@@ -11,7 +12,16 @@ data class TransportEnvelope(
     val recipientId: String,
     val payload: String,
     val createdAtEpochMilliseconds: Long
-)
+) {
+    init {
+        require(version > 0)
+        require(envelopeId.isNotBlank())
+        require(senderId.isNotBlank())
+        require(recipientId.isNotBlank())
+        require(payload.isNotBlank())
+        require(createdAtEpochMilliseconds >= 0L)
+    }
+}
 
 /**
  * Binds a push token to a routing ID. The client signs routing ID, token, platform and issue time with the

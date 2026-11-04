@@ -59,6 +59,7 @@ data class FederatedEnvelope(
         require(senderRoutingId.isNotBlank())
         require(recipientDeviceRoutingId.isNotBlank())
         require(encryptedPayload.isNotBlank())
+        require(createdAtEpochMilliseconds >= 0L)
         require(expiresAtEpochMilliseconds > createdAtEpochMilliseconds)
     }
 }

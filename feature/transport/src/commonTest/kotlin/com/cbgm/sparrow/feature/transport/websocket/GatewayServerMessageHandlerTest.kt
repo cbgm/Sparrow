@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.transport.websocket
 
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
+import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.InternalSerializationApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,4 +48,35 @@ class GatewayServerMessageHandlerTest {
 
         assertEquals("Gateway rejected the session: INVALID_SESSION", error.message)
     }
+
+    @Test
+    fun unreadableEnvelopeIsDroppedAndTheSessionGoesOn() =
+        runTest {
+            val received = mutableListOf<TransportEnvelope>()
+            val dropped = mutableListOf<String>()
+
+            suspend fun handle(frame: String) =
+                handler.handle(
+                    encodedMessage = frame,
+                    expectedRoutingId = "scrouting1_me",
+                    onGatewayRegistered = {},
+                    onRouteRegistered = {},
+                    onRouteRejected = {},
+                    onIncomingEnvelope = { envelope -> received += envelope },
+                    onUnreadableEnvelope = { envelopeId -> dropped += envelopeId },
+                    onIndicatorEvent = {}
+                )
+
+            handle(envelopeFrame(id = "poisoned", createdAt = -1))
+            handle("""{"type":"some_future_message","value":1}""")
+            handle("not json")
+            handle(envelopeFrame(id = "fine", createdAt = 1))
+
+            assertEquals(listOf("poisoned"), dropped)
+            assertEquals(listOf("fine"), received.map(TransportEnvelope::envelopeId))
+        }
+
+    private fun envelopeFrame(id: String, createdAt: Long) =
+        """{"type":"incoming_envelope","envelope":{"version":1,"envelopeId":"$id","senderId":"scrouting1_a",""" +
+            """"recipientId":"scrouting1_me","payload":"scmsg:1","createdAtEpochMilliseconds":$createdAt,"extra":true}}"""
 }

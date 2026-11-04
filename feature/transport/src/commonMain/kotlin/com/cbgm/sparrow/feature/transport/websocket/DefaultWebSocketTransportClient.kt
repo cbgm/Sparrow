@@ -383,6 +383,7 @@ class DefaultWebSocketTransportClient internal constructor(
                         onRouteRegistered = onRouteRegistered,
                         onRouteRejected = onRouteRejected,
                         onIncomingEnvelope = mutableIncomingEnvelopes::emit,
+                        onUnreadableEnvelope = ::dropUnreadableEnvelope,
                         onIndicatorEvent = mutableIncomingIndicatorEvents::emit
                     )
 
@@ -392,6 +393,12 @@ class DefaultWebSocketTransportClient internal constructor(
                 is Frame.Pong -> Unit
             }
         }
+    }
+
+    private suspend fun dropUnreadableEnvelope(envelopeId: String) {
+        acknowledgeIncomingEnvelope(envelopeId)
+            .onSuccess { logger.warn { "Unreadable envelope acknowledged and dropped: envelopeId=$envelopeId" } }
+            .onFailure { error -> logger.warn { "Unreadable envelope could not be acknowledged: ${error.message}" } }
     }
 
     private suspend fun DefaultClientWebSocketSession.logCloseFrame() {

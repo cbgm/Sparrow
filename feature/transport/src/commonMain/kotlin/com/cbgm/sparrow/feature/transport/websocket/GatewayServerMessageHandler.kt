@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.websocket
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.gateway.codec.envelopeIdOrNull
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
@@ -9,6 +10,9 @@ import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.presence.PresenceRouteRefreshRejectedException
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 @OptIn(InternalSerializationApi::class)
 internal class GatewayServerMessageHandler(
@@ -22,7 +26,7 @@ internal class GatewayServerMessageHandler(
      * frame fails the connection and the normal reconnect path takes over.
      */
     fun decodeChallenge(encodedMessage: String): GatewayServerMessage.Challenge =
-        when (val message = decode(encodedMessage)) {
+        when (val message = decodeOrNull(encodedMessage) ?: throw IllegalStateException("Invalid gateway response")) {
             is GatewayServerMessage.Challenge -> message
             is GatewayServerMessage.Error ->
                 throw IllegalStateException("Gateway rejected the session: ${message.code}")
@@ -37,9 +41,12 @@ internal class GatewayServerMessageHandler(
         onRouteRegistered: (Set<String>) -> Unit,
         onRouteRejected: (Throwable) -> Unit,
         onIncomingEnvelope: suspend (TransportEnvelope) -> Unit,
+        onUnreadableEnvelope: suspend (String) -> Unit,
         onIndicatorEvent: suspend (GatewayIndicatorEvent) -> Unit
     ) {
-        when (val message = decode(encodedMessage)) {
+        // One unreadable frame, or a message type from a newer server, is skipped instead of ending the session.
+        val message = decodeOrNull(encodedMessage) ?: return skipUnreadable(encodedMessage, onUnreadableEnvelope)
+        when (message) {
             is GatewayServerMessage.Challenge ->
                 throw IllegalStateException("Gateway sent a second session challenge")
 
@@ -108,13 +115,22 @@ internal class GatewayServerMessageHandler(
         }
     }
 
-    private fun decode(encodedMessage: String): GatewayServerMessage =
+    private fun decodeOrNull(encodedMessage: String): GatewayServerMessage? =
         runCatching {
             json.decodeFromString<GatewayServerMessage>(encodedMessage)
-        }.getOrElse { error ->
-            logger.error(error) { "Invalid gateway response" }
-            throw IllegalStateException("Invalid gateway response", error)
-        }
+        }.onFailure { error ->
+            logger.warn { "Skipped unreadable gateway frame: ${error::class.simpleName}" }
+        }.getOrNull()
+
+    /** An unreadable incoming envelope is acknowledged, so the gateway stops delivering it on every reconnect. */
+    private suspend fun skipUnreadable(
+        encodedMessage: String,
+        onUnreadableEnvelope: suspend (String) -> Unit
+    ) {
+        val frame = runCatching { json.parseToJsonElement(encodedMessage).jsonObject }.getOrNull() ?: return
+        if ((frame["type"] as? JsonPrimitive)?.content != INCOMING_ENVELOPE_TYPE) return
+        (frame["envelope"] as? JsonObject)?.envelopeIdOrNull()?.let { envelopeId -> onUnreadableEnvelope(envelopeId) }
+    }
 
     private fun handleGatewayError(
         message: GatewayServerMessage.Error,
@@ -140,5 +156,9 @@ internal class GatewayServerMessageHandler(
 
             else -> Unit
         }
+    }
+
+    private companion object {
+        const val INCOMING_ENVELOPE_TYPE = "incoming_envelope"
     }
 }

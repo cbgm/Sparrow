@@ -40,8 +40,3 @@ internal data class CreateMailboxResponse(
     val deliveryRoute: MailboxDeliveryRoute,
     val retrievalCapability: String
 )
-
-@Serializable
-internal data class MailboxEnvelopesResponse(
-    val envelopes: List<FederatedEnvelope>
-)
