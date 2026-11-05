@@ -79,8 +79,8 @@ internal class IncomingEnvelopeProcessorImpl(
                 localEncryptionPrivateKey = keyPair.privateKey
             )
         } catch (error: IncomingMessageRejectedException) {
-            logger.error(error) {
-                "Incoming envelope rejected permanently: envelopeId=$envelopeId"
+            logger.warn {
+                "Incoming envelope rejected permanently: envelopeId=$envelopeId, reason=${error.message}"
             }
             return IncomingEnvelopeHandling.REJECTED
         } catch (deferred: IncomingPacketDeferredException) {

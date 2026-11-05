@@ -63,8 +63,8 @@ class RegistryDirectorySignerTest {
             2L * ROTATION_INTERVAL_MILLISECONDS + CERTIFICATE_OVERLAP_MILLISECONDS,
             secondSigningCertificate.validUntilEpochMilliseconds
         )
-        assertTrue(ProtocolSignatures.verifyDirectory(first))
-        assertTrue(ProtocolSignatures.verifyDirectory(second))
+        assertTrue(ProtocolSignatures.verifyDirectory(first, currentTime))
+        assertTrue(ProtocolSignatures.verifyDirectory(second, currentTime))
     }
 
     @Test

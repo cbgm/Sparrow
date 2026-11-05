@@ -1,6 +1,7 @@
 package com.cbgm.sparrow
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -22,7 +23,17 @@ class MainActivity : ComponentActivity() {
 
         consumeAndroidAppIntent(intent)
         setContent {
-            App(onReleaseNativeSplash = { nativeSplashReleased = true })
+            App(
+                onReleaseNativeSplash = { nativeSplashReleased = true },
+                onAppLockEnabledChanged = ::hideFromRecentsWhileLocked
+            )
+        }
+    }
+
+    // Android 13+ can keep the app out of the recent-apps preview without blocking screenshots.
+    private fun hideFromRecentsWhileLocked(appLockEnabled: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(!appLockEnabled)
         }
     }
 

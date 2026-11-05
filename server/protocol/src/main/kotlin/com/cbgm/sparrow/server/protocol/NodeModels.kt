@@ -178,11 +178,16 @@ fun RegistrySigningCertificate.unsigned(): UnsignedRegistrySigningCertificate =
         validUntilEpochMilliseconds = validUntilEpochMilliseconds
     )
 
+/**
+ * [aliasClaimKey] is the presence directory's X25519 public key (raw, 32 bytes). Apps encrypt their phone
+ * aliases for it (see [AliasClaim]); it is signed with the directory, so a gateway cannot swap in its own key.
+ */
 @Serializable
 data class NodeDirectory(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
-    val nodes: List<SparrowNodeDescriptor>
+    val nodes: List<SparrowNodeDescriptor>,
+    val aliasClaimKey: ByteArray? = null
 )
 
 @Serializable

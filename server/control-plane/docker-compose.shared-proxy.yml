@@ -1,6 +1,14 @@
 # Combined/standalone unified Public mode; never republish 80/443 in this project.
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     # Shared front proxy owns public TLS. Keep the component Caddy HTTP-only.
     environment:
       CONTROL_PLANE_SITE_ADDRESS: ":80"
@@ -12,6 +20,7 @@ services:
         aliases:
           - sparrow-control-edge
   node-registry:
+    logging: *default-logging
     networks:
       edge:
       backend:
@@ -19,6 +28,7 @@ services:
         aliases:
           - sparrow-control-registry
   presence-directory:
+    logging: *default-logging
     networks:
       edge:
       backend:
@@ -26,6 +36,7 @@ services:
         aliases:
           - sparrow-control-presence
   push:
+    logging: *default-logging
     networks:
       edge:
       backend:

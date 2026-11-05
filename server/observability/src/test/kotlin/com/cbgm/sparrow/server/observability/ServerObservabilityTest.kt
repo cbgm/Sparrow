@@ -62,4 +62,12 @@ class ServerObservabilityTest {
             assertContains(metrics, "ktor_http_server_requests")
             assertContains(metrics, "service=\"test-service\"")
         }
+
+    @Test
+    fun `logged paths keep no ids`() {
+        assertEquals("/v1/routes/{id}", loggedPath("/v1/routes/scrouting1_AbCd"))
+        assertEquals("/push/wake/{id}/inbox/{id}/ack", loggedPath("/push/wake/3f2a9c/inbox/7e1b-44c0/ack"))
+        assertEquals("/v1/mailboxes/{id}/envelopes", loggedPath("/v1/mailboxes/Zq9x/envelopes"))
+        assertEquals("/health/live", loggedPath("/health/live"))
+    }
 }

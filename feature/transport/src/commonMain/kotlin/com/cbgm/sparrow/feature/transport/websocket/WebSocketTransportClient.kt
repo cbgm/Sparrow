@@ -15,9 +15,14 @@ interface WebSocketTransportClient {
     val incomingEnvelopes: Flow<TransportEnvelope>
     val incomingIndicatorEvents: Flow<GatewayIndicatorEvent>
 
+    /**
+     * [expectedNodeId] is the node chosen from the signed directory; the gateway's session challenge
+     * must name it, so a redirected or spoofed WebSocket endpoint cannot sign the client in.
+     */
     fun connect(
         serverUrl: String,
-        localRoutingId: String
+        localRoutingId: String,
+        expectedNodeId: String
     )
 
     suspend fun sendEnvelopeAndAwaitAcceptance(

@@ -11,7 +11,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -166,8 +168,8 @@ class DefaultOutboxRunner(
             val result = outboxProcessor.processPending(limit = PROCESSING_BATCH_SIZE)
 
             if (result.isFailure) {
-                val error = result.exceptionOrNull()
-                if (error is CancellationException) throw error
+                // A failed batch must not end the observation: only a real cancellation of the runner may.
+                if (result.exceptionOrNull() is CancellationException) currentCoroutineContext().ensureActive()
                 return
             }
 

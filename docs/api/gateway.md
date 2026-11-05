@@ -20,7 +20,7 @@ The health response includes current gateway connection information used by oper
 
 The client implementation is `DefaultWebSocketTransportClient`. Server handling is installed by `installGatewayRoutes()` and implemented by `GatewayWebSocketHandler`, `GatewaySessionHandler` and `GatewaySessionWorkDispatcher`.
 
-The connection carries protocol-level client/server frames for registration, envelopes, acknowledgements, route refresh and ephemeral typing behavior. Treat the concrete models in `:server:protocol` and `:feature:transport` as the source of truth; do not handcraft JSON from this documentation for production code.
+Every session starts with a gateway `challenge` that the client answers with a signed `register`; see [Session sign-in](websocket.md#session-sign-in-challenge-response). The connection carries protocol-level client/server frames for registration, envelopes, acknowledgements, route refresh and ephemeral typing behavior. Treat the concrete models in `:server:protocol` and `:feature:transport` as the source of truth; do not handcraft JSON from this documentation for production code.
 
 ## Attachment blob HTTP API
 

@@ -39,7 +39,7 @@ internal class GroupIncomingWelcomeDataSource(
                 .associate { member -> member.contactId to member.signingPublicKey.copyOf() }
         }.orEmpty()
         val priorAuthority = currentSecurity?.let { security ->
-            val member = securityStore.findMemberKey(groupId, security.currentEpoch, senderContactId)
+            val member = securityStore.findAuthorityKey(groupId, epoch, security.currentEpoch, senderContactId)
                 ?: error("Group update sender is not part of the current epoch")
             check(member.role.isGroupAdminRole()) { "Group update sender is not an admin" }
             member

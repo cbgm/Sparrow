@@ -5,7 +5,9 @@ import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.device.PrivateKeyState
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupMismatchException
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
@@ -19,6 +21,7 @@ import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 
@@ -39,6 +42,11 @@ class IdentityRepositoryImpl(
             extraBufferCapacity = 1
         )
 
+    // False once the stored identity's private keys turned out to be gone while the app runs.
+    private val keysUsable = MutableStateFlow(true)
+
+    override fun observeKeysUsable(): Flow<Boolean> = keysUsable
+
     override fun observeIdentity(): Flow<PublicIdentity?> =
         flow {
             emit(publicIdentityDataSource.load())
@@ -48,12 +56,12 @@ class IdentityRepositoryImpl(
     override suspend fun getStatus(): Result<IdentityStatus> =
         safeSuspendCall {
             val publicIdentityExists = publicIdentityDataSource.exists()
-            val privateKeysExist = runCatching { privateKeyStorage.hasIdentityPrivateKeys() }.getOrDefault(false)
-            val anyPrivateKeyMaterial = privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()
+            // Throws when the keys cannot be read right now; that is a failure, never INCOMPLETE.
+            val privateKeyState = privateKeyStorage.privateKeyState()
 
             when {
-                !publicIdentityExists && !anyPrivateKeyMaterial -> IdentityStatus.NOT_CREATED
-                !publicIdentityExists || !privateKeysExist -> IdentityStatus.INCOMPLETE
+                !publicIdentityExists && privateKeyState == PrivateKeyState.ABSENT -> IdentityStatus.NOT_CREATED
+                !publicIdentityExists || privateKeyState != PrivateKeyState.AVAILABLE -> IdentityStatus.INCOMPLETE
                 !hasConsistentSigningIdentity() -> IdentityStatus.INCOMPLETE
                 else -> IdentityStatus.READY
             }
@@ -192,29 +200,60 @@ class IdentityRepositoryImpl(
         publicIdentity
     }
 
+    /**
+     * Puts the private keys of the stored identity back from a backup. Only a backup of the same identity is
+     * accepted, so chats and contacts stay valid; the old, unusable key-store key is replaced.
+     */
+    @OptIn(ExperimentalUnsignedTypes::class)
+    override suspend fun repairIdentityKeys(
+        publicIdentity: PublicIdentity,
+        encryptionPrivateKey: ByteArray,
+        signingPrivateKey: ByteArray
+    ): Result<PublicIdentity> = safeSuspendCall {
+        val stored = publicIdentityDataSource.load() ?: throw IdentityBackupMismatchException()
+        if (stored != publicIdentity) throw IdentityBackupMismatchException()
+        validateIdentityKeys(publicIdentity, encryptionPrivateKey, signingPrivateKey).getOrThrow()
+        privateKeyStorage.deleteIdentityPrivateKeys()
+        privateKeyStorage.saveIdentityPrivateKeys(encryptionPrivateKey.toUByteArray(), signingPrivateKey.toUByteArray())
+        keysUsable.value = true
+        identityUpdates.emit(stored)
+        stored
+    }
+
+    override suspend fun discardKeyStoreKey(): Result<Unit> =
+        safeSuspendCall {
+            privateKeyStorage.discardWrappingKey()
+            keysUsable.value = false
+        }
+
     override suspend fun resetIdentity(): Result<Unit> =
         safeSuspendCall {
             privateKeyStorage.deleteIdentityPrivateKeys()
             publicIdentityDataSource.delete()
+            keysUsable.value = true
             identityUpdates.emit(null)
         }
 
     override suspend fun getIdentity(): Result<PublicIdentity?> =
         safeSuspendCall { publicIdentityDataSource.load() }
 
+    // Missing or lost keys are an identity state (startup offers restore or reset), not an error to report.
     @OptIn(ExperimentalUnsignedTypes::class)
     override suspend fun getEncryptionPrivateKey(): Result<ByteArray> =
-        safeSuspendCall {
-            privateKeyStorage.loadEncryptionPrivateKey()?.toByteArray()
-                ?: error("Local encryption private key does not exist")
+        safeSuspendCall(expectedFailure = { error -> error is LocalIdentityUnavailableException }) {
+            privateKeyStorage.loadEncryptionPrivateKey()?.toByteArray() ?: throw keysUnavailable()
         }
 
     @OptIn(ExperimentalUnsignedTypes::class)
     override suspend fun getSigningPrivateKey(): Result<ByteArray> =
-        safeSuspendCall {
-            privateKeyStorage.loadSigningPrivateKey()?.toByteArray()
-                ?: error("Local signing private key does not exist")
+        safeSuspendCall(expectedFailure = { error -> error is LocalIdentityUnavailableException }) {
+            privateKeyStorage.loadSigningPrivateKey()?.toByteArray() ?: throw keysUnavailable()
         }
+
+    private suspend fun keysUnavailable(): LocalIdentityUnavailableException {
+        if (publicIdentityDataSource.exists()) keysUsable.value = false
+        return LocalIdentityUnavailableException()
+    }
 
     override suspend fun getLocalPublicIdentity(): Result<LocalPublicIdentity> =
         runCatching {

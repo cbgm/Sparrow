@@ -110,7 +110,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         ParkedMessageOperationEntity::class,
         ParkedEnvelopeEntity::class
     ],
-    version = 59,
+    version = 61,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -131,7 +131,9 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         AutoMigration(from = 55, to = 56),
         AutoMigration(from = 56, to = 57),
         AutoMigration(from = 57, to = 58),
-        AutoMigration(from = 58, to = 59)
+        AutoMigration(from = 58, to = 59),
+        AutoMigration(from = 59, to = 60),
+        AutoMigration(from = 60, to = 61)
     ],
     exportSchema = true
 )

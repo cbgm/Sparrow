@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.di
 
+import com.cbgm.sparrow.core.crypto.claim.AliasClaimSealer
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
@@ -24,6 +25,7 @@ import com.cbgm.sparrow.feature.transport.controlplane.SignedControlPlaneDirecto
 import com.cbgm.sparrow.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
 import com.cbgm.sparrow.feature.transport.device.createPlatformHttpClient
 import com.cbgm.sparrow.feature.transport.discovery.DataStoreNodeDirectoryCache
+import com.cbgm.sparrow.feature.transport.discovery.DataStorePreferredNodeStore
 import com.cbgm.sparrow.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.HttpNodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
@@ -31,9 +33,18 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
+import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.presence.AliasClaimKeyProvider
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
@@ -56,6 +67,7 @@ import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -129,14 +141,18 @@ val transportModule =
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 presenceRouteCoordinator = get<ClientPresenceRouteCoordinator>(),
                 serverMessageHandler = get<GatewayServerMessageHandler>(),
-                pendingRequestRegistry = get<GatewayPendingRequestRegistry>()
+                pendingRequestRegistry = get<GatewayPendingRequestRegistry>(),
+                createGatewaySessionProof = get<CreateGatewaySessionProofUseCase>()
             )
         }
+
+        singleOf(::CreateGatewaySessionProofUseCase)
 
         single<ClientRouteRegistrationFactory> {
             ClientRouteRegistrationFactory(
                 signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
+                aliasClaimSealer = get<AliasClaimSealer>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
@@ -146,7 +162,12 @@ val transportModule =
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
-                localPhoneNumberProvider = get<LocalPhoneNumberProvider>()
+                localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
+                aliasClaimKeyProvider =
+                    AliasClaimKeyProvider(
+                        cache = get<NodeDirectoryCache>(),
+                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                    )
             )
         }
 
@@ -157,7 +178,8 @@ val transportModule =
                 transportConfig = get<TransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
-                controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>()
+                controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>(),
+                preferredNodeStore = get<PreferredNodeStore>()
             )
         }
 
@@ -191,9 +213,12 @@ val transportModule =
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneStatusStore = get<ControlPlaneStatusStore>(),
                 endpointSelector = get<NodeEndpointSelector>(),
-                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>()
+                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>(),
+                preferredNodeStore = get<PreferredNodeStore>()
             )
         }
+
+        single<PreferredNodeStore> { DataStorePreferredNodeStore(dataStore = get()) }
 
         single<NodeDirectorySource> {
             HttpNodeDirectorySource(httpClient = get<HttpClient>())
@@ -258,21 +283,30 @@ val transportModule =
         single<PendingEnvelopeGateway> {
             HttpPendingEnvelopeGateway(
                 httpClient = get<HttpClient>(),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
         single<MailboxGateway> {
-            HttpMailboxGateway(httpClient = get<HttpClient>())
+            HttpMailboxGateway(httpClient = get<HttpClient>(), json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)))
         }
 
         single<PushTokenRegistrationGateway> {
             HttpPushTokenRegistrationGateway(
                 httpClient = get<HttpClient>(),
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
+                createPushDeviceRegistration = get<CreatePushDeviceRegistrationUseCase>()
             )
         }
+
+        singleOf(::CreatePushDeviceRegistrationUseCase)
+        singleOf(::CreateMailboxWakeTicketUseCase)
+        singleOf(::GetGatewayNodesUseCase)
+        singleOf(::ObservePreferredNodeUseCase)
+        singleOf(::SetPreferredNodeUseCase)
+        singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {
             WebSocketOutgoingWireSender(

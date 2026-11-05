@@ -13,6 +13,9 @@ enum class ConversationFailureReason {
     /** The command was valid, but the current conversation state does not allow it. */
     NOT_ALLOWED,
 
+    /** The user blocked the contact. */
+    CONTACT_BLOCKED,
+
     /** The command itself contained invalid input. */
     INVALID_INPUT,
 

@@ -1,5 +1,8 @@
 package com.cbgm.sparrow.feature.transport.mailbox
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.gateway.codec.decodeEnvelopes
+import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -12,23 +15,30 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 class HttpMailboxGateway(
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val json: Json
 ) : MailboxGateway {
+    private val logger = SparrowLog.withTag("HttpMailboxGateway")
+
     override suspend fun create(
         contactId: String,
         nodeId: String,
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long
+        expiresAtEpochMilliseconds: Long,
+        wakeTicket: MailboxWakeTicket
     ): Result<LocalMailboxCredential> =
         runCatching {
             val response =
                 httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
                     contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds))
+                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket))
                 }
             check(response.status == HttpStatusCode.Created) {
                 "Mailbox creation failed with ${response.status}"
@@ -50,8 +60,14 @@ class HttpMailboxGateway(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes"
                 ) { bearerAuth(credential.retrievalCapability) }
             check(response.status.isSuccess()) { "Mailbox retrieval failed with ${response.status}" }
-            response.body<MailboxEnvelopesResponse>().envelopes
-        }
+            val envelopes = response.body<JsonObject>()["envelopes"] as? JsonArray ?: JsonArray(emptyList())
+            val decoded = json.decodeEnvelopes<FederatedEnvelope>(envelopes)
+            decoded.unreadableEnvelopeIds.forEach { envelopeId ->
+                acknowledge(credential, envelopeId)
+                    .onSuccess { logger.warn { "Unreadable mailbox envelope dropped: envelopeId=$envelopeId" } }
+            }
+            decoded.envelopes
+        }.markingNodeUnavailable()
 
     override suspend fun acknowledge(
         credential: LocalMailboxCredential,
@@ -66,7 +82,7 @@ class HttpMailboxGateway(
             check(response.status == HttpStatusCode.NoContent) {
                 "Mailbox acknowledgement failed with ${response.status}"
             }
-        }
+        }.markingNodeUnavailable()
 
     override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> =
         runCatching {

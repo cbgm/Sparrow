@@ -5,4 +5,7 @@
     <string name="notification_channel_messages">Messages</string>
     <string name="notification_channel_messages_description">Benachrichtigung für neue Sparrow Nachricht</string>
     <string name="notification_new_message">Neue Nachricht</string>
+    <string name="notification_channel_sync">Nachrichten-Abruf</string>
+    <string name="notification_channel_sync_description">Wird kurz angezeigt, während neue Nachrichten im Hintergrund abgerufen werden</string>
+    <string name="notification_checking_messages">Neue Nachrichten werden abgerufen</string>
 </resources>

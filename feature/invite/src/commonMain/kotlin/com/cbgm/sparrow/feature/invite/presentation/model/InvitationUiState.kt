@@ -29,6 +29,8 @@ data class InvitationUi(
     val peerId: String,
     val peerDisplayName: String?,
     val peerSecondaryText: String?,
+    val peerUnverified: Boolean = false,
+    val phoneContactName: String? = null,
     val direction: InvitationUiDirection,
     val status: InvitationUiStatus,
     val expiresAtEpochMilliseconds: Long,

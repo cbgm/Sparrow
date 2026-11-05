@@ -1,10 +1,11 @@
 package com.cbgm.sparrow.server.protocol
 
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class GatewaySerializationTest {
     @Test
@@ -27,13 +28,21 @@ class GatewaySerializationTest {
     }
 
     @Test
-    fun legacyRegisterFrameStillDecodes() {
-        val message =
+    fun registerWithoutSessionProofDoesNotDecode() {
+        assertFailsWith<IllegalArgumentException> {
             serverJson.decodeFromString<GatewayClientMessage>(
-                """{"type":"register","routingId":"routing-id"}"""
+                """{"type":"register","routingId":"routing-id","connectionId":"connection-a"}"""
             )
+        }
+    }
 
-        assertEquals(GatewayClientMessage.Register("routing-id"), message)
+    @Test
+    fun challengeRoundTrips() {
+        val challenge = GatewayServerMessage.Challenge(nonce = ByteArray(32) { it.toByte() }, nodeId = "node-a")
+        val encoded = serverJson.encodeToString<GatewayServerMessage>(challenge)
+
+        assertTrue(encoded.startsWith("""{"type":"challenge","nonce":[0,1,2"""))
+        assertEquals(challenge, serverJson.decodeFromString<GatewayServerMessage>(encoded))
     }
 
     @Test
@@ -74,11 +83,10 @@ class GatewaySerializationTest {
     }
 
     @Test
-    fun signedRegisterFrameDecodesAllRouteProofFields() {
+    fun signedRegisterFrameDecodesSessionProof() {
         val encoded =
             "{\"type\":\"register\",\"routingId\":\"scrouting1_test\"," +
-                "\"connectionId\":\"connection-a\",\"generation\":123," +
-                "\"expiresAtEpochMilliseconds\":456,\"clientSigningPublicKey\":[1,2,3]," +
+                "\"connectionId\":\"connection-a\",\"clientSigningPublicKey\":[1,2,3]," +
                 "\"clientSignature\":[4,5,6]}"
         val message =
             serverJson.decodeFromString<GatewayClientMessage>(
@@ -86,18 +94,8 @@ class GatewaySerializationTest {
             ) as GatewayClientMessage.Register
 
         assertEquals("connection-a", message.connectionId)
-        assertEquals(123L, message.generation)
-        assertNotNull(message.clientSigningPublicKey)
-        assertNotNull(message.clientSignature)
-    }
-
-    @Test
-    fun incompleteSignedRegisterFrameIsRejected() {
-        assertFailsWith<IllegalArgumentException> {
-            serverJson.decodeFromString<GatewayClientMessage>(
-                """{"type":"register","routingId":"scrouting1_test","connectionId":"connection-a","generation":123}"""
-            )
-        }
+        assertContentEquals(byteArrayOf(1, 2, 3), message.clientSigningPublicKey)
+        assertContentEquals(byteArrayOf(4, 5, 6), message.clientSignature)
     }
 
     @Test

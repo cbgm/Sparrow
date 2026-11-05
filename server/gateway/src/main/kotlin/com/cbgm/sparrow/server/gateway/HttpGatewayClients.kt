@@ -2,6 +2,8 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
+import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
+import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
@@ -21,6 +23,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -65,13 +68,24 @@ class HttpPresenceClient(
 ) : PresenceClient {
     override suspend fun register(
         registration: ClientRouteRegistration
-    ): PresenceRegistrationResult {
-        val results = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
+    ): PresenceRegistration {
+        val registrations = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
+        val results = registrations.map(PresenceRegistration::result)
+        val acceptedAliasIndexes =
+            registrations
+                .filter { candidate -> candidate.result == PresenceRegistrationResult.ACCEPTED }
+                .flatMap(PresenceRegistration::acceptedAliasIndexes)
+                .distinct()
+                .sorted()
         return when {
-            PresenceRegistrationResult.ACCEPTED in results -> PresenceRegistrationResult.ACCEPTED
+            PresenceRegistrationResult.ACCEPTED in results ->
+                PresenceRegistration(
+                    result = PresenceRegistrationResult.ACCEPTED,
+                    acceptedAliasIndexes = acceptedAliasIndexes
+                )
             PresenceRegistrationResult.PHONE_VERIFICATION_FAILED in results ->
-                PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
-            else -> PresenceRegistrationResult.REJECTED
+                PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
+            else -> PresenceRegistration(PresenceRegistrationResult.REJECTED)
         }
     }
 
@@ -93,27 +107,31 @@ class HttpPresenceClient(
     private suspend fun registerAt(
         baseUrl: String,
         registration: ClientRouteRegistration
-    ): PresenceRegistrationResult =
+    ): PresenceRegistration =
         try {
             val path = "/v1/routes/${registration.route.routingId}"
             val body = serverJson.encodeToString(registration)
             val authentication = signer.sign("PUT", path, body)
-            val status =
+            val response =
                 httpClient
                     .put(baseUrl.trimEnd('/') + path) {
                         nodeAuthentication(authentication)
                         contentType(ContentType.Application.Json)
                         setBody(body)
-                    }.status
+                    }
+            val status = response.status
             when {
                 status.isSuccess() -> {
                     endpointPool.markReachable(baseUrl)
-                    PresenceRegistrationResult.ACCEPTED
+                    PresenceRegistration(
+                        result = PresenceRegistrationResult.ACCEPTED,
+                        acceptedAliasIndexes = acceptedAliasIndexes(response)
+                    )
                 }
 
                 status == HttpStatusCode.Forbidden -> {
                     endpointPool.markReachable(baseUrl)
-                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
+                    PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
                 }
 
                 else -> {
@@ -122,14 +140,47 @@ class HttpPresenceClient(
                     ) {
                         endpointPool.markUnavailable(baseUrl)
                     }
-                    PresenceRegistrationResult.REJECTED
+                    PresenceRegistration(PresenceRegistrationResult.REJECTED)
                 }
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
             endpointPool.markUnavailable(baseUrl)
-            PresenceRegistrationResult.REJECTED
+            PresenceRegistration(PresenceRegistrationResult.REJECTED)
+        }
+
+    // Older presence directories answer 204; they cannot open alias claims, so no alias was stored.
+    private suspend fun acceptedAliasIndexes(response: HttpResponse): List<Int> =
+        if (response.status == HttpStatusCode.NoContent) {
+            emptyList()
+        } else {
+            response.body<ClientRouteRegistrationResult>().acceptedAliasIndexes
+        }
+
+    /**
+     * True when a Control Plane routes [alias] to [routingId]. The gateway asks only when a client sends as its phone
+     * alias (a first invite), so it learns a user's alias only then, never from route registrations.
+     */
+    override suspend fun ownsAlias(
+        alias: String,
+        routingId: String
+    ): Boolean =
+        endpointPool.ordered().any { baseUrl ->
+            try {
+                val path = "/v1/routes/$alias"
+                val response =
+                    httpClient.get(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(signer.sign("GET", path, ""))
+                    }
+                response.status.isSuccess() &&
+                    response.body<ClientRoutingResult>().routes.any { route -> route.routingId == routingId }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+                false
+            }
         }
 
     private suspend fun removeAt(

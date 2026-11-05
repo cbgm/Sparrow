@@ -191,6 +191,13 @@ interface GroupMembershipRepository {
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult>
 
+    /** Gives the group a key the departed admin does not know; a no-op unless this device is the admin on [expectedEpoch]. */
+    suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit>
+
     suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,

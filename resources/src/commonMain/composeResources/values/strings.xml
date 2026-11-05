@@ -312,6 +312,8 @@
     <string name="feature_settings_build_info">Build info</string>
     <string name="feature_settings_danger_zone">Danger zone</string>
     <string name="feature_settings_danger_zone_description">These actions are destructive and only intended for local debugging.</string>
+    <string name="feature_settings_simulate_key_loss">Simulate lost identity key</string>
+    <string name="feature_settings_simulate_key_loss_done">Key-store key removed.</string>
     <string name="feature_settings_data_disclaimer">Data disclaimer</string>
     <string name="feature_settings_data_disclaimer_subtitle">What Sparrow stores locally and in the server infrastructure</string>
     <string name="feature_settings_developer_menu">Developer menu</string>
@@ -457,6 +459,7 @@
     <string name="feature_chats_group_member_removed_message">%1$s was removed from the group</string>
     <string name="feature_chats_group_you_were_removed_message">You were removed from this group</string>
     <string name="feature_chats_group_member_left_message">%1$s left the group</string>
+    <string name="feature_chats_group_change_dropped_message">Your change could not be applied because another admin changed the group at the same time. Please try again.</string>
     <string name="feature_chats_group_you_left_message">You left this group</string>
     <string name="feature_chats_group_unknown_member">A member</string>
     <string name="feature_chats_group_removed_hint_title">You are no longer a member</string>
@@ -479,6 +482,7 @@
     <string name="feature_settings_blocked_contacts_count">%1$d blocked</string>
     <string name="feature_contacts_blocked_contacts_title">Blocked contacts</string>
     <string name="feature_contacts_blocked_contacts_empty">No contacts are blocked.</string>
+    <string name="feature_chats_contact_blocked">This contact is blocked. Unblock it to chat.</string>
     <string name="feature_contacts_block_contact">Block contact</string>
     <string name="feature_contacts_add_blocked_contact">Add blocked contact</string>
     <string name="feature_contacts_add_blocked_contact_description">Enter a phone number or choose an existing contact. Existing direct-chat authorization will be revoked.</string>
@@ -506,6 +510,16 @@
     <string name="feature_settings_control_plane_error_keep_one">At least one control plane must remain.</string>
     <string name="feature_settings_control_plane_error_save_failed">The control-plane list could not be saved.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
+    <string name="feature_settings_preferred_node">Preferred node</string>
+    <string name="feature_settings_preferred_node_subtitle">Automatic or one favourite node</string>
+    <string name="feature_settings_preferred_node_automatic">Automatic</string>
+    <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
+    <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>
+    <string name="feature_settings_preferred_node_search">Search address, IP or node ID</string>
+    <string name="feature_settings_preferred_node_connections">%1$d connections</string>
+    <string name="feature_settings_preferred_node_none_found">No node matches your search</string>
+    <string name="feature_settings_preferred_node_load_failed">Nodes could not be loaded</string>
+    <string name="feature_settings_preferred_node_unlisted">Your favourite node is not in the current list. Sparrow uses other nodes until it is back.</string>
     <string name="feature_settings_control_plane_directory_title">Control-plane directory</string>
     <string name="feature_settings_control_plane_directory_description">Optional URL that publishes the current control-plane list. Sparrow syncs it automatically and keeps the last successful list if the directory is unavailable.</string>
     <string name="feature_settings_control_plane_directory_url">Directory URL</string>
@@ -674,6 +688,8 @@
     <string name="feature_settings_control_planes_manually_added">Manually added Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node discovery</string>
     <string name="feature_invite_group_identity_review_required">Review the inviting contact’s changed identity above before accepting this group invitation.</string>
+    <string name="feature_invite_peer_unverified">Name and number not verified</string>
+    <string name="feature_invite_peer_matches_phone_contact">Matches your contact %1$s · number not verified</string>
 
     <string name="feature_applock_title">App lock</string>
     <string name="feature_applock_subtitle">Require biometrics or your device screen lock when opening Sparrow.</string>
@@ -684,6 +700,12 @@
     <string name="feature_applock_unavailable">Device authentication is unavailable. Set up biometrics or a secure screen lock and try again.</string>
     <string name="feature_applock_authentication_failed">Authentication failed. Try again.</string>
     <string name="feature_applock_unlock_sparrow">Unlock Sparrow</string>
+    <string name="feature_applock_timeout">Lock after</string>
+    <string name="feature_applock_timeout_immediately">Immediately after leaving the app</string>
+    <string name="feature_applock_timeout_one_minute">1 minute in the background</string>
+    <string name="feature_applock_timeout_five_minutes">5 minutes in the background</string>
+    <string name="feature_applock_timeout_thirty_minutes">30 minutes in the background</string>
+    <string name="feature_applock_timeout_on_restart">Only when the app restarts</string>
 
     <!-- Feature: polls -->
     <string name="feature_polls_create_title">Create poll</string>
@@ -919,6 +941,16 @@
     <string name="feature_identity_phone_verification_wrong_code">The code is not correct.</string>
     <string name="feature_identity_setup_load_failed">Identity setup could not be loaded. Please restart Sparrow.</string>
     <string name="feature_identity_restore_failed">The identity could not be restored. Check the backup and password, then try again.</string>
+    <string name="feature_identity_repair_title">Your identity can no longer be used on this device</string>
+    <string name="feature_identity_repair_message">The keys of your identity on this phone are lost, for example after the app data was moved to another phone or the screen lock of the phone changed. Your chats and contacts are still here. Restore the keys from your identity backup to keep everything. Without a backup, only a reset is possible, which deletes all chats and contacts.</string>
+    <string name="feature_identity_repair_restore">Restore from backup</string>
+    <string name="feature_identity_repair_password_hint">Enter the password of your identity backup. Only a backup of this identity is accepted.</string>
+    <string name="feature_identity_repair_reset">Reset</string>
+    <string name="feature_identity_repair_reset_message">This deletes all chats and contacts on this device and starts with a new identity. Your contacts have to accept you again. This cannot be undone.</string>
+    <string name="feature_identity_repair_reset_confirm">Delete and reset</string>
+    <string name="feature_identity_repair_backup_mismatch">This backup belongs to a different identity. Choose the backup of the identity used on this device.</string>
+    <string name="feature_identity_repair_failed">The keys could not be restored. Check the backup and password, then try again.</string>
+    <string name="feature_identity_repair_reset_failed">The identity could not be reset. Try again.</string>
     <string name="feature_identity_restore_invalid_phone">Enter a valid phone number before restoring your identity.</string>
     <string name="feature_identity_restore_read_failed">The identity backup could not be read. Select a valid backup file.</string>
     <string name="feature_identity_overview_load_failed">Your identity could not be loaded. Please try again.</string>

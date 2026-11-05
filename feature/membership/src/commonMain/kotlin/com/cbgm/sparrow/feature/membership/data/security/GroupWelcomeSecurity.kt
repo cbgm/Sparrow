@@ -8,6 +8,8 @@ import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.OpenedGroupWelcomeDto
+import com.cbgm.sparrow.feature.membership.domain.policy.ConcurrentGroupEpochPolicy
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
@@ -40,12 +42,10 @@ internal class GroupWelcomeSecurity(
                 ) {
                     "Group welcome epoch must repeat the current epoch or advance it by one"
                 }
+                // Another admin's version of the installed epoch is checked against the epoch both started from.
                 val authority =
-                    groupSecurityStore.findMemberKey(
-                        groupId = packet.groupId,
-                        epoch = existingState.currentEpoch,
-                        contactId = senderContactId
-                    ) ?: error("Group update sender is not part of the current epoch")
+                    groupSecurityStore.findAuthorityKey(packet.groupId, packet.epoch, existingState.currentEpoch, senderContactId)
+                        ?: error("Group update sender is not part of the current epoch")
                 check(authority.role.isGroupAdminRole()) {
                     "Group update sender is not an admin"
                 }
@@ -87,10 +87,10 @@ internal class GroupWelcomeSecurity(
                     signingPublicKey = expectedOwnerSigningPublicKey
                 ).getOrThrow()
 
-            if (existingState != null && packet.epoch == existingState.currentEpoch) {
+            val contested = existingState?.isContestedBy(packet, expectedOwnerSigningPublicKey) == true
+            if (existingState != null && packet.epoch == existingState.currentEpoch && !contested) {
                 check(
-                    existingState.currentEpoch == packet.epoch &&
-                        existingState.welcomePacketId == packet.packetId &&
+                    existingState.welcomePacketId == packet.packetId &&
                         existingState.localSigningPublicKey.contentEquals(localSigningPublicKey)
                 ) {
                     "Group welcome conflicts with existing security state"
@@ -107,7 +107,7 @@ internal class GroupWelcomeSecurity(
             }
 
             val groupKey =
-                if (existingState == null || packet.epoch > existingState.currentEpoch) {
+                if (existingState == null || packet.epoch > existingState.currentEpoch || contested) {
                     groupCrypto
                         .unwrapGroupKey(
                             wrappedGroupKey = packet.wrappedGroupKey,
@@ -122,9 +122,24 @@ internal class GroupWelcomeSecurity(
 
             OpenedGroupWelcomeDto(
                 packet = packet,
-                groupKey = groupKey
+                groupKey = groupKey,
+                replacesContestedEpoch = contested,
+                dropsLocalChange = contested && existingState.epochSignerSigningPublicKey.contentEquals(localSigningPublicKey)
             )
         }
+
+    /**
+     * Another admin's version of the installed epoch. The losing version is refused, like any rejected packet,
+     * so it is dropped instead of retried; the winning one replaces the installed epoch.
+     */
+    private fun GroupSecurityStateEntity.isContestedBy(packet: GroupCreatedPacket, signer: ByteArray): Boolean {
+        val installedSigner = epochSignerSigningPublicKey ?: return false
+        if (packet.epoch != currentEpoch || installedSigner.contentEquals(signer)) return false
+        if (!ConcurrentGroupEpochPolicy.replacesInstalled(signer, installedSigner)) {
+            throw IncomingMessageRejectedException("Another admin's change to this group epoch takes precedence")
+        }
+        return true
+    }
 
     suspend fun persistJoinedGroup(
         openedWelcome: OpenedGroupWelcomeDto,
@@ -169,9 +184,12 @@ internal class GroupWelcomeSecurity(
                     ownerSigningPublicKey = authority?.signingPublicKey?.copyOf() ?: authoritySigningPublicKey.copyOf(),
                     localSigningPublicKey = localSigningPublicKey.copyOf(),
                     localRole = localMember.role,
-                    updatedAtEpochMilliseconds = receivedAtEpochMilliseconds
+                    updatedAtEpochMilliseconds = receivedAtEpochMilliseconds,
+                    epochSignerSigningPublicKey = authoritySigningPublicKey.copyOf()
                 )
-            if (existingState == null || packet.epoch > existingState.currentEpoch) {
+            if (openedWelcome.replacesContestedEpoch) {
+                groupSecurityStore.replaceContestedEpoch(state = joinedState, memberKeys = memberKeys)
+            } else if (existingState == null || packet.epoch > existingState.currentEpoch) {
                 groupSecurityStore.replaceCurrentEpoch(
                     state = joinedState,
                     memberKeys = memberKeys
@@ -189,10 +207,11 @@ internal class GroupWelcomeSecurity(
                 groupSecurityStore.upsertMemberKeys(memberKeys)
             }
 
+            // The previous epoch's key stays for messages that were sent just before the change.
             groupKeyDataSource
                 .deleteBefore(
                     groupId = packet.groupId,
-                    epoch = packet.epoch
+                    epoch = packet.epoch - 1
                 )
         }
 

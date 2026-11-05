@@ -120,6 +120,29 @@ interface ContactDao {
     )
     suspend fun deleteById(contactId: String)
 
+    /** True when anything besides the contact's own phone numbers and picture refers to it. */
+    @Query(
+        """
+        SELECT
+            EXISTS(SELECT 1 FROM contact_public_identities WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM contact_routing_ids WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM conversations WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM conversation_participants WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM identity_exchanges WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM pending_remote_identity_changes WHERE peerId = :contactId) OR
+            EXISTS(SELECT 1 FROM approved_identity_reconnections WHERE peerId = :contactId) OR
+            EXISTS(SELECT 1 FROM group_memberships WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM group_member_keys WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM message_recipient_states WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM protocol_outbox WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM auto_reply_recipients WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM local_mailbox_credentials WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM retiring_mailbox_credentials WHERE contactId = :contactId) OR
+            EXISTS(SELECT 1 FROM remote_mailbox_routes WHERE contactId = :contactId)
+        """
+    )
+    suspend fun isReferenced(contactId: String): Boolean
+
     @Query(
         """
     SELECT *

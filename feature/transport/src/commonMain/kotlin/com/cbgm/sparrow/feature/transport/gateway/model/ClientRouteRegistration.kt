@@ -81,12 +81,15 @@ fun ClientRoute.unsigned(): UnsignedClientRoute =
         aliases = aliases
     )
 
+/**
+ * [sealedAliasClaim] is an [AliasClaim] encrypted for the presence directory: the gateway forwarding the
+ * registration learns neither the phone aliases nor the phone verification token.
+ */
 @Serializable
 data class ClientRouteRegistration(
     val route: ClientRoute,
     val clientSigningPublicKey: ByteArray,
-    // One-time proof of the phone number verified at sign-up; only the first registration sends it.
-    val phoneVerificationToken: String? = null
+    val sealedAliasClaim: ByteArray? = null
 ) {
     override fun toString(): String = "ClientRouteRegistration(routingId=${route.routingId})"
 
@@ -98,7 +101,7 @@ data class ClientRouteRegistration(
 
         if (route != other.route) return false
         if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
-        if (phoneVerificationToken != other.phoneVerificationToken) return false
+        if (!sealedAliasClaim.contentEquals(other.sealedAliasClaim)) return false
 
         return true
     }
@@ -106,7 +109,31 @@ data class ClientRouteRegistration(
     override fun hashCode(): Int {
         var result = route.hashCode()
         result = 31 * result + clientSigningPublicKey.contentHashCode()
-        result = 31 * result + (phoneVerificationToken?.hashCode() ?: 0)
+        result = 31 * result + (sealedAliasClaim?.contentHashCode() ?: 0)
         return result
     }
+}
+
+/** The device's phone aliases, signed with its key for one route; the first carries the sign-up phone token. */
+@Serializable
+data class AliasClaim(
+    val routingId: String,
+    val connectionId: String,
+    val generation: Long,
+    val aliases: List<String>,
+    val phoneVerificationToken: String? = null,
+    val signature: ByteArray
+) {
+    override fun toString(): String = "AliasClaim(redacted)"
+}
+
+@Serializable
+data class UnsignedAliasClaim(
+    val routingId: String,
+    val connectionId: String,
+    val generation: Long,
+    val aliases: List<String>,
+    val phoneVerificationToken: String? = null
+) {
+    override fun toString(): String = "UnsignedAliasClaim(redacted)"
 }

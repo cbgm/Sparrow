@@ -61,7 +61,7 @@ private suspend fun ApplicationCall.createMailbox(
     when (
         val result =
             store.createWithQuota(
-                request = receive<CreateMailboxRequest>(),
+                request = MailboxLifetimes.capped(receive<CreateMailboxRequest>(), System.currentTimeMillis()),
                 ownerKeyHash = hashedClientAddress(),
                 maximumMailboxes = config.maximumMailboxes,
                 maximumMailboxesPerOwner = config.maximumMailboxesPerClient
@@ -110,12 +110,17 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     pushNotifier: MailboxPushNotifier
 ) {
     val request = receive<MailboxEnvelopeRequest>()
-    when (val result = store.store(mailboxId, capability, request.envelope)) {
+    val envelope =
+        runCatching { MailboxLifetimes.capped(request.envelope, System.currentTimeMillis()) }.getOrElse {
+            respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_ENVELOPE", "Envelope rejected"))
+            return
+        }
+    when (val result = store.store(mailboxId, capability, envelope)) {
         is MailboxResult.Stored -> {
-            if (!result.duplicate) {
-                runCatching {
-                    pushNotifier.notify(request.envelope.recipientDeviceRoutingId)
-                }
+            // Only the owner's ticket decides whom to wake; the sender's recipient field does not.
+            val wakeTicket = result.wakeTicket
+            if (!result.duplicate && wakeTicket != null) {
+                runCatching { pushNotifier.notify(wakeTicket) }
             }
             respond(
                 HttpStatusCode.Accepted,

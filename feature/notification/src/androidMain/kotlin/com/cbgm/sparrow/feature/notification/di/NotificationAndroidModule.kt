@@ -8,10 +8,10 @@ import com.cbgm.sparrow.feature.notification.device.PendingMessageSyncWorker
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.feature.notification.device.PushTokenRegistrationScheduler
 import com.cbgm.sparrow.feature.notification.device.PushTokenRegistrationWorker
+import com.cbgm.sparrow.feature.notification.device.PushTokenRenewalWorker
 import com.cbgm.sparrow.feature.notification.device.SparrowNotificationIntentHandler
 import com.cbgm.sparrow.feature.notification.device.SparrowNotificationManager
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationPresenter
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
 import org.koin.dsl.module
@@ -67,10 +67,11 @@ val notificationAndroidModule =
                 appContext = androidContext(),
                 workerParameters = parameters.get<WorkerParameters>(),
                 synchronizePendingMessages = get(),
-                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                prepareControlPlane = get(),
                 appVisibilityState = get(),
                 conversationNotificationPresenter = get(),
-                backgroundDeliveryReceiptSender = get()
+                backgroundDeliveryReceiptSender = get(),
+                notificationManager = get()
             )
         }
 
@@ -79,7 +80,15 @@ val notificationAndroidModule =
                 appContext = androidContext(),
                 workerParameters = parameters.get<WorkerParameters>(),
                 registerPushToken = get(),
-                controlPlaneConfiguration = get<ControlPlaneConfiguration>()
+                prepareControlPlane = get()
+            )
+        }
+
+        worker { parameters ->
+            PushTokenRenewalWorker(
+                appContext = androidContext(),
+                workerParameters = parameters.get<WorkerParameters>(),
+                pushTokenRegistrationScheduler = get()
             )
         }
     }

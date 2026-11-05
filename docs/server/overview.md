@@ -65,12 +65,15 @@ Key classes:
 Stores short-lived routing information mapping a client routing ID to its current node/connection. Redis is used
 because presence is ephemeral and should be rebuilt by reconnecting clients.
 
-It also checks the optional phone verification of a route registration. The app sends a one-time Firebase ID
-token only with its first route registration at sign-up. When Firebase Admin credentials are configured
-(`GOOGLE_APPLICATION_CREDENTIALS`), a present token must be a valid Firebase phone sign-in whose number matches
-every advertised phone alias, otherwise the registration is rejected with `PHONE_VERIFICATION_FAILED`.
-Registrations without a token, or without configured credentials, are accepted; nothing about the verification is
-stored.
+It also decides which phone aliases a route may hold. The app seals its aliases, with a one-time Firebase ID token in
+its first claim after sign-up, for the Presence Directory's key from the signed node directory, so the gateway that
+forwards them cannot read them. When Firebase Admin credentials are configured
+(`GOOGLE_APPLICATION_CREDENTIALS`), a present token must be a valid Firebase phone sign-in, otherwise the registration
+is rejected with `PHONE_VERIFICATION_FAILED`; it proves the alias of that number. Each alias belongs to one device:
+only the alias and the device routing ID are kept in Redis, renewed by every registration and forgotten 30 days after
+the last one. The holder keeps its alias without a token; a free alias needs a proof when credentials are configured,
+otherwise the first claim wins; an alias held by another device moves only with a proof. Refused aliases are dropped,
+the route is still stored. The token itself is never stored.
 
 Key classes:
 
@@ -83,7 +86,9 @@ Key classes:
 ### `push`
 
 Stores Android device registrations and wake-up/pending fallback information. It integrates with Firebase Admin
-when credentials are configured (the same service account as phone verification).
+when credentials are configured (the same service account as phone verification). A device registration
+needs a signature with the routing ID's identity key and expires 30 days after the last registration
+(`PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS`); see [Push API](../api/push.md).
 
 Key classes:
 
@@ -93,12 +98,13 @@ Key classes:
 - `PostgresPendingEnvelopeStore`
 - `PostgresWakeUpStore`
 - `FirebasePushSender`
+- `PushDeviceRegistrationValidator`
 
 ## Community Node services
 
 ### `gateway`
 
-Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store.
+Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store. Each WebSocket starts with a signed challenge-response sign-in (`GatewaySessionValidator`); see [Session sign-in](../api/websocket.md#session-sign-in-challenge-response).
 
 Key classes:
 
@@ -106,6 +112,7 @@ Key classes:
 - `installGatewayRoutes()`
 - `GatewayWebSocketHandler`
 - `GatewaySessionHandler`
+- `GatewaySessionValidator`
 - `ConnectionRegistry`
 - `BlobStore` / `BlobUploadPermitStore` / `GatewayBlobUploadTicketIssuer`
 

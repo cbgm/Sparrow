@@ -60,7 +60,7 @@ sequenceDiagram
     participant CTRL as ControlPacketDispatcher
     participant GRP as GroupPacketDispatcher
 
-    WS-->>IR: envelope
+    WS-->>IR: envelope (only after challenge-response sign-in)
     IR->>IP: process
     IP->>H: decrypt/decode packet
     H->>ROUTE: IncomingPacket

@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptanc
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class GatewayPendingRequestRegistry {
@@ -37,9 +37,10 @@ internal class GatewayPendingRequestRegistry {
 
             try {
                 send()
-                withTimeout(timeoutMilliseconds.milliseconds) {
-                    deferred.await()
-                }
+                // A missing acknowledgement is an ordinary send failure. A TimeoutCancellationException would
+                // look like a cancellation to every caller and stop the outbox instead of failing one packet.
+                withTimeoutOrNull(timeoutMilliseconds.milliseconds) { deferred.await() }
+                    ?: throw GatewayAcknowledgementTimeoutException("Gateway did not acknowledge the envelope")
             } finally {
                 envelopeAcceptanceMutex.withLock {
                     pendingEnvelopeAcceptances.remove(envelopeId)
@@ -66,9 +67,8 @@ internal class GatewayPendingRequestRegistry {
 
             try {
                 send()
-                withTimeout(timeoutMilliseconds.milliseconds) {
-                    deferred.await()
-                }
+                withTimeoutOrNull(timeoutMilliseconds.milliseconds) { deferred.await() }
+                    ?: throw GatewayAcknowledgementTimeoutException("Gateway did not issue a blob upload ticket")
             } finally {
                 blobTicketMutex.withLock {
                     pendingBlobTickets.remove(requestId)
@@ -80,6 +80,16 @@ internal class GatewayPendingRequestRegistry {
         envelopeAcceptanceMutex.withLock {
             pendingEnvelopeAcceptances[acceptance.envelopeId]
         }?.complete(acceptance)
+    }
+
+    /** The gateway refused this envelope; its sender learns it at once instead of after the timeout. */
+    suspend fun rejectEnvelopeAcceptance(
+        envelopeId: String,
+        error: Throwable
+    ) {
+        envelopeAcceptanceMutex.withLock {
+            pendingEnvelopeAcceptances[envelopeId]
+        }?.completeExceptionally(error)
     }
 
     suspend fun completeBlobUploadTicket(ticket: GatewayBlobUploadTicket) {
@@ -120,3 +130,8 @@ internal class GatewayPendingRequestRegistry {
         }
     }
 }
+
+/** The gateway did not answer a request in time; an ordinary failure, never a cancellation. */
+internal class GatewayAcknowledgementTimeoutException(
+    message: String
+) : IllegalStateException(message)

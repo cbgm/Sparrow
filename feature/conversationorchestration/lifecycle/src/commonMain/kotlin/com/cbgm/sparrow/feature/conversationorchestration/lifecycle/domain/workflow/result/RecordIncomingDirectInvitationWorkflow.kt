@@ -34,7 +34,12 @@ class RecordIncomingDirectInvitationWorkflow internal constructor(
                     ).getOrThrow()
                 )
             is Step.RecordInvitation -> {
-                recordIncomingDirectInvitation(step.command.result, step.command.peerDisplayName).getOrThrow()
+                recordIncomingDirectInvitation(
+                    step.command.result,
+                    step.command.peerDisplayName,
+                    step.command.phoneContactPeerId,
+                    step.command.phoneContactName
+                ).getOrThrow()
                 Outcome.InvitationRecorded
             }
             is Step.DeclineExchange -> {

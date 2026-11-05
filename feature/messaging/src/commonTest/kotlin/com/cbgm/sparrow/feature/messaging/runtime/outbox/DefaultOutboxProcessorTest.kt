@@ -7,6 +7,7 @@ import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -46,6 +47,21 @@ class DefaultOutboxProcessorTest {
         assertEquals(1, outcome.failedCount)
         assertEquals(listOf("processing", "failed"), listener.events)
         assertEquals("network down", outbox.item.lastError)
+    }
+
+    @Test
+    fun aTimeoutFromTheSendFailsThePacketInsteadOfCancellingTheOutbox() = runTest {
+        val outbox = RecordingOutbox()
+        val listener = RecordingDeliveryListener(outbox)
+        val processor = DefaultOutboxProcessor(
+            protocolOutbox = outbox,
+            send = { Result.failure(CancellationException("Timed out waiting for 10000 ms")) },
+            deliveryStateListener = listener
+        )
+        val outcome = processor.processPending(20).getOrThrow()
+        assertEquals(1, outcome.failedCount)
+        assertEquals(listOf("processing", "failed"), listener.events)
+        assertEquals(OutboxStatus.FAILED, outbox.item.status)
     }
 
     @Test

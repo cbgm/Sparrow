@@ -43,9 +43,56 @@ internal class IdentityPeerRepositoryImpl(
             contactDataSource.deleteById(merge.fromPeerId)
         }
 
+    override suspend fun isLinkablePhoneContact(peerId: String): Result<Boolean> =
+        safeSuspendCall { linkablePhoneContact(peerId) != null }
+
+    override suspend fun linkPhoneContact(
+        peerId: String,
+        phoneContactPeerId: String,
+        updatedAtEpochMilliseconds: Long
+    ): Result<Unit> =
+        safeSuspendCall {
+            if (peerId == phoneContactPeerId) return@safeSuspendCall
+            val phoneContact = linkablePhoneContact(phoneContactPeerId) ?: return@safeSuspendCall
+            val contact = contactDataSource.findContactOnlyById(peerId) ?: return@safeSuspendCall
+
+            // Unique device link and phone numbers: the phone book row goes before its data moves over.
+            contactDataSource.deleteById(phoneContactPeerId)
+            val movedPhoneNumbers =
+                phoneContact.phoneNumbers
+                    .filterNot { moved ->
+                        contact.phoneNumbers.any { own -> phoneNumbersEquivalent(own.value, moved.value) }
+                    }.map { moved ->
+                        moved.copy(
+                            id = IdGenerator.generate(),
+                            contactId = peerId,
+                            updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                        )
+                    }
+            contactDataSource.upsertPhoneNumbers(movedPhoneNumbers)
+            val preferredPhoneNumberId =
+                phoneContact.contact.preferredPhoneNumberId
+                    ?.let { preferredId -> phoneContact.phoneNumbers.firstOrNull { it.id == preferredId } }
+                    ?.let { preferred ->
+                        (contact.phoneNumbers + movedPhoneNumbers)
+                            .firstOrNull { phoneNumbersEquivalent(it.value, preferred.value) }
+                            ?.id
+                    }
+            contactDataSource.upsertContact(
+                contact.contact.copy(
+                    displayName = phoneContact.contact.displayName ?: contact.contact.displayName,
+                    deviceContactId = phoneContact.contact.deviceContactId,
+                    deviceContactLinkStatus = phoneContact.contact.deviceContactLinkStatus,
+                    preferredPhoneNumberId = preferredPhoneNumberId ?: contact.contact.preferredPhoneNumberId,
+                    updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+                )
+            )
+        }
+
     override suspend fun updateIncomingMetadata(
         peerId: String,
         phoneNumber: String,
+        storePhoneNumber: Boolean,
         updatedAtEpochMilliseconds: Long
     ): Result<Unit> =
         safeSuspendCall {
@@ -54,6 +101,7 @@ internal class IdentityPeerRepositoryImpl(
                 phoneNumber = phoneNumber,
                 updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
             )
+            if (!storePhoneNumber) return@safeSuspendCall
 
             val contact = contactDataSource.findContactOnlyById(peerId) ?: return@safeSuspendCall
             if (contact.phoneNumbers.any { phoneNumbersEquivalent(it.value, phoneNumber) }) {
@@ -138,6 +186,11 @@ internal class IdentityPeerRepositoryImpl(
                     phoneNumbersEquivalent(stored.normalizedValue, remotePhoneNumber)
             }
         }
+
+    /** A contact that holds only phone book data: no keys, chats, routes or invitations refer to it. */
+    private suspend fun linkablePhoneContact(peerId: String) =
+        contactDataSource.findContactOnlyById(peerId)
+            ?.takeIf { contact -> contact.phoneNumbers.isNotEmpty() && !contactDataSource.isReferenced(peerId) }
 
     private fun phoneNumbersEquivalent(first: String, second: String): Boolean {
         val firstNormalized = phoneNumberNormalizer.normalize(first).getOrNull() ?: return false

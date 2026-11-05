@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,12 +62,14 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationLauncher
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationResult
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.presentation.overview.components.AppLockTimeoutDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
@@ -78,6 +82,12 @@ import com.cbgm.sparrow.resources.feature_applock_disable_reason
 import com.cbgm.sparrow.resources.feature_applock_enable_reason
 import com.cbgm.sparrow.resources.feature_applock_prompt_title
 import com.cbgm.sparrow.resources.feature_applock_subtitle
+import com.cbgm.sparrow.resources.feature_applock_timeout
+import com.cbgm.sparrow.resources.feature_applock_timeout_five_minutes
+import com.cbgm.sparrow.resources.feature_applock_timeout_immediately
+import com.cbgm.sparrow.resources.feature_applock_timeout_on_restart
+import com.cbgm.sparrow.resources.feature_applock_timeout_one_minute
+import com.cbgm.sparrow.resources.feature_applock_timeout_thirty_minutes
 import com.cbgm.sparrow.resources.feature_applock_title
 import com.cbgm.sparrow.resources.feature_applock_unavailable
 import com.cbgm.sparrow.resources.feature_attachments_storage
@@ -110,6 +120,8 @@ import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
 import com.cbgm.sparrow.resources.feature_settings_messaging
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
+import com.cbgm.sparrow.resources.feature_settings_preferred_node
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_subtitle
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
@@ -141,6 +153,8 @@ fun SettingsScreen(
     val identityMode = remember(uiState) { derivedStateOf { uiState.value.directIdentitySetupMode } }
     val blockUnknownInvites = remember(uiState) { derivedStateOf { uiState.value.blockUnknownContactInvites } }
     val appLockEnabled = remember(uiState) { derivedStateOf { uiState.value.appLockEnabled } }
+    val appLockTimeout = remember(uiState) { derivedStateOf { uiState.value.appLockTimeout } }
+    val timeoutPickerVisible = remember(uiState) { derivedStateOf { uiState.value.showAppLockTimeoutPicker } }
     val blockedCount = remember(uiState) { derivedStateOf { uiState.value.blockedContactCount } }
     val semanticEnabled = remember(uiState) { derivedStateOf { uiState.value.localEmbeddingState.semanticSearchEnabled } }
     val semanticState = remember(uiState) { derivedStateOf { uiState.value.semanticSearchState } }
@@ -179,10 +193,21 @@ fun SettingsScreen(
                 subtitle = stringResource(Res.string.feature_settings_control_planes_settings_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.ControlPlanesClicked) }
             )
+
+            SettingsDivider()
+
+            SettingsRow(
+                icon = Icons.Default.Dns,
+                title = stringResource(Res.string.feature_settings_preferred_node),
+                subtitle = stringResource(Res.string.feature_settings_preferred_node_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.PreferredNodeClicked) }
+            )
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_security)) {
             AppLockSettingsRow(appLockEnabled, onUiEvent)
+
+            AppLockTimeoutRow(appLockEnabled, appLockTimeout, onUiEvent)
 
             SettingsDivider()
 
@@ -255,6 +280,7 @@ fun SettingsScreen(
     }
 
     SettingsLanguagePicker(pickerVisible, language, onUiEvent)
+    AppLockTimeoutPicker(timeoutPickerVisible, appLockTimeout, onUiEvent)
 }
 
 @Composable
@@ -477,6 +503,50 @@ private fun DeveloperSettingsSection(
         }
     }
 }
+
+@Composable
+private fun AppLockTimeoutRow(
+    enabled: State<Boolean>,
+    timeout: State<AppLockTimeout>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    if (enabled.value) {
+        SettingsDivider()
+
+        SettingsRow(
+            icon = Icons.Default.Timer,
+            title = stringResource(Res.string.feature_applock_timeout),
+            subtitle = appLockTimeoutLabel(timeout.value),
+            onClick = { onUiEvent(SettingsUiEvent.AppLockTimeoutClicked) }
+        )
+    }
+}
+
+@Composable
+private fun AppLockTimeoutPicker(
+    visible: State<Boolean>,
+    timeout: State<AppLockTimeout>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    if (visible.value) {
+        AppLockTimeoutDialog(
+            currentTimeout = timeout.value,
+            label = { appLockTimeoutLabel(it) },
+            onTimeoutSelected = { onUiEvent(SettingsUiEvent.AppLockTimeoutSelected(it)) },
+            onDismiss = { onUiEvent(SettingsUiEvent.AppLockTimeoutPickerDismissed) }
+        )
+    }
+}
+
+@Composable
+private fun appLockTimeoutLabel(timeout: AppLockTimeout): String =
+    when (timeout) {
+        AppLockTimeout.IMMEDIATELY -> stringResource(Res.string.feature_applock_timeout_immediately)
+        AppLockTimeout.ONE_MINUTE -> stringResource(Res.string.feature_applock_timeout_one_minute)
+        AppLockTimeout.FIVE_MINUTES -> stringResource(Res.string.feature_applock_timeout_five_minutes)
+        AppLockTimeout.THIRTY_MINUTES -> stringResource(Res.string.feature_applock_timeout_thirty_minutes)
+        AppLockTimeout.ON_RESTART -> stringResource(Res.string.feature_applock_timeout_on_restart)
+    }
 
 @Composable
 private fun SettingsLanguagePicker(

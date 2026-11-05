@@ -544,6 +544,12 @@ internal class GroupMembershipRepositoryImpl(
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult> = operations.promoteMember(groupId, contactId, context)
 
+    override suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit> = operations.rotateAfterAdminLeft(groupId, expectedEpoch, context)
+
     override suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,

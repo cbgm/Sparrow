@@ -80,7 +80,7 @@ class ParkedEnvelopesTest {
         assertNull(checkGroupReady(GROUP_ID, groupMessage(epoch = 2)).getOrThrow())
 
         memberships.currentEpochs.clear()
-        assertNull(GroupPacketEpochPolicy.requiredEpoch(removal()))
+        assertNull(GroupPacketEpochPolicy.requiredEpoch(removal(), 1))
         assertNull(checkGroupReady(GROUP_ID, removal()).getOrThrow())
     }
 

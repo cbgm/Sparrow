@@ -126,13 +126,13 @@ internal class IdentityExchangeDataSource(
                 val invitationId = IdGenerator.generate()
                 val challenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val expiresAt = now + INVITATION_LIFETIME_MILLISECONDS
-                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
+                // The first invite travels unencrypted, so it carries no picture: the encrypted ready packet does.
                 val packet = invitationRequestProtocol.createPacket(
                     invitationId = invitationId,
                     displayName = invitationSenderLabel,
                     createdAtEpochMilliseconds = now,
                     expiresAtEpochMilliseconds = expiresAt,
-                    profilePicture = profilePicture,
+                    profilePicture = ProfilePictureMetadata(),
                     inviteChallenge = challenge,
                     encryptionPublicKey = localIdentity.encryptionPublicKey,
                     signingKeyPair = signingKeyPair,
@@ -1229,6 +1229,7 @@ internal class IdentityExchangeDataSource(
         val readyPacket = invitationHandshakeProtocol.createReady(
             invitationId = acceptance.exchangeId,
             readyAtEpochMilliseconds = readyAt,
+            profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() },
             responseChallenge = acceptance.responseChallenge,
             acceptedResponderEncryptionPublicKey = acceptance.responderEncryptionPublicKey,
             acceptedResponderSigningPublicKey = acceptance.responderSigningPublicKey,

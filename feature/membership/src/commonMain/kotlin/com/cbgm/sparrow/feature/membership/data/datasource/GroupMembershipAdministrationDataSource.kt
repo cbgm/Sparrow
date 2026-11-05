@@ -23,6 +23,12 @@ internal class GroupMembershipAdministrationDataSource(
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult> = promotionDataSource.promoteMember(groupId, contactId, context)
 
+    suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit> = promotionDataSource.rotateAfterAdminLeft(groupId, expectedEpoch, context)
+
     suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,

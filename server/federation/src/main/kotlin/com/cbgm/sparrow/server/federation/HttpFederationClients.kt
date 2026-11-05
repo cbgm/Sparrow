@@ -29,13 +29,23 @@ import kotlinx.coroutines.CancellationException
 
 class HttpPresenceDirectoryClient(
     private val httpClient: HttpClient,
-    private val endpointPool: ControlPlaneEndpointPool
+    private val endpointPool: ControlPlaneEndpointPool,
+    private val signer: NodeRequestSigner
 ) : PresenceDirectoryClient {
     override suspend fun resolve(routingId: String): ClientRoutingResult {
         var emptyResult: ClientRoutingResult? = null
         for (baseUrl in endpointPool.ordered()) {
             try {
-                val response = httpClient.get("${baseUrl.trimEnd('/')}/v1/routes/$routingId")
+                val path = "/v1/routes/$routingId"
+                // Route lookups are signed: only nodes may ask who is online.
+                val authentication = signer.sign("GET", path, "")
+                val response =
+                    httpClient.get("${baseUrl.trimEnd('/')}$path") {
+                        header(NodeRequestHeaders.NODE_ID, authentication.nodeId)
+                        header(NodeRequestHeaders.TIMESTAMP, authentication.timestampEpochMilliseconds)
+                        header(NodeRequestHeaders.NONCE, authentication.nonce)
+                        header(NodeRequestHeaders.SIGNATURE, authentication.signature)
+                    }
                 if (!response.status.isSuccess()) {
                     if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
                         endpointPool.markUnavailable(baseUrl)

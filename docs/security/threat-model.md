@@ -8,13 +8,41 @@ The design aims to protect against:
 
 - a server reading encrypted Direct/Group message plaintext in the normal encrypted path;
 - an unauthenticated party forging registered Community Node requests;
+- a client signing in to a gateway as another user's routing ID (sessions need a signature over a
+  single-use gateway challenge with the key the routing ID is derived from);
+- binding one's own push token to another user's routing ID to receive their wake-ups and read or delete
+  their pending envelopes (push registrations need a fresh signature with the routing ID's key);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
+- posing as a phone book contact by claiming their number in an invitation (only keys file an invitation
+  under a known contact; a claimed number is shown as unverified, the invitation counts as unknown, and
+  a matching phone book contact is linked only when the user accepts);
+- getting around a block by writing the blocked number differently (`0151...`, `+49151...`) or by claiming it
+  from a new installation (both resolve to the blocked contact; a sender that claims no number or another one
+  still arrives as unknown, which "block unknown invites" covers);
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
-- advertising a phone alias with a phone verification token for a different number (the one-time
-  token from sign-up must match the alias when the presence directory has a verifier
-  configured).
+- taking over a phone alias another device holds (an alias stays with the first device that claims
+  it; only a phone verification token for that number moves it). The exception are the operator's
+  configured test numbers, which any device can take;
+- a Community Node waking devices whose mailbox it does not hold (push wake-ups need the device's
+  signed wake ticket for that node) or sending indicator events for clients that are not connected
+  through it;
+- a node directory with an expired registry certificate, or one signed under a different registry
+  root than the configured or first-seen one;
+- a Community Node learning its users' phone numbers from their route registrations: phone aliases and the phone
+  verification token are sealed for the Control Plane's presence directory, whose key is signed into the node
+  directory. A gateway learns a user's alias only when that user sends a first invite;
+- looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
+  signed node requests and the Control Plane's push service, and never return a device's phone aliases.
+
+Servers keep as little about users as they can: mailboxes store no client address (the per-client creation
+quota uses an HMAC of the address with an in-memory key that changes daily), mailboxes live at most 31 days
+and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
+container logs are capped at 3 × 10 MB per service.
+
+Anyone can run a Community Node; registering one gives no power over other nodes' clients. Whoever runs
+the gateway a client connects through still sees that client's network address.
 
 ## Infrastructure can still observe metadata
 
@@ -25,6 +53,10 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - routing IDs and delivery timing within the protocol's needs;
 - node connection counts/load;
 - encrypted envelope sizes;
+- the first contact invite, which is unencrypted because the recipient's key is not known yet: the sender's
+  phone number, public keys and invite challenge (no profile picture; it follows in the encrypted ready packet);
+- group invites, join requests and their answers sent to a contact whose key is not known yet. Answers to a
+  contact invite, and group invite packets to a contact with a known key, are encrypted;
 - encrypted attachment/blob sizes and blob-transfer timing.
 
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase

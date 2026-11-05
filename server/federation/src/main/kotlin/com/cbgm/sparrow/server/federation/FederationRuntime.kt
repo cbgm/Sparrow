@@ -57,7 +57,12 @@ internal fun createFederationRuntime(
             config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) },
             discoveryFile = discoveryFile
         )
-    val registry = CachingNodeRegistryClient(httpClient, registryEndpointPool)
+    val registry =
+        CachingNodeRegistryClient(
+            httpClient = httpClient,
+            endpointPool = registryEndpointPool,
+            configuredRootNodeIds = config.controlPlaneRootNodeIds
+        )
     val localGateway =
         HttpLocalGatewayClient(
             httpClient = httpClient,
@@ -74,7 +79,7 @@ internal fun createFederationRuntime(
         FederationRouter(
             localNodeId = identity.nodeId,
             presenceDirectory =
-                HttpPresenceDirectoryClient(httpClient, presenceEndpointPool),
+                HttpPresenceDirectoryClient(httpClient, presenceEndpointPool, NodeRequestSigner(identity)),
             nodeRegistry = registry,
             localGateway = localGateway,
             remoteFederation = remoteFederation,

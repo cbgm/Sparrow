@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChatDao {
+    @Query("SELECT EXISTS(SELECT 1 FROM conversations)")
+    suspend fun hasConversations(): Boolean
+
     @Query(
         """
         SELECT *

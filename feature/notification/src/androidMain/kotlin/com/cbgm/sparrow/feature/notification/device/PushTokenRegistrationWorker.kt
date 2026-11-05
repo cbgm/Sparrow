@@ -5,8 +5,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.notification.domain.usecase.RegisterPushTokenUseCase
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
 import com.cbgm.sparrow.feature.transport.push.PushPlatform
 import com.cbgm.sparrow.protocol.identity.LocalIdentityUnavailableException
 import kotlinx.coroutines.CancellationException
@@ -15,7 +15,7 @@ class PushTokenRegistrationWorker(
     appContext: Context,
     workerParameters: WorkerParameters,
     private val registerPushToken: RegisterPushTokenUseCase,
-    private val controlPlaneConfiguration: ControlPlaneConfiguration
+    private val prepareControlPlane: PrepareControlPlaneUseCase
 ) : CoroutineWorker(appContext, workerParameters) {
     private val logger = SparrowLog.withTag("PushTokenRegistrationWorker")
 
@@ -26,7 +26,7 @@ class PushTokenRegistrationWorker(
 
         // Token refresh may also run in a process with no UI initialization.
         return runCatching {
-            controlPlaneConfiguration.initialize()
+            prepareControlPlane().getOrThrow()
             registerPushToken(
                 token = token,
                 platform = PushPlatform.ANDROID

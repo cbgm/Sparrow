@@ -20,8 +20,19 @@ enum class PresenceRegistrationResult {
     PHONE_VERIFICATION_FAILED
 }
 
+/** [acceptedAliasIndexes] are the positions of the sealed alias claim's aliases a Control Plane accepted. */
+data class PresenceRegistration(
+    val result: PresenceRegistrationResult,
+    val acceptedAliasIndexes: List<Int> = emptyList()
+)
+
 interface PresenceClient {
-    suspend fun register(registration: ClientRouteRegistration): PresenceRegistrationResult
+    suspend fun register(registration: ClientRouteRegistration): PresenceRegistration
+
+    suspend fun ownsAlias(
+        alias: String,
+        routingId: String
+    ): Boolean
 
     suspend fun remove(
         routingId: String,

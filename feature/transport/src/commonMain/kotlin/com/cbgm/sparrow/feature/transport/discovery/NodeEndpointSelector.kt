@@ -5,9 +5,14 @@ import com.cbgm.sparrow.feature.transport.config.TransportConfig
 class NodeEndpointSelector(
     private val config: TransportConfig
 ) {
+    /**
+     * Orders the gateways by load. The [preferredNodeId] goes first while it is listed; the others
+     * stay behind it so a failed favourite fails over to them as usual.
+     */
     fun select(
         signedDirectory: SignedNodeDirectory,
-        localRoutingId: String
+        localRoutingId: String,
+        preferredNodeId: String? = null
     ): List<NodeEndpoint> {
         require(localRoutingId.isNotBlank()) {
             "Local routing ID must not be blank"
@@ -42,7 +47,7 @@ class NodeEndpointSelector(
             "Node directory does not contain a compatible gateway"
         }
 
-        return endpoints
+        return endpoints.sortedByDescending { endpoint -> endpoint.nodeId == preferredNodeId }
     }
 
     private fun stableSelectionScore(

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.result
 
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.LinkPhoneContactUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
@@ -15,17 +16,19 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
 import kotlin.reflect.KClass
 
 /**
- * incoming, accepted: AcceptExchange -> ActivateConversation
+ * incoming, accepted: AcceptExchange -> [LinkPhoneContact] -> ActivateConversation
  * incoming, declined: DeclineExchange -> [BlockContact]
  * outgoing, declined: DiscardWaitingMessages
  *
  * Both identity setup modes create the receiver's chat and release its queued messages on acceptance.
+ * Accepting an invitation that matched a phone book contact by its claimed number links the two.
  */
 class HandleDirectInvitationResultWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val acceptIdentityExchange: AcceptIdentityExchangeUseCase,
     private val declineIdentityExchange: DeclineIdentityExchangeUseCase,
-    private val blockContact: BlockContactUseCase
+    private val blockContact: BlockContactUseCase,
+    private val linkPhoneContact: LinkPhoneContactUseCase
 ) : WorkflowStateMachine<
         LifecycleCommand.HandleDirectInvitationResult,
         HandleDirectInvitationResultWorkflow.Step,
@@ -54,6 +57,10 @@ class HandleDirectInvitationResultWorkflow internal constructor(
                 acceptIdentityExchange(result.invitationId).getOrThrow()
                 Outcome.ExchangeAccepted
             }
+            is Step.LinkPhoneContact -> {
+                linkPhoneContact(result.peerId, step.phoneContactPeerId).getOrThrow()
+                Outcome.PhoneContactLinked
+            }
             is Step.ActivateConversation -> {
                 engine.run(MessageCommand.ActivateAuthorizedConversation(result.peerId)).getOrThrow()
                 Outcome.Done
@@ -76,7 +83,13 @@ class HandleDirectInvitationResultWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            Outcome.ExchangeAccepted -> Transition.Next(Step.ActivateConversation(step.command))
+            Outcome.ExchangeAccepted ->
+                step.command.result.phoneContactPeerId
+                    ?.let { phoneContactPeerId ->
+                        Transition.Next(Step.LinkPhoneContact(phoneContactPeerId, step.command))
+                    }
+                    ?: Transition.Next(Step.ActivateConversation(step.command))
+            Outcome.PhoneContactLinked -> Transition.Next(Step.ActivateConversation(step.command))
             Outcome.ExchangeDeclined -> afterExchangeDeclined(step.command)
             Outcome.Done -> Transition.Complete()
         }
@@ -92,6 +105,11 @@ class HandleDirectInvitationResultWorkflow internal constructor(
         val command: LifecycleCommand.HandleDirectInvitationResult
 
         data class AcceptExchange(
+            override val command: LifecycleCommand.HandleDirectInvitationResult
+        ) : Step
+
+        data class LinkPhoneContact(
+            val phoneContactPeerId: String,
             override val command: LifecycleCommand.HandleDirectInvitationResult
         ) : Step
 
@@ -119,6 +137,8 @@ class HandleDirectInvitationResultWorkflow internal constructor(
 
     sealed interface Outcome {
         data object ExchangeAccepted : Outcome
+
+        data object PhoneContactLinked : Outcome
 
         data object ExchangeDeclined : Outcome
 

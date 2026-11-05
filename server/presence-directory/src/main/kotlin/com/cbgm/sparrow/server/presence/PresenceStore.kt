@@ -12,7 +12,10 @@ private const val DEFAULT_MAXIMUM_TTL_MILLISECONDS = 120_000L
 interface PresenceStorage : AutoCloseable {
     val persistenceMode: String
 
-    suspend fun register(registration: ClientRouteRegistration): PresenceResult
+    suspend fun register(
+        registration: ClientRouteRegistration,
+        claims: AliasClaims
+    ): PresenceResult
 
     suspend fun remove(routingId: String, connectionId: String)
 
@@ -26,20 +29,39 @@ class PresenceStore(
     private val now: () -> Long = System::currentTimeMillis
 ) : PresenceStorage {
     private val routes = ConcurrentHashMap<String, ConcurrentHashMap<String, ClientRoute>>()
+    private val aliasOwners = ConcurrentHashMap<String, AliasBinding>()
+    private val lock = Any()
     override val persistenceMode: String = "memory"
 
-    override suspend fun register(registration: ClientRouteRegistration): PresenceResult {
-        val route = registration.route
-        val currentTime = now()
-        validatePresenceRegistration(
-            registration,
-            maximumTtlMilliseconds,
-            currentTime
-        )?.let { return it }
+    override suspend fun register(
+        registration: ClientRouteRegistration,
+        claims: AliasClaims
+    ): PresenceResult =
+        synchronized(lock) {
+            val currentTime = now()
+            validatePresenceRegistration(
+                registration,
+                claims.aliases,
+                maximumTtlMilliseconds,
+                currentTime
+            ) ?: registerValidated(registration.route.withClaimedAliases(claims), claims, currentTime)
+        }
 
-        val routingIds = listOf(route.routingId) + route.aliases.orEmpty()
+    private fun registerValidated(
+        route: ClientRoute,
+        claims: AliasClaims,
+        currentTime: Long
+    ): PresenceResult {
+        purgeExpired()
+        aliasOwners.entries.removeIf { (_, binding) -> binding.expiresAtEpochMilliseconds <= currentTime }
+        val aliases =
+            route.aliases.orEmpty().filter { alias ->
+                claims.allows(alias, route.routingId, aliasOwners[alias]?.owner)
+            }
+        val routingIds = listOf(route.routingId) + aliases
         val newestGeneration =
             routingIds
+                .filter { routingId -> routingId == route.routingId || aliasOwners[routingId]?.owner == route.routingId }
                 .mapNotNull { routingId -> routes[routingId]?.values?.maxOfOrNull(ClientRoute::generation) }
                 .maxOrNull()
                 ?: -1L
@@ -47,6 +69,9 @@ class PresenceStore(
         return when {
             route.generation < newestGeneration -> PresenceResult.Rejected("STALE_GENERATION")
             else -> {
+                aliases
+                    .filter { alias -> aliasOwners[alias]?.owner != route.routingId }
+                    .forEach { alias -> routes.remove(alias) }
                 routingIds.forEach { routingId ->
                     val deviceRoutes = routes.computeIfAbsent(routingId) { ConcurrentHashMap() }
                     if (route.generation > (
@@ -58,15 +83,28 @@ class PresenceStore(
                     }
                     deviceRoutes[route.connectionId] = route
                 }
-                PresenceResult.Accepted
+                aliases.forEach { alias ->
+                    aliasOwners[alias] =
+                        AliasBinding(route.routingId, currentTime + ALIAS_BINDING_LIFETIME_MILLISECONDS)
+                }
+                PresenceResult.Accepted(aliases)
             }
         }
     }
 
     override suspend fun remove(routingId: String, connectionId: String) {
+        synchronized(lock) { removeRoute(routingId, connectionId) }
+    }
+
+    private fun removeRoute(routingId: String, connectionId: String) {
         val route = routes[routingId]?.get(connectionId)
-        val routingIds = listOf(route?.routingId ?: routingId) + route?.aliases.orEmpty()
-        routingIds.distinct().forEach { currentRoutingId ->
+        val deviceRoutingId = route?.routingId ?: routingId
+        // Connection IDs are chosen by clients, so an alias only loses a route its own device stored.
+        val aliases =
+            route?.aliases.orEmpty().filter { alias ->
+                routes[alias]?.get(connectionId)?.routingId == deviceRoutingId
+            }
+        (listOf(deviceRoutingId) + aliases).distinct().forEach { currentRoutingId ->
             routes[currentRoutingId]?.let { deviceRoutes ->
                 deviceRoutes.remove(connectionId)
                 if (deviceRoutes.isEmpty()) routes.remove(currentRoutingId, deviceRoutes)
@@ -99,10 +137,17 @@ class PresenceStore(
     }
 
     override fun close() = Unit
+
+    private data class AliasBinding(
+        val owner: String,
+        val expiresAtEpochMilliseconds: Long
+    )
 }
 
+/** The route signature covers the route without aliases; the aliases come signed in the [AliasClaims]. */
 internal fun validatePresenceRegistration(
     registration: ClientRouteRegistration,
+    aliases: List<String>,
     maximumTtlMilliseconds: Long,
     currentTime: Long
 ): PresenceResult.Rejected? {
@@ -114,10 +159,10 @@ internal fun validatePresenceRegistration(
         ) ->
             PresenceResult.Rejected("INVALID_ROUTING_ID")
 
-        route.aliases.orEmpty().any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ->
+        aliases.any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ->
             PresenceResult.Rejected("INVALID_ROUTING_ALIAS")
 
-        route.aliases.orEmpty().distinct().size != route.aliases.orEmpty().size ->
+        aliases.distinct().size != aliases.size ->
             PresenceResult.Rejected("DUPLICATE_ROUTING_ALIAS")
 
         route.expiresAtEpochMilliseconds <= currentTime -> PresenceResult.Rejected("ROUTE_EXPIRED")
@@ -133,8 +178,15 @@ internal fun validatePresenceRegistration(
     }
 }
 
+/** Stores the route under the claimed aliases; aliases the route itself names (older apps) are ignored. */
+internal fun ClientRoute.withClaimedAliases(claims: AliasClaims): ClientRoute =
+    copy(aliases = claims.aliases.takeIf(List<String>::isNotEmpty))
+
 sealed interface PresenceResult {
-    data object Accepted : PresenceResult
+    /** [aliases] are the requested aliases the route was stored under; the others were refused. */
+    data class Accepted(
+        val aliases: List<String>
+    ) : PresenceResult
 
     data class Rejected(
         val code: String

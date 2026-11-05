@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.observability.installServerObservability
+import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.NodeDescriptorResolver
@@ -22,7 +23,10 @@ internal data class PresenceRuntime(
     val httpClient: HttpClient,
     val registryUrl: String,
     val nodeRequestAuthorizer: NodeRequestAuthorizer,
-    val phoneVerification: PhoneVerification
+    val phoneVerification: PhoneVerification,
+    /** Lets the control plane's push service resolve routes; nodes sign their requests instead. */
+    val internalApiToken: String? = null,
+    val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys.generate()
 )
 
 internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {
@@ -41,7 +45,8 @@ internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {
         httpClient = httpClient,
         registryUrl = registryUrl,
         nodeRequestAuthorizer = NodeRequestAuthorizer(descriptorResolver),
-        phoneVerification = createPhoneVerification()
+        phoneVerification = createPhoneVerification(),
+        internalApiToken = ServiceEnvironment.secret("PRESENCE_INTERNAL_API_TOKEN")
     )
 }
 

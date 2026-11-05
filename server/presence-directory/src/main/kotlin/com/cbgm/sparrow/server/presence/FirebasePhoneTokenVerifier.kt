@@ -40,7 +40,10 @@ internal fun createPhoneVerification(
             val auth by lazy { firebaseAuth(projectId) }
             CachingPhoneTokenVerifier(FirebasePhoneTokenVerifier { auth })
         }
-    return PhoneVerification(verifier = verifier)
+    return PhoneVerification(
+        verifier = verifier,
+        testAliases = testPhoneAliases(environment("PRESENCE_TEST_PHONE_ALIASES"))
+    )
 }
 
 private fun firebaseAuth(projectId: String): FirebaseAuth {

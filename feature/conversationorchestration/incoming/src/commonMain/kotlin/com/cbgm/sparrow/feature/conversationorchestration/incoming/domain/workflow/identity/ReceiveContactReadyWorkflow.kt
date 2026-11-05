@@ -4,6 +4,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeBindingUseCase
@@ -11,11 +12,15 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityReadyUseC
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationHandshakeProtocol
 import kotlin.reflect.KClass
 
-/** FindExchange -> VerifyReady -> ReceiveReady. READY completes the inviter's side of the exchange. */
+/**
+ * FindExchange -> VerifyReady -> ReceiveReady -> ApplyProfilePicture. READY completes the inviter's side of the
+ * exchange and carries the inviter's picture, which the unencrypted first invite leaves out.
+ */
 class ReceiveContactReadyWorkflow internal constructor(
     private val getIdentityExchangeBinding: GetIdentityExchangeBindingUseCase,
     private val invitationHandshakeProtocol: ContactInvitationHandshakeProtocol,
-    private val receiveIdentityReady: ReceiveIdentityReadyUseCase
+    private val receiveIdentityReady: ReceiveIdentityReadyUseCase,
+    private val applyPeerProfilePicture: ApplyPeerProfilePictureUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveContactReady,
         ReceiveContactReadyWorkflow.Step,
@@ -59,6 +64,10 @@ class ReceiveContactReadyWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.ReadyReceived
             }
+            is Step.ApplyProfilePicture -> {
+                applyPeerProfilePicture(context.contactId, packet.profilePicture)
+                Outcome.ProfilePictureApplied
+            }
         }
     }
 
@@ -66,7 +75,8 @@ class ReceiveContactReadyWorkflow internal constructor(
         when (outcome) {
             is Outcome.ExchangeFound -> Transition.Next(Step.VerifyReady(outcome.binding, step.command))
             Outcome.ReadyVerified -> Transition.Next(Step.ReceiveReady(step.command))
-            Outcome.ReadyReceived -> Transition.Complete()
+            Outcome.ReadyReceived -> Transition.Next(Step.ApplyProfilePicture(step.command))
+            Outcome.ProfilePictureApplied -> Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {
@@ -84,6 +94,10 @@ class ReceiveContactReadyWorkflow internal constructor(
         data class ReceiveReady(
             override val command: IncomingCommand.ReceiveContactReady
         ) : Step
+
+        data class ApplyProfilePicture(
+            override val command: IncomingCommand.ReceiveContactReady
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -94,5 +108,7 @@ class ReceiveContactReadyWorkflow internal constructor(
         data object ReadyVerified : Outcome
 
         data object ReadyReceived : Outcome
+
+        data object ProfilePictureApplied : Outcome
     }
 }

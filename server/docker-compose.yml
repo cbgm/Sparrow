@@ -12,8 +12,16 @@ x-service: &sparrow-service
     retries: 6
     start_period: 20s
 
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   node-registry-database:
+    logging: *default-logging
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -31,6 +39,7 @@ services:
       retries: 12
 
   node-registry:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..
@@ -41,6 +50,8 @@ services:
       PORT: 8090
       REGISTRY_IDENTITY_PATH: /data/registry.identity
       NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/sparrow_registry
+      # The presence directory's alias claim key, signed into the node directory.
+      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       NODE_REGISTRY_DATABASE_USER: sparrow_registry
       NODE_REGISTRY_DATABASE_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS:-30}
@@ -59,6 +70,7 @@ services:
         condition: service_healthy
 
   presence-redis:
+    logging: *default-logging
     image: redis:7.4-alpine
     restart: unless-stopped
     command:
@@ -82,6 +94,7 @@ services:
       retries: 12
 
   presence-directory:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..
@@ -96,6 +109,8 @@ services:
       PRESENCE_REDIS_URL: redis://presence-redis:6379
       PRESENCE_REDIS_PASSWORD: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
       PRESENCE_MAXIMUM_TTL_MILLISECONDS: 120000
+      PRESENCE_TEST_PHONE_ALIASES: ${PRESENCE_TEST_PHONE_ALIASES:-}
+      PRESENCE_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
     volumes:
       - type: bind
         source: ${FIREBASE_ADMIN_CREDENTIALS:?Define FIREBASE_ADMIN_CREDENTIALS in server/.env}
@@ -110,6 +125,7 @@ services:
         condition: service_healthy
 
   mailbox-database:
+    logging: *default-logging
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -127,6 +143,7 @@ services:
       retries: 12
 
   mailbox:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..
@@ -154,6 +171,7 @@ services:
         condition: service_healthy
 
   push-database:
+    logging: *default-logging
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -171,6 +189,7 @@ services:
       retries: 12
 
   push:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..
@@ -205,6 +224,7 @@ services:
         condition: service_healthy
 
   federation-database:
+    logging: *default-logging
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -222,6 +242,7 @@ services:
       retries: 12
 
   federation:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..
@@ -260,6 +281,7 @@ services:
         condition: service_healthy
 
   gateway:
+    logging: *default-logging
     <<: *sparrow-service
     build:
       context: ..

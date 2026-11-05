@@ -24,8 +24,7 @@ val sharedModule =
         single {
             AppInitializationDependencies(
                 initializeCryptoRuntime = get(),
-                getIdentityStatus = get(),
-                recoverIncompleteIdentity = get(),
+                resolveIdentityStatus = get(),
                 initializeLocalEmbedding = get(),
                 initializeSemanticSearch = get(),
                 initializeMessageSafety = get(),
@@ -58,7 +57,8 @@ val sharedModule =
                 incomingEnvelopeRunner = get(),
                 transportConnectionManager = get(),
                 outboxRunner = get(),
-                mailboxCoordinator = get()
+                mailboxCoordinator = get(),
+                observeIdentityKeysUsable = get()
             )
         }
 
@@ -86,7 +86,10 @@ val sharedModule =
 
         viewModel {
             AppViewModel(
-                foregroundRuntime = get()
+                foregroundRuntime = get(),
+                recordAppHidden = get(),
+                recordAppVisible = get(),
+                observeAppLockEnabled = get()
             )
         }
     }

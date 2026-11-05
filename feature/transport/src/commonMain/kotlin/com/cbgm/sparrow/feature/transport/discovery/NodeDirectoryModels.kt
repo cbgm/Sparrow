@@ -124,11 +124,13 @@ internal fun RegistrySigningCertificate.unsigned(): UnsignedRegistrySigningCerti
         validUntilEpochMilliseconds = validUntilEpochMilliseconds
     )
 
+/** [aliasClaimKey] is the presence directory's key that alias claims are sealed for, signed with the directory. */
 @Serializable
 data class NodeDirectory(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
-    val nodes: List<SparrowNodeDescriptor>
+    val nodes: List<SparrowNodeDescriptor>,
+    val aliasClaimKey: ByteArray? = null
 )
 
 @Serializable

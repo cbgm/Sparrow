@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.identity.domain.usecase.DiscardIdentityKeyStoreKeyUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
@@ -12,6 +13,8 @@ import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDevelop
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_settings_simulate_key_loss_done
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperMenuViewModel(
@@ -30,7 +34,8 @@ class DeveloperMenuViewModel(
     getBuildInfoUseCase: GetBuildInfoUseCase,
     observeDeveloperErrorsUseCase: ObserveDeveloperErrorsUseCase,
     private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
-    private val transportDiagnosticsProvider: TransportDiagnosticsProvider
+    private val transportDiagnosticsProvider: TransportDiagnosticsProvider,
+    private val discardIdentityKeyStoreKey: DiscardIdentityKeyStoreKeyUseCase
 ) : BaseViewModel() {
     private val isClearingLocalData = MutableStateFlow(false)
     private val buildInfo = getBuildInfoUseCase().getOrThrow()
@@ -67,6 +72,7 @@ class DeveloperMenuViewModel(
             DeveloperMenuUiEvent.ErrorLogClicked -> navigator.navigateTo(AppRoute.DeveloperErrorLog)
             DeveloperMenuUiEvent.ClearLocalDataClicked -> clearLocalData()
             DeveloperMenuUiEvent.DisableDeveloperModeClicked -> disableDeveloperMode()
+            DeveloperMenuUiEvent.SimulateKeyLossClicked -> simulateKeyLoss()
         }
     }
 
@@ -82,6 +88,14 @@ class DeveloperMenuViewModel(
             } finally {
                 isClearingLocalData.value = false
             }
+        }
+    }
+
+    private fun simulateKeyLoss() {
+        viewModelScope.launch {
+            discardIdentityKeyStoreKey()
+                .onSuccess { SparrowLog.hint(getString(Res.string.feature_settings_simulate_key_loss_done)) }
+                .onFailure { error -> SparrowLog.error(TAG, "Key-store key could not be removed", error) }
         }
     }
 

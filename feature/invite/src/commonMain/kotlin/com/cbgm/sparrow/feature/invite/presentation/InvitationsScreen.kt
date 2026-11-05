@@ -75,6 +75,8 @@ import com.cbgm.sparrow.resources.feature_invite_invitations_incoming_empty
 import com.cbgm.sparrow.resources.feature_invite_invitations_outgoing
 import com.cbgm.sparrow.resources.feature_invite_invitations_outgoing_empty
 import com.cbgm.sparrow.resources.feature_invite_invitations_title
+import com.cbgm.sparrow.resources.feature_invite_peer_matches_phone_contact
+import com.cbgm.sparrow.resources.feature_invite_peer_unverified
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -583,6 +585,15 @@ private fun InvitationRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            unverifiedClaimText(invitation)?.let { claim ->
+                Text(
+                    text = claim,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             if (identityApprovalPending) {
                 Text(
                     text = stringResource(Res.string.feature_invite_group_identity_review_required),
@@ -600,6 +611,20 @@ private fun InvitationRow(
                 strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
             )
         }
+    }
+}
+
+/** An unknown sender's name and number are only its own claim; say so, and name a matching phone contact. */
+@Composable
+private fun unverifiedClaimText(invitation: InvitationUi): String? {
+    val incomingDirect =
+        invitation.payloadType == InvitationUiPayloadType.DIRECT &&
+            invitation.direction == InvitationUiDirection.INCOMING
+    return when {
+        !incomingDirect || !invitation.peerUnverified -> null
+        invitation.phoneContactName != null ->
+            stringResource(Res.string.feature_invite_peer_matches_phone_contact, invitation.phoneContactName)
+        else -> stringResource(Res.string.feature_invite_peer_unverified)
     }
 }
 

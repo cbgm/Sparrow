@@ -7,6 +7,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.applock.presentation.AppLockRoute
+import com.cbgm.sparrow.feature.identity.presentation.repair.IdentityRepairRoute
 import com.cbgm.sparrow.feature.onboarding.presentation.OnboardingRoute
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent
 import com.cbgm.sparrow.startup.presentation.start.model.StartupUiState
@@ -56,6 +57,16 @@ fun StartupRoute(
             }
         }
 
+        StartupUiState.IdentityUnusable -> {
+            // After a restore or a reset, startup runs again and decides where to go.
+            IdentityRepairRoute(onFinished = { startupViewModel.onUiEvent(StartupUiEvent.RetryClicked) })
+
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                onStartupContentReady()
+            }
+        }
+
         is StartupUiState.Error -> {
             StartupErrorScreen(
                 message = state.message,
@@ -78,5 +89,6 @@ private fun StartupUiState.traceName(): String =
         StartupUiState.Loading -> "Loading"
         StartupUiState.Ready -> "Ready"
         StartupUiState.IdentityRequired -> "IdentityRequired"
+        StartupUiState.IdentityUnusable -> "IdentityUnusable"
         is StartupUiState.Error -> "Error"
     }

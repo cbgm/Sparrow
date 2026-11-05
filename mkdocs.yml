@@ -108,6 +108,7 @@ nav:
   - API:
       - Gateway: api/gateway.md
       - WebSocket: api/websocket.md
+      - Push: api/push.md
       - Protocol: api/protocol.md
   - Development:
       - Local Development: development/local-development.md

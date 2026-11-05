@@ -25,7 +25,8 @@ class DefaultNodeEndpointResolver(
     private val controlPlaneStatusStore: ControlPlaneStatusStore,
     private val endpointSelector: NodeEndpointSelector,
     private val controlPlaneDirectorySynchronizer: ControlPlaneDirectorySynchronizer? = null,
-    private val now: () -> Long = SystemClock::nowEpochMilliseconds
+    private val now: () -> Long = SystemClock::nowEpochMilliseconds,
+    private val preferredNodeStore: PreferredNodeStore? = null
 ) : NodeEndpointResolver {
     private val logger = SparrowLog.withTag("DefaultNodeEndpointResolver")
     private val resolutionMutex = Mutex()
@@ -75,7 +76,7 @@ class DefaultNodeEndpointResolver(
                                 config.cachedDirectoryGraceMilliseconds,
                         descriptorExpiryGraceMilliseconds = config.cachedDirectoryGraceMilliseconds
                     ).getOrNull() ?: return@withLock null
-                endpointSelector.select(cachedDirectory, localRoutingId)
+                endpointSelector.select(cachedDirectory, localRoutingId, preferredNodeId())
             }
         }
 
@@ -94,7 +95,7 @@ class DefaultNodeEndpointResolver(
             !forceRefresh && cachedSourceIsConfigured &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
         ) {
-            return endpointSelector.select(checkNotNull(cachedDirectory), localRoutingId)
+            return endpointSelector.select(checkNotNull(cachedDirectory), localRoutingId, preferredNodeId())
         }
 
         val selectedDirectory =
@@ -110,8 +111,10 @@ class DefaultNodeEndpointResolver(
                     remoteError = remoteError
                 )
             }
-        return endpointSelector.select(selectedDirectory, localRoutingId)
+        return endpointSelector.select(selectedDirectory, localRoutingId, preferredNodeId())
     }
+
+    private suspend fun preferredNodeId(): String? = preferredNodeStore?.get()
 
     // Never keep selecting nodes from an endpoint removed from configuration.
     // Older cache entries do not record their source; preserve their short-lived

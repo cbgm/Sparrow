@@ -1,5 +1,13 @@
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     environment:
       CONTROL_PLANE_SITE_ADDRESS: ${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
     ports: !override
@@ -11,6 +19,7 @@ services:
       - edge
 
   node-registry-database:
+    logging: *default-logging
     ports: !reset []
     environment:
       POSTGRES_PASSWORD: !reset null
@@ -21,6 +30,7 @@ services:
       - backend
 
   node-registry:
+    logging: *default-logging
     ports: !reset []
     environment:
       TRUST_PROXY_HEADERS: "true"
@@ -33,6 +43,7 @@ services:
       - backend
 
   presence-redis:
+    logging: *default-logging
     ports: !reset []
     command:
       - /bin/sh
@@ -52,17 +63,22 @@ services:
       - backend
 
   presence-directory:
+    logging: *default-logging
     ports: !reset []
     environment:
       PRESENCE_REDIS_PASSWORD: !reset null
       PRESENCE_REDIS_PASSWORD_FILE: /run/secrets/presence-redis-password
+      PRESENCE_INTERNAL_API_TOKEN: !reset null
+      PRESENCE_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
     secrets:
       - presence-redis-password
+      - push-internal-api-token
     networks:
       - edge
       - backend
 
   push-database:
+    logging: *default-logging
     ports: !reset []
     environment:
       POSTGRES_PASSWORD: !reset null
@@ -73,6 +89,7 @@ services:
       - backend
 
   push:
+    logging: *default-logging
     ports: !reset []
     environment:
       TRUST_PROXY_HEADERS: "true"

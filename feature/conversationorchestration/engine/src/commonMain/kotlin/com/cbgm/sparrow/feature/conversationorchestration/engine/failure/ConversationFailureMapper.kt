@@ -10,6 +10,7 @@ object ConversationFailureMapper {
         when (error) {
             is ConversationFailureException -> error.failure
             is WorkflowEngineException -> failure(ConversationFailureReason.UNEXPECTED, error)
+            is ContactBlockedException -> failure(ConversationFailureReason.CONTACT_BLOCKED, error)
             is DirectChatAuthorizationRequiredException ->
                 failure(ConversationFailureReason.AUTHORIZATION_REQUIRED, error)
             is IllegalArgumentException -> failure(ConversationFailureReason.INVALID_INPUT, error)

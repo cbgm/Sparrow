@@ -84,12 +84,21 @@ internal class PostgresMailboxDatabase(
                 ADD COLUMN IF NOT EXISTS owner_key_hash TEXT NOT NULL DEFAULT ''
                 """.trimIndent(),
                 """
+                ALTER TABLE mailboxes
+                ADD COLUMN IF NOT EXISTS wake_ticket_json TEXT
+                """.trimIndent(),
+                """
                 CREATE INDEX IF NOT EXISTS mailboxes_expiry_idx
                 ON mailboxes (expires_at_epoch_milliseconds)
                 """.trimIndent(),
                 """
                 CREATE INDEX IF NOT EXISTS mailboxes_owner_idx
                 ON mailboxes (owner_key_hash)
+                """.trimIndent(),
+                // Owner keys only count mailboxes per client while the in-memory key that made them lives. Older
+                // versions stored a reversible SHA-256 of the client IP here; nothing from before a start is kept.
+                """
+                UPDATE mailboxes SET owner_key_hash = '' WHERE owner_key_hash <> ''
                 """.trimIndent(),
                 """
                 CREATE TABLE IF NOT EXISTS mailbox_envelopes (

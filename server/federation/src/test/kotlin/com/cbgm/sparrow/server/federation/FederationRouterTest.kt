@@ -255,6 +255,38 @@ class FederationRouterTest {
         }
 
     @Test
+    fun onlyTheNodeASenderIsConnectedThroughSpeaksForIt() =
+        kotlinx.coroutines.test.runTest {
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { routingId ->
+                        ClientRoutingResult(
+                            routingId = routingId,
+                            routes =
+                                listOf(
+                                    ClientRoute(
+                                        routingId = routingId,
+                                        nodeId = "node-b",
+                                        connectionId = "connection-b",
+                                        generation = 1L,
+                                        expiresAtEpochMilliseconds = 10_000L,
+                                        clientSignature = byteArrayOf(1)
+                                    )
+                                )
+                        )
+                    },
+                    nodeRegistry = { null },
+                    localGateway = { error("Not used") },
+                    remoteFederation = { _, _ -> error("Not used") },
+                    mailbox = { error("Not used") }
+                )
+
+            assertTrue(router.isConnectedThrough("sender", "node-b"))
+            assertFalse(router.isConnectedThrough("sender", "node-c"))
+        }
+
+    @Test
     fun initialRouteDoesNotWaitForControlPlaneFallback() =
         kotlinx.coroutines.test.runTest {
             var controlPlaneCalls = 0

@@ -117,7 +117,7 @@ internal class PostgresMailboxStore(
 
                 queries.purgeExpiredEnvelopes(connection, mailboxId)
                 if (queries.contains(connection, mailboxId, envelope.envelopeId)) {
-                    return@inMailboxTransaction MailboxResult.Stored(duplicate = true)
+                    return@inMailboxTransaction MailboxResult.Stored(duplicate = true, wakeTicket = mailbox.wakeTicket)
                 }
                 if (queries.storedBytes(
                         connection,
@@ -162,7 +162,7 @@ internal class PostgresMailboxStore(
                             )
                             statement.executeUpdate() == 1
                         }
-                MailboxResult.Stored(duplicate = !inserted)
+                MailboxResult.Stored(duplicate = !inserted, wakeTicket = mailbox.wakeTicket)
             }
         }
 
@@ -281,8 +281,9 @@ internal class PostgresMailboxStore(
                     owner_key_hash,
                     send_capability_hash,
                     retrieval_capability_hash,
-                    expires_at_epoch_milliseconds
-                ) VALUES (?, ?, ?, ?, ?)
+                    expires_at_epoch_milliseconds,
+                    wake_ticket_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT (mailbox_id) DO NOTHING
                 """.trimIndent()
             ).use { statement ->
@@ -299,6 +300,10 @@ internal class PostgresMailboxStore(
                 statement.setLong(
                     MailboxInsertParameter.EXPIRES_AT,
                     request.expiresAtEpochMilliseconds
+                )
+                statement.setString(
+                    MailboxInsertParameter.WAKE_TICKET_JSON,
+                    request.wakeTicket?.let { ticket -> serverJson.encodeToString(ticket) }
                 )
                 statement.executeUpdate() == 1
             }
@@ -323,6 +328,7 @@ internal class PostgresMailboxStore(
         const val SEND_CAPABILITY_HASH = 3
         const val RETRIEVAL_CAPABILITY_HASH = 4
         const val EXPIRES_AT = 5
+        const val WAKE_TICKET_JSON = 6
     }
 
     private object EnvelopeInsertParameter {

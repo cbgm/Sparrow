@@ -8,14 +8,20 @@ import kotlin.test.assertEquals
 @OptIn(InternalSerializationApi::class)
 class GatewayClientMessageTest {
     @Test
-    fun unsignedRegistrationKeepsTheLegacyWireShape() {
+    fun registrationCarriesTheSessionProof() {
         val encoded =
             createGatewayJson().encodeToString<GatewayClientMessage>(
-                GatewayClientMessage.Register(routingId = "scrouting1_test")
+                GatewayClientMessage.Register(
+                    routingId = "scrouting1_test",
+                    connectionId = "connection-a",
+                    clientSigningPublicKey = byteArrayOf(1, 2),
+                    clientSignature = byteArrayOf(3, 4)
+                )
             )
 
         assertEquals(
-            """{"type":"register","routingId":"scrouting1_test"}""",
+            """{"type":"register","routingId":"scrouting1_test","connectionId":"connection-a",""" +
+                """"clientSigningPublicKey":[1,2],"clientSignature":[3,4]}""",
             encoded
         )
     }

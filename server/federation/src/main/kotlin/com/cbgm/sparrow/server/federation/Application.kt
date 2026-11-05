@@ -51,6 +51,8 @@ data class FederationConfig(
     val databasePassword: String,
     val databaseMaximumPoolSize: Int,
     val controlPlaneUrls: List<String>,
+    /** Registry roots trusted for the configured Control Planes; empty keeps the first verified root. */
+    val controlPlaneRootNodeIds: Set<String> = emptySet(),
     val nodeRegistryUrl: String,
     val presenceDirectoryUrl: String,
     val gatewayInternalUrl: String,
@@ -96,6 +98,13 @@ data class FederationConfig(
                         optionalEnv("CONTROL_PLANE_URLS")
                             ?.let { controlPlaneUrlsFromEnvironment(emptyList(), it) }
                             ?: emptyList(),
+                    controlPlaneRootNodeIds =
+                        optionalEnv("CONTROL_PLANE_ROOT_NODE_IDS")
+                            ?.split(',')
+                            ?.map(String::trim)
+                            ?.filter(String::isNotEmpty)
+                            ?.toSet()
+                            .orEmpty(),
                     nodeRegistryUrl = string("NODE_REGISTRY_URL", "http://localhost:8090"),
                     presenceDirectoryUrl = string("PRESENCE_DIRECTORY_URL", "http://localhost:8091"),
                     gatewayInternalUrl = string("GATEWAY_INTERNAL_URL", "http://localhost:8094"),

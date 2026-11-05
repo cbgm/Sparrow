@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.push
 
+import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.PushDeviceRegistrationRequest
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
@@ -44,11 +45,20 @@ private fun Route.installHealthRoute(runtime: PushRuntime) {
     }
 }
 
+/**
+ * The only public route that changes a device binding. There is no public unregister: a binding ends when
+ * the token is bound to another routing ID, FCM reports it unregistered, or it expires without renewal.
+ */
 private fun Route.installDeviceRegistrationRoute(runtime: PushRuntime) {
     post("/push/devices") {
         if (call.enforceRateLimit(runtime.deviceRegistrationRateLimiter)) {
             val request = call.receive<PushDeviceRegistrationRequest>()
-            if (request.isValid()) {
+            val failure =
+                PushDeviceRegistrationValidator.validationFailure(
+                    request = request,
+                    nowEpochMilliseconds = System.currentTimeMillis()
+                )
+            if (failure == null) {
                 runtime.devices.register(
                     PushDevice(
                         routingId = request.routingId,
@@ -58,7 +68,7 @@ private fun Route.installDeviceRegistrationRoute(runtime: PushRuntime) {
                 )
                 call.respond(HttpStatusCode.NoContent)
             } else {
-                call.respond(HttpStatusCode.BadRequest)
+                call.respond(failure.status, ErrorResponse(failure.code, failure.message))
             }
         }
     }
@@ -172,9 +182,6 @@ private fun Route.installInternalAcknowledgementRoute(
         }
     }
 }
-
-private fun PushDeviceRegistrationRequest.isValid(): Boolean =
-    listOf(routingId, token, platform).all(String::isNotBlank)
 
 private fun ApplicationCall.hasInternalAccess(expectedToken: String?): Boolean =
     InternalApiAuthentication.isAuthorized(

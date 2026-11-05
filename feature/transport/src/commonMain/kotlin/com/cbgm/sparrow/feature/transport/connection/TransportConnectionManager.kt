@@ -16,4 +16,10 @@ interface TransportConnectionManager {
      * Permanently stops the current connection loop.
      */
     suspend fun stop()
+
+    /**
+     * Reconnects when the running connection uses another node than [nodeId], so the new order of
+     * nodes applies right away.
+     */
+    suspend fun moveTo(nodeId: String)
 }

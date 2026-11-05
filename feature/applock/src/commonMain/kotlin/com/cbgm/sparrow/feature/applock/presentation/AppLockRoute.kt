@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.applock.device.AppLockAuthenticationLauncher
+import com.cbgm.sparrow.feature.applock.device.AppLockBackHandler
 import com.cbgm.sparrow.feature.applock.presentation.model.AppLockUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_applock_prompt_reason
@@ -38,6 +39,8 @@ fun AppLockRoute(
         }
 
         is AppLockUiState.Locked -> {
+            AppLockBackHandler()
+
             AppLockAuthenticationLauncher(
                 requestId = state.authenticationRequestId,
                 enabled = state.isAuthenticating,

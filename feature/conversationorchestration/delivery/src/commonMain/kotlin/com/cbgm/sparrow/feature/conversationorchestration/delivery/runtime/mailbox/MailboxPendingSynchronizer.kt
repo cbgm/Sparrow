@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProce
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 
@@ -35,7 +36,7 @@ class MailboxPendingSynchronizer(
     private suspend fun synchronize(credential: LocalMailboxCredential): Int {
         val envelopes =
             mailboxGateway.pending(credential).getOrElse { error ->
-                logger.warn(error) { "Mailbox of contact ${credential.contactId} could not be read" }
+                logUnreadable(credential, error)
                 return 0
             }
         return envelopes.count { envelope -> process(credential, envelope) }
@@ -68,7 +69,32 @@ class MailboxPendingSynchronizer(
                 IncomingEnvelopeProcessingResult.UnknownSender -> false
             }
         }.getOrElse { error ->
-            logger.warn(error) { "Mailbox envelope ${envelope.envelopeId} stays pending for the next sync" }
+            logStillPending(envelope, error)
             false
         }
+
+    // A node that is down is expected (it may come back or be replaced); only other failures are errors.
+    private fun logUnreadable(
+        credential: LocalMailboxCredential,
+        error: Throwable
+    ) {
+        when (error) {
+            is MailboxNodeUnavailableException ->
+                logger.info { "Mailbox node of contact ${credential.contactId} is unavailable; retried on the next sync" }
+
+            else -> logger.warn(error) { "Mailbox of contact ${credential.contactId} could not be read" }
+        }
+    }
+
+    private fun logStillPending(
+        envelope: FederatedEnvelope,
+        error: Throwable
+    ) {
+        when (error) {
+            is MailboxNodeUnavailableException ->
+                logger.info { "Mailbox node is unavailable; envelope ${envelope.envelopeId} stays pending" }
+
+            else -> logger.warn(error) { "Mailbox envelope ${envelope.envelopeId} stays pending for the next sync" }
+        }
+    }
 }

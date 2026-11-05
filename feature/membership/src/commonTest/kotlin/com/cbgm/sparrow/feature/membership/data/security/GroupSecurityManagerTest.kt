@@ -8,11 +8,13 @@ import com.cbgm.sparrow.feature.membership.crypto.GroupCiphertext
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
@@ -29,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -44,12 +47,16 @@ class GroupSecurityManagerTest {
             groupSecurityStore = GroupSecurityStoreDataSource(dao),
             groupKeyDataSource = keyStorage
         )
+    private val transactions = RecordingTransactions()
+    private val outbox = RecordingOutbox(transactions)
     private val epochSecurity = GroupEpochSecurityDataSource(
         groupCrypto = crypto,
         cryptoHash = DefaultCryptoHash(),
         payloadEncoder = encoder,
         securityStore = GroupSecurityStoreDataSource(dao),
-        groupKeyDataSource = keyStorage
+        groupKeyDataSource = keyStorage,
+        packetBroadcaster = GroupPacketBroadcaster(outbox),
+        transactions = transactions
     )
     private val manager =
         GroupSecurityManager(
@@ -400,6 +407,82 @@ class GroupSecurityManagerTest {
         }
 
     @Test
+    fun anotherAdminsVersionOfTheEpochWithTheLowerKeyReplacesTheInstalledOne() =
+        runTest {
+            seedContestedEpoch(installedSigner = byteArrayOf(9))
+            val localEncryptionKey = byteArrayOf(8)
+
+            val opened = manager.openWelcome(
+                packet = contestingWelcome(localEncryptionKey),
+                senderContactId = REMOTE_CONTACT_ID,
+                expectedOwnerEncryptionPublicKey = byteArrayOf(5),
+                expectedOwnerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localEncryptionKeyPair = LocalEncryptionKeyPair(localEncryptionKey, localEncryptionKey),
+                localSigningPublicKey = LOCAL_SIGNING_KEY
+            ).getOrThrow()
+
+            assertTrue(opened.replacesContestedEpoch)
+            assertFalse(opened.dropsLocalChange)
+            assertContentEquals(GROUP_KEY, opened.groupKey)
+        }
+
+    @Test
+    fun anotherAdminsVersionOfTheEpochWithTheHigherKeyIsRefused() =
+        runTest {
+            seedContestedEpoch(installedSigner = byteArrayOf(5))
+            val localEncryptionKey = byteArrayOf(8)
+
+            val result = manager.openWelcome(
+                packet = contestingWelcome(localEncryptionKey),
+                senderContactId = REMOTE_CONTACT_ID,
+                expectedOwnerEncryptionPublicKey = byteArrayOf(5),
+                expectedOwnerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localEncryptionKeyPair = LocalEncryptionKeyPair(localEncryptionKey, localEncryptionKey),
+                localSigningPublicKey = LOCAL_SIGNING_KEY
+            )
+
+            assertIs<IncomingMessageRejectedException>(result.exceptionOrNull())
+        }
+
+    /** Epoch 2 is installed, signed by [installedSigner]; the remote admin was an admin of epoch 1. */
+    private suspend fun seedContestedEpoch(installedSigner: ByteArray) {
+        dao.upsertState(
+            GroupSecurityStateEntity(
+                groupId = GROUP_ID,
+                currentEpoch = 2,
+                welcomePacketId = null,
+                ownerContactId = REMOTE_CONTACT_ID,
+                ownerSigningPublicKey = REMOTE_SIGNING_KEY,
+                localSigningPublicKey = LOCAL_SIGNING_KEY,
+                localRole = GROUP_ADMIN_ROLE,
+                updatedAtEpochMilliseconds = 100L,
+                epochSignerSigningPublicKey = installedSigner
+            )
+        )
+        dao.upsertMemberKeys(listOf(memberKey(epoch = 1).copy(role = GROUP_ADMIN_ROLE)))
+        keyStorage.save(GROUP_ID, 2, byteArrayOf(42))
+    }
+
+    private fun contestingWelcome(localEncryptionKey: ByteArray): GroupCreatedPacket {
+        val unsigned =
+            GroupCreatedPacket(
+                packetId = manager.welcomePacketId(GROUP_ID, INVITATION_ID, 2),
+                groupId = GROUP_ID,
+                title = "Group",
+                createdAtEpochMilliseconds = 100L,
+                epoch = 2,
+                members =
+                    listOf(
+                        GroupMemberPayload(null, byteArrayOf(5), REMOTE_SIGNING_KEY, GROUP_ADMIN_ROLE, "+491"),
+                        GroupMemberPayload(null, localEncryptionKey, LOCAL_SIGNING_KEY, GROUP_ADMIN_ROLE, "+492")
+                    ),
+                wrappedGroupKey = GROUP_KEY + localEncryptionKey,
+                ownerSignature = byteArrayOf(0)
+            )
+        return unsigned.copy(ownerSignature = encoder.encodeWelcome(unsigned) + REMOTE_SIGNING_KEY)
+    }
+
+    @Test
     fun retiringThenDeletingLocalMembershipRemovesKeysAndSecurityState() =
         runTest {
             seedSecurityState()
@@ -536,6 +619,57 @@ class GroupSecurityManagerTest {
                 ).getOrThrow()
 
             assertEquals(nextEpoch, manager.findOwnedGroupEpoch(GROUP_ID).getOrThrow())
+        }
+
+    @Test
+    fun rotationQueuesWelcomesWithTheNewEpochAndKeepsThePreviousKey() =
+        runTest {
+            dao.upsertState(
+                GroupSecurityStateEntity(
+                    groupId = GROUP_ID,
+                    currentEpoch = EPOCH,
+                    welcomePacketId = "welcome-1",
+                    ownerContactId = REMOTE_CONTACT_ID,
+                    ownerSigningPublicKey = REMOTE_SIGNING_KEY,
+                    localSigningPublicKey = LOCAL_SIGNING_KEY,
+                    localRole = GROUP_ADMIN_ROLE,
+                    updatedAtEpochMilliseconds = 100L
+                )
+            )
+            keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY)
+
+            epochSecurity
+                .rotateOwnedGroup(
+                    groupId = GROUP_ID,
+                    title = "Group",
+                    createdAtEpochMilliseconds = 100L,
+                    updatedAtEpochMilliseconds = 200L,
+                    memberPayloads =
+                        listOf(
+                            GroupMemberPayload(null, byteArrayOf(8), LOCAL_SIGNING_KEY, GROUP_ADMIN_ROLE, "+491"),
+                            GroupMemberPayload(null, byteArrayOf(5), REMOTE_SIGNING_KEY, GROUP_MEMBER_ROLE, "+492")
+                        ),
+                    memberKeys = listOf(memberKey(epoch = EPOCH + 1)),
+                    recipients = listOf(GroupWelcomeRecipientDto(REMOTE_CONTACT_ID, INVITATION_ID, byteArrayOf(5))),
+                    localSigningKeyPair = LocalSigningKeyPair(LOCAL_SIGNING_KEY, LOCAL_SIGNING_KEY)
+                ).getOrThrow()
+
+            assertEquals(listOf(REMOTE_CONTACT_ID to true), outbox.queued)
+            assertEquals(EPOCH + 1, dao.findState(GROUP_ID)?.currentEpoch)
+            assertContentEquals(GROUP_KEY, keyStorage.load(GROUP_ID, EPOCH))
+        }
+
+    @Test
+    fun aMessageOfThePreviousEpochIsReadOnlyFromAStillCurrentMember() =
+        runTest {
+            seedSecurityState()
+            dao.upsertState(dao.findState(GROUP_ID)!!.copy(currentEpoch = EPOCH + 1))
+            val packet = createRemotePacket(text = "sent just before the change")
+
+            assertTrue(manager.decryptMessage(packet, REMOTE_CONTACT_ID).isFailure)
+
+            dao.upsertMemberKeys(listOf(memberKey(epoch = EPOCH + 1)))
+            assertEquals("sent just before the change", manager.decryptMessage(packet, REMOTE_CONTACT_ID).getOrThrow())
         }
 
     @Test
@@ -769,6 +903,10 @@ class GroupSecurityManagerTest {
 
         override suspend fun deleteMemberKeys(groupId: String) {
             memberKeys.removeAll { member -> member.groupId == groupId }
+        }
+
+        override suspend fun deleteMemberKeysOfEpoch(groupId: String, epoch: Int) {
+            memberKeys.removeAll { member -> member.groupId == groupId && member.epoch == epoch }
         }
 
         override suspend fun findMemberKey(

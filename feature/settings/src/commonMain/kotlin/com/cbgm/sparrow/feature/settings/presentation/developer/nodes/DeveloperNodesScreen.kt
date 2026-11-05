@@ -1,7 +1,10 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -9,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -17,9 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -31,6 +37,8 @@ import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_network_no_nodes
 import com.cbgm.sparrow.resources.feature_settings_network_nodes
+import com.cbgm.sparrow.resources.feature_settings_preferred_node
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_subtitle
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +46,7 @@ import org.jetbrains.compose.resources.stringResource
 fun DeveloperNodesScreen(
     diagnostics: TransportDiagnostics,
     onBack: () -> Unit,
+    onPreferredNodeClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
@@ -59,6 +68,10 @@ fun DeveloperNodesScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
+            item(key = "preferred-node") {
+                PreferredNodeLink(onClick = onPreferredNodeClicked)
+            }
+
             if (nodes.isEmpty()) {
                 item(key = "no-nodes") {
                     Text(
@@ -78,6 +91,38 @@ fun DeveloperNodesScreen(
                     NodeDiagnosticRow(node = node, outlined = true)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PreferredNodeLink(onClick: () -> Unit) {
+    SparrowCardNoAnimation {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(Res.string.feature_settings_preferred_node),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(Res.string.feature_settings_preferred_node_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -126,7 +171,8 @@ private fun DeveloperNodesScreenPreview() {
                     )
                 )
             ),
-            onBack = {}
+            onBack = {},
+            onPreferredNodeClicked = {}
         )
     }
 }

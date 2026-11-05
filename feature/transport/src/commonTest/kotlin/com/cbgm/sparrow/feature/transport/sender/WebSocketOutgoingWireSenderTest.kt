@@ -197,7 +197,8 @@ class WebSocketOutgoingWireSenderTest {
 
         override fun connect(
             serverUrl: String,
-            localRoutingId: String
+            localRoutingId: String,
+            expectedNodeId: String
         ) = Unit
 
         override suspend fun awaitRoutingAlias(

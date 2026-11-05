@@ -44,21 +44,55 @@ interface WakeUpStore {
     suspend fun resolve(wakeUpId: String?): String?
 }
 
-class InMemoryPushDeviceStore : PushDeviceStore {
-    private val devices = ConcurrentHashMap<String, ConcurrentHashMap<String, PushDevice>>()
+/**
+ * Keeps each binding only until [lifetimeMilliseconds] after its last registration. The app renews it
+ * regularly, so a binding the app no longer renews disappears instead of being kept forever.
+ */
+class InMemoryPushDeviceStore(
+    private val lifetimeMilliseconds: Long = DEFAULT_DEVICE_LIFETIME_MILLISECONDS,
+    private val now: () -> Long = System::currentTimeMillis
+) : PushDeviceStore {
+    private data class Entry(
+        val device: PushDevice,
+        val expiresAtEpochMilliseconds: Long
+    )
 
-    override suspend fun register(device: PushDevice) {
-        devices.values.forEach { it.remove(device.token) }
-        devices.computeIfAbsent(device.routingId) { ConcurrentHashMap() }[device.token] = device
+    private val devices = ConcurrentHashMap<String, ConcurrentHashMap<String, Entry>>()
+
+    init {
+        require(lifetimeMilliseconds > 0L) {
+            "Push device lifetime must be positive"
+        }
     }
 
-    override suspend fun find(routingId: String): List<PushDevice> = devices[routingId]?.values?.toList().orEmpty()
+    override suspend fun register(device: PushDevice) {
+        purgeExpired()
+        devices.values.forEach { it.remove(device.token) }
+        devices.computeIfAbsent(device.routingId) { ConcurrentHashMap() }[device.token] =
+            Entry(device = device, expiresAtEpochMilliseconds = now() + lifetimeMilliseconds)
+    }
+
+    override suspend fun find(routingId: String): List<PushDevice> {
+        purgeExpired()
+        return devices[routingId]?.values?.map(Entry::device).orEmpty()
+    }
 
     override suspend fun removeToken(token: String) {
         devices.values.forEach { it.remove(token) }
     }
 
-    override suspend fun count(): Int = devices.values.sumOf { it.size }
+    override suspend fun count(): Int {
+        purgeExpired()
+        return devices.values.sumOf { it.size }
+    }
+
+    private fun purgeExpired() {
+        val currentTime = now()
+        devices.values.forEach { routingDevices ->
+            routingDevices.values.removeIf { entry -> entry.expiresAtEpochMilliseconds <= currentTime }
+        }
+        devices.values.removeIf { routingDevices -> routingDevices.isEmpty() }
+    }
 }
 
 class InMemoryPendingEnvelopeStore(
@@ -183,6 +217,8 @@ class InMemoryWakeUpStore(
     }
 }
 
+internal const val DEFAULT_DEVICE_LIFETIME_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
+
 class PushStores(
     val devices: PushDeviceStore,
     val pendingEnvelopes: PendingEnvelopeStore,
@@ -197,7 +233,10 @@ class PushStores(
     companion object {
         fun inMemory(config: PushConfig): PushStores =
             PushStores(
-                devices = InMemoryPushDeviceStore(),
+                devices =
+                    InMemoryPushDeviceStore(
+                        lifetimeMilliseconds = config.deviceRegistrationLifetimeMilliseconds
+                    ),
                 pendingEnvelopes =
                     InMemoryPendingEnvelopeStore(
                         maximumEnvelopes = config.maximumEnvelopes

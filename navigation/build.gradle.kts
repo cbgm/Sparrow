@@ -16,6 +16,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.util)
             implementation(projects.core.ui)
+            implementation(projects.feature.applock)
             implementation(projects.feature.attachments)
             implementation(projects.feature.autoreply)
             implementation(projects.feature.chats)

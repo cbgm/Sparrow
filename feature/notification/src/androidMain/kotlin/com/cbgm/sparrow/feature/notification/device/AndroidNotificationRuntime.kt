@@ -10,5 +10,6 @@ internal class AndroidNotificationRuntime(
 
     override fun requestPushTokenRegistration() {
         pushTokenRegistrationScheduler.enqueueCurrentToken()
+        pushTokenRegistrationScheduler.schedulePeriodicRenewal()
     }
 }

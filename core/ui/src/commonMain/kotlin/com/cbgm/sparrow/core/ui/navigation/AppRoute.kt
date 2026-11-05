@@ -100,6 +100,12 @@ sealed interface AppRoute {
     data object ControlPlanes : AppRoute
 
     @Serializable
+    data object PreferredNode : AppRoute
+
+    @Serializable
+    data object AppLock : AppRoute
+
+    @Serializable
     data class FilePicker(
         val sessionId: String
     ) : AppRoute

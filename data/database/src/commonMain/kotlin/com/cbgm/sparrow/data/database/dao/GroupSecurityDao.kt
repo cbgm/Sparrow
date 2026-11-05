@@ -37,6 +37,20 @@ interface GroupSecurityDao {
     @Query("DELETE FROM group_member_keys WHERE groupId = :groupId")
     suspend fun deleteMemberKeys(groupId: String)
 
+    @Query("DELETE FROM group_member_keys WHERE groupId = :groupId AND epoch = :epoch")
+    suspend fun deleteMemberKeysOfEpoch(groupId: String, epoch: Int)
+
+    /** Replaces the state and every member key of its epoch, as when the winning version of an epoch arrives. */
+    @Transaction
+    suspend fun replaceContestedEpoch(
+        state: GroupSecurityStateEntity,
+        memberKeys: List<GroupMemberKeyEntity>
+    ) {
+        deleteMemberKeysOfEpoch(state.groupId, state.currentEpoch)
+        upsertState(state)
+        upsertMemberKeys(memberKeys)
+    }
+
     @Transaction
     suspend fun deleteGroup(groupId: String) {
         deleteMemberKeys(groupId)

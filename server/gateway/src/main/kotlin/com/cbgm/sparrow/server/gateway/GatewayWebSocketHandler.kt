@@ -14,6 +14,7 @@ class GatewayWebSocketHandler(
     presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long,
+    private val signInTimeoutMilliseconds: Long,
     private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
 ) {
     private val boundedPresence = BoundedPresenceClient(presence)
@@ -34,6 +35,7 @@ class GatewayWebSocketHandler(
                     acknowledge = pushDispatcher::acknowledge
                 ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
+            signInTimeoutMilliseconds = signInTimeoutMilliseconds,
             actions =
                 GatewayMessageActions(
                     sendEnvelope = { connection, message ->
@@ -76,11 +78,12 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: TransportEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderId)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderId, boundedPresence::ownsAlias)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
-                    message = "Envelope sender differs from connection"
+                    message = "Envelope sender differs from connection",
+                    envelopeId = envelope.envelopeId
                 )
             )
             return
@@ -107,11 +110,12 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: FederatedEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId, boundedPresence::ownsAlias)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
-                    message = "Envelope sender differs from connection"
+                    message = "Envelope sender differs from connection",
+                    envelopeId = envelope.envelopeId
                 )
             )
             return
@@ -151,7 +155,8 @@ class GatewayWebSocketHandler(
             sender.send(
                 GatewayServerMessage.Error(
                     code = "ENVELOPE_REJECTED",
-                    message = "Envelope could not be stored or queued"
+                    message = "Envelope could not be stored or queued",
+                    envelopeId = envelopeId
                 )
             )
         }

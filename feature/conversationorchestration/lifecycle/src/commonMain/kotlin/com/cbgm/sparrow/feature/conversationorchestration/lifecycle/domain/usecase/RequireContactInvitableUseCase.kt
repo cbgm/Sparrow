@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usec
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.ContactBlockedException
 
 /** A blocked contact is never sent a direct invitation. */
 class RequireContactInvitableUseCase(
@@ -9,8 +10,6 @@ class RequireContactInvitableUseCase(
 ) {
     suspend operator fun invoke(contactId: String): Result<Unit> =
         safeSuspendCall(logFailure = false) {
-            check(!blocklistRepository.isBlocked(contactId).getOrThrow()) {
-                "Blocked contacts cannot be invited"
-            }
+            if (blocklistRepository.isBlocked(contactId).getOrThrow()) throw ContactBlockedException()
         }
 }

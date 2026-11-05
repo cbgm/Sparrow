@@ -7,8 +7,16 @@ x-hardened-service: &hardened-service
   security_opt:
     - no-new-privileges:true
 
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     depends_on:
       mailbox:
         condition: service_started
@@ -20,6 +28,7 @@ services:
       - edge
 
   mailbox-database:
+    logging: *default-logging
     ports: !reset []
     environment:
       POSTGRES_PASSWORD: !reset null
@@ -30,6 +39,7 @@ services:
       - backend
 
   mailbox:
+    logging: *default-logging
     <<: *hardened-service
     image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-mailbox:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
@@ -50,6 +60,7 @@ services:
         condition: service_healthy
 
   federation-database:
+    logging: *default-logging
     ports: !reset []
     environment:
       POSTGRES_PASSWORD: !reset null
@@ -60,6 +71,7 @@ services:
       - backend
 
   federation:
+    logging: *default-logging
     <<: *hardened-service
     image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-federation:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
@@ -88,6 +100,7 @@ services:
         condition: service_healthy
 
   gateway:
+    logging: *default-logging
     <<: *hardened-service
     image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-gateway:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null

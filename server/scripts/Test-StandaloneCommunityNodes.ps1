@@ -187,7 +187,7 @@ function New-SmokePresenceRoute {
                 "/data/node.identity", $NodeId, $connectionId, "1", [string]$expiresAt
             )
     $route = Convert-KeyValueOutput -Output $output
-    foreach ($key in @("routingId", "path", "body", "nodeId", "timestamp", "nonce", "signature")) {
+    foreach ($key in @("routingId", "clientPrivateKey", "path", "body", "nodeId", "timestamp", "nonce", "signature")) {
         if ([string]::IsNullOrWhiteSpace([string]$route[$key])) {
             throw "Presence route CLI did not return '$key': $output"
         }
@@ -347,7 +347,8 @@ function Register-SmokePresenceRoute {
             -Body $route["body"] `
             -UseBasicParsing `
             -TimeoutSec 10
-    if ($response.StatusCode -ne 204) {
+    # 204, or 200 with the accepted phone aliases from presence directories of the previous version.
+    if ($response.StatusCode -ne 204 -and $response.StatusCode -ne 200) {
         throw "Signed presence registration failed: HTTP $($response.StatusCode)"
     }
     return $route
@@ -403,7 +404,11 @@ function Receive-SmokeGatewayMessage {
 function Connect-SmokeGatewayClient {
     param(
         [Parameter(Mandatory = $true)][int]$GatewayPort,
-        [Parameter(Mandatory = $true)][hashtable]$Route
+        [Parameter(Mandatory = $true)][hashtable]$Route,
+        [Parameter(Mandatory = $true)][string]$Project,
+        [Parameter(Mandatory = $true)][string]$EnvironmentFile,
+        [Parameter(Mandatory = $true)][string]$ComposeFile,
+        [Parameter(Mandatory = $true)][string]$NodeId
     )
 
     # The signed CLI route must belong to a LIVE WebSocket. Registering the
@@ -417,14 +422,37 @@ function Connect-SmokeGatewayClient {
             $uri,
             [System.Threading.CancellationToken]::None
         ).GetAwaiter().GetResult()
+        # The gateway first sends a single-use challenge; the client signs it with its routing key.
+        $challenge = Receive-SmokeGatewayMessage -Socket $socket
+        if ($challenge.type -ne "challenge" -or $challenge.nodeId -ne $NodeId) {
+            throw "Unexpected gateway challenge: $($challenge | ConvertTo-Json -Compress)"
+        }
+        $proof =
+            Convert-KeyValueOutput -Output (
+                Get-ComposeOutput `
+                    -Project $Project `
+                    -EnvironmentFile $EnvironmentFile `
+                    -ComposeFile $ComposeFile `
+                    -Arguments @(
+                        "exec", "-T", "federation",
+                        "java", "-cp", "/app/lib/*",
+                        "com.cbgm.sparrow.server.security.GatewaySessionProofCli",
+                        $Route["clientPrivateKey"],
+                        $routePayload.routingId,
+                        $routePayload.connectionId,
+                        $NodeId,
+                        (ConvertTo-Json -InputObject @($challenge.nonce) -Compress)
+                    )
+            )
+        if ([string]::IsNullOrWhiteSpace([string]$proof["clientSignature"])) {
+            throw "Gateway session proof CLI did not return a signature."
+        }
         $registerMessage = @{
             type = "register"
             routingId = $routePayload.routingId
             connectionId = $routePayload.connectionId
-            generation = [long]$routePayload.generation
-            expiresAtEpochMilliseconds = [long]$routePayload.expiresAtEpochMilliseconds
             clientSigningPublicKey = $registration.clientSigningPublicKey
-            clientSignature = $routePayload.clientSignature
+            clientSignature = @($proof["clientSignature"] | ConvertFrom-Json)
         } | ConvertTo-Json -Compress -Depth 8
         Send-SmokeWebSocketText -Socket $socket -Text $registerMessage
         $accepted = Receive-SmokeGatewayMessage -Socket $socket
@@ -459,7 +487,14 @@ function Send-SmokeFederatedEnvelope {
             -NodeId $DestinationNodeId
     $socket = $null
     try {
-        $socket = Connect-SmokeGatewayClient -GatewayPort $DestinationGatewayPort -Route $route
+        $socket =
+            Connect-SmokeGatewayClient `
+                -GatewayPort $DestinationGatewayPort `
+                -Route $route `
+                -Project $DestinationProject `
+                -EnvironmentFile $DestinationEnvironmentFile `
+                -ComposeFile $DestinationComposeFile `
+                -NodeId $DestinationNodeId
         $createdAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
         $envelopeId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
         $envelopeBody =
@@ -672,16 +707,33 @@ try {
     }
     Write-Host "PASS registry contains the two independent node identities."
 
-    $nodePushPath = "/v1/node-push/wake-ups/standalone-smoke-recipient"
+    # A node may only wake a device that gave it a signed wake ticket. This ticket comes from a fresh device key
+    # with no push registration, so a correctly signed request returns 404 (not 202); a bad signature returns 401.
+    $wakeTicket =
+        Convert-KeyValueOutput -Output (
+            Get-ComposeOutput `
+                -Project $nodeAProject `
+                -EnvironmentFile $nodeAEnvironment `
+                -ComposeFile $nodeCompose `
+                -Arguments @(
+                    "exec", "-T", "federation",
+                    "java", "-cp", "/app/lib/*",
+                    "com.cbgm.sparrow.server.security.MailboxWakeTicketCli",
+                    $nodeAId
+                )
+        )
+    if ([string]::IsNullOrWhiteSpace([string]$wakeTicket["routingId"]) -or [string]::IsNullOrWhiteSpace([string]$wakeTicket["ticket"])) {
+        throw "Wake ticket CLI did not return a ticket."
+    }
+    $nodePushPath = "/v1/node-push/wake-ups/$($wakeTicket['routingId'])"
     $nodePushAuthentication =
         Get-NodeAuthentication `
             -Project $nodeAProject `
             -EnvironmentFile $nodeAEnvironment `
             -ComposeFile $nodeCompose `
             -Method "POST" `
-            -Path $nodePushPath
-    # No device is registered for this dummy recipient. A correctly signed
-    # request returns 404 (not 202); an invalid signature returns 401.
+            -Path $nodePushPath `
+            -Body $wakeTicket["ticket"]
     $nodePushStatus = $null
     try {
         $nodePushResponse =
@@ -689,6 +741,8 @@ try {
                 -Uri "http://localhost:8390$nodePushPath" `
                 -Method Post `
                 -Headers (Get-NodeAuthenticationHeaders -Authentication $nodePushAuthentication) `
+                -ContentType "application/json" `
+                -Body $wakeTicket["ticket"] `
                 -UseBasicParsing `
                 -TimeoutSec 10
         $nodePushStatus = [int]$nodePushResponse.StatusCode

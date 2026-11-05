@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.push
 
+import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
@@ -88,12 +89,23 @@ private fun Route.installNodeWakeUpRoute(runtime: PushRuntime) {
     post("/v1/node-push/wake-ups/{recipientId}") {
         val recipientId = call.parameters["recipientId"]
         val path = "/v1/node-push/wake-ups/$recipientId"
+        val body = call.receiveText()
+        val ticket = runCatching { serverJson.decodeFromString<MailboxWakeTicket>(body) }.getOrNull()
         when {
-            recipientId.isNullOrBlank() ->
+            recipientId.isNullOrBlank() || ticket == null ->
                 call.respond(HttpStatusCode.BadRequest)
 
-            !call.hasNodeAccess(runtime, "POST", path, "", NodeCapability.MAILBOX) ->
+            !call.hasNodeAccess(runtime, "POST", path, body, NodeCapability.MAILBOX) ->
                 call.respond(HttpStatusCode.Unauthorized)
+
+            // Any node may host mailboxes; it may only wake devices that gave it a ticket.
+            !MailboxWakeTicketValidator.allows(
+                ticket = ticket,
+                recipientId = recipientId,
+                nodeId = call.nodeRequestAuthentication()?.nodeId,
+                nowEpochMilliseconds = System.currentTimeMillis()
+            ) ->
+                call.respond(HttpStatusCode.Forbidden)
 
             // A successful wake-up means this Control Plane actually owns a
             // registered device for the recipient. Previously every plane

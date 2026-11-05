@@ -12,7 +12,8 @@ interface MailboxGateway {
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long
+        expiresAtEpochMilliseconds: Long,
+        wakeTicket: MailboxWakeTicket
     ): Result<LocalMailboxCredential>
 
     suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>>
@@ -30,16 +31,12 @@ internal data class CreateMailboxRequest(
     val nodeId: String,
     val nodeEndpoint: String,
     val routeSequence: Long,
-    val expiresAtEpochMilliseconds: Long
+    val expiresAtEpochMilliseconds: Long,
+    val wakeTicket: MailboxWakeTicket
 )
 
 @Serializable
 internal data class CreateMailboxResponse(
     val deliveryRoute: MailboxDeliveryRoute,
     val retrievalCapability: String
-)
-
-@Serializable
-internal data class MailboxEnvelopesResponse(
-    val envelopes: List<FederatedEnvelope>
 )

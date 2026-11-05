@@ -73,6 +73,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupReadyAckno
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ResolveGroupTransportEncryptionPublicKeyUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.RotateGroupKeyAfterAdminLeftUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
@@ -131,6 +132,7 @@ val membershipModule =
 
         singleOf(::OpenIncomingGroupWelcomeUseCase)
         singleOf(::PersistIncomingGroupWelcomeUseCase)
+        singleOf(::RotateGroupKeyAfterAdminLeftUseCase)
         singleOf(::AuthorizeIncomingGroupWelcomeUseCase)
         singleOf(::CompleteIncomingGroupWelcomeUseCase)
         singleOf(::SendGroupReadyAcknowledgementUseCase)

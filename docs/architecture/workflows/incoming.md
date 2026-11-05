@@ -226,6 +226,8 @@ VerifyInvitation -> ResolvePeer -> MergePeers -> [UpdatePeerPhoneNumber] -> Rece
 
 Signature and time bounds are verified BEFORE contacts are looked up or merged. Keys that differ from a
 known contact's are proof of the proposed keys only: they become an identity review, never a merge.
+The claimed phone number never files the invitation under a contact; a matching phone book contact is
+only offered for linking, which happens when the user accepts.
 The Identity result observer restores the inbox record after a restart; it alone declines rejected senders.
 ```
 
@@ -250,10 +252,11 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactReady`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactReadyWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`
+- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
-FindExchange -> VerifyReady -> ReceiveReady. READY completes the inviter's side of the exchange.
+FindExchange -> VerifyReady -> ReceiveReady -> ApplyProfilePicture. READY completes the inviter's side of the
+exchange and carries the inviter's picture, which the unencrypted first invite leaves out.
 ```
 
 ```mermaid
@@ -261,7 +264,8 @@ stateDiagram-v2
     [*] --> FindExchange
     FindExchange --> VerifyReady : ExchangeFound
     VerifyReady --> ReceiveReady : ReadyVerified
-    ReceiveReady --> [*] : ReadyReceived
+    ReceiveReady --> ApplyProfilePicture : ReadyReceived
+    ApplyProfilePicture --> [*] : ProfilePictureApplied
 ```
 
 ### ReceiveIdentityAcknowledgementWorkflow
@@ -575,11 +579,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupWelcome`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupWelcomeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`
+- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`, `RotateGroupKeyAfterAdminLeftUseCase`
 
 ```text
 AuthorizeWelcome -> LoadAuthority -> OpenWelcome -> RecordRestart -> ResolveMemberContacts -> PersistWelcome
 -> ResolveMemberNames -> InstallWelcome -> [EstablishMutualIdentity] -> SendReadyAcknowledgement -> CompleteWelcome
+-> RotateAfterAdminLeft
 
 The first welcome must come from the accepted, pinned inviter identity; later welcomes are checked against
 Membership's prior epoch. Contacts are resolved only after Membership verified and decrypted the welcome.
@@ -600,7 +605,8 @@ stateDiagram-v2
     InstallWelcome --> SendReadyAcknowledgement : Advanced
     EstablishMutualIdentity --> SendReadyAcknowledgement : Advanced
     SendReadyAcknowledgement --> CompleteWelcome : Advanced
-    CompleteWelcome --> [*] : Completed
+    CompleteWelcome --> RotateAfterAdminLeft : Advanced
+    RotateAfterAdminLeft --> [*] : Completed
 ```
 
 ## `metadata`

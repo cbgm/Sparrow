@@ -13,7 +13,7 @@ suspend inline fun <T> safeSuspendCall(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (error: Exception) {
-        if (logFailure && !expectedFailure(error)) {
+        if (logFailure && error !is ExpectedFailure && !expectedFailure(error)) {
             val logger = SparrowLog.withTag("safeSuspendCall")
             logger.error(throwable = error, message = { error.message ?: "" })
         }
@@ -30,7 +30,7 @@ inline fun <T> safeCall(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (error: Exception) {
-        if (logFailure && !expectedFailure(error)) {
+        if (logFailure && error !is ExpectedFailure && !expectedFailure(error)) {
             val logger = SparrowLog.withTag("safeCall")
             logger.error(throwable = error, message = { error.message ?: "" })
         }

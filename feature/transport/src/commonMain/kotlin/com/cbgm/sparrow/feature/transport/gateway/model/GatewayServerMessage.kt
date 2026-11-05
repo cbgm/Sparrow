@@ -6,6 +6,26 @@ import kotlinx.serialization.Serializable
 @kotlinx.serialization.InternalSerializationApi
 @Serializable
 sealed interface GatewayServerMessage {
+    /**
+     * First frame of every session. The single-use [nonce] and the gateway's [nodeId] are signed into
+     * [GatewayClientMessage.Register], so a proof cannot be replayed on another connection or node.
+     */
+    @Serializable
+    @SerialName("challenge")
+    data class Challenge(
+        val nonce: ByteArray,
+        val nodeId: String
+    ) : GatewayServerMessage {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Challenge) return false
+
+            return nodeId == other.nodeId && nonce.contentEquals(other.nonce)
+        }
+
+        override fun hashCode(): Int = 31 * nonce.contentHashCode() + nodeId.hashCode()
+    }
+
     @Serializable
     @SerialName("registered")
     data class Registered(
@@ -15,8 +35,9 @@ sealed interface GatewayServerMessage {
 
     @Serializable
     @SerialName("route_registered")
+    /** Positions in the sealed [AliasClaim.aliases] the Control Plane accepted; the gateway never sees the aliases. */
     data class RouteRegistered(
-        val aliases: List<String> = emptyList()
+        val acceptedAliasIndexes: List<Int> = emptyList()
     ) : GatewayServerMessage
 
     @Serializable
@@ -64,6 +85,8 @@ sealed interface GatewayServerMessage {
     @SerialName("error")
     data class Error(
         val code: String,
-        val message: String
+        val message: String,
+        /** Set when the error refuses one sent envelope. */
+        val envelopeId: String? = null
     ) : GatewayServerMessage
 }

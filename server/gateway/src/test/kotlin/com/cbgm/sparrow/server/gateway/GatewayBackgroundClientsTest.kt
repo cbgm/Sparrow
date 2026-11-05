@@ -17,18 +17,23 @@ class GatewayBackgroundClientsTest {
                 BoundedPresenceClient(
                     object : PresenceClient {
                         override suspend fun register(registration: ClientRouteRegistration) =
-                            PresenceRegistrationResult.PHONE_VERIFICATION_FAILED
+                            PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
 
                         override suspend fun remove(
                             routingId: String,
                             connectionId: String
                         ) = Unit
+
+                        override suspend fun ownsAlias(
+                            alias: String,
+                            routingId: String
+                        ) = false
                     }
                 )
             try {
                 assertEquals(
                     PresenceRegistrationResult.PHONE_VERIFICATION_FAILED,
-                    wrapper.register(testRegistration())
+                    wrapper.register(testRegistration()).result
                 )
             } finally {
                 wrapper.close()
@@ -41,12 +46,17 @@ class GatewayBackgroundClientsTest {
             val rejectedPresence =
                 object : PresenceClient {
                     override suspend fun register(registration: ClientRouteRegistration) =
-                        PresenceRegistrationResult.REJECTED
+                        PresenceRegistration(PresenceRegistrationResult.REJECTED)
 
                     override suspend fun remove(
                         routingId: String,
                         connectionId: String
                     ) = Unit
+
+                    override suspend fun ownsAlias(
+                        alias: String,
+                        routingId: String
+                    ) = false
                 }
 
             assertEquals(
@@ -54,7 +64,7 @@ class GatewayBackgroundClientsTest {
                 synchronizePresenceRegistration(
                     presence = rejectedPresence,
                     registration = testRegistration()
-                )
+                ).result
             )
         }
 
@@ -65,12 +75,17 @@ class GatewayBackgroundClientsTest {
                 object : PresenceClient {
                     override suspend fun register(
                         registration: ClientRouteRegistration
-                    ): PresenceRegistrationResult = error("presence unavailable")
+                    ): PresenceRegistration = error("presence unavailable")
 
                     override suspend fun remove(
                         routingId: String,
                         connectionId: String
                     ) = Unit
+
+                    override suspend fun ownsAlias(
+                        alias: String,
+                        routingId: String
+                    ) = false
                 }
 
             assertEquals(
@@ -78,7 +93,7 @@ class GatewayBackgroundClientsTest {
                 synchronizePresenceRegistration(
                     presence = failingPresence,
                     registration = testRegistration()
-                )
+                ).result
             )
         }
 

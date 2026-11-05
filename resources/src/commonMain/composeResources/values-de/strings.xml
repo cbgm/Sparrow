@@ -314,6 +314,8 @@
     <string name="feature_settings_build_info">Build-Informationen</string>
     <string name="feature_settings_danger_zone">Gefahrenbereich</string>
     <string name="feature_settings_danger_zone_description">Diese Aktionen sind destruktiv und nur für lokale Debugging-Zwecke vorgesehen.</string>
+    <string name="feature_settings_simulate_key_loss">Verlust des Identitätsschlüssels simulieren</string>
+    <string name="feature_settings_simulate_key_loss_done">Keystore-Schlüssel entfernt.</string>
     <string name="feature_settings_data_disclaimer">Datenschutzhinweis</string>
     <string name="feature_settings_data_disclaimer_subtitle">Welche Daten Sparrow lokal und in der Server-Infrastruktur speichert</string>
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
@@ -457,6 +459,7 @@
     <string name="feature_chats_group_member_removed_message">%1$s wurde aus der Gruppe entfernt</string>
     <string name="feature_chats_group_you_were_removed_message">Du wurdest aus dieser Gruppe entfernt</string>
     <string name="feature_chats_group_member_left_message">%1$s hat die Gruppe verlassen</string>
+    <string name="feature_chats_group_change_dropped_message">Deine Änderung konnte nicht übernommen werden, weil ein anderer Admin die Gruppe gleichzeitig geändert hat. Bitte versuche es erneut.</string>
     <string name="feature_chats_group_you_left_message">Du hast diese Gruppe verlassen</string>
     <string name="feature_chats_group_unknown_member">Ein Mitglied</string>
     <string name="feature_chats_group_removed_hint_title">Du bist kein Mitglied mehr</string>
@@ -479,6 +482,7 @@
     <string name="feature_settings_blocked_contacts_count">%1$d blockiert</string>
     <string name="feature_contacts_blocked_contacts_title">Blockierte Kontakte</string>
     <string name="feature_contacts_blocked_contacts_empty">Es sind keine Kontakte blockiert.</string>
+    <string name="feature_chats_contact_blocked">Dieser Kontakt ist blockiert. Entsperre ihn, um zu chatten.</string>
     <string name="feature_contacts_block_contact">Kontakt blockieren</string>
     <string name="feature_contacts_add_blocked_contact">Blockierten Kontakt hinzufügen</string>
     <string name="feature_contacts_add_blocked_contact_description">Gib eine Telefonnummer ein oder wähle einen bestehenden Kontakt aus. Eine bestehende Direktchat-Berechtigung wird entzogen.</string>
@@ -506,6 +510,16 @@
     <string name="feature_settings_control_plane_error_keep_one">Mindestens eine Control Plane muss erhalten bleiben.</string>
     <string name="feature_settings_control_plane_error_save_failed">Die Control-Plane-Liste konnte nicht gespeichert werden.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
+    <string name="feature_settings_preferred_node">Bevorzugte Node</string>
+    <string name="feature_settings_preferred_node_subtitle">Automatisch oder ein Lieblings-Node</string>
+    <string name="feature_settings_preferred_node_automatic">Automatisch</string>
+    <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
+    <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>
+    <string name="feature_settings_preferred_node_search">Adresse, IP oder Node-ID suchen</string>
+    <string name="feature_settings_preferred_node_connections">%1$d Verbindungen</string>
+    <string name="feature_settings_preferred_node_none_found">Kein Node passt zu deiner Suche</string>
+    <string name="feature_settings_preferred_node_load_failed">Nodes konnten nicht geladen werden</string>
+    <string name="feature_settings_preferred_node_unlisted">Deine bevorzugte Node ist gerade nicht in der Liste. Sparrow nutzt andere Nodes, bis sie wieder da ist.</string>
     <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
     <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
     <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>
@@ -678,6 +692,8 @@
     <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
     <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
+    <string name="feature_invite_peer_unverified">Name und Nummer nicht bestätigt</string>
+    <string name="feature_invite_peer_matches_phone_contact">Passt zu deinem Kontakt %1$s · Nummer nicht bestätigt</string>
 
     <string name="feature_applock_title">App-Sperre</string>
     <string name="feature_applock_subtitle">Beim Öffnen von Sparrow Biometrie oder die Gerätesperre verlangen.</string>
@@ -688,6 +704,12 @@
     <string name="feature_applock_unavailable">Geräteauthentifizierung ist nicht verfügbar. Richte Biometrie oder eine sichere Gerätesperre ein und versuche es erneut.</string>
     <string name="feature_applock_authentication_failed">Authentifizierung fehlgeschlagen. Versuche es erneut.</string>
     <string name="feature_applock_unlock_sparrow">Entsperre Sparrow</string>
+    <string name="feature_applock_timeout">Sperren nach</string>
+    <string name="feature_applock_timeout_immediately">Sofort nach Verlassen der App</string>
+    <string name="feature_applock_timeout_one_minute">1 Minute im Hintergrund</string>
+    <string name="feature_applock_timeout_five_minutes">5 Minuten im Hintergrund</string>
+    <string name="feature_applock_timeout_thirty_minutes">30 Minuten im Hintergrund</string>
+    <string name="feature_applock_timeout_on_restart">Nur beim Neustart der App</string>
 
     <!-- Feature: polls -->
     <string name="feature_polls_create_title">Umfrage erstellen</string>
@@ -923,6 +945,16 @@
     <string name="feature_identity_phone_verification_wrong_code">Der Code ist nicht korrekt.</string>
     <string name="feature_identity_setup_load_failed">Die Einrichtung konnte nicht geladen werden. Bitte starte Sparrow neu.</string>
     <string name="feature_identity_restore_failed">Die Identität konnte nicht wiederhergestellt werden. Prüfe das Backup und das Passwort und versuche es erneut.</string>
+    <string name="feature_identity_repair_title">Deine Identität kann auf diesem Gerät nicht mehr verwendet werden</string>
+    <string name="feature_identity_repair_message">Die Schlüssel deiner Identität auf diesem Telefon sind verloren, zum Beispiel nachdem die App-Daten auf ein anderes Telefon übertragen wurden oder sich die Displaysperre geändert hat. Deine Chats und Kontakte sind noch da. Stelle die Schlüssel aus deinem Identitäts-Backup wieder her, um alles zu behalten. Ohne Backup ist nur ein Zurücksetzen möglich, das alle Chats und Kontakte löscht.</string>
+    <string name="feature_identity_repair_restore">Aus Backup wiederherstellen</string>
+    <string name="feature_identity_repair_password_hint">Gib das Passwort deines Identitäts-Backups ein. Nur ein Backup dieser Identität wird angenommen.</string>
+    <string name="feature_identity_repair_reset">Zurücksetzen</string>
+    <string name="feature_identity_repair_reset_message">Dadurch werden alle Chats und Kontakte auf diesem Gerät gelöscht und eine neue Identität begonnen. Deine Kontakte müssen dich erneut annehmen. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="feature_identity_repair_reset_confirm">Löschen und zurücksetzen</string>
+    <string name="feature_identity_repair_backup_mismatch">Dieses Backup gehört zu einer anderen Identität. Wähle das Backup der Identität, die auf diesem Gerät verwendet wird.</string>
+    <string name="feature_identity_repair_failed">Die Schlüssel konnten nicht wiederhergestellt werden. Prüfe Backup und Passwort und versuche es erneut.</string>
+    <string name="feature_identity_repair_reset_failed">Die Identität konnte nicht zurückgesetzt werden. Versuche es erneut.</string>
     <string name="feature_identity_restore_invalid_phone">Gib eine gültige Telefonnummer ein, bevor du deine Identität wiederherstellst.</string>
     <string name="feature_identity_restore_read_failed">Das Identitäts-Backup konnte nicht gelesen werden. Wähle eine gültige Backup-Datei aus.</string>
     <string name="feature_identity_overview_load_failed">Deine Identität konnte nicht geladen werden. Bitte versuche es erneut.</string>

@@ -10,7 +10,10 @@ data class InvitationLifecycleRecord(
     val expiresAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long,
     val peerDisplayName: String? = null,
-    val peerSecondaryText: String? = null
+    val peerSecondaryText: String? = null,
+    val peerUnverified: Boolean = false,
+    val phoneContactPeerId: String? = null,
+    val phoneContactName: String? = null
 ) {
     init {
         require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }

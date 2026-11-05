@@ -1,10 +1,13 @@
 package com.cbgm.sparrow.feature.identity.device
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import java.security.KeyStore
+import java.security.UnrecoverableEntryException
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -41,19 +44,31 @@ class AndroidPrivateKeyStorage(
             dataStore.containsString(SIGNING_PRIVATE_KEY_CIPHERTEXT) ||
             dataStore.containsString(SIGNING_PRIVATE_KEY_IV)
 
-    @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun hasIdentityPrivateKeys(): Boolean {
-        val stored =
-            dataStore.containsString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) &&
-                dataStore.containsString(ENCRYPTION_PRIVATE_KEY_IV) &&
-                dataStore.containsString(SIGNING_PRIVATE_KEY_CIPHERTEXT) &&
-                dataStore.containsString(SIGNING_PRIVATE_KEY_IV)
+    override suspend fun privateKeyState(): PrivateKeyState =
+        when (PRIVATE_KEY_ENTRIES.count { entry -> dataStore.containsString(entry) }) {
+            0 -> PrivateKeyState.ABSENT
+            PRIVATE_KEY_ENTRIES.size -> storedKeyState()
+            else -> PrivateKeyState.PARTIAL
+        }
 
-        return stored &&
-            getExistingWrappingKey() != null &&
-            loadEncryptionPrivateKey() != null &&
-            loadSigningPrivateKey() != null
-    }
+    // Only errors that can never go away count as unusable; anything else is thrown so startup tries again.
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private suspend fun storedKeyState(): PrivateKeyState =
+        try {
+            val decrypted =
+                getExistingWrappingKey() != null &&
+                    loadEncryptionPrivateKey() != null &&
+                    loadSigningPrivateKey() != null
+            if (decrypted) PrivateKeyState.AVAILABLE else PrivateKeyState.UNUSABLE
+        } catch (error: Exception) {
+            if (error.isPermanentKeyLoss()) PrivateKeyState.UNUSABLE else throw error
+        }
+
+    private fun Exception.isPermanentKeyLoss(): Boolean =
+        this is KeyPermanentlyInvalidatedException ||
+            this is AEADBadTagException ||
+            this is UnrecoverableEntryException ||
+            this is IllegalArgumentException
 
     @OptIn(ExperimentalUnsignedTypes::class)
     override suspend fun loadEncryptionPrivateKey(): UByteArray? =
@@ -79,6 +94,10 @@ class AndroidPrivateKeyStorage(
         if (keyStore.containsAlias(WRAPPING_KEY_ALIAS)) {
             keyStore.deleteEntry(WRAPPING_KEY_ALIAS)
         }
+    }
+
+    override suspend fun discardWrappingKey() {
+        keyStore.deleteEntry(WRAPPING_KEY_ALIAS)
     }
 
     @OptIn(ExperimentalUnsignedTypes::class)
@@ -174,6 +193,13 @@ class AndroidPrivateKeyStorage(
         const val ENCRYPTION_PRIVATE_KEY_IV = "${PREFIX}encryption_iv"
         const val SIGNING_PRIVATE_KEY_CIPHERTEXT = "${PREFIX}signing_ciphertext"
         const val SIGNING_PRIVATE_KEY_IV = "${PREFIX}signing_iv"
+        val PRIVATE_KEY_ENTRIES =
+            listOf(
+                ENCRYPTION_PRIVATE_KEY_CIPHERTEXT,
+                ENCRYPTION_PRIVATE_KEY_IV,
+                SIGNING_PRIVATE_KEY_CIPHERTEXT,
+                SIGNING_PRIVATE_KEY_IV
+            )
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
         const val WRAPPING_KEY_ALIAS = "sparrow_identity_wrapping_key"
         const val AES_GCM_TRANSFORMATION = "AES/GCM/NoPadding"

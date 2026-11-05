@@ -2,6 +2,8 @@ package com.cbgm.sparrow.server.mailbox
 
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
+import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
+import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeIdentityStore
 import com.cbgm.sparrow.server.security.NodeRequestAuthentication
@@ -12,7 +14,10 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import java.nio.file.Path
@@ -24,13 +29,14 @@ class MailboxPushNotifier private constructor(
     private val internalToken: String?,
     private val nodeSigner: NodeRequestSigner?
 ) : AutoCloseable {
-    suspend fun notify(recipientId: String): Boolean {
+    /** Wakes the mailbox owner's device; the ticket proves the owner allowed this node to do so. */
+    suspend fun notify(ticket: MailboxWakeTicket): Boolean {
         val client = httpClient ?: return false
         return when {
             nodeSigner != null && endpointPool != null ->
-                notifyUsingNodeIdentity(client, endpointPool, recipientId)
+                notifyUsingNodeIdentity(client, endpointPool, ticket)
             internalBaseUrl != null ->
-                notifyUsingInternalToken(client, internalBaseUrl, recipientId)
+                notifyUsingInternalToken(client, internalBaseUrl, ticket.routingId)
             else -> false
         }
     }
@@ -38,15 +44,18 @@ class MailboxPushNotifier private constructor(
     private suspend fun notifyUsingNodeIdentity(
         client: HttpClient,
         pool: ControlPlaneEndpointPool,
-        recipientId: String
+        ticket: MailboxWakeTicket
     ): Boolean {
-        val path = "/v1/node-push/wake-ups/$recipientId"
+        val path = "/v1/node-push/wake-ups/${ticket.routingId}"
+        val body = serverJson.encodeToString(ticket)
         for (baseUrl in pool.ordered()) {
             try {
-                val authentication = requireNotNull(nodeSigner).sign("POST", path, "")
+                val authentication = requireNotNull(nodeSigner).sign("POST", path, body)
                 val response =
                     client.post(baseUrl.trimEnd('/') + path) {
                         nodeAuthentication(authentication)
+                        contentType(ContentType.Application.Json)
+                        setBody(body)
                     }
                 if (response.status.isSuccess()) {
                     pool.markAvailable(baseUrl)

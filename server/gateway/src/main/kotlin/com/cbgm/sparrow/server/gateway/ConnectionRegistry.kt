@@ -2,31 +2,46 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.ClientRoutingIds
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * The gateway never learns a connection's phone aliases from its route registration (they are sealed for the
+ * Control Plane). [senderAliases] holds only aliases the client sent as and a Control Plane confirmed.
+ */
 class GatewayConnection(
     val routingId: String,
     val connectionId: String,
-    routingAliases: Set<String> = emptySet(),
     private val session: DefaultWebSocketServerSession
 ) {
     private val sendMutex = Mutex()
+    private val senderAliases = ConcurrentHashMap.newKeySet<String>()
 
-    @Volatile
-    private var acceptedRoutingAliases: Set<String> = routingAliases
+    /** True for the connection's routing ID and for phone aliases a Control Plane routes to it. */
+    suspend fun acceptsSenderRoutingId(
+        senderRoutingId: String,
+        ownsAlias: suspend (alias: String, routingId: String) -> Boolean
+    ): Boolean =
+        when {
+            senderRoutingId == routingId || senderRoutingId in senderAliases -> true
+            !ClientRoutingIds.isBootstrapRoutingId(senderRoutingId) -> false
+            else -> confirmSenderAlias(senderRoutingId, ownsAlias)
+        }
 
-    fun acceptsSenderRoutingId(senderRoutingId: String): Boolean =
-        senderRoutingId == routingId || senderRoutingId in acceptedRoutingAliases
-
-    fun routingIds(): Set<String> = acceptedRoutingAliases + routingId
-
-    fun updateRoutingAliases(routingAliases: Collection<String>) {
-        acceptedRoutingAliases = routingAliases.toSet()
+    private suspend fun confirmSenderAlias(
+        alias: String,
+        ownsAlias: suspend (alias: String, routingId: String) -> Boolean
+    ): Boolean {
+        val owned = ownsAlias(alias, routingId)
+        if (owned) senderAliases.add(alias)
+        return owned
     }
+
+    fun routingIds(): Set<String> = setOf(routingId)
 
     suspend fun send(message: GatewayServerMessage) {
         sendMutex.withLock {
@@ -45,15 +60,6 @@ class ConnectionRegistry {
                 .computeIfAbsent(routingId) { ConcurrentHashMap() }[connection.connectionId] =
                 connection
         }
-    }
-
-    fun updateRoutingAliases(
-        connection: GatewayConnection,
-        routingAliases: Collection<String>
-    ) {
-        remove(connection)
-        connection.updateRoutingAliases(routingAliases)
-        register(connection)
     }
 
     fun remove(connection: GatewayConnection) {

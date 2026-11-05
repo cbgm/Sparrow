@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.notification.device
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -29,6 +30,30 @@ class SparrowNotificationManager(
                 description = context.getString(ResourcesR.string.notification_channel_messages_description)
             }
         )
+    }
+
+    /**
+     * The low-importance notification Android requires while the push sync runs as a foreground job, which
+     * WorkManager does for urgent work on Android 10 and 11.
+     */
+    fun createSyncNotification(): Notification {
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(
+                SYNC_CHANNEL_ID,
+                context.getString(ResourcesR.string.notification_channel_sync),
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                description = context.getString(ResourcesR.string.notification_channel_sync_description)
+            }
+        )
+        return NotificationCompat
+            .Builder(context, SYNC_CHANNEL_ID)
+            .setSmallIcon(ResourcesR.drawable.ic_sparrow_notification)
+            .setContentTitle(context.getString(ResourcesR.string.notification_checking_messages))
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
     }
 
     @SuppressLint("MissingPermission")
@@ -98,6 +123,7 @@ class SparrowNotificationManager(
     private companion object {
         const val WAKE_UP_NOTIFICATION_ID = 10_001
         const val MESSAGE_CHANNEL_ID = "sparrow-messages"
+        const val SYNC_CHANNEL_ID = "sparrow-message-sync"
         const val MESSAGE_GROUP_KEY = "sparrow-message-notifications"
     }
 }

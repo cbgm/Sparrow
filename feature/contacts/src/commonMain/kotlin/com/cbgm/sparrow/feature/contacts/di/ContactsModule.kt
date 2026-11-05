@@ -38,6 +38,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.LinkPhoneContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingIdentityPeerMetadataUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsViewModel
@@ -84,6 +85,7 @@ val contactsModule =
         factory { GetIdentityPeerDisplayNameUseCase(repository = get()) }
         factory { InspectContactPeerUseCase(repository = get()) }
         factory { ApplyIdentityPeerMergeUseCase(repository = get()) }
+        factory { LinkPhoneContactUseCase(repository = get(), blocklistRepository = get()) }
         factory { UpdateIncomingIdentityPeerMetadataUseCase(repository = get()) }
 
         single<ContactRepository> {
@@ -148,6 +150,7 @@ val contactsModule =
             BlockContactUseCase(
                 blocklistRepository = get(),
                 contactRepository = get(),
+                identityPeerRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }
