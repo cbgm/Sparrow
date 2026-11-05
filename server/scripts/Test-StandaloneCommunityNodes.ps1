@@ -672,16 +672,33 @@ try {
     }
     Write-Host "PASS registry contains the two independent node identities."
 
-    $nodePushPath = "/v1/node-push/wake-ups/standalone-smoke-recipient"
+    # A node may only wake a device that gave it a signed wake ticket. This ticket comes from a fresh device key
+    # with no push registration, so a correctly signed request returns 404 (not 202); a bad signature returns 401.
+    $wakeTicket =
+        Convert-KeyValueOutput -Output (
+            Get-ComposeOutput `
+                -Project $nodeAProject `
+                -EnvironmentFile $nodeAEnvironment `
+                -ComposeFile $nodeCompose `
+                -Arguments @(
+                    "exec", "-T", "federation",
+                    "java", "-cp", "/app/lib/*",
+                    "com.cbgm.sparrow.server.security.MailboxWakeTicketCli",
+                    $nodeAId
+                )
+        )
+    if ([string]::IsNullOrWhiteSpace([string]$wakeTicket["routingId"]) -or [string]::IsNullOrWhiteSpace([string]$wakeTicket["ticket"])) {
+        throw "Wake ticket CLI did not return a ticket."
+    }
+    $nodePushPath = "/v1/node-push/wake-ups/$($wakeTicket['routingId'])"
     $nodePushAuthentication =
         Get-NodeAuthentication `
             -Project $nodeAProject `
             -EnvironmentFile $nodeAEnvironment `
             -ComposeFile $nodeCompose `
             -Method "POST" `
-            -Path $nodePushPath
-    # No device is registered for this dummy recipient. A correctly signed
-    # request returns 404 (not 202); an invalid signature returns 401.
+            -Path $nodePushPath `
+            -Body $wakeTicket["ticket"]
     $nodePushStatus = $null
     try {
         $nodePushResponse =
@@ -689,6 +706,8 @@ try {
                 -Uri "http://localhost:8390$nodePushPath" `
                 -Method Post `
                 -Headers (Get-NodeAuthenticationHeaders -Authentication $nodePushAuthentication) `
+                -ContentType "application/json" `
+                -Body $wakeTicket["ticket"] `
                 -UseBasicParsing `
                 -TimeoutSec 10
         $nodePushStatus = [int]$nodePushResponse.StatusCode
