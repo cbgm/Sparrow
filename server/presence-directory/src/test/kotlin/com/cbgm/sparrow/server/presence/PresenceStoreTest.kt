@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class PresenceStoreTest {
     @Test
@@ -19,27 +20,50 @@ class PresenceStoreTest {
             val identity = NodeIdentity.generate()
             val store = PresenceStore(now = { 1_000L })
 
-            assertIs<PresenceResult.Accepted>(store.register(registration(identity, generation = 2L), FIRST_CLAIM))
-            assertIs<PresenceResult.Rejected>(store.register(registration(identity, generation = 1L), FIRST_CLAIM))
-            val routingId = ClientRoutingIds.fromSigningPublicKey(identity.encodedPublicKey)
-            assertEquals(2L, store.resolve(routingId).routes.single().generation)
+            assertEquals(PresenceResult.Accepted, store.register(registration(identity, generation = 2L)))
+            assertIs<PresenceResult.Rejected>(store.register(registration(identity, generation = 1L)))
+            assertEquals(2L, store.resolve(identity.routingId).routes.single().generation)
         }
 
     @Test
     fun signingKeyCannotClaimAnotherDeviceRoutingId() =
         runTest {
-            val identity = NodeIdentity.generate()
-            val registration = registration(identity, generation = 1L)
+            val registration = registration(NodeIdentity.generate(), generation = 1L)
             val claimedRoutingId = ClientRoutingIds.fromSigningPublicKey(ByteArray(32) { 7 })
             val result =
                 PresenceStore(now = { 1_000L }).register(
-                    registration.copy(
-                        route = registration.route.copy(routingId = claimedRoutingId)
-                    ),
-                    FIRST_CLAIM
+                    registration.copy(route = registration.route.copy(routingId = claimedRoutingId))
                 )
 
             assertEquals(PresenceResult.Rejected("INVALID_ROUTING_ID"), result)
+        }
+
+    @Test
+    fun anAliasResolvesToTheRoutesOfTheDeviceHoldingIt() =
+        runTest {
+            val owner = NodeIdentity.generate()
+            val store = PresenceStore(now = { 1_000L })
+            store.register(registration(owner, generation = 1L))
+
+            assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, FIRST_CLAIM))
+
+            val resolved = store.resolve(ALIAS)
+            assertEquals(owner.routingId, resolved.ownerRoutingId)
+            assertEquals(listOf(owner.routingId), resolved.routes.map(ClientRoute::routingId))
+            assertNull(resolved.routes.single().aliases)
+        }
+
+    @Test
+    fun anAliasIsBoundEvenWhenTheDeviceRouteIsAtAnotherControlPlane() =
+        runTest {
+            val owner = NodeIdentity.generate()
+            val store = PresenceStore(now = { 1_000L })
+
+            store.bindAliases(owner.routingId, FIRST_CLAIM)
+
+            val resolved = store.resolve(ALIAS)
+            assertEquals(owner.routingId, resolved.ownerRoutingId)
+            assertEquals(emptyList(), resolved.routes)
         }
 
     @Test
@@ -49,33 +73,10 @@ class PresenceStoreTest {
             val attacker = NodeIdentity.generate()
             val store = PresenceStore(now = { 1_000L })
 
-            assertEquals(
-                PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(owner, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-            )
-            assertEquals(
-                PresenceResult.Accepted(emptyList()),
-                store.register(registration(attacker, generation = 9L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-            )
+            assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, FIRST_CLAIM))
+            assertEquals(emptyList(), store.bindAliases(attacker.routingId, FIRST_CLAIM))
 
-            val ownerRoutingId = ClientRoutingIds.fromSigningPublicKey(owner.encodedPublicKey)
-            assertEquals(listOf(ownerRoutingId), store.resolve(ALIAS).routes.map(ClientRoute::routingId))
-            val attackerRoutingId = ClientRoutingIds.fromSigningPublicKey(attacker.encodedPublicKey)
-            assertEquals(1, store.resolve(attackerRoutingId).routes.size)
-        }
-
-    @Test
-    fun removingARouteWithACopiedConnectionIdKeepsTheOwnersAlias() =
-        runTest {
-            val owner = NodeIdentity.generate()
-            val attacker = NodeIdentity.generate()
-            val store = PresenceStore(now = { 1_000L })
-            store.register(registration(owner, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-            store.register(registration(attacker, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-
-            store.remove(ClientRoutingIds.fromSigningPublicKey(attacker.encodedPublicKey), "connection-1")
-
-            assertEquals(1, store.resolve(ALIAS).routes.size)
+            assertEquals(owner.routingId, store.resolve(ALIAS).ownerRoutingId)
         }
 
     @Test
@@ -84,30 +85,26 @@ class PresenceStoreTest {
             val owner = NodeIdentity.generate()
             val newDevice = NodeIdentity.generate()
             val store = PresenceStore(now = { 1_000L })
-            val verifiedServer = AliasClaims(provenAlias = null, unprovenClaimsAllowed = false)
+            val verifiedServer = AliasClaims(provenAlias = null, unprovenClaimsAllowed = false, aliases = listOf(ALIAS))
 
-            assertEquals(
-                PresenceResult.Accepted(emptyList()),
-                store.register(registration(owner, generation = 1L), verifiedServer.copy(aliases = listOf(ALIAS)))
-            )
-            store.register(
-                registration(owner, generation = 2L),
-                verifiedServer.copy(provenAlias = ALIAS, aliases = listOf(ALIAS))
-            )
-            assertEquals(
-                PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(owner, generation = 3L), verifiedServer.copy(aliases = listOf(ALIAS)))
-            )
-            assertEquals(
-                PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(
-                    registration(newDevice, generation = 1L),
-                    verifiedServer.copy(provenAlias = ALIAS, aliases = listOf(ALIAS))
-                )
-            )
+            assertEquals(emptyList(), store.bindAliases(owner.routingId, verifiedServer))
+            store.bindAliases(owner.routingId, verifiedServer.copy(provenAlias = ALIAS))
+            assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, verifiedServer))
+            assertEquals(listOf(ALIAS), store.bindAliases(newDevice.routingId, verifiedServer.copy(provenAlias = ALIAS)))
 
-            val newRoutingId = ClientRoutingIds.fromSigningPublicKey(newDevice.encodedPublicKey)
-            assertEquals(listOf(newRoutingId), store.resolve(ALIAS).routes.map(ClientRoute::routingId))
+            assertEquals(newDevice.routingId, store.resolve(ALIAS).ownerRoutingId)
+        }
+
+    @Test
+    fun aliasBindingExpiresAfterTheOwnerStopsClaimingIt() =
+        runTest {
+            var now = 1_000L
+            val store = PresenceStore(now = { now })
+            store.bindAliases(NodeIdentity.generate().routingId, FIRST_CLAIM)
+
+            now += ALIAS_BINDING_LIFETIME_MILLISECONDS
+            val successor = NodeIdentity.generate()
+            assertEquals(listOf(ALIAS), store.bindAliases(successor.routingId, FIRST_CLAIM))
         }
 
     @Test
@@ -117,26 +114,14 @@ class PresenceStoreTest {
 
             // Older apps named their aliases in the route, which the gateway can read.
             assertEquals(
-                PresenceResult.Accepted(emptyList()),
-                store.register(registration(NodeIdentity.generate(), generation = 1L, aliases = listOf(ALIAS)), FIRST_CLAIM)
+                PresenceResult.Accepted,
+                store.register(registration(NodeIdentity.generate(), generation = 1L, aliases = listOf(ALIAS)))
             )
             assertEquals(emptyList(), store.resolve(ALIAS).routes)
         }
 
-    @Test
-    fun aliasBindingExpiresAfterTheOwnerStopsRegistering() =
-        runTest {
-            var now = 1_000L
-            val store = PresenceStore(now = { now })
-            store.register(registration(NodeIdentity.generate(), generation = 1L, now = now), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-
-            now += ALIAS_BINDING_LIFETIME_MILLISECONDS
-            val successor = NodeIdentity.generate()
-            assertEquals(
-                PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(successor, generation = 1L, now = now), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
-            )
-        }
+    private val NodeIdentity.routingId: String
+        get() = ClientRoutingIds.fromSigningPublicKey(encodedPublicKey)
 
     private fun registration(
         identity: NodeIdentity,
@@ -146,7 +131,7 @@ class PresenceStoreTest {
     ): ClientRouteRegistration {
         val unsigned =
             ClientRoute(
-                routingId = ClientRoutingIds.fromSigningPublicKey(identity.encodedPublicKey),
+                routingId = identity.routingId,
                 nodeId = "node-a",
                 connectionId = "connection-$generation",
                 generation = generation,
@@ -164,6 +149,6 @@ class PresenceStoreTest {
 
     private companion object {
         val ALIAS = ClientRoutingIds.fromPhoneNumber("+491701234567")
-        val FIRST_CLAIM = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true)
+        val FIRST_CLAIM = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(ALIAS))
     }
 }

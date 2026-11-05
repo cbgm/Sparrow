@@ -16,14 +16,11 @@ interface FederationClient {
 
 enum class PresenceRegistrationResult {
     ACCEPTED,
-    REJECTED,
-    PHONE_VERIFICATION_FAILED
+    REJECTED
 }
 
-/** [acceptedAliasIndexes] are the positions of the sealed alias claim's aliases a Control Plane accepted. */
 data class PresenceRegistration(
-    val result: PresenceRegistrationResult,
-    val acceptedAliasIndexes: List<Int> = emptyList()
+    val result: PresenceRegistrationResult
 )
 
 interface PresenceClient {

@@ -22,6 +22,7 @@ internal fun Application.installGatewayRoutes(
         installGatewayWebSocketRoute(runtime)
         installBlobRoutes(runtime.blobStore, runtime.blobUploadPermitStore)
         installGatewayInternalRoutes(runtime, config)
+        installRelayRoute(runtime.relay)
     }
 }
 

@@ -243,18 +243,13 @@ internal class GatewaySessionHandler(
             return
         }
 
-        val presenceRegistration = synchronizePresence(registration)
-        when (val presenceResult = presenceRegistration.result) {
+        when (synchronizePresence(registration).result) {
             PresenceRegistrationResult.ACCEPTED -> {
-                connection.send(
-                    GatewayServerMessage.RouteRegistered(
-                        acceptedAliasIndexes = presenceRegistration.acceptedAliasIndexes
-                    )
-                )
+                connection.send(GatewayServerMessage.RouteRegistered)
                 pushActions.deliverPending(connection)
             }
 
-            else -> connection.sendRouteRejected(presenceResult)
+            PresenceRegistrationResult.REJECTED -> connection.sendError(code = "ROUTE_REJECTED", message = "Presence route rejected")
         }
     }
 
@@ -290,18 +285,6 @@ internal suspend fun synchronizePresenceRegistration(
     } catch (_: Exception) {
         PresenceRegistration(PresenceRegistrationResult.REJECTED)
     }
-
-private suspend fun GatewayConnection.sendRouteRejected(result: PresenceRegistrationResult) {
-    sendError(
-        code = "ROUTE_REJECTED",
-        message =
-            if (result == PresenceRegistrationResult.PHONE_VERIFICATION_FAILED) {
-                "Phone verification failed"
-            } else {
-                "Presence route rejected"
-            }
-    )
-}
 
 internal data class GatewayPushActions(
     val deliverPending: (GatewayConnection) -> Unit,

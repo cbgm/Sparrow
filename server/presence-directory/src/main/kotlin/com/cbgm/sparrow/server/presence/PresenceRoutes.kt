@@ -1,24 +1,29 @@
 package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.AliasClaimKeyResponse
+import com.cbgm.sparrow.server.protocol.AliasClaimRequest
+import com.cbgm.sparrow.server.protocol.AliasClaimResult
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
-import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.NodeCapability
+import com.cbgm.sparrow.server.protocol.UnsignedAliasClaim
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizationRequirements
+import com.cbgm.sparrow.server.security.enforceRateLimit
 import com.cbgm.sparrow.server.security.nodeRequestAuthentication
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.request.receive
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 
@@ -29,6 +34,7 @@ internal fun Application.installPresenceRoutes(runtime: PresenceRuntime) {
         installRouteRemoval(runtime)
         installRouteResolution(runtime)
         installAliasClaimKey(runtime)
+        installAliasClaims(runtime)
     }
 }
 
@@ -83,21 +89,7 @@ private suspend fun ApplicationCall.registerRoute(
     registration: ClientRouteRegistration,
     runtime: PresenceRuntime
 ) {
-    // A claim sealed for an earlier key (before a restart) is dropped; the app seals the next one for the new key.
-    val claim = runtime.aliasClaimKeys.claimFor(registration)
-    when (val claims = runtime.phoneVerification.claims(claim)) {
-        null ->
-            respond(
-                HttpStatusCode.Forbidden,
-                ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
-            )
-
-        else ->
-            respondToRegistration(
-                runtime.store.register(registration.copy(sealedAliasClaim = null), claims),
-                claims.aliases
-            )
-    }
+    respondToRegistration(runtime.store.register(registration))
 }
 
 private suspend fun ApplicationCall.isAuthorizedRegistration(
@@ -159,6 +151,41 @@ private fun Route.installAliasClaimKey(runtime: PresenceRuntime) {
     }
 }
 
+/**
+ * Apps claim their phone aliases here, through two relays ([com.cbgm.sparrow.server.protocol.RelayLayer]): the claim is
+ * sealed for this directory and signed with the device key, so no node is involved and none can read it. The relay
+ * address is shared by many apps, so the rate limit is per device.
+ */
+private fun Route.installAliasClaims(runtime: PresenceRuntime) {
+    post("/v1/alias-claims") {
+        val claim = runCatching { call.receive<AliasClaimRequest>() }.getOrNull()?.let { request -> runtime.aliasClaimKeys.open(request.sealedClaim) }
+        when {
+            claim == null ->
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_ALIAS_CLAIM", "Alias claim rejected"))
+
+            call.enforceRateLimit(runtime.aliasClaimRateLimiter, claim.routingId) -> call.bindAliases(claim, runtime)
+        }
+    }
+}
+
+private suspend fun ApplicationCall.bindAliases(
+    claim: UnsignedAliasClaim,
+    runtime: PresenceRuntime
+) {
+    when (val claims = runtime.phoneVerification.claims(claim)) {
+        null ->
+            respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse("PHONE_VERIFICATION_FAILED", "Phone verification failed")
+            )
+
+        else -> {
+            val bound = runtime.store.bindAliases(claim.routingId, claims)
+            respond(AliasClaimResult(acceptedAliasIndexes = claim.aliases.indices.filter { index -> claim.aliases[index] in bound }))
+        }
+    }
+}
+
 private suspend fun ApplicationCall.isAuthorizedResolution(
     routingId: String,
     runtime: PresenceRuntime
@@ -180,17 +207,9 @@ private suspend fun ApplicationCall.isAuthorizedResolution(
 private fun ClientRoutingResult.withoutAliases(): ClientRoutingResult =
     copy(routes = routes.map { route -> route.copy(aliases = null) })
 
-private suspend fun ApplicationCall.respondToRegistration(
-    result: PresenceResult,
-    claimedAliases: List<String>
-) {
+private suspend fun ApplicationCall.respondToRegistration(result: PresenceResult) {
     when (result) {
-        is PresenceResult.Accepted ->
-            respond(
-                ClientRouteRegistrationResult(
-                    acceptedAliasIndexes = claimedAliases.indices.filter { index -> claimedAliases[index] in result.aliases }
-                )
-            )
+        PresenceResult.Accepted -> respond(HttpStatusCode.NoContent)
 
         is PresenceResult.Rejected ->
             respond(

@@ -32,7 +32,7 @@
         reverse_proxy gateway:8094
     }
 
-    @gateway_info path /v1/gateway/info /v1/control-planes
+    @gateway_info path /v1/gateway/info /v1/control-planes /v1/relay
     handle @gateway_info {
         reverse_proxy gateway:8094
     }

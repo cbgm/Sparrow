@@ -12,6 +12,7 @@ import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.ProtocolSignatures
 import com.cbgm.sparrow.server.security.Signatures
+import com.cbgm.sparrow.server.security.relayKeyPair
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -161,6 +162,7 @@ private class NodeRegistrationClient(
                 protocolVersions = setOf(SUPPORTED_PROTOCOL_VERSION),
                 capabilities = NodeCapability.entries.toSet(),
                 validUntilEpochMilliseconds = now() + config.descriptorLifetimeMilliseconds,
+                relayKey = identity.relayKeyPair().publicKey,
                 signature = byteArrayOf()
             ),
             identity

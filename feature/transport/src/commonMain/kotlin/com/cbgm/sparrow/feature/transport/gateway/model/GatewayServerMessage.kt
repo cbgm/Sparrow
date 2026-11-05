@@ -35,10 +35,7 @@ sealed interface GatewayServerMessage {
 
     @Serializable
     @SerialName("route_registered")
-    /** Positions in the sealed [AliasClaim.aliases] the Control Plane accepted; the gateway never sees the aliases. */
-    data class RouteRegistered(
-        val acceptedAliasIndexes: List<Int> = emptyList()
-    ) : GatewayServerMessage
+    data object RouteRegistered : GatewayServerMessage
 
     @Serializable
     @SerialName("incoming_envelope")

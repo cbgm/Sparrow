@@ -20,6 +20,8 @@ data class SparrowNodeDescriptor(
     val capabilities: Set<NodeCapability>,
     val validUntilEpochMilliseconds: Long,
     val activeConnections: Int? = null,
+    /** Raw X25519 key the node relays onion layers with; null for nodes that do not relay. */
+    val relayKey: ByteArray? = null,
     val signature: ByteArray
 )
 
@@ -32,7 +34,8 @@ internal data class UnsignedNodeDescriptor(
     val identityPublicKey: ByteArray,
     val protocolVersions: Set<Int>,
     val capabilities: Set<NodeCapability>,
-    val validUntilEpochMilliseconds: Long
+    val validUntilEpochMilliseconds: Long,
+    val relayKey: ByteArray? = null
 )
 
 internal fun SparrowNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
@@ -44,7 +47,8 @@ internal fun SparrowNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
         identityPublicKey = identityPublicKey,
         protocolVersions = protocolVersions,
         capabilities = capabilities,
-        validUntilEpochMilliseconds = validUntilEpochMilliseconds
+        validUntilEpochMilliseconds = validUntilEpochMilliseconds,
+        relayKey = relayKey
     )
 
 @Serializable

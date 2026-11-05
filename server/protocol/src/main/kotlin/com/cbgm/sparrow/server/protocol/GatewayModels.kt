@@ -203,9 +203,7 @@ sealed interface GatewayServerMessage {
 
     @Serializable
     @SerialName("route_registered")
-    data class RouteRegistered(
-        val acceptedAliasIndexes: List<Int> = emptyList()
-    ) : GatewayServerMessage
+    data object RouteRegistered : GatewayServerMessage
 
     @Serializable
     @SerialName("incoming_envelope")

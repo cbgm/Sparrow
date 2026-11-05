@@ -322,6 +322,7 @@ FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt
 FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt
 GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt
 EXCHANGE_RATES_URL=
+RELAY_PRIVATE_DESTINATIONS=$([[ "$MODE" == "lan" ]] && echo true || echo false)
 EOF_RUNTIME
 
 COMPOSE=(

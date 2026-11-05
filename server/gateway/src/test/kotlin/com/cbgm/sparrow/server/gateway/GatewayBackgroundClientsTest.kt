@@ -11,13 +11,13 @@ import kotlin.test.assertFalse
 
 class GatewayBackgroundClientsTest {
     @Test
-    fun presenceWrapperPropagatesRejectedPhoneRegistration() =
+    fun presenceWrapperPropagatesRejectedRegistration() =
         runTest {
             val wrapper =
                 BoundedPresenceClient(
                     object : PresenceClient {
                         override suspend fun register(registration: ClientRouteRegistration) =
-                            PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
+                            PresenceRegistration(PresenceRegistrationResult.REJECTED)
 
                         override suspend fun remove(
                             routingId: String,
@@ -32,7 +32,7 @@ class GatewayBackgroundClientsTest {
                 )
             try {
                 assertEquals(
-                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED,
+                    PresenceRegistrationResult.REJECTED,
                     wrapper.register(testRegistration()).result
                 )
             } finally {

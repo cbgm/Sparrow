@@ -32,8 +32,13 @@ class HttpPresenceDirectoryClient(
     private val endpointPool: ControlPlaneEndpointPool,
     private val signer: NodeRequestSigner
 ) : PresenceDirectoryClient {
+    /**
+     * A phone alias may be bound at a Control Plane that does not hold the device's route: its answer names the
+     * device ([ClientRoutingResult.ownerRoutingId]), whose routes are then looked up at all Control Planes.
+     */
     override suspend fun resolve(routingId: String): ClientRoutingResult {
         var emptyResult: ClientRoutingResult? = null
+        var owner: String? = null
         for (baseUrl in endpointPool.ordered()) {
             try {
                 val path = "/v1/routes/$routingId"
@@ -58,13 +63,16 @@ class HttpPresenceDirectoryClient(
                     return result
                 }
                 emptyResult = result
+                owner = owner ?: result.ownerRoutingId?.takeIf { candidate -> candidate != routingId }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
                 endpointPool.markUnavailable(baseUrl)
             }
         }
-        return emptyResult ?: ClientRoutingResult(routingId = routingId, routes = emptyList())
+        return owner?.let { device -> resolve(device).copy(routingId = routingId, ownerRoutingId = device) }
+            ?: emptyResult
+            ?: ClientRoutingResult(routingId = routingId, routes = emptyList())
     }
 }
 

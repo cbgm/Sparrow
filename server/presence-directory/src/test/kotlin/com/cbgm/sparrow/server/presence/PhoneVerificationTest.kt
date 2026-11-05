@@ -127,9 +127,9 @@ class PhoneVerificationTest {
     private fun claim(token: String?, aliases: List<String> = listOf(alias)) =
         UnsignedAliasClaim(
             routingId = "scrouting1_key",
-            connectionId = "connection",
-            generation = 1L,
+            clientSigningPublicKey = byteArrayOf(1),
             aliases = aliases,
-            phoneVerificationToken = token
+            phoneVerificationToken = token,
+            issuedAtEpochMilliseconds = 1_000L
         )
 }

@@ -1,14 +1,13 @@
 package com.cbgm.sparrow.feature.transport.presence
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
-import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -16,7 +15,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -25,13 +23,12 @@ private const val MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS = 30_000L
 private const val MAX_ROUTE_TTL_SAFETY_MARGIN_MILLISECONDS = 5_000L
 private const val MAX_EXPIRATION_RETRIES = 3
 private const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
+private const val ALIAS_CLAIM_INTERVAL_MILLISECONDS = 6L * 60L * 60L * 1_000L
 
 internal class ClientPresenceRouteCoordinator(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
-    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val aliasClaimKeyProvider: AliasClaimKeyProvider
+    private val aliasClaimRegistrar: AliasClaimRegistrar
 ) {
     // Starts the public gateway information request while the WebSocket is still opening, so
     // both cold HTTPS connections overlap instead of running one after the other.
@@ -47,7 +44,8 @@ internal class ClientPresenceRouteCoordinator(
         publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
         onReady: (Set<String>) -> Unit,
         onFailure: suspend (Throwable) -> Unit,
-        prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>? = null
+        prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>? = null,
+        onAliasesClaimed: (Set<String>) -> Unit = {}
     ): ClientPresenceRouteSession =
         ClientPresenceRouteSession(
             scope = scope,
@@ -55,12 +53,11 @@ internal class ClientPresenceRouteCoordinator(
             prefetchedGatewayInformation = prefetchedGatewayInformation,
             httpClient = httpClient,
             registrationFactory = registrationFactory,
-            localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
-            localPhoneNumberProvider = localPhoneNumberProvider,
-            aliasClaimKeyProvider = aliasClaimKeyProvider,
+            aliasClaimRegistrar = aliasClaimRegistrar,
             publishRoute = publishRoute,
             onReady = onReady,
-            onFailure = onFailure
+            onFailure = onFailure,
+            onAliasesClaimed = onAliasesClaimed
         )
 }
 
@@ -70,12 +67,11 @@ internal class ClientPresenceRouteSession(
     private var prefetchedGatewayInformation: Deferred<Result<GatewayInformationSnapshot>>?,
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
-    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val aliasClaimKeyProvider: AliasClaimKeyProvider,
+    private val aliasClaimRegistrar: AliasClaimRegistrar,
     private val publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
     private val onReady: (Set<String>) -> Unit,
-    private val onFailure: suspend (Throwable) -> Unit
+    private val onFailure: suspend (Throwable) -> Unit,
+    private val onAliasesClaimed: (Set<String>) -> Unit
 ) {
     private val logger = SparrowLog.withTag("ClientPresenceRouteSession")
     private val events = Channel<ClientPresenceRouteEvent>(capacity = Channel.UNLIMITED)
@@ -85,11 +81,7 @@ internal class ClientPresenceRouteSession(
     private var gatewayTimeObservedAt: TimeMark? = null
     private var expirationRetries = 0
     private var recoveringExpiredRoute = false
-    private var sentPhoneVerificationToken = false
-
-    // The gateway answers with positions in the sealed claim, never with the aliases themselves.
-    @Volatile
-    private var claimedAliases: List<String> = emptyList()
+    private var aliasClaimJob: Job? = null
 
     private val runner =
         scope.launch {
@@ -104,9 +96,8 @@ internal class ClientPresenceRouteSession(
         events.trySend(ClientPresenceRouteEvent.GatewayRegistered)
     }
 
-    fun onRouteAccepted(acceptedAliasIndexes: List<Int>) {
-        val aliases = acceptedAliasIndexes.mapNotNull(claimedAliases::getOrNull).toSet()
-        events.trySend(ClientPresenceRouteEvent.RouteAccepted(aliases = aliases))
+    fun onRouteAccepted() {
+        events.trySend(ClientPresenceRouteEvent.RouteAccepted(aliases = emptySet()))
     }
 
     fun onRouteRejected(error: Throwable) {
@@ -130,6 +121,7 @@ internal class ClientPresenceRouteSession(
 
     fun close() {
         refreshJob?.cancel()
+        aliasClaimJob?.cancel()
         events.close()
         runner.cancel()
     }
@@ -150,16 +142,12 @@ internal class ClientPresenceRouteSession(
             is ClientPresenceRouteEffect.AnnounceReady -> {
                 expirationRetries = 0
                 recoveringExpiredRoute = false
-                clearSentPhoneVerificationToken()
-                logger.info {
-                    "Presence route ready for ${connection.routingId}; aliases=${effect.aliases.size}"
-                }
+                logger.info { "Presence route ready for ${connection.routingId}" }
                 onReady(effect.aliases)
+                startAliasClaims()
             }
 
             is ClientPresenceRouteEffect.Fail -> {
-                // A rejected token is not sent again; the reconnect registers without it.
-                clearSentPhoneVerificationToken()
                 if (recoveringExpiredRoute || effect.error is PresenceRouteRefreshRejectedException) {
                     // Expected transport housekeeping failure; reconnect will retry.
                     // Error logging here would display an intrusive global snackbar.
@@ -172,19 +160,25 @@ internal class ClientPresenceRouteSession(
         }
     }
 
-    // The phone number verified at sign-up is proven once, with the first accepted route.
-    private suspend fun loadPhoneVerificationToken(): String? =
-        localPhoneNumberProvider
-            .getPhoneVerificationToken()
-            .onFailure { failure -> logger.warn(failure) { "Could not load the phone token" } }
-            .getOrNull()
-
-    private suspend fun clearSentPhoneVerificationToken() {
-        if (!sentPhoneVerificationToken) return
-        sentPhoneVerificationToken = false
-        localPhoneNumberProvider
-            .clearPhoneVerificationToken()
-            .onFailure { failure -> logger.warn(failure) { "Could not clear the phone token" } }
+    /**
+     * Phone aliases go to the Control Planes through the relays, not through the gateway. They are claimed once the
+     * route is ready and again every [ALIAS_CLAIM_INTERVAL_MILLISECONDS], which renews their binding.
+     */
+    private fun startAliasClaims() {
+        if (aliasClaimJob?.isActive == true) return
+        aliasClaimJob =
+            scope.launch {
+                while (true) {
+                    val aliases =
+                        runCatching { aliasClaimRegistrar.claim(connection.routingId) }
+                            .onFailure { failure ->
+                                if (failure is CancellationException) throw failure
+                                logger.warn { "Phone alias claim failed: ${failure::class.simpleName}" }
+                            }.getOrDefault(emptySet())
+                    onAliasesClaimed(aliases)
+                    delay(ALIAS_CLAIM_INTERVAL_MILLISECONDS.milliseconds)
+                }
+            }
     }
 
     // The first load uses the prefetched response; refreshes and expiration recovery always
@@ -214,19 +208,6 @@ internal class ClientPresenceRouteSession(
     }
 
     private suspend fun prepareRegistration(gatewayInformation: GatewayNodeInformation) {
-        val aliases =
-            localBootstrapRoutingIdProvider
-                .getLocalBootstrapRoutingId()
-                .onFailure { failure -> SparrowLog.error("ClientPresenceRouteCoordinator", "Could not load bootstrap routing ID", failure) }
-                .getOrNull()?.let(::listOf)
-                .orEmpty()
-        // Without the presence directory's key the aliases stay on the device; the gateway must not read them.
-        val aliasClaim =
-            aliasClaimKeyProvider.current()
-                ?.takeIf { aliases.isNotEmpty() }
-                ?.let { key -> PendingAliasClaim(aliases, loadPhoneVerificationToken(), key) }
-        claimedAliases = aliasClaim?.aliases.orEmpty()
-
         registrationFactory.create(
             routingId = connection.routingId,
             nodeId = gatewayInformation.nodeId,
@@ -238,11 +219,9 @@ internal class ClientPresenceRouteSession(
                     gatewayInformation.serverTimeObservedAtEpochMilliseconds?.let { observedAt ->
                         observedAt + (gatewayTimeObservedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L)
                     } ?: SystemClock.nowEpochMilliseconds()
-            ),
-            aliasClaim = aliasClaim
+            )
         ).fold(
             onSuccess = { registration ->
-                sentPhoneVerificationToken = aliasClaim?.phoneVerificationToken != null
                 events.send(ClientPresenceRouteEvent.RegistrationPrepared(registration = registration))
             },
             onFailure = { error ->

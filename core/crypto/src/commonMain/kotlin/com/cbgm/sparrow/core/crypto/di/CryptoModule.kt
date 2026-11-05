@@ -3,12 +3,12 @@ package com.cbgm.sparrow.core.crypto.di
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.blob.SodiumBlobCipher
-import com.cbgm.sparrow.core.crypto.claim.AliasClaimSealer
-import com.cbgm.sparrow.core.crypto.claim.SodiumAliasClaimSealer
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.random.SodiumSecureRandomGenerator
+import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
+import com.cbgm.sparrow.core.crypto.sealing.SodiumSealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.DefaultIncomingTransportMessageDecoder
@@ -33,8 +33,8 @@ val cryptoModule =
             SodiumBlobCipher()
         }
 
-        single<AliasClaimSealer> {
-            SodiumAliasClaimSealer()
+        single<SealedMessageCipher> {
+            SodiumSealedMessageCipher()
         }
 
         single<SecureRandomGenerator> {
