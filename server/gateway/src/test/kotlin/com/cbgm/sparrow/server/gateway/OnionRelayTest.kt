@@ -22,6 +22,7 @@ import java.net.InetAddress
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -37,13 +38,18 @@ class OnionRelayTest {
             MockEngine { request ->
                 when (request.url.toString()) {
                     "https://relay-b.test/v1/relay" -> {
-                        val reply = runBlocking { second.relay(request.body.toByteArray()) }
-                        respond(reply ?: byteArrayOf(), if (reply == null) HttpStatusCode.BadGateway else HttpStatusCode.OK)
+                        when (val reply = runBlocking { second.relay(request.body.toByteArray()) }) {
+                            is RelayReply.Sealed -> respond(reply.bytes, HttpStatusCode.OK)
+                            RelayReply.Refused -> respond("", HttpStatusCode.BadRequest)
+                            RelayReply.NextRelayFailed -> respond("", HttpStatusCode.BadGateway)
+                            RelayReply.ControlPlaneFailed -> respond("", HttpStatusCode.GatewayTimeout)
+                        }
                     }
                     "https://control.test/v1/nodes" -> {
                         seenByControlPlane += request.headers.names().joinToString()
                         respond("""{"directory":"signed"}""", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
                     }
+                    "https://down.test/v1/nodes" -> error("Connection refused")
                     else -> respond("", HttpStatusCode.NotFound)
                 }
             }
@@ -63,7 +69,7 @@ class OnionRelayTest {
             val inner = seal(RelayLayer(innerReplyKey, exit = RelayExit("GET", "https://control.test/v1/nodes")), secondKeys)
             val outer = seal(RelayLayer(outerReplyKey, forward = RelayForward("https://relay-b.test/v1/relay", inner)), firstKeys)
 
-            val reply = assertNotNull(first.relay(outer))
+            val reply = assertIs<RelayReply.Sealed>(first.relay(outer)).bytes
             val exitReply = assertNotNull(ReplySealing.open(assertNotNull(ReplySealing.open(reply, outerReplyKey)), innerReplyKey))
             val response = serverJson.decodeFromString<RelayExitResponse>(exitReply.decodeToString())
 
@@ -79,7 +85,34 @@ class OnionRelayTest {
         runTest {
             val layer = seal(RelayLayer(ByteArray(ReplySealing.KEY_BYTES), exit = RelayExit("GET", "https://control.test/v1/nodes")), secondKeys)
 
-            assertNull(first.relay(layer))
+            assertEquals(RelayReply.Refused, first.relay(layer))
+        }
+
+    @Test
+    fun anUnreachableControlPlaneIsReportedThroughBothRelays() =
+        runTest {
+            val inner = seal(RelayLayer(ByteArray(ReplySealing.KEY_BYTES) { 2 }, exit = RelayExit("GET", "https://down.test/v1/nodes")), secondKeys)
+            val outer =
+                seal(
+                    RelayLayer(ByteArray(ReplySealing.KEY_BYTES) { 1 }, forward = RelayForward("https://relay-b.test/v1/relay", inner)),
+                    firstKeys
+                )
+
+            // Not the second relay's fault: the app must not leave it out.
+            assertEquals(RelayReply.ControlPlaneFailed, first.relay(outer))
+        }
+
+    @Test
+    fun aFailingNextRelayIsReportedAsSuch() =
+        runTest {
+            val inner = seal(RelayLayer(ByteArray(ReplySealing.KEY_BYTES) { 2 }, exit = RelayExit("GET", "https://control.test/v1/nodes")), secondKeys)
+            val outer =
+                seal(
+                    RelayLayer(ByteArray(ReplySealing.KEY_BYTES) { 1 }, forward = RelayForward("https://relay-c.test/v1/relay", inner)),
+                    firstKeys
+                )
+
+            assertEquals(RelayReply.NextRelayFailed, first.relay(outer))
         }
 
     @Test

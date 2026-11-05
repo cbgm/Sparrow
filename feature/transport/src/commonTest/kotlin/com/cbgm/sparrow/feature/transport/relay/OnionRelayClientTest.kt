@@ -103,9 +103,147 @@ class OnionRelayClientTest {
         assertTrue(Url("https://node.test/v1/relay").encodedPath.endsWith("/v1/relay"))
     }
 
+    @Test
+    fun theFirstHopIsTheNodeTheAppIsConnectedThrough() =
+        runTest {
+            val firstHops = mutableListOf<String>()
+            val client =
+                onionClient(
+                    nodes = listOf(node("a", 1), node("b", 2), node("c", 3)),
+                    preferred = "a",
+                    connected = { "c" },
+                    network = { url, body ->
+                        firstHops += url
+                        relayNetwork(url, body)
+                    }
+                )
+
+            repeat(5) { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
+
+            assertEquals(List(5) { "https://c.test/v1/relay" }, firstHops)
+        }
+
+    @Test
+    fun aFailedSecondRelayIsLeftOutAndTheRequestStillGoesThrough() =
+        runTest {
+            val firstHops = mutableListOf<String>()
+            val client =
+                onionClient(
+                    nodes = listOf(node("own", 1), node("down", 2)),
+                    preferred = "own",
+                    network = { url, body ->
+                        firstHops += url
+                        relayNetwork(url, body, failing = setOf("https://down.test/v1/relay"))
+                    }
+                )
+
+            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            // The retry and the next request use the remaining relay alone.
+            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            assertEquals(3, firstHops.size)
+        }
+
+    @Test
+    fun anUnreachableFirstRelayIsLeftOut() =
+        runTest {
+            val firstHops = mutableListOf<String>()
+            val client =
+                onionClient(
+                    nodes = listOf(node("own", 1), node("other", 2)),
+                    preferred = null,
+                    connected = { "own" },
+                    network = { url, body ->
+                        firstHops += url
+                        check(url != "https://own.test/v1/relay") { "Connection refused" }
+                        relayNetwork(url, body)
+                    }
+                )
+
+            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            assertEquals(listOf("https://own.test/v1/relay", "https://other.test/v1/relay"), firstHops)
+        }
+
+    @Test
+    fun aFailedRelayIsTriedAgainAfterItsCooldown() =
+        runTest {
+            var clock = 1L
+            var downIsDown = true
+            val routes = mutableListOf<Int>()
+            val client =
+                onionClient(
+                    nodes = listOf(node("own", 1), node("down", 2)),
+                    preferred = "own",
+                    now = { clock },
+                    network = { url, body ->
+                        val failing = if (downIsDown) setOf("https://down.test/v1/relay") else emptySet()
+                        relayNetwork(url, body, failing = failing, hops = routes)
+                    }
+                )
+
+            client.send(RelayExit("GET", "https://control.test/v1/nodes"))
+            downIsDown = false
+            clock = 1L + COOLDOWN
+            routes.clear()
+            client.send(RelayExit("GET", "https://control.test/v1/nodes"))
+
+            assertEquals(listOf(2), routes)
+        }
+
+    @Test
+    fun anUnreachableControlPlaneLeavesNoRelayOut() =
+        runTest {
+            var calls = 0
+            val client =
+                onionClient(
+                    nodes = listOf(node("own", 1), node("other", 2)),
+                    preferred = "own",
+                    status = { HttpStatusCode.GatewayTimeout },
+                    network = { _, _ ->
+                        calls++
+                        byteArrayOf()
+                    }
+                )
+
+            assertFailsWith<IllegalStateException> { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
+            assertFailsWith<IllegalStateException> { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
+            // No retry: both requests went once through the same two relays.
+            assertEquals(2, calls)
+        }
+
+    /**
+     * Plays both relays: peels the layer for [url] and either passes it to the next relay or answers as the exit.
+     * A relay in [failing] does not answer, so the relay before it reports 502. [hops] collects each route's length.
+     */
+    private fun relayNetwork(
+        url: String,
+        body: ByteArray,
+        failing: Set<String> = emptySet(),
+        hops: MutableList<Int>? = null,
+        depth: Int = 1
+    ): ByteArray {
+        val layer = peel(body)
+        val forward = layer.forward
+        val reply =
+            if (forward == null) {
+                hops?.add(depth)
+                json.encodeToString(RelayExitResponse(200, "application/json", "{}".encodeToByteArray())).encodeToByteArray()
+            } else {
+                if (forward.relayUrl in failing) throw RelayDown()
+                relayNetwork(forward.relayUrl, forward.layer, failing, hops, depth + 1)
+            }
+        return cipher.sealReply(reply, layer.replyKey)
+    }
+
+    private fun peel(body: ByteArray): RelayLayer = json.decodeFromString(body.copyOfRange(1, body.size).decodeToString())
+
+    private class RelayDown : RuntimeException()
+
     private fun onionClient(
         nodes: List<SparrowNodeDescriptor>,
         preferred: String?,
+        connected: () -> String? = { null },
+        now: () -> Long = { 1L },
+        status: (String) -> HttpStatusCode = { HttpStatusCode.OK },
         network: suspend (String, ByteArray) -> ByteArray
     ): OnionRelayClient {
         val directory =
@@ -130,8 +268,26 @@ class OnionRelayClientTest {
                 override suspend fun set(nodeId: String?) = Unit
             }
         val httpClient =
-            HttpClient(MockEngine { request -> respond(network(request.url.toString(), request.body.toByteArray()), HttpStatusCode.OK) })
-        return OnionRelayClient(RelaySelector(cache, json, store, now = { 1L }, random = Random(1)), cipher, httpClient, json)
+            HttpClient(
+                MockEngine { request ->
+                    val url = request.url.toString()
+                    runCatching { network(url, request.body.toByteArray()) }.fold(
+                        onSuccess = { reply -> respond(reply, status(url)) },
+                        onFailure = { failure -> if (failure is RelayDown) respond(byteArrayOf(), HttpStatusCode.BadGateway) else throw failure }
+                    )
+                }
+            )
+        val selector =
+            RelaySelector(
+                cache = cache,
+                json = json,
+                preferredNodeStore = store,
+                connectedNodeId = connected,
+                now = now,
+                random = Random(1),
+                failureCooldownMilliseconds = COOLDOWN
+            )
+        return OnionRelayClient(selector, cipher, httpClient, json)
     }
 
     private fun node(
@@ -179,5 +335,9 @@ class OnionRelayClientTest {
             reply: ByteArray,
             replyKey: ByteArray
         ): ByteArray = byteArrayOf(replyKey.first()) + reply
+    }
+
+    private companion object {
+        const val COOLDOWN = 5L
     }
 }

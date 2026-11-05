@@ -175,7 +175,9 @@ val transportModule =
                     RelaySelector(
                         cache = get<NodeDirectoryCache>(),
                         json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                        preferredNodeStore = get<PreferredNodeStore>()
+                        preferredNodeStore = get<PreferredNodeStore>(),
+                        // Read when a route is built: the connection manager itself uses the relayed client.
+                        connectedNodeId = { get<TransportConnectionManager>().connectedNodeId }
                     ),
                 cipher = get<SealedMessageCipher>(),
                 httpClient = get<HttpClient>(),

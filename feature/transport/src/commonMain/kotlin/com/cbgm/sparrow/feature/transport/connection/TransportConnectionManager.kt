@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.StateFlow
 interface TransportConnectionManager {
     val connectionState: StateFlow<TransportConnectionState>
 
+    /** The gateway node the app is connected through right now, or null while it is not connected. */
+    val connectedNodeId: String?
+
     /**
      * Starts the persistent connection loop.
      *

@@ -42,44 +42,61 @@ internal class OnionRelay(
     private val httpClient: HttpClient,
     private val destinations: RelayDestinationPolicy
 ) {
-    /** The sealed reply, or null when the layer is not for this relay or the next hop failed. */
-    suspend fun relay(sealedLayer: ByteArray): ByteArray? {
+    /** The sealed reply, or which part of the route failed ([RelayReply]). */
+    suspend fun relay(sealedLayer: ByteArray): RelayReply {
         val layer =
             keys.open(sealedLayer, RELAY_CONTEXT)
                 ?.let { plaintext -> runCatching { serverJson.decodeFromString<RelayLayer>(plaintext.decodeToString()) } }
                 ?.getOrNull()
                 ?.takeIf { candidate -> candidate.replyKey.size == ReplySealing.KEY_BYTES }
-                ?: return null
+                ?: return RelayReply.Refused
         val nextRelay = layer.forward
         val destination = layer.exit
-        val reply =
-            try {
-                when {
-                    nextRelay != null && destination == null -> forward(nextRelay)
-                    destination != null && nextRelay == null -> exit(destination)
-                    else -> null
-                }
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                null
-            }
-        return reply?.let { bytes -> ReplySealing.seal(bytes, layer.replyKey) }
+        return when {
+            nextRelay != null && destination == null ->
+                attempt(RelayReply.NextRelayFailed) { forward(nextRelay, layer.replyKey) }
+            destination != null && nextRelay == null ->
+                attempt(RelayReply.ControlPlaneFailed) { exit(destination, layer.replyKey) }
+            else -> RelayReply.Refused
+        }
     }
 
-    private suspend fun forward(forward: RelayForward): ByteArray? {
-        val target = destinations.nextRelay(forward.relayUrl) ?: return null
+    private suspend fun attempt(
+        failure: RelayReply,
+        hop: suspend () -> RelayReply
+    ): RelayReply =
+        try {
+            hop()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            failure
+        }
+
+    /** A next relay that could not reach the Control Plane passes that on, so the app does not blame a relay. */
+    private suspend fun forward(
+        forward: RelayForward,
+        replyKey: ByteArray
+    ): RelayReply {
+        val target = destinations.nextRelay(forward.relayUrl) ?: return RelayReply.NextRelayFailed
         val response =
             httpClient.request(target.toString()) {
                 method = HttpMethod.Post
                 contentType(ContentType.Application.OctetStream)
                 setBody(forward.layer)
             }
-        return response.takeIf { it.status == HttpStatusCode.OK }?.limitedBody()
+        return when (response.status) {
+            HttpStatusCode.OK -> response.limitedBody()?.let { reply -> sealed(reply, replyKey) } ?: RelayReply.NextRelayFailed
+            HttpStatusCode.GatewayTimeout -> RelayReply.ControlPlaneFailed
+            else -> RelayReply.NextRelayFailed
+        }
     }
 
-    private suspend fun exit(exit: RelayExit): ByteArray? {
-        val target = destinations.controlPlane(exit) ?: return null
+    private suspend fun exit(
+        exit: RelayExit,
+        replyKey: ByteArray
+    ): RelayReply {
+        val target = destinations.controlPlane(exit) ?: return RelayReply.ControlPlaneFailed
         val response =
             httpClient.request(target.toString()) {
                 method = HttpMethod.parse(exit.method)
@@ -88,11 +105,18 @@ internal class OnionRelay(
                     setBody(body)
                 }
             }
-        val body = response.limitedBody() ?: return null
-        return serverJson
-            .encodeToString(RelayExitResponse(response.status.value, response.headers[HttpHeaders.ContentType], body))
-            .encodeToByteArray()
+        val body = response.limitedBody() ?: return RelayReply.ControlPlaneFailed
+        val reply =
+            serverJson
+                .encodeToString(RelayExitResponse(response.status.value, response.headers[HttpHeaders.ContentType], body))
+                .encodeToByteArray()
+        return sealed(reply, replyKey)
     }
+
+    private fun sealed(
+        reply: ByteArray,
+        replyKey: ByteArray
+    ): RelayReply = RelayReply.Sealed(ReplySealing.seal(reply, replyKey))
 
     private suspend fun HttpResponse.limitedBody(): ByteArray? =
         bodyAsChannel().readRemaining(MAXIMUM_BODY_BYTES + 1L).readByteArray().takeIf { it.size <= MAXIMUM_BODY_BYTES }
@@ -104,6 +128,23 @@ internal class OnionRelay(
     companion object {
         const val MAXIMUM_BODY_BYTES = 512 * 1024
     }
+}
+
+/** What a relay answers ([installRelayRoute] maps it to the HTTP status the app reads). */
+internal sealed interface RelayReply {
+    /** The reply, sealed with the layer's reply key: 200. */
+    class Sealed(
+        val bytes: ByteArray
+    ) : RelayReply
+
+    /** The layer is not for this relay (for example an outdated relay key) or not a valid layer: 400. */
+    data object Refused : RelayReply
+
+    /** The next relay did not pass the request on: 502. */
+    data object NextRelayFailed : RelayReply
+
+    /** As the last hop: the Control Plane could not be reached or the destination is not allowed: 504. */
+    data object ControlPlaneFailed : RelayReply
 }
 
 /**
@@ -153,8 +194,10 @@ internal fun Route.installRelayRoute(relay: OnionRelay) {
         val sealedLayer = call.receiveChannel().readRemaining(OnionRelay.MAXIMUM_BODY_BYTES + 1L).readByteArray()
         val reply = sealedLayer.takeIf { it.size <= OnionRelay.MAXIMUM_BODY_BYTES }?.let { relay.relay(it) }
         when (reply) {
-            null -> call.respond(HttpStatusCode.BadGateway)
-            else -> call.respondBytes(reply, ContentType.Application.OctetStream)
+            is RelayReply.Sealed -> call.respondBytes(reply.bytes, ContentType.Application.OctetStream)
+            null, RelayReply.Refused -> call.respond(HttpStatusCode.BadRequest)
+            RelayReply.NextRelayFailed -> call.respond(HttpStatusCode.BadGateway)
+            RelayReply.ControlPlaneFailed -> call.respond(HttpStatusCode.GatewayTimeout)
         }
     }
 }
