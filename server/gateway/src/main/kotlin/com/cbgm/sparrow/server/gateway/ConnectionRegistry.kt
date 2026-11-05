@@ -24,19 +24,19 @@ class GatewayConnection(
     /** True for the connection's routing ID and for phone aliases a Control Plane routes to it. */
     suspend fun acceptsSenderRoutingId(
         senderRoutingId: String,
-        ownsAlias: suspend (alias: String, routingId: String) -> Boolean
+        aliasOwner: suspend (alias: String) -> String?
     ): Boolean =
         when {
             senderRoutingId == routingId || senderRoutingId in senderAliases -> true
             !ClientRoutingIds.isBootstrapRoutingId(senderRoutingId) -> false
-            else -> confirmSenderAlias(senderRoutingId, ownsAlias)
+            else -> confirmSenderAlias(senderRoutingId, aliasOwner)
         }
 
     private suspend fun confirmSenderAlias(
         alias: String,
-        ownsAlias: suspend (alias: String, routingId: String) -> Boolean
+        aliasOwner: suspend (alias: String) -> String?
     ): Boolean {
-        val owned = ownsAlias(alias, routingId)
+        val owned = aliasOwner(alias) == routingId
         if (owned) senderAliases.add(alias)
         return owned
     }

@@ -232,6 +232,27 @@ class GatewaySessionHandlerTest {
             }
         }
 
+    @Test
+    fun anEnvelopeToAPhoneAliasReachesTheDeviceTheControlPlaneRoutesItTo() =
+        gatewayTest {
+            connect {
+                send(register(nonce = challenge().nonce))
+                assertIs<GatewayServerMessage.Registered>(receiveMessage())
+                assertIs<GatewayServerMessage.IncomingEnvelope>(receiveMessage())
+
+                send(
+                    GatewayClientMessage.SendEnvelope(
+                        transportEnvelope(envelopeId = "invite-1", senderId = routingId, recipientId = SENDER_ALIAS)
+                    )
+                )
+                val replies = listOf(receiveMessage(), receiveMessage())
+                val delivered = replies.filterIsInstance<GatewayServerMessage.IncomingEnvelope>().single()
+                assertEquals("invite-1", delivered.envelope.envelopeId)
+                assertEquals(routingId, delivered.envelope.recipientId)
+                assertTrue(replies.any { reply -> reply is GatewayServerMessage.EnvelopeAccepted })
+            }
+        }
+
     private fun gatewayTest(
         signInTimeoutMilliseconds: Long = 10_000L,
         block: suspend ApplicationTestBuilder.() -> Unit
@@ -274,10 +295,8 @@ class GatewaySessionHandlerTest {
                     override suspend fun register(registration: ClientRouteRegistration) =
                         PresenceRegistration(PresenceRegistrationResult.ACCEPTED)
 
-                    override suspend fun ownsAlias(
-                        alias: String,
-                        routingId: String
-                    ) = alias == SENDER_ALIAS
+                    override suspend fun aliasOwner(alias: String): String? =
+                        routingId.takeIf { alias == SENDER_ALIAS }
 
                     override suspend fun remove(
                         routingId: String,
@@ -340,12 +359,13 @@ class GatewaySessionHandlerTest {
 
     private fun transportEnvelope(
         envelopeId: String = "envelope-1",
-        senderId: String
+        senderId: String,
+        recipientId: String = routingId
     ): TransportEnvelope =
         TransportEnvelope(
             envelopeId = envelopeId,
             senderId = senderId,
-            recipientId = routingId,
+            recipientId = recipientId,
             payload = "ciphertext",
             createdAtEpochMilliseconds = 1L
         )

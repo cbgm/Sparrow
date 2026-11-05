@@ -129,27 +129,23 @@ class HttpPresenceClient(
         }
 
     /**
-     * True when a Control Plane routes [alias] to [routingId]. The gateway asks only when a client sends as its phone
-     * alias (a first invite), so it learns a user's alias only then, never from route registrations.
+     * The device a Control Plane routes [alias] to. The gateway asks only for a first invite (sent as or to a phone
+     * alias), so it learns a user's alias only then, never from route registrations.
      */
-    override suspend fun ownsAlias(
-        alias: String,
-        routingId: String
-    ): Boolean =
-        endpointPool.ordered().any { baseUrl ->
+    override suspend fun aliasOwner(alias: String): String? =
+        endpointPool.ordered().firstNotNullOfOrNull { baseUrl ->
             try {
                 val path = "/v1/routes/$alias"
                 val response =
                     httpClient.get(baseUrl.trimEnd('/') + path) {
                         nodeAuthentication(signer.sign("GET", path, ""))
                     }
-                response.status.isSuccess() &&
-                    response.body<ClientRoutingResult>().ownerRoutingId == routingId
+                response.takeIf { it.status.isSuccess() }?.body<ClientRoutingResult>()?.ownerRoutingId
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
                 endpointPool.markUnavailable(baseUrl)
-                false
+                null
             }
         }
 

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.relay
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.HttpClientEngineConfig
@@ -37,6 +38,7 @@ internal class OnionRelayEngine(
     private val requirement: suspend (Url) -> RelayRequirement
 ) : HttpClientEngineBase("sparrow-onion-relay") {
     override val config: HttpClientEngineConfig = HttpClientEngineConfig()
+    private val logger = SparrowLog.withTag("OnionRelayEngine")
 
     @OptIn(InternalAPI::class)
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
@@ -57,7 +59,7 @@ internal class OnionRelayEngine(
         val response =
             when (requirement(data.url)) {
                 RelayRequirement.DIRECT -> direct(exit)
-                RelayRequirement.ROUTE_PREFERRED -> onion.send(exit) ?: direct(exit)
+                RelayRequirement.ROUTE_PREFERRED -> onion.send(exit) ?: direct(exit).also { logDirect(data.url) }
                 RelayRequirement.ROUTE_ONLY -> checkNotNull(onion.send(exit)) { "No relaying node known yet" }
             }
         return HttpResponseData(
@@ -68,6 +70,10 @@ internal class OnionRelayEngine(
             body = ByteReadChannel(response.body),
             callContext = callContext
         )
+    }
+
+    private fun logDirect(url: Url) {
+        logger.info { "Control Plane request sent directly, no relaying node known yet: ${url.encodedPath}" }
     }
 
     private suspend fun direct(exit: RelayExit): RelayExitResponse {

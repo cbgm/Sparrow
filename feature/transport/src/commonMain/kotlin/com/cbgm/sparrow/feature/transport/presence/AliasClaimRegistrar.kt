@@ -63,7 +63,12 @@ internal class AliasClaimRegistrar(
         if (token != null && results.any { result -> result != ClaimOutcome.Unreachable }) {
             localPhoneNumberProvider.clearPhoneVerificationToken()
         }
-        return results.filterIsInstance<ClaimOutcome.Bound>().flatMap(ClaimOutcome.Bound::aliases).toSet()
+        val bound = results.filterIsInstance<ClaimOutcome.Bound>()
+        logger.info {
+            "Phone alias bound at ${bound.count { it.aliases.isNotEmpty() }} of ${results.size} Control Planes " +
+                "(${results.count { it == ClaimOutcome.Unreachable }} unreachable or without pinned root)"
+        }
+        return bound.flatMap(ClaimOutcome.Bound::aliases).toSet()
     }
 
     private suspend fun claimAt(

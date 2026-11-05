@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.relay
 
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
@@ -63,6 +64,8 @@ class OnionRelayClient internal constructor(
     private val httpClient: HttpClient,
     private val json: Json
 ) {
+    private val logger = SparrowLog.withTag("OnionRelayClient")
+
     /**
      * Null when no node relays yet; throws when the route fails, so a request is never sent around the relays. A
      * failed second relay is replaced once by another one.
@@ -88,6 +91,7 @@ class OnionRelayClient internal constructor(
             val forward = RelayForward(relayUrl = route[index + 1].relayUrl, layer = layer)
             layer = seal(RelayLayer(replyKey = replyKeys[index], forward = forward), route[index])
         }
+        logger.debug { "Control Plane request through ${route.size} relay(s): ${route.joinToString(" -> ") { it.nodeId.take(8) }}" }
         val response =
             httpClient.post(route.first().relayUrl) {
                 contentType(ContentType.Application.OctetStream)

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 import com.cbgm.sparrow.core.util.flow.collectUntilHandled
 import com.cbgm.sparrow.core.util.flow.retryWithBackoff
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.ExpectedFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
@@ -61,19 +62,26 @@ class InvitationResultObserver internal constructor(
                 engine.run(LifecycleCommand.RecoverAcceptedDirectInvitation(result))
             else -> return true
         }
-        return recovery
-            .onFailure { error ->
-                logger.error(error) { "Could not recover accepted invitation ${result.invitationId}" }
-            }
-            .isSuccess
+        return recovery.handledOrLogged { error ->
+            logger.error(error) { "Could not recover accepted invitation ${result.invitationId}" }
+        }
     }
 
     private suspend fun handle(result: InvitationResult): Boolean =
-        startWorkflow(result)
-            .onFailure { error ->
-                logger.error(error) { "Invitation result workflow failed for invitationId=${result.invitationId}" }
-            }
-            .isSuccess
+        startWorkflow(result).handledOrLogged { error ->
+            logger.error(error) { "Invitation result workflow failed for invitationId=${result.invitationId}" }
+        }
+
+    /** An expected outcome (such as an expired invitation) is final: it is noted once and not tried again. */
+    private fun Result<ConversationResult>.handledOrLogged(logFailure: (Throwable) -> Unit): Boolean {
+        val failure = exceptionOrNull() ?: return true
+        if (failure is ExpectedFailure) {
+            logger.info { "Invitation result not applied: ${failure.message}" }
+            return true
+        }
+        logFailure(failure)
+        return false
+    }
 
     private suspend fun startWorkflow(result: InvitationResult): Result<ConversationResult> =
         when (result.payloadType) {

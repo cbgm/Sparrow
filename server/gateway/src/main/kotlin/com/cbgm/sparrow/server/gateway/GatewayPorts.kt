@@ -26,10 +26,8 @@ data class PresenceRegistration(
 interface PresenceClient {
     suspend fun register(registration: ClientRouteRegistration): PresenceRegistration
 
-    suspend fun ownsAlias(
-        alias: String,
-        routingId: String
-    ): Boolean
+    /** The device a Control Plane routes the phone [alias] to, or null when none does. */
+    suspend fun aliasOwner(alias: String): String?
 
     suspend fun remove(
         routingId: String,

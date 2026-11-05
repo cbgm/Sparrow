@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.protocol.outbox.OutboxProcessingResult
@@ -25,6 +26,8 @@ class DefaultOutboxProcessor(
     private val send: suspend (ProtocolOutboxItem) -> Result<OutgoingWireAcceptance>,
     private val deliveryStateListener: OutboxDeliveryStateListener
 ) : OutboxProcessor {
+    private val logger = SparrowLog.withTag("DefaultOutboxProcessor")
+
     override suspend fun processPending(limit: Int): Result<OutboxProcessingResult> =
         runCatching {
             require(limit > 0) { "Outbox processing limit must be positive" }
@@ -86,11 +89,13 @@ class DefaultOutboxProcessor(
         protocolOutbox
             .markSent(item.id, acceptance.expiresAtEpochMilliseconds)
             .getOrElse { error -> return Result.failure(error) }
+        logger.info { "Packet ${item.packetId.take(8)} accepted by the gateway (attempt ${item.attemptCount + 1})" }
         return deliveryStateListener.onSent(item.packetId)
     }
 
     private suspend fun markFailed(item: ProtocolOutboxItem, error: Throwable?): Result<Unit> {
         val errorMessage = error?.message ?: "Outgoing packet could not be sent"
+        logger.warn { "Packet ${item.packetId.take(8)} not sent (attempt ${item.attemptCount + 1}): $errorMessage" }
         protocolOutbox
             .markFailed(item.id, errorMessage)
             .getOrElse { markFailedError -> return Result.failure(markFailedError) }

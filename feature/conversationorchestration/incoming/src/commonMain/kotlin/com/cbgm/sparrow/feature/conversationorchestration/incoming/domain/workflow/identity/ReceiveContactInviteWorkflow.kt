@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingIdentityPeerMetadataUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -50,6 +51,8 @@ class ReceiveContactInviteWorkflow internal constructor(
         ReceiveContactInviteWorkflow.Step,
         ReceiveContactInviteWorkflow.Outcome
     > {
+    private val logger = SparrowLog.withTag("ReceiveContactInviteWorkflow")
+
     override val commandType: KClass<IncomingCommand.ReceiveContactInvite> = IncomingCommand.ReceiveContactInvite::class
 
     override fun firstStep(command: IncomingCommand.ReceiveContactInvite): Step = Step.VerifyInvitation(command)
@@ -95,6 +98,7 @@ class ReceiveContactInviteWorkflow internal constructor(
                         originalInviteAutoSharesIdentity = packet.autoSharesIdentity
                     )
                 ).getOrThrow()
+                logger.info { "Invitation ${packet.invitationId.take(8)} needs an identity review: keys differ" }
                 Outcome.Done
             }
             is Step.MergePeers -> {
@@ -149,6 +153,7 @@ class ReceiveContactInviteWorkflow internal constructor(
                         phoneContactName = step.phoneContactName
                     )
                 ).getOrThrow()
+                logger.info { "Invitation ${packet.invitationId.take(8)} received and saved" }
                 Outcome.Done
             }
         }
