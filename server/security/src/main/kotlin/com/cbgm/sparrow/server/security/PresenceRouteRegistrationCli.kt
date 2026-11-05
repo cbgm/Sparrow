@@ -5,6 +5,7 @@ import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
 import java.nio.file.Path
+import java.util.Base64
 
 object PresenceRouteRegistrationCli {
     @JvmStatic
@@ -39,6 +40,8 @@ object PresenceRouteRegistrationCli {
         CommandLineOutput.write(
             listOf(
                 "routingId=$routingId",
+                // A throwaway smoke-test key: the test signs the gateway's sign-in challenge with it.
+                "clientPrivateKey=${Base64.getEncoder().encodeToString(clientIdentity.privateKey.encoded)}",
                 "path=$path",
                 "body=$body",
                 "nodeId=${authentication.nodeId}",

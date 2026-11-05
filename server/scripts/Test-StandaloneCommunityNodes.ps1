@@ -187,7 +187,7 @@ function New-SmokePresenceRoute {
                 "/data/node.identity", $NodeId, $connectionId, "1", [string]$expiresAt
             )
     $route = Convert-KeyValueOutput -Output $output
-    foreach ($key in @("routingId", "path", "body", "nodeId", "timestamp", "nonce", "signature")) {
+    foreach ($key in @("routingId", "clientPrivateKey", "path", "body", "nodeId", "timestamp", "nonce", "signature")) {
         if ([string]::IsNullOrWhiteSpace([string]$route[$key])) {
             throw "Presence route CLI did not return '$key': $output"
         }
@@ -404,7 +404,11 @@ function Receive-SmokeGatewayMessage {
 function Connect-SmokeGatewayClient {
     param(
         [Parameter(Mandatory = $true)][int]$GatewayPort,
-        [Parameter(Mandatory = $true)][hashtable]$Route
+        [Parameter(Mandatory = $true)][hashtable]$Route,
+        [Parameter(Mandatory = $true)][string]$Project,
+        [Parameter(Mandatory = $true)][string]$EnvironmentFile,
+        [Parameter(Mandatory = $true)][string]$ComposeFile,
+        [Parameter(Mandatory = $true)][string]$NodeId
     )
 
     # The signed CLI route must belong to a LIVE WebSocket. Registering the
@@ -418,14 +422,37 @@ function Connect-SmokeGatewayClient {
             $uri,
             [System.Threading.CancellationToken]::None
         ).GetAwaiter().GetResult()
+        # The gateway first sends a single-use challenge; the client signs it with its routing key.
+        $challenge = Receive-SmokeGatewayMessage -Socket $socket
+        if ($challenge.type -ne "challenge" -or $challenge.nodeId -ne $NodeId) {
+            throw "Unexpected gateway challenge: $($challenge | ConvertTo-Json -Compress)"
+        }
+        $proof =
+            Convert-KeyValueOutput -Output (
+                Get-ComposeOutput `
+                    -Project $Project `
+                    -EnvironmentFile $EnvironmentFile `
+                    -ComposeFile $ComposeFile `
+                    -Arguments @(
+                        "exec", "-T", "federation",
+                        "java", "-cp", "/app/lib/*",
+                        "com.cbgm.sparrow.server.security.GatewaySessionProofCli",
+                        $Route["clientPrivateKey"],
+                        $routePayload.routingId,
+                        $routePayload.connectionId,
+                        $NodeId,
+                        (ConvertTo-Json -InputObject @($challenge.nonce) -Compress)
+                    )
+            )
+        if ([string]::IsNullOrWhiteSpace([string]$proof["clientSignature"])) {
+            throw "Gateway session proof CLI did not return a signature."
+        }
         $registerMessage = @{
             type = "register"
             routingId = $routePayload.routingId
             connectionId = $routePayload.connectionId
-            generation = [long]$routePayload.generation
-            expiresAtEpochMilliseconds = [long]$routePayload.expiresAtEpochMilliseconds
             clientSigningPublicKey = $registration.clientSigningPublicKey
-            clientSignature = $routePayload.clientSignature
+            clientSignature = @($proof["clientSignature"] | ConvertFrom-Json)
         } | ConvertTo-Json -Compress -Depth 8
         Send-SmokeWebSocketText -Socket $socket -Text $registerMessage
         $accepted = Receive-SmokeGatewayMessage -Socket $socket
@@ -460,7 +487,14 @@ function Send-SmokeFederatedEnvelope {
             -NodeId $DestinationNodeId
     $socket = $null
     try {
-        $socket = Connect-SmokeGatewayClient -GatewayPort $DestinationGatewayPort -Route $route
+        $socket =
+            Connect-SmokeGatewayClient `
+                -GatewayPort $DestinationGatewayPort `
+                -Route $route `
+                -Project $DestinationProject `
+                -EnvironmentFile $DestinationEnvironmentFile `
+                -ComposeFile $DestinationComposeFile `
+                -NodeId $DestinationNodeId
         $createdAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
         $envelopeId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
         $envelopeBody =
