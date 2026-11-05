@@ -347,7 +347,8 @@ function Register-SmokePresenceRoute {
             -Body $route["body"] `
             -UseBasicParsing `
             -TimeoutSec 10
-    if ($response.StatusCode -ne 204) {
+    # 204, or 200 with the accepted phone aliases from presence directories of the previous version.
+    if ($response.StatusCode -ne 204 -and $response.StatusCode -ne 200) {
         throw "Signed presence registration failed: HTTP $($response.StatusCode)"
     }
     return $route
