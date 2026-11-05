@@ -38,7 +38,7 @@ internal class GatewayServerMessageHandler(
         encodedMessage: String,
         expectedRoutingId: String,
         onGatewayRegistered: () -> Unit,
-        onRouteRegistered: (Set<String>) -> Unit,
+        onRouteRegistered: (List<Int>) -> Unit,
         onRouteRejected: (Throwable) -> Unit,
         onIncomingEnvelope: suspend (TransportEnvelope) -> Unit,
         onUnreadableEnvelope: suspend (String) -> Unit,
@@ -59,7 +59,7 @@ internal class GatewayServerMessageHandler(
             }
 
             is GatewayServerMessage.RouteRegistered -> {
-                onRouteRegistered(message.aliases.toSet())
+                onRouteRegistered(message.acceptedAliasIndexes)
             }
 
             is GatewayServerMessage.IncomingEnvelope -> {

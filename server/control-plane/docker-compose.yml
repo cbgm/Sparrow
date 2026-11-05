@@ -73,6 +73,8 @@ services:
       PORT: 8090
       REGISTRY_IDENTITY_PATH: /data/registry.identity
       NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/sparrow_registry
+      # The presence directory's alias claim key, signed into the node directory.
+      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       NODE_REGISTRY_DATABASE_USER: sparrow_registry
       NODE_REGISTRY_DATABASE_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS:-30}

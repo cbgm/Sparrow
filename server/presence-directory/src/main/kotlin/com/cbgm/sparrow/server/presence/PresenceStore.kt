@@ -38,13 +38,13 @@ class PresenceStore(
         claims: AliasClaims
     ): PresenceResult =
         synchronized(lock) {
-            val route = registration.route
             val currentTime = now()
             validatePresenceRegistration(
                 registration,
+                claims.aliases,
                 maximumTtlMilliseconds,
                 currentTime
-            ) ?: registerValidated(route, claims, currentTime)
+            ) ?: registerValidated(registration.route.withClaimedAliases(claims), claims, currentTime)
         }
 
     private fun registerValidated(
@@ -144,8 +144,10 @@ class PresenceStore(
     )
 }
 
+/** The route signature covers the route without aliases; the aliases come signed in the [AliasClaims]. */
 internal fun validatePresenceRegistration(
     registration: ClientRouteRegistration,
+    aliases: List<String>,
     maximumTtlMilliseconds: Long,
     currentTime: Long
 ): PresenceResult.Rejected? {
@@ -157,10 +159,10 @@ internal fun validatePresenceRegistration(
         ) ->
             PresenceResult.Rejected("INVALID_ROUTING_ID")
 
-        route.aliases.orEmpty().any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ->
+        aliases.any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ->
             PresenceResult.Rejected("INVALID_ROUTING_ALIAS")
 
-        route.aliases.orEmpty().distinct().size != route.aliases.orEmpty().size ->
+        aliases.distinct().size != aliases.size ->
             PresenceResult.Rejected("DUPLICATE_ROUTING_ALIAS")
 
         route.expiresAtEpochMilliseconds <= currentTime -> PresenceResult.Rejected("ROUTE_EXPIRED")
@@ -175,6 +177,10 @@ internal fun validatePresenceRegistration(
         else -> null
     }
 }
+
+/** Stores the route under the claimed aliases; aliases the route itself names (older apps) are ignored. */
+internal fun ClientRoute.withClaimedAliases(claims: AliasClaims): ClientRoute =
+    copy(aliases = claims.aliases.takeIf(List<String>::isNotEmpty))
 
 sealed interface PresenceResult {
     /** [aliases] are the requested aliases the route was stored under; the others were refused. */

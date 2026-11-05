@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.di
 
+import com.cbgm.sparrow.core.crypto.claim.AliasClaimSealer
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
@@ -43,6 +44,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.presence.AliasClaimKeyProvider
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
@@ -150,6 +152,7 @@ val transportModule =
             ClientRouteRegistrationFactory(
                 signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
+                aliasClaimSealer = get<AliasClaimSealer>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
@@ -159,7 +162,12 @@ val transportModule =
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
-                localPhoneNumberProvider = get<LocalPhoneNumberProvider>()
+                localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
+                aliasClaimKeyProvider =
+                    AliasClaimKeyProvider(
+                        cache = get<NodeDirectoryCache>(),
+                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                    )
             )
         }
 

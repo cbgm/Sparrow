@@ -215,7 +215,6 @@ class ClientPresenceRouteStateMachineTest {
                     connectionId = "connection-a",
                     generation = 1L,
                     expiresAtEpochMilliseconds = 2L,
-                    aliases = listOf("bootstrap-a"),
                     clientSignature = byteArrayOf(1)
                 ),
             clientSigningPublicKey = byteArrayOf(2)

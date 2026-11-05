@@ -78,7 +78,7 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: TransportEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderId)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderId, boundedPresence::ownsAlias)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
@@ -110,7 +110,7 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: FederatedEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId, boundedPresence::ownsAlias)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",

@@ -16,6 +16,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -29,7 +30,8 @@ internal class ClientPresenceRouteCoordinator(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider
+    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val aliasClaimKeyProvider: AliasClaimKeyProvider
 ) {
     // Starts the public gateway information request while the WebSocket is still opening, so
     // both cold HTTPS connections overlap instead of running one after the other.
@@ -55,6 +57,7 @@ internal class ClientPresenceRouteCoordinator(
             registrationFactory = registrationFactory,
             localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
             localPhoneNumberProvider = localPhoneNumberProvider,
+            aliasClaimKeyProvider = aliasClaimKeyProvider,
             publishRoute = publishRoute,
             onReady = onReady,
             onFailure = onFailure
@@ -69,6 +72,7 @@ internal class ClientPresenceRouteSession(
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val aliasClaimKeyProvider: AliasClaimKeyProvider,
     private val publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
     private val onReady: (Set<String>) -> Unit,
     private val onFailure: suspend (Throwable) -> Unit
@@ -83,6 +87,10 @@ internal class ClientPresenceRouteSession(
     private var recoveringExpiredRoute = false
     private var sentPhoneVerificationToken = false
 
+    // The gateway answers with positions in the sealed claim, never with the aliases themselves.
+    @Volatile
+    private var claimedAliases: List<String> = emptyList()
+
     private val runner =
         scope.launch {
             for (event in events) {
@@ -96,7 +104,8 @@ internal class ClientPresenceRouteSession(
         events.trySend(ClientPresenceRouteEvent.GatewayRegistered)
     }
 
-    fun onRouteAccepted(aliases: Set<String>) {
+    fun onRouteAccepted(acceptedAliasIndexes: List<Int>) {
+        val aliases = acceptedAliasIndexes.mapNotNull(claimedAliases::getOrNull).toSet()
         events.trySend(ClientPresenceRouteEvent.RouteAccepted(aliases = aliases))
     }
 
@@ -211,6 +220,12 @@ internal class ClientPresenceRouteSession(
                 .onFailure { failure -> SparrowLog.error("ClientPresenceRouteCoordinator", "Could not load bootstrap routing ID", failure) }
                 .getOrNull()?.let(::listOf)
                 .orEmpty()
+        // Without the presence directory's key the aliases stay on the device; the gateway must not read them.
+        val aliasClaim =
+            aliasClaimKeyProvider.current()
+                ?.takeIf { aliases.isNotEmpty() }
+                ?.let { key -> PendingAliasClaim(aliases, loadPhoneVerificationToken(), key) }
+        claimedAliases = aliasClaim?.aliases.orEmpty()
 
         registrationFactory.create(
             routingId = connection.routingId,
@@ -224,16 +239,11 @@ internal class ClientPresenceRouteSession(
                         observedAt + (gatewayTimeObservedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L)
                     } ?: SystemClock.nowEpochMilliseconds()
             ),
-            aliases = aliases
+            aliasClaim = aliasClaim
         ).fold(
             onSuccess = { registration ->
-                val token = if (aliases.isEmpty()) null else loadPhoneVerificationToken()
-                sentPhoneVerificationToken = token != null
-                events.send(
-                    ClientPresenceRouteEvent.RegistrationPrepared(
-                        registration = registration.copy(phoneVerificationToken = token)
-                    )
-                )
+                sentPhoneVerificationToken = aliasClaim?.phoneVerificationToken != null
+                events.send(ClientPresenceRouteEvent.RegistrationPrepared(registration = registration))
             },
             onFailure = { error ->
                 events.send(

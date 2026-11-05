@@ -25,7 +25,8 @@ internal data class PresenceRuntime(
     val nodeRequestAuthorizer: NodeRequestAuthorizer,
     val phoneVerification: PhoneVerification,
     /** Lets the control plane's push service resolve routes; nodes sign their requests instead. */
-    val internalApiToken: String? = null
+    val internalApiToken: String? = null,
+    val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys.generate()
 )
 
 internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {

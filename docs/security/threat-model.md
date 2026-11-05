@@ -30,6 +30,9 @@ The design aims to protect against:
   through it;
 - a node directory with an expired registry certificate, or one signed under a different registry
   root than the configured or first-seen one;
+- a Community Node learning its users' phone numbers from their route registrations: phone aliases and the phone
+  verification token are sealed for the Control Plane's presence directory, whose key is signed into the node
+  directory. A gateway learns a user's alias only when that user sends a first invite;
 - looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
   signed node requests and the Control Plane's push service, and never return a device's phone aliases.
 

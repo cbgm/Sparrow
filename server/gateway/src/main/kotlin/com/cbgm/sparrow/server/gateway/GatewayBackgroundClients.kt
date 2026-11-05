@@ -21,6 +21,11 @@ internal class BoundedPresenceClient(
     ): PresenceRegistration =
         slots.withPermit { delegate.register(registration) }
 
+    override suspend fun ownsAlias(
+        alias: String,
+        routingId: String
+    ): Boolean = slots.withPermit { delegate.ownsAlias(alias, routingId) }
+
     override suspend fun remove(
         routingId: String,
         connectionId: String

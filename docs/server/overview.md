@@ -65,8 +65,9 @@ Key classes:
 Stores short-lived routing information mapping a client routing ID to its current node/connection. Redis is used
 because presence is ephemeral and should be rebuilt by reconnecting clients.
 
-It also decides which phone aliases a route may hold. The app sends a one-time Firebase ID token only with its
-first route registration at sign-up. When Firebase Admin credentials are configured
+It also decides which phone aliases a route may hold. The app seals its aliases, with a one-time Firebase ID token in
+its first claim after sign-up, for the Presence Directory's key from the signed node directory, so the gateway that
+forwards them cannot read them. When Firebase Admin credentials are configured
 (`GOOGLE_APPLICATION_CREDENTIALS`), a present token must be a valid Firebase phone sign-in, otherwise the registration
 is rejected with `PHONE_VERIFICATION_FAILED`; it proves the alias of that number. Each alias belongs to one device:
 only the alias and the device routing ID are kept in Redis, renewed by every registration and forgotten 30 days after

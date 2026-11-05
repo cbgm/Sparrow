@@ -50,8 +50,9 @@ internal class RedisPresenceStore(
         claims: AliasClaims
     ): PresenceResult {
         val currentTime = now()
-        validatePresenceRegistration(registration, maximumTtlMilliseconds, currentTime)?.let { return it }
-        val route = registration.route
+        validatePresenceRegistration(registration, claims.aliases, maximumTtlMilliseconds, currentTime)
+            ?.let { return it }
+        val route = registration.route.withClaimedAliases(claims)
         val routingIds = listOf(route.routingId) + route.aliases.orEmpty()
         val encodedRoute = serverJson.encodeToString(route)
         val results =

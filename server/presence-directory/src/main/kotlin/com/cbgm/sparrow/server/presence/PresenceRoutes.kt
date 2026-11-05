@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.presence
 
+import com.cbgm.sparrow.server.protocol.AliasClaimKeyResponse
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
@@ -27,6 +28,7 @@ internal fun Application.installPresenceRoutes(runtime: PresenceRuntime) {
         installRouteRegistration(runtime)
         installRouteRemoval(runtime)
         installRouteResolution(runtime)
+        installAliasClaimKey(runtime)
     }
 }
 
@@ -81,7 +83,9 @@ private suspend fun ApplicationCall.registerRoute(
     registration: ClientRouteRegistration,
     runtime: PresenceRuntime
 ) {
-    when (val claims = runtime.phoneVerification.claims(registration)) {
+    // A claim sealed for an earlier key (before a restart) is dropped; the app seals the next one for the new key.
+    val claim = runtime.aliasClaimKeys.claimFor(registration)
+    when (val claims = runtime.phoneVerification.claims(claim)) {
         null ->
             respond(
                 HttpStatusCode.Forbidden,
@@ -90,7 +94,8 @@ private suspend fun ApplicationCall.registerRoute(
 
         else ->
             respondToRegistration(
-                runtime.store.register(registration.copy(phoneVerificationToken = null), claims)
+                runtime.store.register(registration.copy(sealedAliasClaim = null), claims),
+                claims.aliases
             )
     }
 }
@@ -147,6 +152,13 @@ private fun Route.installRouteResolution(runtime: PresenceRuntime) {
     }
 }
 
+/** The public key apps seal their alias claims for; the node registry signs it into the node directory. */
+private fun Route.installAliasClaimKey(runtime: PresenceRuntime) {
+    get("/v1/alias-claim-key") {
+        call.respond(AliasClaimKeyResponse(publicKey = runtime.aliasClaimKeys.publicKey))
+    }
+}
+
 private suspend fun ApplicationCall.isAuthorizedResolution(
     routingId: String,
     runtime: PresenceRuntime
@@ -168,10 +180,17 @@ private suspend fun ApplicationCall.isAuthorizedResolution(
 private fun ClientRoutingResult.withoutAliases(): ClientRoutingResult =
     copy(routes = routes.map { route -> route.copy(aliases = null) })
 
-private suspend fun ApplicationCall.respondToRegistration(result: PresenceResult) {
+private suspend fun ApplicationCall.respondToRegistration(
+    result: PresenceResult,
+    claimedAliases: List<String>
+) {
     when (result) {
         is PresenceResult.Accepted ->
-            respond(ClientRouteRegistrationResult(aliases = result.aliases))
+            respond(
+                ClientRouteRegistrationResult(
+                    acceptedAliasIndexes = claimedAliases.indices.filter { index -> claimedAliases[index] in result.aliases }
+                )
+            )
 
         is PresenceResult.Rejected ->
             respond(

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
+import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
@@ -70,16 +71,17 @@ class HttpPresenceClient(
     ): PresenceRegistration {
         val registrations = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
         val results = registrations.map(PresenceRegistration::result)
-        val acceptedAliases =
+        val acceptedAliasIndexes =
             registrations
                 .filter { candidate -> candidate.result == PresenceRegistrationResult.ACCEPTED }
-                .flatMap(PresenceRegistration::aliases)
-                .toSet()
+                .flatMap(PresenceRegistration::acceptedAliasIndexes)
+                .distinct()
+                .sorted()
         return when {
             PresenceRegistrationResult.ACCEPTED in results ->
                 PresenceRegistration(
                     result = PresenceRegistrationResult.ACCEPTED,
-                    aliases = registration.route.aliases.orEmpty().filter { alias -> alias in acceptedAliases }
+                    acceptedAliasIndexes = acceptedAliasIndexes
                 )
             PresenceRegistrationResult.PHONE_VERIFICATION_FAILED in results ->
                 PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
@@ -123,7 +125,7 @@ class HttpPresenceClient(
                     endpointPool.markReachable(baseUrl)
                     PresenceRegistration(
                         result = PresenceRegistrationResult.ACCEPTED,
-                        aliases = acceptedAliases(response, registration)
+                        acceptedAliasIndexes = acceptedAliasIndexes(response)
                     )
                 }
 
@@ -148,15 +150,37 @@ class HttpPresenceClient(
             PresenceRegistration(PresenceRegistrationResult.REJECTED)
         }
 
-    // A directory without alias ownership answers 204 and stores every alias.
-    private suspend fun acceptedAliases(
-        response: HttpResponse,
-        registration: ClientRouteRegistration
-    ): List<String> =
+    // Older presence directories answer 204; they cannot open alias claims, so no alias was stored.
+    private suspend fun acceptedAliasIndexes(response: HttpResponse): List<Int> =
         if (response.status == HttpStatusCode.NoContent) {
-            registration.route.aliases.orEmpty()
+            emptyList()
         } else {
-            response.body<ClientRouteRegistrationResult>().aliases
+            response.body<ClientRouteRegistrationResult>().acceptedAliasIndexes
+        }
+
+    /**
+     * True when a Control Plane routes [alias] to [routingId]. The gateway asks only when a client sends as its phone
+     * alias (a first invite), so it learns a user's alias only then, never from route registrations.
+     */
+    override suspend fun ownsAlias(
+        alias: String,
+        routingId: String
+    ): Boolean =
+        endpointPool.ordered().any { baseUrl ->
+            try {
+                val path = "/v1/routes/$alias"
+                val response =
+                    httpClient.get(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(signer.sign("GET", path, ""))
+                    }
+                response.status.isSuccess() &&
+                    response.body<ClientRoutingResult>().routes.any { route -> route.routingId == routingId }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+                false
+            }
         }
 
     private suspend fun removeAt(

@@ -51,11 +51,11 @@ class PresenceStoreTest {
 
             assertEquals(
                 PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(owner, generation = 1L, aliases = listOf(ALIAS)), FIRST_CLAIM)
+                store.register(registration(owner, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
             )
             assertEquals(
                 PresenceResult.Accepted(emptyList()),
-                store.register(registration(attacker, generation = 9L, aliases = listOf(ALIAS)), FIRST_CLAIM)
+                store.register(registration(attacker, generation = 9L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
             )
 
             val ownerRoutingId = ClientRoutingIds.fromSigningPublicKey(owner.encodedPublicKey)
@@ -70,8 +70,8 @@ class PresenceStoreTest {
             val owner = NodeIdentity.generate()
             val attacker = NodeIdentity.generate()
             val store = PresenceStore(now = { 1_000L })
-            store.register(registration(owner, generation = 1L, aliases = listOf(ALIAS)), FIRST_CLAIM)
-            store.register(registration(attacker, generation = 1L, aliases = listOf(ALIAS)), FIRST_CLAIM)
+            store.register(registration(owner, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
+            store.register(registration(attacker, generation = 1L), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
 
             store.remove(ClientRoutingIds.fromSigningPublicKey(attacker.encodedPublicKey), "connection-1")
 
@@ -88,21 +88,21 @@ class PresenceStoreTest {
 
             assertEquals(
                 PresenceResult.Accepted(emptyList()),
-                store.register(registration(owner, generation = 1L, aliases = listOf(ALIAS)), verifiedServer)
+                store.register(registration(owner, generation = 1L), verifiedServer.copy(aliases = listOf(ALIAS)))
             )
             store.register(
-                registration(owner, generation = 2L, aliases = listOf(ALIAS)),
-                verifiedServer.copy(provenAlias = ALIAS)
+                registration(owner, generation = 2L),
+                verifiedServer.copy(provenAlias = ALIAS, aliases = listOf(ALIAS))
             )
             assertEquals(
                 PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(owner, generation = 3L, aliases = listOf(ALIAS)), verifiedServer)
+                store.register(registration(owner, generation = 3L), verifiedServer.copy(aliases = listOf(ALIAS)))
             )
             assertEquals(
                 PresenceResult.Accepted(listOf(ALIAS)),
                 store.register(
-                    registration(newDevice, generation = 1L, aliases = listOf(ALIAS)),
-                    verifiedServer.copy(provenAlias = ALIAS)
+                    registration(newDevice, generation = 1L),
+                    verifiedServer.copy(provenAlias = ALIAS, aliases = listOf(ALIAS))
                 )
             )
 
@@ -111,17 +111,30 @@ class PresenceStoreTest {
         }
 
     @Test
+    fun aliasesTheRouteItselfNamesAreIgnored() =
+        runTest {
+            val store = PresenceStore(now = { 1_000L })
+
+            // Older apps named their aliases in the route, which the gateway can read.
+            assertEquals(
+                PresenceResult.Accepted(emptyList()),
+                store.register(registration(NodeIdentity.generate(), generation = 1L, aliases = listOf(ALIAS)), FIRST_CLAIM)
+            )
+            assertEquals(emptyList(), store.resolve(ALIAS).routes)
+        }
+
+    @Test
     fun aliasBindingExpiresAfterTheOwnerStopsRegistering() =
         runTest {
             var now = 1_000L
             val store = PresenceStore(now = { now })
-            store.register(registration(NodeIdentity.generate(), generation = 1L, aliases = listOf(ALIAS), now = now), FIRST_CLAIM)
+            store.register(registration(NodeIdentity.generate(), generation = 1L, now = now), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
 
             now += ALIAS_BINDING_LIFETIME_MILLISECONDS
             val successor = NodeIdentity.generate()
             assertEquals(
                 PresenceResult.Accepted(listOf(ALIAS)),
-                store.register(registration(successor, generation = 1L, aliases = listOf(ALIAS), now = now), FIRST_CLAIM)
+                store.register(registration(successor, generation = 1L, now = now), FIRST_CLAIM.copy(aliases = listOf(ALIAS)))
             )
         }
 

@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.server.presence
 
-import com.cbgm.sparrow.server.protocol.ClientRoute
-import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
+import com.cbgm.sparrow.server.protocol.UnsignedAliasClaim
 import com.cbgm.sparrow.server.security.ClientRoutingIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
@@ -20,15 +19,19 @@ class PhoneVerificationTest {
     @Test
     fun registrationsWithoutProofProveNothing() =
         runTest {
-            val claims = verification { error("Must not call Firebase") }.claims(registration(null))
-            assertEquals(AliasClaims(provenAlias = null, unprovenClaimsAllowed = false), claims)
+            val claims = verification { error("Must not call Firebase") }.claims(claim(null))
+            assertEquals(AliasClaims(provenAlias = null, unprovenClaimsAllowed = false, aliases = listOf(alias)), claims)
+            assertEquals(
+                AliasClaims(provenAlias = null, unprovenClaimsAllowed = false),
+                verification { error("Must not call Firebase") }.claims(null)
+            )
         }
 
     @Test
     fun proofCoversOnlyTheVerifiedPhoneAlias() =
         runTest {
             val otherAlias = ClientRoutingIds.fromPhoneNumber("+491709999999")
-            val claims = assertNotNull(verification { phone }.claims(registration("valid", listOf(alias, otherAlias))))
+            val claims = assertNotNull(verification { phone }.claims(claim("valid", listOf(alias, otherAlias))))
             assertTrue(claims.isProven(alias))
             assertFalse(claims.isProven(otherAlias))
         }
@@ -37,22 +40,22 @@ class PhoneVerificationTest {
     fun invalidProofIsRejected() =
         runTest {
             val verification = verification { error("Expired or invalid JWT") }
-            assertNull(verification.claims(registration("invalid")))
-            assertNull(verification.claims(registration("")))
+            assertNull(verification.claims(claim("invalid")))
+            assertNull(verification.claims(claim("")))
         }
 
     @Test
     fun withoutPhoneVerificationTheFirstClaimWins() =
         runTest {
-            val expected = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true)
-            assertEquals(expected, PhoneVerification(verifier = null).claims(registration("token")))
-            assertEquals(expected, createPhoneVerification { null }.claims(registration("token")))
+            val expected = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(alias))
+            assertEquals(expected, PhoneVerification(verifier = null).claims(claim("token")))
+            assertEquals(expected, createPhoneVerification { null }.claims(claim("token")))
         }
 
     @Test
     fun malformedVerifiedNumberIsRejected() =
         runTest {
-            assertNull(verification { "not-a-phone" }.claims(registration("valid")))
+            assertNull(verification { "not-a-phone" }.claims(claim("valid")))
         }
 
     @Test
@@ -60,7 +63,7 @@ class PhoneVerificationTest {
         runTest {
             assertNotNull(
                 verification { error("No phone claimed") }
-                    .claims(registration("valid", emptyList()))
+                    .claims(claim("valid", emptyList()))
             )
         }
 
@@ -68,7 +71,7 @@ class PhoneVerificationTest {
     fun cancellationIsNotConvertedToAuthorizationFailure() =
         runTest {
             assertFailsWith<CancellationException> {
-                verification { throw CancellationException() }.claims(registration("valid"))
+                verification { throw CancellationException() }.claims(claim("valid"))
             }
         }
 
@@ -99,7 +102,7 @@ class PhoneVerificationTest {
                         else -> null
                     }
                 }
-            val claims = assertNotNull(verification.claims(registration(null)))
+            val claims = assertNotNull(verification.claims(claim(null)))
 
             assertTrue(claims.allows(alias, deviceRoutingId = "device-b", currentOwner = "device-a"))
             assertFalse(claims.allows(otherAlias, deviceRoutingId = "device-b", currentOwner = "device-a"))
@@ -114,26 +117,19 @@ class PhoneVerificationTest {
     }
 
     @Test
-    fun tokensAreRedactedFromRegistrationStrings() {
-        assertFalse(registration("sensitive-token").toString().contains("sensitive-token"))
+    fun tokensAreRedactedFromClaimStrings() {
+        assertFalse(claim("sensitive-token").toString().contains("sensitive-token"))
     }
 
     private fun verification(phoneNumber: suspend (String) -> String) =
         PhoneVerification(verifier = { token -> VerifiedPhone(phoneNumber(token), Long.MAX_VALUE) })
 
-    private fun registration(token: String?, aliases: List<String> = listOf(alias)) =
-        ClientRouteRegistration(
-            route =
-                ClientRoute(
-                    routingId = "scrouting1_key",
-                    nodeId = "node",
-                    connectionId = "connection",
-                    generation = 1L,
-                    expiresAtEpochMilliseconds = 1000L,
-                    aliases = aliases,
-                    clientSignature = byteArrayOf(1)
-                ),
-            clientSigningPublicKey = byteArrayOf(1),
+    private fun claim(token: String?, aliases: List<String> = listOf(alias)) =
+        UnsignedAliasClaim(
+            routingId = "scrouting1_key",
+            connectionId = "connection",
+            generation = 1L,
+            aliases = aliases,
             phoneVerificationToken = token
         )
 }

@@ -39,7 +39,8 @@ fun main() {
         module = {
             nodeRegistryModule(
                 identity = signingRuntime.identity,
-                directorySigner = signingRuntime.directorySigner
+                directorySigner = signingRuntime.directorySigner,
+                aliasClaimKey = presenceAliasClaimKeySource()
             )
         }
     ).start(wait = true)
@@ -49,7 +50,8 @@ fun Application.nodeRegistryModule(
     identity: NodeIdentity,
     config: NodeRegistryConfig = NodeRegistryConfig.fromEnvironment(),
     store: NodeRegistryStorage = createNodeRegistryStorage(config),
-    directorySigner: RegistryDirectorySigner = DirectRegistryDirectorySigner(identity)
+    directorySigner: RegistryDirectorySigner = DirectRegistryDirectorySigner(identity),
+    aliasClaimKey: AliasClaimKeySource = AliasClaimKeySource { null }
 ) {
     val registrationRateLimiter = BoundedRateLimiter(config.registrationRateLimit)
     val heartbeatRateLimiter = BoundedRateLimiter(config.heartbeatRateLimit)
@@ -120,7 +122,8 @@ fun Application.nodeRegistryModule(
                 NodeDirectory(
                     generatedAtEpochMilliseconds = generatedAt,
                     validUntilEpochMilliseconds = generatedAt + 60_000L,
-                    nodes = store.healthyNodes()
+                    nodes = store.healthyNodes(),
+                    aliasClaimKey = aliasClaimKey.current()
                 )
             call.respond(directorySigner.sign(directory))
         }

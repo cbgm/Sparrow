@@ -23,6 +23,11 @@ class GatewayBackgroundClientsTest {
                             routingId: String,
                             connectionId: String
                         ) = Unit
+
+                        override suspend fun ownsAlias(
+                            alias: String,
+                            routingId: String
+                        ) = false
                     }
                 )
             try {
@@ -47,6 +52,11 @@ class GatewayBackgroundClientsTest {
                         routingId: String,
                         connectionId: String
                     ) = Unit
+
+                    override suspend fun ownsAlias(
+                        alias: String,
+                        routingId: String
+                    ) = false
                 }
 
             assertEquals(
@@ -71,6 +81,11 @@ class GatewayBackgroundClientsTest {
                         routingId: String,
                         connectionId: String
                     ) = Unit
+
+                    override suspend fun ownsAlias(
+                        alias: String,
+                        routingId: String
+                    ) = false
                 }
 
             assertEquals(

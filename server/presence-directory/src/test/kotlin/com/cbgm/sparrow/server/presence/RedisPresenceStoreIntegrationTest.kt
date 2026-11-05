@@ -65,22 +65,22 @@ class RedisPresenceStoreIntegrationTest {
             createStore(redisUrl, "sparrow:test:presence:$suffix").use { store ->
                 assertEquals(
                     PresenceResult.Accepted(listOf(alias)),
-                    store.register(registration(owner, ownerRoutingId, 1L, now, listOf(alias)), firstClaim)
+                    store.register(registration(owner, ownerRoutingId, 1L, now), firstClaim.copy(aliases = listOf(alias)))
                 )
                 assertEquals(
                     PresenceResult.Accepted(emptyList()),
-                    store.register(registration(other, otherRoutingId, 9L, now, listOf(alias)), firstClaim)
+                    store.register(registration(other, otherRoutingId, 9L, now), firstClaim.copy(aliases = listOf(alias)))
                 )
                 assertEquals(listOf(ownerRoutingId), store.resolve(alias).routes.map(ClientRoute::routingId))
                 assertEquals(
                     PresenceResult.Accepted(listOf(alias)),
-                    store.register(registration(owner, ownerRoutingId, 2L, now, listOf(alias)), firstClaim)
+                    store.register(registration(owner, ownerRoutingId, 2L, now), firstClaim.copy(aliases = listOf(alias)))
                 )
                 assertEquals(
                     PresenceResult.Accepted(listOf(alias)),
                     store.register(
-                        registration(other, otherRoutingId, 10L, now, listOf(alias)),
-                        firstClaim.copy(provenAlias = alias)
+                        registration(other, otherRoutingId, 10L, now),
+                        firstClaim.copy(provenAlias = alias, aliases = listOf(alias))
                     )
                 )
                 assertEquals(listOf(otherRoutingId), store.resolve(alias).routes.map(ClientRoute::routingId))
@@ -104,8 +104,7 @@ class RedisPresenceStoreIntegrationTest {
         identity: NodeIdentity,
         routingId: String,
         generation: Long,
-        now: Long,
-        aliases: List<String>? = null
+        now: Long
     ): ClientRouteRegistration {
         val unsigned =
             ClientRoute(
@@ -114,7 +113,6 @@ class RedisPresenceStoreIntegrationTest {
                 connectionId = "connection-$generation",
                 generation = generation,
                 expiresAtEpochMilliseconds = now + 60_000L,
-                aliases = aliases,
                 clientSignature = byteArrayOf()
             )
         val signature =

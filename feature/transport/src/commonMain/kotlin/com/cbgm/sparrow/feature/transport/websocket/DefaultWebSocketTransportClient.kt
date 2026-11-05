@@ -370,7 +370,7 @@ class DefaultWebSocketTransportClient internal constructor(
     private suspend fun DefaultClientWebSocketSession.consumeIncomingFrames(
         expectedRoutingId: String,
         onGatewayRegistered: () -> Unit,
-        onRouteRegistered: (Set<String>) -> Unit,
+        onRouteRegistered: (List<Int>) -> Unit,
         onRouteRejected: (Throwable) -> Unit
     ) {
         incoming.consumeEach { frame ->

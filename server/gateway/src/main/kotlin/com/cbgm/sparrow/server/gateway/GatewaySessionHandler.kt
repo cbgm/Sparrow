@@ -246,21 +246,15 @@ internal class GatewaySessionHandler(
         val presenceRegistration = synchronizePresence(registration)
         when (val presenceResult = presenceRegistration.result) {
             PresenceRegistrationResult.ACCEPTED -> {
-                val aliases = presenceRegistration.aliases
-                connections.updateRoutingAliases(
-                    connection = connection,
-                    routingAliases = aliases
-                )
                 connection.send(
-                    GatewayServerMessage.RouteRegistered(aliases = aliases)
+                    GatewayServerMessage.RouteRegistered(
+                        acceptedAliasIndexes = presenceRegistration.acceptedAliasIndexes
+                    )
                 )
                 pushActions.deliverPending(connection)
             }
 
-            else -> {
-                connections.updateRoutingAliases(connection, emptyList())
-                connection.sendRouteRejected(presenceResult)
-            }
+            else -> connection.sendRouteRejected(presenceResult)
         }
     }
 

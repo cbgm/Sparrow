@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.presence
 
+import com.cbgm.sparrow.server.protocol.AliasClaimKeyResponse
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
@@ -42,12 +43,24 @@ class PresenceRouteResolutionTest {
             assertNull(result.routes.single().aliases)
         }
 
+    @Test
+    fun aliasClaimKeyIsPublishedForTheNodeRegistry() =
+        withPresence {
+            val response = client.get("/v1/alias-claim-key")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(32, serverJson.decodeFromString<AliasClaimKeyResponse>(response.bodyAsText()).publicKey.size)
+        }
+
     private fun withPresence(block: suspend PresenceTestScope.(String) -> Unit) =
         testApplication {
             val identity = NodeIdentity.generate()
             val store = PresenceStore()
             val registration = registration(identity)
-            store.register(registration, AliasClaims(provenAlias = null, unprovenClaimsAllowed = true))
+            store.register(
+                registration,
+                AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(PHONE_ALIAS))
+            )
             val runtime =
                 PresenceRuntime(
                     store = store,
@@ -76,7 +89,6 @@ class PresenceRouteResolutionTest {
                 connectionId = "connection-1",
                 generation = 1L,
                 expiresAtEpochMilliseconds = System.currentTimeMillis() + 60_000L,
-                aliases = listOf(ClientRoutingIds.fromPhoneNumber("+491701234567")),
                 clientSignature = byteArrayOf()
             )
         val signature =
@@ -89,5 +101,6 @@ class PresenceRouteResolutionTest {
 
     private companion object {
         const val TOKEN = "presence-test-token"
+        val PHONE_ALIAS = ClientRoutingIds.fromPhoneNumber("+491701234567")
     }
 }

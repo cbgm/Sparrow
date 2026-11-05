@@ -214,6 +214,24 @@ class GatewaySessionHandlerTest {
             }
         }
 
+    @Test
+    fun clientsSendAsAPhoneAliasOnlyWhenTheControlPlaneRoutesItToThem() =
+        gatewayTest {
+            connect {
+                send(register(nonce = challenge().nonce))
+                assertIs<GatewayServerMessage.Registered>(receiveMessage())
+                assertIs<GatewayServerMessage.IncomingEnvelope>(receiveMessage())
+
+                send(GatewayClientMessage.SendEnvelope(transportEnvelope(senderId = SENDER_ALIAS)))
+                // The envelope is addressed to this connection, so it also arrives here.
+                val replies = listOf(receiveMessage(), receiveMessage())
+                assertTrue(replies.any { reply -> reply is GatewayServerMessage.EnvelopeAccepted })
+
+                send(GatewayClientMessage.SendEnvelope(transportEnvelope(senderId = "scphone1_someone_else")))
+                assertEquals("SENDER_MISMATCH", assertIs<GatewayServerMessage.Error>(receiveMessage()).code)
+            }
+        }
+
     private fun gatewayTest(
         signInTimeoutMilliseconds: Long = 10_000L,
         block: suspend ApplicationTestBuilder.() -> Unit
@@ -256,8 +274,13 @@ class GatewaySessionHandlerTest {
                     override suspend fun register(registration: ClientRouteRegistration) =
                         PresenceRegistration(
                             result = PresenceRegistrationResult.ACCEPTED,
-                            aliases = registration.route.aliases.orEmpty()
+                            acceptedAliasIndexes = listOf(0)
                         )
+
+                    override suspend fun ownsAlias(
+                        alias: String,
+                        routingId: String
+                    ) = alias == SENDER_ALIAS
 
                     override suspend fun remove(
                         routingId: String,
@@ -364,6 +387,7 @@ class GatewaySessionHandlerTest {
 
     private companion object {
         const val NODE_ID = "node-a"
+        const val SENDER_ALIAS = "scphone1_own_number"
         const val CONNECTION_ID = "connection-a"
     }
 }
