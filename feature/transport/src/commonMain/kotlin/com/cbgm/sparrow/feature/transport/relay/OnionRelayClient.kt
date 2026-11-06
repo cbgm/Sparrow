@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
 import com.cbgm.sparrow.feature.transport.discovery.SignedNodeDirectory
 import com.cbgm.sparrow.feature.transport.discovery.SparrowNodeDescriptor
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.readRawBytes
@@ -91,7 +92,9 @@ internal class RelaySelector(
     }
 
     private companion object {
-        const val DEFAULT_FAILURE_COOLDOWN_MILLISECONDS = 2L * 60L * 1_000L
+        // Short, so a node that is back is used again soon; while it is down, one request per cooldown tries it and
+        // is resent at once through the remaining relays.
+        const val DEFAULT_FAILURE_COOLDOWN_MILLISECONDS = 20L * 1_000L
     }
 }
 
@@ -158,6 +161,8 @@ class OnionRelayClient internal constructor(
         val response =
             try {
                 httpClient.post(route.first().relayUrl) {
+                    // The relay's status says which hop failed (failedHop), so it must not be thrown as an exception.
+                    expectSuccess = false
                     contentType(ContentType.Application.OctetStream)
                     setBody(layer)
                 }

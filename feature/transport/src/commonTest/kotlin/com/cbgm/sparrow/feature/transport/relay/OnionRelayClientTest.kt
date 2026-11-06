@@ -144,6 +144,27 @@ class OnionRelayClientTest {
         }
 
     @Test
+    fun aFailedSecondRelayIsReplacedByAThirdNode() =
+        runTest {
+            val routes = mutableListOf<List<String>>()
+            val client =
+                onionClient(
+                    nodes = listOf(node("own", 1), node("down", 2), node("third", 3)),
+                    preferred = null,
+                    connected = { "own" },
+                    network = { url, body ->
+                        relayNetwork(url, body, failing = setOf("https://down.test/v1/relay"), path = routes)
+                    }
+                )
+
+            repeat(4) { assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status) }
+
+            // Every request that reached the Control Plane went through the own node and the third one.
+            assertTrue(routes.isNotEmpty())
+            assertTrue(routes.all { route -> route == listOf("https://own.test/v1/relay", "https://third.test/v1/relay") })
+        }
+
+    @Test
     fun anUnreachableFirstRelayIsLeftOut() =
         runTest {
             val firstHops = mutableListOf<String>()
@@ -219,17 +240,20 @@ class OnionRelayClientTest {
         body: ByteArray,
         failing: Set<String> = emptySet(),
         hops: MutableList<Int>? = null,
-        depth: Int = 1
+        depth: Int = 1,
+        path: MutableList<List<String>>? = null,
+        visited: List<String> = emptyList()
     ): ByteArray {
         val layer = peel(body)
         val forward = layer.forward
         val reply =
             if (forward == null) {
                 hops?.add(depth)
+                path?.add(visited + url)
                 json.encodeToString(RelayExitResponse(200, "application/json", "{}".encodeToByteArray())).encodeToByteArray()
             } else {
                 if (forward.relayUrl in failing) throw RelayDown()
-                relayNetwork(forward.relayUrl, forward.layer, failing, hops, depth + 1)
+                relayNetwork(forward.relayUrl, forward.layer, failing, hops, depth + 1, path, visited + url)
             }
         return cipher.sealReply(reply, layer.replyKey)
     }
@@ -267,6 +291,7 @@ class OnionRelayClientTest {
 
                 override suspend fun set(nodeId: String?) = Unit
             }
+        // Like the app's shared client: failed answers would be thrown unless the request asks otherwise.
         val httpClient =
             HttpClient(
                 MockEngine { request ->
@@ -276,7 +301,7 @@ class OnionRelayClientTest {
                         onFailure = { failure -> if (failure is RelayDown) respond(byteArrayOf(), HttpStatusCode.BadGateway) else throw failure }
                     )
                 }
-            )
+            ) { expectSuccess = true }
         val selector =
             RelaySelector(
                 cache = cache,
