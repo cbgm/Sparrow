@@ -6,7 +6,14 @@ import com.cbgm.sparrow.server.security.CircuitLayer
 import com.cbgm.sparrow.server.security.X25519KeyPair
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
+import io.ktor.server.request.receive
+import io.ktor.server.response.respondBytes
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
@@ -54,6 +61,49 @@ class CircuitRelayTest {
         }
 
     @Test
+    fun theSessionNodeMakesALargeMailboxRequestThroughTwoHops() =
+        relays {
+            circuit {
+                create(keysA)
+                extend("ws://relay-b/v1/circuit", keysB)
+
+                val answer =
+                    request(
+                        stream = 3,
+                        request = CircuitHttpRequest("POST", "https://mailbox.test/v1/mailboxes/box-1/envelopes", "capability", "application/json", ByteArray(2_500) { 1 })
+                    )
+
+                assertEquals(RelayCommand.STREAM_END, answer.first)
+                assertEquals(201, status(answer.second))
+                assertEquals("box-1|Bearer capability|2500", body(answer.second).decodeToString())
+            }
+        }
+
+    @Test
+    fun aLargeAnswerComesBackInParts() =
+        relays {
+            circuit {
+                create(keysA)
+                val answer = request(stream = 1, request = CircuitHttpRequest("GET", "https://mailbox.test/v1/mailboxes/box-1/envelopes", "capability", null, ByteArray(0)))
+
+                assertEquals(RelayCommand.STREAM_END, answer.first)
+                assertContentEquals(ByteArray(LARGE_ANSWER_BYTES) { (it % 251).toByte() }, body(answer.second))
+            }
+        }
+
+    @Test
+    fun theSessionNodeRefusesAnythingButMailboxes() =
+        relays {
+            circuit {
+                create(keysA)
+
+                val answer = request(stream = 2, request = CircuitHttpRequest("GET", "https://mailbox.test/v1/routes/someone", null, null, ByteArray(0)))
+
+                assertEquals(RelayCommand.STREAM_REFUSED, answer.first)
+            }
+        }
+
+    @Test
     fun aCellThatDoesNotOpenEndsTheCircuit() =
         relays {
             circuit {
@@ -68,12 +118,28 @@ class CircuitRelayTest {
             install(ServerWebSockets)
             val policy = RelayDestinationPolicy(allowPrivateAddresses = false, resolve = { listOf(PUBLIC_ADDRESS) })
             val onward = createClient { install(ClientWebSockets) }
-            val relayA = CircuitRelay(keysA, onward, policy)
-            val relayB = CircuitRelay(keysB, onward, policy)
+            val relayA = CircuitRelay(keysA, onward, policy, exitClient = onward)
+            val relayB = CircuitRelay(keysB, onward, policy, exitClient = onward)
             externalServices {
                 hosts("ws://relay-b") {
                     this.install(ServerWebSockets)
                     this.routing { installCircuitRoute(relayB) }
+                }
+                hosts("https://mailbox.test") {
+                    this.routing {
+                        post("/v1/mailboxes/{mailboxId}/envelopes") {
+                            val token = call.request.headers[HttpHeaders.Authorization]
+                            val body = call.receive<ByteArray>()
+                            call.respondBytes(
+                                "${call.parameters["mailboxId"]}|$token|${body.size}".encodeToByteArray(),
+                                ContentType.Text.Plain,
+                                HttpStatusCode.Created
+                            )
+                        }
+                        get("/v1/mailboxes/{mailboxId}/envelopes") {
+                            call.respondBytes(ByteArray(LARGE_ANSWER_BYTES) { (it % 251).toByte() }, ContentType.Application.Json)
+                        }
+                    }
                 }
             }
             routing { installCircuitRoute(relayA) }
@@ -116,14 +182,40 @@ class CircuitRelayTest {
             return answer.data
         }
 
+        /** Sends [request] in parts on [stream]; the command that ended the answer and the answer's bytes. */
+        suspend fun request(
+            stream: Int,
+            request: CircuitHttpRequest
+        ): Pair<Int, ByteArray> {
+            val bytes = request.encode()
+            val parts = (bytes.indices step RelayPayload.MAXIMUM_DATA_BYTES).map { start -> bytes.copyOfRange(start, minOf(start + RelayPayload.MAXIMUM_DATA_BYTES, bytes.size)) }
+            parts.dropLast(1).forEach { part -> send(RelayPayload(RelayCommand.STREAM_DATA, stream, part)) }
+            send(RelayPayload(RelayCommand.STREAM_END, stream, parts.last()))
+            var answer = ByteArray(0)
+            while (true) {
+                val part = receive()
+                assertEquals(stream, part.stream)
+                answer += part.data
+                if (part.command != RelayCommand.STREAM_DATA) return part.command to answer
+            }
+        }
+
         suspend fun receiveCell(): CircuitCell = assertNotNull(CircuitCell.decode((session.incoming.receive() as Frame.Binary).readBytes()))
 
         private suspend fun exchange(request: RelayPayload): RelayPayload {
+            send(request)
+            return receive()
+        }
+
+        private suspend fun send(request: RelayPayload) {
             val last = hops.last()
             var body = CircuitLayer.seal(last.keys.forward, last.forwardCount++, request.encode())
             hops.dropLast(1).asReversed().forEach { hop -> body = CircuitLayer.stream(hop.keys.forward, hop.forwardCount++, body) }
             session.send(Frame.Binary(true, CircuitCell(CIRCUIT_ID, CircuitCell.RELAY, body).encode()))
+        }
 
+        private suspend fun receive(): RelayPayload {
+            val last = hops.last()
             var answer = receiveCell().body
             hops.dropLast(1).forEach { hop -> answer = CircuitLayer.stream(hop.keys.backward, hop.backwardCount++, answer) }
             val opened = assertNotNull(CircuitLayer.open(last.keys.backward, last.backwardCount++, answer))
@@ -138,7 +230,12 @@ class CircuitRelayTest {
         }
     }
 
+    private fun status(answer: ByteArray): Int = ((answer[0].toInt() and 0xFF) shl 8) or (answer[1].toInt() and 0xFF)
+
+    private fun body(answer: ByteArray): ByteArray = answer.copyOfRange(3 + (answer[2].toInt() and 0xFF), answer.size)
+
     private companion object {
+        const val LARGE_ANSWER_BYTES = 3_000
         const val CIRCUIT_ID = 7
         val PUBLIC_ADDRESS: InetAddress = InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8))
     }

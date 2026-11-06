@@ -8,6 +8,9 @@ import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,6 +61,25 @@ class MailboxPendingSynchronizerTest {
             assertEquals(listOf(PROCESSED), gateway.acknowledged)
         }
 
+    @Test
+    fun envelopesAreFetchedAsTheyArriveAndOnlyFromTheMailboxesThatGotSome() =
+        runTest {
+            val gateway =
+                FakeMailboxGateway(
+                    pending = mapOf(UNREACHABLE to null, REACHABLE to listOf(envelope(PROCESSED))),
+                    readyOnce = setOf("mailbox-$REACHABLE")
+                )
+            val routes = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE)))
+            val listener = MailboxArrivalListener(gateway, routes, MailboxPendingSynchronizer(gateway, routes, FakeProcessor))
+
+            val listening = backgroundScope.launch { listener.listen() }
+            advanceTimeBy(20_000)
+
+            assertEquals(listOf(REACHABLE), gateway.fetched)
+            assertEquals(listOf(PROCESSED), gateway.acknowledged)
+            listening.cancel()
+        }
+
     private object FakeProcessor : IncomingEnvelopeProcessor {
         override suspend fun process(
             envelopeId: String,
@@ -72,9 +94,11 @@ class MailboxPendingSynchronizerTest {
     }
 
     private class FakeMailboxGateway(
-        private val pending: Map<String, List<FederatedEnvelope>?>
+        private val pending: Map<String, List<FederatedEnvelope>?>,
+        private var readyOnce: Set<String> = emptySet()
     ) : MailboxGateway {
         val acknowledged = mutableListOf<String>()
+        val fetched = mutableListOf<String>()
 
         override suspend fun create(
             contactId: String,
@@ -87,7 +111,8 @@ class MailboxPendingSynchronizerTest {
         ): Result<LocalMailboxCredential> = error("Not used")
 
         override suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>> =
-            pending[credential.contactId]?.let { Result.success(it) }
+            pending[credential.contactId]
+                ?.let { Result.success(it).also { fetched += credential.contactId } }
                 ?: Result.failure(IllegalStateException("node unreachable"))
 
         override suspend fun acknowledge(credential: LocalMailboxCredential, envelopeId: String): Result<Unit> {
@@ -96,6 +121,18 @@ class MailboxPendingSynchronizerTest {
         }
 
         override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> = error("Not used")
+
+        override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+        /** Like the node: answers at once when mailboxes hold envelopes, otherwise after its wait. */
+        override suspend fun ready(
+            accessEndpoint: String,
+            credentials: List<LocalMailboxCredential>
+        ): Result<Set<String>> {
+            val ready = readyOnce.also { readyOnce = emptySet() }
+            if (ready.isEmpty()) delay(8_000)
+            return Result.success(ready)
+        }
     }
 
     private class FakeMailboxRouteRepository(

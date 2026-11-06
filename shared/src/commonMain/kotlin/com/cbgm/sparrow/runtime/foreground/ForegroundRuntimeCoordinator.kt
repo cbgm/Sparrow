@@ -59,6 +59,18 @@ class ForegroundRuntimeCoordinator(
             }
     }
 
+    /**
+     * Messages held back while there was no circuit through enough hops (sending directly switched off) are retried
+     * by the outbox with a growing delay; once such a circuit is up they go out at once.
+     */
+    private suspend fun sendWaitingMessagesWhenRouteReturns() {
+        var waiting = false
+        foreground.observeWaitingForRoute().distinctUntilChanged().collect { waitingNow ->
+            if (waiting && !waitingNow) foreground.outboxRunner.start()
+            waiting = waitingNow
+        }
+    }
+
     private suspend fun runForegroundSession() {
         StartupTrace.measure("incoming envelope runner start") {
             foreground.incomingEnvelopeRunner.start()
@@ -73,13 +85,17 @@ class ForegroundRuntimeCoordinator(
                     foreground.transportConnectionManager.connectionState
                         .collect(connectionHandler::handle)
                 }
-            // Stage 1 of onion routing: the circuit is built and measured; nothing is sent through it yet.
+            // Mailbox requests and messages to contacts with a mailbox go through the circuit.
             val circuit = launch { foreground.circuitRunner.run() }
+            val mailboxArrivals = launch { foreground.mailboxCoordinator.listen() }
+            val routeReturns = launch { sendWaitingMessagesWhenRouteReturns() }
 
             try {
                 awaitCancellation()
             } finally {
                 connectionObserver.cancelAndJoin()
+                routeReturns.cancelAndJoin()
+                mailboxArrivals.cancelAndJoin()
                 circuit.cancelAndJoin()
                 foreground.outboxRunner.stop()
                 foreground.incomingEnvelopeRunner.stop()

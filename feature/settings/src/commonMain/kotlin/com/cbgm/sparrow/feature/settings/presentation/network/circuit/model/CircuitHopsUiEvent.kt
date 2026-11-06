@@ -9,4 +9,8 @@ sealed interface CircuitHopsUiEvent {
     ) : CircuitHopsUiEvent
 
     data object HopCountChosen : CircuitHopsUiEvent
+
+    data class SendDirectlyChanged(
+        val sendsDirectly: Boolean
+    ) : CircuitHopsUiEvent
 }

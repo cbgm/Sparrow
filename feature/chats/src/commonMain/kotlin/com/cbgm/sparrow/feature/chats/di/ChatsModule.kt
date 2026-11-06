@@ -245,7 +245,8 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
             identityController = get(),
             indicatorController = get(),
             stateController = get(),
-            actionsController = get()
+            actionsController = get(),
+            observeWaitingForRoute = get()
         )
     }
 }

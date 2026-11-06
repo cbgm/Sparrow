@@ -176,6 +176,13 @@ class DefaultMailboxCapabilityLifecycleTest {
                 Result.success(Unit)
             }
         }
+
+        override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+        override suspend fun ready(
+            accessEndpoint: String,
+            credentials: List<LocalMailboxCredential>
+        ): Result<Set<String>> = error("Not used")
     }
 
     private companion object {

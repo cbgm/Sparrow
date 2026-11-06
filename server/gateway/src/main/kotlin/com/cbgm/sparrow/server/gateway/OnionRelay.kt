@@ -157,6 +157,15 @@ internal class RelayDestinationPolicy(
 ) {
     fun nextRelay(url: String): URI? = target(url)?.takeIf { uri -> uri.rawPath == RELAY_PATH && uri.rawQuery == null }
 
+    /** A request the session node makes for the app through its circuit: only the node mailbox operations, and waiting for envelopes. */
+    fun mailbox(
+        method: String,
+        url: String
+    ): URI? =
+        target(url)?.takeIf { uri ->
+            uri.rawQuery == null && MAILBOX_REQUESTS.any { (allowed, path) -> method == allowed && path.matches(uri.rawPath.orEmpty()) }
+        }
+
     /** The next hop of a circuit: another node's `/v1/circuit` WebSocket, under the same address rules. */
     fun nextCircuitHop(url: String): URI? {
         val asHttp =
@@ -188,6 +197,16 @@ internal class RelayDestinationPolicy(
     private companion object {
         const val RELAY_PATH = "/v1/relay"
         const val CIRCUIT_PATH = "/v1/circuit"
+        private const val ID = "[A-Za-z0-9_.-]{1,128}"
+        val MAILBOX_REQUESTS =
+            listOf(
+                "POST" to Regex("/v1/mailboxes"),
+                "POST" to Regex("/v1/mailboxes/wait"),
+                "POST" to Regex("/v1/mailboxes/$ID/envelopes"),
+                "GET" to Regex("/v1/mailboxes/$ID/envelopes"),
+                "DELETE" to Regex("/v1/mailboxes/$ID/envelopes/$ID"),
+                "DELETE" to Regex("/v1/mailboxes/$ID")
+            )
         val CONTROL_PLANE_REQUESTS =
             listOf(
                 "GET" to Regex("/v1/nodes"),

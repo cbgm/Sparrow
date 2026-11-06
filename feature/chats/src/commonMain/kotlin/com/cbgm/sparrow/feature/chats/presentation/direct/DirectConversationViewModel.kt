@@ -20,16 +20,19 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrches
 import com.cbgm.sparrow.feature.conversationorchestration.api.awaitResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,7 +47,8 @@ class DirectConversationViewModel(
     private val identityController: DirectIdentityController,
     private val indicatorController: DirectIndicatorController,
     stateController: DirectConversationStateController,
-    private val actionsController: DirectConversationActionsController
+    private val actionsController: DirectConversationActionsController,
+    observeWaitingForRoute: ObserveWaitingForRouteUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -106,6 +110,10 @@ class DirectConversationViewModel(
     val indicatorState = stateController.indicatorState
     val historyState = stateController.historyState
     val errorMessage = stateController.errorMessage
+
+    /** True while messages wait for a circuit through enough hops (sending directly is switched off). */
+    val waitingForRoute: StateFlow<Boolean> =
+        observeWaitingForRoute().stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L), false)
 
     init {
         viewModelScope.launch {

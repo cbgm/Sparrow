@@ -124,6 +124,24 @@ data class MailboxEnvelopeRequest(
     val envelope: FederatedEnvelope
 )
 
+/** `POST /v1/mailboxes/wait`: the owner's mailboxes to watch, each with its retrieval capability. */
+@Serializable
+data class MailboxWaitRequest(
+    val mailboxes: List<MailboxWaitEntry>
+)
+
+@Serializable
+data class MailboxWaitEntry(
+    val mailboxId: String,
+    val retrievalCapability: String
+)
+
+/** The watched mailboxes that hold envelopes; empty when none arrived while the node waited. */
+@Serializable
+data class MailboxWaitResponse(
+    val ready: List<String>
+)
+
 @Serializable
 data class MailboxEnvelopesResponse(
     val envelopes: List<FederatedEnvelope>

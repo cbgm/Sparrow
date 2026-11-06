@@ -9,7 +9,9 @@ import io.ktor.websocket.WebSocketExtension
 import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.readBytes
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
@@ -17,8 +19,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CircuitTest {
     private val cipher = ReadableCircuitCipher()
@@ -32,12 +36,83 @@ class CircuitTest {
             circuit.create(hop("a", 1))
             circuit.extend(hop("b", 2))
             circuit.extend(hop("c", 3))
+            backgroundScope.launch { circuit.readAnswers() }
             circuit.ping()
             circuit.ping()
 
             assertEquals(listOf("a", "b", "c"), circuit.nodeIds)
             assertEquals(listOf("wss://b.test/v1/circuit", "wss://c.test/v1/circuit"), relays.extendedTo)
             assertEquals(2, relays.pingsAtLastHop)
+            relays.stop()
+        }
+
+    @Test
+    fun aMailboxRequestAndItsAnswerSpanManyCells() =
+        runTest {
+            val relays = SimulatedRelays(this, cipher)
+            val circuit = Circuit(relays.session, cipher, now = { 0L })
+            circuit.create(hop("a", 1))
+            circuit.extend(hop("b", 2))
+            backgroundScope.launch { circuit.readAnswers() }
+
+            val answer =
+                circuit.request(
+                    CircuitHttpRequest("POST", "https://box.test/v1/mailboxes/m/envelopes", "send-capability", "application/json", ByteArray(2_500) { 7 })
+                )
+
+            assertEquals("POST https://box.test/v1/mailboxes/m/envelopes send-capability 2500", relays.lastRequest)
+            assertEquals(201, answer.status)
+            assertEquals("text/plain", answer.contentType)
+            assertContentEquals(ByteArray(3_000) { (it % 251).toByte() }, answer.body)
+            relays.stop()
+        }
+
+    @Test
+    fun aRefusedRequestLeavesTheCircuitUsable() =
+        runTest {
+            val relays = SimulatedRelays(this, cipher)
+            val circuit = Circuit(relays.session, cipher, now = { 0L })
+            circuit.create(hop("a", 1))
+            backgroundScope.launch { circuit.readAnswers() }
+
+            assertFailsWith<CircuitRequestRefusedException> {
+                circuit.request(CircuitHttpRequest("GET", "https://box.test/v1/routes/x", null, null, ByteArray(0)))
+            }
+            circuit.ping()
+            relays.stop()
+        }
+
+    @Test
+    fun aWaitingRequestDoesNotHoldBackOthers() =
+        runTest {
+            val relays = SimulatedRelays(this, cipher)
+            val circuit = Circuit(relays.session, cipher, now = { 0L })
+            circuit.create(hop("a", 1))
+            circuit.extend(hop("b", 2))
+            backgroundScope.launch { circuit.readAnswers() }
+
+            // The simulated session node answers the wait only after the ping that follows it got through.
+            val waiting = async(start = CoroutineStart.UNDISPATCHED) { circuit.request(CircuitHttpRequest("POST", "https://box.test/v1/mailboxes/wait", null, "application/json", ByteArray(10))) }
+            circuit.ping()
+
+            assertEquals(200, waiting.await().status)
+            relays.stop()
+        }
+
+    @Test
+    fun aFailingCircuitFailsTheRequestsOnTheWay() =
+        runTest {
+            val relays = SimulatedRelays(this, cipher)
+            val circuit = Circuit(relays.session, cipher, now = { 0L })
+            circuit.create(hop("a", 1))
+            val reading = backgroundScope.launch { runCatching { circuit.readAnswers() } }
+
+            val waiting = async(start = CoroutineStart.UNDISPATCHED) { runCatching { circuit.request(CircuitHttpRequest("POST", "https://box.test/v1/mailboxes/wait", null, "application/json", ByteArray(10))) } }
+            relays.destroy()
+            reading.join()
+
+            assertTrue(waiting.await().isFailure)
+            assertTrue(circuit.isClosed)
             relays.stop()
         }
 
@@ -70,6 +145,8 @@ class CircuitTest {
         private val hops = mutableListOf<Hop>()
         val extendedTo = mutableListOf<String>()
         var pingsAtLastHop = 0
+        var lastRequest: String? = null
+        private val streams = mutableMapOf<Int, ByteArray>()
         val session: WebSocketSession = ChannelSession(toApp, fromApp)
         private val job: Job =
             scope.launch {
@@ -83,8 +160,14 @@ class CircuitTest {
                 }
             }
 
+        private var heldWait: Int? = null
+
         fun stop() {
             job.cancel()
+        }
+
+        suspend fun destroy() {
+            toApp.send(Frame.Binary(true, CircuitCell(1, CircuitCell.DESTROY, ByteArray(0)).encode()))
         }
 
         private suspend fun created(ephemeral: ByteArray) {
@@ -99,16 +182,52 @@ class CircuitTest {
             var layered = body
             inner.forEach { hop -> layered = cipher.stream(hop.keys.forward, hop.forwardCount++, layered) }
             val request = RelayPayload.decode(cipher.open(last.keys.forward, last.forwardCount++, layered)!!)!!
-            val answer =
+            val answers =
                 when (request.command) {
-                    RelayCommand.EXTEND -> extend(request.data)
-                    RelayCommand.PING -> RelayPayload(RelayCommand.PONG, request.stream, request.data).also { pingsAtLastHop++ }
+                    RelayCommand.EXTEND -> listOf(extend(request.data))
+                    RelayCommand.PING -> listOf(RelayPayload(RelayCommand.PONG, request.stream, request.data)).also { pingsAtLastHop++ } + releaseWait()
+                    RelayCommand.STREAM_DATA -> emptyList<RelayPayload>().also { streams[request.stream] = (streams[request.stream] ?: ByteArray(0)) + request.data }
+                    RelayCommand.STREAM_END -> exit(request.stream, (streams.remove(request.stream) ?: ByteArray(0)) + request.data)
                     else -> error("Unexpected command ${request.command}")
                 }
-            var back = cipher.seal(last.keys.backward, last.backwardCount++, answer.encode())
-            inner.asReversed().forEach { hop -> back = cipher.stream(hop.keys.backward, hop.backwardCount++, back) }
-            toApp.send(Frame.Binary(true, CircuitCell(1, CircuitCell.RELAY, back).encode()))
+            answers.forEach { answer ->
+                var back = cipher.seal(last.keys.backward, last.backwardCount++, answer.encode())
+                inner.asReversed().forEach { hop -> back = cipher.stream(hop.keys.backward, hop.backwardCount++, back) }
+                toApp.send(Frame.Binary(true, CircuitCell(1, CircuitCell.RELAY, back).encode()))
+            }
         }
+
+        /** Reads the request as the gateway does and answers mailbox paths with a large body. */
+        private fun exit(
+            stream: Int,
+            bytes: ByteArray
+        ): List<RelayPayload> {
+            var offset = 0
+
+            fun field(lengthBytes: Int): String {
+                val length = (0 until lengthBytes).fold(0) { value, index -> (value shl 8) or (bytes[offset + index].toInt() and 0xFF) }
+                offset += lengthBytes
+                return bytes.copyOfRange(offset, offset + length).decodeToString().also { offset += length }
+            }
+            val method = field(1)
+            val url = field(2)
+            val token = field(2)
+            field(1)
+            lastRequest = "$method $url $token ${bytes.size - offset}"
+            if (url.endsWith("/v1/mailboxes/wait")) {
+                heldWait = stream
+                return emptyList()
+            }
+            if ("/v1/mailboxes/" !in url) return listOf(RelayPayload(RelayCommand.STREAM_REFUSED, stream, ByteArray(0)))
+            val type = "text/plain".encodeToByteArray()
+            val answer = byteArrayOf(0, 201.toByte(), type.size.toByte()) + type + ByteArray(3_000) { (it % 251).toByte() }
+            val parts = streamParts(answer)
+            return parts.dropLast(1).map { part -> RelayPayload(RelayCommand.STREAM_DATA, stream, part) } +
+                RelayPayload(RelayCommand.STREAM_END, stream, parts.last())
+        }
+
+        private fun releaseWait(): List<RelayPayload> =
+            listOfNotNull(heldWait?.let { stream -> RelayPayload(RelayCommand.STREAM_END, stream, byteArrayOf(0, 200.toByte(), 0)) }).also { heldWait = null }
 
         private fun extend(data: ByteArray): RelayPayload {
             val urlLength = ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)

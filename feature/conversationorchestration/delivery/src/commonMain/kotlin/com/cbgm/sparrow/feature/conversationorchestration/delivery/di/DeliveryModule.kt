@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indic
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.WebSocketMessagingIndicatorGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCoordinator
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxArrivalListener
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxCredentialFactory
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRoutePacketHandler
@@ -127,9 +128,10 @@ private fun Module.registerMailbox() {
     }
     singleOf(::MailboxCredentialFactory)
     singleOf(::MailboxPendingSynchronizer)
+    single { MailboxArrivalListener(mailboxGateway = get(), mailboxRouteRepository = get(), pendingSynchronizer = get()) }
     singleOf(::MailboxRouteProvisioner)
     single<MailboxCoordinator> {
-        DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get())
+        DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get(), arrivalListener = get())
     }
     singleOf(::MailboxRoutePacketHandler) { bind<TypedProtocolPacketHandler>() }
 }

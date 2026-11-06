@@ -70,7 +70,73 @@ internal object RelayCommand {
     const val EXTEND_FAILED = 3
     const val PING = 4
     const val PONG = 5
+
+    /** A part of a request or an answer; more parts follow. */
+    const val STREAM_DATA = 6
+
+    /** The last part of a request or an answer. */
+    const val STREAM_END = 7
+
+    /** The session node will not make the request. */
+    const val STREAM_REFUSED = 8
+
+    /** The session node could not make the request. */
+    const val STREAM_FAILED = 9
 }
+
+/**
+ * An HTTP request the session node makes for the app, as the gateway's `CircuitHttpRequest`:
+ * `method length (1) || method || url length (2) || url || token length (2) || bearer token || content type length (1) ||
+ * content type || body`.
+ */
+internal class CircuitHttpRequest(
+    val method: String,
+    val url: String,
+    val bearerToken: String?,
+    val contentType: String?,
+    val body: ByteArray
+) {
+    fun encode(): ByteArray =
+        field(method.encodeToByteArray(), 1) +
+            field(url.encodeToByteArray(), 2) +
+            field(bearerToken.orEmpty().encodeToByteArray(), 2) +
+            field(contentType.orEmpty().encodeToByteArray(), 1) +
+            body
+
+    private fun field(
+        value: ByteArray,
+        lengthBytes: Int
+    ): ByteArray {
+        require(value.size < (1 shl (8 * lengthBytes))) { "Field too long" }
+        return ByteArray(lengthBytes) { index -> (value.size ushr (8 * (lengthBytes - 1 - index))).toByte() } + value
+    }
+}
+
+/** The answer: `status (2) || content type length (1) || content type || body`. */
+internal class CircuitHttpResponse(
+    val status: Int,
+    val contentType: String?,
+    val body: ByteArray
+) {
+    companion object {
+        fun decode(bytes: ByteArray): CircuitHttpResponse? {
+            if (bytes.size < 3) return null
+            val typeLength = bytes[2].toInt() and 0xFF
+            if (bytes.size < 3 + typeLength) return null
+            return CircuitHttpResponse(
+                status = readShort(bytes, 0),
+                contentType = bytes.copyOfRange(3, 3 + typeLength).decodeToString().ifEmpty { null },
+                body = bytes.copyOfRange(3 + typeLength, bytes.size)
+            )
+        }
+    }
+}
+
+/** [data] cut into stream parts of at most [RelayPayload.MAXIMUM_DATA_BYTES]; at least one, possibly empty. */
+internal fun streamParts(data: ByteArray): List<ByteArray> =
+    (data.indices step RelayPayload.MAXIMUM_DATA_BYTES)
+        .map { start -> data.copyOfRange(start, minOf(start + RelayPayload.MAXIMUM_DATA_BYTES, data.size)) }
+        .ifEmpty { listOf(ByteArray(0)) }
 
 /** EXTEND data: `url length (2) || url (UTF-8) || the app's ephemeral key for the next hop (32)`. */
 internal fun extendRequest(

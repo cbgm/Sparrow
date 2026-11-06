@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.settings.presentation.network.circuit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,9 +16,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -35,9 +38,13 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_estimate
 import com.cbgm.sparrow.resources.feature_settings_circuit_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_hint
 import com.cbgm.sparrow.resources.feature_settings_circuit_hops
+import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly
+import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_off
+import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_on
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_building
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_connected
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_unavailable
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -75,6 +82,11 @@ fun CircuitHopsScreen(
             item(key = "hops") {
                 SparrowCardNoAnimation {
                     HopCountChooser(uiState = uiState, onUiEvent = onUiEvent)
+                }
+            }
+            item(key = "fallback") {
+                SparrowCardNoAnimation {
+                    FallbackChooser(uiState = uiState, onUiEvent = onUiEvent)
                 }
             }
         }
@@ -119,6 +131,41 @@ private fun HopCountChooser(
             }
     }
 }
+
+@Composable
+private fun FallbackChooser(
+    uiState: CircuitHopsUiState,
+    onUiEvent: (CircuitHopsUiEvent) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MaterialTheme.spacing.base),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(Res.string.feature_settings_circuit_send_directly),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            StatusLine(text = stringResource(fallbackExplanation(uiState.sendsDirectlyWithoutCircuit)))
+        }
+        Switch(
+            checked = uiState.sendsDirectlyWithoutCircuit,
+            onCheckedChange = { checked -> onUiEvent(CircuitHopsUiEvent.SendDirectlyChanged(checked)) }
+        )
+    }
+}
+
+private fun fallbackExplanation(sendsDirectly: Boolean): StringResource =
+    if (sendsDirectly) {
+        Res.string.feature_settings_circuit_send_directly_on
+    } else {
+        Res.string.feature_settings_circuit_send_directly_off
+    }
 
 @Composable
 private fun statusText(status: CircuitUiStatus): String =

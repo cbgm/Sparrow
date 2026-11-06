@@ -96,6 +96,36 @@ class HttpMailboxGateway(
             }
         }
 
+    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> =
+        runCatching {
+            val route = requireNotNull(envelope.mailboxRoute) { "The envelope names no mailbox" }
+            val response =
+                httpClient.post("${route.nodeEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes") {
+                    bearerAuth(route.sendCapability)
+                    contentType(ContentType.Application.Json)
+                    setBody(MailboxEnvelopeRequest(envelope))
+                }
+            check(response.status == HttpStatusCode.Accepted) { "Mailbox delivery failed with ${response.status}" }
+        }
+
+    override suspend fun ready(
+        accessEndpoint: String,
+        credentials: List<LocalMailboxCredential>
+    ): Result<Set<String>> =
+        runCatching {
+            val response =
+                httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes/wait") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        MailboxWaitRequest(
+                            credentials.map { credential -> MailboxWaitEntry(credential.deliveryRoute.mailboxId, credential.retrievalCapability) }
+                        )
+                    )
+                }
+            check(response.status.isSuccess()) { "Waiting for mailbox envelopes failed with ${response.status}" }
+            response.body<MailboxWaitResponse>().ready.toSet()
+        }.markingNodeUnavailable()
+
     private companion object {
         /** The mailbox no longer exists for this capability; revoking it again can never succeed. */
         val MAILBOX_GONE = setOf(HttpStatusCode.NotFound, HttpStatusCode.Gone, HttpStatusCode.Unauthorized)

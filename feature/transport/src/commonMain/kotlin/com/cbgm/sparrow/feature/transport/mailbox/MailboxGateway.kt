@@ -24,6 +24,18 @@ interface MailboxGateway {
     ): Result<Unit>
 
     suspend fun revoke(credential: LocalMailboxCredential): Result<Unit>
+
+    /** Puts [envelope] into the contact's mailbox it names ([FederatedEnvelope.mailboxRoute]). */
+    suspend fun deliver(envelope: FederatedEnvelope): Result<Unit>
+
+    /**
+     * Waits a few seconds at [accessEndpoint] for envelopes in [credentials] (all kept there); the mailbox IDs that
+     * hold some, empty when none arrived meanwhile.
+     */
+    suspend fun ready(
+        accessEndpoint: String,
+        credentials: List<LocalMailboxCredential>
+    ): Result<Set<String>>
 }
 
 @Serializable
@@ -33,6 +45,27 @@ internal data class CreateMailboxRequest(
     val routeSequence: Long,
     val expiresAtEpochMilliseconds: Long,
     val wakeTicket: MailboxWakeTicket
+)
+
+@Serializable
+internal data class MailboxEnvelopeRequest(
+    val envelope: FederatedEnvelope
+)
+
+@Serializable
+internal data class MailboxWaitRequest(
+    val mailboxes: List<MailboxWaitEntry>
+)
+
+@Serializable
+internal data class MailboxWaitEntry(
+    val mailboxId: String,
+    val retrievalCapability: String
+)
+
+@Serializable
+internal data class MailboxWaitResponse(
+    val ready: List<String>
 )
 
 @Serializable

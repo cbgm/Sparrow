@@ -215,7 +215,9 @@ val settingsModule =
             CircuitHopsViewModel(
                 observeCircuitHopCount = get(),
                 observeCircuitStatus = get(),
-                setCircuitHopCount = get()
+                observeCircuitFallback = get(),
+                setCircuitHopCount = get(),
+                setCircuitFallback = get()
             )
         }
 

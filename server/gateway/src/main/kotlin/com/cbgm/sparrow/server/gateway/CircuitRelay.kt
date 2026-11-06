@@ -8,8 +8,17 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.client.request.header
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.contentType
 import io.ktor.server.routing.Route
 import io.ktor.server.websocket.webSocket
+import io.ktor.utils.io.readBuffer
 import io.ktor.websocket.DefaultWebSocketSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
@@ -23,6 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.io.readByteArray
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds
@@ -38,6 +49,7 @@ internal class CircuitRelay(
     private val keys: X25519KeyPair,
     private val httpClient: HttpClient,
     private val destinations: RelayDestinationPolicy,
+    private val exitClient: HttpClient = createRelayHttpClient(),
     private val extendTimeoutMilliseconds: Long = EXTEND_TIMEOUT_MILLISECONDS
 ) {
     /** Serves one link until it closes; every circuit on it ends with it, and so do their onward links. */
@@ -99,8 +111,60 @@ internal class CircuitRelay(
             null -> hop.destroy()
             RelayCommand.EXTEND -> launch { extend(hop, request) }
             RelayCommand.PING -> hop.reply(RelayPayload(RelayCommand.PONG, request.stream, request.data))
+            RelayCommand.STREAM_DATA -> hop.collect(request).takeIf { complete -> !complete }?.let { hop.refuse(request.stream) }
+            RelayCommand.STREAM_END -> hop.finish(request)?.let { body -> launch { exit(hop, request.stream, body) } }
             else -> Unit
         }
+    }
+
+    /** As the last hop, the session node makes an HTTP request for the app: only to node mailboxes. */
+    private suspend fun exit(
+        hop: CircuitHop,
+        stream: Int,
+        encodedRequest: ByteArray
+    ) {
+        val request = CircuitHttpRequest.decode(encodedRequest)
+        val target = request?.let { destinations.mailbox(it.method, it.url) }
+        when {
+            request == null || target == null -> hop.answer(stream, RelayCommand.STREAM_REFUSED, ByteArray(0))
+            else -> {
+                val response =
+                    try {
+                        call(request, target.toString())
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (_: Exception) {
+                        null
+                    }
+                when (response) {
+                    null -> hop.answer(stream, RelayCommand.STREAM_FAILED, ByteArray(0))
+                    else -> hop.answer(stream, RelayCommand.STREAM_END, response.encode())
+                }
+            }
+        }
+    }
+
+    private suspend fun call(
+        request: CircuitHttpRequest,
+        url: String
+    ): CircuitHttpResponse? {
+        val response =
+            exitClient.request(url) {
+                method = HttpMethod.parse(request.method)
+                request.bearerToken?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
+                request.body.takeIf { it.isNotEmpty() }?.let { body ->
+                    contentType(request.contentType?.let(ContentType::parse) ?: ContentType.Application.Json)
+                    setBody(body)
+                }
+            }
+        val body =
+            response
+                .bodyAsChannel()
+                .readBuffer(MAXIMUM_RESPONSE_BYTES + 1L)
+                .readByteArray()
+                .takeIf { it.size <= MAXIMUM_RESPONSE_BYTES }
+                ?: return null
+        return CircuitHttpResponse(response.status.value, response.headers[HttpHeaders.ContentType], body)
     }
 
     private suspend fun extend(
@@ -154,6 +218,7 @@ internal class CircuitRelay(
 
     fun close() {
         httpClient.close()
+        exitClient.close()
     }
 
     private class CircuitHop(
@@ -174,9 +239,51 @@ internal class CircuitRelay(
         suspend fun openForward(body: ByteArray): ByteArray? =
             counters.withLock { CircuitLayer.open(keys.forward, forwardCount++, body) }
 
+        private val streams = HashMap<Int, ByteArrayOutputStream>()
+
+        /** Sealed and sent under one lock: several answers may be on their way, and their counts must arrive in order. */
         suspend fun reply(payload: RelayPayload) {
-            val sealed = counters.withLock { CircuitLayer.seal(keys.backward, backwardCount++, payload.encode()) }
-            inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, sealed))
+            counters.withLock {
+                val sealed = CircuitLayer.seal(keys.backward, backwardCount++, payload.encode())
+                inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, sealed))
+            }
+        }
+
+        /** Adds a request part; false when the request grew too large or too many are open. */
+        fun collect(part: RelayPayload): Boolean {
+            val buffer =
+                streams[part.stream]
+                    ?: ByteArrayOutputStream().takeIf { streams.size < MAXIMUM_OPEN_STREAMS }?.also { streams[part.stream] = it }
+                    ?: return false
+            buffer.write(part.data)
+            return buffer.size() <= MAXIMUM_REQUEST_BYTES
+        }
+
+        /** The whole request once its last part arrived, or null when it was refused. */
+        suspend fun finish(last: RelayPayload): ByteArray? {
+            val complete = collect(last)
+            val request = streams.remove(last.stream)?.toByteArray()
+            if (!complete) refuse(last.stream)
+            return request?.takeIf { complete }
+        }
+
+        suspend fun refuse(stream: Int) {
+            streams.remove(stream)
+            reply(RelayPayload(RelayCommand.STREAM_REFUSED, stream, ByteArray(0)))
+        }
+
+        /** [data] in as many parts as it needs; the last one carries [command]. */
+        suspend fun answer(
+            stream: Int,
+            command: Int,
+            data: ByteArray
+        ) {
+            val parts =
+                (data.indices step RelayPayload.MAXIMUM_DATA_BYTES)
+                    .map { start -> data.copyOfRange(start, minOf(start + RelayPayload.MAXIMUM_DATA_BYTES, data.size)) }
+                    .ifEmpty { listOf(ByteArray(0)) }
+            parts.dropLast(1).forEach { part -> reply(RelayPayload(RelayCommand.STREAM_DATA, stream, part)) }
+            reply(RelayPayload(command, stream, parts.last()))
         }
 
         suspend fun destroy() {
@@ -192,10 +299,11 @@ internal class CircuitRelay(
                         for (frame in link.session.incoming) {
                             val cell = (frame as? Frame.Binary)?.let { binary -> CircuitCell.decode(binary.readBytes()) } ?: continue
                             when (cell.command) {
-                                CircuitCell.RELAY -> {
-                                    val layered = counters.withLock { CircuitLayer.stream(keys.backward, backwardCount++, cell.body) }
-                                    inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, layered))
-                                }
+                                CircuitCell.RELAY ->
+                                    counters.withLock {
+                                        val layered = CircuitLayer.stream(keys.backward, backwardCount++, cell.body)
+                                        inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, layered))
+                                    }
                                 CircuitCell.DESTROY -> break
                                 else -> Unit
                             }
@@ -236,6 +344,9 @@ internal class CircuitRelay(
     private companion object {
         const val EXTEND_TIMEOUT_MILLISECONDS = 10_000L
         const val MAXIMUM_CIRCUITS_PER_LINK = 16
+        const val MAXIMUM_OPEN_STREAMS = 8
+        const val MAXIMUM_REQUEST_BYTES = 64 * 1024
+        const val MAXIMUM_RESPONSE_BYTES = 512 * 1024
 
         /** An onward link carries exactly one circuit for now. */
         const val ONWARD_CIRCUIT_ID = 1
@@ -313,6 +424,89 @@ internal object RelayCommand {
     const val EXTEND_FAILED = 3
     const val PING = 4
     const val PONG = 5
+
+    /** A part of a request (towards the session node) or an answer (back), more parts follow. */
+    const val STREAM_DATA = 6
+
+    /** The last part of a request or an answer. */
+    const val STREAM_END = 7
+
+    /** The session node will not make this request: not a mailbox, too large or too many at once. */
+    const val STREAM_REFUSED = 8
+
+    /** The request could not be made: the mailbox node did not answer, or the answer was too large. */
+    const val STREAM_FAILED = 9
+}
+
+/**
+ * An HTTP request the session node makes for the app, in a stream:
+ * `method length (1) || method || url length (2) || url || token length (2) || bearer token || content type length (1) ||
+ * content type || body`. An empty token or content type means none.
+ */
+internal class CircuitHttpRequest(
+    val method: String,
+    val url: String,
+    val bearerToken: String?,
+    val contentType: String?,
+    val body: ByteArray
+) {
+    fun encode(): ByteArray {
+        val output = ByteArrayOutputStream()
+        output.writeField(method.encodeToByteArray(), 1)
+        output.writeField(url.encodeToByteArray(), 2)
+        output.writeField(bearerToken.orEmpty().encodeToByteArray(), 2)
+        output.writeField(contentType.orEmpty().encodeToByteArray(), 1)
+        output.write(body)
+        return output.toByteArray()
+    }
+
+    companion object {
+        fun decode(bytes: ByteArray): CircuitHttpRequest? =
+            runCatching {
+                val buffer = ByteBuffer.wrap(bytes)
+                val method = buffer.readField(1)
+                val url = buffer.readField(2)
+                val token = buffer.readField(2)
+                val contentType = buffer.readField(1)
+                CircuitHttpRequest(
+                    method = method,
+                    url = url,
+                    bearerToken = token.ifEmpty { null },
+                    contentType = contentType.ifEmpty { null },
+                    body = ByteArray(buffer.remaining()).also(buffer::get)
+                )
+            }.getOrNull()
+    }
+}
+
+/** The answer: `status (2) || content type length (1) || content type || body`. */
+internal class CircuitHttpResponse(
+    val status: Int,
+    val contentType: String?,
+    val body: ByteArray
+) {
+    fun encode(): ByteArray {
+        val output = ByteArrayOutputStream()
+        output.write(status ushr 8)
+        output.write(status and 0xFF)
+        output.writeField(contentType.orEmpty().encodeToByteArray(), 1)
+        output.write(body)
+        return output.toByteArray()
+    }
+}
+
+private fun ByteArrayOutputStream.writeField(
+    value: ByteArray,
+    lengthBytes: Int
+) {
+    require(value.size < (1 shl (8 * lengthBytes))) { "Field too long" }
+    (lengthBytes - 1 downTo 0).forEach { index -> write((value.size ushr (8 * index)) and 0xFF) }
+    write(value)
+}
+
+private fun ByteBuffer.readField(lengthBytes: Int): String {
+    val length = (0 until lengthBytes).fold(0) { value, _ -> (value shl 8) or (get().toInt() and 0xFF) }
+    return ByteArray(length).also(::get).decodeToString()
 }
 
 /** EXTEND data: `url length (2) || url (UTF-8) || the app's ephemeral key for the next hop (32)`. */

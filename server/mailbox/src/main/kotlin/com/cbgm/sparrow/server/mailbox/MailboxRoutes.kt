@@ -6,6 +6,8 @@ import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
+import com.cbgm.sparrow.server.protocol.MailboxWaitRequest
+import com.cbgm.sparrow.server.protocol.MailboxWaitResponse
 import com.cbgm.sparrow.server.security.BoundedRateLimiter
 import com.cbgm.sparrow.server.security.enforceRateLimit
 import com.cbgm.sparrow.server.security.hashedClientAddress
@@ -25,15 +27,19 @@ internal fun Application.configureMailboxRoutes(
     config: MailboxConfig,
     store: MailboxStorage,
     pushNotifier: MailboxPushNotifier,
-    creationRateLimiter: BoundedRateLimiter
+    creationRateLimiter: BoundedRateLimiter,
+    arrivals: MailboxArrivals = MailboxArrivals()
 ) {
     routing {
         get("/health") { call.respondMailboxHealth(store) }
         post("/v1/mailboxes") {
             call.createMailbox(config, store, creationRateLimiter)
         }
+        post("/v1/mailboxes/wait") {
+            call.respondReadyMailboxes(store, arrivals)
+        }
         post("/v1/mailboxes/{mailboxId}/envelopes") {
-            call.storeEnvelope(store, pushNotifier)
+            call.storeEnvelope(store, pushNotifier, arrivals)
         }
         get("/v1/mailboxes/{mailboxId}/envelopes") {
             call.respondPendingEnvelopes(store)
@@ -90,16 +96,28 @@ private suspend fun ApplicationCall.respondOwnerQuotaExceeded(config: MailboxCon
     )
 }
 
+private suspend fun ApplicationCall.respondReadyMailboxes(
+    store: MailboxStorage,
+    arrivals: MailboxArrivals
+) {
+    val request = runCatching { receive<MailboxWaitRequest>() }.getOrNull()
+    when {
+        request == null || request.mailboxes.size > MAXIMUM_WATCHED_MAILBOXES -> respond(HttpStatusCode.BadRequest)
+        else -> respond(MailboxWaitResponse(arrivals.ready(store, request.mailboxes, WAIT_MILLISECONDS)))
+    }
+}
+
 private suspend fun ApplicationCall.storeEnvelope(
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier
+    pushNotifier: MailboxPushNotifier,
+    arrivals: MailboxArrivals
 ) {
     val mailboxId = parameters["mailboxId"]
     val capability = bearerCapability()
     when {
         mailboxId == null -> respond(HttpStatusCode.BadRequest)
         capability == null -> respond(HttpStatusCode.Unauthorized)
-        else -> storeAuthorizedEnvelope(mailboxId, capability, store, pushNotifier)
+        else -> storeAuthorizedEnvelope(mailboxId, capability, store, pushNotifier, arrivals)
     }
 }
 
@@ -107,7 +125,8 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     mailboxId: String,
     capability: String,
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier
+    pushNotifier: MailboxPushNotifier,
+    arrivals: MailboxArrivals
 ) {
     val request = receive<MailboxEnvelopeRequest>()
     val envelope =
@@ -119,6 +138,7 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
         is MailboxResult.Stored -> {
             // Only the owner's ticket decides whom to wake; the sender's recipient field does not.
             val wakeTicket = result.wakeTicket
+            if (!result.duplicate) arrivals.stored(mailboxId)
             if (!result.duplicate && wakeTicket != null) {
                 runCatching { pushNotifier.notify(wakeTicket) }
             }
@@ -191,4 +211,8 @@ private suspend fun ApplicationCall.respondRevocation(result: MailboxRevocationR
 }
 
 private const val MILLISECONDS_PER_SECOND = 1_000L
+
+/** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
+private const val WAIT_MILLISECONDS = 8_000L
+private const val MAXIMUM_WATCHED_MAILBOXES = 512
 private const val MINIMUM_RETRY_AFTER_SECONDS = 1L

@@ -1,20 +1,37 @@
 package com.cbgm.sparrow.feature.transport.sender
 
+import com.cbgm.sparrow.feature.transport.circuit.CircuitFallbackStore
+import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
+import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.circuit.ReadableCircuitCipher
+import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.discovery.CachedNodeDirectory
+import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
+import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
+import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respondError
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,6 +73,162 @@ class WebSocketOutgoingWireSenderTest {
             assertEquals("encoded-payload", envelope.encryptedPayload)
             assertEquals(null, client.envelope)
         }
+
+    @Test
+    fun aContactWithAMailboxGetsTheEnvelopePutIntoIt() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val mailboxes = RecordingMailboxGateway()
+
+            assertTrue(mailboxSender(client, mailboxes, sendsDirectly = true).send("recipient-routing-id", "encoded-payload").isSuccess)
+
+            assertEquals(ROUTE, mailboxes.delivered?.mailboxRoute)
+            assertEquals("encoded-payload", mailboxes.delivered?.encryptedPayload)
+            assertEquals(null, client.federatedEnvelope)
+        }
+
+    @Test
+    fun anUnreachableMailboxLeavesItToTheConnectedNodeWhenSendingDirectlyIsAllowed() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val mailboxes = RecordingMailboxGateway(fails = true)
+
+            assertTrue(mailboxSender(client, mailboxes, sendsDirectly = true).send("recipient-routing-id", "encoded-payload").isSuccess)
+
+            assertEquals(ROUTE, client.federatedEnvelope?.mailboxRoute)
+        }
+
+    @Test
+    fun anUnreachableMailboxFailsTheSendWhenSendingDirectlyIsOff() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val mailboxes = RecordingMailboxGateway(fails = true)
+
+            assertTrue(mailboxSender(client, mailboxes, sendsDirectly = false).send("recipient-routing-id", "encoded-payload").isFailure)
+
+            assertEquals(null, client.federatedEnvelope)
+        }
+
+    private fun mailboxSender(
+        client: RecordingWebSocketTransportClient,
+        mailboxes: MailboxGateway,
+        sendsDirectly: Boolean
+    ) = WebSocketOutgoingWireSender(
+        webSocketTransportClient = client,
+        localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+        localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+        transportConfig = TransportConfig(),
+        mailboxRouteRepository = FakeMailboxRouteRepository(ROUTE),
+        mailboxGateway = mailboxes,
+        sendingPolicy = policy(sendsDirectly)
+    )
+
+    /** No circuit is ever up here, so only the user's choice decides. */
+    private fun policy(sendsDirectly: Boolean) =
+        DirectSendingPolicy(
+            circuits =
+                CircuitRunner(
+                    httpClient = HttpClient(MockEngine { respondError(HttpStatusCode.ServiceUnavailable) }),
+                    cipher = ReadableCircuitCipher(),
+                    selector = RelaySelector(EmptyCache, createGatewayJson(), preferredNodeStore = null, connectedNodeId = { null }),
+                    hopCountStore = FixedHopCount
+                ),
+            fallback = FixedFallback(sendsDirectly)
+        )
+
+    @Test
+    fun withoutAMailboxRouteNothingGoesOutWhileSendingDirectlyIsOffAndNoCircuitProtects() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val sender =
+                WebSocketOutgoingWireSender(
+                    webSocketTransportClient = client,
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig = TransportConfig(),
+                    sendingPolicy = policy(sendsDirectly = false)
+                )
+
+            val result = sender.send("recipient-routing-id", "encoded-payload")
+
+            assertTrue(result.exceptionOrNull()?.isWaitingForRoute() == true)
+            assertEquals(null, client.envelope)
+        }
+
+    @Test
+    fun withoutAMailboxRouteTheConnectedNodeDeliversWhenSendingDirectlyIsAllowed() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val sender =
+                WebSocketOutgoingWireSender(
+                    webSocketTransportClient = client,
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig = TransportConfig(),
+                    sendingPolicy = policy(sendsDirectly = true)
+                )
+
+            assertTrue(sender.send("recipient-routing-id", "encoded-payload").isSuccess)
+            assertEquals("recipient-routing-id", client.envelope?.recipientId)
+        }
+
+    private object EmptyCache : NodeDirectoryCache {
+        override suspend fun read(): CachedNodeDirectory? = null
+
+        override suspend fun write(directory: CachedNodeDirectory) = Unit
+    }
+
+    private object FixedHopCount : CircuitHopCountStore {
+        override fun observe(): Flow<Int> = flowOf(2)
+
+        override suspend fun set(hopCount: Int) = Unit
+    }
+
+    private class RecordingMailboxGateway(
+        private val fails: Boolean = false
+    ) : MailboxGateway {
+        var delivered: FederatedEnvelope? = null
+
+        override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> =
+            if (fails) {
+                Result.failure(IllegalStateException("Mailbox delivery failed with 502"))
+            } else {
+                delivered = envelope
+                Result.success(Unit)
+            }
+
+        override suspend fun create(
+            contactId: String,
+            nodeId: String,
+            routeEndpoint: String,
+            accessEndpoint: String,
+            sequence: Long,
+            expiresAtEpochMilliseconds: Long,
+            wakeTicket: MailboxWakeTicket
+        ): Result<LocalMailboxCredential> = error("Not used")
+
+        override suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>> = error("Not used")
+
+        override suspend fun acknowledge(
+            credential: LocalMailboxCredential,
+            envelopeId: String
+        ): Result<Unit> = error("Not used")
+
+        override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> = error("Not used")
+
+        override suspend fun ready(
+            accessEndpoint: String,
+            credentials: List<LocalMailboxCredential>
+        ): Result<Set<String>> = error("Not used")
+    }
+
+    private class FixedFallback(
+        private val sendsDirectly: Boolean
+    ) : CircuitFallbackStore {
+        override fun observeSendsDirectly(): Flow<Boolean> = flowOf(sendsDirectly)
+
+        override suspend fun setSendsDirectly(sendsDirectly: Boolean) = Unit
+    }
 
     @Test
     fun sendBuildsEnvelopeAndWaitsForGatewayAcceptance() =
@@ -275,5 +448,19 @@ class WebSocketOutgoingWireSenderTest {
         override suspend fun markRetiringRevocationPending(contactId: String) = Result.success(Unit)
 
         override suspend fun deleteRetiring(routeId: String) = Result.success(Unit)
+    }
+
+    private companion object {
+        val ROUTE =
+            MailboxDeliveryRoute(
+                routeId = "route-1",
+                nodeId = "node-b",
+                nodeEndpoint = "https://node-b.example",
+                mailboxId = "mailbox-1",
+                sendCapability = "send-capability",
+                sequence = 4L,
+                expiresAtEpochMilliseconds = Long.MAX_VALUE,
+                identitySignature = byteArrayOf(1, 2, 3)
+            )
     }
 }

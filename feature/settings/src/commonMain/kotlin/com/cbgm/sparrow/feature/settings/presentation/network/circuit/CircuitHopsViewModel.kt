@@ -8,8 +8,10 @@ import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.Circ
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,12 +23,19 @@ import kotlinx.coroutines.launch
 class CircuitHopsViewModel(
     observeCircuitHopCount: ObserveCircuitHopCountUseCase,
     observeCircuitStatus: ObserveCircuitStatusUseCase,
-    private val setCircuitHopCount: SetCircuitHopCountUseCase
+    observeCircuitFallback: ObserveCircuitFallbackUseCase,
+    private val setCircuitHopCount: SetCircuitHopCountUseCase,
+    private val setCircuitFallback: SetCircuitFallbackUseCase
 ) : BaseViewModel() {
     private val draftHopCount = MutableStateFlow<Int?>(null)
 
     val uiState: StateFlow<CircuitHopsUiState> =
-        combine(observeCircuitHopCount(), observeCircuitStatus(), draftHopCount) { saved, status, draft ->
+        combine(
+            observeCircuitHopCount(),
+            observeCircuitStatus(),
+            draftHopCount,
+            observeCircuitFallback()
+        ) { saved, status, draft, sendsDirectly ->
             val selected = draft ?: saved
             val uiStatus = status.toUiStatus()
             CircuitHopsUiState(
@@ -37,7 +46,8 @@ class CircuitHopsViewModel(
                 estimatedLatencyMilliseconds =
                     (uiStatus as? CircuitUiStatus.Connected)
                         ?.takeIf { connected -> connected.hopCount != selected }
-                        ?.estimateFor(selected)
+                        ?.estimateFor(selected),
+                sendsDirectlyWithoutCircuit = sendsDirectly
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLISECONDS), CircuitHopsUiState())
 
@@ -46,6 +56,7 @@ class CircuitHopsViewModel(
             CircuitHopsUiEvent.BackClicked -> navigator.popBackStack()
             is CircuitHopsUiEvent.HopCountChanged -> draftHopCount.value = event.hopCount
             CircuitHopsUiEvent.HopCountChosen -> saveDraft()
+            is CircuitHopsUiEvent.SendDirectlyChanged -> saveFallback(event.sendsDirectly)
         }
     }
 
@@ -55,6 +66,14 @@ class CircuitHopsViewModel(
             setCircuitHopCount(chosen)
                 .onSuccess { draftHopCount.value = null }
                 .onFailure { error -> SparrowLog.error("CircuitHopsViewModel", "Hop count could not be saved", error) }
+        }
+    }
+
+    private fun saveFallback(sendsDirectly: Boolean) {
+        viewModelScope.launch {
+            setCircuitFallback(sendsDirectly).onFailure { error ->
+                SparrowLog.error("CircuitHopsViewModel", "Fallback choice could not be saved", error)
+            }
         }
     }
 

@@ -11,9 +11,14 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.circuit.CircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
+import com.cbgm.sparrow.feature.transport.circuit.CircuitMailboxEngine
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitHopCountStore
+import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.circuit.createMailboxHttpClient
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
@@ -42,10 +47,13 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionPro
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
@@ -197,6 +205,9 @@ val transportModule =
         }
 
         single<CircuitHopCountStore> { DataStoreCircuitHopCountStore(dataStore = get()) }
+
+        single<CircuitFallbackStore> { DataStoreCircuitFallbackStore(dataStore = get()) }
+        single { DirectSendingPolicy(circuits = get(), fallback = get()) }
 
         single {
             OnionRelayClient(
@@ -363,7 +374,20 @@ val transportModule =
         }
 
         single<MailboxGateway> {
-            HttpMailboxGateway(httpClient = get<HttpClient>(), json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)))
+            // Mailbox requests go through the circuit, so the mailbox node does not see the device's address.
+            HttpMailboxGateway(
+                httpClient =
+                    createMailboxHttpClient(
+                        engine =
+                            CircuitMailboxEngine(
+                                circuits = get<CircuitRunner>(),
+                                fallback = get<CircuitFallbackStore>(),
+                                directClient = get<HttpClient>()
+                            ),
+                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                    ),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
         }
 
         single<PushTokenRegistrationGateway> {
@@ -383,6 +407,9 @@ val transportModule =
         singleOf(::ObserveCircuitHopCountUseCase)
         singleOf(::SetCircuitHopCountUseCase)
         singleOf(::ObserveCircuitStatusUseCase)
+        singleOf(::ObserveCircuitFallbackUseCase)
+        singleOf(::SetCircuitFallbackUseCase)
+        singleOf(::ObserveWaitingForRouteUseCase)
         singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {
@@ -391,7 +418,9 @@ val transportModule =
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
                 transportConfig = get<TransportConfig>(),
-                mailboxRouteRepository = get()
+                mailboxRouteRepository = get(),
+                mailboxGateway = get<MailboxGateway>(),
+                sendingPolicy = get<DirectSendingPolicy>()
             )
         }
     }

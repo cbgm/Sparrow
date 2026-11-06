@@ -521,6 +521,9 @@
     <string name="feature_settings_circuit_status_unavailable">Route not available right now</string>
     <string name="feature_settings_circuit_estimate">About %1$d ms with %2$d hops (estimate)</string>
     <string name="feature_settings_circuit_fewer">Only %1$d of %2$d hops available: not enough relaying nodes</string>
+    <string name="feature_settings_circuit_send_directly">Send directly without a route</string>
+    <string name="feature_settings_circuit_send_directly_on">While no route through at least two nodes is available, sending and receiving through mailboxes go directly or through a single node: messages keep working, but a server sees your address.</string>
+    <string name="feature_settings_circuit_send_directly_off">Sending and receiving through mailboxes wait for a route through at least two nodes: your address stays hidden, but with fewer nodes reachable, messages wait until enough are back.</string>
     <string name="feature_settings_preferred_node_automatic">Automatic</string>
     <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
     <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>
@@ -676,6 +679,8 @@
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 
 
+    <string name="feature_chats_route_waiting_title">Messages are waiting</string>
+    <string name="feature_chats_route_waiting_description">No onion route through at least 2 nodes is available, and sending directly is switched off. Messages go out as soon as there is one. To send anyway, turn on “Send directly without a route” in Settings › Network › Onion routing.</string>
     <string name="feature_chats_reconnect_contact">Reconnect contact</string>
     <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact has new keys, an identity-change invitation appears in your Mailbox. You can accept, decline or block it.</string>
     <string name="feature_chats_reconnect_confirm">Send invitation</string>

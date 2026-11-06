@@ -521,6 +521,9 @@
     <string name="feature_settings_circuit_status_unavailable">Route gerade nicht verfügbar</string>
     <string name="feature_settings_circuit_estimate">Etwa %1$d ms mit %2$d Hops (Schätzung)</string>
     <string name="feature_settings_circuit_fewer">Nur %1$d von %2$d Hops verfügbar: nicht genug weiterleitende Knoten</string>
+    <string name="feature_settings_circuit_send_directly">Ohne Route direkt senden</string>
+    <string name="feature_settings_circuit_send_directly_on">Solange keine Route über mindestens zwei Knoten verfügbar ist, laufen Senden und Empfangen über Postfächer direkt oder über einen einzigen Knoten: Nachrichten funktionieren weiter, aber ein Server sieht deine Adresse.</string>
+    <string name="feature_settings_circuit_send_directly_off">Senden und Empfangen über Postfächer warten auf eine Route über mindestens zwei Knoten: deine Adresse bleibt verborgen, aber sind weniger Knoten erreichbar, warten Nachrichten, bis wieder genug da sind.</string>
     <string name="feature_settings_preferred_node_automatic">Automatisch</string>
     <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
     <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>
@@ -680,6 +683,8 @@
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 
 
+    <string name="feature_chats_route_waiting_title">Nachrichten warten</string>
+    <string name="feature_chats_route_waiting_description">Es gibt keine Onion-Route über mindestens 2 Knoten, und direktes Senden ist ausgeschaltet. Nachrichten gehen raus, sobald es eine gibt. Um trotzdem zu senden, schalte „Ohne Route direkt senden“ unter Einstellungen › Netzwerk › Onion-Routing ein.</string>
     <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
     <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt neue Schlüssel hat, erscheint eine Einladung zum Identitätswechsel im Postfach. Du kannst sie annehmen, ablehnen oder den Kontakt blockieren.</string>
     <string name="feature_chats_reconnect_confirm">Einladung senden</string>

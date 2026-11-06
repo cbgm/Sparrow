@@ -4,18 +4,21 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
+import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Processes the envelopes waiting in every local mailbox, including retiring ones a renewal replaced: they keep
  * receiving until the contact learned the new route, and are revoked only after they expired.
  *
  * An envelope that fails stays in its mailbox and is retried on the next sync; it never stops the envelopes
- * behind it or the other mailboxes.
+ * behind it or the other mailboxes. One sync runs at a time, so an envelope is never processed twice at once.
  */
 class MailboxPendingSynchronizer(
     private val mailboxGateway: MailboxGateway,
@@ -23,14 +26,17 @@ class MailboxPendingSynchronizer(
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor
 ) {
     private val logger = SparrowLog.withTag("MailboxPendingSynchronizer")
+    private val synchronizing = Mutex()
 
     suspend fun synchronize(): Result<Int> =
         safeSuspendCall(logFailure = false) {
-            val current = mailboxRouteRepository.allLocal().getOrThrow()
-            val retiring = mailboxRouteRepository.allRetiring().getOrThrow()
-            (current + retiring)
-                .filterNot(LocalMailboxCredential::revocationPending)
-                .sumOf { credential -> synchronize(credential) }
+            synchronizing.withLock { mailboxRouteRepository.receiving().getOrThrow().sumOf { credential -> synchronize(credential) } }
+        }
+
+    /** Only [credentials], the mailboxes known to hold envelopes. */
+    suspend fun synchronize(credentials: List<LocalMailboxCredential>): Result<Int> =
+        safeSuspendCall(logFailure = false) {
+            synchronizing.withLock { credentials.sumOf { credential -> synchronize(credential) } }
         }
 
     private suspend fun synchronize(credential: LocalMailboxCredential): Int {
@@ -73,13 +79,17 @@ class MailboxPendingSynchronizer(
             false
         }
 
-    // A node that is down is expected (it may come back or be replaced); only other failures are errors.
+    // A node that is down is expected (it may come back or be replaced), and so is waiting for a protecting circuit
+    // the user chose; only other failures are errors.
     private fun logUnreadable(
         credential: LocalMailboxCredential,
         error: Throwable
     ) {
-        when (error) {
-            is MailboxNodeUnavailableException ->
+        when {
+            error.isWaitingForRoute() ->
+                logger.info { "Mailbox of contact ${credential.contactId} not read: waiting for a circuit through enough hops" }
+
+            error is MailboxNodeUnavailableException ->
                 logger.info { "Mailbox node of contact ${credential.contactId} is unavailable; retried on the next sync" }
 
             else -> logger.warn(error) { "Mailbox of contact ${credential.contactId} could not be read" }
@@ -90,8 +100,11 @@ class MailboxPendingSynchronizer(
         envelope: FederatedEnvelope,
         error: Throwable
     ) {
-        when (error) {
-            is MailboxNodeUnavailableException ->
+        when {
+            error.isWaitingForRoute() ->
+                logger.info { "Envelope ${envelope.envelopeId} stays pending: waiting for a circuit through enough hops" }
+
+            error is MailboxNodeUnavailableException ->
                 logger.info { "Mailbox node is unavailable; envelope ${envelope.envelopeId} stays pending" }
 
             else -> logger.warn(error) { "Mailbox envelope ${envelope.envelopeId} stays pending for the next sync" }

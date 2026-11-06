@@ -59,7 +59,8 @@ val sharedModule =
                 circuitRunner = get(),
                 outboxRunner = get(),
                 mailboxCoordinator = get(),
-                observeIdentityKeysUsable = get()
+                observeIdentityKeysUsable = get(),
+                observeWaitingForRoute = get()
             )
         }
 

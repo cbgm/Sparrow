@@ -6,13 +6,17 @@ import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocketSession
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
 /** Where the app's circuit stands; [Connected.latencyMilliseconds] is the last measured round trip. */
@@ -45,6 +49,24 @@ class CircuitRunner internal constructor(
     private val logger = SparrowLog.withTag("CircuitRunner")
     private val mutableStatus = MutableStateFlow<CircuitStatus>(CircuitStatus.Building)
     val status: StateFlow<CircuitStatus> = mutableStatus.asStateFlow()
+    private val current = MutableStateFlow<Circuit?>(null)
+
+    /**
+     * The open circuit through at least [minimumHopCount] hops, or null while there is none (being built, failed, too
+     * few relaying nodes, or the app is in the background).
+     */
+    internal fun currentCircuit(minimumHopCount: Int = 1): Circuit? = current.value?.takeIf { circuit -> circuit.isUsable(minimumHopCount) }
+
+    /** Waits up to [timeoutMilliseconds] for an open circuit through at least [minimumHopCount] hops. */
+    internal suspend fun awaitCircuit(
+        timeoutMilliseconds: Long,
+        minimumHopCount: Int = 1
+    ): Circuit? =
+        withTimeoutOrNull(timeoutMilliseconds.milliseconds) {
+            current.first { circuit -> circuit?.isUsable(minimumHopCount) == true }
+        }
+
+    private fun Circuit.isUsable(minimumHopCount: Int): Boolean = !isClosed && nodeIds.size >= minimumHopCount
 
     suspend fun run() {
         hopCountStore.observe().collectLatest { hopCount -> keepCircuit(hopCount) }
@@ -52,14 +74,24 @@ class CircuitRunner internal constructor(
 
     private suspend fun keepCircuit(hopCount: Int) {
         var retryDelay = FIRST_RETRY_MILLISECONDS
+        var next: Circuit? = null
         while (currentCoroutineContext().isActive) {
-            mutableStatus.value = CircuitStatus.Building
+            if (next == null) mutableStatus.value = CircuitStatus.Building
             try {
-                val circuit = build(hopCount)
+                val circuit = next ?: build(hopCount)
+                next = null
                 retryDelay = FIRST_RETRY_MILLISECONDS
+                current.value = circuit
                 try {
-                    measure(circuit, hopCount)
+                    next =
+                        coroutineScope {
+                            val reading = launch { circuit.readAnswers() }
+                            measure(circuit, hopCount).also { reading.cancel() }
+                        }
+                    // The fuller circuit takes over before the old one closes, so requests always find one.
+                    current.value = next
                 } finally {
+                    current.compareAndSet(circuit, null)
                     circuit.close()
                 }
             } catch (cancellation: CancellationException) {
@@ -102,15 +134,44 @@ class CircuitRunner internal constructor(
         return circuit
     }
 
+    /** Pings [circuit] until it fails, or until a fuller circuit was built, which it returns. */
     private suspend fun measure(
         circuit: Circuit,
         hopCount: Int
-    ) {
-        while (currentCoroutineContext().isActive) {
+    ): Circuit {
+        while (true) {
             val latency = circuit.ping()
             logger.debug { "Circuit round trip: $latency ms" }
             mutableStatus.value = CircuitStatus.Connected(circuit.nodeIds.size, hopCount, latency)
             delay(pingIntervalMilliseconds.milliseconds)
+            fuller(circuit, hopCount)?.let { fuller -> return fuller }
+        }
+    }
+
+    /**
+     * A circuit through more hops than [circuit] once relaying nodes that were missing are back; [circuit] keeps
+     * working while it is built, and stays when that fails.
+     */
+    private suspend fun fuller(
+        circuit: Circuit,
+        hopCount: Int
+    ): Circuit? {
+        val hops = circuit.nodeIds.size
+        if (hops >= hopCount || selector.circuitRoute(hopCount).size <= hops) return null
+        return try {
+            val built = build(hopCount)
+            if (built.nodeIds.size > hops) {
+                built
+            } else {
+                built.close()
+                null
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (failure: Exception) {
+            (failure as? CircuitHopFailedException)?.let { hopFailure -> selector.recordFailure(hopFailure.nodeId) }
+            logger.info { "Circuit through more hops not built yet (${failure.message ?: failure::class.simpleName}); keeping $hops hop(s)" }
+            null
         }
     }
 
