@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 
 class DefaultTransportConnectionManager(
@@ -49,7 +50,10 @@ class DefaultTransportConnectionManager(
     private var connectionLoopJob: Job? = null
     private var directoryRefreshJob: Job? = null
     private var resolvedEndpoints: List<NodeEndpoint> = emptyList()
-    private var connectedNodeId: String? = null
+
+    @Volatile
+    override var connectedNodeId: String? = null
+        private set
 
     private val failedNodeTracker =
         FailedNodeTracker(

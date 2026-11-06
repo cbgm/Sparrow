@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
-import com.cbgm.sparrow.server.protocol.ClientRouteRegistrationResult
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
@@ -23,7 +22,6 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -70,23 +68,10 @@ class HttpPresenceClient(
         registration: ClientRouteRegistration
     ): PresenceRegistration {
         val registrations = endpointPool.all().map { baseUrl -> registerAt(baseUrl, registration) }
-        val results = registrations.map(PresenceRegistration::result)
-        val acceptedAliasIndexes =
-            registrations
-                .filter { candidate -> candidate.result == PresenceRegistrationResult.ACCEPTED }
-                .flatMap(PresenceRegistration::acceptedAliasIndexes)
-                .distinct()
-                .sorted()
-        return when {
-            PresenceRegistrationResult.ACCEPTED in results ->
-                PresenceRegistration(
-                    result = PresenceRegistrationResult.ACCEPTED,
-                    acceptedAliasIndexes = acceptedAliasIndexes
-                )
-            PresenceRegistrationResult.PHONE_VERIFICATION_FAILED in results ->
-                PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
-            else -> PresenceRegistration(PresenceRegistrationResult.REJECTED)
-        }
+        val accepted = registrations.any { candidate -> candidate.result == PresenceRegistrationResult.ACCEPTED }
+        return PresenceRegistration(
+            if (accepted) PresenceRegistrationResult.ACCEPTED else PresenceRegistrationResult.REJECTED
+        )
     }
 
     override suspend fun remove(
@@ -123,15 +108,7 @@ class HttpPresenceClient(
             when {
                 status.isSuccess() -> {
                     endpointPool.markReachable(baseUrl)
-                    PresenceRegistration(
-                        result = PresenceRegistrationResult.ACCEPTED,
-                        acceptedAliasIndexes = acceptedAliasIndexes(response)
-                    )
-                }
-
-                status == HttpStatusCode.Forbidden -> {
-                    endpointPool.markReachable(baseUrl)
-                    PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
+                    PresenceRegistration(PresenceRegistrationResult.ACCEPTED)
                 }
 
                 else -> {
@@ -150,36 +127,24 @@ class HttpPresenceClient(
             PresenceRegistration(PresenceRegistrationResult.REJECTED)
         }
 
-    // Older presence directories answer 204; they cannot open alias claims, so no alias was stored.
-    private suspend fun acceptedAliasIndexes(response: HttpResponse): List<Int> =
-        if (response.status == HttpStatusCode.NoContent) {
-            emptyList()
-        } else {
-            response.body<ClientRouteRegistrationResult>().acceptedAliasIndexes
-        }
-
     /**
-     * True when a Control Plane routes [alias] to [routingId]. The gateway asks only when a client sends as its phone
-     * alias (a first invite), so it learns a user's alias only then, never from route registrations.
+     * The device a Control Plane routes [alias] to. The gateway asks only for a first invite (sent as or to a phone
+     * alias), so it learns a user's alias only then, never from route registrations.
      */
-    override suspend fun ownsAlias(
-        alias: String,
-        routingId: String
-    ): Boolean =
-        endpointPool.ordered().any { baseUrl ->
+    override suspend fun aliasOwner(alias: String): String? =
+        endpointPool.ordered().firstNotNullOfOrNull { baseUrl ->
             try {
                 val path = "/v1/routes/$alias"
                 val response =
                     httpClient.get(baseUrl.trimEnd('/') + path) {
                         nodeAuthentication(signer.sign("GET", path, ""))
                     }
-                response.status.isSuccess() &&
-                    response.body<ClientRoutingResult>().routes.any { route -> route.routingId == routingId }
+                response.takeIf { it.status.isSuccess() }?.body<ClientRoutingResult>()?.ownerRoutingId
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
                 endpointPool.markUnavailable(baseUrl)
-                false
+                null
             }
         }
 

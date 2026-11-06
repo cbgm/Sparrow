@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
@@ -39,6 +40,8 @@ class StartDirectInvitationWorkflow internal constructor(
         StartDirectInvitationWorkflow.Step,
         StartDirectInvitationWorkflow.Outcome
     > {
+    private val logger = SparrowLog.withTag("StartDirectInvitationWorkflow")
+
     override val commandType: KClass<LifecycleCommand.StartDirectInvitation> =
         LifecycleCommand.StartDirectInvitation::class
 
@@ -74,6 +77,7 @@ class StartDirectInvitationWorkflow internal constructor(
                 val exchange =
                     startIdentityExchange(step.command.contactId, step.senderLabel).getOrThrow()
                         ?: error("No new invitation was created; an existing exchange must be resolved first")
+                logger.info { "Invitation ${exchange.exchangeId.take(8)} started; queued for sending" }
                 Outcome.ExchangeStarted(exchange, step.peerDisplayName)
             }
             is Step.RecordInvitation -> {
@@ -102,7 +106,12 @@ class StartDirectInvitationWorkflow internal constructor(
         if (hasEstablishedExchange) Outcome.Authorized else Outcome.NotAuthorized
 
     private fun conversationFound(conversationId: String?): Outcome =
-        if (conversationId != null) Outcome.ConversationExists else Outcome.ConversationMissing
+        if (conversationId != null) {
+            logger.info { "No invitation sent: this contact is authorized and the chat still exists" }
+            Outcome.ConversationExists
+        } else {
+            Outcome.ConversationMissing
+        }
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.StartDirectInvitation

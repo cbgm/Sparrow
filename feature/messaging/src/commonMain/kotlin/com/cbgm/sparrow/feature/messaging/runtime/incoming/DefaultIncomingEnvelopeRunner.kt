@@ -47,6 +47,7 @@ class DefaultIncomingEnvelopeRunner(
         senderRoutingId: String,
         encodedTransportPayload: String
     ) {
+        logger.info { "Incoming envelope arrived: envelopeId=$envelopeId" }
         try {
             when (
                 incomingEnvelopeProcessor

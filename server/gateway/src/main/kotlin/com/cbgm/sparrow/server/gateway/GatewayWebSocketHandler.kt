@@ -5,6 +5,7 @@ import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
+import com.cbgm.sparrow.server.security.ClientRoutingIds
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 
 class GatewayWebSocketHandler(
@@ -78,7 +79,7 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: TransportEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderId, boundedPresence::ownsAlias)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderId, boundedPresence::aliasOwner)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
@@ -89,7 +90,7 @@ class GatewayWebSocketHandler(
             return
         }
 
-        val routedEnvelope = envelope.toFederatedEnvelope()
+        val routedEnvelope = envelope.toFederatedEnvelope().addressedToAliasOwner()
         val accepted =
             storeAndRouteFederatedEnvelope(
                 envelope = routedEnvelope,
@@ -110,7 +111,7 @@ class GatewayWebSocketHandler(
         sender: GatewayConnection,
         envelope: FederatedEnvelope
     ) {
-        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId, boundedPresence::ownsAlias)) {
+        if (!sender.acceptsSenderRoutingId(envelope.senderRoutingId, boundedPresence::aliasOwner)) {
             sender.send(
                 GatewayServerMessage.Error(
                     code = "SENDER_MISMATCH",
@@ -121,7 +122,7 @@ class GatewayWebSocketHandler(
             return
         }
 
-        val routedEnvelope = envelope.withServerDeliveryDeadline()
+        val routedEnvelope = envelope.withServerDeliveryDeadline().addressedToAliasOwner()
         val accepted =
             storeAndRouteFederatedEnvelope(
                 envelope = routedEnvelope,
@@ -137,6 +138,17 @@ class GatewayWebSocketHandler(
             accepted = accepted
         )
     }
+
+    /**
+     * A first invite is addressed to the recipient's phone alias, which no connection is registered under: the
+     * Control Plane names the device holding it, so it is delivered and stored for that device.
+     */
+    private suspend fun FederatedEnvelope.addressedToAliasOwner(): FederatedEnvelope =
+        recipientDeviceRoutingId
+            .takeIf(ClientRoutingIds::isBootstrapRoutingId)
+            ?.let { alias -> boundedPresence.aliasOwner(alias) }
+            ?.let { owner -> copy(recipientDeviceRoutingId = owner) }
+            ?: this
 
     private suspend fun respondToEnvelope(
         sender: GatewayConnection,

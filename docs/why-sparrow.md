@@ -145,7 +145,9 @@ The similarity is the infrastructure philosophy:
 Tor goes much further. Tor is an anonymity network: traffic is deliberately sent through a multi-hop circuit of
 relays with layered onion encryption. The Tor Project describes the normal Tor Browser path as three relays.
 Sparrow currently connects a client to **one Community Node at a time**; that node may federate an encrypted
-envelope to another node for the recipient.
+envelope to another node for the recipient. Only the app's requests to Control Planes (node discovery, push, phone
+alias claims) go through two relays with layered encryption, so Control Planes do not see the app's address; the
+messaging connection itself does not.
 
 ```mermaid
 flowchart LR
@@ -175,7 +177,7 @@ still observe protocol metadata such as connection IPs/timing, routing activity,
 | Infrastructure model | Multiple Control Planes + independently hostable Community Nodes | Signal-operated service with strong metadata-minimization design | Meta-operated client/server service | Thousands of independently operated relays |
 | Automatic relay/node failover | Yes, between authorized Community Nodes | Service implementation detail, not a user-operated federation model | Service implementation detail, not a user-operated federation model | Yes, circuits use multiple relays |
 | Community can run transport nodes | Yes | Not as one shared federated Signal network | No | Yes |
-| Multi-hop onion routing | No | No | No | Yes |
+| Multi-hop onion routing | Only for Control Plane requests (two relays) | No | No | Yes |
 | Designed for sender/network anonymity | No | Metadata minimization, but not Tor-style anonymity | No | Yes |
 | Cryptographic/protocol maturity | Experimental; no completed independent audit | Very high/mature | Very high; Signal Protocol is a foundation of WhatsApp E2EE | Very high for its anonymity-network threat model |
 | Current Sparrow limitation | Android usable; iOS incomplete | Mature multi-platform product | Mature multi-platform product | Different product category |

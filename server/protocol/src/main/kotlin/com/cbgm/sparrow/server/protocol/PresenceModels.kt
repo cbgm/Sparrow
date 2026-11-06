@@ -91,15 +91,11 @@ fun ClientRoute.unsigned(): UnsignedClientRoute =
         aliases = aliases
     )
 
-/**
- * [sealedAliasClaim] is an [AliasClaim] encrypted for the presence directory (see `AliasClaimKeys`), so the gateway
- * that forwards the registration learns neither the phone aliases nor the phone verification token.
- */
+/** Routes carry no phone aliases; the app claims them directly at each Control Plane ([AliasClaim]). */
 @Serializable
 data class ClientRouteRegistration(
     val route: ClientRoute,
-    val clientSigningPublicKey: ByteArray,
-    val sealedAliasClaim: ByteArray? = null
+    val clientSigningPublicKey: ByteArray
 ) {
     override fun toString(): String = "ClientRouteRegistration(redacted)"
 
@@ -111,7 +107,6 @@ data class ClientRouteRegistration(
 
         if (route != other.route) return false
         if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
-        if (!sealedAliasClaim.contentEquals(other.sealedAliasClaim)) return false
 
         return true
     }
@@ -119,31 +114,23 @@ data class ClientRouteRegistration(
     override fun hashCode(): Int {
         var result = route.hashCode()
         result = 31 * result + clientSigningPublicKey.contentHashCode()
-        result = 31 * result + (sealedAliasClaim?.contentHashCode() ?: 0)
         return result
     }
 }
 
 /**
- * The phone aliases of the [AliasClaim] the presence directory stored the route under, as positions in
- * [AliasClaim.aliases]; the others were refused. Positions keep the aliases themselves from the gateway.
- */
-@Serializable
-data class ClientRouteRegistrationResult(
-    val acceptedAliasIndexes: List<Int> = emptyList()
-)
-
-/**
- * The phone aliases a device holds, with the one-time phone verification token from sign-up. Signed with the
- * device key and bound to one route, so neither a gateway nor anyone else can claim aliases for a device.
+ * The phone aliases a device holds, with the one-time phone verification token from sign-up in its first claim.
+ * Signed with the device key ([clientSigningPublicKey] derives [routingId]) and sealed for one Control Plane's presence
+ * directory ([NodeDirectory.aliasClaimKey]). The app sends it through two relays (see [RelayLayer]), so neither the
+ * relays nor the gateway read it and the Control Plane does not see the app's address.
  */
 @Serializable
 data class AliasClaim(
     val routingId: String,
-    val connectionId: String,
-    val generation: Long,
+    val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneVerificationToken: String? = null,
+    val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
     override fun toString(): String = "AliasClaim(redacted)"
@@ -153,6 +140,38 @@ data class AliasClaim(
 
     override fun hashCode(): Int = 31 * unsigned().hashCode() + signature.contentHashCode()
 }
+
+@Serializable
+data class UnsignedAliasClaim(
+    val routingId: String,
+    val clientSigningPublicKey: ByteArray,
+    val aliases: List<String>,
+    val phoneVerificationToken: String? = null,
+    val issuedAtEpochMilliseconds: Long
+) {
+    override fun toString(): String = "UnsignedAliasClaim(redacted)"
+
+    override fun equals(other: Any?): Boolean =
+        other is UnsignedAliasClaim &&
+            routingId == other.routingId &&
+            clientSigningPublicKey.contentEquals(other.clientSigningPublicKey) &&
+            aliases == other.aliases &&
+            phoneVerificationToken == other.phoneVerificationToken &&
+            issuedAtEpochMilliseconds == other.issuedAtEpochMilliseconds
+
+    override fun hashCode(): Int =
+        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneVerificationToken, issuedAtEpochMilliseconds)
+            .hashCode()
+}
+
+fun AliasClaim.unsigned(): UnsignedAliasClaim =
+    UnsignedAliasClaim(
+        routingId = routingId,
+        clientSigningPublicKey = clientSigningPublicKey,
+        aliases = aliases,
+        phoneVerificationToken = phoneVerificationToken,
+        issuedAtEpochMilliseconds = issuedAtEpochMilliseconds
+    )
 
 /** The presence directory's raw X25519 key for [AliasClaim]s; see [NodeDirectory.aliasClaimKey]. */
 @Serializable
@@ -164,28 +183,29 @@ data class AliasClaimKeyResponse(
     override fun hashCode(): Int = publicKey.contentHashCode()
 }
 
+/** `POST /v1/alias-claims` on the presence directory: an [AliasClaim] sealed for its key. */
 @Serializable
-data class UnsignedAliasClaim(
-    val routingId: String,
-    val connectionId: String,
-    val generation: Long,
-    val aliases: List<String>,
-    val phoneVerificationToken: String? = null
+data class AliasClaimRequest(
+    val sealedClaim: ByteArray
 ) {
-    override fun toString(): String = "UnsignedAliasClaim(redacted)"
+    override fun equals(other: Any?): Boolean = other is AliasClaimRequest && sealedClaim.contentEquals(other.sealedClaim)
+
+    override fun hashCode(): Int = sealedClaim.contentHashCode()
 }
 
-fun AliasClaim.unsigned(): UnsignedAliasClaim =
-    UnsignedAliasClaim(
-        routingId = routingId,
-        connectionId = connectionId,
-        generation = generation,
-        aliases = aliases,
-        phoneVerificationToken = phoneVerificationToken
-    )
+/**
+ * Positions in [AliasClaim.aliases] the presence directory bound to the device; the others are held by another
+ * device. Positions keep the aliases out of the reply, which the exit relay passes on.
+ */
+@Serializable
+data class AliasClaimResult(
+    val acceptedAliasIndexes: List<Int> = emptyList()
+)
 
+/** For a phone alias, [ownerRoutingId] is the device holding it; [routes] are that device's routes here, if any. */
 @Serializable
 data class ClientRoutingResult(
     val routingId: String,
-    val routes: List<ClientRoute>
+    val routes: List<ClientRoute>,
+    val ownerRoutingId: String? = null
 )

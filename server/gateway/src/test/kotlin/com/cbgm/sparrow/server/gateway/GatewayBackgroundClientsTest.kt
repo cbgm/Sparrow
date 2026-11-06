@@ -11,28 +11,25 @@ import kotlin.test.assertFalse
 
 class GatewayBackgroundClientsTest {
     @Test
-    fun presenceWrapperPropagatesRejectedPhoneRegistration() =
+    fun presenceWrapperPropagatesRejectedRegistration() =
         runTest {
             val wrapper =
                 BoundedPresenceClient(
                     object : PresenceClient {
                         override suspend fun register(registration: ClientRouteRegistration) =
-                            PresenceRegistration(PresenceRegistrationResult.PHONE_VERIFICATION_FAILED)
+                            PresenceRegistration(PresenceRegistrationResult.REJECTED)
 
                         override suspend fun remove(
                             routingId: String,
                             connectionId: String
                         ) = Unit
 
-                        override suspend fun ownsAlias(
-                            alias: String,
-                            routingId: String
-                        ) = false
+                        override suspend fun aliasOwner(alias: String): String? = null
                     }
                 )
             try {
                 assertEquals(
-                    PresenceRegistrationResult.PHONE_VERIFICATION_FAILED,
+                    PresenceRegistrationResult.REJECTED,
                     wrapper.register(testRegistration()).result
                 )
             } finally {
@@ -53,10 +50,7 @@ class GatewayBackgroundClientsTest {
                         connectionId: String
                     ) = Unit
 
-                    override suspend fun ownsAlias(
-                        alias: String,
-                        routingId: String
-                    ) = false
+                    override suspend fun aliasOwner(alias: String): String? = null
                 }
 
             assertEquals(
@@ -82,10 +76,7 @@ class GatewayBackgroundClientsTest {
                         connectionId: String
                     ) = Unit
 
-                    override suspend fun ownsAlias(
-                        alias: String,
-                        routingId: String
-                    ) = false
+                    override suspend fun aliasOwner(alias: String): String? = null
                 }
 
             assertEquals(

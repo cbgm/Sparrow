@@ -30,9 +30,13 @@ The design aims to protect against:
   through it;
 - a node directory with an expired registry certificate, or one signed under a different registry
   root than the configured or first-seen one;
-- a Community Node learning its users' phone numbers from their route registrations: phone aliases and the phone
-  verification token are sealed for the Control Plane's presence directory, whose key is signed into the node
+- a Community Node learning its users' phone numbers: routes carry no phone aliases. The app claims its alias at
+  each of its Control Planes, sealed for the presence directory's key from that Control Plane's signed node
   directory. A gateway learns a user's alias only when that user sends a first invite;
+- Control Planes learning the app's network address: the app's requests to them go through two relays (onion
+  layers sealed for each relay's key from the signed directory). The first relay sees the address but not the
+  destination, the second the destination but not the address; neither reads the content. Two relays run by the
+  same operator could link both, and with a single relaying node there is only one hop;
 - looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
   signed node requests and the Control Plane's push service, and never return a device's phone aliases.
 
@@ -42,7 +46,9 @@ and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/env
 container logs are capped at 3 × 10 MB per service.
 
 Anyone can run a Community Node; registering one gives no power over other nodes' clients. Whoever runs
-the gateway a client connects through still sees that client's network address.
+the gateway a client connects through still sees that client's network address. The last relay sees the
+content of requests that are not sealed for the Control Plane (node directory fetches, push registration with
+its routing ID and push token), but not who sent them.
 
 ## Infrastructure can still observe metadata
 

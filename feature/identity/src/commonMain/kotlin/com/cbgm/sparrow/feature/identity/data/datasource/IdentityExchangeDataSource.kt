@@ -9,6 +9,7 @@ import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.feature.identity.data.model.IdentityAcceptanceReviewRequiredDtoException
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
+import com.cbgm.sparrow.feature.identity.domain.error.InvitationExpiredException
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
@@ -240,8 +241,8 @@ internal class IdentityExchangeDataSource(
         safeSuspendCall {
             mutex.withLock {
                 val invitation = requireInvitation(invitationId, IdentityExchangeDirection.INCOMING)
-                ensureNotExpired(invitation)
 
+                // An acceptance given in time stays valid: it is resent, even after the invitation's lifetime.
                 if (
                     invitation.stage == IdentityExchangeStage.ACCEPTANCE_SENT.name ||
                     invitation.stage == IdentityExchangeStage.WAITING_FOR_READY.name
@@ -253,6 +254,7 @@ internal class IdentityExchangeDataSource(
                     return@withLock
                 }
 
+                ensureNotExpired(invitation)
                 requireState(invitation, IdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED)
 
                 val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
@@ -279,6 +281,7 @@ internal class IdentityExchangeDataSource(
                     invitation.copy(
                         stage = IdentityExchangeStage.ACCEPTANCE_SENT.name,
                         responseChallenge = responseChallenge.copyOf(),
+                        acceptedAtEpochMilliseconds = now,
                         updatedAtEpochMilliseconds = now,
                         lastError = null,
                         localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
@@ -1189,11 +1192,12 @@ internal class IdentityExchangeDataSource(
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
-        val acceptedAt = SystemClock.nowEpochMilliseconds()
+        // The inviter checks the signed acceptance time against the lifetime, so a resend keeps the original one.
+        // Acceptances stored before that time was kept are resent with the current time while still valid.
+        val acceptedAt =
+            invitation.acceptedAtEpochMilliseconds
+                ?: SystemClock.nowEpochMilliseconds().also { ensureNotExpired(invitation) }
         val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
-        check(acceptedAt <= invitation.expiresAtEpochMilliseconds) {
-            "Invitation has expired"
-        }
         val packet = invitationHandshakeProtocol.createAccepted(
             invitationId = invitation.exchangeId,
             acceptedAtEpochMilliseconds = acceptedAt,
@@ -1299,7 +1303,7 @@ internal class IdentityExchangeDataSource(
                 lastError = "Invitation expired"
             )
         )
-        error("Invitation has expired")
+        throw InvitationExpiredException()
     }
 
     private fun requireState(

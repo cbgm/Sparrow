@@ -41,11 +41,8 @@ class ReceiveAuthorizationRevokedWorkflow internal constructor(
         val packet = step.command.packet
         return when (step) {
             is Step.FindExchange ->
-                Outcome.ExchangeFound(
-                    getIdentityExchangeBinding(packet.invitationId).getOrThrow() ?: error(
-                        "Invitation was not found: ${packet.invitationId}"
-                    )
-                )
+                getIdentityExchangeBinding(packet.invitationId).getOrThrow()?.let(Outcome::ExchangeFound)
+                    ?: unknownExchange(packet.invitationId)
             is Step.VerifySignature -> {
                 revocationProtocol.verifyPacket(packet).getOrThrow()
                 Outcome.SignatureValid(step.binding)
@@ -72,6 +69,12 @@ class ReceiveAuthorizationRevokedWorkflow internal constructor(
                 Outcome.Done
             }
         }
+    }
+
+    // The device already deleted this exchange (or never had it): nothing is left to revoke.
+    private fun unknownExchange(invitationId: String): Outcome {
+        logger.info { "Ignoring authorization revocation for an unknown invitation: invitationId=$invitationId" }
+        return Outcome.Done
     }
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =

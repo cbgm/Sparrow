@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.sender
 
 import com.cbgm.sparrow.core.util.id.IdGenerator
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
@@ -11,6 +12,8 @@ import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 
 class WebSocketOutgoingWireSender(
     private val webSocketTransportClient: WebSocketTransportClient,
@@ -19,6 +22,8 @@ class WebSocketOutgoingWireSender(
     private val transportConfig: TransportConfig,
     private val mailboxRouteRepository: MailboxRouteRepository? = null
 ) : OutgoingWireSender {
+    private val logger = SparrowLog.withTag("WebSocketOutgoingWireSender")
+
     override suspend fun send(
         recipientAddress: String,
         encodedTransportPayload: String
@@ -41,7 +46,12 @@ class WebSocketOutgoingWireSender(
                             .awaitRoutingAlias(
                                 routingAlias = alias,
                                 timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
-                            ).getOrThrow()
+                            ).getOrElse { failure ->
+                                if (failure is CancellationException && failure !is TimeoutCancellationException) throw failure
+                                // A first invite names the sender's phone alias, which a Control Plane must hold.
+                                logger.warn { "First invite not sent: own phone number is not bound at any Control Plane" }
+                                throw IllegalStateException("Own phone number is not bound at any Control Plane yet")
+                            }
                     }
                 } else {
                     localRoutingIdProvider.getLocalRoutingId().getOrThrow()

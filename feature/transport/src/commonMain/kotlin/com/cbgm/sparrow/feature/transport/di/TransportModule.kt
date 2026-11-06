@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.di
 
-import com.cbgm.sparrow.core.crypto.claim.AliasClaimSealer
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
@@ -44,13 +44,18 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.presence.AliasClaimKeyProvider
+import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
 import com.cbgm.sparrow.feature.transport.push.PushTokenRegistrationGateway
 import com.cbgm.sparrow.feature.transport.push.inbox.HttpPendingEnvelopeGateway
 import com.cbgm.sparrow.feature.transport.push.inbox.PendingEnvelopeGateway
+import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
+import com.cbgm.sparrow.feature.transport.relay.OnionRelayClient
+import com.cbgm.sparrow.feature.transport.relay.OnionRelayEngine
+import com.cbgm.sparrow.feature.transport.relay.RelaySelector
+import com.cbgm.sparrow.feature.transport.relay.createControlPlaneHttpClient
 import com.cbgm.sparrow.feature.transport.routing.DefaultLocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.DefaultLocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
@@ -152,7 +157,60 @@ val transportModule =
             ClientRouteRegistrationFactory(
                 signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
-                aliasClaimSealer = get<AliasClaimSealer>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single {
+            ControlPlaneRelayPolicy(
+                transportConfig = get<TransportConfig>(),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                cache = get<NodeDirectoryCache>()
+            )
+        }
+
+        single {
+            OnionRelayClient(
+                selector =
+                    RelaySelector(
+                        cache = get<NodeDirectoryCache>(),
+                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                        preferredNodeStore = get<PreferredNodeStore>(),
+                        // Read when a route is built: the connection manager itself uses the relayed client.
+                        connectedNodeId = { get<TransportConnectionManager>().connectedNodeId }
+                    ),
+                cipher = get<SealedMessageCipher>(),
+                httpClient = get<HttpClient>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        // Requests to Control Planes go through two relays, so no Control Plane sees the app's address.
+        single<HttpClient>(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)) {
+            val policy = get<ControlPlaneRelayPolicy>()
+            createControlPlaneHttpClient(
+                engine =
+                    OnionRelayEngine(
+                        onion = get<OnionRelayClient>(),
+                        directClient = get<HttpClient>().config { expectSuccess = false },
+                        requirement = policy::requirement
+                    ),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single {
+            AliasClaimRegistrar(
+                controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                relayPolicy = get<ControlPlaneRelayPolicy>(),
+                directoryVerifier = get<NodeDirectoryVerifier>(),
+                transportConfig = get<TransportConfig>(),
+                signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
+                signatureCrypto = get<DetachedSignatureCrypto>(),
+                cipher = get<SealedMessageCipher>(),
+                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
+                localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
@@ -161,13 +219,7 @@ val transportModule =
             ClientPresenceRouteCoordinator(
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
-                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
-                localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
-                aliasClaimKeyProvider =
-                    AliasClaimKeyProvider(
-                        cache = get<NodeDirectoryCache>(),
-                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
-                    )
+                aliasClaimRegistrar = get<AliasClaimRegistrar>()
             )
         }
 
@@ -205,7 +257,7 @@ val transportModule =
 
         single<NodeEndpointResolver> {
             DefaultNodeEndpointResolver(
-                source = get<NodeDirectorySource>(),
+                source = HttpNodeDirectorySource(httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 cache = get(),
                 verifier = get(),
@@ -233,7 +285,7 @@ val transportModule =
 
         single<ControlPlaneHealthMonitor> {
             HttpControlPlaneHealthMonitor(
-                httpClient = get<HttpClient>(),
+                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 configuration = get<ControlPlaneConfiguration>(),
                 statusStore = get<ControlPlaneStatusStore>()
             )
@@ -282,7 +334,7 @@ val transportModule =
 
         single<PendingEnvelopeGateway> {
             HttpPendingEnvelopeGateway(
-                httpClient = get<HttpClient>(),
+                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
@@ -294,7 +346,7 @@ val transportModule =
 
         single<PushTokenRegistrationGateway> {
             HttpPushTokenRegistrationGateway(
-                httpClient = get<HttpClient>(),
+                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
                 controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
                 createPushDeviceRegistration = get<CreatePushDeviceRegistrationUseCase>()
@@ -320,3 +372,4 @@ val transportModule =
     }
 
 internal const val GATEWAY_JSON_QUALIFIER = "GatewayJson"
+internal const val CONTROL_PLANE_HTTP_CLIENT_QUALIFIER = "ControlPlaneHttpClient"

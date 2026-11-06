@@ -4,8 +4,10 @@ import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.BoundedRateLimiter
 import com.cbgm.sparrow.server.security.NodeDescriptorResolver
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
+import com.cbgm.sparrow.server.security.RateLimitPolicy
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -26,8 +28,12 @@ internal data class PresenceRuntime(
     val phoneVerification: PhoneVerification,
     /** Lets the control plane's push service resolve routes; nodes sign their requests instead. */
     val internalApiToken: String? = null,
-    val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys.generate()
+    val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys(),
+    val aliasClaimRateLimiter: BoundedRateLimiter = BoundedRateLimiter(ALIAS_CLAIM_RATE_LIMIT)
 )
+
+/** An app claims its aliases when it connects and every few hours; a device needs only a few claims per window. */
+private val ALIAS_CLAIM_RATE_LIMIT = RateLimitPolicy(maximumRequests = 20, windowMilliseconds = 60L * 60L * 1_000L)
 
 internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {
     val httpClient = createPresenceHttpClient()

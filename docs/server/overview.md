@@ -65,15 +65,15 @@ Key classes:
 Stores short-lived routing information mapping a client routing ID to its current node/connection. Redis is used
 because presence is ephemeral and should be rebuilt by reconnecting clients.
 
-It also decides which phone aliases a route may hold. The app seals its aliases, with a one-time Firebase ID token in
-its first claim after sign-up, for the Presence Directory's key from the signed node directory, so the gateway that
-forwards them cannot read them. When Firebase Admin credentials are configured
-(`GOOGLE_APPLICATION_CREDENTIALS`), a present token must be a valid Firebase phone sign-in, otherwise the registration
-is rejected with `PHONE_VERIFICATION_FAILED`; it proves the alias of that number. Each alias belongs to one device:
-only the alias and the device routing ID are kept in Redis, renewed by every registration and forgotten 30 days after
-the last one. The holder keeps its alias without a token; a free alias needs a proof when credentials are configured,
-otherwise the first claim wins; an alias held by another device moves only with a proof. Refused aliases are dropped,
-the route is still stored. The token itself is never stored.
+It also decides which device holds a phone alias. Apps claim their aliases directly (`POST /v1/alias-claims`), sealed
+for the Presence Directory's key from the signed node directory and sent through two relays, so neither a gateway nor
+a relay reads them and the Control Plane does not see the app's address. The first claim after sign-up carries a
+one-time Firebase ID token. When Firebase Admin credentials are configured (`GOOGLE_APPLICATION_CREDENTIALS`), a
+present token must be a valid Firebase phone sign-in, otherwise the claim is rejected with `PHONE_VERIFICATION_FAILED`;
+it proves the alias of that number. Each alias belongs to one device: only the alias and the device routing ID are kept
+in Redis, renewed by every claim and forgotten 30 days after the last one. The holder keeps its alias without a token;
+a free alias needs a proof when credentials are configured, otherwise the first claim wins; an alias held by another
+device moves only with a proof. The token itself is never stored.
 
 Key classes:
 

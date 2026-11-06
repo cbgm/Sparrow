@@ -64,7 +64,9 @@ data class GatewayConfig(
     val maximumBlobRetentionMilliseconds: Long,
     val blobCleanupIntervalMilliseconds: Long,
     val blobUploadTicketLifetimeMilliseconds: Long,
-    val signInTimeoutMilliseconds: Long
+    val signInTimeoutMilliseconds: Long,
+    /** Lets the relay reach LAN addresses; only for LAN installations, where Control Planes have private addresses. */
+    val relayPrivateDestinations: Boolean = false
 ) {
     init {
         require(routeLifetimeMilliseconds > 0L) {
@@ -161,7 +163,8 @@ data class GatewayConfig(
                     ServiceEnvironment.long(
                         "SIGN_IN_TIMEOUT_MILLISECONDS",
                         DEFAULT_SIGN_IN_TIMEOUT_MILLISECONDS
-                    )
+                    ),
+                relayPrivateDestinations = ServiceEnvironment.string("RELAY_PRIVATE_DESTINATIONS", "false") == "true"
             )
         }
 

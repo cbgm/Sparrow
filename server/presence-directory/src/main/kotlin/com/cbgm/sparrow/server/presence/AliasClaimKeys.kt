@@ -1,123 +1,51 @@
 package com.cbgm.sparrow.server.presence
 
+import com.cbgm.sparrow.server.protocol.ALIAS_CLAIM_CONTEXT
 import com.cbgm.sparrow.server.protocol.AliasClaim
-import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.UnsignedAliasClaim
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
+import com.cbgm.sparrow.server.security.ClientRoutingIds
 import com.cbgm.sparrow.server.security.Signatures
-import java.security.GeneralSecurityException
-import java.security.KeyFactory
-import java.security.KeyPairGenerator
-import java.security.MessageDigest
-import java.security.PrivateKey
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
-import javax.crypto.Cipher
-import javax.crypto.KeyAgreement
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
+import com.cbgm.sparrow.server.security.X25519KeyPair
+import kotlin.math.absoluteValue
 
 /**
- * The presence directory's key for alias claims. Apps seal their phone aliases for [publicKey] so the gateway that
- * forwards them cannot read them: `ephemeral X25519 public key || ChaCha20-Poly1305(claim)`, with the key
- * `SHA-256("sparrow-alias-claim-v1" || shared secret || ephemeral public key || publicKey)` and a zero nonce (every
- * claim has its own ephemeral key). The key lives only in memory: a restart replaces it, and apps pick up the new one
- * with the next signed node directory.
+ * The presence directory's key for alias claims ([AliasClaim]). It lives only in memory: a restart replaces it, and
+ * apps pick up the new one with the next signed node directory ([com.cbgm.sparrow.server.protocol.NodeDirectory]).
  */
-internal class AliasClaimKeys private constructor(
-    private val privateKey: PrivateKey,
-    val publicKey: ByteArray
+internal class AliasClaimKeys(
+    private val keys: X25519KeyPair = X25519KeyPair.generate(),
+    private val now: () -> Long = System::currentTimeMillis
 ) {
-    /** Returns the claim, or null when it was sealed for another key or changed on the way. */
-    fun open(sealed: ByteArray): ByteArray? {
-        if (sealed.size <= RAW_KEY_BYTES + TAG_BYTES) return null
-        val ephemeralPublicKey = sealed.copyOfRange(0, RAW_KEY_BYTES)
-        return try {
-            val shared =
-                KeyAgreement.getInstance(X25519).run {
-                    init(privateKey)
-                    doPhase(decodePublicKey(ephemeralPublicKey), true)
-                    generateSecret()
-                }
-            Cipher.getInstance(CIPHER).run {
-                init(
-                    Cipher.DECRYPT_MODE,
-                    SecretKeySpec(sealingKey(shared, ephemeralPublicKey, publicKey), "ChaCha20"),
-                    IvParameterSpec(ByteArray(NONCE_BYTES))
+    val publicKey: ByteArray get() = keys.publicKey
+
+    /**
+     * The claim when it was sealed for this key, signed by the key its routing ID derives from and issued within
+     * [MAXIMUM_CLAIM_AGE_MILLISECONDS]; otherwise null. A replayed claim only renews what its device claimed.
+     */
+    fun open(sealedClaim: ByteArray): UnsignedAliasClaim? {
+        val claim =
+            keys.open(sealedClaim, ALIAS_CLAIM_CONTEXT)
+                ?.let { plaintext -> runCatching { serverJson.decodeFromString<AliasClaim>(plaintext.decodeToString()) } }
+                ?.getOrNull()
+                ?: return null
+        val ownKey = ClientRoutingIds.matchesSigningPublicKey(claim.routingId, claim.clientSigningPublicKey)
+        val fresh = (now() - claim.issuedAtEpochMilliseconds).absoluteValue <= MAXIMUM_CLAIM_AGE_MILLISECONDS
+        val signed =
+            runCatching {
+                Signatures.verify(
+                    content = serverJson.encodeToString(claim.unsigned()).encodeToByteArray(),
+                    signature = claim.signature,
+                    publicKey = Signatures.decodePublicKey(claim.clientSigningPublicKey)
                 )
-                doFinal(sealed, RAW_KEY_BYTES, sealed.size - RAW_KEY_BYTES)
-            }
-        } catch (_: GeneralSecurityException) {
-            null
-        }
+            }.getOrDefault(false)
+        val validAliases =
+            claim.aliases.all(ClientRoutingIds::isBootstrapRoutingId) && claim.aliases.distinct() == claim.aliases
+        return claim.unsigned().takeIf { ownKey && fresh && signed && validAliases }
     }
 
-    companion object {
-        fun generate(): AliasClaimKeys {
-            val keyPair = KeyPairGenerator.getInstance(X25519).generateKeyPair()
-            return AliasClaimKeys(keyPair.private, keyPair.public.encoded.takeLast(RAW_KEY_BYTES).toByteArray())
-        }
-
-        /** For tests: a key from its raw 32 private and public bytes. */
-        internal fun fromRaw(
-            privateKey: ByteArray,
-            publicKey: ByteArray
-        ): AliasClaimKeys =
-            AliasClaimKeys(
-                KeyFactory.getInstance(X25519).generatePrivate(PKCS8EncodedKeySpec(PKCS8_PREFIX + privateKey)),
-                publicKey
-            )
-
-        internal fun sealingKey(
-            shared: ByteArray,
-            ephemeralPublicKey: ByteArray,
-            recipientPublicKey: ByteArray
-        ): ByteArray =
-            MessageDigest.getInstance("SHA-256").run {
-                update(CONTEXT)
-                update(shared)
-                update(ephemeralPublicKey)
-                update(recipientPublicKey)
-                digest()
-            }
-
-        internal fun decodePublicKey(raw: ByteArray) =
-            KeyFactory.getInstance(X25519).generatePublic(X509EncodedKeySpec(X509_PREFIX + raw))
-
-        private const val X25519 = "X25519"
-        private const val CIPHER = "ChaCha20-Poly1305"
-        private const val RAW_KEY_BYTES = 32
-        private const val TAG_BYTES = 16
-        internal const val NONCE_BYTES = 12
-        private val CONTEXT = "sparrow-alias-claim-v1".encodeToByteArray()
-        private val X509_PREFIX =
-            byteArrayOf(0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00)
-        private val PKCS8_PREFIX =
-            byteArrayOf(0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x04, 0x22, 0x04, 0x20)
+    private companion object {
+        const val MAXIMUM_CLAIM_AGE_MILLISECONDS = 5L * 60L * 1_000L
     }
-}
-
-/** The registration's alias claim when it was sealed for this key and signed for this very route; otherwise null. */
-internal fun AliasClaimKeys.claimFor(registration: ClientRouteRegistration): UnsignedAliasClaim? {
-    val route = registration.route
-    val claim =
-        registration.sealedAliasClaim
-            ?.let(::open)
-            ?.let { plaintext -> runCatching { serverJson.decodeFromString<AliasClaim>(plaintext.decodeToString()) } }
-            ?.getOrNull()
-            ?: return null
-    val boundToRoute =
-        claim.routingId == route.routingId &&
-            claim.connectionId == route.connectionId &&
-            claim.generation == route.generation
-    val signed =
-        runCatching {
-            Signatures.verify(
-                content = serverJson.encodeToString(claim.unsigned()).encodeToByteArray(),
-                signature = claim.signature,
-                publicKey = Signatures.decodePublicKey(registration.clientSigningPublicKey)
-            )
-        }.getOrDefault(false)
-    return claim.unsigned().takeIf { boundToRoute && signed }
 }

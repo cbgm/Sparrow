@@ -289,12 +289,13 @@ class DefaultWebSocketTransportClient internal constructor(
                                 )
                             }
                         },
-                        onReady = { aliases ->
-                            mutableRegisteredRoutingAliases.value = aliases
+                        onReady = {
                             mutableConnectionState.value =
                                 TransportConnectionState.Connected(routingId = localRoutingId)
                         },
                         prefetchedGatewayInformation = gatewayInformation,
+                        // The Control Planes bound these aliases; first invites wait for them (awaitRoutingAlias).
+                        onAliasesClaimed = { aliases -> mutableRegisteredRoutingAliases.value = aliases },
                         onFailure = { error ->
                             mutableRegisteredRoutingAliases.value = emptySet()
                             mutableConnectionState.value =
@@ -370,7 +371,7 @@ class DefaultWebSocketTransportClient internal constructor(
     private suspend fun DefaultClientWebSocketSession.consumeIncomingFrames(
         expectedRoutingId: String,
         onGatewayRegistered: () -> Unit,
-        onRouteRegistered: (List<Int>) -> Unit,
+        onRouteRegistered: () -> Unit,
         onRouteRejected: (Throwable) -> Unit
     ) {
         incoming.consumeEach { frame ->

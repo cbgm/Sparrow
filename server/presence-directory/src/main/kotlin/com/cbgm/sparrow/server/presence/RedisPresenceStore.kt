@@ -45,64 +45,50 @@ internal class RedisPresenceStore(
         }
     }
 
-    override suspend fun register(
-        registration: ClientRouteRegistration,
-        claims: AliasClaims
-    ): PresenceResult {
+    override suspend fun register(registration: ClientRouteRegistration): PresenceResult {
         val currentTime = now()
-        validatePresenceRegistration(registration, claims.aliases, maximumTtlMilliseconds, currentTime)
-            ?.let { return it }
-        val route = registration.route.withClaimedAliases(claims)
-        val routingIds = listOf(route.routingId) + route.aliases.orEmpty()
-        val encodedRoute = serverJson.encodeToString(route)
-        val results =
-            routingIds.associateWith { routingId ->
-                val keys = routingKeys(routingId)
-                withJedis { jedis ->
-                    jedis.eval(
-                        REGISTER_SCRIPT,
-                        listOf(keys.generation, keys.routes, keys.expiries, routingIdsKey, keys.owner),
-                        listOf(
-                            routingId,
-                            currentTime.toString(),
-                            route.generation.toString(),
-                            route.connectionId,
-                            encodedRoute,
-                            route.expiresAtEpochMilliseconds.toString(),
-                            if (routingId == route.routingId) "1" else "0",
-                            route.routingId,
-                            if (claims.isProven(routingId)) "1" else "0",
-                            if (claims.allowsFreeAlias(routingId)) "1" else "0",
-                            ALIAS_BINDING_LIFETIME_MILLISECONDS.toString()
-                        )
-                    ) as Long
-                }
+        validatePresenceRegistration(registration, maximumTtlMilliseconds, currentTime)?.let { return it }
+        val route = registration.route.copy(aliases = null)
+        val keys = routingKeys(route.routingId)
+        val result =
+            withJedis { jedis ->
+                jedis.eval(
+                    REGISTER_SCRIPT,
+                    listOf(keys.generation, keys.routes, keys.expiries, routingIdsKey),
+                    listOf(
+                        route.routingId,
+                        currentTime.toString(),
+                        route.generation.toString(),
+                        route.connectionId,
+                        serverJson.encodeToString(route),
+                        route.expiresAtEpochMilliseconds.toString()
+                    )
+                ) as Long
             }
-        val registeredIds = results.filterValues { result -> result == REGISTERED_RESULT }.keys
-        return if (results.values.none { result -> result == STALE_RESULT }) {
-            PresenceResult.Accepted(registeredIds.filter { routingId -> routingId != route.routingId })
-        } else {
-            registeredIds.forEach { routingId ->
-                removeRoute(routingId, route.connectionId, currentTime)
-            }
-            PresenceResult.Rejected("STALE_GENERATION")
-        }
+        return if (result == REGISTERED_RESULT) PresenceResult.Accepted else PresenceResult.Rejected("STALE_GENERATION")
     }
 
-    override suspend fun remove(routingId: String, connectionId: String) {
-        val route = resolve(routingId).routes.firstOrNull { candidate -> candidate.connectionId == connectionId }
-        val deviceRoutingId = route?.routingId ?: routingId
-        // Connection IDs are chosen by clients, so an alias only loses a route its own device stored.
-        val aliases =
-            route?.aliases.orEmpty().filter { alias ->
-                resolve(alias).routes.any { candidate ->
-                    candidate.connectionId == connectionId && candidate.routingId == deviceRoutingId
-                }
-            }
-        val currentTime = now()
-        (listOf(deviceRoutingId) + aliases).distinct().forEach { currentRoutingId ->
-            removeRoute(currentRoutingId, connectionId, currentTime)
+    override suspend fun bindAliases(
+        deviceRoutingId: String,
+        claims: AliasClaims
+    ): List<String> =
+        claims.aliases.filter { alias ->
+            withJedis { jedis ->
+                jedis.eval(
+                    BIND_ALIAS_SCRIPT,
+                    listOf(routingKeys(alias).owner),
+                    listOf(
+                        deviceRoutingId,
+                        if (claims.isProven(alias)) "1" else "0",
+                        if (claims.allowsFreeAlias(alias)) "1" else "0",
+                        ALIAS_BINDING_LIFETIME_MILLISECONDS.toString()
+                    )
+                ) as Long
+            } == REGISTERED_RESULT
         }
+
+    override suspend fun remove(routingId: String, connectionId: String) {
+        removeRoute(routingId, connectionId, now())
     }
 
     private suspend fun removeRoute(
@@ -121,6 +107,15 @@ internal class RedisPresenceStore(
     }
 
     override suspend fun resolve(routingId: String): ClientRoutingResult {
+        val owner = withJedis { jedis -> jedis.get(routingKeys(routingId).owner) }
+        return ClientRoutingResult(
+            routingId = routingId,
+            routes = resolveRoutes(owner ?: routingId),
+            ownerRoutingId = owner
+        )
+    }
+
+    private suspend fun resolveRoutes(routingId: String): List<ClientRoute> {
         val keys = routingKeys(routingId)
         val routes =
             withJedis { jedis ->
@@ -135,7 +130,7 @@ internal class RedisPresenceStore(
                     .map { encoded -> serverJson.decodeFromString<ClientRoute>(encoded) }
                     .sortedBy(ClientRoute::nodeId)
             }
-        return ClientRoutingResult(routingId = routingId, routes = routes)
+        return routes
     }
 
     override suspend fun routeCount(): Int =
@@ -199,13 +194,9 @@ internal class RedisPresenceStore(
     }
 
     private companion object {
-        const val STALE_RESULT = 0L
         const val REGISTERED_RESULT = 1L
 
-        // ARGV[7] marks the device's own routing ID; aliases also need the owner check:
-        // ARGV[8] device routing ID, ARGV[9] alias proven, ARGV[10] free alias allowed,
-        // ARGV[11] owner binding lifetime. Returns 0 for a stale generation, 1 when registered and
-        // 2 when the alias is refused.
+        // Returns 0 for a stale generation and 1 when registered.
         val REGISTER_SCRIPT =
             """
             local expired = redis.call('ZRANGEBYSCORE', KEYS[3], '-inf', ARGV[2])
@@ -220,21 +211,6 @@ internal class RedisPresenceStore(
                 redis.call('SREM', KEYS[4], ARGV[1])
             end
 
-            if ARGV[7] == '0' then
-                local owner = redis.call('GET', KEYS[5])
-                if not owner then
-                    if ARGV[10] ~= '1' then
-                        return 2
-                    end
-                    redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
-                elseif owner ~= ARGV[8] then
-                    if ARGV[9] ~= '1' then
-                        return 2
-                    end
-                    redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
-                end
-            end
-
             local currentGeneration = redis.call('GET', KEYS[1])
             if currentGeneration and tonumber(ARGV[3]) < tonumber(currentGeneration) then
                 return 0
@@ -246,16 +222,29 @@ internal class RedisPresenceStore(
 
             redis.call('HSET', KEYS[2], ARGV[4], ARGV[5])
             redis.call('ZADD', KEYS[3], ARGV[6], ARGV[4])
-            if ARGV[7] == '1' then
-                redis.call('SADD', KEYS[4], ARGV[1])
-            end
+            redis.call('SADD', KEYS[4], ARGV[1])
             local latest = redis.call('ZREVRANGE', KEYS[3], 0, 0, 'WITHSCORES')
             redis.call('PEXPIREAT', KEYS[1], latest[2])
             redis.call('PEXPIREAT', KEYS[2], latest[2])
             redis.call('PEXPIREAT', KEYS[3], latest[2])
-            if ARGV[7] == '0' then
-                redis.call('SET', KEYS[5], ARGV[8], 'PX', ARGV[11])
+            return 1
+            """.trimIndent()
+
+        // KEYS[1] the alias owner; ARGV[1] device routing ID, ARGV[2] alias proven, ARGV[3] free alias allowed,
+        // ARGV[4] binding lifetime. Returns 1 when bound and 0 when the alias stays with its owner.
+        val BIND_ALIAS_SCRIPT =
+            """
+            local owner = redis.call('GET', KEYS[1])
+            if not owner then
+                if ARGV[3] ~= '1' then
+                    return 0
+                end
+            elseif owner ~= ARGV[1] then
+                if ARGV[2] ~= '1' then
+                    return 0
+                end
             end
+            redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[4])
             return 1
             """.trimIndent()
 

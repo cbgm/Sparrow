@@ -151,6 +151,7 @@ services:
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       ROUTE_LIFETIME_MILLISECONDS: 90000
       ROUTE_REFRESH_INTERVAL_MILLISECONDS: 30000
+      RELAY_PRIVATE_DESTINATIONS: ${RELAY_PRIVATE_DESTINATIONS:-true}
     # Direct host endpoint advertised to Android clients by the signed registry directory.
     ports:
       - "127.0.0.1:8294:8094"

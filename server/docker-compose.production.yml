@@ -216,6 +216,7 @@ services:
       GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
       PUSH_INTERNAL_API_TOKEN: !reset null
       PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
+      RELAY_PRIVATE_DESTINATIONS: "false"
     secrets:
       - federation-internal-api-token
       - gateway-internal-api-token

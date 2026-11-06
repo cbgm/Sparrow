@@ -158,6 +158,7 @@ packet from a new identity never revokes the previous identity's chat. It is ack
 ```mermaid
 stateDiagram-v2
     [*] --> FindExchange
+    FindExchange --> [*] : Done
     FindExchange --> VerifySignature : ExchangeFound
     VerifySignature --> DecideRevocation : SignatureValid
     DecideRevocation --> [*] : Done

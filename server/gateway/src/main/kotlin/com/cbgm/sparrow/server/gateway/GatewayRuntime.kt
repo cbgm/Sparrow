@@ -5,6 +5,7 @@ import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.NodeRequestSigner
+import com.cbgm.sparrow.server.security.relayKeyPair
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
@@ -34,7 +35,8 @@ internal data class GatewayRuntime(
     val handler: GatewayWebSocketHandler,
     val blobStore: BlobStore,
     val blobUploadPermitStore: BlobUploadPermitStore,
-    val serviceScope: CoroutineScope
+    val serviceScope: CoroutineScope,
+    val relay: OnionRelay
 )
 
 internal fun createGatewayRuntime(
@@ -72,7 +74,13 @@ internal fun createGatewayRuntime(
         handler = createGatewayHandler(identity, config, httpClient, connections, permitStore),
         blobStore = blobStore,
         blobUploadPermitStore = permitStore,
-        serviceScope = serviceScope
+        serviceScope = serviceScope,
+        relay =
+            OnionRelay(
+                keys = identity.relayKeyPair(),
+                httpClient = createRelayHttpClient(),
+                destinations = RelayDestinationPolicy(allowPrivateAddresses = config.relayPrivateDestinations)
+            )
     )
 }
 
@@ -148,6 +156,7 @@ private fun createGatewayHandler(
 internal fun Application.configureGatewayLifecycle(runtime: GatewayRuntime) {
     monitor.subscribe(ApplicationStopped) {
         runtime.handler.close()
+        runtime.relay.close()
         runtime.serviceScope.cancel()
         if (runtime.ownsHttpClient) {
             runtime.httpClient.close()

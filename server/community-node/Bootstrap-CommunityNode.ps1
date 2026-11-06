@@ -1332,7 +1332,9 @@ try {
         "FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt",
         "FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt",
         "GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt",
-        "EXCHANGE_RATES_URL="
+        "EXCHANGE_RATES_URL=",
+        # LAN Control Planes have private addresses, which the onion relay refuses otherwise.
+        "RELAY_PRIVATE_DESTINATIONS=$(if ($mode -eq 'lan') { 'true' } else { 'false' })"
     )
 
     [System.IO.File]::WriteAllLines(

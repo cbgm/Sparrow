@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.AliasClaimKeyResponse
+import com.cbgm.sparrow.server.protocol.AliasClaimRequest
+import com.cbgm.sparrow.server.protocol.AliasClaimResult
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
@@ -14,8 +16,12 @@ import com.cbgm.sparrow.server.security.Signatures
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,15 +58,49 @@ class PresenceRouteResolutionTest {
             assertEquals(32, serverJson.decodeFromString<AliasClaimKeyResponse>(response.bodyAsText()).publicKey.size)
         }
 
+    @Test
+    fun appsClaimTheirAliasesWithoutANode() =
+        withPresence { routingId ->
+            val sealed =
+                AliasClaimKeysTest.sealClaim(
+                    device = device,
+                    presenceKey = aliasClaimKey,
+                    issuedAt = System.currentTimeMillis(),
+                    aliases = listOf(PHONE_ALIAS)
+                )
+            val response =
+                client.post("/v1/alias-claims") {
+                    contentType(ContentType.Application.Json)
+                    setBody(serverJson.encodeToString(AliasClaimRequest(sealed)))
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(listOf(0), serverJson.decodeFromString<AliasClaimResult>(response.bodyAsText()).acceptedAliasIndexes)
+            val resolved =
+                client.get("/v1/routes/$PHONE_ALIAS") { header(InternalApiAuthentication.TOKEN_HEADER, TOKEN) }
+            val result = serverJson.decodeFromString<ClientRoutingResult>(resolved.bodyAsText())
+            assertEquals(routingId, result.ownerRoutingId)
+            assertEquals(listOf(routingId), result.routes.map(ClientRoute::routingId))
+        }
+
+    @Test
+    fun aClaimSealedForAnotherKeyIsRejected() =
+        withPresence {
+            val response =
+                client.post("/v1/alias-claims") {
+                    contentType(ContentType.Application.Json)
+                    setBody(serverJson.encodeToString(AliasClaimRequest(ByteArray(80))))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
     private fun withPresence(block: suspend PresenceTestScope.(String) -> Unit) =
         testApplication {
             val identity = NodeIdentity.generate()
             val store = PresenceStore()
             val registration = registration(identity)
-            store.register(
-                registration,
-                AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(PHONE_ALIAS))
-            )
+            store.register(registration)
             val runtime =
                 PresenceRuntime(
                     store = store,
@@ -74,11 +114,13 @@ class PresenceRouteResolutionTest {
                 installPresencePlugins(runtime)
                 installPresenceRoutes(runtime)
             }
-            PresenceTestScope(client).block(registration.route.routingId)
+            PresenceTestScope(client, identity, runtime.aliasClaimKeys.publicKey).block(registration.route.routingId)
         }
 
     private class PresenceTestScope(
-        val client: HttpClient
+        val client: HttpClient,
+        val device: NodeIdentity,
+        val aliasClaimKey: ByteArray
     )
 
     private fun registration(identity: NodeIdentity): ClientRouteRegistration {
