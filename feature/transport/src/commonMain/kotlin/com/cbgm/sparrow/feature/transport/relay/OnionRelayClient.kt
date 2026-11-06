@@ -22,10 +22,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
-/** One relay of an onion route: [relayUrl] is its `POST /v1/relay`. */
+/** One relay of an onion route: [relayUrl] is its `POST /v1/relay`, [circuitUrl] its `/v1/circuit` WebSocket. */
 internal class RelayHop(
     val nodeId: String,
     val relayUrl: String,
+    val circuitUrl: String,
     val relayKey: ByteArray
 )
 
@@ -50,7 +51,10 @@ internal class RelaySelector(
     private val failedAt = MutableStateFlow<Map<String, Long>>(emptyMap())
     private val singleHop = MutableStateFlow(false)
 
-    suspend fun route(): List<RelayHop> {
+    suspend fun route(): List<RelayHop> = circuitRoute(hopCount = 2).also(::reportHopCount)
+
+    /** Up to [hopCount] distinct relays, the first as above; fewer when fewer nodes relay. */
+    suspend fun circuitRoute(hopCount: Int): List<RelayHop> {
         val relays =
             cache.read()
                 ?.let { cached -> runCatching { json.decodeFromString<SignedNodeDirectory>(cached.encodedDirectory) }.getOrNull() }
@@ -63,8 +67,8 @@ internal class RelaySelector(
         val available = relays.filterNot { hop -> hop.nodeId in coolingDown() }.ifEmpty { relays }
         val own = connectedNodeId() ?: preferredNodeStore?.get()
         val first = available.firstOrNull { hop -> hop.nodeId == own } ?: available.randomOrNull(random) ?: return emptyList()
-        val second = available.filter { hop -> hop.nodeId != first.nodeId }.randomOrNull(random)
-        return listOfNotNull(first, second).also(::reportHopCount)
+        val others = available.filter { hop -> hop.nodeId != first.nodeId }.shuffled(random).take(hopCount - 1)
+        return listOf(first) + others
     }
 
     fun recordFailure(nodeId: String) {
@@ -202,8 +206,19 @@ class OnionRelayClient internal constructor(
     ): ByteArray = cipher.seal(json.encodeToString(layer).encodeToByteArray(), hop.relayKey, RELAY_CONTEXT).getOrThrow()
 }
 
-private fun SparrowNodeDescriptor.relayHop(): RelayHop? =
-    relayKey?.let { key -> relayUrl(clientEndpoint)?.let { url -> RelayHop(nodeId, url, key) } }
+private fun SparrowNodeDescriptor.relayHop(): RelayHop? {
+    val key = relayKey ?: return null
+    val relay = relayUrl(clientEndpoint) ?: return null
+    val circuit = circuitUrl(clientEndpoint) ?: return null
+    return RelayHop(nodeId, relay, circuit, key)
+}
+
+/** `wss://host/v1/gateway` → `wss://host/v1/circuit`. */
+internal fun circuitUrl(clientEndpoint: String): String? {
+    val scheme = clientEndpoint.substringBefore("://", missingDelimiterValue = "").takeIf { it == "wss" || it == "ws" }
+    val authority = clientEndpoint.substringAfter("://").substringBefore('/').substringBefore('?')
+    return scheme?.let { authority.takeIf(String::isNotBlank)?.let { host -> "$it://$host/v1/circuit" } }
+}
 
 /** `wss://host/v1/gateway` → `https://host/v1/relay`. */
 internal fun relayUrl(clientEndpoint: String): String? {

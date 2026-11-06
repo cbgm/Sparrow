@@ -56,6 +56,7 @@ val sharedModule =
                 appVisibilityState = get(),
                 incomingEnvelopeRunner = get(),
                 transportConnectionManager = get(),
+                circuitRunner = get(),
                 outboxRunner = get(),
                 mailboxCoordinator = get(),
                 observeIdentityKeysUsable = get()

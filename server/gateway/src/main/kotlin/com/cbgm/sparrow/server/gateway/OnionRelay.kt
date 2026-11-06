@@ -26,7 +26,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
-import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.readByteArray
 import java.net.InetAddress
@@ -119,7 +119,7 @@ internal class OnionRelay(
     ): RelayReply = RelayReply.Sealed(ReplySealing.seal(reply, replyKey))
 
     private suspend fun HttpResponse.limitedBody(): ByteArray? =
-        bodyAsChannel().readRemaining(MAXIMUM_BODY_BYTES + 1L).readByteArray().takeIf { it.size <= MAXIMUM_BODY_BYTES }
+        bodyAsChannel().readBuffer(MAXIMUM_BODY_BYTES + 1L).readByteArray().takeIf { it.size <= MAXIMUM_BODY_BYTES }
 
     fun close() {
         httpClient.close()
@@ -157,6 +157,17 @@ internal class RelayDestinationPolicy(
 ) {
     fun nextRelay(url: String): URI? = target(url)?.takeIf { uri -> uri.rawPath == RELAY_PATH && uri.rawQuery == null }
 
+    /** The next hop of a circuit: another node's `/v1/circuit` WebSocket, under the same address rules. */
+    fun nextCircuitHop(url: String): URI? {
+        val asHttp =
+            when {
+                url.startsWith("wss://") -> "https://" + url.removePrefix("wss://")
+                url.startsWith("ws://") -> "http://" + url.removePrefix("ws://")
+                else -> return null
+            }
+        return target(asHttp)?.takeIf { uri -> uri.rawPath == CIRCUIT_PATH && uri.rawQuery == null }?.let { URI(url) }
+    }
+
     fun controlPlane(exit: RelayExit): URI? =
         target(exit.url)?.takeIf { uri ->
             CONTROL_PLANE_REQUESTS.any { (method, path) -> exit.method == method && path.matches(uri.rawPath.orEmpty()) }
@@ -176,6 +187,7 @@ internal class RelayDestinationPolicy(
 
     private companion object {
         const val RELAY_PATH = "/v1/relay"
+        const val CIRCUIT_PATH = "/v1/circuit"
         val CONTROL_PLANE_REQUESTS =
             listOf(
                 "GET" to Regex("/v1/nodes"),
@@ -191,7 +203,7 @@ internal class RelayDestinationPolicy(
 /** `POST /v1/relay`: the body is a sealed [RelayLayer], the answer the sealed reply. */
 internal fun Route.installRelayRoute(relay: OnionRelay) {
     post("/v1/relay") {
-        val sealedLayer = call.receiveChannel().readRemaining(OnionRelay.MAXIMUM_BODY_BYTES + 1L).readByteArray()
+        val sealedLayer = call.receiveChannel().readBuffer(OnionRelay.MAXIMUM_BODY_BYTES + 1L).readByteArray()
         val reply = sealedLayer.takeIf { it.size <= OnionRelay.MAXIMUM_BODY_BYTES }?.let { relay.relay(it) }
         when (reply) {
             is RelayReply.Sealed -> call.respondBytes(reply.bytes, ContentType.Application.OctetStream)

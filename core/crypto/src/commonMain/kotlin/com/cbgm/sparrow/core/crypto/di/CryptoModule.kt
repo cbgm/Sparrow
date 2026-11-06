@@ -3,6 +3,8 @@ package com.cbgm.sparrow.core.crypto.di
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.blob.SodiumBlobCipher
+import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
+import com.cbgm.sparrow.core.crypto.circuit.SodiumCircuitCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
@@ -35,6 +37,9 @@ val cryptoModule =
 
         single<SealedMessageCipher> {
             SodiumSealedMessageCipher()
+        }
+        single<CircuitCipher> {
+            SodiumCircuitCipher()
         }
 
         single<SecureRandomGenerator> {

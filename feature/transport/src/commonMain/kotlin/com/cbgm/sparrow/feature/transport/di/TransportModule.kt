@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.di
 
+import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
@@ -10,6 +11,9 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
+import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
@@ -38,8 +42,11 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionPro
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
@@ -169,16 +176,31 @@ val transportModule =
             )
         }
 
+        // One selector for the HTTP relay and the circuits, so a relay that failed for one is left out by both.
+        single {
+            RelaySelector(
+                cache = get<NodeDirectoryCache>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                preferredNodeStore = get<PreferredNodeStore>(),
+                // Read when a route is built: the connection manager itself uses the relayed client.
+                connectedNodeId = { get<TransportConnectionManager>().connectedNodeId }
+            )
+        }
+
+        single {
+            CircuitRunner(
+                httpClient = get<HttpClient>(),
+                cipher = get<CircuitCipher>(),
+                selector = get<RelaySelector>(),
+                hopCountStore = get<CircuitHopCountStore>()
+            )
+        }
+
+        single<CircuitHopCountStore> { DataStoreCircuitHopCountStore(dataStore = get()) }
+
         single {
             OnionRelayClient(
-                selector =
-                    RelaySelector(
-                        cache = get<NodeDirectoryCache>(),
-                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                        preferredNodeStore = get<PreferredNodeStore>(),
-                        // Read when a route is built: the connection manager itself uses the relayed client.
-                        connectedNodeId = { get<TransportConnectionManager>().connectedNodeId }
-                    ),
+                selector = get<RelaySelector>(),
                 cipher = get<SealedMessageCipher>(),
                 httpClient = get<HttpClient>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
@@ -358,6 +380,9 @@ val transportModule =
         singleOf(::GetGatewayNodesUseCase)
         singleOf(::ObservePreferredNodeUseCase)
         singleOf(::SetPreferredNodeUseCase)
+        singleOf(::ObserveCircuitHopCountUseCase)
+        singleOf(::SetCircuitHopCountUseCase)
+        singleOf(::ObserveCircuitStatusUseCase)
         singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {

@@ -61,6 +61,8 @@ sealed interface SettingsUiEvent {
 
     data object PreferredNodeClicked : SettingsUiEvent
 
+    data object CircuitHopsClicked : SettingsUiEvent
+
     data object AttachmentStorageClicked : SettingsUiEvent
 
     data object VersionRowTapped : SettingsUiEvent

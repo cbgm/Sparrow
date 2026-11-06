@@ -512,6 +512,15 @@
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
     <string name="feature_settings_preferred_node">Preferred node</string>
     <string name="feature_settings_preferred_node_subtitle">Automatic or one favourite node</string>
+    <string name="feature_settings_circuit">Onion routing</string>
+    <string name="feature_settings_circuit_subtitle">How many relays your connection runs through</string>
+    <string name="feature_settings_circuit_hint">Each relay only knows the one before and after it. More hops make you harder to trace, but slower and a little less reliable. They only help when the relays are run by different people.</string>
+    <string name="feature_settings_circuit_hops">Hops: %1$d</string>
+    <string name="feature_settings_circuit_status_building">Building the route…</string>
+    <string name="feature_settings_circuit_status_connected">Connected through %1$d hops · round trip %2$d ms</string>
+    <string name="feature_settings_circuit_status_unavailable">Route not available right now</string>
+    <string name="feature_settings_circuit_estimate">About %1$d ms with %2$d hops (estimate)</string>
+    <string name="feature_settings_circuit_fewer">Only %1$d of %2$d hops available: not enough relaying nodes</string>
     <string name="feature_settings_preferred_node_automatic">Automatic</string>
     <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
     <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>

@@ -36,7 +36,8 @@ internal data class GatewayRuntime(
     val blobStore: BlobStore,
     val blobUploadPermitStore: BlobUploadPermitStore,
     val serviceScope: CoroutineScope,
-    val relay: OnionRelay
+    val relay: OnionRelay,
+    val circuits: CircuitRelay
 )
 
 internal fun createGatewayRuntime(
@@ -79,6 +80,12 @@ internal fun createGatewayRuntime(
             OnionRelay(
                 keys = identity.relayKeyPair(),
                 httpClient = createRelayHttpClient(),
+                destinations = RelayDestinationPolicy(allowPrivateAddresses = config.relayPrivateDestinations)
+            ),
+        circuits =
+            CircuitRelay(
+                keys = identity.relayKeyPair(),
+                httpClient = createCircuitHttpClient(),
                 destinations = RelayDestinationPolicy(allowPrivateAddresses = config.relayPrivateDestinations)
             )
     )
@@ -157,6 +164,7 @@ internal fun Application.configureGatewayLifecycle(runtime: GatewayRuntime) {
     monitor.subscribe(ApplicationStopped) {
         runtime.handler.close()
         runtime.relay.close()
+        runtime.circuits.close()
         runtime.serviceScope.cancel()
         if (runtime.ownsHttpClient) {
             runtime.httpClient.close()

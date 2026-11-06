@@ -73,11 +73,14 @@ class ForegroundRuntimeCoordinator(
                     foreground.transportConnectionManager.connectionState
                         .collect(connectionHandler::handle)
                 }
+            // Stage 1 of onion routing: the circuit is built and measured; nothing is sent through it yet.
+            val circuit = launch { foreground.circuitRunner.run() }
 
             try {
                 awaitCancellation()
             } finally {
                 connectionObserver.cancelAndJoin()
+                circuit.cancelAndJoin()
                 foreground.outboxRunner.stop()
                 foreground.incomingEnvelopeRunner.stop()
                 foreground.transportConnectionManager.stop()

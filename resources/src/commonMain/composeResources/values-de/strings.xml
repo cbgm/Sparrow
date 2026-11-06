@@ -512,6 +512,15 @@
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
     <string name="feature_settings_preferred_node">Bevorzugte Node</string>
     <string name="feature_settings_preferred_node_subtitle">Automatisch oder ein Lieblings-Node</string>
+    <string name="feature_settings_circuit">Onion-Routing</string>
+    <string name="feature_settings_circuit_subtitle">Über wie viele Relays deine Verbindung läuft</string>
+    <string name="feature_settings_circuit_hint">Jedes Relay kennt nur das vorherige und das nächste. Mehr Hops machen dich schwerer zurückzuverfolgen, aber langsamer und etwas weniger zuverlässig. Sie helfen nur, wenn die Relays von verschiedenen Menschen betrieben werden.</string>
+    <string name="feature_settings_circuit_hops">Hops: %1$d</string>
+    <string name="feature_settings_circuit_status_building">Route wird aufgebaut…</string>
+    <string name="feature_settings_circuit_status_connected">Verbunden über %1$d Hops · Umlaufzeit %2$d ms</string>
+    <string name="feature_settings_circuit_status_unavailable">Route gerade nicht verfügbar</string>
+    <string name="feature_settings_circuit_estimate">Etwa %1$d ms mit %2$d Hops (Schätzung)</string>
+    <string name="feature_settings_circuit_fewer">Nur %1$d von %2$d Hops verfügbar: nicht genug weiterleitende Knoten</string>
     <string name="feature_settings_preferred_node_automatic">Automatisch</string>
     <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
     <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>

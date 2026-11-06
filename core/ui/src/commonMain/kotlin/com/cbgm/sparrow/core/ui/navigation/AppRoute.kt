@@ -103,6 +103,9 @@ sealed interface AppRoute {
     data object PreferredNode : AppRoute
 
     @Serializable
+    data object CircuitHops : AppRoute
+
+    @Serializable
     data object AppLock : AppRoute
 
     @Serializable

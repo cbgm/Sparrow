@@ -20,7 +20,7 @@
         file_server
     }
 
-    @gateway_ws path /v1/gateway
+    @gateway_ws path /v1/gateway /v1/circuit
     handle @gateway_ws {
         reverse_proxy gateway:8094 {
             stream_close_delay 5m
