@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.direct.component
+package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column

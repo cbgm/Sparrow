@@ -25,6 +25,7 @@ import com.cbgm.sparrow.feature.expenses.domain.usecase.ObserveExpenseSummaryUse
 import com.cbgm.sparrow.feature.expenses.presentation.pin.mapper.toExpensePinUi
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +57,8 @@ class GroupConversationViewModel(
     private val actionsController: GroupConversationActionsController,
     private val pollController: GroupPollController,
     private val pinController: GroupPinController,
-    private val expenseController: GroupExpenseController
+    private val expenseController: GroupExpenseController,
+    observeWaitingForRoute: ObserveWaitingForRouteUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -134,6 +136,10 @@ class GroupConversationViewModel(
     val indicatorState = stateController.indicatorState
     val historyState = stateController.historyState
     val errorMessage = stateController.errorMessage
+
+    /** True while messages wait for a circuit through enough hops (sending directly is switched off). */
+    val waitingForRoute: StateFlow<Boolean> =
+        observeWaitingForRoute().stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L), false)
 
     private val expenseSummary: StateFlow<ExpenseSummaryLoadUi> =
         observeExpenseSummary(groupId)

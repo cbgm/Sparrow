@@ -49,6 +49,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
@@ -84,6 +85,7 @@ fun GroupConversationScreen(
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
+    waitingForRoute: Boolean = false,
     targetMessageId: String? = null
 ) {
     var attachmentSelection by remember {
@@ -205,6 +207,9 @@ fun GroupConversationScreen(
                             onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) }
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
+                            if (waitingForRoute) {
+                                RouteWaitingBanner()
+                            }
                         }
                         pin?.let { pin ->
                             GroupPinnedMessageBar(

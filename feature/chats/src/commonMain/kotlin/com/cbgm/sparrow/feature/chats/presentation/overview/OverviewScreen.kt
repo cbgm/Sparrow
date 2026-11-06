@@ -50,6 +50,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ScrollToBottomButton
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.LastMessagePreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
@@ -118,18 +119,24 @@ private fun Content(
         uiState.conversations.isEmpty() ->
             Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
                 EmptyContent(modifier = Modifier.fillMaxSize())
-                uiState.activeAutoReplyName?.let { name ->
-                    ActiveAutoReplyChip(
-                        name = name,
-                        onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(
+                Column(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (uiState.waitingForRoute) {
+                        RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small))
+                    }
+                    uiState.activeAutoReplyName?.let { name ->
+                        ActiveAutoReplyChip(
+                            name = name,
+                            onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
+                            modifier =
+                                Modifier.padding(
                                     horizontal = MaterialTheme.spacing.screenPadding,
                                     vertical = MaterialTheme.spacing.base
                                 )
-                    )
+                        )
+                    }
                 }
             }
 
@@ -140,6 +147,11 @@ private fun Content(
                     contentPadding = innerPadding,
                     state = listState
                 ) {
+                    if (uiState.waitingForRoute) {
+                        item(key = "route-waiting") {
+                            RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small))
+                        }
+                    }
                     uiState.activeAutoReplyName?.let { name ->
                         item(key = "active-auto-reply") {
                             Box(

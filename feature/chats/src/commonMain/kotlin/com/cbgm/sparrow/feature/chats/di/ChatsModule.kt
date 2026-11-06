@@ -174,7 +174,8 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
             observeConversationContext = get(),
             observeActiveAutoReply = get(),
             orchestrator = get(),
-            getGroupLeaveRequirement = get()
+            getGroupLeaveRequirement = get(),
+            observeWaitingForRoute = get()
         )
     }
 
@@ -208,7 +209,8 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
             actionsController = get(),
             pollController = get(),
             pinController = get(),
-            expenseController = get()
+            expenseController = get(),
+            observeWaitingForRoute = get()
         )
     }
 

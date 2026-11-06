@@ -51,9 +51,9 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
-import com.cbgm.sparrow.feature.chats.presentation.direct.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.findMessage
