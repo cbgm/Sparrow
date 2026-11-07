@@ -15,6 +15,8 @@ import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MailboxRouteProvisioner(
     private val getMailboxContactStates: GetMailboxContactStatesUseCase,
@@ -27,7 +29,28 @@ class MailboxRouteProvisioner(
     private val credentialFactory: MailboxCredentialFactory,
     private val protocolOutbox: ProtocolOutbox
 ) {
-    suspend fun provision(): Result<Int> =
+    private val provisioning = Mutex()
+
+    /**
+     * Provisions only when a contact that should have a mailbox has none yet, typically right after an invite: then
+     * the route goes out at once instead of at the next connect, and messages to that contact use mailboxes from
+     * then on. Cheap otherwise: no node is asked.
+     */
+    suspend fun provisionMissing(): Result<Int> =
+        runCatching {
+            val withMailbox = mailboxRouteRepository.allLocal().getOrThrow().mapTo(HashSet(), LocalMailboxCredential::contactId)
+            val blocked = contactBlocklistRepository.getBlockedContactIds().getOrThrow()
+            val missing =
+                getMailboxContactStates().getOrThrow().any { state ->
+                    state.isProvisioningEligible && state.contactId !in withMailbox && state.contactId !in blocked
+                }
+            if (missing) provision().getOrThrow() else 0
+        }
+
+    /** One provisioning at a time: the connect and the new-contact check must not create a mailbox twice. */
+    suspend fun provision(): Result<Int> = provisioning.withLock { provisionNow() }
+
+    private suspend fun provisionNow(): Result<Int> =
         runCatching {
             val now = SystemClock.nowEpochMilliseconds()
             // Node discovery validates signatures before returning a directory. It is

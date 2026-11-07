@@ -30,6 +30,29 @@ class MailboxRouteProvisionerTest {
         }
 
     @Test
+    fun aNewContactGetsItsMailboxWithoutWaitingForTheNextConnect() =
+        runTest {
+            fakes.contacts.facts = listOf(facts(CONTACT_ID, sharesActiveGroup = true))
+
+            assertEquals(1, fakes.provisioner().provisionMissing().getOrThrow())
+
+            val created = fakes.routes.local.getValue(CONTACT_ID)
+            val packet = fakes.outbox.enqueued.single().second as MailboxRoutePacket
+            assertEquals(created.deliveryRoute.routeId, packet.deliveryRoute.routeId)
+        }
+
+    @Test
+    fun whenEveryContactHasAMailboxNothingIsAskedOfTheNode() =
+        runTest {
+            fakes.routes.local[CONTACT_ID] = mailboxCredential(CONTACT_ID, "current", expiresAt = SystemClock.nowEpochMilliseconds() + DAY)
+            fakes.contacts.facts = listOf(facts(CONTACT_ID, sharesActiveGroup = true))
+
+            assertEquals(0, fakes.provisioner().provisionMissing().getOrThrow())
+
+            assertTrue(fakes.outbox.enqueued.isEmpty())
+        }
+
+    @Test
     fun expiredRetiringMailboxIsRevokedOnlyOnceItIsEmpty() =
         runTest {
             val expired = SystemClock.nowEpochMilliseconds() - 1
