@@ -345,8 +345,12 @@ internal class CircuitRelay(
         const val EXTEND_TIMEOUT_MILLISECONDS = 10_000L
         const val MAXIMUM_CIRCUITS_PER_LINK = 16
         const val MAXIMUM_OPEN_STREAMS = 8
-        const val MAXIMUM_REQUEST_BYTES = 64 * 1024
-        const val MAXIMUM_RESPONSE_BYTES = 512 * 1024
+
+        /** Room for the largest envelope a mailbox takes (1 MiB of payload) and its JSON around it. */
+        const val MAXIMUM_REQUEST_BYTES = 3 * 512 * 1024
+
+        /** Room for one page of pending envelopes: a mailbox answers at most about 1 MiB plus one envelope. */
+        const val MAXIMUM_RESPONSE_BYTES = 3 * 1024 * 1024
 
         /** An onward link carries exactly one circuit for now. */
         const val ONWARD_CIRCUIT_ID = 1

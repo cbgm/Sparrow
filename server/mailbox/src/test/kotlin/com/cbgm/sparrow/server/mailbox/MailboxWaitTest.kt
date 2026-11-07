@@ -4,11 +4,13 @@ import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.CreateMailboxResponse
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
+import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.MailboxWaitEntry
 import com.cbgm.sparrow.server.protocol.MailboxWaitRequest
 import com.cbgm.sparrow.server.protocol.MailboxWaitResponse
 import com.cbgm.sparrow.server.protocol.serverJson
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -59,6 +61,19 @@ class MailboxWaitTest {
             assertEquals(emptyList(), wait(MailboxWaitEntry(mailbox.deliveryRoute.mailboxId, "not-the-capability")))
         }
 
+    @Test
+    fun aFullMailboxAnswersInPagesThatFitThroughACircuit() =
+        mailboxes {
+            val mailbox = create()
+            repeat(3) { index -> store(mailbox, "envelope-$index", payload = "x".repeat(600_000)) }
+
+            val first =
+                client.get("/v1/mailboxes/${mailbox.deliveryRoute.mailboxId}/envelopes") { bearerAuth(mailbox.retrievalCapability) }
+            val page = serverJson.decodeFromString<MailboxEnvelopesResponse>(first.bodyAsText())
+
+            assertEquals(listOf("envelope-0"), page.envelopes.map { it.envelopeId })
+        }
+
     private fun mailboxes(block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
             application {
@@ -101,7 +116,8 @@ class MailboxWaitTest {
 
     private suspend fun ApplicationTestBuilder.store(
         mailbox: CreateMailboxResponse,
-        envelopeId: String
+        envelopeId: String,
+        payload: String = "payload"
     ) {
         val now = System.currentTimeMillis()
         val envelope =
@@ -110,7 +126,7 @@ class MailboxWaitTest {
                 senderRoutingId = "sender",
                 recipientDeviceRoutingId = "recipient",
                 mailboxRoute = mailbox.deliveryRoute,
-                encryptedPayload = "payload",
+                encryptedPayload = payload,
                 createdAtEpochMilliseconds = now,
                 expiresAtEpochMilliseconds = now + 60_000L
             )

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.mailbox
 import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.ErrorResponse
+import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
@@ -159,7 +160,7 @@ private suspend fun ApplicationCall.respondPendingEnvelopes(store: MailboxStorag
             if (pending == null) {
                 respond(HttpStatusCode.Unauthorized)
             } else {
-                respond(MailboxEnvelopesResponse(pending))
+                respond(MailboxEnvelopesResponse(pending.firstPage()))
             }
         }
     }
@@ -197,6 +198,21 @@ private suspend fun ApplicationCall.respondRevocation(result: MailboxRevocationR
         MailboxRevocationResult.Unauthorized -> respond(HttpStatusCode.Unauthorized)
     }
 }
+
+/**
+ * The envelopes of one answer: in order, until about [PAGE_BYTES] of payload, but always at least one. The owner
+ * acknowledges them and asks again for the rest, so an answer always fits through a circuit.
+ */
+private fun List<FederatedEnvelope>.firstPage(): List<FederatedEnvelope> {
+    var bytes = 0
+    return takeWhile { envelope ->
+        val fits = bytes == 0 || bytes + envelope.encryptedPayload.length <= PAGE_BYTES
+        bytes += envelope.encryptedPayload.length
+        fits
+    }
+}
+
+private const val PAGE_BYTES = 1_024 * 1_024
 
 /** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
 private const val WAIT_MILLISECONDS = 8_000L
