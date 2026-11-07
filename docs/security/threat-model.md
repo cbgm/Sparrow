@@ -40,8 +40,9 @@ The design aims to protect against:
 - looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
   signed node requests and the Control Plane's push service, and never return a device's phone aliases.
 
-Servers keep as little about users as they can: mailboxes store no client address (the per-client creation
-quota uses an HMAC of the address with an in-memory key that changes daily), mailboxes live at most 31 days
+Servers keep as little about users as they can: mailboxes store nothing about their creator (a new mailbox costs
+a small proof of work instead of a per-address quota, so users behind one session node do not share a limit;
+used work stamps are kept for 10 minutes), mailboxes live at most 31 days
 and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
 container logs are capped at 3 × 10 MB per service.
 

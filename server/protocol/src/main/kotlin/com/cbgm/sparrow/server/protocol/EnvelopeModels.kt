@@ -96,7 +96,16 @@ data class CreateMailboxRequest(
     val nodeEndpoint: String,
     val routeSequence: Long = 0L,
     val expiresAtEpochMilliseconds: Long,
-    val wakeTicket: MailboxWakeTicket? = null
+    val wakeTicket: MailboxWakeTicket? = null,
+    val creationWork: MailboxCreationWork? = null
+)
+
+/** Proof of work for a new mailbox: a random [stamp], when it was made, and the [nonce] that solves it. */
+@Serializable
+data class MailboxCreationWork(
+    val stamp: String,
+    val createdAtEpochMilliseconds: Long,
+    val nonce: Long
 )
 
 /**

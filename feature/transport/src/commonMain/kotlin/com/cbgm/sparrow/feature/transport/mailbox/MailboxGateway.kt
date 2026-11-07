@@ -44,7 +44,16 @@ internal data class CreateMailboxRequest(
     val nodeEndpoint: String,
     val routeSequence: Long,
     val expiresAtEpochMilliseconds: Long,
-    val wakeTicket: MailboxWakeTicket
+    val wakeTicket: MailboxWakeTicket,
+    val creationWork: MailboxCreationWork
+)
+
+/** The proof of work that pays for a new mailbox ([MailboxCreationWorkSolver]). */
+@Serializable
+internal data class MailboxCreationWork(
+    val stamp: String,
+    val createdAtEpochMilliseconds: Long,
+    val nonce: Long
 )
 
 @Serializable

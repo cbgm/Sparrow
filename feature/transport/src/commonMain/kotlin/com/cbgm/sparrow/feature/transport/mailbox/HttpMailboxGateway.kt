@@ -19,9 +19,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-class HttpMailboxGateway(
+class HttpMailboxGateway internal constructor(
     private val httpClient: HttpClient,
-    private val json: Json
+    private val json: Json,
+    private val creationWork: MailboxCreationWorkSolver
 ) : MailboxGateway {
     private val logger = SparrowLog.withTag("HttpMailboxGateway")
 
@@ -35,10 +36,11 @@ class HttpMailboxGateway(
         wakeTicket: MailboxWakeTicket
     ): Result<LocalMailboxCredential> =
         runCatching {
+            val work = creationWork.solve()
             val response =
                 httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
                     contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket))
+                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket, work))
                 }
             check(response.status == HttpStatusCode.Created) {
                 "Mailbox creation failed with ${response.status}"

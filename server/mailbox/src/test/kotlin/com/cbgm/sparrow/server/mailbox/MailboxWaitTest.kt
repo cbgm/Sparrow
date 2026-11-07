@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class MailboxWaitTest {
     @Test
@@ -31,7 +32,7 @@ class MailboxWaitTest {
             val mailbox = create()
             coroutineScope {
                 val waiting = async { wait(MailboxWaitEntry(mailbox.deliveryRoute.mailboxId, mailbox.retrievalCapability)) }
-                delay(300)
+                delay(300.milliseconds)
                 store(mailbox, "envelope-1")
 
                 assertEquals(listOf(mailbox.deliveryRoute.mailboxId), waiting.await())
@@ -69,7 +70,8 @@ class MailboxWaitTest {
                             databasePassword = "",
                             databaseMaximumPoolSize = 1,
                             maximumEnvelopeBytes = 1_048_576,
-                            maximumMailboxBytes = 100L * 1_048_576L
+                            maximumMailboxBytes = 100L * 1_048_576L,
+                            creationWorkBits = 0
                         ),
                     store = MailboxStore(),
                     pushNotifier = MailboxPushNotifier.disabled()
@@ -87,7 +89,8 @@ class MailboxWaitTest {
                         CreateMailboxRequest(
                             nodeId = "node-a",
                             nodeEndpoint = "http://mailbox",
-                            expiresAtEpochMilliseconds = System.currentTimeMillis() + 60_000L
+                            expiresAtEpochMilliseconds = System.currentTimeMillis() + 60_000L,
+                            creationWork = solvedWork(0)
                         )
                     )
                 )

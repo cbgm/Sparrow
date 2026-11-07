@@ -342,7 +342,7 @@ private fun capabilityMatches(
     expectedHash: ByteArray
 ): Boolean = MessageDigest.isEqual(hashCapability(capability), expectedHash)
 
-private const val UNATTRIBUTED_OWNER = "unattributed"
+internal const val UNATTRIBUTED_OWNER = "unattributed"
 private const val DEFAULT_MAXIMUM_ENVELOPE_BYTES = 1_048_576
 private const val DEFAULT_MAXIMUM_MAILBOX_BYTES = 100L * DEFAULT_MAXIMUM_ENVELOPE_BYTES
 private const val CAPABILITY_TOKEN_BYTES = 32

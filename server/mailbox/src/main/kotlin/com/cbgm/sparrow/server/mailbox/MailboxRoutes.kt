@@ -8,10 +8,6 @@ import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.MailboxWaitRequest
 import com.cbgm.sparrow.server.protocol.MailboxWaitResponse
-import com.cbgm.sparrow.server.security.BoundedRateLimiter
-import com.cbgm.sparrow.server.security.enforceRateLimit
-import com.cbgm.sparrow.server.security.hashedClientAddress
-import com.cbgm.sparrow.server.security.respondTooManyRequests
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -27,13 +23,13 @@ internal fun Application.configureMailboxRoutes(
     config: MailboxConfig,
     store: MailboxStorage,
     pushNotifier: MailboxPushNotifier,
-    creationRateLimiter: BoundedRateLimiter,
+    creationWork: MailboxCreationWorkCheck,
     arrivals: MailboxArrivals = MailboxArrivals()
 ) {
     routing {
         get("/health") { call.respondMailboxHealth(store) }
         post("/v1/mailboxes") {
-            call.createMailbox(config, store, creationRateLimiter)
+            call.createMailbox(config, store, creationWork)
         }
         post("/v1/mailboxes/wait") {
             call.respondReadyMailboxes(store, arrivals)
@@ -58,23 +54,25 @@ private suspend fun ApplicationCall.respondMailboxHealth(store: MailboxStorage) 
 private suspend fun ApplicationCall.createMailbox(
     config: MailboxConfig,
     store: MailboxStorage,
-    creationRateLimiter: BoundedRateLimiter
+    creationWork: MailboxCreationWorkCheck
 ) {
-    if (!enforceRateLimit(creationRateLimiter)) {
+    val request = receive<CreateMailboxRequest>()
+    if (!creationWork.accepts(request.creationWork)) {
+        respond(HttpStatusCode.Forbidden, ErrorResponse("MAILBOX_WORK_REQUIRED", "A valid proof of work is required"))
         return
     }
-
+    // Nothing about the creator is kept: the proof of work is the price, so there is no per-address quota.
     when (
         val result =
             store.createWithQuota(
-                request = MailboxLifetimes.capped(receive<CreateMailboxRequest>(), System.currentTimeMillis()),
-                ownerKeyHash = hashedClientAddress(),
+                request = MailboxLifetimes.capped(request.copy(creationWork = null), System.currentTimeMillis()),
+                ownerKeyHash = UNATTRIBUTED_OWNER,
                 maximumMailboxes = config.maximumMailboxes,
-                maximumMailboxesPerOwner = config.maximumMailboxesPerClient
+                maximumMailboxesPerOwner = Int.MAX_VALUE
             )
     ) {
         is MailboxCreationResult.Created -> respond(HttpStatusCode.Created, result.response)
-        MailboxCreationResult.OwnerQuotaExceeded -> respondOwnerQuotaExceeded(config)
+        MailboxCreationResult.OwnerQuotaExceeded,
         MailboxCreationResult.GlobalQuotaExceeded ->
             respond(
                 HttpStatusCode.InsufficientStorage,
@@ -84,16 +82,6 @@ private suspend fun ApplicationCall.createMailbox(
                 )
             )
     }
-}
-
-private suspend fun ApplicationCall.respondOwnerQuotaExceeded(config: MailboxConfig) {
-    respondTooManyRequests(
-        retryAfterSeconds =
-            (config.creationRateLimit.windowMilliseconds / MILLISECONDS_PER_SECOND)
-                .coerceAtLeast(MINIMUM_RETRY_AFTER_SECONDS),
-        code = "MAILBOX_CLIENT_QUOTA_EXCEEDED",
-        message = "Active mailbox quota exceeded"
-    )
 }
 
 private suspend fun ApplicationCall.respondReadyMailboxes(
@@ -210,9 +198,6 @@ private suspend fun ApplicationCall.respondRevocation(result: MailboxRevocationR
     }
 }
 
-private const val MILLISECONDS_PER_SECOND = 1_000L
-
 /** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
 private const val WAIT_MILLISECONDS = 8_000L
 private const val MAXIMUM_WATCHED_MAILBOXES = 512
-private const val MINIMUM_RETRY_AFTER_SECONDS = 1L

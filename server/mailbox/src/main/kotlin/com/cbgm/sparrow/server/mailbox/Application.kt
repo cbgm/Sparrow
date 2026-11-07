@@ -3,8 +3,6 @@ package com.cbgm.sparrow.server.mailbox
 import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.protocol.serverJson
-import com.cbgm.sparrow.server.security.BoundedRateLimiter
-import com.cbgm.sparrow.server.security.RateLimitPolicy
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
@@ -34,7 +32,7 @@ fun Application.mailboxModule(
         config = config,
         store = store,
         pushNotifier = pushNotifier,
-        creationRateLimiter = BoundedRateLimiter(config.creationRateLimit)
+        creationWork = MailboxCreationWorkCheck(config.creationWorkBits)
     )
 }
 
@@ -70,12 +68,8 @@ data class MailboxConfig(
     val maximumEnvelopeBytes: Int,
     val maximumMailboxBytes: Long,
     val maximumMailboxes: Int = DEFAULT_MAXIMUM_MAILBOXES,
-    val maximumMailboxesPerClient: Int = DEFAULT_MAXIMUM_MAILBOXES_PER_CLIENT,
-    val creationRateLimit: RateLimitPolicy =
-        RateLimitPolicy(
-            maximumRequests = DEFAULT_CREATION_RATE_LIMIT_REQUESTS,
-            windowMilliseconds = DEFAULT_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS
-        ),
+    /** Zero bits a new mailbox's proof of work needs ([MailboxCreationWorkCheck]); the app solves 18 bits. */
+    val creationWorkBits: Int = DEFAULT_CREATION_WORK_BITS,
     val trustProxyHeaders: Boolean = false
 ) {
     init {
@@ -89,9 +83,6 @@ data class MailboxConfig(
             "Maximum mailbox bytes must be positive"
         }
         require(maximumMailboxes > 0) { "Maximum mailbox count must be positive" }
-        require(maximumMailboxesPerClient > 0) {
-            "Per-client mailbox count must be positive"
-        }
     }
 
     companion object {
@@ -111,29 +102,7 @@ data class MailboxConfig(
                         ?: DEFAULT_MAXIMUM_MAILBOX_BYTES,
                 maximumMailboxes =
                     ServiceEnvironment.int("MAILBOX_MAXIMUM_MAILBOXES", DEFAULT_MAXIMUM_MAILBOXES),
-                maximumMailboxesPerClient =
-                    ServiceEnvironment.int(
-                        "MAILBOX_MAXIMUM_MAILBOXES_PER_CLIENT",
-                        DEFAULT_MAXIMUM_MAILBOXES_PER_CLIENT
-                    ),
-                creationRateLimit =
-                    RateLimitPolicy(
-                        maximumRequests =
-                            ServiceEnvironment.int(
-                                "MAILBOX_CREATION_RATE_LIMIT_REQUESTS",
-                                DEFAULT_CREATION_RATE_LIMIT_REQUESTS
-                            ),
-                        windowMilliseconds =
-                            ServiceEnvironment.long(
-                                "MAILBOX_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS",
-                                DEFAULT_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS
-                            ),
-                        maximumTrackedClients =
-                            ServiceEnvironment.int(
-                                "MAILBOX_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS",
-                                DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS
-                            )
-                    ),
+                creationWorkBits = ServiceEnvironment.int("MAILBOX_CREATION_WORK_BITS", DEFAULT_CREATION_WORK_BITS),
                 trustProxyHeaders =
                     ServiceEnvironment.string("TRUST_PROXY_HEADERS", "false").toBoolean()
             )
@@ -142,10 +111,7 @@ data class MailboxConfig(
         private const val DEFAULT_MAXIMUM_ENVELOPE_BYTES = 1_048_576
         private const val DEFAULT_MAXIMUM_MAILBOX_BYTES = 100L * 1_048_576L
         private const val DEFAULT_MAXIMUM_MAILBOXES = 100_000
-        private const val DEFAULT_MAXIMUM_MAILBOXES_PER_CLIENT = 100
-        private const val DEFAULT_CREATION_RATE_LIMIT_REQUESTS = 30
-        private const val DEFAULT_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS = 60L * 60L * 1_000L
-        private const val DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS = 100_000
+        private const val DEFAULT_CREATION_WORK_BITS = 18
     }
 }
 

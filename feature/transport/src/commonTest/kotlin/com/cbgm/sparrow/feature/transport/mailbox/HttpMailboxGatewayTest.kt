@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.mailbox
 
+import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
@@ -61,7 +62,8 @@ class HttpMailboxGatewayTest {
                         expectSuccess = true
                         install(ContentNegotiation) { json(createGatewayJson()) }
                     },
-                    createGatewayJson()
+                    createGatewayJson(),
+                    MailboxCreationWorkSolver(DefaultCryptoHash())
                 )
 
             val envelopes = gateway.pending(credential).getOrThrow()
@@ -73,7 +75,8 @@ class HttpMailboxGatewayTest {
     private fun gateway(status: HttpStatusCode) =
         HttpMailboxGateway(
             HttpClient(MockEngine { respond(content = "", status = status) }) { expectSuccess = true },
-            createGatewayJson()
+            createGatewayJson(),
+            MailboxCreationWorkSolver(DefaultCryptoHash())
         )
 
     private val credential =

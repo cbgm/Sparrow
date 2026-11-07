@@ -58,6 +58,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCa
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
@@ -386,7 +387,8 @@ val transportModule =
                             ),
                         json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
                     ),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                creationWork = MailboxCreationWorkSolver(get<CryptoHash>())
             )
         }
 
