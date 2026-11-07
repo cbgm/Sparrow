@@ -84,6 +84,9 @@ class WebSocketOutgoingWireSenderTest {
 
             assertEquals(ROUTE, mailboxes.delivered?.mailboxRoute)
             assertEquals("encoded-payload", mailboxes.delivered?.encryptedPayload)
+            // The mailbox and the nodes on the way do not learn who writes to whom.
+            assertEquals(FederatedEnvelope.HIDDEN_ROUTING_ID, mailboxes.delivered?.senderRoutingId)
+            assertEquals(FederatedEnvelope.HIDDEN_ROUTING_ID, mailboxes.delivered?.recipientDeviceRoutingId)
             assertEquals(null, client.federatedEnvelope)
         }
 
@@ -96,6 +99,7 @@ class WebSocketOutgoingWireSenderTest {
             assertTrue(mailboxSender(client, mailboxes, sendsDirectly = true).send("recipient-routing-id", "encoded-payload").isSuccess)
 
             assertEquals(ROUTE, client.federatedEnvelope?.mailboxRoute)
+            assertEquals("recipient-routing-id", client.federatedEnvelope?.recipientDeviceRoutingId)
         }
 
     @Test

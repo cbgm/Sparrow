@@ -119,7 +119,7 @@ class WebSocketOutgoingWireSender(
      */
     private suspend fun sendToMailbox(envelope: FederatedEnvelope): Long {
         val gateway = mailboxGateway ?: return throughConnectedNode(envelope)
-        gateway.deliver(envelope).exceptionOrNull()?.let { failure ->
+        gateway.deliver(envelope.withoutRoutingIds()).exceptionOrNull()?.let { failure ->
             if (failure is CancellationException) throw failure
             if (sendingPolicy?.sendsDirectly() == false) throw failure
             logger.warn { "Message sent through the connected node (contact's mailbox not reachable: ${failure.message}): that node sees the recipient" }

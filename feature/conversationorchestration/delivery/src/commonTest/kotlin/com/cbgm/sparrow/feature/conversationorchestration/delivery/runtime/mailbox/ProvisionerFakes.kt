@@ -228,7 +228,8 @@ internal class FakeContactTransport : ContactTransportRepository {
 
     override suspend fun getMailboxContacts(): Result<List<MailboxContactFacts>> = Result.success(facts)
 
-    override suspend fun resolveRoutingId(contactId: String): Result<String> = error(NOT_USED)
+    /** Every contact's routing ID is `routing-<contactId>`. */
+    override suspend fun resolveRoutingId(contactId: String): Result<String> = Result.success("routing-$contactId")
 
     override suspend fun resolveBootstrapRoutingId(contactId: String): Result<String> = error(NOT_USED)
 

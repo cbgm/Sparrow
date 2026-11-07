@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
@@ -8,12 +9,14 @@ import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Duration.Companion.milliseconds
 
 class MailboxPendingSynchronizerTest {
     @Test
@@ -31,7 +34,8 @@ class MailboxPendingSynchronizerTest {
                 MailboxPendingSynchronizer(
                     mailboxGateway = gateway,
                     mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE))),
-                    incomingEnvelopeProcessor = FakeProcessor
+                    incomingEnvelopeProcessor = FakeProcessor,
+                    resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport())
                 )
 
             assertEquals(1, synchronizer.synchronize().getOrThrow())
@@ -54,13 +58,15 @@ class MailboxPendingSynchronizerTest {
                             credentials = listOf(credential(REACHABLE)),
                             retiring = listOf(credential(RETIRING), credential(REVOKING).copy(revocationPending = true))
                         ),
-                    incomingEnvelopeProcessor = FakeProcessor
+                    incomingEnvelopeProcessor = FakeProcessor,
+                    resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport())
                 )
 
             assertEquals(1, synchronizer.synchronize().getOrThrow())
             assertEquals(listOf(PROCESSED), gateway.acknowledged)
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun envelopesAreFetchedAsTheyArriveAndOnlyFromTheMailboxesThatGotSome() =
         runTest {
@@ -70,23 +76,45 @@ class MailboxPendingSynchronizerTest {
                     readyOnce = setOf("mailbox-$REACHABLE")
                 )
             val routes = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE)))
-            val listener = MailboxArrivalListener(gateway, routes, MailboxPendingSynchronizer(gateway, routes, FakeProcessor))
+            val listener = MailboxArrivalListener(gateway, routes, MailboxPendingSynchronizer(gateway, routes, FakeProcessor, ResolveContactTransportRoutingIdUseCase(FakeContactTransport())))
 
             val listening = backgroundScope.launch { listener.listen() }
-            advanceTimeBy(20_000)
+            advanceTimeBy(20_000.milliseconds)
 
             assertEquals(listOf(REACHABLE), gateway.fetched)
             assertEquals(listOf(PROCESSED), gateway.acknowledged)
             listening.cancel()
         }
 
+    @Test
+    fun theSenderIsTheMailboxesContactWhateverTheEnvelopeNames() =
+        runTest {
+            val gateway =
+                FakeMailboxGateway(
+                    pending = mapOf(REACHABLE to listOf(envelope(PROCESSED).copy(senderRoutingId = "someone-else"), envelope("hidden").withoutRoutingIds()))
+                )
+            val synchronizer =
+                MailboxPendingSynchronizer(
+                    mailboxGateway = gateway,
+                    mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(REACHABLE))),
+                    incomingEnvelopeProcessor = FakeProcessor,
+                    resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport())
+                )
+            FakeProcessor.senders.clear()
+
+            assertEquals(2, synchronizer.synchronize().getOrThrow())
+            assertEquals(listOf("routing-$REACHABLE", "routing-$REACHABLE"), FakeProcessor.senders)
+        }
+
     private object FakeProcessor : IncomingEnvelopeProcessor {
+        val senders = mutableListOf<String>()
+
         override suspend fun process(
             envelopeId: String,
             senderRoutingId: String,
             encodedTransportPayload: String
         ): Result<IncomingEnvelopeProcessingResult> =
-            when (envelopeId) {
+            when (envelopeId.also { senders += senderRoutingId }) {
                 FAILING -> Result.failure(IllegalStateException("database is busy"))
                 REJECTED -> Result.success(IncomingEnvelopeProcessingResult.Rejected)
                 else -> Result.success(IncomingEnvelopeProcessingResult.Processed)
@@ -130,7 +158,7 @@ class MailboxPendingSynchronizerTest {
             credentials: List<LocalMailboxCredential>
         ): Result<Set<String>> {
             val ready = readyOnce.also { readyOnce = emptySet() }
-            if (ready.isEmpty()) delay(8_000)
+            if (ready.isEmpty()) delay(8_000.milliseconds)
             return Result.success(ready)
         }
     }

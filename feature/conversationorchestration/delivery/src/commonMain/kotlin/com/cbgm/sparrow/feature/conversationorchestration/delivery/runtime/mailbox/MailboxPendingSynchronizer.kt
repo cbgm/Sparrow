@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
@@ -23,7 +24,8 @@ import kotlinx.coroutines.sync.withLock
 class MailboxPendingSynchronizer(
     private val mailboxGateway: MailboxGateway,
     private val mailboxRouteRepository: MailboxRouteRepository,
-    private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor
+    private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
+    private val resolveContactRoutingId: ResolveContactTransportRoutingIdUseCase
 ) {
     private val logger = SparrowLog.withTag("MailboxPendingSynchronizer")
     private val synchronizing = Mutex()
@@ -45,17 +47,29 @@ class MailboxPendingSynchronizer(
                 logUnreadable(credential, error)
                 return 0
             }
-        return envelopes.count { envelope -> process(credential, envelope) }
+        if (envelopes.isEmpty()) return 0
+        // The mailbox belongs to one contact, and only that contact holds its send capability: the sender is that
+        // contact, whatever routing ID the envelope names (envelopes put in by the app itself name none).
+        val sender =
+            resolveContactRoutingId(credential.contactId).getOrElse { error ->
+                logger.warn(error) { "Mailbox of contact ${credential.contactId} not read: the contact's routing ID is unknown" }
+                return 0
+            }
+        return envelopes.count { envelope -> process(credential, sender, envelope) }
     }
 
     /** True when the envelope was processed and acknowledged. */
-    private suspend fun process(credential: LocalMailboxCredential, envelope: FederatedEnvelope): Boolean =
+    private suspend fun process(
+        credential: LocalMailboxCredential,
+        sender: String,
+        envelope: FederatedEnvelope
+    ): Boolean =
         safeSuspendCall(logFailure = false) {
             when (
                 incomingEnvelopeProcessor
                     .process(
                         envelopeId = envelope.envelopeId,
-                        senderRoutingId = envelope.senderRoutingId,
+                        senderRoutingId = sender,
                         encodedTransportPayload = envelope.encryptedPayload
                     ).getOrThrow()
             ) {
