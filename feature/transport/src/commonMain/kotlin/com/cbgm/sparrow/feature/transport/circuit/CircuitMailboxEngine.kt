@@ -21,6 +21,7 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.util.AttributeKey
 import io.ktor.util.date.GMTDate
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.InternalAPI
@@ -60,7 +61,7 @@ internal class CircuitMailboxEngine(
                     body.takeIf { it.isNotEmpty() }?.let { data.body.contentType?.toString() ?: ContentType.Application.Json.toString() },
                 body = body
             )
-        val response = throughCircuit(request) ?: direct(request)
+        val response = throughCircuit(request, data.attributes.getOrNull(CircuitKey)) ?: direct(request)
         return HttpResponseData(
             statusCode = HttpStatusCode.fromValue(response.status),
             requestTime = GMTDate(),
@@ -72,9 +73,12 @@ internal class CircuitMailboxEngine(
     }
 
     /** Null when the request goes out directly instead: no circuit, or it failed, and the user allows that. */
-    private suspend fun throughCircuit(request: CircuitHttpRequest): CircuitHttpResponse? {
+    private suspend fun throughCircuit(
+        request: CircuitHttpRequest,
+        key: String?
+    ): CircuitHttpResponse? {
         val sendsDirectly = fallback.sendsDirectly()
-        val circuit = circuits.currentCircuit(minimumHopCount(sendsDirectly)) ?: waitUnlessDirect(sendsDirectly)
+        val circuit = circuits.currentCircuit(key, minimumHopCount(sendsDirectly)) ?: waitUnlessDirect(sendsDirectly)
         if (circuit == null) {
             logDirect(request, "no circuit")
             return null
@@ -129,6 +133,9 @@ internal class CircuitMailboxEngine(
         const val DEFAULT_WAIT_MILLISECONDS = 30_000L
     }
 }
+
+/** Which mailbox or contact a request is about: requests with the same key use the same circuit. */
+internal val CircuitKey = AttributeKey<String>("SparrowCircuitKey")
 
 /** The mailbox client: requests go through [engine]; status codes are checked by the caller, as with the shared client. */
 internal fun createMailboxHttpClient(

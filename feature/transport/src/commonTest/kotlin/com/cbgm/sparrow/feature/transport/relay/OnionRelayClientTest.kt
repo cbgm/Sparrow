@@ -262,6 +262,22 @@ class OnionRelayClientTest {
 
     private class RelayDown : RuntimeException()
 
+    @Test
+    fun anotherCircuitEndsAtADifferentSessionNodeWhenThereIsOne() =
+        runTest {
+            onionClient(nodes = listOf(node("own", 1), node("b", 2), node("c", 3)), preferred = "own", network = { _, _ -> byteArrayOf() })
+            val selector = lastSelector!!
+
+            repeat(10) {
+                val route = selector.circuitRoute(hopCount = 2, avoidLastHops = setOf("b"))
+                assertEquals(listOf("own", "c"), route.map { it.nodeId })
+            }
+            // With no other node left, the circuit still gets built.
+            assertEquals(2, selector.circuitRoute(hopCount = 2, avoidLastHops = setOf("b", "c")).size)
+            assertEquals(3, selector.circuitRoute(hopCount = 3, avoidLastHops = setOf("b")).size)
+            assertEquals("c", selector.circuitRoute(hopCount = 3, avoidLastHops = setOf("b")).last().nodeId)
+        }
+
     private fun onionClient(
         nodes: List<SparrowNodeDescriptor>,
         preferred: String?,
@@ -312,8 +328,11 @@ class OnionRelayClientTest {
                 random = Random(1),
                 failureCooldownMilliseconds = COOLDOWN
             )
+        lastSelector = selector
         return OnionRelayClient(selector, cipher, httpClient, json)
     }
+
+    private var lastSelector: RelaySelector? = null
 
     private fun node(
         name: String,

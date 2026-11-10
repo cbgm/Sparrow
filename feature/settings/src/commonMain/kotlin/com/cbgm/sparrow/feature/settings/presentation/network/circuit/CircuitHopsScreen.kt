@@ -34,6 +34,9 @@ import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.Circ
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_circuit
+import com.cbgm.sparrow.resources.feature_settings_circuit_count
+import com.cbgm.sparrow.resources.feature_settings_circuit_count_hint
+import com.cbgm.sparrow.resources.feature_settings_circuit_count_open
 import com.cbgm.sparrow.resources.feature_settings_circuit_estimate
 import com.cbgm.sparrow.resources.feature_settings_circuit_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_hint
@@ -84,6 +87,11 @@ fun CircuitHopsScreen(
                     HopCountChooser(uiState = uiState, onUiEvent = onUiEvent)
                 }
             }
+            item(key = "circuits") {
+                SparrowCardNoAnimation {
+                    CircuitCountChooser(uiState = uiState, onUiEvent = onUiEvent)
+                }
+            }
             item(key = "fallback") {
                 SparrowCardNoAnimation {
                     FallbackChooser(uiState = uiState, onUiEvent = onUiEvent)
@@ -129,6 +137,36 @@ private fun HopCountChooser(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+    }
+}
+
+@Composable
+private fun CircuitCountChooser(
+    uiState: CircuitHopsUiState,
+    onUiEvent: (CircuitHopsUiEvent) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MaterialTheme.spacing.base),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    ) {
+        Text(
+            text = stringResource(Res.string.feature_settings_circuit_count, uiState.selectedCircuitCount),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Slider(
+            value = uiState.selectedCircuitCount.toFloat(),
+            onValueChange = { value -> onUiEvent(CircuitHopsUiEvent.CircuitCountChanged(value.roundToInt())) },
+            valueRange = uiState.minimumCircuitCount.toFloat()..uiState.maximumCircuitCount.toFloat(),
+            steps = uiState.maximumCircuitCount - uiState.minimumCircuitCount - 1
+        )
+        StatusLine(text = stringResource(Res.string.feature_settings_circuit_count_hint))
+        (uiState.status as? CircuitUiStatus.Connected)?.let { connected ->
+            StatusLine(text = stringResource(Res.string.feature_settings_circuit_count_open, connected.circuitsUp, connected.requestedCircuitCount))
+        }
     }
 }
 

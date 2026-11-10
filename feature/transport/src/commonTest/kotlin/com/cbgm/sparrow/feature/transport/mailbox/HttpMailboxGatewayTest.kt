@@ -72,6 +72,38 @@ class HttpMailboxGatewayTest {
             assertEquals(listOf("broken"), deleted)
         }
 
+    @Test
+    fun eachCircuitWaitsOnlyForItsOwnMailboxes() =
+        runTest {
+            val bodies = mutableListOf<String>()
+            val engine =
+                MockEngine { request ->
+                    val body = (request.body as io.ktor.http.content.TextContent).text
+                    bodies += body
+                    respond(
+                        content = """{"ready":["${if ("box-a" in body) "box-a" else "box-b"}"]}""",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/json")
+                    )
+                }
+            val gateway =
+                HttpMailboxGateway(
+                    HttpClient(engine) { install(ContentNegotiation) { json(createGatewayJson()) } },
+                    createGatewayJson(),
+                    MailboxCreationWorkSolver(DefaultCryptoHash()),
+                    circuitSlot = { mailboxId -> if (mailboxId == "box-a") 0 else 1 }
+                )
+
+            val ready = gateway.ready("https://node.test", listOf(credentialFor("box-a"), credentialFor("box-b"))).getOrThrow()
+
+            assertEquals(setOf("box-a", "box-b"), ready)
+            assertEquals(2, bodies.size)
+            assertEquals(1, bodies.count { "box-a" in it && "box-b" !in it })
+        }
+
+    private fun credentialFor(mailboxId: String) =
+        credential.copy(deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
+
     private fun gateway(status: HttpStatusCode) =
         HttpMailboxGateway(
             HttpClient(MockEngine { respond(content = "", status = status) }) { expectSuccess = true },

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.sender
 
+import com.cbgm.sparrow.feature.transport.circuit.CircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
@@ -135,7 +136,8 @@ class WebSocketOutgoingWireSenderTest {
                     httpClient = HttpClient(MockEngine { respondError(HttpStatusCode.ServiceUnavailable) }),
                     cipher = ReadableCircuitCipher(),
                     selector = RelaySelector(EmptyCache, createGatewayJson(), preferredNodeStore = null, connectedNodeId = { null }),
-                    hopCountStore = FixedHopCount
+                    hopCountStore = FixedHopCount,
+                    circuitCountStore = OneCircuit
                 ),
             fallback = FixedFallback(sendsDirectly)
         )
@@ -180,6 +182,12 @@ class WebSocketOutgoingWireSenderTest {
         override suspend fun read(): CachedNodeDirectory? = null
 
         override suspend fun write(directory: CachedNodeDirectory) = Unit
+    }
+
+    private object OneCircuit : CircuitCountStore {
+        override fun observe(): Flow<Int> = flowOf(1)
+
+        override suspend fun set(circuitCount: Int) = Unit
     }
 
     private object FixedHopCount : CircuitHopCountStore {

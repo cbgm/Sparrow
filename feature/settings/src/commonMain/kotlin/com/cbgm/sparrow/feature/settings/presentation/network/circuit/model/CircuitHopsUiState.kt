@@ -8,7 +8,10 @@ data class CircuitHopsUiState(
     /** Round trip expected with [selectedHopCount], from the measured time per hop; null before a measurement. */
     val estimatedLatencyMilliseconds: Long? = null,
     /** Requests go out directly while there is no circuit (true) or wait for one. */
-    val sendsDirectlyWithoutCircuit: Boolean = true
+    val sendsDirectlyWithoutCircuit: Boolean = true,
+    val selectedCircuitCount: Int = 1,
+    val minimumCircuitCount: Int = 1,
+    val maximumCircuitCount: Int = 3
 )
 
 sealed interface CircuitUiStatus {
@@ -19,6 +22,8 @@ sealed interface CircuitUiStatus {
     data class Connected(
         val hopCount: Int,
         val requestedHopCount: Int,
-        val latencyMilliseconds: Long
+        val latencyMilliseconds: Long,
+        val circuitsUp: Int = 1,
+        val requestedCircuitCount: Int = 1
     ) : CircuitUiStatus
 }

@@ -35,7 +35,8 @@ class CircuitMailboxEngineTest {
             httpClient = direct,
             cipher = ReadableCircuitCipher(),
             selector = RelaySelector(EmptyCache, json, preferredNodeStore = null, connectedNodeId = { null }),
-            hopCountStore = FixedHopCount
+            hopCountStore = FixedHopCount,
+            circuitCountStore = OneCircuit
         )
 
     @Test
@@ -68,6 +69,12 @@ class CircuitMailboxEngineTest {
         override suspend fun read(): CachedNodeDirectory? = null
 
         override suspend fun write(directory: CachedNodeDirectory) = Unit
+    }
+
+    private object OneCircuit : CircuitCountStore {
+        override fun observe(): Flow<Int> = flowOf(1)
+
+        override suspend fun set(circuitCount: Int) = Unit
     }
 
     private object FixedHopCount : CircuitHopCountStore {

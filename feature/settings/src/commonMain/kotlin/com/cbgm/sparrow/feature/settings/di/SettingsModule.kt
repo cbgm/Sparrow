@@ -216,8 +216,10 @@ val settingsModule =
                 observeCircuitHopCount = get(),
                 observeCircuitStatus = get(),
                 observeCircuitFallback = get(),
+                observeCircuitCount = get(),
                 setCircuitHopCount = get(),
-                setCircuitFallback = get()
+                setCircuitFallback = get(),
+                setCircuitCount = get()
             )
         }
 

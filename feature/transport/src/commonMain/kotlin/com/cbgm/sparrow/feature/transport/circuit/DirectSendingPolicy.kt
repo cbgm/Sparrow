@@ -31,7 +31,7 @@ class DirectSendingPolicy(
 
     /** For a send that cannot use the circuit: throws [ProtectedRouteMissingException] while it may not go out. */
     suspend fun checkUnprotectedSendAllowed() {
-        if (!fallback.sendsDirectly() && circuits.currentCircuit(CircuitHopCount.PROTECTING) == null) {
+        if (!fallback.sendsDirectly() && circuits.currentCircuit(minimumHopCount = CircuitHopCount.PROTECTING) == null) {
             throw ProtectedRouteMissingException()
         }
     }

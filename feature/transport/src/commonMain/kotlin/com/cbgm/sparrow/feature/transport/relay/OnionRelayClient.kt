@@ -53,8 +53,14 @@ internal class RelaySelector(
 
     suspend fun route(): List<RelayHop> = circuitRoute(hopCount = 2).also(::reportHopCount)
 
-    /** Up to [hopCount] distinct relays, the first as above; fewer when fewer nodes relay. */
-    suspend fun circuitRoute(hopCount: Int): List<RelayHop> {
+    /**
+     * Up to [hopCount] distinct relays, the first as above; fewer when fewer nodes relay. The last hop, the session
+     * node, is one not in [avoidLastHops] when there is such a node, so the app's circuits end at different nodes.
+     */
+    suspend fun circuitRoute(
+        hopCount: Int,
+        avoidLastHops: Set<String> = emptySet()
+    ): List<RelayHop> {
         val relays =
             cache.read()
                 ?.let { cached -> runCatching { json.decodeFromString<SignedNodeDirectory>(cached.encodedDirectory) }.getOrNull() }
@@ -67,8 +73,17 @@ internal class RelaySelector(
         val available = relays.filterNot { hop -> hop.nodeId in coolingDown() }.ifEmpty { relays }
         val own = connectedNodeId() ?: preferredNodeStore?.get()
         val first = available.firstOrNull { hop -> hop.nodeId == own } ?: available.randomOrNull(random) ?: return emptyList()
-        val others = available.filter { hop -> hop.nodeId != first.nodeId }.shuffled(random).take(hopCount - 1)
-        return listOf(first) + others
+        val others = available.filter { hop -> hop.nodeId != first.nodeId }.shuffled(random)
+        val chosen = others.take(hopCount - 1)
+        val replacement = others.drop(chosen.size).firstOrNull { hop -> hop.nodeId !in avoidLastHops }
+        val ordered =
+            when {
+                chosen.isEmpty() || chosen.last().nodeId !in avoidLastHops -> chosen
+                replacement != null -> chosen.dropLast(1) + replacement
+                // Every unused node is avoided: a chosen hop that is not goes last, when there is one.
+                else -> chosen.partition { hop -> hop.nodeId in avoidLastHops }.let { (avoided, free) -> avoided + free }
+            }
+        return listOf(first) + ordered
     }
 
     fun recordFailure(nodeId: String) {

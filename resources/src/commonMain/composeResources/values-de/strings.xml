@@ -521,6 +521,9 @@
     <string name="feature_settings_circuit_status_unavailable">Route gerade nicht verfügbar</string>
     <string name="feature_settings_circuit_estimate">Etwa %1$d ms mit %2$d Hops (Schätzung)</string>
     <string name="feature_settings_circuit_fewer">Nur %1$d von %2$d Hops verfügbar: nicht genug weiterleitende Knoten</string>
+    <string name="feature_settings_circuit_count">Routen: %1$d</string>
+    <string name="feature_settings_circuit_count_hint">Deine Kontakte werden auf die Routen verteilt, die – wenn es genug Knoten gibt – jeweils an einem anderen Knoten enden, sodass kein Knoten alle sieht. Jede Route braucht etwas mehr Akku und Daten.</string>
+    <string name="feature_settings_circuit_count_open">%1$d von %2$d Routen offen</string>
     <string name="feature_settings_circuit_send_directly">Ohne Route direkt senden</string>
     <string name="feature_settings_circuit_send_directly_on">Solange keine Route über mindestens zwei Knoten verfügbar ist, laufen Senden und Empfangen über Postfächer direkt oder über einen einzigen Knoten: Nachrichten funktionieren weiter, aber ein Server sieht deine Adresse.</string>
     <string name="feature_settings_circuit_send_directly_off">Senden und Empfangen über Postfächer warten auf eine Route über mindestens zwei Knoten: deine Adresse bleibt verborgen, aber sind weniger Knoten erreichbar, warten Nachrichten, bis wieder genug da sind.</string>

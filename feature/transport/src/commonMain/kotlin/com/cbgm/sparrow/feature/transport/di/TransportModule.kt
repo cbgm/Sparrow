@@ -11,10 +11,12 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.circuit.CircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitMailboxEngine
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
@@ -47,12 +49,14 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionPro
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
@@ -201,11 +205,13 @@ val transportModule =
                 httpClient = get<HttpClient>(),
                 cipher = get<CircuitCipher>(),
                 selector = get<RelaySelector>(),
-                hopCountStore = get<CircuitHopCountStore>()
+                hopCountStore = get<CircuitHopCountStore>(),
+                circuitCountStore = get<CircuitCountStore>()
             )
         }
 
         single<CircuitHopCountStore> { DataStoreCircuitHopCountStore(dataStore = get()) }
+        single<CircuitCountStore> { DataStoreCircuitCountStore(dataStore = get()) }
 
         single<CircuitFallbackStore> { DataStoreCircuitFallbackStore(dataStore = get()) }
         single { DirectSendingPolicy(circuits = get(), fallback = get()) }
@@ -388,7 +394,8 @@ val transportModule =
                         json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
                     ),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                creationWork = MailboxCreationWorkSolver(get<CryptoHash>())
+                creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
+                circuitSlot = get<CircuitRunner>()::slotOf
             )
         }
 
@@ -408,6 +415,8 @@ val transportModule =
         singleOf(::SetPreferredNodeUseCase)
         singleOf(::ObserveCircuitHopCountUseCase)
         singleOf(::SetCircuitHopCountUseCase)
+        singleOf(::ObserveCircuitCountUseCase)
+        singleOf(::SetCircuitCountUseCase)
         singleOf(::ObserveCircuitStatusUseCase)
         singleOf(::ObserveCircuitFallbackUseCase)
         singleOf(::SetCircuitFallbackUseCase)
