@@ -12,22 +12,26 @@ import kotlin.test.assertTrue
 
 class MessagingIndicatorUseCasesTest {
     @Test
-    fun genericIndicatorPreservesSenderTypeAndRoutingDestination() = runTest {
+    fun genericIndicatorPreservesSenderTypeAndDestination() = runTest {
         val gateway = FakeGateway()
         val incoming = ObserveMessagingIndicatorsUseCase(gateway)().first()
-        assertEquals("peer-routing", incoming.senderRoutingId)
+        assertEquals("peer", incoming.senderContactId)
         assertEquals("TYPING", incoming.indicatorType)
-        val sent = SendMessagingIndicatorUseCase(gateway)("recipient-routing", "RECORDING")
+        val sent = SendMessagingIndicatorUseCase(gateway)("recipient", "group-1", "RECORDING")
         assertTrue(sent.isSuccess)
-        assertEquals("recipient-routing" to "RECORDING", gateway.lastSent)
+        assertEquals(Triple("recipient", "group-1", "RECORDING"), gateway.lastSent)
     }
 
     private class FakeGateway : MessagingIndicatorGateway {
-        override val incoming: Flow<MessagingIndicator> = flowOf(MessagingIndicator("peer-routing", "TYPING"))
-        var lastSent: Pair<String, String>? = null
+        override val incoming: Flow<MessagingIndicator> = flowOf(MessagingIndicator("peer", null, "TYPING"))
+        var lastSent: Triple<String, String?, String>? = null
 
-        override suspend fun send(recipientRoutingId: String, indicatorType: String): Result<Unit> {
-            lastSent = recipientRoutingId to indicatorType
+        override suspend fun send(
+            recipientContactId: String,
+            groupId: String?,
+            indicatorType: String
+        ): Result<Unit> {
+            lastSent = Triple(recipientContactId, groupId, indicatorType)
             return Result.success(Unit)
         }
     }

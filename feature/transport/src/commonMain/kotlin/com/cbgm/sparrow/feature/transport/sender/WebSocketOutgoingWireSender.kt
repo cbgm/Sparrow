@@ -32,11 +32,12 @@ class WebSocketOutgoingWireSender(
         recipientAddress: String,
         encodedTransportPayload: String
     ): Result<Unit> =
-        sendWithAcceptance(recipientAddress, encodedTransportPayload).map { }
+        sendWithAcceptance(recipientAddress, encodedTransportPayload, recipientContactId = null).map { }
 
     override suspend fun sendWithAcceptance(
         recipientAddress: String,
-        encodedTransportPayload: String
+        encodedTransportPayload: String,
+        recipientContactId: String?
     ): Result<OutgoingWireAcceptance> =
         runCatching {
             require(recipientAddress.isNotBlank()) { "Recipient address must not be blank" }
@@ -63,9 +64,11 @@ class WebSocketOutgoingWireSender(
 
             val envelopeId = IdGenerator.generate()
             val createdAt = SystemClock.nowEpochMilliseconds()
+            // By contact when it is known: the routing table holds only the phone alias, not the address messages to
+            // a verified contact are sent to, so a lookup by that address would never find the route.
             val route =
                 mailboxRouteRepository
-                    ?.remoteForRecipientRoutingId(recipientAddress)
+                    ?.let { routes -> recipientContactId?.let { routes.remoteForContact(it) } ?: routes.remoteForRecipientRoutingId(recipientAddress) }
                     ?.getOrThrow()
                     ?.takeIf { it.expiresAtEpochMilliseconds > createdAt }
 

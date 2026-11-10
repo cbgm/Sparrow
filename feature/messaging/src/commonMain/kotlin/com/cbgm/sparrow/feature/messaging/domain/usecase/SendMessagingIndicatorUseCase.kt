@@ -5,6 +5,9 @@ import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGa
 class SendMessagingIndicatorUseCase(
     private val gateway: MessagingIndicatorGateway
 ) {
-    suspend operator fun invoke(recipientRoutingId: String, indicatorType: String): Result<Unit> =
-        gateway.send(recipientRoutingId, indicatorType)
+    suspend operator fun invoke(
+        recipientContactId: String,
+        groupId: String?,
+        indicatorType: String
+    ): Result<Unit> = gateway.send(recipientContactId, groupId, indicatorType)
 }

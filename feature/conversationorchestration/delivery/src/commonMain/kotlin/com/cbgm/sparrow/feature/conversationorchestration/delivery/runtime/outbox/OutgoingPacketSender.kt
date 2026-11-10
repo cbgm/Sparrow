@@ -50,7 +50,7 @@ class OutgoingPacketSender(
                 ).getOrThrow()
 
             val recipientRoutingId = recipientRoutingResolver.resolve(item.contactId, packet)
-            sendEncodedTransport(recipientRoutingId, encodedTransportPayload)
+            sendEncodedTransport(recipientRoutingId, encodedTransportPayload, recipientContactId = item.contactId)
                 .getOrElse { error ->
                     // Only a failure at the actual wire-send stage is retryable.
                     // Key lookup, encryption and routing-resolution errors must

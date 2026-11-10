@@ -22,6 +22,7 @@ import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.protocol.packet.IndicatorPacket
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
@@ -76,6 +77,7 @@ class OutgoingPacketTransportPolicy {
                 }
 
                 // Sent right after the handshake, before the identity is verified, with the key the handshake set.
+                is IndicatorPacket,
                 is MailboxRoutePacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = true,

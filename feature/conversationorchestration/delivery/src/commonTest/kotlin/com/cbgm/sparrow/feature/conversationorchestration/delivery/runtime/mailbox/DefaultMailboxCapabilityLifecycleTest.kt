@@ -108,6 +108,8 @@ class DefaultMailboxCapabilityLifecycleTest {
         override suspend fun remoteForRecipientRoutingId(routingId: String) =
             Result.success<MailboxDeliveryRoute?>(null)
 
+        override suspend fun remoteForContact(contactId: String) = Result.success<MailboxDeliveryRoute?>(null)
+
         override suspend fun allLocal() = Result.success(listOfNotNull(credential))
 
         override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> {

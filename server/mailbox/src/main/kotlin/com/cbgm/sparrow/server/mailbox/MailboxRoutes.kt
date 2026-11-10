@@ -128,7 +128,9 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
             // Only the owner's ticket decides whom to wake; the sender's recipient field does not.
             val wakeTicket = result.wakeTicket
             if (!result.duplicate) arrivals.stored(mailboxId)
-            if (!result.duplicate && wakeTicket != null) {
+            // Typing indicators live only seconds: waking a phone for them would cost battery for nothing.
+            val worthWaking = envelope.expiresAtEpochMilliseconds - envelope.createdAtEpochMilliseconds > SHORT_LIVED_MILLISECONDS
+            if (!result.duplicate && wakeTicket != null && worthWaking) {
                 runCatching { pushNotifier.notify(wakeTicket) }
             }
             respond(
@@ -213,6 +215,7 @@ private fun List<FederatedEnvelope>.firstPage(): List<FederatedEnvelope> {
 }
 
 private const val PAGE_BYTES = 1_024 * 1_024
+private const val SHORT_LIVED_MILLISECONDS = 60_000L
 
 /** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
 private const val WAIT_MILLISECONDS = 8_000L

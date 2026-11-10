@@ -15,8 +15,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.usecas
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.event.ApplyDeliveryEventWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.transport.RecordPreparedTransportWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.delivery.OutboxDeliveryStateRouter
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.IndicatorPacketHandler
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicatorGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.TransportConversationIndicatorObserver
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.WebSocketMessagingIndicatorGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCoordinator
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxArrivalListener
@@ -137,9 +138,8 @@ private fun Module.registerMailbox() {
 }
 
 private fun Module.registerIndicators() {
-    single<MessagingIndicatorGateway> {
-        WebSocketMessagingIndicatorGateway(client = get<WebSocketTransportClient>())
-    }
+    singleOf(::MailboxMessagingIndicatorGateway) { bind<MessagingIndicatorGateway>() }
+    singleOf(::IndicatorPacketHandler) { bind<TypedProtocolPacketHandler>() }
     singleOf(::SendConversationIndicatorUseCase)
     singleOf(::TransportConversationIndicatorObserver) { bind<ConversationIndicatorObserver>() }
 }

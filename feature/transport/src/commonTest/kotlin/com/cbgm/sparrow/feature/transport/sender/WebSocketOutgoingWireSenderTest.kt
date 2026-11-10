@@ -92,6 +92,27 @@ class WebSocketOutgoingWireSenderTest {
         }
 
     @Test
+    fun theContactsRouteIsFoundByTheContactEvenWhenTheRoutingTableDoesNotKnowTheAddress() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val mailboxes = RecordingMailboxGateway()
+            val sender =
+                WebSocketOutgoingWireSender(
+                    webSocketTransportClient = client,
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig = TransportConfig(),
+                    mailboxRouteRepository = FakeMailboxRouteRepository(ROUTE, knowsAddress = false),
+                    mailboxGateway = mailboxes,
+                    sendingPolicy = policy(sendsDirectly = true)
+                )
+
+            assertTrue(sender.sendWithAcceptance("scrouting1_contact", "encoded-payload", recipientContactId = "contact").isSuccess)
+
+            assertEquals(ROUTE, mailboxes.delivered?.mailboxRoute)
+        }
+
+    @Test
     fun anUnreachableMailboxLeavesItToTheConnectedNodeWhenSendingDirectlyIsAllowed() =
         runTest {
             val client = RecordingWebSocketTransportClient()
@@ -424,12 +445,16 @@ class WebSocketOutgoingWireSenderTest {
         override suspend fun disconnect() = Unit
     }
 
+    /** Like the app's table: with [knowsAddress] false, only the lookup by contact finds the route. */
     private class FakeMailboxRouteRepository(
-        private val route: MailboxDeliveryRoute
+        private val route: MailboxDeliveryRoute,
+        private val knowsAddress: Boolean = true
     ) : MailboxRouteRepository {
         override suspend fun localForContact(contactId: String) = Result.success<LocalMailboxCredential?>(null)
 
-        override suspend fun remoteForRecipientRoutingId(routingId: String) = Result.success(route)
+        override suspend fun remoteForRecipientRoutingId(routingId: String) = Result.success(route.takeIf { knowsAddress })
+
+        override suspend fun remoteForContact(contactId: String) = Result.success(route)
 
         override suspend fun allLocal() = Result.success(emptyList<LocalMailboxCredential>())
 

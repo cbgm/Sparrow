@@ -171,6 +171,8 @@ class MailboxPendingSynchronizerTest {
 
         override suspend fun remoteForRecipientRoutingId(routingId: String) = error("Not used")
 
+        override suspend fun remoteForContact(contactId: String) = error("Not used")
+
         override suspend fun allLocal() = Result.success(credentials)
 
         override suspend fun saveLocal(credential: LocalMailboxCredential) = error("Not used")

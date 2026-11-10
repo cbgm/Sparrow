@@ -10,13 +10,15 @@ class SendEncodedTransportUseCase(
 ) {
     suspend operator fun invoke(
         recipientRoutingId: String,
-        encodedTransportPayload: String
+        encodedTransportPayload: String,
+        /** Finds the contact's mailbox route; without it the route is looked up by [recipientRoutingId]. */
+        recipientContactId: String? = null
     ): Result<OutgoingWireAcceptance> =
         safeSuspendCall(logFailure = false) {
             require(recipientRoutingId.isNotBlank()) { "Recipient routing ID is required" }
             require(encodedTransportPayload.isNotBlank()) { "Encoded transport payload is required" }
             outgoingWireSender
-                .sendWithAcceptance(recipientRoutingId, encodedTransportPayload)
+                .sendWithAcceptance(recipientRoutingId, encodedTransportPayload, recipientContactId)
                 .getOrThrow()
         }
 }

@@ -19,14 +19,22 @@ class GetMailboxContactStatesUseCase(
     suspend operator fun invoke(): Result<List<MailboxContactState>> =
         safeSuspendCall(logFailure = false) {
             repository.getMailboxContacts().getOrThrow().map { contact ->
-                MailboxContactState(contact.contactId, isProvisioningEligible(contact))
+                val reason = ineligibleReason(contact)
+                MailboxContactState(contact.contactId, isProvisioningEligible = reason == null, ineligibleReason = reason)
             }
         }
 
-    private suspend fun isProvisioningEligible(contact: MailboxContactFacts): Boolean {
-        if (!contact.hasRoutingId) return false
-        if (contact.sharesActiveGroup && contact.hasMutualIdentity) return true
-        return contact.hasDirectConversation &&
-            getIdentityPeerState(contact.contactId).getOrThrow().hasEstablishedExchange
+    private suspend fun ineligibleReason(contact: MailboxContactFacts): String? {
+        if (!contact.hasRoutingId) return "no routing ID"
+        if (contact.sharesActiveGroup && contact.hasMutualIdentity) return null
+        if (!contact.hasDirectConversation) {
+            return if (contact.sharesActiveGroup) "only a shared group, and the identity is not mutual" else "no direct chat and no shared group"
+        }
+        val peer = getIdentityPeerState(contact.contactId).getOrThrow()
+        return if (peer.hasEstablishedExchange) {
+            null
+        } else {
+            "the handshake is not established (pending=${peer.hasPendingExchange}, mutual=${peer.hasMutualIdentity})"
+        }
     }
 }

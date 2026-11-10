@@ -124,6 +124,8 @@ internal class InMemoryMailboxRoutes : MailboxRouteRepository {
     override suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?> =
         error(NOT_USED)
 
+    override suspend fun remoteForContact(contactId: String): Result<MailboxDeliveryRoute?> = error(NOT_USED)
+
     override suspend fun allLocal() = Result.success(local.values.toList())
 
     override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> {

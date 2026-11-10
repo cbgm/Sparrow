@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxRouteSigningPublicKeyUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
@@ -17,6 +18,8 @@ class MailboxRoutePacketHandler(
     private val signatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: MailboxRoutePayloadEncoder
 ) : TypedProtocolPacketHandler {
+    private val logger = SparrowLog.withTag("MailboxRoutePacketHandler")
+
     override fun canHandle(packet: SparrowPacket): Boolean = packet is MailboxRoutePacket
 
     override suspend fun handle(
@@ -36,6 +39,7 @@ class MailboxRoutePacketHandler(
                     signature = route.identitySignature
                 ).getOrThrow()
             repository.saveRemote(context.contactId, route).getOrThrow()
+            logger.info { "Mailbox route of contact ${context.contactId} saved; messages to them now go into their mailbox" }
         }
 
     private fun validateRoute(
