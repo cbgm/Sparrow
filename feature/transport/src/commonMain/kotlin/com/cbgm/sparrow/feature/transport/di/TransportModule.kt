@@ -12,6 +12,9 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.background.ConnectionKeepAlive
+import com.cbgm.sparrow.feature.transport.background.ConnectionModeStore
+import com.cbgm.sparrow.feature.transport.background.DataStoreConnectionModeStore
 import com.cbgm.sparrow.feature.transport.blob.BlobGateway
 import com.cbgm.sparrow.feature.transport.blob.CircuitBlobGateway
 import com.cbgm.sparrow.feature.transport.circuit.CircuitCountStore
@@ -49,6 +52,7 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
+import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
@@ -57,12 +61,14 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseC
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
@@ -218,6 +224,8 @@ val transportModule =
         single<CircuitCountStore> { DataStoreCircuitCountStore(dataStore = get()) }
 
         single<CircuitFallbackStore> { DataStoreCircuitFallbackStore(dataStore = get()) }
+        single<ConnectionModeStore> { DataStoreConnectionModeStore(dataStore = get()) }
+        single { ConnectionKeepAlive() }
         single { DirectSendingPolicy(circuits = get(), fallback = get()) }
 
         single {
@@ -443,6 +451,9 @@ val transportModule =
         singleOf(::ObserveCircuitFallbackUseCase)
         singleOf(::SetCircuitFallbackUseCase)
         singleOf(::ObserveWaitingForRouteUseCase)
+        singleOf(::ObserveConnectionModeUseCase)
+        singleOf(::SetConnectionModeUseCase)
+        singleOf(::CanConnectWhileClosedUseCase)
         singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {

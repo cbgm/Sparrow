@@ -217,9 +217,12 @@ val settingsModule =
                 observeCircuitStatus = get(),
                 observeCircuitFallback = get(),
                 observeCircuitCount = get(),
+                observeConnectionMode = get(),
+                canConnectWhileClosed = get(),
                 setCircuitHopCount = get(),
                 setCircuitFallback = get(),
-                setCircuitCount = get()
+                setCircuitCount = get(),
+                setConnectionMode = get()
             )
         }
 

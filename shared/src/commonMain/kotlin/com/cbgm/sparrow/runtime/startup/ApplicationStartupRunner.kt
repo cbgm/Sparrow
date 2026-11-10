@@ -26,6 +26,10 @@ import kotlinx.coroutines.sync.withLock
  * and the local identity is ready. Slower waiting tasks such as the app language keep running
  * meanwhile, so the connection is not delayed by work it does not depend on. When no identity
  * exists yet, the runtime starts later through [startPostNavigationRuntime].
+ *
+ * Once ready, the tasks are not run again in this process: the app and a service started without it (after a
+ * reboot) may both ask, and the later caller gets the result at once. A start that is not ready yet (no identity,
+ * a failure) runs again, as before.
  */
 class ApplicationStartupRunner(
     private val startupTasks: List<StartupTask>,
@@ -39,8 +43,15 @@ class ApplicationStartupRunner(
     private val transportPrerequisites = Mutex()
     private var finishedTransportPrerequisites = 0
     private var identityReady = false
+    private val startup = Mutex()
+    private var result: StartupResult? = null
 
     override suspend fun run(): StartupResult =
+        startup.withLock {
+            result ?: runOnce().also { finished -> if (finished == StartupResult.Ready) result = finished }
+        }
+
+    private suspend fun runOnce(): StartupResult =
         try {
             val waitingTaskResults = runWaitingTasks()
             resolveStartupResult(waitingTaskResults)

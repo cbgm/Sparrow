@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.circuit.model
 
+import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+
 data class CircuitHopsUiState(
     val selectedHopCount: Int = 2,
     val minimumHopCount: Int = 1,
@@ -11,7 +13,11 @@ data class CircuitHopsUiState(
     val sendsDirectlyWithoutCircuit: Boolean = true,
     val selectedCircuitCount: Int = 1,
     val minimumCircuitCount: Int = 1,
-    val maximumCircuitCount: Int = 3
+    val maximumCircuitCount: Int = 3,
+    /** How messages reach the device while Sparrow is closed. */
+    val connectionMode: ConnectionMode = ConnectionMode.WHILE_OPEN,
+    /** False on iOS: there only a note is shown. */
+    val connectsWhileClosed: Boolean = true
 )
 
 sealed interface CircuitUiStatus {

@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityKeysUsabl
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeRunner
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.notification.domain.model.AppVisibilityState
+import com.cbgm.sparrow.feature.transport.background.ConnectionKeepAlive
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
@@ -19,5 +20,6 @@ data class ForegroundRuntimeDependencies(
     val mailboxCoordinator: MailboxCoordinator,
     val observeIdentityKeysUsable: ObserveIdentityKeysUsableUseCase,
     val observeWaitingForRoute: ObserveWaitingForRouteUseCase,
-    val sendUnsentMessages: SendUnsentMessagesUseCase
+    val sendUnsentMessages: SendUnsentMessagesUseCase,
+    val connectionKeepAlive: ConnectionKeepAlive
 )

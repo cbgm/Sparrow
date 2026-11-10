@@ -3,6 +3,7 @@ package com.cbgm.sparrow.di
 import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.feature.transport.background.HeadlessStart
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
@@ -61,8 +62,19 @@ val sharedModule =
                 mailboxCoordinator = get(),
                 observeIdentityKeysUsable = get(),
                 observeWaitingForRoute = get(),
-                sendUnsentMessages = get()
+                sendUnsentMessages = get(),
+                connectionKeepAlive = get()
             )
+        }
+
+        // A service started without the app (after a reboot, a check now and then) starts the runtime the same way.
+        single<HeadlessStart> {
+            val startupRunner = get<StartupRunner>()
+            object : HeadlessStart {
+                override suspend fun start() {
+                    startupRunner.run()
+                }
+            }
         }
 
         single {

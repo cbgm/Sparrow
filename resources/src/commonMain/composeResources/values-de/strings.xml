@@ -978,4 +978,16 @@
     <string name="feature_identity_picture_save_failed">Das Profilbild konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_picture_remove_failed">Das Profilbild konnte nicht entfernt werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_backup_failed">Die Identitätssicherung konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
+    <string name="feature_receiving_title">Nachrichten empfangen</string>
+    <string name="feature_receiving_description">Wie sollen dich Nachrichten erreichen, während Sparrow geschlossen ist?</string>
+    <string name="feature_receiving_always">Immer verbunden (empfohlen)</string>
+    <string name="feature_receiving_always_consequence">Nachrichten kommen sofort an; eine dauerhafte Benachrichtigung ist zu sehen, und es kostet etwas Akku.</string>
+    <string name="feature_receiving_while_open">Nur wenn die App offen ist</string>
+    <string name="feature_receiving_while_open_consequence">Nachrichten warten, bis du Sparrow öffnest: bis zu 7 Tage, erste Einladungen 24 Stunden.</string>
+    <string name="feature_receiving_check">Ab und zu nachsehen</string>
+    <string name="feature_receiving_check_consequence">Android sieht höchstens alle 15 Minuten nach, im Tiefschlaf seltener: Nachrichten kommen spät, wenig Akku.</string>
+    <string name="feature_receiving_why">Warum ist das so?</string>
+    <string name="feature_receiving_why_text">Sparrow nutzt keinen Google-Push, also erfährt keine Firma, wann du Nachrichten bekommst, und niemand braucht einen Schlüssel von uns, um einen Server zu betreiben. Android erlaubt einer App eine eigene Verbindung nur mit einer sichtbaren Benachrichtigung.</string>
+    <string name="feature_receiving_battery_declined">Ohne die Akku-Ausnahme kann Android die Verbindung im Tiefschlaf trennen.</string>
+    <string name="feature_receiving_ios_note">Auf dem iPhone kann Sparrow die Verbindung wegen der Einschränkungen von iOS nicht im Hintergrund offen halten. Nachrichten kommen an, wenn du die App öffnest.</string>
 </resources>

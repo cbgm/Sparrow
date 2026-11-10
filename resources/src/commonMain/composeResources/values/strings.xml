@@ -974,4 +974,16 @@
     <string name="feature_identity_picture_save_failed">Profile picture could not be saved. Please try again.</string>
     <string name="feature_identity_picture_remove_failed">Profile picture could not be removed. Please try again.</string>
     <string name="feature_identity_backup_failed">The identity backup could not be completed. Please try again.</string>
+    <string name="feature_receiving_title">Receiving messages</string>
+    <string name="feature_receiving_description">How should messages reach you while Sparrow is closed?</string>
+    <string name="feature_receiving_always">Always connected (recommended)</string>
+    <string name="feature_receiving_always_consequence">Messages arrive at once; a permanent notification shows, and it costs a little battery.</string>
+    <string name="feature_receiving_while_open">Only while the app is open</string>
+    <string name="feature_receiving_while_open_consequence">Messages wait until you open Sparrow: up to 7 days, first invites 24 hours.</string>
+    <string name="feature_receiving_check">Check now and then</string>
+    <string name="feature_receiving_check_consequence">Android checks every 15 minutes at most, less in deep sleep: messages come late, little battery.</string>
+    <string name="feature_receiving_why">Why is that?</string>
+    <string name="feature_receiving_why_text">Sparrow uses no Google push, so no company learns when you get messages, and nobody needs a key from us to run a server. Android only lets an app keep its own connection with a visible notification.</string>
+    <string name="feature_receiving_battery_declined">Without the battery exception, Android may drop the connection in deep sleep.</string>
+    <string name="feature_receiving_ios_note">On iPhone, Sparrow cannot keep the connection open in the background because of iOS restrictions. Messages arrive when you open the app.</string>
 </resources>

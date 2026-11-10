@@ -50,9 +50,12 @@ class ForegroundRuntimeCoordinator(
         isForeground.value = false
     }
 
-    // Without usable identity keys the connection and runners pause until the keys are restored.
+    // Without usable identity keys the connection and runners pause until the keys are restored. While the app is not
+    // on screen they keep running as long as something holds the connection (the foreground service, a check).
     private suspend fun observeForegroundState() {
-        combine(isForeground, foreground.observeIdentityKeysUsable()) { visible, keysUsable -> visible && keysUsable }
+        combine(isForeground, foreground.connectionKeepAlive.observeHeld(), foreground.observeIdentityKeysUsable()) { visible, held, keysUsable ->
+            (visible || held) && keysUsable
+        }
             .distinctUntilChanged()
             .collectLatest { shouldRun ->
                 if (shouldRun) {

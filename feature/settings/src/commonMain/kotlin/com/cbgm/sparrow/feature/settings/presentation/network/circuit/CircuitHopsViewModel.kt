@@ -6,16 +6,20 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
+import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 import com.cbgm.sparrow.feature.transport.circuit.CircuitCount
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
+import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,10 +32,14 @@ class CircuitHopsViewModel(
     observeCircuitStatus: ObserveCircuitStatusUseCase,
     observeCircuitFallback: ObserveCircuitFallbackUseCase,
     observeCircuitCount: ObserveCircuitCountUseCase,
+    observeConnectionMode: ObserveConnectionModeUseCase,
+    canConnectWhileClosed: CanConnectWhileClosedUseCase,
     private val setCircuitHopCount: SetCircuitHopCountUseCase,
     private val setCircuitFallback: SetCircuitFallbackUseCase,
-    private val setCircuitCount: SetCircuitCountUseCase
+    private val setCircuitCount: SetCircuitCountUseCase,
+    private val setConnectionMode: SetConnectionModeUseCase
 ) : BaseViewModel() {
+    private val connectsWhileClosed = canConnectWhileClosed()
     private val draftHopCount = MutableStateFlow<Int?>(null)
 
     val uiState: StateFlow<CircuitHopsUiState> =
@@ -56,9 +64,11 @@ class CircuitHopsViewModel(
                 sendsDirectlyWithoutCircuit = sendsDirectly,
                 selectedCircuitCount = circuitCount,
                 minimumCircuitCount = CircuitCount.MINIMUM,
-                maximumCircuitCount = CircuitCount.MAXIMUM
+                maximumCircuitCount = CircuitCount.MAXIMUM,
+                connectsWhileClosed = connectsWhileClosed
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLISECONDS), CircuitHopsUiState())
+        }.combine(observeConnectionMode()) { state, mode -> state.copy(connectionMode = mode) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLISECONDS), CircuitHopsUiState())
 
     fun onUiEvent(event: CircuitHopsUiEvent) {
         when (event) {
@@ -67,6 +77,7 @@ class CircuitHopsViewModel(
             CircuitHopsUiEvent.HopCountChosen -> saveDraft()
             is CircuitHopsUiEvent.SendDirectlyChanged -> saveFallback(event.sendsDirectly)
             is CircuitHopsUiEvent.CircuitCountChanged -> saveCircuitCount(event.circuitCount)
+            is CircuitHopsUiEvent.ConnectionModeChanged -> saveConnectionMode(event.mode)
         }
     }
 
@@ -83,6 +94,14 @@ class CircuitHopsViewModel(
         viewModelScope.launch {
             setCircuitCount(circuitCount).onFailure { error ->
                 SparrowLog.error("CircuitHopsViewModel", "Circuit count could not be saved", error)
+            }
+        }
+    }
+
+    private fun saveConnectionMode(mode: ConnectionMode) {
+        viewModelScope.launch {
+            setConnectionMode(mode).onFailure { error ->
+                SparrowLog.error("CircuitHopsViewModel", "Connection mode could not be saved", error)
             }
         }
     }
