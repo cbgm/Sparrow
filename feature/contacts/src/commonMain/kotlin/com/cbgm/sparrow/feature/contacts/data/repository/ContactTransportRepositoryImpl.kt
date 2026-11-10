@@ -44,4 +44,7 @@ class ContactTransportRepositoryImpl(
 
     override suspend fun getMutualSigningPublicKey(contactId: String): Result<ByteArray?> =
         safeSuspendCall { mailboxContacts.findMutualSigningPublicKey(contactId) }
+
+    override suspend fun getSigningPublicKey(contactId: String): Result<ByteArray?> =
+        safeSuspendCall { mailboxContacts.findSigningPublicKey(contactId) }
 }

@@ -42,6 +42,23 @@ class MailboxRouteProvisionerTest {
         }
 
     @Test
+    fun aDirectContactGetsAMailboxRightAfterTheHandshakeBeforeTheIdentityIsVerified() =
+        runTest {
+            fakes.contacts.facts = listOf(facts(CONTACT_ID, hasDirectConversation = true, hasMutualIdentity = false))
+            fakes.identity.establishedPeers += CONTACT_ID
+
+            assertEquals(1, fakes.provisioner().provisionMissing().getOrThrow())
+        }
+
+    @Test
+    fun aGroupMemberWithoutMutualIdentityGetsNoMailbox() =
+        runTest {
+            fakes.contacts.facts = listOf(facts(CONTACT_ID, sharesActiveGroup = true, hasMutualIdentity = false))
+
+            assertEquals(0, fakes.provisioner().provisionMissing().getOrThrow())
+        }
+
+    @Test
     fun whenEveryContactHasAMailboxNothingIsAskedOfTheNode() =
         runTest {
             fakes.routes.local[CONTACT_ID] = mailboxCredential(CONTACT_ID, "current", expiresAt = SystemClock.nowEpochMilliseconds() + DAY)

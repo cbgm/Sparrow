@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMutualContactSigningPublicKeyUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxRouteSigningPublicKeyUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
@@ -12,7 +12,7 @@ import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 class MailboxRoutePacketHandler(
-    private val getMutualContactSigningPublicKey: GetMutualContactSigningPublicKeyUseCase,
+    private val getRouteSigningPublicKey: GetMailboxRouteSigningPublicKeyUseCase,
     private val repository: MailboxRouteRepository,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: MailboxRoutePayloadEncoder
@@ -27,8 +27,8 @@ class MailboxRoutePacketHandler(
             val route = (packet as MailboxRoutePacket).deliveryRoute
             validateRoute(route)
             val signingPublicKey =
-                getMutualContactSigningPublicKey(context.contactId).getOrThrow()
-                    ?: error("Contact identity is unavailable or identity exchange is incomplete")
+                getRouteSigningPublicKey(context.contactId).getOrThrow()
+                    ?: error("Contact identity is unavailable or the handshake is incomplete")
             signatureCrypto
                 .verify(
                     payload = payloadEncoder.encode(route.copy(identitySignature = byteArrayOf())),

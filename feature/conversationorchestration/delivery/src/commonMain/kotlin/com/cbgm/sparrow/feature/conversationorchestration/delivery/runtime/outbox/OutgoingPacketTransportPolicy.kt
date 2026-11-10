@@ -75,6 +75,14 @@ class OutgoingPacketTransportPolicy {
                     )
                 }
 
+                // Sent right after the handshake, before the identity is verified, with the key the handshake set.
+                is MailboxRoutePacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = true,
+                        allowsEncryptionBeforeMutualIdentity = true,
+                        encryptionUnavailableMessage = "Mailbox route requires the contact's key from the handshake"
+                    )
+
                 is ChatMessagePacket,
                 is OperationMessagePacket ->
                     OutgoingTransportRequirement(
@@ -95,8 +103,7 @@ class OutgoingPacketTransportPolicy {
                 is GroupMemberActivationAcknowledgementPacket,
                 is GroupVerificationReceiptPacket,
                 is GroupVerificationSnapshotRequestPacket,
-                is GroupVerificationSnapshotPacket,
-                is MailboxRoutePacket ->
+                is GroupVerificationSnapshotPacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = true,
                         encryptionUnavailableMessage =

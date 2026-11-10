@@ -75,10 +75,11 @@ internal fun mailboxCredential(
 internal fun facts(
     contactId: String,
     hasDirectConversation: Boolean = false,
-    sharesActiveGroup: Boolean = false
+    sharesActiveGroup: Boolean = false,
+    hasMutualIdentity: Boolean = true
 ) = MailboxContactFacts(
     contactId = contactId,
-    hasMutualIdentity = true,
+    hasMutualIdentity = hasMutualIdentity,
     hasRoutingId = true,
     hasDirectConversation = hasDirectConversation,
     sharesActiveGroup = sharesActiveGroup
@@ -240,6 +241,8 @@ internal class FakeContactTransport : ContactTransportRepository {
     override suspend fun reconcileKnownContacts(): Result<Unit> = error(NOT_USED)
 
     override suspend fun getMutualSigningPublicKey(contactId: String): Result<ByteArray?> = error(NOT_USED)
+
+    override suspend fun getSigningPublicKey(contactId: String): Result<ByteArray?> = error(NOT_USED)
 }
 
 /** Only the peer state is read: peers in [establishedPeers] have an established exchange. */

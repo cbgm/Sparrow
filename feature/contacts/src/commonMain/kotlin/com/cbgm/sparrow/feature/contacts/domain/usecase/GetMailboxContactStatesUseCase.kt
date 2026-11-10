@@ -7,9 +7,10 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactTransportRepos
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 
 /**
- * Decides which contacts get a mailbox route. Besides a mutual identity and a routing ID, the contact must still be
- * someone we talk to: a direct chat with an established exchange, or an active group we share (group packets also
- * arrive through the mailbox). A contact whose chat was deleted is therefore never sent a fresh route.
+ * Decides which contacts get a mailbox route. Besides a routing ID, the contact must still be someone we talk to: a
+ * direct chat with an established exchange (right after the handshake, before the identity is verified, so the
+ * messages after the handshake already use mailboxes), or an active group we share with a mutual identity (group
+ * packets also arrive through the mailbox). A contact whose chat was deleted is therefore never sent a fresh route.
  */
 class GetMailboxContactStatesUseCase(
     private val repository: ContactTransportRepository,
@@ -23,8 +24,8 @@ class GetMailboxContactStatesUseCase(
         }
 
     private suspend fun isProvisioningEligible(contact: MailboxContactFacts): Boolean {
-        if (!contact.hasMutualIdentity || !contact.hasRoutingId) return false
-        if (contact.sharesActiveGroup) return true
+        if (!contact.hasRoutingId) return false
+        if (contact.sharesActiveGroup && contact.hasMutualIdentity) return true
         return contact.hasDirectConversation &&
             getIdentityPeerState(contact.contactId).getOrThrow().hasEstablishedExchange
     }
