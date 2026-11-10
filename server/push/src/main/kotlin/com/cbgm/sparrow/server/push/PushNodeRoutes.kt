@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.server.push
 
-import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
@@ -18,7 +17,6 @@ import io.ktor.server.routing.post
 internal fun Route.installNodePushRoutes(runtime: PushRuntime) {
     installNodeEnvelopeRoute(runtime)
     installNodeEnvelopeReplicaRoute(runtime)
-    installNodeWakeUpRoute(runtime)
     installNodePendingRoute(runtime)
     installNodeAcknowledgementRoute(runtime)
 }
@@ -41,7 +39,7 @@ private fun Route.installNodeEnvelopeRoute(runtime: PushRuntime) {
                 call.respond(HttpStatusCode.Unauthorized)
 
             else -> {
-                val accepted = runtime.coordinator.accept(envelope)
+                val accepted = runtime.pendingEnvelopes.store(envelope)
                 call.respond(
                     if (accepted) {
                         HttpStatusCode.Accepted
@@ -72,7 +70,7 @@ private fun Route.installNodeEnvelopeReplicaRoute(runtime: PushRuntime) {
                 call.respond(HttpStatusCode.Unauthorized)
 
             else -> {
-                val accepted = runtime.coordinator.replicate(envelope)
+                val accepted = runtime.pendingEnvelopes.store(envelope)
                 call.respond(
                     if (accepted) {
                         HttpStatusCode.Accepted
@@ -80,43 +78,6 @@ private fun Route.installNodeEnvelopeReplicaRoute(runtime: PushRuntime) {
                         HttpStatusCode.InsufficientStorage
                     }
                 )
-            }
-        }
-    }
-}
-
-private fun Route.installNodeWakeUpRoute(runtime: PushRuntime) {
-    post("/v1/node-push/wake-ups/{recipientId}") {
-        val recipientId = call.parameters["recipientId"]
-        val path = "/v1/node-push/wake-ups/$recipientId"
-        val body = call.receiveText()
-        val ticket = runCatching { serverJson.decodeFromString<MailboxWakeTicket>(body) }.getOrNull()
-        when {
-            recipientId.isNullOrBlank() || ticket == null ->
-                call.respond(HttpStatusCode.BadRequest)
-
-            !call.hasNodeAccess(runtime, "POST", path, body, NodeCapability.MAILBOX) ->
-                call.respond(HttpStatusCode.Unauthorized)
-
-            // Any node may host mailboxes; it may only wake devices that gave it a ticket.
-            !MailboxWakeTicketValidator.allows(
-                ticket = ticket,
-                recipientId = recipientId,
-                nodeId = call.nodeRequestAuthentication()?.nodeId,
-                nowEpochMilliseconds = System.currentTimeMillis()
-            ) ->
-                call.respond(HttpStatusCode.Forbidden)
-
-            // A successful wake-up means this Control Plane actually owns a
-            // registered device for the recipient. Previously every plane
-            // returned 202 even with no device, preventing the mailbox from
-            // trying the next dynamically discovered plane.
-            runtime.devices.find(recipientId).isEmpty() ->
-                call.respond(HttpStatusCode.NotFound)
-
-            else -> {
-                runtime.coordinator.notifyRecipient(recipientId)
-                call.respond(HttpStatusCode.Accepted)
             }
         }
     }
@@ -221,24 +182,6 @@ private suspend fun ApplicationCall.hasNodeRouteAccess(
         } ?: false
     return nodeAuthorized && ownsRoute
 }
-
-private suspend fun ApplicationCall.hasNodeAccess(
-    runtime: PushRuntime,
-    method: String,
-    path: String,
-    body: String,
-    capability: NodeCapability
-): Boolean =
-    runtime.nodeRequestAuthorizer?.isAuthorized(
-        authentication = nodeRequestAuthentication(),
-        method = method,
-        path = path,
-        body = body,
-        requirements =
-            NodeRequestAuthorizationRequirements(
-                requiredCapability = capability
-            )
-    ) ?: false
 
 private const val NODE_ENVELOPE_PATH = "/v1/node-push/envelopes"
 private const val NODE_ENVELOPE_REPLICA_PATH = "/v1/node-push/replicas/envelopes"

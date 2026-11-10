@@ -96,7 +96,6 @@ data class CreateMailboxRequest(
     val nodeEndpoint: String,
     val routeSequence: Long = 0L,
     val expiresAtEpochMilliseconds: Long,
-    val wakeTicket: MailboxWakeTicket? = null,
     val creationWork: MailboxCreationWork? = null
 )
 
@@ -106,20 +105,6 @@ data class MailboxCreationWork(
     val stamp: String,
     val createdAtEpochMilliseconds: Long,
     val nonce: Long
-)
-
-/**
- * The mailbox owner's permission for one mailbox node to wake its device through push. Signed with
- * the device's identity key (the routing ID is derived from it), so a node can only wake devices
- * whose mailbox it holds. It reveals nothing the mailbox node would not learn from its envelopes.
- */
-@Serializable
-class MailboxWakeTicket(
-    val routingId: String,
-    val nodeId: String,
-    val expiresAtEpochMilliseconds: Long,
-    val clientSigningPublicKey: ByteArray,
-    val clientSignature: ByteArray
 )
 
 @Serializable

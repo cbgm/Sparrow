@@ -88,8 +88,7 @@ class MailboxWaitTest {
                             maximumMailboxBytes = 100L * 1_048_576L,
                             creationWorkBits = 0
                         ),
-                    store = MailboxStore(),
-                    pushNotifier = MailboxPushNotifier.disabled()
+                    store = MailboxStore()
                 )
             }
             block()

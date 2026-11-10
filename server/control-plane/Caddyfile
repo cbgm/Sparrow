@@ -62,11 +62,6 @@
         reverse_proxy push:8095
     }
 
-    @push path /push /push/*
-    handle @push {
-        reverse_proxy push:8095
-    }
-
     respond 404
 }
 

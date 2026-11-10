@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.server.push
 
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
-import com.cbgm.sparrow.server.security.RateLimitPolicy
 import io.ktor.server.application.Application
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -37,13 +36,6 @@ data class PushConfig(
     val databaseMaximumPoolSize: Int,
     val maximumEnvelopes: Int,
     val envelopeRetentionMilliseconds: Long,
-    val wakeUpLifetimeMilliseconds: Long,
-    val deviceRegistrationLifetimeMilliseconds: Long = DEFAULT_DEVICE_LIFETIME_MILLISECONDS,
-    val deviceRegistrationRateLimit: RateLimitPolicy =
-        RateLimitPolicy(
-            maximumRequests = DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS,
-            windowMilliseconds = DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS
-        ),
     val trustProxyHeaders: Boolean = false
 ) {
     init {
@@ -55,12 +47,6 @@ data class PushConfig(
         }
         require(envelopeRetentionMilliseconds > 0L) {
             "Envelope retention must be positive"
-        }
-        require(wakeUpLifetimeMilliseconds > 0L) {
-            "Wake-up lifetime must be positive"
-        }
-        require(deviceRegistrationLifetimeMilliseconds > 0L) {
-            "Push device lifetime must be positive"
         }
     }
 
@@ -87,32 +73,6 @@ data class PushConfig(
                 envelopeRetentionMilliseconds =
                     System.getenv("PUSH_ENVELOPE_RETENTION_MILLISECONDS")?.toLongOrNull()
                         ?: DEFAULT_ENVELOPE_RETENTION_MILLISECONDS,
-                wakeUpLifetimeMilliseconds =
-                    System.getenv("PUSH_WAKE_UP_LIFETIME_MILLISECONDS")?.toLongOrNull()
-                        ?: DEFAULT_WAKE_UP_LIFETIME_MILLISECONDS,
-                deviceRegistrationLifetimeMilliseconds =
-                    ServiceEnvironment.long(
-                        "PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS",
-                        DEFAULT_DEVICE_LIFETIME_MILLISECONDS
-                    ),
-                deviceRegistrationRateLimit =
-                    RateLimitPolicy(
-                        maximumRequests =
-                            ServiceEnvironment.int(
-                                "PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS",
-                                DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS
-                            ),
-                        windowMilliseconds =
-                            ServiceEnvironment.long(
-                                "PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS",
-                                DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS
-                            ),
-                        maximumTrackedClients =
-                            ServiceEnvironment.int(
-                                "PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS",
-                                DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS
-                            )
-                    ),
                 trustProxyHeaders =
                     ServiceEnvironment.string("TRUST_PROXY_HEADERS", "false").toBoolean()
             )
@@ -121,10 +81,5 @@ data class PushConfig(
         private const val DEFAULT_MAXIMUM_ENVELOPES = 100_000
         private const val DEFAULT_ENVELOPE_RETENTION_MILLISECONDS =
             7L * 24L * 60L * 60L * 1_000L
-        private const val DEFAULT_WAKE_UP_LIFETIME_MILLISECONDS =
-            15L * 60L * 1_000L
-        private const val DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS = 60
-        private const val DEFAULT_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS = 60_000L
-        private const val DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS = 100_000
     }
 }

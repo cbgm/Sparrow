@@ -1,11 +1,8 @@
 package com.cbgm.sparrow.server.push
 
-import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
-import com.cbgm.sparrow.server.protocol.PushDeviceRegistrationRequest
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
-import com.cbgm.sparrow.server.security.enforceRateLimit
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -23,12 +20,8 @@ internal fun Application.installPushRoutes(
 ) {
     routing {
         installHealthRoute(runtime)
-        installDeviceRegistrationRoute(runtime)
-        installWakeUpInboxRoute(runtime)
-        installWakeUpAcknowledgementRoute(runtime)
         installNodePushRoutes(runtime)
         installInternalEnvelopeRoute(runtime, config)
-        installInternalWakeUpRoute(runtime, config)
         installInternalPendingRoute(runtime, config)
         installInternalAcknowledgementRoute(runtime, config)
     }
@@ -37,68 +30,9 @@ internal fun Application.installPushRoutes(
 private fun Route.installHealthRoute(runtime: PushRuntime) {
     get("/health") {
         call.respondText(
-            "ok fcmEnabled=${runtime.fcmEnabled} " +
-                "persistence=${runtime.stores.persistenceMode} " +
-                "devices=${runtime.devices.count()} " +
+            "ok persistence=${runtime.stores.persistenceMode} " +
                 "pendingEnvelopes=${runtime.pendingEnvelopes.count()}"
         )
-    }
-}
-
-/**
- * The only public route that changes a device binding. There is no public unregister: a binding ends when
- * the token is bound to another routing ID, FCM reports it unregistered, or it expires without renewal.
- */
-private fun Route.installDeviceRegistrationRoute(runtime: PushRuntime) {
-    post("/push/devices") {
-        if (call.enforceRateLimit(runtime.deviceRegistrationRateLimiter)) {
-            val request = call.receive<PushDeviceRegistrationRequest>()
-            val failure =
-                PushDeviceRegistrationValidator.validationFailure(
-                    request = request,
-                    nowEpochMilliseconds = System.currentTimeMillis()
-                )
-            if (failure == null) {
-                runtime.devices.register(
-                    PushDevice(
-                        routingId = request.routingId,
-                        token = request.token,
-                        platform = request.platform
-                    )
-                )
-                call.respond(HttpStatusCode.NoContent)
-            } else {
-                call.respond(failure.status, ErrorResponse(failure.code, failure.message))
-            }
-        }
-    }
-}
-
-private fun Route.installWakeUpInboxRoute(runtime: PushRuntime) {
-    get("/push/wake/{wakeUpId}/inbox") {
-        val recipientId = runtime.wakeUps.resolve(call.parameters["wakeUpId"])
-        if (recipientId == null) {
-            call.respond(HttpStatusCode.NotFound)
-        } else {
-            call.respond(
-                PendingTransportEnvelopesResponse(
-                    runtime.pendingEnvelopes.pending(recipientId)
-                )
-            )
-        }
-    }
-}
-
-private fun Route.installWakeUpAcknowledgementRoute(runtime: PushRuntime) {
-    post("/push/wake/{wakeUpId}/inbox/{envelopeId}/ack") {
-        val recipientId = runtime.wakeUps.resolve(call.parameters["wakeUpId"])
-        val envelopeId = call.parameters["envelopeId"]
-        if (recipientId == null || envelopeId.isNullOrBlank()) {
-            call.respond(HttpStatusCode.NotFound)
-        } else {
-            runtime.pendingEnvelopes.remove(recipientId, envelopeId)
-            call.respond(HttpStatusCode.NoContent)
-        }
     }
 }
 
@@ -108,7 +42,7 @@ private fun Route.installInternalEnvelopeRoute(
 ) {
     post("/internal/v1/envelopes") {
         if (call.hasInternalAccess(config.pushInternalApiToken)) {
-            val accepted = runtime.coordinator.accept(call.receive<TransportEnvelope>())
+            val accepted = runtime.pendingEnvelopes.store(call.receive<TransportEnvelope>())
             call.respond(
                 if (accepted) {
                     HttpStatusCode.Accepted
@@ -116,25 +50,6 @@ private fun Route.installInternalEnvelopeRoute(
                     HttpStatusCode.InsufficientStorage
                 }
             )
-        } else {
-            call.respond(HttpStatusCode.Unauthorized)
-        }
-    }
-}
-
-private fun Route.installInternalWakeUpRoute(
-    runtime: PushRuntime,
-    config: PushConfig
-) {
-    post("/internal/v1/wake-ups/{recipientId}") {
-        if (call.hasInternalAccess(config.pushInternalApiToken)) {
-            val recipientId = call.parameters["recipientId"]
-            if (recipientId.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest)
-            } else {
-                runtime.coordinator.notifyRecipient(recipientId)
-                call.respond(HttpStatusCode.Accepted)
-            }
         } else {
             call.respond(HttpStatusCode.Unauthorized)
         }

@@ -26,8 +26,6 @@ kotlin {
 
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.work.runtime)
-            implementation(libs.firebase.messaging)
-            implementation(libs.firebase.analytics)
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.workmanager)
         }

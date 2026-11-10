@@ -60,8 +60,6 @@ services:
       MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-b-database:5432/sparrow_mailbox_b
       MAILBOX_DATABASE_USER: sparrow_mailbox_b
       MAILBOX_DATABASE_PASSWORD: ${MAILBOX_B_DATABASE_PASSWORD:-local-development-password}
-      PUSH_INTERNAL_URL: http://push:8095
-      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       MAILBOX_MAXIMUM_MAILBOXES: ${MAILBOX_MAXIMUM_MAILBOXES:-100000}
       MAILBOX_CREATION_WORK_BITS: ${MAILBOX_CREATION_WORK_BITS:-18}
     ports:

@@ -4,7 +4,6 @@ import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.CreateMailboxResponse
 import com.cbgm.sparrow.server.protocol.DeliveryRoute
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -100,8 +99,7 @@ class MailboxStore(
                     ownerKeyHash = ownerKeyHash,
                     sendCapabilityHash = hashCapability(sendCapability),
                     retrievalCapabilityHash = hashCapability(retrievalCapability),
-                    expiresAtEpochMilliseconds = request.expiresAtEpochMilliseconds,
-                    wakeTicket = request.wakeTicket
+                    expiresAtEpochMilliseconds = request.expiresAtEpochMilliseconds
                 )
 
             MailboxCreationResult.Created(
@@ -224,7 +222,7 @@ class MailboxStore(
             MailboxResult.Rejected("MAILBOX_QUOTA_EXCEEDED")
         } else {
             mailbox.envelopes.putIfAbsent(envelope.envelopeId, envelope)
-            MailboxResult.Stored(duplicate, mailbox.wakeTicket)
+            MailboxResult.Stored(duplicate)
         }
     }
 }
@@ -234,7 +232,6 @@ private data class InMemoryMailbox(
     val sendCapabilityHash: ByteArray,
     val retrievalCapabilityHash: ByteArray,
     val expiresAtEpochMilliseconds: Long,
-    val wakeTicket: MailboxWakeTicket?,
     val envelopes: ConcurrentHashMap<String, FederatedEnvelope> = ConcurrentHashMap()
 ) {
     override fun equals(other: Any?): Boolean {
@@ -247,7 +244,6 @@ private data class InMemoryMailbox(
         if (ownerKeyHash != other.ownerKeyHash) return false
         if (!sendCapabilityHash.contentEquals(other.sendCapabilityHash)) return false
         if (!retrievalCapabilityHash.contentEquals(other.retrievalCapabilityHash)) return false
-        if (wakeTicket != other.wakeTicket) return false
         if (envelopes != other.envelopes) return false
 
         return true
@@ -258,17 +254,14 @@ private data class InMemoryMailbox(
         result = 31 * result + ownerKeyHash.hashCode()
         result = 31 * result + sendCapabilityHash.contentHashCode()
         result = 31 * result + retrievalCapabilityHash.contentHashCode()
-        result = 31 * result + (wakeTicket?.hashCode() ?: 0)
         result = 31 * result + envelopes.hashCode()
         return result
     }
 }
 
 sealed interface MailboxResult {
-    /** [wakeTicket] is the owner's permission to wake its device, when the owner gave one. */
     data class Stored(
-        val duplicate: Boolean,
-        val wakeTicket: MailboxWakeTicket? = null
+        val duplicate: Boolean
     ) : MailboxResult
 
     data class Rejected(

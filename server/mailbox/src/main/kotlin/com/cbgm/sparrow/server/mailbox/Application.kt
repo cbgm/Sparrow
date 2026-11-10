@@ -24,26 +24,22 @@ fun main() {
 
 fun Application.mailboxModule(
     config: MailboxConfig = MailboxConfig.fromEnvironment(),
-    store: MailboxStorage = createMailboxStorage(config),
-    pushNotifier: MailboxPushNotifier = MailboxPushNotifier.fromEnvironment()
+    store: MailboxStorage = createMailboxStorage(config)
 ) {
-    configureMailboxLifecycle(store, pushNotifier)
+    configureMailboxLifecycle(store)
     configureMailboxPlugins(config, store)
     configureMailboxRoutes(
         config = config,
         store = store,
-        pushNotifier = pushNotifier,
         creationWork = CreationWorkCheck(config.creationWorkBits)
     )
 }
 
 private fun Application.configureMailboxLifecycle(
-    store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier
+    store: MailboxStorage
 ) {
     monitor.subscribe(ApplicationStopped) {
         store.close()
-        pushNotifier.close()
     }
 }
 

@@ -222,10 +222,7 @@ internal class RelayDestinationPolicy(
             listOf(
                 "GET" to Regex("/v1/nodes"),
                 "GET" to Regex("/health/registry"),
-                "POST" to Regex("/v1/alias-claims"),
-                "POST" to Regex("/push/devices"),
-                "GET" to Regex("/push/wake/[A-Za-z0-9_-]{1,128}/inbox"),
-                "POST" to Regex("/push/wake/[A-Za-z0-9_-]{1,128}/inbox/[A-Za-z0-9_.-]{1,128}/ack")
+                "POST" to Regex("/v1/alias-claims")
             )
     }
 }

@@ -155,8 +155,6 @@ services:
       MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/sparrow_mailbox
       MAILBOX_DATABASE_USER: sparrow_mailbox
       MAILBOX_DATABASE_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
-      PUSH_INTERNAL_URL: http://push:8095
-      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       MAILBOX_MAXIMUM_MAILBOXES: ${MAILBOX_MAXIMUM_MAILBOXES:-100000}
       MAILBOX_CREATION_WORK_BITS: ${MAILBOX_CREATION_WORK_BITS:-18}
     ports:
@@ -198,22 +196,11 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
       PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
       PUSH_DATABASE_USER: sparrow_push
       PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
-      PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS:-60}
-      PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
-      PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
     ports:
       - "127.0.0.1:8095:8095"
-    volumes:
-      - type: bind
-        source: ${FIREBASE_ADMIN_CREDENTIALS:?Define FIREBASE_ADMIN_CREDENTIALS in server/.env}
-        target: /run/secrets/firebase-admin.json
-        read_only: true
-        bind:
-          create_host_path: false
     depends_on:
       node-registry:
         condition: service_healthy

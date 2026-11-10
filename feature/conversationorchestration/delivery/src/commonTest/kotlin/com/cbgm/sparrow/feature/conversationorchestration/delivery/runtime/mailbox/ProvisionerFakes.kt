@@ -21,10 +21,8 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseC
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
@@ -108,8 +106,7 @@ internal class ProvisionerFakes {
                     gateway,
                     FakeSigningKeys,
                     FakeSignatures,
-                    MailboxRoutePayloadEncoder(),
-                    CreateMailboxWakeTicketUseCase(FakeLocalRoutingId, FakeSigningKeys, FakeSignatures)
+                    MailboxRoutePayloadEncoder()
                 ),
             protocolOutbox = outbox
         )
@@ -182,8 +179,7 @@ internal class RecordingMailboxGateway : MailboxGateway {
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long,
-        wakeTicket: MailboxWakeTicket
+        expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> {
         created += contactId
         return Result.success(

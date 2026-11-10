@@ -126,19 +126,15 @@ For the Control Plane, optionally select an administrator-owned Google service-a
 that it is structurally a service account and stores it (Windows: below
 `%LOCALAPPDATA%\Sparrow\Server\Secrets\<control-plane-id>`; Linux/macOS:
 `control-plane/secrets/firebase-admin.json`), then attaches it read-only via
-`docker-compose.firebase.yml` to two services:
+`docker-compose.firebase.yml` to the `presence-directory`, which verifies the Firebase phone sign-in token
+that the app sends once, with its first route registration at sign-up (`GOOGLE_APPLICATION_CREDENTIALS`).
+Sparrow uses no push service: the app keeps its own connection instead.
 
-- `push` sends FCM wake-ups with it;
-- `presence-directory` verifies the Firebase phone sign-in token that the app sends once, with its
-  first route registration at sign-up (`GOOGLE_APPLICATION_CREDENTIALS`).
-
-Both use the Firebase project `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`, the project of the
-Android app). The account therefore needs Firebase Cloud Messaging **and** Firebase Authentication
-access to that project. The importer does **not** grant this access or verify a real device delivery;
+It uses the Firebase project `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`, the project of the
+Android app). The account therefore needs Firebase Authentication access to that project. The importer does **not** grant this access or verify a real device delivery;
 authorization must be set up separately by an operator with the proper privileges.
 
-Without the credential file, the push HTTP service continues running but FCM sending is disabled, and
-phone verification tokens are not checked (registrations are accepted with or without a token). With
+Without the credential file, phone verification tokens are not checked (registrations are accepted with or without a token). With
 credentials, a registration that carries a token is accepted only if the token is a valid Firebase
 phone sign-in whose number matches the advertised phone alias; otherwise it is rejected with
 `PHONE_VERIFICATION_FAILED`. Registrations without a token (every later route refresh) are always

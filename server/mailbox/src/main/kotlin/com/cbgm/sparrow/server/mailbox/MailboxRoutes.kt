@@ -24,7 +24,6 @@ import io.ktor.server.routing.routing
 internal fun Application.configureMailboxRoutes(
     config: MailboxConfig,
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier,
     creationWork: CreationWorkCheck,
     arrivals: MailboxArrivals = MailboxArrivals()
 ) {
@@ -37,7 +36,7 @@ internal fun Application.configureMailboxRoutes(
             call.respondReadyMailboxes(store, arrivals)
         }
         post("/v1/mailboxes/{mailboxId}/envelopes") {
-            call.storeEnvelope(store, pushNotifier, arrivals)
+            call.storeEnvelope(store, arrivals)
         }
         get("/v1/mailboxes/{mailboxId}/envelopes") {
             call.respondPendingEnvelopes(store)
@@ -99,7 +98,6 @@ private suspend fun ApplicationCall.respondReadyMailboxes(
 
 private suspend fun ApplicationCall.storeEnvelope(
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier,
     arrivals: MailboxArrivals
 ) {
     val mailboxId = parameters["mailboxId"]
@@ -107,7 +105,7 @@ private suspend fun ApplicationCall.storeEnvelope(
     when {
         mailboxId == null -> respond(HttpStatusCode.BadRequest)
         capability == null -> respond(HttpStatusCode.Unauthorized)
-        else -> storeAuthorizedEnvelope(mailboxId, capability, store, pushNotifier, arrivals)
+        else -> storeAuthorizedEnvelope(mailboxId, capability, store, arrivals)
     }
 }
 
@@ -115,7 +113,6 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     mailboxId: String,
     capability: String,
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier,
     arrivals: MailboxArrivals
 ) {
     val request = receive<MailboxEnvelopeRequest>()
@@ -126,14 +123,7 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
         }
     when (val result = store.store(mailboxId, capability, envelope)) {
         is MailboxResult.Stored -> {
-            // Only the owner's ticket decides whom to wake; the sender's recipient field does not.
-            val wakeTicket = result.wakeTicket
             if (!result.duplicate) arrivals.stored(mailboxId)
-            // Typing indicators live only seconds: waking a phone for them would cost battery for nothing.
-            val worthWaking = envelope.expiresAtEpochMilliseconds - envelope.createdAtEpochMilliseconds > SHORT_LIVED_MILLISECONDS
-            if (!result.duplicate && wakeTicket != null && worthWaking) {
-                runCatching { pushNotifier.notify(wakeTicket) }
-            }
             respond(
                 HttpStatusCode.Accepted,
                 FederationAcknowledgement(
@@ -216,7 +206,6 @@ private fun List<FederatedEnvelope>.firstPage(): List<FederatedEnvelope> {
 }
 
 private const val PAGE_BYTES = 1_024 * 1_024
-private const val SHORT_LIVED_MILLISECONDS = 60_000L
 
 /** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
 private const val WAIT_MILLISECONDS = 8_000L

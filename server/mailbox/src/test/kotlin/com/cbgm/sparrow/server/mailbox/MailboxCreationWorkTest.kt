@@ -66,8 +66,7 @@ class MailboxCreationWorkTest {
                             maximumMailboxBytes = 100L * 1_048_576L,
                             creationWorkBits = BITS
                         ),
-                    store = MailboxStore(),
-                    pushNotifier = MailboxPushNotifier.disabled()
+                    store = MailboxStore()
                 )
             }
             block()

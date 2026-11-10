@@ -7,7 +7,6 @@ import kotlinx.coroutines.launch
 
 internal class AndroidNotificationRuntime(
     private val notificationManager: SparrowNotificationManager,
-    private val pushTokenRegistrationScheduler: PushTokenRegistrationScheduler,
     private val observeConnectionMode: ObserveConnectionModeUseCase,
     private val connectionModeApplier: ConnectionModeApplier,
     private val applicationScope: ApplicationCoroutineScope
@@ -18,10 +17,5 @@ internal class AndroidNotificationRuntime(
         applicationScope.launch {
             observeConnectionMode().distinctUntilChanged().collect(connectionModeApplier::apply)
         }
-    }
-
-    override fun requestPushTokenRegistration() {
-        pushTokenRegistrationScheduler.enqueueCurrentToken()
-        pushTokenRegistrationScheduler.schedulePeriodicRenewal()
     }
 }

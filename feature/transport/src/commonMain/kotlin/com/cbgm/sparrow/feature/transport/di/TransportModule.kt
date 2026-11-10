@@ -54,8 +54,6 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreatePushDeviceRegistrationUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
@@ -77,10 +75,6 @@ import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
-import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
-import com.cbgm.sparrow.feature.transport.push.PushTokenRegistrationGateway
-import com.cbgm.sparrow.feature.transport.push.inbox.HttpPendingEnvelopeGateway
-import com.cbgm.sparrow.feature.transport.push.inbox.PendingEnvelopeGateway
 import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.relay.OnionRelayClient
 import com.cbgm.sparrow.feature.transport.relay.OnionRelayEngine
@@ -384,14 +378,6 @@ val transportModule =
             )
         }
 
-        single<PendingEnvelopeGateway> {
-            HttpPendingEnvelopeGateway(
-                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
-            )
-        }
-
         single<MailboxGateway> {
             // Mailbox requests go through the circuit, so the mailbox node does not see the device's address.
             HttpMailboxGateway(
@@ -429,17 +415,6 @@ val transportModule =
             )
         }
 
-        single<PushTokenRegistrationGateway> {
-            HttpPushTokenRegistrationGateway(
-                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
-                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>(),
-                createPushDeviceRegistration = get<CreatePushDeviceRegistrationUseCase>()
-            )
-        }
-
-        singleOf(::CreatePushDeviceRegistrationUseCase)
-        singleOf(::CreateMailboxWakeTicketUseCase)
         singleOf(::GetGatewayNodesUseCase)
         singleOf(::ObservePreferredNodeUseCase)
         singleOf(::SetPreferredNodeUseCase)

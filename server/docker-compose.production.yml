@@ -131,11 +131,8 @@ services:
       TRUST_PROXY_HEADERS: "true"
       MAILBOX_DATABASE_PASSWORD: !reset null
       MAILBOX_DATABASE_PASSWORD_FILE: /run/secrets/mailbox-database-password
-      PUSH_INTERNAL_API_TOKEN: !reset null
-      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
     secrets:
       - mailbox-database-password
-      - push-internal-api-token
     networks:
       - edge
       - backend
@@ -165,8 +162,6 @@ services:
     secrets:
       - push-database-password
       - push-internal-api-token
-      - source: firebase-admin
-        target: firebase-admin.json
     networks:
       - edge
       - backend

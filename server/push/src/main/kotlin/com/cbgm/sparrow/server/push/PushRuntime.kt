@@ -4,7 +4,6 @@ import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
-import com.cbgm.sparrow.server.security.BoundedRateLimiter
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeDescriptorResolver
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
@@ -20,21 +19,11 @@ import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 internal data class PushRuntime(
     val stores: PushStores,
-    val devices: PushDeviceStore,
     val pendingEnvelopes: PendingEnvelopeStore,
-    val wakeUps: WakeUpStore,
-    val coordinator: PushCoordinator,
-    val scope: CoroutineScope,
-    val deviceRegistrationRateLimiter: BoundedRateLimiter,
-    val fcmEnabled: Boolean,
     val nodeApiHttpClient: HttpClient?,
     val nodeRequestAuthorizer: NodeRequestAuthorizer?,
     val nodeRouteOwnershipResolver: NodeRouteOwnershipResolver?
@@ -49,22 +38,11 @@ internal fun interface NodeRouteOwnershipResolver {
 
 internal fun createPushRuntime(config: PushConfig): PushRuntime {
     val stores = createPushStores(config)
-    val messaging = FirebasePushSender.createMessagingOrNull()
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val coordinator = createPushCoordinator(stores, messaging, scope)
     val nodeApi = createNodeApiRuntime(config.nodeRegistryUrl, config.presenceDirectoryUrl, config.pushInternalApiToken)
-    coordinator.resumePendingNotifications()
 
     return PushRuntime(
         stores = stores,
-        devices = stores.devices,
         pendingEnvelopes = stores.pendingEnvelopes,
-        wakeUps = stores.wakeUps,
-        coordinator = coordinator,
-        scope = scope,
-        deviceRegistrationRateLimiter =
-            BoundedRateLimiter(config.deviceRegistrationRateLimit),
-        fcmEnabled = messaging != null,
         nodeApiHttpClient = nodeApi?.httpClient,
         nodeRequestAuthorizer = nodeApi?.authorizer,
         nodeRouteOwnershipResolver = nodeApi?.routeOwnershipResolver
@@ -77,22 +55,6 @@ private fun createPushStores(config: PushConfig): PushStores =
     } else {
         createPostgresPushStores(config)
     }
-
-private fun createPushCoordinator(
-    stores: PushStores,
-    messaging: com.google.firebase.messaging.FirebaseMessaging?,
-    scope: CoroutineScope
-): PushCoordinator =
-    PushCoordinator(
-        pendingEnvelopes = stores.pendingEnvelopes,
-        sender =
-            FirebasePushSender(
-                messaging = messaging,
-                devices = stores.devices,
-                wakeUps = stores.wakeUps
-            ),
-        scope = scope
-    )
 
 private fun createNodeApiRuntime(
     registryUrl: String?,
@@ -162,7 +124,6 @@ private suspend fun fetchRouteOwnership(
 
 internal fun Application.configurePushLifecycle(runtime: PushRuntime) {
     monitor.subscribe(ApplicationStopped) {
-        runtime.scope.cancel()
         runtime.nodeApiHttpClient?.close()
         runtime.stores.close()
     }
@@ -173,7 +134,6 @@ internal fun Application.installPushPlugins(
     config: PushConfig
 ) {
     installServerObservability("push") {
-        runtime.devices.count()
         runtime.pendingEnvelopes.count()
         true
     }

@@ -72,36 +72,12 @@ internal class PostgresPushDatabase(
 
         val PUSH_SCHEMA_STATEMENTS =
             listOf(
+                // FCM is gone: the device tokens and wake-ups it needed are deleted, not kept.
                 """
-                CREATE TABLE IF NOT EXISTS push_devices (
-                    token TEXT PRIMARY KEY,
-                    routing_id TEXT NOT NULL,
-                    platform TEXT NOT NULL,
-                    updated_at_epoch_milliseconds BIGINT NOT NULL,
-                    expires_at_epoch_milliseconds BIGINT NOT NULL
-                )
+                DROP TABLE IF EXISTS push_devices
                 """.trimIndent(),
                 """
-                CREATE INDEX IF NOT EXISTS push_devices_routing_id_idx
-                ON push_devices (routing_id)
-                """.trimIndent(),
-                // Migration: rows written before registration proofs existed have no expiry. They are
-                // dropped, not given one, because nothing proves who bound them; the app registers again
-                // with a proof on its next start.
-                """
-                ALTER TABLE push_devices
-                ADD COLUMN IF NOT EXISTS expires_at_epoch_milliseconds BIGINT
-                """.trimIndent(),
-                """
-                DELETE FROM push_devices WHERE expires_at_epoch_milliseconds IS NULL
-                """.trimIndent(),
-                """
-                ALTER TABLE push_devices
-                ALTER COLUMN expires_at_epoch_milliseconds SET NOT NULL
-                """.trimIndent(),
-                """
-                CREATE INDEX IF NOT EXISTS push_devices_expiry_idx
-                ON push_devices (expires_at_epoch_milliseconds)
+                DROP TABLE IF EXISTS push_wake_ups
                 """.trimIndent(),
                 """
                 CREATE TABLE IF NOT EXISTS pending_envelopes (
@@ -121,17 +97,6 @@ internal class PostgresPushDatabase(
                 """
                 CREATE INDEX IF NOT EXISTS pending_envelopes_expiry_idx
                 ON pending_envelopes (expires_at_epoch_milliseconds)
-                """.trimIndent(),
-                """
-                CREATE TABLE IF NOT EXISTS push_wake_ups (
-                    wake_up_id TEXT PRIMARY KEY,
-                    recipient_id TEXT NOT NULL,
-                    expires_at_epoch_milliseconds BIGINT NOT NULL
-                )
-                """.trimIndent(),
-                """
-                CREATE INDEX IF NOT EXISTS push_wake_ups_expiry_idx
-                ON push_wake_ups (expires_at_epoch_milliseconds)
                 """.trimIndent()
             )
     }

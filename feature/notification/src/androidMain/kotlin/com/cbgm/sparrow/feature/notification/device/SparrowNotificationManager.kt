@@ -34,30 +34,6 @@ class SparrowNotificationManager(
     }
 
     /**
-     * The low-importance notification Android requires while the push sync runs as a foreground job, which
-     * WorkManager does for urgent work on Android 10 and 11.
-     */
-    fun createSyncNotification(): Notification {
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(
-                SYNC_CHANNEL_ID,
-                context.getString(ResourcesR.string.notification_channel_sync),
-                NotificationManager.IMPORTANCE_MIN
-            ).apply {
-                description = context.getString(ResourcesR.string.notification_channel_sync_description)
-            }
-        )
-        return NotificationCompat
-            .Builder(context, SYNC_CHANNEL_ID)
-            .setSmallIcon(ResourcesR.drawable.ic_sparrow_notification)
-            .setContentTitle(context.getString(ResourcesR.string.notification_checking_messages))
-            .setPriority(NotificationCompat.PRIORITY_MIN)
-            .setOngoing(true)
-            .setSilent(true)
-            .build()
-    }
-
-    /**
      * The notification Android requires while the connection service keeps Sparrow connected; tapping it opens the
      * app. Silent and at the lowest importance, so it does not get in the way.
      */
@@ -156,7 +132,6 @@ class SparrowNotificationManager(
         const val CONNECTION_NOTIFICATION_ID = 10_003
         private const val WAKE_UP_NOTIFICATION_ID = 10_001
         private const val MESSAGE_CHANNEL_ID = "sparrow-messages"
-        private const val SYNC_CHANNEL_ID = "sparrow-message-sync"
         private const val CONNECTION_CHANNEL_ID = "sparrow-connection"
         private const val MESSAGE_GROUP_KEY = "sparrow-message-notifications"
     }

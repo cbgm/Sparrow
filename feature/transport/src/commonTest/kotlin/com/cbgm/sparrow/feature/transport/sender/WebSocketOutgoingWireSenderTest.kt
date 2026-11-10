@@ -16,7 +16,6 @@ import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
@@ -236,8 +235,7 @@ class WebSocketOutgoingWireSenderTest {
             routeEndpoint: String,
             accessEndpoint: String,
             sequence: Long,
-            expiresAtEpochMilliseconds: Long,
-            wakeTicket: MailboxWakeTicket
+            expiresAtEpochMilliseconds: Long
         ): Result<LocalMailboxCredential> = error("Not used")
 
         override suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>> = error("Not used")

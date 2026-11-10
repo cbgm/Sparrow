@@ -2,7 +2,6 @@ package com.cbgm.sparrow.runtime.foreground
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
-import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -17,7 +16,6 @@ import kotlinx.coroutines.launch
 
 class ForegroundRuntimeCoordinator(
     private val foreground: ForegroundRuntimeDependencies,
-    private val notificationRuntime: PlatformNotificationRuntime,
     private val applicationScope: CoroutineScope
 ) {
     private val logger = SparrowLog.withTag("ForegroundRuntimeCoordinator")
@@ -39,7 +37,6 @@ class ForegroundRuntimeCoordinator(
 
         StartupTrace.event("app lifecycle visible")
         foreground.appVisibilityState.onAppVisible()
-        notificationRuntime.requestPushTokenRegistration()
         isForeground.value = true
     }
 

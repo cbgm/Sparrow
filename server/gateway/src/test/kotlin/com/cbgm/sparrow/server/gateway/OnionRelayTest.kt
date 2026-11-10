@@ -119,7 +119,7 @@ class OnionRelayTest {
     fun relaysReachOnlyControlPlanePathsAndOtherRelays() {
         assertNotNull(policy.controlPlane(RelayExit("GET", "https://control.test/v1/nodes")))
         assertNotNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/alias-claims")))
-        assertNotNull(policy.controlPlane(RelayExit("GET", "https://control.test/push/wake/abc_1/inbox")))
+        assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/push/devices")))
         assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/nodes")))
         assertNull(policy.controlPlane(RelayExit("GET", "https://control.test/v1/routes/scphone1_x")))
         assertNull(policy.controlPlane(RelayExit("GET", "https://user@control.test/v1/nodes")))

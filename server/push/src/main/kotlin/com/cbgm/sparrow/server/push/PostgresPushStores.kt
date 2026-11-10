@@ -16,21 +16,11 @@ internal fun createPostgresPushStores(config: PushConfig): PushStores {
         )
 
     return PushStores(
-        devices =
-            PostgresPushDeviceStore(
-                database = database,
-                lifetimeMilliseconds = config.deviceRegistrationLifetimeMilliseconds
-            ),
         pendingEnvelopes =
             PostgresPendingEnvelopeStore(
                 database = database,
                 maximumEnvelopes = config.maximumEnvelopes,
                 retentionMilliseconds = config.envelopeRetentionMilliseconds
-            ),
-        wakeUps =
-            PostgresWakeUpStore(
-                database = database,
-                lifetimeMilliseconds = config.wakeUpLifetimeMilliseconds
             ),
         persistenceMode = "postgresql",
         closeAction = database::close

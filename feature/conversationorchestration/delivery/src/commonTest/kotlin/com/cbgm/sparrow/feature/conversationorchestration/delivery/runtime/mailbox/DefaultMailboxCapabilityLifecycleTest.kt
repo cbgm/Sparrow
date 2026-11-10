@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -158,8 +157,7 @@ class DefaultMailboxCapabilityLifecycleTest {
             routeEndpoint: String,
             accessEndpoint: String,
             sequence: Long,
-            expiresAtEpochMilliseconds: Long,
-            wakeTicket: MailboxWakeTicket
+            expiresAtEpochMilliseconds: Long
         ): Result<LocalMailboxCredential> = error("Not used")
 
         override suspend fun pending(credential: LocalMailboxCredential) =

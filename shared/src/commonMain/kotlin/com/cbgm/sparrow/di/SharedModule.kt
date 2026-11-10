@@ -80,7 +80,6 @@ val sharedModule =
         single {
             ForegroundRuntimeCoordinator(
                 foreground = get(),
-                notificationRuntime = get(),
                 applicationScope = get<ApplicationCoroutineScope>()
             )
         }

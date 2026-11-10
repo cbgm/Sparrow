@@ -171,57 +171,7 @@ class ProtocolSignaturesTest {
         )
     }
 
-    @Test
-    fun pushDeviceContentMatchesTheSharedWireVector() {
-        val content =
-            ProtocolSignatures.pushDeviceContent(
-                PushDeviceBinding(
-                    routingId = "r",
-                    token = "t",
-                    platform = "p",
-                    issuedAtEpochMilliseconds = 258L
-                )
-            )
-
-        // The app builds the same bytes in feature/transport; both tests pin this vector.
-        assertEquals(PUSH_DEVICE_VECTOR, content.toHexString())
-    }
-
-    @Test
-    fun mailboxWakeContentMatchesTheSharedWireVector() {
-        val content = ProtocolSignatures.mailboxWakeContent("routing", "node", 1_234_567_890_123L)
-
-        // The app builds the same bytes in feature/transport; both tests pin this vector.
-        assertEquals(MAILBOX_WAKE_VECTOR, content.toHexString())
-    }
-
-    @Test
-    fun pushDeviceSignatureIsBoundToEveryField() {
-        val identity = NodeIdentity.generate()
-        val device = PushDeviceBinding("routing", "token", "ANDROID", 1_000L)
-        val signature = Signatures.sign(ProtocolSignatures.pushDeviceContent(device), identity.privateKey)
-
-        assertTrue(ProtocolSignatures.verifyPushDevice(device, identity.encodedPublicKey, signature))
-        listOf(
-            PushDeviceBinding("other", device.token, device.platform, device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, "other", device.platform, device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, device.token, "IOS", device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, device.token, device.platform, 1_001L)
-        ).forEach { other ->
-            assertFalse(ProtocolSignatures.verifyPushDevice(other, identity.encodedPublicKey, signature))
-        }
-        assertFalse(
-            ProtocolSignatures.verifyPushDevice(device, NodeIdentity.generate().encodedPublicKey, signature)
-        )
-    }
-
     private companion object {
-        const val PUSH_DEVICE_VECTOR =
-            "0000001673706172726f772d707573682d6465766963652d7631" +
-                "000000017200000001740000000170000000080000000000000102"
-        const val MAILBOX_WAKE_VECTOR =
-            "0000001773706172726f772d6d61696c626f782d77616b652d7631" +
-                "00000007726f7574696e67000000046e6f6465000000080000011f71fb04cb"
         const val GATEWAY_SESSION_VECTOR =
             "0000001a73706172726f772d676174657761792d73657373696f6e2d7631" +
                 "00000001720000000163000000016e000000020102"

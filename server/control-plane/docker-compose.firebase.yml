@@ -1,5 +1,5 @@
-# Include only when an operator has supplied service-account credentials.
-# Without this optional override the push API continues to operate, but FCM is disabled.
+# Include only when an operator has supplied service-account credentials: the presence directory checks the phone
+# sign-in token with them. Push no longer uses Firebase.
 # Container logs are size-limited: they must not keep request metadata indefinitely.
 x-logging: &default-logging
   driver: json-file
@@ -8,13 +8,6 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
-  push:
-    logging: *default-logging
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
-    secrets:
-      - source: firebase-admin
-        target: firebase-admin.json
   presence-directory:
     logging: *default-logging
     environment:

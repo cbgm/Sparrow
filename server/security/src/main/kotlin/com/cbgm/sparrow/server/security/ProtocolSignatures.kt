@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.server.security
 
 import com.cbgm.sparrow.server.protocol.ClientRoute
-import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import com.cbgm.sparrow.server.protocol.NodeDirectory
 import com.cbgm.sparrow.server.protocol.NodeHeartbeatRequest
 import com.cbgm.sparrow.server.protocol.RegistryAuthorityCertificate
@@ -99,63 +98,6 @@ object ProtocolSignatures {
             session.nonce
         )
 
-    /**
-     * Checks a push device registration. Only the holder of the routing ID's identity key can bind a push
-     * token to it; otherwise anyone could redirect another user's wake-ups and read their pending inbox.
-     */
-    fun verifyPushDevice(
-        device: PushDeviceBinding,
-        clientPublicKey: ByteArray,
-        clientSignature: ByteArray
-    ): Boolean =
-        runCatching {
-            Signatures.verify(
-                content = pushDeviceContent(device),
-                signature = clientSignature,
-                publicKey = Signatures.decodePublicKey(clientPublicKey)
-            )
-        }.getOrDefault(false)
-
-    /**
-     * Same length-prefixed layout as [gatewaySessionContent] with its own domain string. The issue time is
-     * an 8-byte big-endian field so the server can refuse old proofs.
-     */
-    fun pushDeviceContent(device: PushDeviceBinding): ByteArray =
-        lengthPrefixed(
-            PUSH_DEVICE_DOMAIN.encodeToByteArray(),
-            device.routingId.encodeToByteArray(),
-            device.token.encodeToByteArray(),
-            device.platform.encodeToByteArray(),
-            ByteBuffer.allocate(Long.SIZE_BYTES).putLong(device.issuedAtEpochMilliseconds).array()
-        )
-
-    /** True when the device behind [MailboxWakeTicket.routingId] signed the ticket. */
-    fun verifyMailboxWakeTicket(ticket: MailboxWakeTicket): Boolean =
-        ClientRoutingIds.matchesSigningPublicKey(ticket.routingId, ticket.clientSigningPublicKey) &&
-            runCatching {
-                Signatures.verify(
-                    content = mailboxWakeContent(ticket.routingId, ticket.nodeId, ticket.expiresAtEpochMilliseconds),
-                    signature = ticket.clientSignature,
-                    publicKey = Signatures.decodePublicKey(ticket.clientSigningPublicKey)
-                )
-            }.getOrDefault(false)
-
-    /**
-     * The bytes a device signs to let one mailbox node wake it. The app builds the same bytes in
-     * mailboxWakeTicketPayload.
-     */
-    fun mailboxWakeContent(
-        routingId: String,
-        nodeId: String,
-        expiresAtEpochMilliseconds: Long
-    ): ByteArray =
-        lengthPrefixed(
-            MAILBOX_WAKE_DOMAIN.encodeToByteArray(),
-            routingId.encodeToByteArray(),
-            nodeId.encodeToByteArray(),
-            ByteBuffer.allocate(Long.SIZE_BYTES).putLong(expiresAtEpochMilliseconds).array()
-        )
-
     fun signDirectory(
         directory: NodeDirectory,
         identity: NodeIdentity,
@@ -251,8 +193,6 @@ object ProtocolSignatures {
     }
 
     private const val GATEWAY_SESSION_DOMAIN = "sparrow-gateway-session-v1"
-    private const val PUSH_DEVICE_DOMAIN = "sparrow-push-device-v1"
-    private const val MAILBOX_WAKE_DOMAIN = "sparrow-mailbox-wake-v1"
 }
 
 /**
@@ -263,14 +203,4 @@ class GatewaySessionBinding(
     val connectionId: String,
     val nodeId: String,
     val nonce: ByteArray
-)
-
-/**
- * What a push device registration proof is bound to.
- */
-class PushDeviceBinding(
-    val routingId: String,
-    val token: String,
-    val platform: String,
-    val issuedAtEpochMilliseconds: Long
 )

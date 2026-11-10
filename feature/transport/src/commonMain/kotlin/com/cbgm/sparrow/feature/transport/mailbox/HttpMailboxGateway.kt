@@ -37,8 +37,7 @@ class HttpMailboxGateway internal constructor(
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long,
-        wakeTicket: MailboxWakeTicket
+        expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> =
         runCatching {
             val work = creationWork.solve()
@@ -46,7 +45,7 @@ class HttpMailboxGateway internal constructor(
                 httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
                     attributes.put(CircuitKey, contactId)
                     contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket, work))
+                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work))
                 }
             check(response.status == HttpStatusCode.Created) {
                 "Mailbox creation failed with ${response.status}"

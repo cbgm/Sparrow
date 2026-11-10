@@ -35,11 +35,6 @@
         reverse_proxy gateway:8094
     }
 
-    @push path /push /push/*
-    handle @push {
-        reverse_proxy push:8095
-    }
-
     @federation path /v1/federation /v1/federation/*
     handle @federation {
         reverse_proxy federation:8093

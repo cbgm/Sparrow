@@ -1,25 +1,7 @@
 package com.cbgm.sparrow.server.push
 
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
-import java.security.SecureRandom
-import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
-
-data class PushDevice(
-    val routingId: String,
-    val token: String,
-    val platform: String
-)
-
-interface PushDeviceStore {
-    suspend fun register(device: PushDevice)
-
-    suspend fun find(routingId: String): List<PushDevice>
-
-    suspend fun removeToken(token: String)
-
-    suspend fun count(): Int
-}
 
 interface PendingEnvelopeStore {
     suspend fun enqueue(envelope: TransportEnvelope): Boolean
@@ -36,63 +18,6 @@ interface PendingEnvelopeStore {
     suspend fun pendingRecipientIds(): Set<String>
 
     suspend fun count(): Int
-}
-
-interface WakeUpStore {
-    suspend fun create(recipientId: String): String
-
-    suspend fun resolve(wakeUpId: String?): String?
-}
-
-/**
- * Keeps each binding only until [lifetimeMilliseconds] after its last registration. The app renews it
- * regularly, so a binding the app no longer renews disappears instead of being kept forever.
- */
-class InMemoryPushDeviceStore(
-    private val lifetimeMilliseconds: Long = DEFAULT_DEVICE_LIFETIME_MILLISECONDS,
-    private val now: () -> Long = System::currentTimeMillis
-) : PushDeviceStore {
-    private data class Entry(
-        val device: PushDevice,
-        val expiresAtEpochMilliseconds: Long
-    )
-
-    private val devices = ConcurrentHashMap<String, ConcurrentHashMap<String, Entry>>()
-
-    init {
-        require(lifetimeMilliseconds > 0L) {
-            "Push device lifetime must be positive"
-        }
-    }
-
-    override suspend fun register(device: PushDevice) {
-        purgeExpired()
-        devices.values.forEach { it.remove(device.token) }
-        devices.computeIfAbsent(device.routingId) { ConcurrentHashMap() }[device.token] =
-            Entry(device = device, expiresAtEpochMilliseconds = now() + lifetimeMilliseconds)
-    }
-
-    override suspend fun find(routingId: String): List<PushDevice> {
-        purgeExpired()
-        return devices[routingId]?.values?.map(Entry::device).orEmpty()
-    }
-
-    override suspend fun removeToken(token: String) {
-        devices.values.forEach { it.remove(token) }
-    }
-
-    override suspend fun count(): Int {
-        purgeExpired()
-        return devices.values.sumOf { it.size }
-    }
-
-    private fun purgeExpired() {
-        val currentTime = now()
-        devices.values.forEach { routingDevices ->
-            routingDevices.values.removeIf { entry -> entry.expiresAtEpochMilliseconds <= currentTime }
-        }
-        devices.values.removeIf { routingDevices -> routingDevices.isEmpty() }
-    }
 }
 
 class InMemoryPendingEnvelopeStore(
@@ -153,76 +78,11 @@ class InMemoryPendingEnvelopeStore(
     }
 }
 
-class InMemoryWakeUpStore(
-    private val lifetimeMilliseconds: Long = DEFAULT_LIFETIME_MILLISECONDS,
-    private val now: () -> Long = System::currentTimeMillis
-) : WakeUpStore {
-    private data class Entry(
-        val recipientId: String,
-        val expiresAtEpochMilliseconds: Long
-    )
-
-    private val entries = ConcurrentHashMap<String, Entry>()
-
-    private val random = SecureRandom()
-
-    init {
-        require(lifetimeMilliseconds > 0L) {
-            "Wake-up lifetime must be positive"
-        }
-    }
-
-    override suspend fun create(recipientId: String): String {
-        purgeExpired()
-
-        val bytes = ByteArray(WAKE_UP_ID_BYTE_COUNT)
-        random.nextBytes(bytes)
-
-        val id =
-            Base64
-                .getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(bytes)
-
-        entries[id] =
-            Entry(
-                recipientId = recipientId,
-                expiresAtEpochMilliseconds = now() + lifetimeMilliseconds
-            )
-
-        return id
-    }
-
-    override suspend fun resolve(wakeUpId: String?): String? {
-        if (wakeUpId.isNullOrBlank()) {
-            return null
-        }
-
-        purgeExpired()
-
-        return entries[wakeUpId]?.recipientId
-    }
-
-    private fun purgeExpired() {
-        val currentTime = now()
-
-        entries.entries.removeIf { (_, entry) ->
-            entry.expiresAtEpochMilliseconds <= currentTime
-        }
-    }
-
-    private companion object {
-        const val WAKE_UP_ID_BYTE_COUNT = 32
-        const val DEFAULT_LIFETIME_MILLISECONDS = 15L * 60L * 1_000L
-    }
-}
-
-internal const val DEFAULT_DEVICE_LIFETIME_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
+/** Stores [envelope] unless it is there already; false only when there is no room for it. */
+suspend fun PendingEnvelopeStore.store(envelope: TransportEnvelope): Boolean = enqueue(envelope) || contains(envelope.envelopeId)
 
 class PushStores(
-    val devices: PushDeviceStore,
     val pendingEnvelopes: PendingEnvelopeStore,
-    val wakeUps: WakeUpStore,
     val persistenceMode: String,
     private val closeAction: () -> Unit = {}
 ) : AutoCloseable {
@@ -233,17 +93,9 @@ class PushStores(
     companion object {
         fun inMemory(config: PushConfig): PushStores =
             PushStores(
-                devices =
-                    InMemoryPushDeviceStore(
-                        lifetimeMilliseconds = config.deviceRegistrationLifetimeMilliseconds
-                    ),
                 pendingEnvelopes =
                     InMemoryPendingEnvelopeStore(
                         maximumEnvelopes = config.maximumEnvelopes
-                    ),
-                wakeUps =
-                    InMemoryWakeUpStore(
-                        lifetimeMilliseconds = config.wakeUpLifetimeMilliseconds
                     ),
                 persistenceMode = "memory"
             )
