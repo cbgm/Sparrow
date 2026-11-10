@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationMediaController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
+import com.cbgm.sparrow.feature.chats.presentation.common.controller.sendFailureText
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
@@ -106,7 +107,7 @@ class GroupConversationActionsController(
                 if (parts.isNotEmpty()) {
                     dispatchSend(
                         parts = parts,
-                        clearComposerOnSuccess = true,
+                        clearsComposer = true,
                         fallbackError = "Message could not be sent"
                     )
                 }
@@ -120,8 +121,8 @@ class GroupConversationActionsController(
                 .onSuccess { part ->
                     dispatchSend(
                         parts = listOf(part),
-                        clearComposerOnSuccess = false,
-                        clearVoiceOnSuccess = true,
+                        clearsComposer = false,
+                        clearsVoice = true,
                         fallbackError = "Voice message could not be sent"
                     )
                 }.onFailure { error ->
@@ -147,7 +148,7 @@ class GroupConversationActionsController(
     ) {
         dispatchSend(
             parts = listOf(part),
-            clearComposerOnSuccess = false,
+            clearsComposer = false,
             fallbackError = fallbackError,
             isLocationShare = isLocationShare,
             onSuccess = onSuccess
@@ -156,9 +157,9 @@ class GroupConversationActionsController(
 
     private fun dispatchSend(
         parts: List<MessagePart>,
-        clearComposerOnSuccess: Boolean,
+        clearsComposer: Boolean,
         fallbackError: String,
-        clearVoiceOnSuccess: Boolean = false,
+        clearsVoice: Boolean = false,
         isLocationShare: Boolean = false,
         onSuccess: () -> Unit = {}
     ) {
@@ -178,25 +179,17 @@ class GroupConversationActionsController(
 
         val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errors.clear()
+        val sentMedia = clearForSending(clearsComposer, clearsVoice)
         scope.launch {
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             composerController.setSending(true)
             try {
                 orchestrator.awaitResult(GroupMessageCommand.SendMessage(groupId, parts, replyTo))
-                    .onSuccess {
-                        when {
-                            clearComposerOnSuccess -> clearComposer()
-                            clearVoiceOnSuccess -> {
-                                voiceController.finishSent(parts)
-                                clearReply()
-                            }
-
-                            else -> clearReply()
-                        }
-                        onSuccess()
-                    }
-                    .onFailure { error -> errors.report(error.message ?: fallbackError) }
+                    .onSuccess { onSuccess() }
+                    .onFailure { error -> errors.report(error.sendFailureText(fallbackError)) }
             } finally {
+                mediaController.deleteLocalCopies(sentMedia)
+                if (clearsVoice) voiceController.deleteSent(parts)
                 composerController.setSending(false)
                 if (isLocationShare) transitionLocationShare(LocationShareEvent.COMPLETED)
             }
@@ -215,6 +208,20 @@ class GroupConversationActionsController(
         mediaController.select(media)
             .onSuccess { errors.clear() }
             .onFailure { errors.report(it.message ?: "Selected attachments could not be attached") }
+    }
+
+    /** What is sent leaves the composer right away, not only once it was sent; the media files it needs are returned. */
+    private fun clearForSending(
+        clearsComposer: Boolean,
+        clearsVoice: Boolean
+    ): List<MediaSelectionUi> {
+        if (clearsVoice) voiceController.clearComposer()
+        if (!clearsComposer) {
+            clearReply()
+            return emptyList()
+        }
+        indicatorController.stopLocalIndicator()
+        return composerController.takeForSending()
     }
 
     private fun clearComposer() {

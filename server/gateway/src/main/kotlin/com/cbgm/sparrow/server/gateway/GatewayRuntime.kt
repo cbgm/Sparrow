@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.NodeRequestSigner
 import com.cbgm.sparrow.server.security.relayKeyPair
@@ -35,6 +36,7 @@ internal data class GatewayRuntime(
     val handler: GatewayWebSocketHandler,
     val blobStore: BlobStore,
     val blobUploadPermitStore: BlobUploadPermitStore,
+    val blobCreationWork: CreationWorkCheck,
     val serviceScope: CoroutineScope,
     val relay: OnionRelay,
     val circuits: CircuitRelay
@@ -75,6 +77,7 @@ internal fun createGatewayRuntime(
         handler = createGatewayHandler(identity, config, httpClient, connections, permitStore),
         blobStore = blobStore,
         blobUploadPermitStore = permitStore,
+        blobCreationWork = CreationWorkCheck(config.blobCreationWorkBits),
         serviceScope = serviceScope,
         relay =
             OnionRelay(

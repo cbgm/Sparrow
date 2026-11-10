@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.mailbox
 import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
@@ -32,7 +33,7 @@ fun Application.mailboxModule(
         config = config,
         store = store,
         pushNotifier = pushNotifier,
-        creationWork = MailboxCreationWorkCheck(config.creationWorkBits)
+        creationWork = CreationWorkCheck(config.creationWorkBits)
     )
 }
 
@@ -68,7 +69,7 @@ data class MailboxConfig(
     val maximumEnvelopeBytes: Int,
     val maximumMailboxBytes: Long,
     val maximumMailboxes: Int = DEFAULT_MAXIMUM_MAILBOXES,
-    /** Zero bits a new mailbox's proof of work needs ([MailboxCreationWorkCheck]); the app solves 18 bits. */
+    /** Zero bits a new mailbox's proof of work needs ([CreationWorkCheck]); the app solves 18 bits. */
     val creationWorkBits: Int = DEFAULT_CREATION_WORK_BITS,
     val trustProxyHeaders: Boolean = false
 ) {

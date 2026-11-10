@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.transport.di
 
 import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
@@ -11,6 +12,8 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.blob.BlobGateway
+import com.cbgm.sparrow.feature.transport.blob.CircuitBlobGateway
 import com.cbgm.sparrow.feature.transport.circuit.CircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
@@ -20,6 +23,7 @@ import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.circuit.FileTransferCircuits
 import com.cbgm.sparrow.feature.transport.circuit.createMailboxHttpClient
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
@@ -396,6 +400,24 @@ val transportModule =
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
                 circuitSlot = get<CircuitRunner>()::slotOf
+            )
+        }
+
+        single<BlobGateway> {
+            // Every file transfer gets a circuit of its own, so the blob node does not see the device's address.
+            CircuitBlobGateway(
+                transfers =
+                    FileTransferCircuits(
+                        circuits = get<CircuitRunner>(),
+                        fallback = get<CircuitFallbackStore>(),
+                        directClient = get<HttpClient>()
+                    ),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
+                cryptoHash = get<CryptoHash>(),
+                nodeEndpointResolver = get<NodeEndpointResolver>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
+                randomBytes = get<SecureRandomGenerator>().let { random -> { size -> random.generateBytes(size).getOrThrow() } }
             )
         }
 

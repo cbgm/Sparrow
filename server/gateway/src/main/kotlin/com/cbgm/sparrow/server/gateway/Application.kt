@@ -66,7 +66,9 @@ data class GatewayConfig(
     val blobUploadTicketLifetimeMilliseconds: Long,
     val signInTimeoutMilliseconds: Long,
     /** Lets the relay reach LAN addresses; only for LAN installations, where Control Planes have private addresses. */
-    val relayPrivateDestinations: Boolean = false
+    val relayPrivateDestinations: Boolean = false,
+    /** Zero bits the proof of work for a blob opened through a circuit needs; the app solves 18 bits. */
+    val blobCreationWorkBits: Int = DEFAULT_BLOB_CREATION_WORK_BITS
 ) {
     init {
         require(routeLifetimeMilliseconds > 0L) {
@@ -164,7 +166,8 @@ data class GatewayConfig(
                         "SIGN_IN_TIMEOUT_MILLISECONDS",
                         DEFAULT_SIGN_IN_TIMEOUT_MILLISECONDS
                     ),
-                relayPrivateDestinations = ServiceEnvironment.string("RELAY_PRIVATE_DESTINATIONS", "false") == "true"
+                relayPrivateDestinations = ServiceEnvironment.string("RELAY_PRIVATE_DESTINATIONS", "false") == "true",
+                blobCreationWorkBits = ServiceEnvironment.int("BLOB_CREATION_WORK_BITS", DEFAULT_BLOB_CREATION_WORK_BITS)
             )
         }
 
@@ -200,6 +203,7 @@ data class GatewayConfig(
         private const val DEFAULT_MAXIMUM_BLOB_RETENTION_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
         private const val DEFAULT_BLOB_CLEANUP_INTERVAL_MILLISECONDS = 60L * 60L * 1_000L
         private const val DEFAULT_BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS = 5L * 60L * 1_000L
+        private const val DEFAULT_BLOB_CREATION_WORK_BITS = 18
 
         // Bounds how long an unauthenticated socket may hold a connection slot after the challenge.
         private const val DEFAULT_SIGN_IN_TIMEOUT_MILLISECONDS = 15_000L

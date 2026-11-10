@@ -59,6 +59,19 @@ class CircuitMailboxEngineTest {
             assertEquals(emptyList(), seenDirectly)
         }
 
+    @Test
+    fun withoutACircuitAFileTransferGoesOutDirectlyOnlyWhenTheUserAllowsIt() =
+        runTest {
+            val directly =
+                FileTransferCircuits(runner, FixedFallback(sendsDirectly = true), direct, waitMilliseconds = 50)
+                    .transfer { route -> route.request(FileTransferRequest("GET", "https://node.test/v1/blobs/b/chunks/0", "read")) }
+            val held = FileTransferCircuits(runner, FixedFallback(sendsDirectly = false), direct, waitMilliseconds = 50)
+
+            assertEquals(200, directly.status)
+            assertFailsWith<ProtectedRouteMissingException> { held.transfer { route -> route.request(FileTransferRequest("GET", "https://node.test/x")) } }
+            assertEquals(listOf("https://node.test/v1/blobs/b/chunks/0 Bearer read"), seenDirectly)
+        }
+
     private fun mailboxClient(sendsDirectly: Boolean): HttpClient =
         createMailboxHttpClient(
             CircuitMailboxEngine(runner, FixedFallback(sendsDirectly), direct, waitMilliseconds = 50),

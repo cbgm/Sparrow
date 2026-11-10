@@ -51,6 +51,9 @@ internal class Circuit(
 
     val nodeIds: List<String> get() = hops.map { hop -> hop.nodeId }
 
+    /** The `/v1/circuit` address of the last hop, the session node that makes the requests. */
+    val sessionNodeCircuitUrl: String? get() = hops.lastOrNull()?.circuitUrl
+
     suspend fun create(relay: RelayHop) {
         val ephemeral = cipher.newEphemeralKey()
         session.send(Frame.Binary(true, CircuitCell(CIRCUIT_ID, CircuitCell.CREATE, ephemeral.publicKey).encode()))
@@ -60,7 +63,7 @@ internal class Circuit(
                 .takeIf { cell -> cell.command == CircuitCell.CREATED }
                 ?.let { cell -> cipher.completeHandshake(ephemeral, relay.relayKey, cell.body.copyOf(REPLY_BYTES)) }
                 ?: throw CircuitHopFailedException(relay.nodeId, "circuit not created")
-        hops += Hop(relay.nodeId, keys)
+        hops += Hop(relay.nodeId, relay.circuitUrl, keys)
     }
 
     suspend fun extend(relay: RelayHop) {
@@ -71,7 +74,7 @@ internal class Circuit(
                 .takeIf { payload -> payload.command == RelayCommand.EXTENDED }
                 ?.let { payload -> cipher.completeHandshake(ephemeral, relay.relayKey, payload.data) }
                 ?: throw CircuitHopFailedException(relay.nodeId, "not reachable as the next hop")
-        hops += Hop(relay.nodeId, keys)
+        hops += Hop(relay.nodeId, relay.circuitUrl, keys)
     }
 
     /** The round trip to the last hop and back, in milliseconds. Needs [readAnswers] running. */
@@ -218,6 +221,7 @@ internal class Circuit(
 
     private class Hop(
         val nodeId: String,
+        val circuitUrl: String,
         val keys: CircuitHopKeys
     ) {
         var forwardCount = 0L

@@ -81,6 +81,14 @@ class ConversationComposerController(
         media.discardSelection()
     }
 
+    /** Empties the composer as soon as a message is sent; the media files are returned, to be deleted once sending is over. */
+    fun takeForSending(): List<MediaSelectionUi> {
+        setMessageText("")
+        setReplyToMessageId("")
+        setEditingMessageId("")
+        return media.releaseSelection()
+    }
+
     private fun setMessageText(text: String) {
         _messageText.value = text
         state[MESSAGE_TEXT_KEY] = text

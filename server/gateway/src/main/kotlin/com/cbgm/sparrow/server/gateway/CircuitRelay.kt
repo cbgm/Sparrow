@@ -117,14 +117,14 @@ internal class CircuitRelay(
         }
     }
 
-    /** As the last hop, the session node makes an HTTP request for the app: only to node mailboxes. */
+    /** As the last hop, the session node makes an HTTP request for the app: only to node mailboxes and blobs. */
     private suspend fun exit(
         hop: CircuitHop,
         stream: Int,
         encodedRequest: ByteArray
     ) {
         val request = CircuitHttpRequest.decode(encodedRequest)
-        val target = request?.let { destinations.mailbox(it.method, it.url) }
+        val target = request?.let { destinations.sessionRequest(it.method, it.url) }
         when {
             request == null || target == null -> hop.answer(stream, RelayCommand.STREAM_REFUSED, ByteArray(0))
             else -> {

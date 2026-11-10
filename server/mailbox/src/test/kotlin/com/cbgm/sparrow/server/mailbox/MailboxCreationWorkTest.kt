@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.mailbox
 import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.MailboxCreationWork
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -44,7 +45,7 @@ class MailboxCreationWorkTest {
     @Test
     fun tooLittleOrStaleWorkIsRejected() {
         val now = 1_000_000_000L
-        val check = MailboxCreationWorkCheck(requiredBits = BITS, windowMilliseconds = 60_000L, now = { now })
+        val check = CreationWorkCheck(requiredBits = BITS, windowMilliseconds = 60_000L, now = { now })
 
         assertFalse(check.accepts(solvedWork(0, createdAt = now).takeUnless { work -> leadingZeroBits(work) >= BITS }))
         assertFalse(check.accepts(solvedWork(BITS, createdAt = now - 120_000L)))

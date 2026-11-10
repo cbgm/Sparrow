@@ -87,6 +87,33 @@ class CircuitRunner internal constructor(
             currentCircuit(minimumHopCount = minimumHopCount)
         }
 
+    /**
+     * Builds a circuit of its own for one file transfer, through the chosen hops and ending at a session node the
+     * other circuits do not use when there is one, runs [block] on it and closes it: a large transfer does not hold
+     * back messages, and no node can link it to the device's mailboxes. Fails with [ProtectedRouteMissingException]
+     * when it gets fewer than [minimumHopCount] hops.
+     */
+    internal suspend fun <T> withOwnCircuit(
+        minimumHopCount: Int,
+        block: suspend (Circuit) -> T
+    ): T {
+        val hopCount = hopCountStore.observe().first()
+        val circuit = build("for a transfer", hopCount, otherSessionNodes(slot = NO_SLOT), TRANSFER_ANSWER_TIMEOUT_MILLISECONDS)
+        return try {
+            if (circuit.nodeIds.size < minimumHopCount) throw ProtectedRouteMissingException()
+            coroutineScope {
+                val reading = launch { circuit.readAnswers() }
+                try {
+                    block(circuit)
+                } finally {
+                    reading.cancel()
+                }
+            }
+        } finally {
+            circuit.close()
+        }
+    }
+
     private fun usableCircuits(minimumHopCount: Int): List<Circuit> =
         circuits.take(activeCount.value).mapNotNull { slot -> slot.value?.takeIf { circuit -> circuit.isUsable(minimumHopCount) } }
 
@@ -111,7 +138,7 @@ class CircuitRunner internal constructor(
         while (currentCoroutineContext().isActive) {
             if (next == null) setStatus(slot, hopCount, CircuitStatus.Building)
             try {
-                val circuit = next ?: build(slot, hopCount)
+                val circuit = next ?: build("${slot + 1}", hopCount, otherSessionNodes(slot))
                 next = null
                 retryDelay = FIRST_RETRY_MILLISECONDS
                 circuits[slot].value = circuit
@@ -165,10 +192,12 @@ class CircuitRunner internal constructor(
         circuits.take(activeCount.value).filterIndexed { index, _ -> index != slot }.mapNotNullTo(HashSet()) { it.value?.nodeIds?.lastOrNull() }
 
     private suspend fun build(
-        slot: Int,
-        hopCount: Int
+        name: String,
+        hopCount: Int,
+        avoidLastHops: Set<String>,
+        answerTimeoutMilliseconds: Long? = null
     ): Circuit {
-        val route = selector.circuitRoute(hopCount, avoidLastHops = otherSessionNodes(slot))
+        val route = selector.circuitRoute(hopCount, avoidLastHops = avoidLastHops)
         check(route.isNotEmpty()) { "no relaying node known yet" }
         val first = route.first()
         val session =
@@ -179,7 +208,7 @@ class CircuitRunner internal constructor(
             } catch (unreachable: Exception) {
                 throw CircuitHopFailedException(first.nodeId, "not reachable: ${unreachable::class.simpleName}")
             }
-        val circuit = Circuit(session, cipher)
+        val circuit = answerTimeoutMilliseconds?.let { timeout -> Circuit(session, cipher, timeout) } ?: Circuit(session, cipher)
         try {
             circuit.create(first)
             route.drop(1).forEach { hop -> circuit.extend(hop) }
@@ -189,7 +218,7 @@ class CircuitRunner internal constructor(
         }
         selector.recordSuccess(route)
         logger.info {
-            "Circuit ${slot + 1} built through ${route.size} hop(s): ${circuit.nodeIds.joinToString(" -> ") { it.take(8) }}" +
+            "Circuit $name built through ${route.size} hop(s): ${circuit.nodeIds.joinToString(" -> ") { it.take(8) }}" +
                 if (route.size < hopCount) " (fewer than the chosen $hopCount: not enough relaying nodes)" else ""
         }
         return circuit
@@ -222,7 +251,7 @@ class CircuitRunner internal constructor(
         val hops = circuit.nodeIds.size
         if (hops >= hopCount || selector.circuitRoute(hopCount).size <= hops) return null
         return try {
-            val built = build(slot, hopCount)
+            val built = build("${slot + 1}", hopCount, otherSessionNodes(slot))
             if (built.nodeIds.size > hops) {
                 built
             } else {
@@ -242,5 +271,9 @@ class CircuitRunner internal constructor(
         const val DEFAULT_PING_INTERVAL_MILLISECONDS = 30_000L
         const val FIRST_RETRY_MILLISECONDS = 5_000L
         const val MAXIMUM_RETRY_MILLISECONDS = 60_000L
+        const val NO_SLOT = -1
+
+        /** A chunk of a file takes about a thousand cells through every hop; on a slow network that takes a while. */
+        const val TRANSFER_ANSWER_TIMEOUT_MILLISECONDS = 120_000L
     }
 }

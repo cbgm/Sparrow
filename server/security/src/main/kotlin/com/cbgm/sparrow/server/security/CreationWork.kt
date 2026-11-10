@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.server.mailbox
+package com.cbgm.sparrow.server.security
 
 import com.cbgm.sparrow.server.protocol.MailboxCreationWork
 import java.security.MessageDigest
@@ -6,12 +6,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 
 /**
- * The price of a new mailbox: instead of counting mailboxes per address (behind a circuit, every user of a session
+ * The price of a new mailbox or blob: instead of counting them per address (behind a circuit, every user of a session
  * node shares one), the app shows a small proof of work. `SHA-256("sparrow-mailbox-work-v1|stamp|createdAt|nonce")`
  * must start with [requiredBits] zero bits. A stamp counts once and only for [windowMilliseconds] around its time;
  * used stamps are kept only that long, and nothing about the creator.
  */
-internal class MailboxCreationWorkCheck(
+class CreationWorkCheck(
     private val requiredBits: Int,
     private val windowMilliseconds: Long = DEFAULT_WINDOW_MILLISECONDS,
     private val now: () -> Long = System::currentTimeMillis
@@ -19,7 +19,7 @@ internal class MailboxCreationWorkCheck(
     private val usedStamps = ConcurrentHashMap<String, Long>()
 
     init {
-        require(requiredBits in 0..MAXIMUM_BITS) { "Mailbox creation work must be 0 to $MAXIMUM_BITS bits" }
+        require(requiredBits in 0..MAXIMUM_BITS) { "Creation work must be 0 to $MAXIMUM_BITS bits" }
     }
 
     fun accepts(work: MailboxCreationWork?): Boolean {

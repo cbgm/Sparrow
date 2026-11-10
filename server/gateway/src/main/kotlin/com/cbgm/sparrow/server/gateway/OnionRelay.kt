@@ -157,13 +157,16 @@ internal class RelayDestinationPolicy(
 ) {
     fun nextRelay(url: String): URI? = target(url)?.takeIf { uri -> uri.rawPath == RELAY_PATH && uri.rawQuery == null }
 
-    /** A request the session node makes for the app through its circuit: only the node mailbox operations, and waiting for envelopes. */
-    fun mailbox(
+    /**
+     * A request the session node makes for the app through its circuit: only the node mailbox operations, waiting for
+     * envelopes, and opening, sending, reading and deleting blobs in chunks (and reading ones sent in one piece).
+     */
+    fun sessionRequest(
         method: String,
         url: String
     ): URI? =
         target(url)?.takeIf { uri ->
-            uri.rawQuery == null && MAILBOX_REQUESTS.any { (allowed, path) -> method == allowed && path.matches(uri.rawPath.orEmpty()) }
+            uri.rawQuery == null && SESSION_REQUESTS.any { (allowed, path) -> method == allowed && path.matches(uri.rawPath.orEmpty()) }
         }
 
     /** The next hop of a circuit: another node's `/v1/circuit` WebSocket, under the same address rules. */
@@ -198,14 +201,22 @@ internal class RelayDestinationPolicy(
         const val RELAY_PATH = "/v1/relay"
         const val CIRCUIT_PATH = "/v1/circuit"
         private const val ID = "[A-Za-z0-9_.-]{1,128}"
-        val MAILBOX_REQUESTS =
+        private const val BLOB_ID = "[A-Za-z0-9_-]{16,128}"
+        val SESSION_REQUESTS =
             listOf(
                 "POST" to Regex("/v1/mailboxes"),
                 "POST" to Regex("/v1/mailboxes/wait"),
                 "POST" to Regex("/v1/mailboxes/$ID/envelopes"),
                 "GET" to Regex("/v1/mailboxes/$ID/envelopes"),
                 "DELETE" to Regex("/v1/mailboxes/$ID/envelopes/$ID"),
-                "DELETE" to Regex("/v1/mailboxes/$ID")
+                "DELETE" to Regex("/v1/mailboxes/$ID"),
+                "POST" to Regex("/v1/blobs"),
+                "GET" to Regex("/v1/blobs/$BLOB_ID/chunks"),
+                "PUT" to Regex("/v1/blobs/$BLOB_ID/chunks/[0-9]{1,6}"),
+                "GET" to Regex("/v1/blobs/$BLOB_ID/chunks/[0-9]{1,6}"),
+                // Blobs sent in one piece before chunks existed; goes once those have expired.
+                "GET" to Regex("/v1/blobs/$BLOB_ID"),
+                "DELETE" to Regex("/v1/blobs/$BLOB_ID")
             )
         val CONTROL_PLANE_REQUESTS =
             listOf(

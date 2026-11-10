@@ -11,12 +11,17 @@ class ConversationVoiceController(
 ) {
     suspend fun recordedPart(): Result<Voice> = getRecordedVoiceAttachment()
 
-    fun finishSent(parts: List<com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart>) {
+    /** The recording leaves the composer as soon as it is sent; its file stays until [deleteSent]. */
+    fun clearComposer() {
+        resetVoiceComposer()
+    }
+
+    /** Deletes the sent recording's file once sending is over. */
+    fun deleteSent(parts: List<com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart>) {
         parts.filterIsInstance<Voice>().singleOrNull()?.localFilePath?.let {
             media.deleteLocalPaths(
                 listOf(it)
             )
         }
-        resetVoiceComposer()
     }
 }

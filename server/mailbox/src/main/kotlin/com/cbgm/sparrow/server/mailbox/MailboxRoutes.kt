@@ -9,6 +9,7 @@ import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.MailboxWaitRequest
 import com.cbgm.sparrow.server.protocol.MailboxWaitResponse
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -24,7 +25,7 @@ internal fun Application.configureMailboxRoutes(
     config: MailboxConfig,
     store: MailboxStorage,
     pushNotifier: MailboxPushNotifier,
-    creationWork: MailboxCreationWorkCheck,
+    creationWork: CreationWorkCheck,
     arrivals: MailboxArrivals = MailboxArrivals()
 ) {
     routing {
@@ -55,7 +56,7 @@ private suspend fun ApplicationCall.respondMailboxHealth(store: MailboxStorage) 
 private suspend fun ApplicationCall.createMailbox(
     config: MailboxConfig,
     store: MailboxStorage,
-    creationWork: MailboxCreationWorkCheck
+    creationWork: CreationWorkCheck
 ) {
     val request = receive<CreateMailboxRequest>()
     if (!creationWork.accepts(request.creationWork)) {
