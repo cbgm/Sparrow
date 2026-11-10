@@ -70,6 +70,9 @@ internal class DirectMessageRepositoryImpl(
             dataSource.findMessagesAwaitingOutbox(createdBeforeEpochMilliseconds).map { it.toStoredMessage() }
         }
 
+    override suspend fun findUnsent(): Result<List<StoredMessage>> =
+        safeSuspendCall { dataSource.findUnsentMessages().map { it.toStoredMessage() } }
+
     override suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>> =
         safeSuspendCall {
             dataSource.findMessagesAwaitingReadReceipt(conversationId).map { it.toUnreadIncomingMessage() }

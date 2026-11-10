@@ -14,14 +14,17 @@ class CreateDirectMessagePacketUseCase(
     private val attachmentRepository: MessageAttachmentOperationsRepository,
     private val packetFactory: DirectMessagePacketFactory
 ) {
-    /** A message stored just now: its content is still in memory. The packet is linked to the message. */
+    /**
+     * A message stored just now: its text is still in memory, its attachments are uploaded here (storing does not
+     * upload them). The packet is linked to the message.
+     */
     suspend operator fun invoke(stored: StoredOutgoingMessage): Result<ChatMessagePacket> =
         safeSuspendCall(logFailure = false) {
             val packet =
                 packetFactory.create(
                     messageId = stored.message.id,
                     text = stored.text,
-                    parts = stored.parts,
+                    parts = attachmentRepository.prepareOutgoing(stored.message.id).getOrThrow(),
                     replyToMessageId = stored.message.replyToMessageId
                 ).getOrThrow()
             link(stored.message.id, packet, missingMessage = "Stored direct message was not found")

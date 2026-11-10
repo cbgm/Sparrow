@@ -444,6 +444,21 @@ interface ChatDao {
     )
     suspend fun findDirectMessagesAwaitingOutbox(createdBefore: Long): List<MessageEntity>
 
+    /** Failed outgoing direct messages that never got a packet, e.g. because an attachment could not be uploaded yet. */
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = 'FAILED'
+          AND messages.packetId IS NULL
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    suspend fun findUnsentDirectMessages(): List<MessageEntity>
+
     @Query(
         """
         SELECT messages.*
@@ -712,6 +727,27 @@ interface ChatDao {
         """
     )
     suspend fun findQueuedGroupMessages(conversationId: String): List<MessageEntity>
+
+    /** The groups holding own messages that were never encrypted for anyone yet ([findQueuedGroupMessages]). */
+    @Query(
+        """
+        SELECT DISTINCT messages.conversationId
+        FROM messages
+        INNER JOIN conversations
+            ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'GROUP'
+          AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
+          AND messages.packetId IS NULL
+          AND messages.deliveryStatus = 'QUEUED'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM message_recipient_states
+              WHERE message_recipient_states.messageId = messages.id
+          )
+        """
+    )
+    suspend fun findGroupsWithQueuedMessages(): List<String>
 
     /** Recipient rows can be committed just before a process crash, with no
      * corresponding outbox row yet. Reconcile that window after activation.

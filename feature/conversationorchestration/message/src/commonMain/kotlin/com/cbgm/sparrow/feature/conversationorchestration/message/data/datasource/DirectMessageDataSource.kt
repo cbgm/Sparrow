@@ -54,6 +54,8 @@ internal class DirectMessageDataSource(
     suspend fun findMessagesAwaitingOutbox(createdBefore: Long): List<MessageEntity> =
         chatDao.findDirectMessagesAwaitingOutbox(createdBefore)
 
+    suspend fun findUnsentMessages(): List<MessageEntity> = chatDao.findUnsentDirectMessages()
+
     suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessageDto> =
         chatDao.findMessagesAwaitingReadReceipt(conversationId)
 

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** Attachment persistence and transfer API; callers never access attachment DAOs or datasources. */
 interface MessageAttachmentOperationsRepository {
+    /** Stores an outgoing message's parts with their files; nothing is uploaded yet ([prepareOutgoing] does that). */
     suspend fun persistOutgoing(
         messageId: String,
         parts: List<MessagePart>,

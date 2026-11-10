@@ -123,6 +123,8 @@ class GroupOwnMessageOperationTest {
         override suspend fun findAwaitingOutbox(groupId: String): Result<List<StoredMessage>> =
             Result.success(emptyList())
 
+        override suspend fun findGroupsWithQueued(): Result<List<String>> = Result.success(emptyList())
+
         override suspend fun delete(messages: List<StoredMessage>): Result<Unit> {
             queued.removeAll { stored -> messages.any { it.id == stored.id } }
             return Result.success(Unit)

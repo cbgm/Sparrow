@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.presentation.model
 
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendUnsentMessagesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityKeysUsableUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeRunner
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
@@ -17,5 +18,6 @@ data class ForegroundRuntimeDependencies(
     val outboxRunner: OutboxRunner,
     val mailboxCoordinator: MailboxCoordinator,
     val observeIdentityKeysUsable: ObserveIdentityKeysUsableUseCase,
-    val observeWaitingForRoute: ObserveWaitingForRouteUseCase
+    val observeWaitingForRoute: ObserveWaitingForRouteUseCase,
+    val sendUnsentMessages: SendUnsentMessagesUseCase
 )

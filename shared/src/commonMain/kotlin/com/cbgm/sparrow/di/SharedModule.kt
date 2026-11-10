@@ -60,7 +60,8 @@ val sharedModule =
                 outboxRunner = get(),
                 mailboxCoordinator = get(),
                 observeIdentityKeysUsable = get(),
-                observeWaitingForRoute = get()
+                observeWaitingForRoute = get(),
+                sendUnsentMessages = get()
             )
         }
 

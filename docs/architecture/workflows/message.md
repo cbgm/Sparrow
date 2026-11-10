@@ -95,13 +95,14 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `MessageCommand.DeliverDirectMessage`
 - **Source:** `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/domain/workflow/direct/DeliverDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `DirectConversationRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`
+- **Uses:** `DirectConversationRepository`, `FindDirectAuthorizationBlockUseCase`, `LoadDirectRecipientUseCase`, `StoreOutgoingDirectMessageUseCase`, `DiscardDirectMessagesUseCase`, `CreateDirectMessagePacketUseCase`, `ProtocolOutbox`, `RecordPacketSendFailureUseCase`, `KeepUnsentDirectMessageUseCase`
 
 ```text
 FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket -> EnqueuePacket.
 
-A packet that cannot be created or linked to the message discards the stored message again; a packet the
-outbox rejects keeps the message and marks it failed so the user can retry.
+A packet that cannot be created or linked to the message discards the stored message again, unless only its
+attachment could not go out yet ([UnsentMessagePolicy]): then the message stays, failed, to be sent again. A
+packet the outbox rejects keeps the message and marks it failed so the user can retry.
 ```
 
 ```mermaid
@@ -114,7 +115,9 @@ stateDiagram-v2
     StoreMessage --> CreatePacket : MessageStored
     CreatePacket --> EnqueuePacket : PacketCreated
     CreatePacket --> DiscardMessage : PacketPreparationFailed
+    CreatePacket --> KeepUnsent : PacketPreparationFailed
     DiscardMessage --> Rejected : MessageDiscarded
+    KeepUnsent --> Rejected : MessageKeptUnsent
     EnqueuePacket --> MarkSendFailed : EnqueueFailed
     EnqueuePacket --> [*] : PacketEnqueued
     MarkSendFailed --> Rejected : SendFailureRecorded
@@ -727,7 +730,9 @@ ValidateContent -> CheckMembership -> FindRecipients -> [FlushQueuedMessages] ->
 -> [EncryptMessage -> SaveRecipientStates -> EnqueuePackets].
 
 Without an active recipient the message stays queued and is flushed once a member activates.
-Older queued messages are flushed first so recipients receive them in order.
+Older queued messages are flushed first so recipients receive them in order. A message whose attachment could
+not go out yet ([UnsentMessagePolicy]) also stays queued and is flushed again later; any other failure to
+encrypt discards it.
 ```
 
 ```mermaid
@@ -742,6 +747,7 @@ stateDiagram-v2
     StoreMessage --> EncryptMessage : MessageStored
     StoreMessage --> [*] : MessageStored
     EncryptMessage --> DiscardMessage : EncryptionFailed
+    EncryptMessage --> Rejected : EncryptionFailed
     EncryptMessage --> SaveRecipientStates : MessageEncrypted
     DiscardMessage --> Rejected : MessageDiscarded
     SaveRecipientStates --> EnqueuePackets : RecipientStatesSaved

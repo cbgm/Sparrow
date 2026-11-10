@@ -47,6 +47,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindRetryableGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindUndeliveredGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.InspectDirectInvitationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.KeepUnsentDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.LoadDirectRecipientUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordPacketSendFailureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordRetryRequestedUseCase
@@ -59,6 +60,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SaveQueuedGroupRecipientsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendReadReceiptUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendUnsentMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ToggleLocalReactionUseCase
@@ -137,6 +139,8 @@ private fun Module.registerUseCases() {
     singleOf(::RecordPacketSendFailureUseCase)
     singleOf(::RecordRetryRequestedUseCase)
     singleOf(::RecoverInterruptedDirectSendsUseCase)
+    singleOf(::KeepUnsentDirectMessageUseCase)
+    singleOf(::SendUnsentMessagesUseCase)
     singleOf(::RequireDirectChatAuthorizationUseCase)
     singleOf(::SendDirectOperationUseCase)
     singleOf(::SendReadReceiptUseCase)

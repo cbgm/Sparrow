@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.runtime.foreground
 
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
@@ -19,6 +20,7 @@ class ForegroundRuntimeCoordinator(
     private val notificationRuntime: PlatformNotificationRuntime,
     private val applicationScope: CoroutineScope
 ) {
+    private val logger = SparrowLog.withTag("ForegroundRuntimeCoordinator")
     private val isForeground = MutableStateFlow(false)
     private val connectionHandler = ForegroundConnectionHandler(foreground)
     private var runtimeJob: Job? = null
@@ -61,14 +63,21 @@ class ForegroundRuntimeCoordinator(
 
     /**
      * Messages held back while there was no circuit through enough hops (sending directly switched off) are retried
-     * by the outbox with a growing delay; once such a circuit is up they go out at once.
+     * by the outbox with a growing delay; once such a circuit is up they go out at once. Messages whose attachment
+     * could not go out yet are sent again then too, and once when the app comes to the foreground.
      */
     private suspend fun sendWaitingMessagesWhenRouteReturns() {
-        var waiting = false
+        // Null until the first answer: a route that is there from the start sends the unsent messages once.
+        var waiting: Boolean? = null
         foreground.observeWaitingForRoute().distinctUntilChanged().collect { waitingNow ->
-            if (waiting && !waitingNow) foreground.outboxRunner.start()
+            if (waiting == true && !waitingNow) foreground.outboxRunner.start()
+            if (waiting != false && !waitingNow) sendUnsentMessages()
             waiting = waitingNow
         }
+    }
+
+    private suspend fun sendUnsentMessages() {
+        foreground.sendUnsentMessages().onSuccess { tried -> if (tried > 0) logger.info { "Unsent messages sent again: $tried" } }
     }
 
     private suspend fun runForegroundSession() {

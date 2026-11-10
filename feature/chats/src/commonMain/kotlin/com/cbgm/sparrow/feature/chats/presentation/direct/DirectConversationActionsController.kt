@@ -292,7 +292,7 @@ class DirectConversationActionsController(
 
     private fun executeAction(message: String, action: suspend () -> Result<*>) {
         scope.launch {
-            action().onFailure { errors.report(it.message ?: message) }
+            action().onFailure { errors.report(it.sendFailureText(it.message ?: message)) }
         }
     }
 

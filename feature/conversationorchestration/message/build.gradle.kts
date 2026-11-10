@@ -21,6 +21,7 @@ kotlin {
             implementation(projects.feature.identity)
             implementation(projects.feature.invite)
             implementation(projects.feature.membership)
+            implementation(projects.feature.transport)
 
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)

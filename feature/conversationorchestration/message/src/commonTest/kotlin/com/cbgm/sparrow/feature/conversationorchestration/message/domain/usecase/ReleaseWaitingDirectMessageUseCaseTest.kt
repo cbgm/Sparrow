@@ -159,6 +159,8 @@ class ReleaseWaitingDirectMessageUseCaseTest {
         override suspend fun findAwaitingOutbox(createdBeforeEpochMilliseconds: Long): Result<List<StoredMessage>> =
             error(NOT_USED)
 
+        override suspend fun findUnsent(): Result<List<StoredMessage>> = error(NOT_USED)
+
         override suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>> =
             error(NOT_USED)
 
