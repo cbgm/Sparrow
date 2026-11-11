@@ -891,7 +891,6 @@ function Write-ProxyConfig {
         $routes += Get-ComponentRoutes $cpRoot '{$CONTROL_PLANE_SITE_ADDRESS}' @{
             'node-registry:8090' = 'sparrow-control-registry:8090'
             'presence-directory:8091' = 'sparrow-control-presence:8091'
-            'push:8095' = 'sparrow-control-push:8095'
         } '/srv/control-plane'
         $entries += "$(Check-Domain $cpHost) {`n    import sparrow_control_routes`n}"
     }
@@ -973,7 +972,7 @@ function Repair-InstalledPublicMetadataIfAlreadyPublic {
     # partially converted, leave it untouched: a fake Public metadata flag can
     # change Compose DB credential and signing-volume bindings.
     Assert-DeploymentsNotRunningElsewhere
-    Test-InstalledProjectHasCompletePublicLayers 'sparrow-control-plane' @('caddy', 'node-registry', 'presence-directory', 'push')
+    Test-InstalledProjectHasCompletePublicLayers 'sparrow-control-plane' @('caddy', 'node-registry', 'presence-directory')
     Test-InstalledProjectHasCompletePublicLayers 'sparrow-community-node' @('caddy', 'mailbox', 'federation', 'gateway')
     $proxyIds = @(& docker ps -a --filter 'label=com.docker.compose.project=sparrow-public-proxy' --filter 'label=com.docker.compose.service=caddy' --format '{{.ID}}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or $proxyIds.Count -ne 1 -or -not $proxyIds[0]) {
@@ -1106,8 +1105,8 @@ function Test-LocalLanDeploymentForMigration {
         throw 'In-place LAN to Public conversion currently requires Combined mode (Node + Control Plane).'
     }
     Assert-DeploymentsNotRunningElsewhere
-    foreach ($entry in @(@{ Root=$cpRoot; Project='sparrow-control-plane'; Services=@('caddy','node-registry','presence-directory','push','node-registry-database','presence-redis','push-database') },
-                        @{ Root=$nodeRoot; Project='sparrow-community-node'; Services=@('caddy','mailbox','federation','gateway','mailbox-database','federation-database') })) {
+    foreach ($entry in @(@{ Root=$cpRoot; Project='sparrow-control-plane'; Services=@('caddy','node-registry','presence-directory','node-registry-database','presence-redis') },
+                        @{ Root=$nodeRoot; Project='sparrow-community-node'; Services=@('caddy','mailbox','federation','gateway','mailbox-database') })) {
         $runtimePath = Join-Path $entry.Root '.env.runtime'
         $config = Read-Properties (Join-Path $entry.Root 'sparrow.conf')
         if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf) -or
@@ -1128,8 +1127,7 @@ function Test-LocalLanDeploymentForMigration {
             }
         }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/mailbox-database-password.txt') -PathType Leaf) -or
-        -not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/federation-database-password.txt') -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/mailbox-database-password.txt') -PathType Leaf)) {
         throw 'Existing node password files are missing. Refusing to change its Compose configuration.'
     }
     foreach ($entry in @(@{Root=$cpRoot; Name='control-plane'}, @{Root=$nodeRoot; Name='community-node'})) {
@@ -1160,7 +1158,7 @@ function Invoke-LanToPublicMigration {
     }
     $cpRuntime = Read-Properties (Join-Path $cpRoot '.env.runtime')
     $nodeRuntime = Read-Properties (Join-Path $nodeRoot '.env.runtime')
-    foreach ($key in @('CONTROL_PLANE_PROJECT_NAME','NODE_REGISTRY_DATABASE_PASSWORD','PRESENCE_REDIS_PASSWORD','PUSH_DATABASE_PASSWORD','PUSH_INTERNAL_API_TOKEN')) {
+    foreach ($key in @('CONTROL_PLANE_PROJECT_NAME','NODE_REGISTRY_DATABASE_PASSWORD','PRESENCE_REDIS_PASSWORD')) {
         if (-not $cpRuntime[$key]) { throw "Existing Control Plane lacks $key. No data changed." }
     }
     foreach ($key in @('COMMUNITY_NODE_PROJECT_NAME','CLIENT_ENDPOINT','FEDERATION_ENDPOINT','MAILBOX_ENDPOINT','CONTROL_PLANE_URL')) {
@@ -1268,7 +1266,7 @@ function Invoke-LanToPublicMigration {
     }
         Write-Host 'Applying existing Control Plane backend and Caddy networking without touching database/Redis containers ...'
         $cpArgs = Get-ComposeArguments $cpRoot
-        Invoke-Docker -Arguments ($cpArgs + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','push','caddy'))
+        Invoke-Docker -Arguments ($cpArgs + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','caddy'))
         Write-Host 'Applying existing Community Node backend and Caddy networking without touching database containers ...'
         $nodeArgs = Get-ComposeArguments $nodeRoot
         Invoke-Docker -Arguments ($nodeArgs + @('up','-d','--no-deps','--pull','never','mailbox','federation','gateway','caddy'))
@@ -1306,7 +1304,7 @@ function Invoke-LanToPublicMigration {
         try {
             $originalCp = @('compose','--env-file',(Join-Path $cpRoot '.env.runtime'),'-f',(Join-Path $cpRoot 'docker-compose.yml'))
             if ($cpFlavor -eq 'release') { $originalCp += @('-f',(Join-Path $cpRoot 'docker-compose.release.yml')) }
-            Invoke-Docker -Arguments ($originalCp + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','push','caddy'))
+            Invoke-Docker -Arguments ($originalCp + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','caddy'))
         } catch { $rollbackFailures.Add("Restore LAN Control Plane: $($_.Exception.Message)") }
         try {
             $originalNode = @('compose','--env-file',(Join-Path $nodeRoot '.env.runtime'),'-f',(Join-Path $nodeRoot 'docker-compose.yml'),'-f',(Join-Path $nodeRoot 'docker-compose.release.yml'))
@@ -1568,7 +1566,7 @@ try {
                 # registration client cannot write to.
                 New-Item -ItemType Directory -Path (Join-Path $cpRoot 'directory-registration-proofs') -Force | Out-Null
             }
-            Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory', 'push')
+            Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory')
         }
         if ($nodeSelected) {
             if (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) {

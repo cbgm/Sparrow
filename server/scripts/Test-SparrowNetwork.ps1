@@ -209,9 +209,6 @@ $services = @(
     "presence-directory",
     "mailbox-database",
     "mailbox",
-    "push-database",
-    "push",
-    "federation-database",
     "federation",
     "gateway"
 )
@@ -219,7 +216,6 @@ if ($MultiNode) {
     $services += @(
         "mailbox-b-database",
         "mailbox-b",
-        "federation-b-database",
         "federation-b",
         "gateway-b"
     )
@@ -247,7 +243,7 @@ $checks = @(
     [pscustomobject]@{
         Name = "presence-directory"
         Url = "http://localhost:8091/health"
-        Pattern = '^ok persistence=redis routes=\d+$'
+        Pattern = '^ok persistence=redis$'
     },
     [pscustomobject]@{
         Name = "mailbox"
@@ -257,17 +253,12 @@ $checks = @(
     [pscustomobject]@{
         Name = "federation"
         Url = "http://localhost:8093/health"
-        Pattern = '^ok persistence=postgresql pending=\d+$'
+        Pattern = '^ok$'
     },
     [pscustomobject]@{
         Name = "gateway"
         Url = "http://localhost:8094/health"
-        Pattern = '^ok connections=\d+$'
-    },
-    [pscustomobject]@{
-        Name = "push"
-        Url = "http://localhost:8095/health"
-        Pattern = '^ok persistence=postgresql pendingEnvelopes=\d+$'
+        Pattern = '^ok$'
     }
 )
 if ($MultiNode) {
@@ -280,12 +271,12 @@ if ($MultiNode) {
         [pscustomobject]@{
             Name = "federation-b"
             Url = "http://localhost:8193/health"
-            Pattern = '^ok persistence=postgresql pending=\d+$'
+            Pattern = '^ok$'
         },
         [pscustomobject]@{
             Name = "gateway-b"
             Url = "http://localhost:8294/health"
-            Pattern = '^ok connections=\d+$'
+            Pattern = '^ok$'
         }
     )
 }

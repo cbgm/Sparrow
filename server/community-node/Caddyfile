@@ -20,7 +20,7 @@
         file_server
     }
 
-    @gateway_ws path /v1/gateway /v1/circuit
+    @gateway_ws path /v1/circuit
     handle @gateway_ws {
         reverse_proxy gateway:8094 {
             stream_close_delay 5m
@@ -32,7 +32,7 @@
         reverse_proxy gateway:8094
     }
 
-    @gateway_info path /v1/gateway/info /v1/control-planes /v1/relay
+    @gateway_info path /v1/control-planes /v1/relay
     handle @gateway_info {
         reverse_proxy gateway:8094
     }

@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.server.security
 
 import java.security.MessageDigest
-import java.security.PublicKey
 import java.util.Base64
 import java.util.UUID
 
@@ -11,13 +10,6 @@ data class NodeRequestAuthentication(
     val nonce: String,
     val signature: String
 )
-
-object NodeRequestHeaders {
-    const val NODE_ID = "X-Sparrow-Node-Id"
-    const val TIMESTAMP = "X-Sparrow-Timestamp"
-    const val NONCE = "X-Sparrow-Nonce"
-    const val SIGNATURE = "X-Sparrow-Signature"
-}
 
 class NodeRequestSigner(
     private val identity: NodeIdentity,
@@ -37,42 +29,6 @@ class NodeRequestSigner(
             nonce = nonce,
             signature = Base64.getEncoder().encodeToString(Signatures.sign(content, identity.privateKey))
         )
-    }
-}
-
-class NodeRequestVerifier(
-    private val replayProtection: ReplayProtection = ReplayProtection()
-) {
-    fun verify(
-        authentication: NodeRequestAuthentication,
-        method: String,
-        path: String,
-        body: String,
-        publicKey: PublicKey
-    ): Boolean {
-        if (!replayProtection.accept(
-                scope = authentication.nodeId,
-                nonce = authentication.nonce,
-                timestampEpochMilliseconds = authentication.timestampEpochMilliseconds
-            )
-        ) {
-            return false
-        }
-
-        return runCatching {
-            Signatures.verify(
-                content =
-                    canonicalRequest(
-                        method,
-                        path,
-                        authentication.timestampEpochMilliseconds,
-                        authentication.nonce,
-                        body
-                    ),
-                signature = Base64.getDecoder().decode(authentication.signature),
-                publicKey = publicKey
-            )
-        }.getOrDefault(false)
     }
 }
 

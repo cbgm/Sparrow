@@ -85,9 +85,9 @@ The current source tree includes:
 - exact/optional on-device semantic message search and local message-safety analysis;
 - device-owner app locking in `:feature:applock`;
 - task-based application startup through `ApplicationStartupRunner` / `StartupTask`, with post-navigation runtime observers separated from the startup gate;
-- signed Control Plane discovery, multiple Control Planes, node failover, WebSocket foreground delivery, mailbox-backed offline delivery and Android FCM wake-ups;
+- signed Control Plane discovery, multiple Control Planes, node failover, circuits through community relays and mailbox delivery for every packet;
 - unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
-- Docker/Ktor server services, persistent registry/mailbox/federation/push state, observability and deployment tooling.
+- Docker/Ktor server services, persistent registry/mailbox state, observability and deployment tooling.
 
 See [Current feature status](docs/features/current-features.md), [Polls](docs/features/polls.md), [Group expenses](docs/features/expenses.md), [Settle up and payment](docs/features/payment.md), [App lock](docs/features/app-lock.md), [Startup architecture](docs/architecture/startup.md), [Runtime flows](docs/architecture/runtime-flows.md), [Identity recovery](docs/features/identity-recovery.md), [Invitations](docs/features/invitations.md), [Group membership](docs/features/group-membership.md), and the [current-code inventory](docs/reference/current-code-inventory.md).
 
@@ -97,27 +97,25 @@ See [Current feature status](docs/features/current-features.md), [Polls](docs/fe
 flowchart LR
     A[Android app] -->|directory JSON| D[Control Plane directory]
     A -->|HTTPS| CP[Control Plane]
-    A -->|WSS /v1/gateway| N1[Community Node]
-    N1 -->|signed registration / presence / push| CP
-    N1 -->|federation| N2[Community Node]
-    N2 -->|mailbox wake-up| CP
+    A -->|circuit /v1/circuit| N1[Community Node]
+    N1 -->|relayed alias claims / invitation routes| CP
+    N1 -->|signed registration| CP
+    N1 -->|circuit| N2[Community Node]
 
     subgraph Control Plane
         CP --> R[Node Registry]
         CP --> P[Presence Directory / Redis]
-        CP --> PU[Push / PostgreSQL / FCM]
     end
 
     subgraph Community Node
-        N1 --> G[Gateway]
+        N1 --> G[Gateway relays and circuits]
         G --> B[Encrypted attachment blobs]
-        N1 --> F[Federation]
         N1 --> M[Mailbox / PostgreSQL]
     end
 ```
 
-The Control Plane is **discovery/control infrastructure**. Community Nodes carry client WebSocket traffic,
-federate messages between nodes, and host recipient-selected mailboxes. Caddy is the public HTTP edge for both
+The Control Plane is **discovery/control infrastructure**. Community Nodes relay the apps' circuits and
+host recipient-selected mailboxes. Caddy is the public HTTP edge for both
 packages.
 
 ## Fastest way to bring it to life
@@ -197,13 +195,13 @@ See [Local development](docs/development/local-development.md) and [Server runti
 
 ### 5. Verify the server
 
-A LAN Control Plane normally exposes `/index` on port `8390`; a LAN Community Node normally exposes `/index` on port `8490`. These pages link to the relevant registry/presence/push and gateway/federation/mailbox diagnostics.
+A LAN Control Plane normally exposes `/index` on port `8390`; a LAN Community Node normally exposes `/index` on port `8490`. These pages link to the relevant registry/presence and gateway/federation/mailbox diagnostics.
 
 ### 6. Run the app
 
 Use an Android emulator/device. `ApplicationStartupRunner` executes the registered startup tasks, restores and
 verifies the signed Control Plane directory, resolves identity readiness, and starts the post-navigation runtime.
-Transport discovery then selects a compatible node, establishes `/v1/gateway`, and automatically fails over when
+Transport discovery then selects a compatible home node, builds a circuit through it, and automatically fails over when
 the current node becomes unavailable.
 
 ## Project structure
@@ -239,8 +237,8 @@ feature/expenses/                 group expenses, balances, currency conversion
 feature/ocr/                      on-device receipt text recognition
 feature/payment/                  SEPA settle-up and payment status
 feature/applock/                  device-owner application lock
-feature/messaging/                generic durable outbox + incoming envelope runners
-feature/transport/                discovery/WebSocket/routing/mailbox/push gateways
+feature/messaging/                generic durable outbox runner
+feature/transport/                discovery, circuits, alias claims and mailbox gateways
 feature/onboarding/               onboarding flows
 feature/settings/                 settings/network/diagnostics UI
 feature/search/                   exact + local semantic search
@@ -265,9 +263,9 @@ Direct and Group chat behavior is intentionally separated. Start with
 - **libsodium:** identity keys, sealed-box transport encryption, Ed25519 signatures, and group AEAD.
 - **Docker + Docker Compose:** packages and runs the server services and their dependencies.
 - **Caddy:** public reverse proxy/edge; exposes one operator-friendly address and routes requests internally.
-- **PostgreSQL:** durable server data (registry, mailbox, push, federation queue).
-- **Redis:** short-lived presence/routing data that can be rebuilt when clients reconnect.
-- **Firebase Cloud Messaging:** Android wake-up notification path for offline delivery.
+- **PostgreSQL:** durable server data (registry, mailbox).
+- **Redis:** phone alias bindings and invitation routes, rebuilt from the apps' regular claims.
+- **Firebase Authentication:** SMS phone verification at sign-up.
 - **Micrometer/Prometheus:** server metrics.
 - **Detekt + ktlint:** static analysis and formatting/quality checks.
 - **MediaPipe Text Embedder:** on-device embeddings for optional semantic message search and message-safety analysis.

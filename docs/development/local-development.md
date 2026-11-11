@@ -34,7 +34,7 @@ button in the verification dialog. With `DEBUG_SMS_CODE` set, debug builds use t
 mode: add the number as a test phone number with this code in the Firebase console (Authentication
 → Sign-in method → Phone); the app check is skipped, the code is filled in automatically and also
 shown as a "Sparrow (test SMS)" notification. Release builds ignore both. The resulting one-time
-token is sent only with the first route registration (see
+token is sent once to the Directory's phone verifier, and its attestation goes into the alias claims (see
 [Transport](../features/transport.md#phone-verification-token-at-sign-up)).
 
 ```properties
@@ -145,17 +145,15 @@ For multiple nodes, use separate Compose project names, ports, identities and vo
 flowchart LR
     APP1[Android A] <--> N1[Community Node A]
     APP2[Android B] <--> N2[Community Node B]
-    N1 <--> N2
     N1 --> CP[Control Plane]
     N2 --> CP
     CP --> REG[Node registry]
     CP --> PRES[Presence]
-    CP --> PUSH[Push]
     N1 --> MB1[Mailbox]
     N2 --> MB2[Mailbox]
 ```
 
-The Control Plane handles discovery/presence/push. Community Nodes handle client WebSockets, federation, encrypted mailbox envelopes and encrypted attachment blobs. Application messages are encrypted client-side before these transport layers.
+The Control Plane handles discovery and presence (alias bindings, invitation routes). Community Nodes handle relays and circuits, encrypted mailbox envelopes and encrypted attachment blobs. Application messages are encrypted client-side before these transport layers.
 
 ## 6. Independent Control Plane Directory
 
@@ -167,7 +165,7 @@ For ordinary local testing, a Combined unified installation can use its local Co
 
 ## 7. Observe the system
 
-Control Plane `/index` links to registry, presence, push and node information. Community Node `/index` links to gateway, Control Plane advertisement, federation and mailbox diagnostics.
+Control Plane `/index` links to registry, presence and node information. Community Node `/index` links to gateway, Control Plane advertisement, federation and mailbox diagnostics.
 
 Useful Docker commands:
 

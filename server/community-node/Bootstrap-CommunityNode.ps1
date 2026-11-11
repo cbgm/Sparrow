@@ -1282,21 +1282,9 @@ try {
     New-Item -ItemType Directory -Path $secretsDirectory -Force | Out-Null
 
     $mailboxPasswordPath = Join-Path $secretsDirectory "mailbox-database-password.txt"
-    $federationPasswordPath = Join-Path $secretsDirectory "federation-database-password.txt"
-    $federationTokenPath = Join-Path $secretsDirectory "federation-internal-api-token.txt"
-    $gatewayTokenPath = Join-Path $secretsDirectory "gateway-internal-api-token.txt"
-
-    @(
-        $mailboxPasswordPath,
-        $federationPasswordPath,
-        $federationTokenPath,
-        $gatewayTokenPath
-    ) | ForEach-Object {
-        Ensure-SecretFile -Path $_
-    }
+    Ensure-SecretFile -Path $mailboxPasswordPath
 
     $mailboxPassword = (Get-Content -LiteralPath $mailboxPasswordPath -Raw).Trim()
-    $federationPassword = (Get-Content -LiteralPath $federationPasswordPath -Raw).Trim()
 
     $clientEndpoint = if ($mode -eq "public") { "wss://$publicDomain/v1/gateway" } else { "ws://$hostAddress`:$publicPort/v1/gateway" }
     $httpEndpoint = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$hostAddress`:$publicPort" }
@@ -1313,7 +1301,6 @@ try {
         "FEDERATION_DIAGNOSTIC_PORT=$(if ($config['FEDERATION_DIAGNOSTIC_PORT']) { $config['FEDERATION_DIAGNOSTIC_PORT'] } else { '8493' })",
         "GATEWAY_DIAGNOSTIC_PORT=$(if ($config['GATEWAY_DIAGNOSTIC_PORT']) { $config['GATEWAY_DIAGNOSTIC_PORT'] } else { '8494' })",
         "MAILBOX_DATABASE_PORT=$(if ($config['MAILBOX_DATABASE_PORT']) { $config['MAILBOX_DATABASE_PORT'] } else { '5636' })",
-        "FEDERATION_DATABASE_PORT=$(if ($config['FEDERATION_DATABASE_PORT']) { $config['FEDERATION_DATABASE_PORT'] } else { '5638' })",
         "COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=$(if ($config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME']) { $config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME'] } else { 'sparrow-node-directory-cache' })",
         "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
         "COMMUNITY_NODE_DOMAIN=$publicDomain",
@@ -1329,9 +1316,6 @@ try {
         "SPARROW_IMAGE_TAG=$($config['SPARROW_IMAGE_TAG'])",
         "SPARROW_UPDATE_INTERVAL_SECONDS=300",
         "MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt",
-        "FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt",
-        "FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt",
-        "GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt",
         "EXCHANGE_RATES_URL=",
         # LAN Control Planes have private addresses, which the onion relay refuses otherwise.
         "RELAY_PRIVATE_DESTINATIONS=$(if ($mode -eq 'lan') { 'true' } else { 'false' })"
@@ -1356,7 +1340,7 @@ try {
         Set-ProgressValue -Value 55
 
         Set-ProgressValue -Value 65
-        Set-Status "Starting node databases..."
+        Set-Status "Starting the node database..."
         # Always recreate the database containers here. Docker Desktop implements
         # Compose file-based secrets as host bind mounts. If a secret file was
         # temporarily unavailable, a stopped container can retain a stale mount
@@ -1367,12 +1351,10 @@ try {
             "up",
             "-d",
             "--force-recreate",
-            "mailbox-database",
-            "federation-database"
+            "mailbox-database"
         )
 
         Wait-ForContainerRunning -Service "mailbox-database"
-        Wait-ForContainerRunning -Service "federation-database"
 
         Start-Sleep -Seconds 3
 
@@ -1381,12 +1363,6 @@ try {
             -DatabaseUser "sparrow_mailbox" `
             -DatabaseName "sparrow_mailbox" `
             -Password $mailboxPassword
-
-        Synchronize-PostgresPassword `
-            -Service "federation-database" `
-            -DatabaseUser "sparrow_federation" `
-            -DatabaseName "sparrow_federation" `
-            -Password $federationPassword
 
         Set-ProgressValue -Value 82
         Set-Status "Starting Sparrow node services..."

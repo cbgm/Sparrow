@@ -15,7 +15,7 @@
     ],
     "public-proxy": ["docker-compose.yml"]
   },
-  "services": ["node-registry", "presence-directory", "mailbox", "federation", "gateway", "push"],
+  "services": ["node-registry", "presence-directory", "mailbox", "federation", "gateway"],
   "instanceHelpers": ["control_plane_directory_client.py", "Get-SparrowVerifiedDirectory.ps1"],
   "generated": ["bundle.json", "local-images.json", "local-images.tar"],
   "legacy": [

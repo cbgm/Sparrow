@@ -88,7 +88,7 @@ internal class InvitationTestWorld {
         ) { expectSuccess = true }
 
     class Device(
-        val name: String
+        name: String
     ) {
         val key: ByteArray = name.encodeToByteArray()
         val routingId = "scrouting1_$name"

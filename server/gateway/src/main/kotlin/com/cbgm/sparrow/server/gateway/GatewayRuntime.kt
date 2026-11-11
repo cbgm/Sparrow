@@ -1,14 +1,10 @@
 package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.observability.installServerObservability
-import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.CreationWorkCheck
 import com.cbgm.sparrow.server.security.NodeIdentity
-import com.cbgm.sparrow.server.security.NodeRequestSigner
 import com.cbgm.sparrow.server.security.relayKeyPair
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
@@ -24,16 +20,15 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 private const val WEBSOCKET_PING_PERIOD_SECONDS = 20
 private const val WEBSOCKET_TIMEOUT_SECONDS = 60
 
+/**
+ * The node's edge for apps: relays and circuits (the circuit hops are WebSockets), and blobs. Apps hold no session
+ * here; messages go into mailboxes through the circuits.
+ */
 internal data class GatewayRuntime(
-    val httpClient: HttpClient,
-    val ownsHttpClient: Boolean,
-    val connections: ConnectionRegistry,
-    val handler: GatewayWebSocketHandler,
     val blobStore: BlobStore,
     val blobCreationWork: CreationWorkCheck,
     val serviceScope: CoroutineScope,
@@ -43,11 +38,8 @@ internal data class GatewayRuntime(
 
 internal fun createGatewayRuntime(
     identity: NodeIdentity,
-    config: GatewayConfig,
-    suppliedHttpClient: HttpClient?
+    config: GatewayConfig
 ): GatewayRuntime {
-    val httpClient = suppliedHttpClient ?: createGatewayHttpClient()
-    val connections = ConnectionRegistry()
     val blobStore =
         BlobStore(
             root = Path.of(config.blobStoragePath),
@@ -63,10 +55,6 @@ internal fun createGatewayRuntime(
     }
 
     return GatewayRuntime(
-        httpClient = httpClient,
-        ownsHttpClient = suppliedHttpClient == null,
-        connections = connections,
-        handler = createGatewayHandler(identity, config, httpClient, connections),
         blobStore = blobStore,
         blobCreationWork = CreationWorkCheck(config.blobCreationWorkBits),
         serviceScope = serviceScope,
@@ -85,86 +73,16 @@ internal fun createGatewayRuntime(
     )
 }
 
-private fun createGatewayHttpClient(): HttpClient =
-    HttpClient(CIO) {
-        install(ClientContentNegotiation) {
-            json(serverJson)
-        }
-    }
-
-private fun createGatewayHandler(
-    identity: NodeIdentity,
-    config: GatewayConfig,
-    httpClient: HttpClient,
-    connections: ConnectionRegistry
-): GatewayWebSocketHandler {
-    val signer = NodeRequestSigner(identity)
-    val discoveryFile = System.getenv("DIRECTORY_DISCOVERY_PATH")
-        ?.takeIf(String::isNotBlank)
-        ?.let { Path.of(it) }
-    val presenceEndpointPool =
-        ControlPlaneEndpointPool(
-            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) },
-            discoveryFile = discoveryFile
-        )
-    val pushClient =
-        config.pushNodeApiUrl?.let { nodeApiUrl ->
-            HttpNodePushClient(
-                httpClient = httpClient,
-                endpointPool =
-                    ControlPlaneEndpointPool(
-                        config.controlPlaneUrls.ifEmpty { listOf(nodeApiUrl) },
-                        discoveryFile = discoveryFile
-                    ),
-                signer = signer
-            )
-        } ?: HttpLegacyPushClient(
-            httpClient = httpClient,
-            baseUrl = config.pushInternalUrl,
-            internalToken = config.pushInternalApiToken
-        )
-
-    return GatewayWebSocketHandler(
-        nodeId = identity.nodeId,
-        connections = connections,
-        federation =
-            HttpFederationClient(
-                httpClient = httpClient,
-                baseUrl = config.federationInternalUrl,
-                internalToken = config.federationInternalApiToken
-            ),
-        presence =
-            HttpPresenceClient(
-                httpClient = httpClient,
-                endpointPool = presenceEndpointPool,
-                signer = signer
-            ),
-        legacyPush = pushClient,
-        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
-        signInTimeoutMilliseconds = config.signInTimeoutMilliseconds
-    )
-}
-
 internal fun Application.configureGatewayLifecycle(runtime: GatewayRuntime) {
     monitor.subscribe(ApplicationStopped) {
-        runtime.handler.close()
         runtime.relay.close()
         runtime.circuits.close()
         runtime.serviceScope.cancel()
-        if (runtime.ownsHttpClient) {
-            runtime.httpClient.close()
-        }
     }
 }
 
-internal fun Application.installGatewayPlugins(
-    runtime: GatewayRuntime,
-    config: GatewayConfig
-) {
-    installServerObservability("gateway") {
-        runtime.connections.count()
-        true
-    }
+internal fun Application.installGatewayPlugins(config: GatewayConfig) {
+    installServerObservability("gateway") { true }
     install(ContentNegotiation) {
         json(serverJson)
     }

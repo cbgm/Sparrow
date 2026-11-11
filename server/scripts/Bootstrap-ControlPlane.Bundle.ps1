@@ -971,78 +971,6 @@ function Synchronize-PostgresPassword {
     }
 }
 
-function Reset-ObsoletePushSchemaIfNeeded {
-    Set-Status "Checking push database schema..."
-
-    $schemaCheckSql = @"
-SELECT CASE
-    WHEN to_regclass('public.push_devices') IS NULL THEN 'EMPTY'
-    WHEN EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = 'push_devices'
-          AND column_name = 'routing_id'
-    ) THEN 'CURRENT'
-    ELSE 'OBSOLETE'
-END;
-"@
-
-    $composeFileArguments = $script:ComposeFileArguments
-    $output = & $script:Docker compose `
-        --env-file $runtimeEnvironmentPath `
-        @composeFileArguments `
-        exec -T `
-        push-database `
-        psql `
-        -v ON_ERROR_STOP=1 `
-        -At `
-        -U sparrow_push `
-        -d sparrow_push `
-        -c $schemaCheckSql 2>&1
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not inspect the push database schema."
-    }
-
-    $schemaState = ($output | Out-String).Trim()
-    Write-Log "push database schema: $schemaState"
-
-    if ($schemaState -ne "OBSOLETE") {
-        return
-    }
-
-    Set-Status "Resetting obsolete push database schema..."
-    Write-Detail "Detected the pre-routing-id push schema. Resetting only push runtime data."
-
-    $resetSql = @"
-DROP TABLE IF EXISTS push_wake_ups CASCADE;
-DROP TABLE IF EXISTS pending_envelopes CASCADE;
-DROP TABLE IF EXISTS push_devices CASCADE;
-"@
-
-    $resetOutput = & $script:Docker compose `
-        --env-file $runtimeEnvironmentPath `
-        @composeFileArguments `
-        exec -T `
-        push-database `
-        psql `
-        -v ON_ERROR_STOP=1 `
-        -U sparrow_push `
-        -d sparrow_push `
-        -c $resetSql 2>&1
-
-    foreach ($line in $resetOutput) {
-        Write-Log "push database reset: $line"
-    }
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not reset the obsolete push database schema."
-    }
-
-    Write-Detail "Obsolete push database schema removed. The push service will create the current schema."
-}
-
 function Test-HttpReady {
     param(
         [string]$Url,
@@ -1152,18 +1080,12 @@ try {
 
     $registryPasswordPath = Join-Path $secretsDirectory "node-registry-database-password.txt"
     $presencePasswordPath = Join-Path $secretsDirectory "presence-redis-password.txt"
-    $pushPasswordPath = Join-Path $secretsDirectory "push-database-password.txt"
-    $pushTokenPath = Join-Path $secretsDirectory "push-internal-api-token.txt"
 
     Ensure-Secret $registryPasswordPath
     Ensure-Secret $presencePasswordPath
-    Ensure-Secret $pushPasswordPath
-    Ensure-Secret $pushTokenPath
 
     $registryPassword = (Get-Content $registryPasswordPath -Raw).Trim()
     $presencePassword = (Get-Content $presencePasswordPath -Raw).Trim()
-    $pushPassword = (Get-Content $pushPasswordPath -Raw).Trim()
-    $pushToken = (Get-Content $pushTokenPath -Raw).Trim()
 
     Ensure-RegistryAuthority -Config $config
 
@@ -1181,12 +1103,8 @@ try {
         "REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",
         "PRESENCE_REDIS_PASSWORD=$presencePassword",
-        "PUSH_DATABASE_PASSWORD=$pushPassword",
-        "PUSH_INTERNAL_API_TOKEN=$pushToken",
         "NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt",
         "PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt",
-        "PUSH_DATABASE_PASSWORD_FILE=./secrets/push-database-password.txt",
-        "PUSH_INTERNAL_API_TOKEN_FILE=./secrets/push-internal-api-token.txt",
         "SPARROW_IMAGE_PREFIX=$($config['SPARROW_IMAGE_PREFIX'])",
         "SPARROW_IMAGE_TAG=$($config['SPARROW_IMAGE_TAG'])"
     )
@@ -1216,8 +1134,7 @@ try {
         Invoke-Compose -Arguments @(
             "up",
             "-d",
-            "node-registry-database",
-            "push-database"
+            "node-registry-database"
         )
 
         Set-ProgressValue -Value 72
@@ -1231,7 +1148,6 @@ try {
 
         Wait-ForContainerRunning -Service "node-registry-database"
         Wait-ForContainerRunning -Service "presence-redis"
-        Wait-ForContainerRunning -Service "push-database"
 
         Start-Sleep -Seconds 3
 
@@ -1240,14 +1156,6 @@ try {
             -DatabaseUser "sparrow_registry" `
             -DatabaseName "sparrow_registry" `
             -Password $registryPassword
-
-        Synchronize-PostgresPassword `
-            -Service "push-database" `
-            -DatabaseUser "sparrow_push" `
-            -DatabaseName "sparrow_push" `
-            -Password $pushPassword
-
-        Reset-ObsoletePushSchemaIfNeeded
 
         Set-ProgressValue -Value 80
         Set-Status "Preparing registry signing storage..."
@@ -1285,10 +1193,6 @@ try {
     Wait-ForEndpoint `
         -Name "control-plane presence route" `
         -Url "http://127.0.0.1:8390/health/presence"
-
-    Wait-ForEndpoint `
-        -Name "control-plane push route" `
-        -Url "http://127.0.0.1:8390/health/push"
 
     $address = @(
         Get-NetIPConfiguration |

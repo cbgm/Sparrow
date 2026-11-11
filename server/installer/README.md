@@ -136,10 +136,9 @@ Build a fresh distributable from the repository root with `python3 server/instal
 (Windows, Linux and macOS); `--local-images` builds the six server images from the source tree and
 embeds them, `--install <folder>` creates a ready server folder instead of a ZIP. An installed manager
 builds and applies local images itself with **Build from source...**. The resulting
-`dist/sparrow-server.zip` contains no service-account keys and has no deployment data.
+`dist/sparrow-server.zip` has no deployment data.
 Organization-enforced policies or AppLocker/WDAC may still block execution and should not be
-circumvented. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS, public ingress, and FCM
-account authorization require integration verification on the operator's machine.
+circumvented. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS and public ingress require integration verification on the operator's machine.
 
 Source-only tests live in `server/installer/tests/` (`Test-SparrowLocalImages.ps1`,
 `Test-SparrowDirectoryRoutePreservation.ps1`); they are not part of the bundle.
@@ -160,9 +159,8 @@ contents. This is **not** a backup or a migration; it does not inspect/verify da
 credentials, identities or certificates. In particular, an online filesystem copy of live PostgreSQL
 or Redis volumes is not a reliable rollback point.
 
-**Status** shows the Compose containers, configured endpoints and whether a Control Plane
-service-account file exists; it does not claim that the public endpoint or FCM delivery is
-functioning. **Logs** also includes shared proxy logs if the proxy is configured.
+**Status** shows the Compose containers and configured endpoints; it does not claim that the public
+endpoint is functioning. **Logs** also includes shared proxy logs if the proxy is configured.
 
 The manager guards against starting a second copy of a running Compose project from another
 deployment folder. A Public-to-LAN switch or a change of a custom Public hostname is blocked until
@@ -180,8 +178,7 @@ data volumes. If anything is running, the snapshot fails closed.
 
 The snapshot preserves a read-only archive of each selected project's Compose-labeled local Docker
 volumes (including databases, identities, queues, and the component's Caddy certificate state), the
-component's configuration, Compose files, secrets, and any configured external FCM service-account
-JSON. Backup output receives a restrictive Windows ACL; store it securely because it contains live
+component's configuration, Compose files and secrets. Backup output receives a restrictive Windows ACL; store it securely because it contains live
 encryption keys and credentials. The script does not touch or delete original Docker resources. If
 the snapshot fails, its output retains `INCOMPLETE-DO-NOT-RESTORE.txt` and must not be used for
 recovery.
@@ -219,7 +216,7 @@ scripts move public traffic to one shared Caddy without moving data volumes:
 `-Apply` requires a plan directory with `cutover-readiness.json` and a candidate Caddyfile. The
 readiness check that produced this plan is **not** part of the current source tree, so a new cutover
 plan cannot be prepared with this bundle alone. None of these steps is certified for production
-migration; Windows/Docker/live external DNS, TLS, WebSocket and FCM tests remain outstanding.
+migration; Windows/Docker/live external DNS, TLS and circuit tests remain outstanding.
 
 ## Public Caddy without an owned domain
 
@@ -235,7 +232,7 @@ After Install, the **Server** card displays the installed Control Plane, Communi
 (`wss://.../v1/gateway`) addresses with individual **Copy** buttons, read from the installed
 `sparrow.conf`. These are configured URLs, **not proof** of outside connectivity or successful ACME
 certificate issuance. Always test from a different internet connection, with real HTTPS certificate
-checks and WebSocket messaging. Caddy requires incoming TCP 80/443 (or matching forwarded ports); a
+checks and messaging between two phones. Caddy requires incoming TCP 80/443 (or matching forwarded ports); a
 public IP reported by a lookup service does not prove that the router has a globally reachable IPv4
 (CGNAT/DS-Lite can prevent IPv4 port forwarding). Public DNS services and certificate authorities have
 availability/rate limits. Caddy's local/internal certificate is NOT a substitute for a public,

@@ -12,9 +12,7 @@ This page describes the current server tree and the installer/runtime tooling.
 - `node-registry-database` (PostgreSQL)
 - `node-registry` (`:server:node-registry`)
 - `presence-redis`
-- `presence-directory` (`:server:presence-directory`; optional phone-token check with Firebase Admin)
-- `push-database` (PostgreSQL)
-- `push` (`:server:push`)
+- `presence-directory` (`:server:presence-directory`; phone attestations checked with the pinned Directory key)
 
 ### Community Node
 
@@ -22,7 +20,7 @@ This page describes the current server tree and the installer/runtime tooling.
 
 - `caddy`
 - `mailbox-database` + `mailbox` (`:server:mailbox`)
-- `federation-database` + `federation` (`:server:federation`)
+- `federation` (`:server:federation`, node registration)
 - `blob-storage-init`
 - `gateway` (`:server:gateway`)
 
@@ -40,7 +38,6 @@ flowchart LR
     CP[Control Plane Caddy]
     REG[node-registry]
     PRES[presence-directory]
-    PUSH[push]
     NODE[Community Node Caddy]
     GW[gateway]
     FED[federation]
@@ -50,38 +47,25 @@ flowchart LR
     APP --> CP
     CP --> REG
     CP --> PRES
-    CP --> PUSH
     APP <--> NODE
     NODE --> GW
     NODE --> FED
     NODE --> MB
-    GW <--> FED
-    FED --> MB
     GW --> BLOB
-    FED <--> REG
-    FED <--> PRES
+    FED --> REG
 ```
 
 ## Important server classes
 
 Gateway:
 
-- `GatewayWebSocketHandler`
-- `GatewaySessionHandler`
-- `ConnectionRegistry`
+- `OnionRelay`, `CircuitRelay`
 - `BlobStore`
 - `BlobCleanupAgent`
-- `HttpFederationClient`, `HttpPresenceClient`, `HttpNodePushClient`
 
 Federation:
 
-- `FederationRouter`
-- `FederationPeerRouter`
-- `OutboundEnvelopeQueue`
-- `OutboundEnvelopeRetryAgent`
 - `NodeRegistrationAgent`
-- `CachingNodeRegistryClient`
-- `HttpPresenceDirectoryClient`, `HttpLocalGatewayClient`, `HttpRemoteFederationClient`, `HttpMailboxClient`
 
 Mailbox:
 
@@ -89,13 +73,13 @@ Mailbox:
 - `PostgresMailboxStore`
 - mailbox capability/create/revoke/fetch HTTP routes in `MailboxRoutes`
 
-Registry/presence/push:
+Registry/presence:
 
 - `NodeRegistryStore`
 - `RegistryDirectorySigner`, `DirectRegistryDirectorySigner`, `RotatingRegistryDirectorySigner`
 - `RegistryAuthorityCertificateStore`
 - `PhoneVerification`, `PhoneAttestations`
-- `PostgresPendingEnvelopeStore` (pending envelopes of the old delivery path)
+- `AliasClaimKeys`, `RedisPresenceStore` (alias bindings and invitation routes)
 
 Link preview:
 
@@ -144,7 +128,7 @@ Add `--local-images` to embed locally built server images. The installed manager
 
 ## Service image build
 
-Each executable Ktor service has an `application` main class and is built through the common `server/Dockerfile` using a `SERVICE` build argument. Compose files select service names such as `gateway`, `federation`, `mailbox`, `node-registry`, `presence-directory` and `push`.
+Each executable Ktor service has an `application` main class and is built through the common `server/Dockerfile` using a `SERVICE` build argument. Compose files select service names such as `gateway`, `federation`, `mailbox`, `node-registry` and `presence-directory`.
 
 ## Backups and upgrades
 

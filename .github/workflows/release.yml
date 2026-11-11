@@ -27,7 +27,6 @@ jobs:
       android: ${{ steps.changes.outputs.android }}
       node_registry: ${{ steps.changes.outputs.node_registry }}
       presence_directory: ${{ steps.changes.outputs.presence_directory }}
-      push: ${{ steps.changes.outputs.push }}
       mailbox: ${{ steps.changes.outputs.mailbox }}
       federation: ${{ steps.changes.outputs.federation }}
       gateway: ${{ steps.changes.outputs.gateway }}
@@ -63,7 +62,6 @@ jobs:
           FULL_BUILD: ${{ steps.changes.outputs.full_build }}
           NODE_REGISTRY: ${{ steps.changes.outputs.node_registry }}
           PRESENCE_DIRECTORY: ${{ steps.changes.outputs.presence_directory }}
-          PUSH: ${{ steps.changes.outputs.push }}
           MAILBOX: ${{ steps.changes.outputs.mailbox }}
           FEDERATION: ${{ steps.changes.outputs.federation }}
           GATEWAY: ${{ steps.changes.outputs.gateway }}
@@ -77,7 +75,6 @@ jobs:
             "${FULL_BUILD}" \
             "${NODE_REGISTRY}" \
             "${PRESENCE_DIRECTORY}" \
-            "${PUSH}" \
             "${MAILBOX}" \
             "${FEDERATION}" \
             "${GATEWAY}" \
@@ -481,7 +478,6 @@ jobs:
           RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
           CHANGE_NODE_REGISTRY: ${{ needs.changes.outputs.node_registry }}
           CHANGE_PRESENCE_DIRECTORY: ${{ needs.changes.outputs.presence_directory }}
-          CHANGE_PUSH: ${{ needs.changes.outputs.push }}
           CHANGE_MAILBOX: ${{ needs.changes.outputs.mailbox }}
           CHANGE_FEDERATION: ${{ needs.changes.outputs.federation }}
           CHANGE_GATEWAY: ${{ needs.changes.outputs.gateway }}
@@ -496,7 +492,6 @@ jobs:
           required=(
             node-registry
             presence-directory
-            push
             mailbox
             federation
             gateway

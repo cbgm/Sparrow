@@ -81,9 +81,6 @@ class ForegroundRuntimeCoordinator(
     }
 
     private suspend fun runForegroundSession() {
-        StartupTrace.measure("incoming envelope runner start") {
-            foreground.incomingEnvelopeRunner.start()
-        }
         StartupTrace.measure("transport connection manager start") {
             foreground.transportConnectionManager.start()
         }
@@ -107,7 +104,6 @@ class ForegroundRuntimeCoordinator(
                 mailboxArrivals.cancelAndJoin()
                 circuit.cancelAndJoin()
                 foreground.outboxRunner.stop()
-                foreground.incomingEnvelopeRunner.stop()
                 foreground.transportConnectionManager.stop()
             }
         }

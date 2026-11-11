@@ -57,7 +57,6 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
@@ -82,8 +81,6 @@ import com.cbgm.sparrow.feature.transport.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.SignedInvitationLetters
 import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
-import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
-import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.presence.InvitationRouteRemoteSource
 import com.cbgm.sparrow.feature.transport.presence.PhoneAttestationRemoteSource
 import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
@@ -97,11 +94,7 @@ import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvide
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.routing.Sha256RoutingIdGenerator
-import com.cbgm.sparrow.feature.transport.sender.WebSocketOutgoingWireSender
-import com.cbgm.sparrow.feature.transport.websocket.DefaultWebSocketTransportClient
-import com.cbgm.sparrow.feature.transport.websocket.GatewayPendingRequestRegistry
-import com.cbgm.sparrow.feature.transport.websocket.GatewayServerMessageHandler
-import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.feature.transport.sender.MailboxOutgoingWireSender
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
@@ -162,38 +155,6 @@ val transportModule =
             DefaultLocalBootstrapRoutingIdProvider(
                 localPhoneNumberProvider = get(),
                 routingIdGenerator = get<RoutingIdGenerator>()
-            )
-        }
-
-        single {
-            GatewayPendingRequestRegistry()
-        }
-
-        single {
-            GatewayServerMessageHandler(
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                pendingRequestRegistry = get<GatewayPendingRequestRegistry>()
-            )
-        }
-
-        single<WebSocketTransportClient> {
-            DefaultWebSocketTransportClient(
-                httpClient = get<HttpClient>(),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                presenceRouteCoordinator = get<ClientPresenceRouteCoordinator>(),
-                serverMessageHandler = get<GatewayServerMessageHandler>(),
-                pendingRequestRegistry = get<GatewayPendingRequestRegistry>(),
-                createGatewaySessionProof = get<CreateGatewaySessionProofUseCase>()
-            )
-        }
-
-        singleOf(::CreateGatewaySessionProofUseCase)
-
-        single<ClientRouteRegistrationFactory> {
-            ClientRouteRegistrationFactory(
-                signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
-                signatureCrypto = get<DetachedSignatureCrypto>(),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
@@ -326,16 +287,9 @@ val transportModule =
         }
 
         single {
-            ClientPresenceRouteCoordinator(
-                httpClient = get<HttpClient>(),
-                registrationFactory = get<ClientRouteRegistrationFactory>(),
-                aliasClaimRegistrar = get<AliasClaimRegistrar>()
-            )
-        }
-
-        single {
             DefaultTransportConnectionManager(
-                webSocketTransportClient = get<WebSocketTransportClient>(),
+                circuits = get<CircuitRunner>(),
+                aliasClaims = get<AliasClaimRegistrar>(),
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
                 transportConfig = get<TransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>(),
@@ -496,15 +450,14 @@ val transportModule =
         singleOf(::PrepareControlPlaneUseCase)
 
         single<OutgoingWireSender> {
-            WebSocketOutgoingWireSender(
-                webSocketTransportClient = get<WebSocketTransportClient>(),
+            MailboxOutgoingWireSender(
                 localRoutingIdProvider = get<LocalRoutingIdProvider>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
                 transportConfig = get<TransportConfig>(),
                 mailboxRouteRepository = get(),
                 mailboxGateway = get<MailboxGateway>(),
-                sendingPolicy = get<DirectSendingPolicy>(),
-                invitationLetters = get<InvitationLetters>()
+                invitationLetters = get<InvitationLetters>(),
+                aliasBinding = get<AliasClaimRegistrar>()
             )
         }
     }

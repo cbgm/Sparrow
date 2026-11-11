@@ -42,11 +42,10 @@ The exact Sparrow pieces are implemented by classes such as:
 - `HttpControlPlaneDirectorySynchronizer` — loads the external Control Plane directory;
 - `SignedDirectoryControlPlaneCandidateVerifier` — verifies Control Plane candidates;
 - `HttpNodeDirectorySource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
-- `DefaultTransportConnectionManager` — selects/reconnects/fails over between nodes;
+- `DefaultTransportConnectionManager` — selects the home node and fails over between nodes;
 - `FailedNodeTracker` — keeps temporarily failed nodes out of immediate reselection;
-- `DefaultWebSocketTransportClient` — maintains the client WebSocket to `/v1/gateway`;
+- `CircuitRunner` — keeps a circuit through relays, starting at the home node;
 - `NodeRegistrationAgent` — registers/heartbeats a Community Node against reachable Control Planes;
-- `FederationRouter` and `FederationPeerRouter` — route encrypted envelopes between nodes;
 - `MailboxStorage` / `PostgresMailboxStore` — store offline encrypted envelopes.
 
 No individual Community Node is intended to become the permanent home of a user's account.
@@ -83,8 +82,8 @@ Running ten nodes on one account in one datacenter does not provide the same ind
 
 ### 3. Control and message transport are separated
 
-A Control Plane provides discovery, presence and Android push support. Community Nodes handle client WebSockets,
-federation and mailboxes.
+A Control Plane provides discovery and presence (phone alias bindings, invitation routes). Community Nodes handle
+relays, circuits and mailboxes.
 
 That split means the service responsible for publishing node information is not automatically the service carrying
 every client connection and every encrypted envelope.
@@ -96,22 +95,18 @@ flowchart TB
     DIR[External Control Plane directory]
     REG[Node Registry]
     PRES[Presence Directory]
-    PUSH[Push]
-    GW[Gateway]
-    FED[FederationRouter]
+    GW[Gateway relays and circuits]
     MB[MailboxStorage]
 
     DIR --> REG
     REG --> GW
-    GW --> FED
-    FED --> MB
-    FED --> PRES
-    MB --> PUSH
+    GW --> MB
+    GW -. two relays .-> PRES
 ```
 
 ### 4. Message content stays client-side
 
-Normal encrypted Direct and Group messages are encrypted before server transport. Gateway, federation and mailbox
+Normal encrypted Direct and Group messages are encrypted before server transport. Relays, circuits and mailbox
 services work with encrypted protocol payloads/envelopes rather than chat plaintext.
 
 Client-side implementations include:
@@ -144,10 +139,10 @@ The similarity is the infrastructure philosophy:
 
 Tor goes much further. Tor is an anonymity network: traffic is deliberately sent through a multi-hop circuit of
 relays with layered onion encryption. The Tor Project describes the normal Tor Browser path as three relays.
-Sparrow currently connects a client to **one Community Node at a time**; that node may federate an encrypted
-envelope to another node for the recipient. Only the app's requests to Control Planes (node discovery, push, phone
-alias claims) go through two relays with layered encryption, so Control Planes do not see the app's address; the
-messaging connection itself does not.
+Sparrow's app builds a circuit through relays starting at its home node and puts every packet into the recipient's
+mailbox, which the recipient reads the same way. Its requests to Control Planes (node discovery, phone alias claims,
+invitation route lookups) go through two relays with layered encryption, so Control Planes do not see the app's
+address. Sparrow does not add cover traffic or the other protections Tor relies on.
 
 ```mermaid
 flowchart LR
@@ -159,9 +154,10 @@ flowchart LR
     end
 
     subgraph SC[Sparrow message routing]
-        SClient[Client] --> NodeA[Community Node A]
-        NodeA --> NodeB[Recipient Community Node]
-        NodeB --> Recipient[Recipient]
+        SClient[Client] --> Home[Home node relay]
+        Home --> NodeB[Recipient's mailbox node]
+        Recipient[Recipient] --> RHome[Recipient's home node relay]
+        RHome --> NodeB
     end
 ```
 

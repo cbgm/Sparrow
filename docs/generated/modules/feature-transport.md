@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/transport` |
 | Build file | `feature/transport/build.gradle.kts` |
-| Kotlin files | 80 |
-| Production Kotlin files | 65 |
-| Test Kotlin files | 15 |
+| Kotlin files | 121 |
+| Production Kotlin files | 94 |
+| Test Kotlin files | 27 |
 | Resource files | 1 |
 | Direct dependencies | 4 |
-| Direct dependents | 9 |
+| Direct dependents | 12 |
 
 ## Source sets
 
@@ -35,11 +35,14 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependents
 
 - [`:feature:attachments`](../modules/feature-attachments.md)
+- [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:conversationorchestration:delivery`](../modules/feature-conversationorchestration-delivery.md)
+- [`:feature:conversationorchestration:message`](../modules/feature-conversationorchestration-message.md)
 - [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:linkpreview`](../modules/feature-linkpreview.md)
 - [`:feature:notification`](../modules/feature-notification.md)
+- [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:settings`](../modules/feature-settings.md)
 - [`:shared`](../modules/shared.md)
 - [`:startup`](../modules/startup.md)

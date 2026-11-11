@@ -333,14 +333,10 @@ try {
 
     $registryPasswordPath = Join-Path $secretsDirectory "node-registry-database-password.txt"
     $presencePasswordPath = Join-Path $secretsDirectory "presence-redis-password.txt"
-    $pushPasswordPath = Join-Path $secretsDirectory "push-database-password.txt"
-    $pushTokenPath = Join-Path $secretsDirectory "push-internal-api-token.txt"
 
     @(
         $registryPasswordPath,
-        $presencePasswordPath,
-        $pushPasswordPath,
-        $pushTokenPath
+        $presencePasswordPath
     ) | ForEach-Object { Ensure-SecretFile -Path $_ }
 
     # The presence directory checks phone attestations with the pinned Directory key.
@@ -355,9 +351,7 @@ try {
         "CONTROL_PLANE_SITE_ADDRESS=:80",
         "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=$directoryKey",
         "NODE_REGISTRY_DATABASE_PASSWORD=$(Read-SecretFile -Path $registryPasswordPath)",
-        "PRESENCE_REDIS_PASSWORD=$(Read-SecretFile -Path $presencePasswordPath)",
-        "PUSH_DATABASE_PASSWORD=$(Read-SecretFile -Path $pushPasswordPath)",
-        "PUSH_INTERNAL_API_TOKEN=$(Read-SecretFile -Path $pushTokenPath)"
+        "PRESENCE_REDIS_PASSWORD=$(Read-SecretFile -Path $presencePasswordPath)"
     )
 
     [System.IO.File]::WriteAllLines(

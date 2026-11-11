@@ -136,17 +136,6 @@ function Get-NodeAuthentication {
     return $authentication
 }
 
-function Get-NodeAuthenticationHeaders {
-    param([Parameter(Mandatory = $true)][hashtable]$Authentication)
-
-    return @{
-        "X-Sparrow-Node-Id" = $Authentication["nodeId"]
-        "X-Sparrow-Timestamp" = $Authentication["timestamp"]
-        "X-Sparrow-Nonce" = $Authentication["nonce"]
-        "X-Sparrow-Signature" = $Authentication["signature"]
-    }
-}
-
 function Get-CommunityNodeId {
     param(
         [Parameter(Mandatory = $true)][string]$Project,
@@ -162,36 +151,6 @@ function Get-CommunityNodeId {
             -Method "GET" `
             -Path "/standalone-smoke/identity"
     return [string]$authentication["nodeId"]
-}
-
-function New-SmokePresenceRoute {
-    param(
-        [Parameter(Mandatory = $true)][string]$Project,
-        [Parameter(Mandatory = $true)][string]$EnvironmentFile,
-        [Parameter(Mandatory = $true)][string]$ComposeFile,
-        [Parameter(Mandatory = $true)][string]$NodeId
-    )
-
-    $connectionId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
-    $expiresAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + 90000
-    $output =
-        Get-ComposeOutput `
-            -Project $Project `
-            -EnvironmentFile $EnvironmentFile `
-            -ComposeFile $ComposeFile `
-            -Arguments @(
-                "exec", "-T", "federation",
-                "java", "-cp", "/app/lib/*",
-                "com.cbgm.sparrow.server.security.PresenceRouteRegistrationCli",
-                "/data/node.identity", $NodeId, $connectionId, "1", [string]$expiresAt
-            )
-    $route = Convert-KeyValueOutput -Output $output
-    foreach ($key in @("routingId", "clientPrivateKey", "path", "body", "nodeId", "timestamp", "nonce", "signature")) {
-        if ([string]::IsNullOrWhiteSpace([string]$route[$key])) {
-            throw "Presence route CLI did not return '$key': $output"
-        }
-    }
-    return $route
 }
 
 function Wait-ForHealth {
@@ -323,220 +282,6 @@ function Assert-NoSharedVolumes {
     Write-Host "PASS $Description share no Docker volume."
 }
 
-function Register-SmokePresenceRoute {
-    param(
-        [Parameter(Mandatory = $true)][string]$Project,
-        [Parameter(Mandatory = $true)][string]$EnvironmentFile,
-        [Parameter(Mandatory = $true)][string]$ComposeFile,
-        [Parameter(Mandatory = $true)][string]$NodeId
-    )
-
-    $route =
-        New-SmokePresenceRoute `
-            -Project $Project `
-            -EnvironmentFile $EnvironmentFile `
-            -ComposeFile $ComposeFile `
-            -NodeId $NodeId
-    $response =
-        Invoke-WebRequest `
-            -Uri "http://localhost:8390$($route['path'])" `
-            -Method Put `
-            -Headers (Get-NodeAuthenticationHeaders -Authentication $route) `
-            -ContentType "application/json" `
-            -Body $route["body"] `
-            -UseBasicParsing `
-            -TimeoutSec 10
-    # 204, or 200 with the accepted phone aliases from presence directories of the previous version.
-    if ($response.StatusCode -ne 204 -and $response.StatusCode -ne 200) {
-        throw "Signed presence registration failed: HTTP $($response.StatusCode)"
-    }
-    return $route
-}
-
-function Send-SmokeWebSocketText {
-    param(
-        [Parameter(Mandatory = $true)][System.Net.WebSockets.ClientWebSocket]$Socket,
-        [Parameter(Mandatory = $true)][string]$Text
-    )
-
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
-    $segment = [System.ArraySegment[byte]]::new($bytes)
-    [void]$Socket.SendAsync(
-        $segment,
-        [System.Net.WebSockets.WebSocketMessageType]::Text,
-        $true,
-        [System.Threading.CancellationToken]::None
-    ).GetAwaiter().GetResult()
-}
-
-function Receive-SmokeGatewayMessage {
-    param(
-        [Parameter(Mandatory = $true)][System.Net.WebSockets.ClientWebSocket]$Socket,
-        [int]$TimeoutSeconds = 20
-    )
-
-    $cancellation = New-Object System.Threading.CancellationTokenSource
-    $cancellation.CancelAfter([TimeSpan]::FromSeconds($TimeoutSeconds))
-    $stream = New-Object System.IO.MemoryStream
-    try {
-        do {
-            $buffer = New-Object byte[] 65536
-            $segment = [System.ArraySegment[byte]]::new($buffer)
-            $result = $Socket.ReceiveAsync($segment, $cancellation.Token).GetAwaiter().GetResult()
-            if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
-                throw "Gateway closed the smoke-test WebSocket before delivering its response."
-            }
-            $stream.Write($buffer, 0, $result.Count)
-        } while (-not $result.EndOfMessage)
-
-        $message = [System.Text.Encoding]::UTF8.GetString($stream.ToArray()) | ConvertFrom-Json
-        if ($message.type -eq "error") {
-            throw "Gateway rejected smoke-test request: $($message.code): $($message.message)"
-        }
-        return $message
-    } finally {
-        $stream.Dispose()
-        $cancellation.Dispose()
-    }
-}
-
-function Connect-SmokeGatewayClient {
-    param(
-        [Parameter(Mandatory = $true)][int]$GatewayPort,
-        [Parameter(Mandatory = $true)][hashtable]$Route,
-        [Parameter(Mandatory = $true)][string]$Project,
-        [Parameter(Mandatory = $true)][string]$EnvironmentFile,
-        [Parameter(Mandatory = $true)][string]$ComposeFile,
-        [Parameter(Mandatory = $true)][string]$NodeId
-    )
-
-    # The signed CLI route must belong to a LIVE WebSocket. Registering the
-    # route in the control plane alone does not create a gateway connection.
-    $registration = $Route["body"] | ConvertFrom-Json
-    $routePayload = $registration.route
-    $socket = New-Object System.Net.WebSockets.ClientWebSocket
-    try {
-        $uri = [Uri]"ws://127.0.0.1:$GatewayPort/v1/gateway"
-        [void]$socket.ConnectAsync(
-            $uri,
-            [System.Threading.CancellationToken]::None
-        ).GetAwaiter().GetResult()
-        # The gateway first sends a single-use challenge; the client signs it with its routing key.
-        $challenge = Receive-SmokeGatewayMessage -Socket $socket
-        if ($challenge.type -ne "challenge" -or $challenge.nodeId -ne $NodeId) {
-            throw "Unexpected gateway challenge: $($challenge | ConvertTo-Json -Compress)"
-        }
-        $proof =
-            Convert-KeyValueOutput -Output (
-                Get-ComposeOutput `
-                    -Project $Project `
-                    -EnvironmentFile $EnvironmentFile `
-                    -ComposeFile $ComposeFile `
-                    -Arguments @(
-                        "exec", "-T", "federation",
-                        "java", "-cp", "/app/lib/*",
-                        "com.cbgm.sparrow.server.security.GatewaySessionProofCli",
-                        $Route["clientPrivateKey"],
-                        $routePayload.routingId,
-                        $routePayload.connectionId,
-                        $NodeId,
-                        (ConvertTo-Json -InputObject @($challenge.nonce) -Compress)
-                    )
-            )
-        if ([string]::IsNullOrWhiteSpace([string]$proof["clientSignature"])) {
-            throw "Gateway session proof CLI did not return a signature."
-        }
-        $registerMessage = @{
-            type = "register"
-            routingId = $routePayload.routingId
-            connectionId = $routePayload.connectionId
-            clientSigningPublicKey = $registration.clientSigningPublicKey
-            clientSignature = @($proof["clientSignature"] | ConvertFrom-Json)
-        } | ConvertTo-Json -Compress -Depth 8
-        Send-SmokeWebSocketText -Socket $socket -Text $registerMessage
-        $accepted = Receive-SmokeGatewayMessage -Socket $socket
-        if ($accepted.type -ne "registered" -or $accepted.routingId -ne $routePayload.routingId) {
-            throw "Unexpected gateway registration response: $($accepted | ConvertTo-Json -Compress)"
-        }
-        return $socket
-    } catch {
-        $socket.Dispose()
-        throw
-    }
-}
-
-function Send-SmokeFederatedEnvelope {
-    param(
-        [Parameter(Mandatory = $true)][string]$SourceName,
-        [Parameter(Mandatory = $true)][int]$SourceFederationPort,
-        [Parameter(Mandatory = $true)][string]$SourceFederationToken,
-        [Parameter(Mandatory = $true)][string]$DestinationName,
-        [Parameter(Mandatory = $true)][int]$DestinationGatewayPort,
-        [Parameter(Mandatory = $true)][string]$DestinationProject,
-        [Parameter(Mandatory = $true)][string]$DestinationEnvironmentFile,
-        [Parameter(Mandatory = $true)][string]$DestinationComposeFile,
-        [Parameter(Mandatory = $true)][string]$DestinationNodeId
-    )
-
-    $route =
-        Register-SmokePresenceRoute `
-            -Project $DestinationProject `
-            -EnvironmentFile $DestinationEnvironmentFile `
-            -ComposeFile $DestinationComposeFile `
-            -NodeId $DestinationNodeId
-    $socket = $null
-    try {
-        $socket =
-            Connect-SmokeGatewayClient `
-                -GatewayPort $DestinationGatewayPort `
-                -Route $route `
-                -Project $DestinationProject `
-                -EnvironmentFile $DestinationEnvironmentFile `
-                -ComposeFile $DestinationComposeFile `
-                -NodeId $DestinationNodeId
-        $createdAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-        $envelopeId = "standalone-smoke-$([Guid]::NewGuid().ToString('N'))"
-        $envelopeBody =
-            @{
-                envelopeId = $envelopeId
-                senderRoutingId = "standalone-smoke-sender"
-                recipientDeviceRoutingId = $route["routingId"]
-                encryptedPayload = "standalone-smoke-encrypted-payload"
-                createdAtEpochMilliseconds = $createdAt
-                expiresAtEpochMilliseconds = $createdAt + 300000
-            } | ConvertTo-Json -Compress
-        $acknowledgement =
-            Invoke-RestMethod `
-                -Uri "http://127.0.0.1:$SourceFederationPort/internal/v1/outgoing-envelopes" `
-                -Method Post `
-                -Headers @{ "X-Sparrow-Internal-Token" = $SourceFederationToken } `
-                -ContentType "application/json" `
-                -Body $envelopeBody `
-                -TimeoutSec 20
-        if ($acknowledgement.envelopeId -ne $envelopeId) {
-            throw "$SourceName to $DestinationName returned the wrong envelope ID."
-        }
-        # The destination is connected now, so the envelope must be delivered
-        # LIVE. QUEUED_AT_GATEWAY is not proof of cross-node delivery.
-        if ($acknowledgement.state -ne "STORED_AT_DESTINATION") {
-            throw "$SourceName to $DestinationName did not deliver the envelope: $($acknowledgement.state)"
-        }
-        $received = Receive-SmokeGatewayMessage -Socket $socket -TimeoutSeconds 20
-        if (
-            $received.type -ne "incoming_envelope" -or
-            $received.envelope.envelopeId -ne $envelopeId -or
-            $received.envelope.recipientId -ne $route["routingId"]
-        ) {
-            throw "$DestinationName received an unexpected gateway message: $($received | ConvertTo-Json -Compress -Depth 6)"
-        }
-        Write-Host "PASS $SourceName delivered a test envelope to a live client on isolated $DestinationName."
-    } finally {
-        if ($null -ne $socket) {
-            $socket.Dispose()
-        }
-    }
-}
-
 function Stop-Project {
     param(
         [Parameter(Mandatory = $true)][string]$Project,
@@ -561,14 +306,10 @@ Write-Utf8File -Path $controlEnvironment -Lines @(
     "CONTROL_PLANE_SITE_ADDRESS=:80",
     "NODE_REGISTRY_DIAGNOSTIC_PORT=8391",
     "PRESENCE_DIRECTORY_DIAGNOSTIC_PORT=8392",
-    "PUSH_DIAGNOSTIC_PORT=8395",
     "NODE_REGISTRY_DATABASE_PORT=5537",
     "PRESENCE_REDIS_PORT=6480",
-    "PUSH_DATABASE_PORT=5535",
     "NODE_REGISTRY_DATABASE_PASSWORD=standalone-smoke-registry",
-    "PRESENCE_REDIS_PASSWORD=standalone-smoke-presence",
-    "PUSH_DATABASE_PASSWORD=standalone-smoke-push",
-    "PUSH_INTERNAL_API_TOKEN=standalone-smoke-internal-token"
+    "PRESENCE_REDIS_PASSWORD=standalone-smoke-presence"
 )
 
 Write-Utf8File -Path $nodeAEnvironment -Lines @(
@@ -587,11 +328,7 @@ Write-Utf8File -Path $nodeAEnvironment -Lines @(
     "FEDERATION_DIAGNOSTIC_PORT=8493",
     "GATEWAY_DIAGNOSTIC_PORT=8494",
     "MAILBOX_DATABASE_PORT=5636",
-    "FEDERATION_DATABASE_PORT=5638",
-    "MAILBOX_DATABASE_PASSWORD=standalone-smoke-mailbox-a",
-    "FEDERATION_DATABASE_PASSWORD=standalone-smoke-federation-a",
-    "FEDERATION_INTERNAL_API_TOKEN=standalone-smoke-federation-token-a",
-    "GATEWAY_INTERNAL_API_TOKEN=standalone-smoke-gateway-token-a"
+    "MAILBOX_DATABASE_PASSWORD=standalone-smoke-mailbox-a"
 )
 
 Write-Utf8File -Path $nodeBEnvironment -Lines @(
@@ -610,11 +347,7 @@ Write-Utf8File -Path $nodeBEnvironment -Lines @(
     "FEDERATION_DIAGNOSTIC_PORT=8593",
     "GATEWAY_DIAGNOSTIC_PORT=8594",
     "MAILBOX_DATABASE_PORT=5736",
-    "FEDERATION_DATABASE_PORT=5738",
-    "MAILBOX_DATABASE_PASSWORD=standalone-smoke-mailbox-b",
-    "FEDERATION_DATABASE_PASSWORD=standalone-smoke-federation-b",
-    "FEDERATION_INTERNAL_API_TOKEN=standalone-smoke-federation-token-b",
-    "GATEWAY_INTERNAL_API_TOKEN=standalone-smoke-gateway-token-b"
+    "MAILBOX_DATABASE_PASSWORD=standalone-smoke-mailbox-b"
 )
 
 try {
@@ -635,11 +368,7 @@ try {
     Wait-ForHealth `
         -Name "control-plane presence" `
         -Url "http://localhost:8392/health" `
-        -Pattern '^ok persistence=redis routes=\d+$'
-    Wait-ForHealth `
-        -Name "control-plane push" `
-        -Url "http://localhost:8395/health" `
-        -Pattern '^ok persistence=postgresql pendingEnvelopes=\d+$'
+        -Pattern '^ok persistence=redis$'
 
     Invoke-Compose $nodeAProject $nodeAEnvironment $nodeCompose $upArguments
     $nodeBUpArguments = @("up", "-d", "--remove-orphans")
@@ -652,11 +381,11 @@ try {
     Wait-ForHealth `
         -Name "node A federation" `
         -Url "http://localhost:8493/health" `
-        -Pattern '^ok persistence=postgresql pending=\d+$'
+        -Pattern '^ok$'
     Wait-ForHealth `
         -Name "node A gateway" `
         -Url "http://localhost:8494/health" `
-        -Pattern '^ok connections=\d+$'
+        -Pattern '^ok$'
     Wait-ForHealth `
         -Name "node B mailbox" `
         -Url "http://localhost:8592/health" `
@@ -664,11 +393,11 @@ try {
     Wait-ForHealth `
         -Name "node B federation" `
         -Url "http://localhost:8593/health" `
-        -Pattern '^ok persistence=postgresql pending=\d+$'
+        -Pattern '^ok$'
     Wait-ForHealth `
         -Name "node B gateway" `
         -Url "http://localhost:8594/health" `
-        -Pattern '^ok connections=\d+$'
+        -Pattern '^ok$'
 
     $advertisedControlPlanes =
         Invoke-RestMethod `
@@ -703,27 +432,6 @@ try {
     }
     Write-Host "PASS registry contains the two independent node identities."
 
-    Send-SmokeFederatedEnvelope `
-        -SourceName "node A" `
-        -SourceFederationPort 8493 `
-        -SourceFederationToken "standalone-smoke-federation-token-a" `
-        -DestinationName "node B" `
-        -DestinationGatewayPort 8590 `
-        -DestinationProject $nodeBProject `
-        -DestinationEnvironmentFile $nodeBEnvironment `
-        -DestinationComposeFile $nodeCompose `
-        -DestinationNodeId $nodeBId
-    Send-SmokeFederatedEnvelope `
-        -SourceName "node B" `
-        -SourceFederationPort 8593 `
-        -SourceFederationToken "standalone-smoke-federation-token-b" `
-        -DestinationName "node A" `
-        -DestinationGatewayPort 8490 `
-        -DestinationProject $nodeAProject `
-        -DestinationEnvironmentFile $nodeAEnvironment `
-        -DestinationComposeFile $nodeCompose `
-        -DestinationNodeId $nodeAId
-
     $controlNetworks = Get-ProjectNetworks $controlProject $controlEnvironment $controlCompose
     $nodeANetworks = Get-ProjectNetworks $nodeAProject $nodeAEnvironment $nodeCompose
     $nodeBNetworks = Get-ProjectNetworks $nodeBProject $nodeBEnvironment $nodeCompose
@@ -746,7 +454,7 @@ try {
     Wait-ForHealth `
         -Name "restarted node A federation" `
         -Url "http://localhost:8493/health" `
-        -Pattern '^ok persistence=postgresql pending=\d+$'
+        -Pattern '^ok$'
     Wait-ForRegistryNodes -Expected 2
     $restartedNodeAId =
         Get-CommunityNodeId `

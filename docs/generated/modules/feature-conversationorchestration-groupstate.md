@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/conversationorchestration/groupstate` |
 | Build file | `feature/conversationorchestration/groupstate/build.gradle.kts` |
-| Kotlin files | 79 |
-| Production Kotlin files | 79 |
-| Test Kotlin files | 0 |
+| Kotlin files | 92 |
+| Production Kotlin files | 89 |
+| Test Kotlin files | 3 |
 | Resource files | 0 |
 | Direct dependencies | 12 |
 | Direct dependents | 2 |
@@ -20,6 +20,7 @@ Generated automatically by `./gradlew architectureReport`.
 ## Source sets
 
 - `commonMain`
+- `commonTest`
 
 ## Dependencies
 

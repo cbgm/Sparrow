@@ -235,7 +235,6 @@ Executable Ktor services are built with the shared `server/Dockerfile` using a `
 :server:gateway
 :server:federation
 :server:mailbox
-:server:push
 :server:link-preview
 ```
 

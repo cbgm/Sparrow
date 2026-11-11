@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.server.security
 
-import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.NodeDirectory
 import com.cbgm.sparrow.server.protocol.NodeHeartbeatRequest
 import com.cbgm.sparrow.server.protocol.RegistryAuthorityCertificate
@@ -9,7 +8,6 @@ import com.cbgm.sparrow.server.protocol.SignedNodeDirectory
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
-import java.nio.ByteBuffer
 
 object ProtocolSignatures {
     fun signDescriptor(
@@ -55,48 +53,6 @@ object ProtocolSignatures {
                 publicKey = Signatures.decodePublicKey(descriptor.identityPublicKey)
             )
         }.getOrDefault(false)
-
-    fun verifyClientRoute(
-        route: ClientRoute,
-        clientPublicKey: ByteArray
-    ): Boolean =
-        runCatching {
-            Signatures.verify(
-                content = serverJson.encodeToString(route.unsigned()).encodeToByteArray(),
-                signature = route.clientSignature,
-                publicKey = Signatures.decodePublicKey(clientPublicKey)
-            )
-        }.getOrDefault(false)
-
-    /**
-     * Checks the Register proof. The payload binds the routing ID to this connection, this gateway and the
-     * nonce the gateway sent, so a captured signature is useless anywhere else.
-     */
-    fun verifyGatewaySession(
-        session: GatewaySessionBinding,
-        clientPublicKey: ByteArray,
-        clientSignature: ByteArray
-    ): Boolean =
-        runCatching {
-            Signatures.verify(
-                content = gatewaySessionContent(session),
-                signature = clientSignature,
-                publicKey = Signatures.decodePublicKey(clientPublicKey)
-            )
-        }.getOrDefault(false)
-
-    /**
-     * Every field is length-prefixed so no two different sessions can produce the same bytes, and the
-     * domain string keeps the signature from being valid for any other Sparrow signing purpose.
-     */
-    fun gatewaySessionContent(session: GatewaySessionBinding): ByteArray =
-        lengthPrefixed(
-            GATEWAY_SESSION_DOMAIN.encodeToByteArray(),
-            session.routingId.encodeToByteArray(),
-            session.connectionId.encodeToByteArray(),
-            session.nodeId.encodeToByteArray(),
-            session.nonce
-        )
 
     fun signDirectory(
         directory: NodeDirectory,
@@ -185,22 +141,4 @@ object ProtocolSignatures {
 
     private fun descriptorContent(descriptor: SparrowNodeDescriptor): ByteArray =
         serverJson.encodeToString(descriptor.unsigned()).encodeToByteArray()
-
-    private fun lengthPrefixed(vararg fields: ByteArray): ByteArray {
-        val buffer = ByteBuffer.allocate(fields.sumOf { field -> Int.SIZE_BYTES + field.size })
-        fields.forEach { field -> buffer.putInt(field.size).put(field) }
-        return buffer.array()
-    }
-
-    private const val GATEWAY_SESSION_DOMAIN = "sparrow-gateway-session-v1"
 }
-
-/**
- * What a gateway session proof is bound to.
- */
-class GatewaySessionBinding(
-    val routingId: String,
-    val connectionId: String,
-    val nodeId: String,
-    val nonce: ByteArray
-)

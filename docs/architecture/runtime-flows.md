@@ -23,7 +23,7 @@ flowchart LR
     ROUTE --> NODE[Community Node]
 ```
 
-Direct and Group workflows in `:feature:conversationorchestration:message` own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery/routing/WebSocket/mailbox/push transport.
+Direct and Group workflows in `:feature:conversationorchestration:message` own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery, circuits and mailbox transport.
 
 ## Message operations
 

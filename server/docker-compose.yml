@@ -108,9 +108,7 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_REDIS_URL: redis://presence-redis:6379
       PRESENCE_REDIS_PASSWORD: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
-      PRESENCE_MAXIMUM_TTL_MILLISECONDS: 120000
       PRESENCE_TEST_PHONE_ALIASES: ${PRESENCE_TEST_PHONE_ALIASES:-}
-      PRESENCE_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
     ports:
       - "127.0.0.1:8091:8091"
     depends_on:
@@ -157,68 +155,6 @@ services:
     depends_on:
       mailbox-database:
         condition: service_healthy
-      push:
-        condition: service_healthy
-
-  push-database:
-    logging: *default-logging
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: sparrow_push
-      POSTGRES_USER: sparrow_push
-      POSTGRES_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
-    ports:
-      - "127.0.0.1:${PUSH_DATABASE_PORT:-5435}:5432"
-    volumes:
-      - push-database-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-  push:
-    logging: *default-logging
-    <<: *sparrow-service
-    build:
-      context: ..
-      dockerfile: server/Dockerfile
-      args:
-        SERVICE: push
-    environment:
-      PORT: 8095
-      NODE_REGISTRY_URL: http://node-registry:8090
-      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
-      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
-      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
-      PUSH_DATABASE_USER: sparrow_push
-      PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
-    ports:
-      - "127.0.0.1:8095:8095"
-    depends_on:
-      node-registry:
-        condition: service_healthy
-      push-database:
-        condition: service_healthy
-
-  federation-database:
-    logging: *default-logging
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: sparrow_federation
-      POSTGRES_USER: sparrow_federation
-      POSTGRES_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
-    ports:
-      - "127.0.0.1:${FEDERATION_DATABASE_PORT:-5438}:5432"
-    volumes:
-      - federation-database-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
 
   federation:
     logging: *default-logging
@@ -232,19 +168,9 @@ services:
       PORT: 8093
       NODE_IDENTITY_PATH: /data/node.identity
       NODE_REGISTRY_URL: http://node-registry:8090
-      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
-      GATEWAY_INTERNAL_URL: http://gateway:8094
       CLIENT_ENDPOINT: ws://localhost:8094/v1/gateway
       FEDERATION_ENDPOINT: http://localhost:8093
       MAILBOX_ENDPOINT: http://localhost:8092
-      FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
-      GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
-      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/sparrow_federation
-      FEDERATION_DATABASE_USER: sparrow_federation
-      FEDERATION_DATABASE_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
-      FEDERATION_INCOMING_RATE_LIMIT_REQUESTS: ${FEDERATION_INCOMING_RATE_LIMIT_REQUESTS:-1200}
-      FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS: ${FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
-      FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
     ports:
       - "127.0.0.1:8093:8093"
     volumes:
@@ -255,8 +181,6 @@ services:
       presence-directory:
         condition: service_healthy
       mailbox:
-        condition: service_healthy
-      federation-database:
         condition: service_healthy
 
   gateway:
@@ -273,15 +197,7 @@ services:
       BLOB_STORAGE_PATH: /var/lib/sparrow/blobs
       BLOB_MAXIMUM_BYTES: ${BLOB_MAXIMUM_BYTES:-134217728}
       BLOB_MAXIMUM_STORAGE_BYTES: ${BLOB_MAXIMUM_STORAGE_BYTES:-10737418240}
-      FEDERATION_INTERNAL_URL: http://federation:8093
-      PUSH_INTERNAL_URL: http://push:8095
-      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
-      FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
-      GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
-      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       EXCHANGE_RATES_URL: ${EXCHANGE_RATES_URL:-}
-      ROUTE_LIFETIME_MILLISECONDS: 90000
-      ROUTE_REFRESH_INTERVAL_MILLISECONDS: 30000
       RELAY_PRIVATE_DESTINATIONS: ${RELAY_PRIVATE_DESTINATIONS:-true}
     ports:
       - "127.0.0.1:8094:8094"
@@ -291,8 +207,6 @@ services:
     depends_on:
       federation:
         condition: service_healthy
-      push:
-        condition: service_healthy
 
 volumes:
   registry-identity:
@@ -300,6 +214,4 @@ volumes:
   node-registry-database-data:
   presence-redis-data:
   mailbox-database-data:
-  push-database-data:
-  federation-database-data:
   gateway-blob-data:

@@ -10,7 +10,7 @@ function Read-SparrowLocalImages([string]$Directory) {
         $manifest.tag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') {
         throw 'Invalid bundled local-image manifest.'
     }
-    $expected = @('node-registry', 'presence-directory', 'mailbox', 'federation', 'gateway', 'push')
+    $expected = @('node-registry', 'presence-directory', 'mailbox', 'federation', 'gateway')
     $images = @($manifest.images)
     if ($images.Count -ne $expected.Count -or
         @($images.service | Sort-Object -Unique).Count -ne $expected.Count) {

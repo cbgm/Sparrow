@@ -22,8 +22,6 @@ dependencies {
     implementation(libs.bundles.ktor.client)
     implementation(libs.ktor.client.cio)
     implementation(libs.logback.classic)
-    implementation(libs.hikari)
-    implementation(libs.postgresql)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.coroutines.test)
     testImplementation(libs.ktor.server.test.host)

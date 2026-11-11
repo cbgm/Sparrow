@@ -39,8 +39,6 @@ services:
         condition: service_healthy
       presence-directory:
         condition: service_healthy
-      push:
-        condition: service_healthy
 
   node-registry-database:
     logging: *default-logging
@@ -132,9 +130,7 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_REDIS_URL: redis://presence-redis:6379
       PRESENCE_REDIS_PASSWORD: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
-      PRESENCE_MAXIMUM_TTL_MILLISECONDS: ${PRESENCE_MAXIMUM_TTL_MILLISECONDS:-120000}
       PRESENCE_TEST_PHONE_ALIASES: ${PRESENCE_TEST_PHONE_ALIASES:-}
-      PRESENCE_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
     ports:
       - "127.0.0.1:${PRESENCE_DIRECTORY_DIAGNOSTIC_PORT:-8392}:8091"
     depends_on:
@@ -143,53 +139,9 @@ services:
       presence-redis:
         condition: service_healthy
 
-  push-database:
-    logging: *default-logging
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: sparrow_push
-      POSTGRES_USER: sparrow_push
-      POSTGRES_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
-    ports:
-      - "127.0.0.1:${PUSH_DATABASE_PORT:-5535}:5432"
-    volumes:
-      - push-database-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-  push:
-    logging: *default-logging
-    <<: *sparrow-service
-    image: sparrow-push:local
-    build:
-      context: ../..
-      dockerfile: server/Dockerfile
-      args:
-        SERVICE: push
-    environment:
-      PORT: 8095
-      NODE_REGISTRY_URL: http://node-registry:8090
-      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
-      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
-      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
-      PUSH_DATABASE_USER: sparrow_push
-      PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
-    ports:
-      - "127.0.0.1:${PUSH_DIAGNOSTIC_PORT:-8395}:8095"
-    depends_on:
-      node-registry:
-        condition: service_healthy
-      push-database:
-        condition: service_healthy
-
 volumes:
   caddy-data:
   caddy-config:
   registry-identity:
   node-registry-database-data:
   presence-redis-data:
-  push-database-data:

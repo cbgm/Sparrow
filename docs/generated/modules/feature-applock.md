@@ -10,17 +10,18 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/applock` |
 | Build file | `feature/applock/build.gradle.kts` |
-| Kotlin files | 13 |
-| Production Kotlin files | 13 |
-| Test Kotlin files | 0 |
+| Kotlin files | 25 |
+| Production Kotlin files | 24 |
+| Test Kotlin files | 1 |
 | Resource files | 1 |
 | Direct dependencies | 3 |
-| Direct dependents | 3 |
+| Direct dependents | 4 |
 
 ## Source sets
 
 - `androidMain`
 - `commonMain`
+- `commonTest`
 - `iosMain`
 
 ## Dependencies
@@ -32,5 +33,6 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependents
 
 - [`:feature:settings`](../modules/feature-settings.md)
+- [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)
 - [`:startup`](../modules/startup.md)

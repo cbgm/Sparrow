@@ -29,11 +29,8 @@ needs, and `ConnectionKeepAlive` holds the connection open.
 A sender puts the encrypted envelope into the recipient's mailbox through its own circuit (see
 [Transport](features/transport.md)). The recipient's app waits at its mailboxes through its circuit
 (`POST /v1/mailboxes/wait`) and fetches what arrived; mailbox envelopes enter the same incoming pipeline as
-every other envelope. Nothing wakes the device from outside: a closed app in `WHILE_OPEN` mode fetches
+every other envelope; nothing else delivers messages. Nothing wakes the device from outside: a closed app in `WHILE_OPEN` mode fetches
 the envelopes on its next start.
-
-The Control Plane's `push` service only keeps pending envelopes of the old delivery path through the
-connected node (see [Push API](api/push.md)). It goes away together with that path.
 
 ## Phone verification
 

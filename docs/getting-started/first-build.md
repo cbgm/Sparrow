@@ -60,7 +60,7 @@ Run `androidApp` from Android Studio. On startup:
 2. `StartupRoute` / `StartupViewModel` invokes `ApplicationStartupRunner.run()`.
 3. registered waiting `StartupTask`s initialize language/crypto, load Control Plane configuration, resolve identity status and complete the other startup gates concurrently.
 4. `StartupViewModel.completeStartup()` navigates to `AppRoute.Main` and calls `ApplicationStartupRunner.startPostNavigationRuntime()`.
-5. non-waiting startup tasks, `ForegroundRuntimeCoordinator` and the transport/runtime observers continue after navigation; a compatible Community Node is then connected through `/v1/gateway`.
+5. non-waiting startup tasks, `ForegroundRuntimeCoordinator` and the transport/runtime observers continue after navigation; a compatible Community Node becomes the home node and the app builds its circuit through the relays (`/v1/relay`, `/v1/circuit`).
 
 ## iOS note
 

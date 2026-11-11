@@ -87,7 +87,7 @@ Keep common contracts/models in `commonMain`. Put Android/iOS implementations in
 1. Define the packet in `:protocol` and update `PacketCodec` support as required.
 2. Decide which feature owns its meaning.
 3. Add an explicit incoming handler/route in that feature. For conversation packets this is a `Receive*Workflow` in `:feature:conversationorchestration:incoming` plus a branch in `GroupPacketDispatcher` or `ControlPacketDispatcher`.
-4. Define outgoing creation in that feature, enqueue through `ProtocolOutbox` rather than calling WebSocket directly.
+4. Define outgoing creation in that feature, enqueue through `ProtocolOutbox` rather than calling the transport directly.
 5. Decide its transport policy/encryption requirements deliberately.
 6. Add routing-ID handling in `:feature:messaging` only if the packet needs a special routing rule.
 7. Add unit/integration tests for decode, policy, outgoing and incoming behavior.
@@ -96,7 +96,7 @@ Do not teach `:feature:transport` the business meaning of the packet.
 
 ## Add a server endpoint
 
-1. Choose the owning service (`gateway`, `federation`, `mailbox`, registry, presence, push).
+1. Choose the owning service (`gateway`, `federation`, `mailbox`, registry, presence).
 2. Put wire models in `server:protocol` only if they are genuinely shared across service/client boundaries.
 3. Add authentication/replay/rate-limit handling appropriate to the endpoint.
 4. Keep service persistence behind the service's store/database types.

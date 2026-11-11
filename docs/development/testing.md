@@ -37,7 +37,7 @@ Two standalone Community Nodes plus Control Plane:
 .\server\scripts\Test-StandaloneCommunityNodes.ps1 -BuildImages
 ```
 
-The standalone smoke test accepts an initial `QUEUED_AT_GATEWAY` result and waits for asynchronous federation/retry storage at the destination rather than incorrectly requiring synchronous `STORED_AT_DESTINATION` on the first attempt.
+The standalone smoke test starts a Control Plane and two Community Nodes, checks their health, that both register with their own identity, that they share no Docker network or volume, and that a node keeps its identity across a restart.
 
 ## CI branch behavior
 

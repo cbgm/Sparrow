@@ -4,7 +4,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.observer.Conversat
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.DirectDeliveryDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.GroupRecipientDeliveryDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.MessageConversationDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.WebSocketIncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.DirectMessageDeliveryRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.GroupRecipientDeliveryRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.MessageConversationRepositoryImpl
@@ -33,12 +32,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routi
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupTransportKeyResolver
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
-import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
-import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
@@ -117,9 +114,6 @@ private fun Module.registerOutbox() {
             send = { item -> sender.send(item) },
             deliveryStateListener = get()
         )
-    }
-    single<IncomingEnvelopeGateway> {
-        WebSocketIncomingEnvelopeGateway(webSocketTransportClient = get<WebSocketTransportClient>())
     }
 }
 

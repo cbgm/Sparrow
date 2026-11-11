@@ -10,7 +10,6 @@ summary_file="${GITHUB_STEP_SUMMARY:-/dev/null}"
 android=false
 node_registry=false
 presence_directory=false
-push=false
 mailbox=false
 federation=false
 gateway=false
@@ -21,7 +20,6 @@ full_build=false
 set_all_server() {
   node_registry=true
   presence_directory=true
-  push=true
   mailbox=true
   federation=true
   gateway=true
@@ -65,10 +63,6 @@ else
         presence_directory=true
         control_plane_package=true
         ;;
-      server/push/*)
-        push=true
-        control_plane_package=true
-        ;;
       server/mailbox/*)
         mailbox=true
         community_node_package=true
@@ -108,7 +102,6 @@ fi
   echo "android=${android}"
   echo "node_registry=${node_registry}"
   echo "presence_directory=${presence_directory}"
-  echo "push=${push}"
   echo "mailbox=${mailbox}"
   echo "federation=${federation}"
   echo "gateway=${gateway}"
@@ -125,7 +118,6 @@ fi
   echo "| Android debug + signed release APK | ${android} |"
   echo "| node-registry image | ${node_registry} |"
   echo "| presence-directory image | ${presence_directory} |"
-  echo "| push image | ${push} |"
   echo "| mailbox image | ${mailbox} |"
   echo "| federation image | ${federation} |"
   echo "| gateway image | ${gateway} |"

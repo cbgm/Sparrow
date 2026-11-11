@@ -55,7 +55,6 @@ val sharedModule =
         single {
             ForegroundRuntimeDependencies(
                 appVisibilityState = get(),
-                incomingEnvelopeRunner = get(),
                 transportConnectionManager = get(),
                 circuitRunner = get(),
                 outboxRunner = get(),

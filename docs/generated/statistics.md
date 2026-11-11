@@ -6,17 +6,17 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 64 |
+| Modules | 63 |
 | Module groups | 11 |
-| Dependency edges | 325 |
+| Dependency edges | 327 |
 | Modules without project dependencies | 14 |
-| Modules without dependents | 14 |
+| Modules without dependents | 13 |
 | Maximum direct dependencies | 41 |
-| Maximum direct dependents | 36 |
+| Maximum direct dependents | 37 |
 | Distinct source sets | 8 |
-| Kotlin files | 2562 |
-| Production Kotlin files | 2374 |
-| Test Kotlin files | 188 |
+| Kotlin files | 2690 |
+| Production Kotlin files | 2465 |
+| Test Kotlin files | 225 |
 | Resource files | 59 |
 
 ## Modules by group
@@ -31,7 +31,7 @@ Generated automatically by `./gradlew architectureReport`.
 | protocol | 1 |
 | quality | 2 |
 | resources | 1 |
-| server | 13 |
+| server | 12 |
 | shared | 1 |
 | startup | 1 |
 
@@ -43,7 +43,7 @@ Generated automatically by `./gradlew architectureReport`.
 | `androidHostTest` | 1 |
 | `androidMain` | 27 |
 | `commonMain` | 44 |
-| `commonTest` | 28 |
+| `commonTest` | 30 |
 | `iosMain` | 14 |
-| `main` | 14 |
-| `test` | 12 |
+| `main` | 13 |
+| `test` | 10 |

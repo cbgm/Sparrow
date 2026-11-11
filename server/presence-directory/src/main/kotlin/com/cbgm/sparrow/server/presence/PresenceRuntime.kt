@@ -2,103 +2,46 @@ package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.observability.installServerObservability
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
-import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.BoundedRateLimiter
 import com.cbgm.sparrow.server.security.CreationWorkCheck
-import com.cbgm.sparrow.server.security.NodeDescriptorResolver
-import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
 import com.cbgm.sparrow.server.security.RateLimitPolicy
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.get
-import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 internal data class PresenceRuntime(
     val store: PresenceStorage,
-    val httpClient: HttpClient,
-    val registryUrl: String,
-    val nodeRequestAuthorizer: NodeRequestAuthorizer,
     val phoneVerification: PhoneVerification,
-    /** Lets the control plane's push service resolve routes; nodes sign their requests instead. */
-    val internalApiToken: String? = null,
     val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys(),
     val aliasClaimRateLimiter: BoundedRateLimiter = BoundedRateLimiter(ALIAS_CLAIM_RATE_LIMIT),
     /** The price of an invitation route lookup; the app solves 18 bits, like for a mailbox. */
     val lookupWork: CreationWorkCheck = CreationWorkCheck(DEFAULT_LOOKUP_WORK_BITS)
 )
 
-/** An app claims its aliases when it connects and every few hours; a device needs only a few claims per window. */
+/** An app claims its aliases when it starts and every few hours; a device needs only a few claims per window. */
 private val ALIAS_CLAIM_RATE_LIMIT = RateLimitPolicy(maximumRequests = 20, windowMilliseconds = 60L * 60L * 1_000L)
 
-internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {
-    val httpClient = createPresenceHttpClient()
-    val registryUrl =
-        System.getenv("NODE_REGISTRY_URL")
-            ?.takeIf(String::isNotBlank)
-            ?: DEFAULT_NODE_REGISTRY_URL
-    val descriptorResolver =
-        NodeDescriptorResolver { nodeId ->
-            fetchNodeDescriptor(httpClient, registryUrl, nodeId)
-        }
-
-    return PresenceRuntime(
+internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime =
+    PresenceRuntime(
         store = store,
-        httpClient = httpClient,
-        registryUrl = registryUrl,
-        nodeRequestAuthorizer = NodeRequestAuthorizer(descriptorResolver),
         phoneVerification = createPhoneVerification(),
-        internalApiToken = ServiceEnvironment.secret("PRESENCE_INTERNAL_API_TOKEN"),
         lookupWork = CreationWorkCheck(ServiceEnvironment.int("PRESENCE_LOOKUP_WORK_BITS", DEFAULT_LOOKUP_WORK_BITS))
     )
-}
-
-private fun createPresenceHttpClient(): HttpClient =
-    HttpClient(CIO) {
-        install(ClientContentNegotiation) {
-            json(serverJson)
-        }
-    }
-
-private suspend fun fetchNodeDescriptor(
-    httpClient: HttpClient,
-    registryUrl: String,
-    nodeId: String
-): SparrowNodeDescriptor? {
-    val response =
-        httpClient.get(
-            "${registryUrl.trimEnd('/')}/v1/nodes/$nodeId"
-        )
-    return if (response.status == HttpStatusCode.OK) {
-        response.body<SparrowNodeDescriptor>()
-    } else {
-        null
-    }
-}
 
 internal fun Application.configurePresenceLifecycle(runtime: PresenceRuntime) {
     monitor.subscribe(ApplicationStopped) {
-        runtime.httpClient.close()
         runtime.store.close()
     }
 }
 
-internal fun Application.installPresencePlugins(runtime: PresenceRuntime) {
-    installServerObservability("presence-directory") {
-        runtime.store.routeCount()
-        true
-    }
+internal fun Application.installPresencePlugins() {
+    installServerObservability("presence-directory") { true }
     install(ContentNegotiation) {
         json(serverJson)
     }
 }
 
-private const val DEFAULT_NODE_REGISTRY_URL = "http://localhost:8090"
 private const val DEFAULT_LOOKUP_WORK_BITS = 18

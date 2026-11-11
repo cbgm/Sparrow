@@ -38,12 +38,7 @@ function New-RandomSecretFile {
 $secretNames = @(
     "node-registry-database-password",
     "presence-redis-password",
-    "mailbox-database-password",
-    "push-database-password",
-    "federation-database-password",
-    "federation-internal-api-token",
-    "gateway-internal-api-token",
-    "push-internal-api-token"
+    "mailbox-database-password"
 )
 
 foreach ($secretName in $secretNames) {
@@ -60,11 +55,6 @@ COMPOSE_PARALLEL_LIMIT=1
 NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt
 PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt
 MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt
-PUSH_DATABASE_PASSWORD_FILE=./secrets/push-database-password.txt
-FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt
-FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt
-GATEWAY_INTERNAL_API_TOKEN_FILE=./secrets/gateway-internal-api-token.txt
-PUSH_INTERNAL_API_TOKEN_FILE=./secrets/push-internal-api-token.txt
 "@
     Set-Content -LiteralPath $environmentFile -Value $content.Trim() -Encoding Ascii
     Write-Host "Created environment file: $environmentFile"

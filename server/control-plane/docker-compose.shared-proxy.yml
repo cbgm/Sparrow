@@ -35,14 +35,6 @@ services:
       public-edge:
         aliases:
           - sparrow-control-presence
-  push:
-    logging: *default-logging
-    networks:
-      edge:
-      backend:
-      public-edge:
-        aliases:
-          - sparrow-control-push
 networks:
   public-edge:
     external: true

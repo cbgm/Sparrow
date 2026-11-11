@@ -10,7 +10,7 @@ Android. iOS source sets/Xcode host exist, but major runtime/platform functional
 
 ## How do I know whether a server is healthy?
 
-Open `/index` on it. Control Plane `/index` links registry/presence/push/node-directory status; Community Node `/index` links gateway, control-plane list, federation and mailbox status.
+Open `/index` on it. Control Plane `/index` links registry/presence/node-directory status; Community Node `/index` links gateway, control-plane list, federation and mailbox status.
 
 ## Why does the app use a Control Plane directory URL?
 

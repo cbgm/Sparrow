@@ -130,7 +130,7 @@ See [Startup architecture](../architecture/startup.md).
 
 ## Offline/background transport
 
-- foreground WebSocket delivery;
+- circuits through the relays of a home node;
 - durable protocol outbox;
 - recipient mailbox delivery;
 - receiving while closed (always connected, while open, or checking every 15 minutes);
@@ -142,20 +142,14 @@ See [Startup architecture](../architecture/startup.md).
 
 - signed Community Node registration/directory;
 - node heartbeat/health expiry;
-- Redis-backed presence routes, with a check of the one-time phone verification token at the first route registration;
-- PostgreSQL-backed push registrations/wake-ups;
-- Firebase Admin integration;
+- Redis-backed phone alias bindings (claimed through two relays, phone attestation of the Directory's verifier) and invitation routes;
 - Caddy reverse proxy and `/index` operator page;
 - LAN/Public deployment through the unified server manager.
 
 ### Community Node
 
-- client WebSocket gateway;
-- signed presence-route registration/refresh;
-- local delivery;
-- cross-node federation;
-- durable federation retry queue;
-- recipient mailbox persistence/capabilities;
+- onion relay (`/v1/relay`) and circuits (`/v1/circuit`);
+- recipient mailbox persistence/capabilities, invitation mailboxes with paid deposits;
 - encrypted blob upload/download used by message attachments;
 - Control Plane directory parsing/caching/retry;
 - continuous registration/heartbeat;

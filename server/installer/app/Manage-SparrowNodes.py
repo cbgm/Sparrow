@@ -866,7 +866,6 @@ def add(args):
                     'FEDERATION_DIAGNOSTIC_PORT': str(port + 3),
                     'GATEWAY_DIAGNOSTIC_PORT': str(port + 4),
                     'MAILBOX_DATABASE_PORT': str(port + 10000),
-                    'FEDERATION_DATABASE_PORT': str(port + 10001),
                     'COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME': data['project'] + '-directory-cache',
                     'CONTROL_PLANE_DIRECTORY_URL': url,
                     'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY': key,

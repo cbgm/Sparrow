@@ -1,6 +1,6 @@
 # Community Node
 
-A Community Node is Sparrow's message-transport edge. It accepts client WebSocket sessions, routes/federates encrypted envelopes, stores recipient-selected offline mailbox data, and stores opaque encrypted attachment blobs.
+A Community Node is Sparrow's message-transport edge. It relays the apps' onion requests and circuit hops, keeps their mailboxes and stores opaque encrypted attachment blobs. Apps hold no session at a node.
 
 ## Runtime topology
 
@@ -11,7 +11,6 @@ flowchart LR
     C[Caddy] --> G[gateway]
     C --> F[federation]
     C --> M[mailbox]
-    F --> FDB[(PostgreSQL)]
     M --> MDB[(PostgreSQL)]
     G --> BLOB[(encrypted blob volume)]
     G --- ID[(shared node identity)]
@@ -19,22 +18,18 @@ flowchart LR
     M --- ID
 ```
 
-Compose services are `caddy`, `mailbox-database`, `mailbox`, `federation-database`, `federation`, `blob-storage-init`, and `gateway`.
+Compose services are `caddy`, `mailbox-database`, `mailbox`, `federation`, `blob-storage-init`, and `gateway`.
 
 ## Gateway
 
-`:server:gateway` terminates the Sparrow client WebSocket protocol and the node-facing blob HTTP API. Important classes include:
+`:server:gateway` serves the onion relay (`POST /v1/relay`), the circuit hops (`/v1/circuit`) and the blob HTTP API; see [Gateway API](../api/gateway.md). Important classes include:
 
-- `GatewayWebSocketHandler`
-- `GatewaySessionHandler`
-- `ConnectionRegistry`
+- `OnionRelay`
+- `CircuitRelay`
 - `BlobStore`
 - `BlobCleanupAgent`
-- `HttpFederationClient`
-- `HttpPresenceClient`
-- `HttpNodePushClient`
 
-The gateway sees routing metadata/envelopes but application payloads remain end-to-end encrypted by the client protocol. Attachment storage contains encrypted blob bytes rather than decoded media.
+A relay sees only the next hop, never both the app's address and the destination of a request. Attachment storage contains encrypted blob bytes rather than decoded media.
 
 ## Exchange rates
 
@@ -54,23 +49,17 @@ existing main node. An empty value uses the default.
 
 ## Federation
 
-`:server:federation` handles routing between Community Nodes. Important classes include `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeQueue`, `OutboundEnvelopeRetryAgent`, `NodeRegistrationAgent`, `CachingNodeRegistryClient`, `HttpPresenceDirectoryClient`, `HttpLocalGatewayClient`, `HttpRemoteFederationClient`, and `HttpMailboxClient`.
-
-A node registers/publishes itself through selected Control Plane infrastructure, learns other signed node descriptors, and can route an envelope to a peer node without either server needing the plaintext conversation content.
-
-Anyone can run a node, so a node may only act for its own clients.
-
-`CachingNodeRegistryClient` accepts a signed node directory only while its authority and signing certificates are within their validity dates. A Control Plane found through the signed Control Plane directory must match the root published there. For configured Control Planes, `CONTROL_PLANE_ROOT_NODE_IDS` (comma-separated registry root node IDs) pins the trusted roots; without it the first verified root of each configured plane is kept until the service restarts, so a later directory cannot switch it.
+`:server:federation` registers the node at its Control Planes (`NodeRegistrationAgent`) and keeps its signed descriptor fresh with heartbeats, so apps find its relays, circuits, mailboxes and blobs in the signed node directory. Nodes pass no envelopes to each other: apps put them into mailboxes themselves, through their circuits.
 
 ## Offline mailbox
 
 `:server:mailbox` provides durable recipient-selected offline delivery. `MailboxStore` / `PostgresMailboxStore` own mailbox persistence; nothing wakes the owner, whose app waits at its mailboxes through its circuit. Mailbox capability/create/revoke/fetch routes are defined by the mailbox HTTP routing layer. A mailbox created with `invitation = true` is an invitation mailbox: its send capability is handed out by the Presence Directories, so every deposit must carry a proof of work (`MailboxEnvelopeRequest.depositWork`, refused with `DEPOSIT_WORK_REQUIRED` otherwise), and it holds at most 50 envelopes of up to 64 KiB (`InvitationMailboxes`).
 
-At the client, mailbox fetch ultimately enters the same incoming-envelope processing pipeline as live WebSocket delivery; the message is not treated as a different plaintext protocol.
+At the client, every envelope arrives through a mailbox and enters the incoming-envelope processing pipeline.
 
 ## Attachment blobs
 
-Caddy routes `/v1/blobs/*` to the gateway. Uploads require short-lived upload authorization/tickets; downloads and deletion are capability-based. The persistent gateway blob volume stores encrypted bytes plus server-side metadata required for size, expiration and capability enforcement. `BlobCleanupAgent` removes expired data.
+Caddy routes `/v1/blobs/*` to the gateway. A blob is opened with a proof of work and uploaded in chunks through a circuit of its own; uploads, downloads and deletion are capability-based. The persistent gateway blob volume stores encrypted bytes plus server-side metadata required for size, expiration and capability enforcement. `BlobCleanupAgent` removes expired data.
 
 ## Multi-node management
 
@@ -82,13 +71,13 @@ On the command line, Linux/macOS use `Start-SparrowServer.sh nodes --help` (`app
 
 ## LAN/public endpoints
 
-A default LAN deployment exposes the node Caddy edge on port `8490`; the client gateway is normally advertised as `ws://<host>:8490/v1/gateway`. Public mode advertises HTTPS/WSS through the configured public hostname.
+A default LAN deployment exposes the node Caddy edge on port `8490`; the node's address in the node directory is normally `ws://<host>:8490/v1/gateway`, from which apps derive the relay, circuit, mailbox and blob URLs. Public mode uses HTTPS/WSS through the configured public hostname.
 
-`/index` provides links for gateway health/info, advertised Control Planes, federation capabilities/health and mailbox health.
+`/index` provides links for gateway health, advertised Control Planes, federation capabilities/health and mailbox health.
 
 ## Failure/retry behavior
 
-`NodeRegistrationAgent` and the cached registry/directory state allow a configured node to tolerate temporary Control Plane outages. Federation maintains a persistent outbound queue and retry agent for cross-node delivery. This is separate from the **client** durable outbox: both layers can retry their own responsibility without servers learning application plaintext.
+`NodeRegistrationAgent` retries a Control Plane that is temporarily unavailable. Sending is retried by the **client** durable outbox: a mailbox that cannot be reached fails the send, and the outbox tries again.
 
 ## Running directly from source
 

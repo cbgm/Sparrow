@@ -12,9 +12,7 @@ flowchart TB
         REG[node-registry]
         PRES[presence-directory]
         REDIS[(Redis)]
-        PUSH[push]
         PGREG[(PostgreSQL registry)]
-        PGPUSH[(PostgreSQL push)]
     end
 
     subgraph NODE[Community Node]
@@ -23,7 +21,6 @@ flowchart TB
         BLOBS[(encrypted blob volume)]
         FED[federation]
         MB[mailbox]
-        PGFED[(PostgreSQL federation)]
         PGMB[(PostgreSQL mailbox)]
     end
 
@@ -32,15 +29,12 @@ flowchart TB
     APP --> CADDY2
     CADDY1 --> REG
     CADDY1 --> PRES
-    CADDY1 --> PUSH
     REG --> PGREG
     PRES --> REDIS
-    PUSH --> PGPUSH
     CADDY2 --> GW
     GW --> BLOBS
     CADDY2 --> FED
     CADDY2 --> MB
-    FED --> PGFED
     MB --> PGMB
     FED --> CADDY1
 ```
@@ -62,72 +56,52 @@ Key classes:
 
 ### `presence-directory`
 
-Stores short-lived routing information mapping a client routing ID to its current node/connection. Redis is used
-because presence is ephemeral and should be rebuilt by reconnecting clients.
-
-It also decides which device holds a phone alias. Apps claim their aliases directly (`POST /v1/alias-claims`), sealed
-for the Presence Directory's key from the signed node directory and sent through two relays, so neither a gateway nor
-a relay reads them and the Control Plane does not see the app's address. The first claim after sign-up carries a
-one-time Firebase ID token. When Firebase Admin credentials are configured (`GOOGLE_APPLICATION_CREDENTIALS`), a
-present token must be a valid Firebase phone sign-in, otherwise the claim is rejected with `PHONE_VERIFICATION_FAILED`;
-it proves the alias of that number. Each alias belongs to one device: only the alias and the device routing ID are kept
-in Redis, renewed by every claim and forgotten 30 days after the last one. The holder keeps its alias without a token;
-a free alias needs a proof when credentials are configured, otherwise the first claim wins; an alias held by another
-device moves only with a proof. The token itself is never stored.
+Decides which device holds a phone alias and keeps each device's invitation mailbox. Apps claim both directly
+(`POST /v1/alias-claims`), sealed for the Presence Directory's key from the signed node directory and sent through two
+relays, so neither a node nor a relay reads them and the Control Plane does not see the app's address. The first claim
+after sign-up carries the attestation of the phone verifier next to the Control Plane Directory; it proves the alias of
+the verified number. Each alias belongs to one device: only the alias and the device routing ID are kept in Redis,
+renewed by every claim and forgotten 30 days after the last one. The holder keeps its alias without an attestation; a
+free alias needs one; an alias held by another device moves only with one. Senders look up an invitation mailbox with
+`POST /v1/invitation-routes`, paid with a proof of work. Redis is used because apps claim again every few hours, so the
+state is rebuilt after a loss.
 
 Key classes:
 
 - `PresenceRuntime`
 - `installPresenceRoutes()`
 - `RedisPresenceStore`
-- `NodeRequestAuthorizer`
+- `AliasClaimKeys`
 - `PhoneVerification`, `PhoneAttestations`
-
-### `push`
-
-Keeps pending envelopes of the old delivery path through the connected node for recipients that are not
-connected; it sends no notifications (no FCM, no device registrations). See [Push API](../api/push.md).
-
-Key classes:
-
-- `PushRuntime`
-- `PostgresPendingEnvelopeStore`
 
 ## Community Node services
 
 ### `gateway`
 
-Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store. Each WebSocket starts with a signed challenge-response sign-in (`GatewaySessionValidator`); see [Session sign-in](../api/websocket.md#session-sign-in-challenge-response).
+The node's edge for apps: onion relays (`POST /v1/relay`), circuit hops (`/v1/circuit`), the encrypted attachment-blob
+HTTP store, link previews and exchange rates. Apps hold no session here; see [Gateway API](../api/gateway.md).
 
 Key classes:
 
 - `GatewayRuntime`
 - `installGatewayRoutes()`
-- `GatewayWebSocketHandler`
-- `GatewaySessionHandler`
-- `GatewaySessionValidator`
-- `ConnectionRegistry`
+- `OnionRelay`, `CircuitRelay`
 - `BlobStore`
 
 ### `federation`
 
-Routes envelopes locally or to another node, resolves recipient presence, queues failed routes durably and retries.
-It also registers/heartbeats the node against configured Control Planes.
+Registers the node at its Control Planes and keeps its signed descriptor fresh with heartbeats. Nodes pass no
+envelopes to each other: apps put them into mailboxes themselves, through their circuits.
 
 Key classes:
 
-- `FederationRouter`
-- `FederationPeerRouter`
-- `OutboundEnvelopeQueue`
-- `PostgresOutboundEnvelopeStorage`
-- `OutboundEnvelopeRetryAgent`
 - `NodeRegistrationAgent`
-- `CachingNodeRegistryClient`
 
 ### `mailbox`
 
-Provides recipient-selected offline stores. Mailboxes are capability protected; encrypted envelopes can be stored,
-retrieved, acknowledged and the entire mailbox can be revoked.
+Provides recipient-selected stores. Mailboxes are capability protected; encrypted envelopes can be stored,
+retrieved, acknowledged and the entire mailbox can be revoked. An invitation mailbox takes only paid deposits and holds
+at most 50 small envelopes.
 
 Key classes:
 
@@ -137,7 +111,7 @@ Key classes:
 
 ## Shared server modules
 
-- `server:protocol` — HTTP/federation wire models.
+- `server:protocol` — HTTP wire models.
 - `server:security` — Ed25519 node identity/signatures, replay protection, rate limits, routing IDs.
 - `server:persistence` — shared environment/idempotency helpers.
 - `server:observability` — health/readiness, metrics, request IDs.
@@ -146,8 +120,8 @@ Key classes:
 
 Every launcher deployment exposes a `/index` page:
 
-- Control Plane `/index`: registry, presence, push, connected nodes.
-- Community Node `/index`: gateway health/info/connections, advertised planes, federation, mailbox.
+- Control Plane `/index`: registry, presence, registered nodes.
+- Community Node `/index`: gateway health, advertised planes, federation, mailbox.
 
 See [Control Plane](control-plane.md) and [Community Node](community-node.md).
 
@@ -162,22 +136,17 @@ classDiagram
     class NodeRegistryStore
     class PostgresNodeRegistryStore
     class PresenceRuntime
-    class NodeRequestAuthorizer
     class PresenceStorage
     class RedisPresenceStore
     class PhoneVerification
     class PhoneAttestations
-    class PushRuntime
-    class PostgresPendingEnvelopeStore
 
     RegistrySigningRuntime --> RegistryDirectorySigner
     NodeRegistryStore <|.. PostgresNodeRegistryStore
-    PresenceRuntime --> NodeRequestAuthorizer
     PresenceRuntime --> PresenceStorage
     PresenceStorage <|.. RedisPresenceStore
     PresenceRuntime --> PhoneVerification
     PhoneVerification --> PhoneAttestations
-    PushRuntime --> PostgresPendingEnvelopeStore
 ```
 
 ### Community Node
@@ -185,27 +154,16 @@ classDiagram
 ```mermaid
 classDiagram
     class GatewayRuntime
-    class GatewayWebSocketHandler
-    class GatewaySessionHandler
-    class ConnectionRegistry
-    class FederationRouter
-    class FederationPeerRouter
-    class OutboundEnvelopeQueue
-    class PostgresOutboundEnvelopeStorage
-    class OutboundEnvelopeRetryAgent
+    class OnionRelay
+    class CircuitRelay
+    class BlobStore
     class NodeRegistrationAgent
     class MailboxStorage
     class PostgresMailboxStore
 
-    GatewayRuntime --> GatewayWebSocketHandler
-    GatewayWebSocketHandler --> GatewaySessionHandler
-    GatewaySessionHandler --> ConnectionRegistry
-
-    FederationRouter --> FederationPeerRouter
-    FederationRouter --> OutboundEnvelopeQueue
-    OutboundEnvelopeQueue --> PostgresOutboundEnvelopeStorage
-    OutboundEnvelopeRetryAgent --> OutboundEnvelopeQueue
-    NodeRegistrationAgent --> FederationPeerRouter
+    GatewayRuntime --> OnionRelay
+    GatewayRuntime --> CircuitRelay
+    GatewayRuntime --> BlobStore
 
     MailboxStorage <|.. PostgresMailboxStore
 ```

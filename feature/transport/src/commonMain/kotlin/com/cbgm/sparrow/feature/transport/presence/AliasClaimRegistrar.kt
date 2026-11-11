@@ -27,7 +27,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Claims the device's phone alias at every Control Plane the user has (from the directory or added by hand), through
@@ -53,8 +57,18 @@ internal class AliasClaimRegistrar(
     private val encryptionKeyPairProvider: LocalEncryptionKeyPairProvider,
     private val json: Json,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
-) {
+) : PhoneAliasBinding {
     private val logger = SparrowLog.withTag("AliasClaimRegistrar")
+
+    /** The aliases at least one Control Plane bound to this device at the latest claim; kept in memory only. */
+    private val boundAliases = MutableStateFlow<Set<String>>(emptySet())
+
+    override suspend fun awaitBound(
+        alias: String,
+        timeoutMilliseconds: Long
+    ) {
+        withTimeout(timeoutMilliseconds.milliseconds) { boundAliases.first { aliases -> alias in aliases } }
+    }
 
     /** Returns the aliases at least one Control Plane bound to [routingId]. */
     suspend fun claim(routingId: String): Set<String> {
@@ -75,7 +89,7 @@ internal class AliasClaimRegistrar(
             "Phone alias bound at ${bound.count { it.aliases.isNotEmpty() }} of ${results.size} Control Planes " +
                 "(${results.count { it == ClaimOutcome.Unreachable }} unreachable or without pinned root)"
         }
-        return bound.flatMap(ClaimOutcome.Bound::aliases).toSet()
+        return bound.flatMap(ClaimOutcome.Bound::aliases).toSet().also { aliases -> boundAliases.value = aliases }
     }
 
     /** The verifier's attestation while the sign-up token is still in memory; null without one or when it failed. */

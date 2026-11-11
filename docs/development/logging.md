@@ -7,10 +7,8 @@ Use the project's logging abstraction instead of scattered `println`. For networ
 1. Developer Settings network diagnostics;
 2. selected/current node and cooldown state;
 3. Control Plane status;
-4. Android logcat around `DefaultWebSocketTransportClient` / transport connection manager;
+4. Android logcat around `DefaultTransportConnectionManager`, `CircuitRunner` and the mailbox classes;
 5. corresponding node `/index` and Docker logs.
-
-A node shown as `COOLDOWN` in Developer Settings must show `0` active connections; stale heartbeat counts are not presented as live connections.
 
 ## Server
 

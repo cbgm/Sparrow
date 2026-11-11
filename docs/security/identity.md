@@ -49,10 +49,10 @@ verification succeeded. On Android this uses Firebase phone authentication: the 
 to obtain a one-time Firebase ID token and signs out again immediately, so no Firebase session
 remains.
 
-The token is kept in memory only (at most 50 minutes) and sent once with the first presence-route
-registration. When the presence directory has a verifier configured, it accepts a registration
-with a token only if the verified number matches the advertised phone alias; a registration
-without a token is accepted. Verification proves control of the number at sign-up time only; it
+The token is kept in memory only (at most 50 minutes) and sent once to the phone verifier next to
+the Control Plane Directory, which answers with a signed attestation for the phone alias and the
+device. The presence directory binds a free phone alias, or moves one held by another device, only
+with such an attestation (operator test numbers excepted). Verification proves control of the number at sign-up time only; it
 is not a continuing login. Debug builds can skip the verification. See [Identity](../features/identity.md#phone-verification-at-sign-up).
 
 ## Identity changes

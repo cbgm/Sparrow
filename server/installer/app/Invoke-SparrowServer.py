@@ -340,8 +340,7 @@ def routes(component):
     else:
         marker = "{$CONTROL_PLANE_SITE_ADDRESS}"
         aliases = {"node-registry:8090": "sparrow-control-registry:8090",
-                   "presence-directory:8091": "sparrow-control-presence:8091",
-                   "push:8095": "sparrow-control-push:8095"}
+                   "presence-directory:8091": "sparrow-control-presence:8091"}
         root = "/srv/control-plane"
     require(marker in source, f"Unexpected component Caddyfile format: {directory}")
     prefix = source.split(marker, 1)[0]
@@ -391,7 +390,7 @@ def installed_public():
 
 
 BACKEND_SERVICES = {"node": ("mailbox", "federation", "gateway"),
-                    "control-plane": ("node-registry", "presence-directory", "push")}
+                    "control-plane": ("node-registry", "presence-directory")}
 
 def update_installed_properties(path, updates):
     """Atomically change only selected key/value settings, retaining all secrets."""

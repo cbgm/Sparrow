@@ -1,6 +1,6 @@
 # Control Plane
 
-A Sparrow Control Plane is the discovery, presence and push side of the network. It does **not** carry normal client WebSocket message traffic and it does not decrypt application messages.
+A Sparrow Control Plane is the discovery and presence side of the network: the signed node directory, the phone alias bindings and the invitation mailboxes of devices. It carries no messages and decrypts nothing.
 
 ## Runtime topology
 
@@ -10,14 +10,12 @@ A Sparrow Control Plane is the discovery, presence and push side of the network.
 flowchart LR
     C[Caddy] --> R[node-registry]
     C --> P[presence-directory]
-    C --> U[push]
     R --> RDB[(PostgreSQL)]
     P --> REDIS[(Redis)]
-    U --> UDB[(PostgreSQL)]
     P -. attestation checked with the pinned Directory key .-> D[Control Plane Directory]
 ```
 
-Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis`, `presence-directory`, `push-database`, and `push`.
+Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis` and `presence-directory`.
 
 ## Kotlin server modules and important classes
 
@@ -29,25 +27,19 @@ The registry signing path matters because Sparrow does not treat an arbitrary li
 
 ### `:server:presence-directory`
 
-Presence is intentionally short-lived routing state. Redis is used for state that can be reconstructed as nodes/clients reconnect; it is not the authoritative store for conversations or messages.
+The presence directory keeps which device holds a phone alias, and each device's invitation mailbox. Redis holds this state; apps claim it again every few hours, so it is rebuilt after a loss. Devices hold no routes here: they receive only through their mailboxes.
 
-Route lookups (`GET /v1/routes/{routingId}`) are answered only for a node request signed by a registered node with the `FEDERATION` capability, or for the push service with the internal token (`PRESENCE_INTERNAL_API_TOKEN`, the same value as `PUSH_INTERNAL_API_TOKEN`); anything else gets `401`. The response leaves out the routes' phone aliases. Gateways use the same signed lookup to confirm that a client may send as its own phone alias (first invites), so a gateway learns a user's alias only when that user sends one.
-
-Routes carry no phone aliases; aliases the route itself names (older apps) are ignored. Apps claim their aliases with `POST /v1/alias-claims`, sent through two relays so the Control Plane does not see the app's address: an `AliasClaim` sealed for the Presence Directory's X25519 key (`AliasClaimKeys`, kept only in memory and replaced on every restart), signed with the device key its routing ID derives from and at most 5 minutes old. The node registry fetches the key from `GET /v1/alias-claim-key` (`PRESENCE_DIRECTORY_URL`, cached 30 seconds) and signs it into the node directory (`NodeDirectory.aliasClaimKey`), so a relay cannot hand the app its own key. Claims are rate-limited per device. A claim also names the device's invitation mailbox and encryption key (`InvitationRoute`); the Presence Directory keeps it for the device as long as an alias binding and replaces it with every claim (a claim without one removes it). `POST /v1/invitation-routes` (`{routingId, work}`, a phone alias or a device routing ID, paid with the mailbox proof of work, `PRESENCE_LOOKUP_WORK_BITS`, default 18) answers `{ownerRoutingId, invitationRoute}` for a live route, or 404. Apps send it through the relays; nothing about the lookup is kept. An alias resolves to the device holding it (`ClientRoutingResult.ownerRoutingId`) and that device's routes at this Control Plane; when they are elsewhere, federation looks the device up at its other Control Planes.
+Apps claim their aliases with `POST /v1/alias-claims`, sent through two relays so the Control Plane does not see the app's address: an `AliasClaim` sealed for the Presence Directory's X25519 key (`AliasClaimKeys`, kept only in memory and replaced on every restart), signed with the device key its routing ID derives from and at most 5 minutes old. The node registry fetches the key from `GET /v1/alias-claim-key` (`PRESENCE_DIRECTORY_URL`, cached 30 seconds) and signs it into the node directory (`NodeDirectory.aliasClaimKey`), so a relay cannot hand the app its own key. Claims are rate-limited per device. A claim also names the device's invitation mailbox and encryption key (`InvitationRoute`); the Presence Directory keeps it for the device as long as an alias binding and replaces it with every claim (a claim without one removes it). `POST /v1/invitation-routes` (`{routingId, work}`, a phone alias or a device routing ID, paid with the mailbox proof of work, `PRESENCE_LOOKUP_WORK_BITS`, default 18) answers `{ownerRoutingId, invitationRoute}` for a live route, or 404. Apps send it through the relays; nothing about the lookup is kept. Senders use it for packets to a device whose mailbox route they do not have yet, and recipients use it to check that a phone alias a letter claims belongs to the device that signed it (see [Invitation mailboxes](../features/transport.md#invitation-mailboxes)).
 
 Phone numbers are verified centrally, by the phone verifier next to the Control Plane Directory (`server/control-plane-directory/phone_verifier.py`), never here. The app verifies the user's phone number once at sign-up (Firebase SMS), sends the Firebase ID token sealed and through two relays to that verifier, and puts the signed attestation it gets back into its alias claims right after sign-up (`AliasClaim.phoneAttestation`). `PhoneAttestations` checks it with the pinned Directory key (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`): the Directory key certifies the verifier's attestation key, the attestation names the alias (`ClientRoutingIds.fromPhoneNumber` of the verified number) and the claiming device's routing ID, and it is valid for one hour. An attestation that does not check out is answered with `403 PHONE_VERIFICATION_FAILED`. Nothing about it is stored.
 
 Each phone alias belongs to one device (`AliasClaims`). The Presence Directory keeps only the alias and the device routing ID holding it (Redis key `…:owner`, no phone number, no token); every claim renews it and it is forgotten 30 days after the last one (`ALIAS_BINDING_LIFETIME_MILLISECONDS`). A device keeps an alias it holds without an attestation. A free alias needs one, and an alias held by another device moves only with one. The response `200 {"acceptedAliasIndexes": [...]}` lists the positions of the bound aliases in the claim, so the relay passing it on learns no alias. Without a pinned Directory key no attestation checks out, so only test numbers can be bound. The operator's test numbers (`PRESENCE_TEST_PHONE_ALIASES`, comma-separated phone aliases, set from the installer's **Test phone numbers** field) count as proven for every claim, so they move to the device that claims them last.
 
-### `:server:push`
-
-Despite its name, the push service sends no notifications (there is no FCM). It only keeps pending envelopes of the old delivery path through the connected node, for recipients that are not connected; see [Push API](../api/push.md). Apps receive through their circuits and mailboxes instead; see [Receiving messages](../push-notifications.md).
-
 ## Control Plane vs. independent directory
 
 Do not confuse a Control Plane with `server/control-plane-directory`.
 
-- A **Control Plane** publishes/serves node registry, presence and push services.
+- A **Control Plane** publishes/serves the node registry and the presence directory.
 - The **Independent Control Plane Directory** publishes a signed list of Control Plane origins and verifies ownership during Control Plane registration.
 - The independent directory is operator infrastructure and is deliberately excluded from the public Sparrow server bundle.
 
@@ -67,7 +59,7 @@ builds `dist/sparrow-server.zip` for distribution. A developer can also run the 
 
 ## LAN and public deployment
 
-In LAN mode the Control Plane Caddy edge is normally exposed on port `8390`. `/index` is the operator-friendly entry page and links to registry/presence/push health and node information.
+In LAN mode the Control Plane Caddy edge is normally exposed on port `8390`. `/index` is the operator-friendly entry page and links to registry/presence health and node information.
 
 Public mode uses Caddy/TLS and a public hostname. In a Combined installation, Control Plane and Community Node remain separate Compose projects; an optional shared public-edge Caddy routes their distinct hostnames.
 
@@ -76,7 +68,7 @@ Public mode uses Caddy/TLS and a public hostname. In a Combined installation, Co
 A valuable deployment must preserve at least:
 
 - registry signing/authority material;
-- PostgreSQL registry and push state;
+- PostgreSQL registry state;
 - Redis configuration/state as appropriate for the deployment;
 - generated runtime secrets;
 - Caddy/TLS state when used;

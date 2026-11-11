@@ -181,13 +181,9 @@ ensure_file_path() {
 
 ensure_secret "$SECRETS_DIR/node-registry-database-password.txt"
 ensure_secret "$SECRETS_DIR/presence-redis-password.txt"
-ensure_secret "$SECRETS_DIR/push-database-password.txt"
-ensure_secret "$SECRETS_DIR/push-internal-api-token.txt"
 
 REGISTRY_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/node-registry-database-password.txt")"
 PRESENCE_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/presence-redis-password.txt")"
-PUSH_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/push-database-password.txt")"
-PUSH_TOKEN="$(tr -d '\r\n' < "$SECRETS_DIR/push-internal-api-token.txt")"
 
 SITE_ADDRESS=":80"
 if [[ "$MODE" == "public" && "${SHARED_PROXY:-false}" != "true" ]]; then
@@ -204,12 +200,8 @@ CONTROL_PLANE_DOMAIN=$PUBLIC_DOMAIN
 CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=${CONTROL_PLANE_DIRECTORY_PUBLIC_KEY:-}
 NODE_REGISTRY_DATABASE_PASSWORD=$REGISTRY_PASSWORD
 PRESENCE_REDIS_PASSWORD=$PRESENCE_PASSWORD
-PUSH_DATABASE_PASSWORD=$PUSH_PASSWORD
-PUSH_INTERNAL_API_TOKEN=$PUSH_TOKEN
 NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt
 PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt
-PUSH_DATABASE_PASSWORD_FILE=./secrets/push-database-password.txt
-PUSH_INTERNAL_API_TOKEN_FILE=./secrets/push-internal-api-token.txt
 REGISTRY_AUTHORITY_IDENTITY_FILE=./secrets/registry-authority.identity
 REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json
 SPARROW_IMAGE_PREFIX=$SPARROW_IMAGE_PREFIX
@@ -320,7 +312,7 @@ ensure_registry_authority
 
 "${COMPOSE[@]}" run --rm --no-deps registry-signing-init
 
-"${COMPOSE[@]}" up -d node-registry-database push-database
+"${COMPOSE[@]}" up -d node-registry-database
 "${COMPOSE[@]}" up -d --force-recreate presence-redis
 
 wait_for_running() {
@@ -343,7 +335,6 @@ wait_for_running() {
 
 wait_for_running node-registry-database
 wait_for_running presence-redis
-wait_for_running push-database
 sleep 3
 
 sql_escape() {
@@ -363,16 +354,6 @@ sync_postgres_password() {
 }
 
 sync_postgres_password node-registry-database sparrow_registry sparrow_registry "$REGISTRY_PASSWORD"
-sync_postgres_password push-database sparrow_push sparrow_push "$PUSH_PASSWORD"
-
-SCHEMA_STATE="$("${COMPOSE[@]}" exec -T push-database \
-  psql -v ON_ERROR_STOP=1 -At -U sparrow_push -d sparrow_push -c \
-  "SELECT CASE WHEN to_regclass('public.push_devices') IS NULL THEN 'EMPTY' WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'push_devices' AND column_name = 'routing_id') THEN 'CURRENT' ELSE 'OBSOLETE' END;" | tr -d '\r\n')"
-if [[ "$SCHEMA_STATE" == "OBSOLETE" ]]; then
-  "${COMPOSE[@]}" exec -T push-database \
-    psql -v ON_ERROR_STOP=1 -U sparrow_push -d sparrow_push -c \
-    "DROP TABLE IF EXISTS push_wake_ups CASCADE; DROP TABLE IF EXISTS pending_envelopes CASCADE; DROP TABLE IF EXISTS push_devices CASCADE;"
-fi
 
 "${COMPOSE[@]}" up -d --remove-orphans
 "${COMPOSE[@]}" up -d --force-recreate caddy
@@ -407,7 +388,6 @@ wait_for_endpoint() {
 
 wait_for_endpoint "control-plane registry route" "http://127.0.0.1:${CONTROL_PLANE_HTTP_PORT}/health/registry"
 wait_for_endpoint "control-plane presence route" "http://127.0.0.1:${CONTROL_PLANE_HTTP_PORT}/health/presence"
-wait_for_endpoint "control-plane push route" "http://127.0.0.1:${CONTROL_PLANE_HTTP_PORT}/health/push"
 
 if [[ "$MODE" == "public" ]]; then
   CONTROL_PLANE_URL="https://$PUBLIC_DOMAIN"

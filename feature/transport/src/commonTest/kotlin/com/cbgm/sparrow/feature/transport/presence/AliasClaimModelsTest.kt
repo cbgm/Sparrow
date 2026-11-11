@@ -71,6 +71,18 @@ class AliasClaimModelsTest {
                 """"identitySignature":[]},"encryptionPublicKey":[3]},"issuedAtEpochMilliseconds":7}""",
             json.encodeToString(unsigned)
         )
+        val claim =
+            AliasClaim(
+                routingId = unsigned.routingId,
+                clientSigningPublicKey = unsigned.clientSigningPublicKey,
+                aliases = unsigned.aliases,
+                invitationRoute = unsigned.invitationRoute,
+                issuedAtEpochMilliseconds = unsigned.issuedAtEpochMilliseconds,
+                signature = byteArrayOf(9)
+            )
+        val decoded = json.decodeFromString<AliasClaim>(json.encodeToString(claim)).invitationRoute
+        assertEquals(route, decoded?.route)
+        assertContentEquals(byteArrayOf(3), decoded?.encryptionPublicKey)
     }
 
     @Test

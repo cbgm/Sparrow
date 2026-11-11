@@ -369,7 +369,7 @@ The read side and the write side use different repositories over the same tables
 
 ```mermaid
 flowchart LR
-    RUN["DefaultIncomingEnvelopeRunner<br/>(:feature:messaging)"] --> PROC[IncomingEnvelopeProcessorImpl]
+    RUN["MailboxPendingSynchronizer<br/>(:feature:conversationorchestration:delivery)"] --> PROC[IncomingEnvelopeProcessorImpl]
     PROC --> HANDLER["IncomingTransportMessageHandler<br/>decrypt + decode"]
     HANDLER -->|"IncomingCommand.RouteIncomingPacket"| ROUTE[RouteIncomingPacketWorkflow]
     ROUTE -->|ReceiveDirectMessage| DIRECT[ReceiveDirectMessageWorkflow]

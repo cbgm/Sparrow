@@ -15,7 +15,7 @@ sequenceDiagram
     participant OUT as ProtocolOutbox
     participant RUN as DefaultOutboxRunner
     participant SEND as OutgoingPacketSender
-    participant WS as DefaultWebSocketTransportClient
+    participant MB as MailboxOutgoingWireSender
 
     VM->>ORCH: awaitResult(DirectConversationCommand.SendMessage)
     ORCH->>WF: blocked? pending identity change?
@@ -25,7 +25,7 @@ sequenceDiagram
         DEL->>DB: persist message
         DEL->>OUT: enqueue encrypted packet work
         RUN->>SEND: process persisted packet
-        SEND->>WS: send
+        SEND->>MB: put into the contact's mailbox (or invitation mailbox) through the circuit
     else not authorized
         WF->>WF: StoreWaitingDirectMessage (release lock): authorized now?
         alt still not authorized
@@ -52,16 +52,14 @@ Retrying a failed Direct message (`RetryDirectMessageWorkflow`) resends its pack
 
 ```mermaid
 sequenceDiagram
-    participant WS as transport incoming gateway
-    participant IR as DefaultIncomingEnvelopeRunner
+    participant MB as MailboxArrivalListener / MailboxPendingSynchronizer
     participant IP as IncomingEnvelopeProcessorImpl
     participant H as IncomingTransportMessageHandler
     participant ROUTE as RouteIncomingPacketWorkflow
     participant CTRL as ControlPacketDispatcher
     participant GRP as GroupPacketDispatcher
 
-    WS-->>IR: envelope (only after challenge-response sign-in)
-    IR->>IP: process
+    MB->>IP: envelope from a mailbox (an invitation letter only once its sender is proven)
     IP->>H: decrypt/decode packet
     H->>ROUTE: IncomingPacket
     ROUTE->>ROUTE: direct message: ReceiveDirectMessageWorkflow / receipt: ApplyDeliveryEventWorkflow
@@ -112,7 +110,7 @@ Explicit recovery/reconnection is documented separately in [Identity recovery](i
 
 ## Offline mailbox
 
-When direct online routing is unavailable or policy selects mailbox delivery, `OutgoingPacketSender` uses the recipient mailbox route/capability resolved by orchestration/transport. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `HttpMailboxGateway`.
+Every packet goes into a mailbox: `OutgoingPacketSender` hands it to `MailboxOutgoingWireSender`, which uses the recipient's mailbox route when the app has it and the recipient's invitation mailbox otherwise. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `HttpMailboxGateway`.
 
 `MailboxRouteProvisioner` decides from the freshly verified, signed node directory, never from a socket failure:
 
@@ -123,11 +121,11 @@ When direct online routing is unavailable or policy selects mailbox delivery, `O
 - **Eligibility:** `GetMailboxContactStatesUseCase` (Contacts) gives a contact a mailbox only with a mutual identity and a routing ID, and only while it is someone we still talk to: a direct conversation with an established identity exchange, or an active group we share (group packets also arrive through the mailbox). A contact whose direct chat was deleted (exchange revoked, conversation removed, mailbox revoked) therefore never gets a fresh mailbox or route, even though it stays MUTUAL.
 - **Blocked contact / deleted chat:** `revokeForContact` revokes the current and every retiring mailbox of the contact; `revokeAll` and the pending-revocation retry cover retiring mailboxes too.
 
-`MailboxPendingSynchronizer` processes every local mailbox, current and retiring (except those whose revocation is pending). An envelope that fails stays in its mailbox for the next sync and does not stop the envelopes behind it or the other mailboxes; a mailbox that cannot be read is skipped. Rejected envelopes are acknowledged and dropped, on the mailbox path and on the push-store path.
+`MailboxPendingSynchronizer` processes every local mailbox, current and retiring (except those whose revocation is pending). An envelope that fails stays in its mailbox for the next sync and does not stop the envelopes behind it or the other mailboxes; a mailbox that cannot be read is skipped. Rejected envelopes are acknowledged and dropped.
 
 A packet for a device whose mailbox route the app does not have yet (a first invitation, or the answers before the contact's route arrived) goes into the device's invitation mailbox instead, as a letter signed with the device key and sealed for the recipient; see [Invitation mailboxes](transport.md#invitation-mailboxes).
 
-The server `mailbox` service stores opaque encrypted envelopes behind recipient-selected capabilities. Push is a wake-up path, not decryption/interpretation by the server.
+The server `mailbox` service stores opaque encrypted envelopes behind recipient-selected capabilities. Nothing wakes the device; the app waits at its mailboxes while it runs.
 
 ## Delivery/read receipts
 

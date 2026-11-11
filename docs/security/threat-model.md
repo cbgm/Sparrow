@@ -8,10 +8,9 @@ The design aims to protect against:
 
 - a server reading encrypted Direct/Group message plaintext in the normal encrypted path;
 - an unauthenticated party forging registered Community Node requests;
-- a client signing in to a gateway as another user's routing ID (sessions need a signature over a
-  single-use gateway challenge with the key the routing ID is derived from);
-- binding one's own push token to another user's routing ID to receive their wake-ups and read or delete
-  their pending envelopes (push registrations need a fresh signature with the routing ID's key);
+- reading or deleting another user's envelopes (a mailbox answers only to the capability its owner created);
+- posing as another device or phone alias in an invitation letter (letters are signed with the device key; a
+  device routing ID must derive from it, and a phone alias must belong to it at the Presence Directory);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
 - posing as a phone book contact by claiming their number in an invitation (only keys file an invitation
@@ -27,15 +26,15 @@ The design aims to protect against:
   configured test numbers, which any device can take;
 - a node directory with an expired registry certificate, or one signed under a different registry
   root than the configured or first-seen one;
-- a Community Node learning its users' phone numbers: routes carry no phone aliases. The app claims its alias at
-  each of its Control Planes, sealed for the presence directory's key from that Control Plane's signed node
-  directory. A gateway learns a user's alias only when that user sends a first invite;
+- a Community Node learning its users' phone numbers: the app claims its alias at each of its Control Planes,
+  sealed for the presence directory's key from that Control Plane's signed node directory, and invitation letters
+  are sealed for the recipient;
 - Control Planes learning the app's network address: the app's requests to them go through two relays (onion
   layers sealed for each relay's key from the signed directory). The first relay sees the address but not the
   destination, the second the destination but not the address; neither reads the content. Two relays run by the
   same operator could link both, and with a single relaying node there is only one hop;
-- looking up who uses Sparrow by hashing phone numbers: route lookups (`GET /v1/routes/{id}`) answer only
-  signed node requests and the Control Plane's push service, and never return a device's phone aliases.
+- looking up who uses Sparrow by hashing phone numbers cheaply: each invitation route lookup
+  (`POST /v1/invitation-routes`) costs a proof of work, and the answer names no phone number.
 
 Servers keep as little about users as they can: mailboxes store nothing about their creator (a new mailbox costs
 a small proof of work instead of a per-address quota, so users behind one session node do not share a limit;
@@ -43,10 +42,9 @@ used work stamps are kept for 10 minutes), mailboxes live at most 31 days
 and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
 container logs are capped at 3 × 10 MB per service.
 
-Anyone can run a Community Node; registering one gives no power over other nodes' clients. Whoever runs
-the gateway a client connects through still sees that client's network address. The last relay sees the
-content of requests that are not sealed for the Control Plane (node directory fetches, push registration with
-its routing ID and push token), but not who sent them.
+Anyone can run a Community Node; registering one gives no power over other nodes' clients. The first relay of
+a circuit still sees the app's network address. The last relay sees the content of requests that are not sealed
+for the Control Plane (node directory fetches, invitation route lookups), but not who sent them.
 
 ## Infrastructure can still observe metadata
 
@@ -55,7 +53,6 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - source network addresses/connections;
 - node/Control Plane access timing;
 - routing IDs and delivery timing within the protocol's needs;
-- node connection counts/load;
 - encrypted envelope sizes;
 - the first contact invite, which is unencrypted because the recipient's key is not known yet: the sender's
   phone number, public keys and invite challenge (no profile picture; it follows in the encrypted ready packet);
@@ -64,8 +61,7 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - encrypted attachment/blob sizes and blob-transfer timing.
 
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase
-processes the phone number and sends the SMS. A registration without a token is still accepted,
-so phone verification is not a guarantee that every advertised alias was verified.
+processes the phone number and sends the SMS. Only the operator's test numbers are bound without it.
 
 Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
 provider (Frankfurter by default) sees the node's address once a day, never a user's.

@@ -67,8 +67,8 @@ function Attached-AssertOwner([string]$Project, [string]$Directory) {
 # project after a container was removed outside this manager.
 function Attached-ProjectInventory([string]$Project, [string]$Directory) {
     $expected = switch ($Project) {
-        'sparrow-community-node' { @('caddy','mailbox-database','mailbox','federation-database','federation','gateway') }
-        'sparrow-control-plane' { @('caddy','node-registry-database','node-registry','presence-redis','presence-directory','push-database','push') }
+        'sparrow-community-node' { @('caddy','mailbox-database','mailbox','federation','gateway') }
+        'sparrow-control-plane' { @('caddy','node-registry-database','node-registry','presence-redis','presence-directory') }
         'sparrow-public-proxy' { @('caddy') }
         default { throw "Unknown attached project: $Project" }
     }

@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/conversationorchestration/message` |
 | Build file | `feature/conversationorchestration/message/build.gradle.kts` |
-| Kotlin files | 108 |
-| Production Kotlin files | 107 |
-| Test Kotlin files | 1 |
+| Kotlin files | 124 |
+| Production Kotlin files | 115 |
+| Test Kotlin files | 9 |
 | Resource files | 0 |
-| Direct dependencies | 11 |
+| Direct dependencies | 12 |
 | Direct dependents | 2 |
 
 ## Source sets
@@ -34,6 +34,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:invite`](../modules/feature-invite.md)
 - [`:feature:membership`](../modules/feature-membership.md)
+- [`:feature:transport`](../modules/feature-transport.md)
 - [`:protocol`](../modules/protocol.md)
 
 ## Dependents

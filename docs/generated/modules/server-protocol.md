@@ -10,17 +10,16 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/protocol` |
 | Build file | `server/protocol/build.gradle.kts` |
-| Kotlin files | 7 |
+| Kotlin files | 6 |
 | Production Kotlin files | 6 |
-| Test Kotlin files | 1 |
+| Test Kotlin files | 0 |
 | Resource files | 0 |
 | Direct dependencies | 0 |
-| Direct dependents | 9 |
+| Direct dependents | 8 |
 
 ## Source sets
 
 - `main`
-- `test`
 
 ## Dependencies
 
@@ -35,5 +34,4 @@ None.
 - [`:server:node-registry`](../modules/server-node-registry.md)
 - [`:server:persistence`](../modules/server-persistence.md)
 - [`:server:presence-directory`](../modules/server-presence-directory.md)
-- [`:server:push`](../modules/server-push.md)
 - [`:server:security`](../modules/server-security.md)
