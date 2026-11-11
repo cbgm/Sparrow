@@ -80,7 +80,8 @@ private fun FederationConfig.toNodeRegistrationConfig(): NodeRegistrationConfig 
     NodeRegistrationConfig(
         clientEndpoint = clientEndpoint,
         federationEndpoint = federationEndpoint,
-        mailboxEndpoint = mailboxEndpoint
+        mailboxEndpoint = mailboxEndpoint,
+        operator = operator
     )
 
 internal fun Application.installFederationPlugins() {

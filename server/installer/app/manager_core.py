@@ -70,6 +70,8 @@ def default_settings() -> dict:
         "directoryUrl": node.get("CONTROL_PLANE_DIRECTORY_URL") or cp.get("CONTROL_PLANE_DIRECTORY_URL", ""),
         # Comma-separated; these numbers move to the device that registers them last, without SMS.
         "testPhoneNumbers": "",
+        # Who runs the nodes; apps never route through two nodes of one operator.
+        "nodeOperator": properties(ROOT / "community-node" / ".env.runtime").get("NODE_OPERATOR", ""),
         "imagePrefix": cp.get("SPARROW_IMAGE_PREFIX", "ghcr.io/cbgm/sparrow"),
         "imageTag": cp.get("SPARROW_IMAGE_TAG", "latest"),
         # "combined" (Control Plane + Community Node) or "node" (Community Node only).
@@ -130,6 +132,8 @@ def engine_command(action: str, settings: dict) -> list[str]:
     if action == "start":
         # Start recreates the presence directory when its test numbers changed.
         command = python("test_phone_numbers.py", "--numbers=" + settings["testPhoneNumbers"], "--then", *command)
+        # Start recreates the federation service when the operator name changed.
+        command = python("node_operator.py", "--operator=" + settings["nodeOperator"], "--then", *command)
     return command
 
 
@@ -243,6 +247,7 @@ def describe(settings: dict) -> list[tuple[str, str]]:
                      ("Control Plane hostname", settings["controlDomain"] or "-")]
     rows += [("Directory Server URL", settings["directoryUrl"] or "-"),
              ("Test phone numbers", settings["testPhoneNumbers"] or "none"),
+             ("Operator name", settings["nodeOperator"] or "none"),
              ("Images", f"{settings['imagePrefix']}-*:{settings['imageTag']}")]
     return rows
 

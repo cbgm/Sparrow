@@ -107,6 +107,8 @@ services:
       CLIENT_ENDPOINT: ${CLIENT_ENDPOINT:?Set CLIENT_ENDPOINT}
       FEDERATION_ENDPOINT: ${FEDERATION_ENDPOINT:?Set FEDERATION_ENDPOINT}
       MAILBOX_ENDPOINT: ${MAILBOX_ENDPOINT:?Set MAILBOX_ENDPOINT}
+      # Who runs this node, signed into its descriptor: apps never route through two nodes of one operator.
+      NODE_OPERATOR: ${NODE_OPERATOR:-}
     ports:
       - "127.0.0.1:${FEDERATION_DIAGNOSTIC_PORT:-8493}:8093"
     volumes:

@@ -75,6 +75,11 @@ class Installer(EngineWindow):
                                       "Control Plane hostname")
         self.directory_entry = card.add(ttk.Entry(card, textvariable=self.directory_url, font=self.fonts["body"]),
                                         "Directory Server URL")
+        self.node_operator = tk.StringVar(value=self.settings["nodeOperator"])
+        card.add(ttk.Entry(card, textvariable=self.node_operator, font=self.fonts["body"]), "Operator name")
+        card.hint("You or your organization, the same on all your nodes: apps never route through two nodes of one "
+                  "operator. Empty: each node counts as its own operator. Applied with Start; added nodes take it "
+                  "on their next start.")
         self.node_only_hint = card.hint("Each node is added with the address of its Control Plane and managed "
                                         "under Nodes...")
 
@@ -187,6 +192,7 @@ class Installer(EngineWindow):
             "mode": "public" if self.mode.get().startswith("Public") else "lan",
             "autoDns": self.auto_dns.get(), "nodeDomain": self.node_domain.get().strip(),
             "controlDomain": self.control_domain.get().strip(), "directoryUrl": self.directory_url.get().strip(),
+            "nodeOperator": self.node_operator.get().strip(),
             "testPhoneNumbers": ",".join(line.strip() for line in self.test_phone_entry.get("1.0", "end").splitlines()
                                          if line.strip()),
             "imagePrefix": self.image_prefix.get().strip(), "imageTag": self.image_tag.get().strip(),

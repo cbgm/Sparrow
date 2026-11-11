@@ -2,6 +2,7 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.persistence.controlPlaneUrlsFromEnvironment
+import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.NodeIdentityStore
 import io.ktor.client.HttpClient
@@ -55,7 +56,9 @@ data class FederationConfig(
     val registerNode: Boolean,
     val clientEndpoint: String,
     val federationEndpoint: String,
-    val mailboxEndpoint: String
+    val mailboxEndpoint: String,
+    /** `NODE_OPERATOR`: who runs this node, so apps do not route through two of one operator's nodes. */
+    val operator: String? = null
 ) {
     companion object {
         fun fromEnvironment(): FederationConfig =
@@ -69,7 +72,8 @@ data class FederationConfig(
                     registerNode = boolean("REGISTER_NODE", true),
                     clientEndpoint = string("CLIENT_ENDPOINT", "ws://localhost:8094/v1/gateway"),
                     federationEndpoint = string("FEDERATION_ENDPOINT", "http://localhost:8093"),
-                    mailboxEndpoint = string("MAILBOX_ENDPOINT", "http://localhost:8092")
+                    mailboxEndpoint = string("MAILBOX_ENDPOINT", "http://localhost:8092"),
+                    operator = optionalEnv("NODE_OPERATOR")?.trim()?.take(SparrowNodeDescriptor.MAXIMUM_OPERATOR_LENGTH)
                 )
             }
     }

@@ -269,13 +269,38 @@ class OnionRelayClientTest {
             val selector = lastSelector!!
 
             repeat(10) {
-                val route = selector.circuitRoute(hopCount = 2, avoidLastHops = setOf("b"))
+                val route = selector.circuitRoute(hopCount = 2, avoidLastOperators = setOf("b"))
                 assertEquals(listOf("own", "c"), route.map { it.nodeId })
             }
             // With no other node left, the circuit still gets built.
-            assertEquals(2, selector.circuitRoute(hopCount = 2, avoidLastHops = setOf("b", "c")).size)
-            assertEquals(3, selector.circuitRoute(hopCount = 3, avoidLastHops = setOf("b")).size)
-            assertEquals("c", selector.circuitRoute(hopCount = 3, avoidLastHops = setOf("b")).last().nodeId)
+            assertEquals(2, selector.circuitRoute(hopCount = 2, avoidLastOperators = setOf("b", "c")).size)
+            assertEquals(3, selector.circuitRoute(hopCount = 3, avoidLastOperators = setOf("b")).size)
+            assertEquals("c", selector.circuitRoute(hopCount = 3, avoidLastOperators = setOf("b")).last().nodeId)
+        }
+
+    @Test
+    fun twoNodesOfOneOperatorAreNeverHopsOfOneCircuit() =
+        runTest {
+            val nodes = listOf(node("own", 1, "Example Org"), node("b", 2, " example org "), node("c", 3, "Other"))
+            onionClient(nodes = nodes, preferred = "own", network = { _, _ -> byteArrayOf() })
+            val selector = lastSelector!!
+
+            repeat(10) {
+                // "b" belongs to the same operator as the first hop, so the route is shorter than asked.
+                assertEquals(listOf("own", "c"), selector.circuitRoute(hopCount = 3).map { it.nodeId })
+            }
+        }
+
+    @Test
+    fun anotherCircuitEndsAtADifferentOperatorWhenThereIsOne() =
+        runTest {
+            val nodes = listOf(node("own", 1, "x"), node("b", 2, "y"), node("c", 3, "y"), node("d", 4, "z"))
+            onionClient(nodes = nodes, preferred = "own", network = { _, _ -> byteArrayOf() })
+            val selector = lastSelector!!
+
+            repeat(10) {
+                assertEquals("d", selector.circuitRoute(hopCount = 2, avoidLastOperators = setOf("y")).last().nodeId)
+            }
         }
 
     private fun onionClient(
@@ -336,7 +361,8 @@ class OnionRelayClientTest {
 
     private fun node(
         name: String,
-        relayKey: Int?
+        relayKey: Int?,
+        operator: String? = null
     ) = SparrowNodeDescriptor(
         nodeId = name,
         clientEndpoint = "wss://$name.test/v1/gateway",
@@ -347,6 +373,7 @@ class OnionRelayClientTest {
         capabilities = NodeCapability.entries.toSet(),
         validUntilEpochMilliseconds = 10L,
         relayKey = relayKey?.let { key -> ByteArray(32) { key.toByte() } },
+        operator = operator,
         signature = byteArrayOf(1)
     )
 

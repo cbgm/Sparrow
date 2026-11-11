@@ -130,6 +130,11 @@ pinned Directory key, or without an attestation, phone numbers are not bound; on
 below work then. Nothing about the verification is stored. Sparrow uses no push service: the app keeps its
 own connection instead.
 
+**Operator name** is put into the signed descriptor of the Community Node and of every added node
+(`NODE_OPERATOR` in their `.env.runtime`, applied with Start; added nodes take it on their next start). Use the
+same name on all your nodes: apps never route a circuit through two nodes of one operator, and they let their
+circuits end at different operators. Empty: each node counts as an operator of its own.
+
 ## Source and testing
 
 Build a fresh distributable from the repository root with `python3 server/installer/build.py`

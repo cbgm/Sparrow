@@ -86,7 +86,7 @@ class HttpMailboxGateway internal constructor(
                 httpClient.get(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes"
                 ) {
-                    attributes.put(CircuitKey, route.mailboxId)
+                    attributes.put(CircuitKey, credential.contactId)
                     bearerAuth(credential.retrievalCapability)
                 }
             check(response.status.isSuccess()) { "Mailbox retrieval failed with ${response.status}" }
@@ -109,7 +109,7 @@ class HttpMailboxGateway internal constructor(
                 httpClient.delete(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes/$envelopeId"
                 ) {
-                    attributes.put(CircuitKey, route.mailboxId)
+                    attributes.put(CircuitKey, credential.contactId)
                     bearerAuth(credential.retrievalCapability)
                 }
             check(response.status == HttpStatusCode.NoContent) {
@@ -124,7 +124,7 @@ class HttpMailboxGateway internal constructor(
                 httpClient.delete(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}"
                 ) {
-                    attributes.put(CircuitKey, route.mailboxId)
+                    attributes.put(CircuitKey, credential.contactId)
                     bearerAuth(credential.retrievalCapability)
                 }
             check(response.status == HttpStatusCode.NoContent || response.status in MAILBOX_GONE) {
@@ -157,7 +157,7 @@ class HttpMailboxGateway internal constructor(
         runCatching {
             coroutineScope {
                 credentials
-                    .groupBy { credential -> circuitSlot(credential.deliveryRoute.mailboxId) }
+                    .groupBy { credential -> circuitSlot(credential.contactId) }
                     .values
                     .map { onCircuit -> async { wait(accessEndpoint, onCircuit) } }
                     .awaitAll()
@@ -172,7 +172,7 @@ class HttpMailboxGateway internal constructor(
     ): List<String> {
         val response =
             httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes/wait") {
-                attributes.put(CircuitKey, credentials.first().deliveryRoute.mailboxId)
+                attributes.put(CircuitKey, credentials.first().contactId)
                 contentType(ContentType.Application.Json)
                 setBody(
                     MailboxWaitRequest(

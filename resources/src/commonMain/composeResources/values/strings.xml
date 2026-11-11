@@ -521,10 +521,11 @@
     <string name="feature_settings_circuit_status_connected">Connected through %1$d hops · round trip %2$d ms</string>
     <string name="feature_settings_circuit_status_unavailable">Route not available right now</string>
     <string name="feature_settings_circuit_estimate">About %1$d ms with %2$d hops (estimate)</string>
-    <string name="feature_settings_circuit_fewer">Only %1$d of %2$d hops available: not enough relaying nodes</string>
+    <string name="feature_settings_circuit_fewer">Only %1$d of %2$d hops available: not enough operators run relaying nodes</string>
     <string name="feature_settings_circuit_count">Circuits: %1$d</string>
-    <string name="feature_settings_circuit_count_hint">Your contacts are spread across the circuits, each ending at a different node when there are enough, so no single node sees all of them. Each circuit uses a little more battery and data.</string>
+    <string name="feature_settings_circuit_count_hint">Your contacts are spread across the circuits, each ending at a node of a different operator when there are enough, so no single operator sees all of them. Each circuit uses a little more battery and data.</string>
     <string name="feature_settings_circuit_count_open">%1$d of %2$d circuits open</string>
+    <string name="feature_settings_circuit_operators_fewer">Your circuits end at only %1$d of %2$d different operators: not enough operators run relaying nodes</string>
     <string name="feature_settings_circuit_send_directly">Send directly without a route</string>
     <string name="feature_settings_circuit_send_directly_on">While no route through at least two nodes is available, sending and receiving through mailboxes go directly or through a single node: messages keep working, but a server sees your address.</string>
     <string name="feature_settings_circuit_send_directly_off">Sending and receiving through mailboxes wait for a route through at least two nodes: your address stays hidden, but with fewer nodes reachable, messages wait until enough are back.</string>

@@ -54,6 +54,7 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_estimate
 import com.cbgm.sparrow.resources.feature_settings_circuit_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_hint
 import com.cbgm.sparrow.resources.feature_settings_circuit_hops
+import com.cbgm.sparrow.resources.feature_settings_circuit_operators_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_off
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_on
@@ -185,6 +186,14 @@ private fun CircuitCountChooser(
         (uiState.status as? CircuitUiStatus.Connected)?.let { connected ->
             StatusLine(text = stringResource(Res.string.feature_settings_circuit_count_open, connected.circuitsUp, connected.requestedCircuitCount))
         }
+        (uiState.status as? CircuitUiStatus.Connected)
+            ?.takeIf { connected -> connected.sessionOperators < connected.circuitsUp }
+            ?.let { connected ->
+                StatusLine(
+                    text = stringResource(Res.string.feature_settings_circuit_operators_fewer, connected.sessionOperators, connected.circuitsUp),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
     }
 }
 

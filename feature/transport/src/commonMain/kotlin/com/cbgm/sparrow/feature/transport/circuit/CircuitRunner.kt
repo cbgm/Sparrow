@@ -24,13 +24,17 @@ import kotlin.time.Duration.Companion.milliseconds
 sealed interface CircuitStatus {
     data object Building : CircuitStatus
 
-    /** [circuitsUp] of the [requestedCircuitCount] circuits are open; the hops and round trip are the best one's. */
+    /**
+     * [circuitsUp] of the [requestedCircuitCount] circuits are open and end at [sessionOperators] different operators;
+     * the hops and round trip are the best one's.
+     */
     data class Connected(
         val hopCount: Int,
         val requestedHopCount: Int,
         val latencyMilliseconds: Long,
         val circuitsUp: Int = 1,
-        val requestedCircuitCount: Int = 1
+        val requestedCircuitCount: Int = 1,
+        val sessionOperators: Int = 1
     ) : CircuitStatus
 
     data class Unavailable(
@@ -40,10 +44,11 @@ sealed interface CircuitStatus {
 
 /**
  * Keeps the chosen number of circuits open while it runs ([run], cancelled when the app leaves the foreground), each
- * built with as many of the chosen hops as there are relaying nodes and ending at a different session node when
- * there are enough nodes; each is measured with a ping every [pingIntervalMilliseconds], rebuilt when it fails or a
- * setting changes. Requests are spread across them by a key ([currentCircuit]), so one session node does not see all
- * of the device's mailboxes. A hop that fails is left out for a while ([RelaySelector.recordFailure]).
+ * built with as many of the chosen hops as there are operators running relaying nodes and ending at a session node of
+ * a different operator when there are enough operators; each is measured with a ping every
+ * [pingIntervalMilliseconds], rebuilt when it fails or a setting changes. Requests are spread across them by a key
+ * ([currentCircuit]) and never cross to a circuit of another operator, so no operator sees all of the device's
+ * mailboxes. A hop that fails is left out for a while ([RelaySelector.recordFailure]).
  */
 class CircuitRunner internal constructor(
     private val httpClient: HttpClient,
@@ -58,6 +63,9 @@ class CircuitRunner internal constructor(
     val status: StateFlow<CircuitStatus> = mutableStatus.asStateFlow()
     private val circuits = List(CircuitCount.MAXIMUM) { MutableStateFlow<Circuit?>(null) }
     private val slotStatuses = List(CircuitCount.MAXIMUM) { MutableStateFlow<CircuitStatus>(CircuitStatus.Building) }
+
+    /** The operator each circuit last ended at: its mailboxes are known there, so they may go there while it is rebuilt. */
+    private val sessionOperators = List(CircuitCount.MAXIMUM) { MutableStateFlow<String?>(null) }
     private val activeCount = MutableStateFlow(1)
 
     /** Which circuit requests with [key] (a mailbox or contact) use, as long as the number of circuits stays. */
@@ -65,27 +73,40 @@ class CircuitRunner internal constructor(
 
     /**
      * An open circuit through at least [minimumHopCount] hops, or null while there is none (being built, failed, too
-     * few relaying nodes, or the app is in the background): the one for [key] when it is usable, otherwise the best
-     * other one, since another circuit still hides the device's address.
+     * few relaying nodes, or the app is in the background). Without [key] the best one. With [key] the one for it, or
+     * while that is rebuilt another one ending at the same operator, which has seen these mailboxes already; never one
+     * of another operator, which would then see mailboxes of two circuits together.
      */
     internal fun currentCircuit(
         key: String? = null,
         minimumHopCount: Int = 1
     ): Circuit? =
         key
-            ?.let { circuits[slotOf(it)].value }
-            ?.takeIf { circuit -> circuit.isUsable(minimumHopCount) }
-            ?: usableCircuits(minimumHopCount).maxByOrNull { circuit -> circuit.nodeIds.size }
+            ?.let { circuitFor(slotOf(it), minimumHopCount) }
+            ?: usableCircuits(minimumHopCount).takeIf { key == null }?.maxByOrNull { circuit -> circuit.nodeIds.size }
 
-    /** Waits up to [timeoutMilliseconds] for any open circuit through at least [minimumHopCount] hops. */
+    /** Whether any circuit through at least [minimumHopCount] hops is open. */
+    internal fun hasCircuit(minimumHopCount: Int = 1): Boolean = usableCircuits(minimumHopCount).isNotEmpty()
+
+    /** Waits up to [timeoutMilliseconds] for an open circuit through at least [minimumHopCount] hops, for [key] as in [currentCircuit]. */
     internal suspend fun awaitCircuit(
         timeoutMilliseconds: Long,
-        minimumHopCount: Int = 1
+        minimumHopCount: Int = 1,
+        key: String? = null
     ): Circuit? =
         withTimeoutOrNull(timeoutMilliseconds.milliseconds) {
-            combine(circuits) { open -> open.toList() }.first { open -> open.any { it?.isUsable(minimumHopCount) == true } }
-            currentCircuit(minimumHopCount = minimumHopCount)
+            combine(circuits) { open -> open.toList() }.first { currentCircuit(key, minimumHopCount) != null }
+            currentCircuit(key, minimumHopCount)
         }
+
+    private fun circuitFor(
+        slot: Int,
+        minimumHopCount: Int
+    ): Circuit? =
+        circuits[slot].value?.takeIf { circuit -> circuit.isUsable(minimumHopCount) }
+            ?: sessionOperators[slot].value?.let { operator ->
+                usableCircuits(minimumHopCount).firstOrNull { circuit -> circuit.sessionOperator == operator }
+            }
 
     /**
      * Builds a circuit of its own for one file transfer, through the chosen hops and ending at a session node the
@@ -98,7 +119,7 @@ class CircuitRunner internal constructor(
         block: suspend (Circuit) -> T
     ): T {
         val hopCount = hopCountStore.observe().first()
-        val circuit = build("for a transfer", hopCount, otherSessionNodes(slot = NO_SLOT), TRANSFER_ANSWER_TIMEOUT_MILLISECONDS)
+        val circuit = build("for a transfer", hopCount, otherSessionOperators(slot = NO_SLOT), TRANSFER_ANSWER_TIMEOUT_MILLISECONDS)
         return try {
             if (circuit.nodeIds.size < minimumHopCount) throw ProtectedRouteMissingException()
             coroutineScope {
@@ -124,6 +145,8 @@ class CircuitRunner internal constructor(
             .collectLatest { (hopCount, circuitCount) ->
                 activeCount.value = circuitCount
                 slotStatuses.forEach { slot -> slot.value = CircuitStatus.Building }
+                // Another number of circuits spreads the mailboxes anew.
+                sessionOperators.forEach { operator -> operator.value = null }
                 publishStatus(hopCount)
                 coroutineScope { repeat(circuitCount) { slot -> launch { keepCircuit(slot, hopCount) } } }
             }
@@ -138,9 +161,10 @@ class CircuitRunner internal constructor(
         while (currentCoroutineContext().isActive) {
             if (next == null) setStatus(slot, hopCount, CircuitStatus.Building)
             try {
-                val circuit = next ?: build("${slot + 1}", hopCount, otherSessionNodes(slot))
+                val circuit = next ?: build("${slot + 1}", hopCount, otherSessionOperators(slot))
                 next = null
                 retryDelay = FIRST_RETRY_MILLISECONDS
+                sessionOperators[slot].value = circuit.sessionOperator
                 circuits[slot].value = circuit
                 try {
                     next =
@@ -149,6 +173,7 @@ class CircuitRunner internal constructor(
                             measure(slot, circuit, hopCount).also { reading.cancel() }
                         }
                     // The fuller circuit takes over before the old one closes, so requests always find one.
+                    sessionOperators[slot].value = next.sessionOperator
                     circuits[slot].value = next
                 } finally {
                     circuits[slot].compareAndSet(circuit, null)
@@ -175,29 +200,36 @@ class CircuitRunner internal constructor(
         publishStatus(hopCount)
     }
 
-    /** The best open circuit's hops and round trip, and how many are open; building while none is but one is being built. */
+    /**
+     * The best open circuit's hops and round trip, how many are open and at how many operators they end; building
+     * while none is but one is being built.
+     */
     private fun publishStatus(hopCount: Int) {
         val active = slotStatuses.take(activeCount.value).map { slot -> slot.value }
         val connected = active.filterIsInstance<CircuitStatus.Connected>()
+        val operators =
+            (0 until activeCount.value)
+                .filter { slot -> slotStatuses[slot].value is CircuitStatus.Connected }
+                .mapNotNullTo(HashSet()) { slot -> sessionOperators[slot].value }
         mutableStatus.value =
             connected
                 .maxWithOrNull(compareBy<CircuitStatus.Connected> { it.hopCount }.thenByDescending { it.latencyMilliseconds })
-                ?.copy(circuitsUp = connected.size, requestedCircuitCount = active.size)
+                ?.copy(circuitsUp = connected.size, requestedCircuitCount = active.size, sessionOperators = operators.size)
                 ?: active.firstOrNull { it is CircuitStatus.Building }
                 ?: CircuitStatus.Unavailable(hopCount)
     }
 
-    /** The session nodes the other circuits end at, so this one ends elsewhere when it can. */
-    private fun otherSessionNodes(slot: Int): Set<String> =
-        circuits.take(activeCount.value).filterIndexed { index, _ -> index != slot }.mapNotNullTo(HashSet()) { it.value?.nodeIds?.lastOrNull() }
+    /** The operators the other circuits end at, so this one ends at another operator when it can. */
+    private fun otherSessionOperators(slot: Int): Set<String> =
+        circuits.take(activeCount.value).filterIndexed { index, _ -> index != slot }.mapNotNullTo(HashSet()) { it.value?.sessionOperator }
 
     private suspend fun build(
         name: String,
         hopCount: Int,
-        avoidLastHops: Set<String>,
+        avoidLastOperators: Set<String>,
         answerTimeoutMilliseconds: Long? = null
     ): Circuit {
-        val route = selector.circuitRoute(hopCount, avoidLastHops = avoidLastHops)
+        val route = selector.circuitRoute(hopCount, avoidLastOperators = avoidLastOperators)
         check(route.isNotEmpty()) { "no relaying node known yet" }
         val first = route.first()
         val session =
@@ -251,7 +283,7 @@ class CircuitRunner internal constructor(
         val hops = circuit.nodeIds.size
         if (hops >= hopCount || selector.circuitRoute(hopCount).size <= hops) return null
         return try {
-            val built = build("${slot + 1}", hopCount, otherSessionNodes(slot))
+            val built = build("${slot + 1}", hopCount, otherSessionOperators(slot))
             if (built.nodeIds.size > hops) {
                 built
             } else {

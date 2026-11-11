@@ -29,16 +29,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 /**
- * Ktor engine for the app's mailbox requests: each is made by the session node at the end of the app's circuit, so
- * the mailbox node does not see the device's address. Without a circuit the request goes out directly when the user
- * allows it ([CircuitFallbackStore], the default) and waits for a circuit otherwise. A circuit through one hop only
- * counts when sending directly is allowed: its single node sees both the device's address and the mailbox.
+ * Ktor engine for the app's mailbox requests: each is made by the session node at the end of the circuit for its
+ * [CircuitKey], so the mailbox node does not see the device's address. While that circuit is rebuilt the request
+ * waits up to [ownCircuitWaitMilliseconds] for it rather than crossing to a circuit of another operator. Without a
+ * circuit the request goes out directly when the user allows it ([CircuitFallbackStore], the default) and waits for
+ * a circuit otherwise. A circuit through one hop only counts when sending directly is allowed: its single node sees
+ * both the device's address and the mailbox.
  */
 internal class CircuitMailboxEngine(
     private val circuits: CircuitRunner,
     private val fallback: CircuitFallbackStore,
     private val directClient: HttpClient,
-    private val waitMilliseconds: Long = DEFAULT_WAIT_MILLISECONDS
+    private val waitMilliseconds: Long = DEFAULT_WAIT_MILLISECONDS,
+    private val ownCircuitWaitMilliseconds: Long = DEFAULT_OWN_CIRCUIT_WAIT_MILLISECONDS
 ) : HttpClientEngineBase("sparrow-circuit-mailbox") {
     override val config: HttpClientEngineConfig = HttpClientEngineConfig()
     private val logger = SparrowLog.withTag("CircuitMailboxEngine")
@@ -78,7 +81,7 @@ internal class CircuitMailboxEngine(
         key: String?
     ): CircuitHttpResponse? {
         val sendsDirectly = fallback.sendsDirectly()
-        val circuit = circuits.currentCircuit(key, minimumHopCount(sendsDirectly)) ?: waitUnlessDirect(sendsDirectly)
+        val circuit = circuits.currentCircuit(key, minimumHopCount(sendsDirectly)) ?: waitUnlessDirect(key, sendsDirectly)
         if (circuit == null) {
             logDirect(request, "no circuit")
             return null
@@ -100,11 +103,18 @@ internal class CircuitMailboxEngine(
         }
     }
 
-    private suspend fun waitUnlessDirect(sendsDirectly: Boolean): Circuit? =
+    /**
+     * Sending directly, it waits only while other circuits are open (the one for [key] is being rebuilt); without any
+     * circuit it goes out directly at once.
+     */
+    private suspend fun waitUnlessDirect(
+        key: String?,
+        sendsDirectly: Boolean
+    ): Circuit? =
         if (sendsDirectly) {
-            null
+            circuits.takeIf { it.hasCircuit() }?.awaitCircuit(ownCircuitWaitMilliseconds, key = key)
         } else {
-            circuits.awaitCircuit(waitMilliseconds, CircuitHopCount.PROTECTING) ?: throw ProtectedRouteMissingException()
+            circuits.awaitCircuit(waitMilliseconds, CircuitHopCount.PROTECTING, key) ?: throw ProtectedRouteMissingException()
         }
 
     private fun minimumHopCount(sendsDirectly: Boolean): Int = if (sendsDirectly) 1 else CircuitHopCount.PROTECTING
@@ -131,10 +141,14 @@ internal class CircuitMailboxEngine(
 
     private companion object {
         const val DEFAULT_WAIT_MILLISECONDS = 30_000L
+        const val DEFAULT_OWN_CIRCUIT_WAIT_MILLISECONDS = 10_000L
     }
 }
 
-/** Which mailbox or contact a request is about: requests with the same key use the same circuit. */
+/**
+ * Which mailbox a request is about: the contact of an own mailbox (from its creation on, so one session node sees it
+ * created and read), the mailbox ID of a contact's mailbox delivered to. Requests with the same key use the same circuit.
+ */
 internal val CircuitKey = AttributeKey<String>("SparrowCircuitKey")
 
 /** The mailbox client: requests go through [engine]; status codes are checked by the caller, as with the shared client. */

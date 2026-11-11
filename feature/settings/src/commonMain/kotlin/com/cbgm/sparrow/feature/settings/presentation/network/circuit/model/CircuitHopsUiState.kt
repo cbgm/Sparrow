@@ -11,7 +11,7 @@ data class CircuitHopsUiState(
     val estimatedLatencyMilliseconds: Long? = null,
     /** Requests go out directly while there is no circuit (true) or wait for one. */
     val sendsDirectlyWithoutCircuit: Boolean = true,
-    val selectedCircuitCount: Int = 1,
+    val selectedCircuitCount: Int = 2,
     val minimumCircuitCount: Int = 1,
     val maximumCircuitCount: Int = 3,
     /** How messages reach the device while Sparrow is closed. */
@@ -30,6 +30,8 @@ sealed interface CircuitUiStatus {
         val requestedHopCount: Int,
         val latencyMilliseconds: Long,
         val circuitsUp: Int = 1,
-        val requestedCircuitCount: Int = 1
+        val requestedCircuitCount: Int = 1,
+        /** At how many different operators the open circuits end. */
+        val sessionOperators: Int = 1
     ) : CircuitUiStatus
 }

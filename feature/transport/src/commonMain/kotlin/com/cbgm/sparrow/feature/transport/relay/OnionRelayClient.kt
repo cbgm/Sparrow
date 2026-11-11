@@ -22,12 +22,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
-/** One relay of an onion route: [relayUrl] is its `POST /v1/relay`, [circuitUrl] its `/v1/circuit` WebSocket. */
+/**
+ * One relay of an onion route: [relayUrl] is its `POST /v1/relay`, [circuitUrl] its `/v1/circuit` WebSocket. [operator]
+ * is who runs it as declared in its descriptor, normalized; a node that declares none counts as its own operator.
+ */
 internal class RelayHop(
     val nodeId: String,
     val relayUrl: String,
     val circuitUrl: String,
-    val relayKey: ByteArray
+    val relayKey: ByteArray,
+    val operator: String = nodeId
 )
 
 /**
@@ -54,12 +58,13 @@ internal class RelaySelector(
     suspend fun route(): List<RelayHop> = circuitRoute(hopCount = 2).also(::reportHopCount)
 
     /**
-     * Up to [hopCount] distinct relays, the first as above; fewer when fewer nodes relay. The last hop, the session
-     * node, is one not in [avoidLastHops] when there is such a node, so the app's circuits end at different nodes.
+     * Up to [hopCount] relays of different operators, the first as above; fewer when fewer operators run relaying
+     * nodes, since two hops of one operator could match both ends. The last hop, the session node, belongs to an
+     * operator not in [avoidLastOperators] when there is one, so the app's circuits end at different operators.
      */
     suspend fun circuitRoute(
         hopCount: Int,
-        avoidLastHops: Set<String> = emptySet()
+        avoidLastOperators: Set<String> = emptySet()
     ): List<RelayHop> {
         val relays =
             cache.read()
@@ -73,15 +78,15 @@ internal class RelaySelector(
         val available = relays.filterNot { hop -> hop.nodeId in coolingDown() }.ifEmpty { relays }
         val own = connectedNodeId() ?: preferredNodeStore?.get()
         val first = available.firstOrNull { hop -> hop.nodeId == own } ?: available.randomOrNull(random) ?: return emptyList()
-        val others = available.filter { hop -> hop.nodeId != first.nodeId }.shuffled(random)
+        val others = available.filter { hop -> hop.operator != first.operator }.shuffled(random).distinctBy(RelayHop::operator)
         val chosen = others.take(hopCount - 1)
-        val replacement = others.drop(chosen.size).firstOrNull { hop -> hop.nodeId !in avoidLastHops }
+        val replacement = others.drop(chosen.size).firstOrNull { hop -> hop.operator !in avoidLastOperators }
         val ordered =
             when {
-                chosen.isEmpty() || chosen.last().nodeId !in avoidLastHops -> chosen
+                chosen.isEmpty() || chosen.last().operator !in avoidLastOperators -> chosen
                 replacement != null -> chosen.dropLast(1) + replacement
-                // Every unused node is avoided: a chosen hop that is not goes last, when there is one.
-                else -> chosen.partition { hop -> hop.nodeId in avoidLastHops }.let { (avoided, free) -> avoided + free }
+                // Every unused operator is avoided: a chosen hop that is not goes last, when there is one.
+                else -> chosen.partition { hop -> hop.operator in avoidLastOperators }.let { (avoided, free) -> avoided + free }
             }
         return listOf(first) + ordered
     }
@@ -225,7 +230,7 @@ private fun SparrowNodeDescriptor.relayHop(): RelayHop? {
     val key = relayKey ?: return null
     val relay = relayUrl(clientEndpoint) ?: return null
     val circuit = circuitUrl(clientEndpoint) ?: return null
-    return RelayHop(nodeId, relay, circuit, key)
+    return RelayHop(nodeId, relay, circuit, key, operator?.trim()?.lowercase()?.takeIf(String::isNotEmpty) ?: nodeId)
 }
 
 /** `wss://host/v1/gateway` → `wss://host/v1/circuit`. */

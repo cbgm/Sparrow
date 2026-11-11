@@ -49,7 +49,7 @@ existing main node. An empty value uses the default.
 
 ## Federation
 
-`:server:federation` registers the node at its Control Planes (`NodeRegistrationAgent`) and keeps its signed descriptor fresh with heartbeats, so apps find its relays, circuits, mailboxes and blobs in the signed node directory. Nodes pass no envelopes to each other: apps put them into mailboxes themselves, through their circuits.
+`:server:federation` registers the node at its Control Planes (`NodeRegistrationAgent`) and keeps its signed descriptor fresh with heartbeats, so apps find its relays, circuits, mailboxes and blobs in the signed node directory. `NODE_OPERATOR` (optional, at most 64 characters) names who runs the node and is signed into the descriptor; give all nodes of one person or organization the same name, since apps never route a circuit through two nodes of one operator. Without it the node counts as an operator of its own. Nodes pass no envelopes to each other: apps put them into mailboxes themselves, through their circuits.
 
 ## Offline mailbox
 

@@ -131,6 +131,7 @@ private class NodeRegistrationClient(
                 capabilities = NodeCapability.entries.toSet(),
                 validUntilEpochMilliseconds = now() + config.descriptorLifetimeMilliseconds,
                 relayKey = identity.relayKeyPair().publicKey,
+                operator = config.operator,
                 signature = byteArrayOf()
             ),
             identity
@@ -164,6 +165,8 @@ data class NodeRegistrationConfig(
     val clientEndpoint: String,
     val federationEndpoint: String,
     val mailboxEndpoint: String,
+    /** Who runs this node, put into its descriptor; null when not declared. */
+    val operator: String? = null,
     val descriptorLifetimeMilliseconds: Long = DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS,
     val registrationRefreshMilliseconds: Long = DEFAULT_REGISTRATION_REFRESH_MILLISECONDS,
     val heartbeatIntervalMilliseconds: Long = DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS,

@@ -17,7 +17,7 @@ interface CircuitCountStore {
 object CircuitCount {
     const val MINIMUM = 1
     const val MAXIMUM = 3
-    const val DEFAULT = 1
+    const val DEFAULT = 2
 }
 
 class DataStoreCircuitCountStore(

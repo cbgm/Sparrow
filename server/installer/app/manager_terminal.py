@@ -147,6 +147,9 @@ def edit_settings(settings: dict, preferences: dict) -> None:
         elif label == "Test phone numbers":
             numbers = ask("Test phone numbers, comma-separated (- = none)", settings["testPhoneNumbers"])
             settings["testPhoneNumbers"] = "" if numbers == "-" else numbers
+        elif label == "Operator name":
+            operator = ask("Operator name, the same on all your nodes (- = none)", settings["nodeOperator"])
+            settings["nodeOperator"] = "" if operator == "-" else operator
         elif label == "Images":
             if local_build_tag():
                 print(warn("A local build is installed; its images are used.")); pause()

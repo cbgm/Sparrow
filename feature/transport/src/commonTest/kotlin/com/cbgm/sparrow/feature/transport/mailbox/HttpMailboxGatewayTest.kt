@@ -91,7 +91,7 @@ class HttpMailboxGatewayTest {
                     HttpClient(engine) { install(ContentNegotiation) { json(createGatewayJson()) } },
                     createGatewayJson(),
                     MailboxCreationWorkSolver(DefaultCryptoHash()),
-                    circuitSlot = { mailboxId -> if (mailboxId == "box-a") 0 else 1 }
+                    circuitSlot = { contactId -> if (contactId == "contact-box-a") 0 else 1 }
                 )
 
             val ready = gateway.ready("https://node.test", listOf(credentialFor("box-a"), credentialFor("box-b"))).getOrThrow()
@@ -102,7 +102,7 @@ class HttpMailboxGatewayTest {
         }
 
     private fun credentialFor(mailboxId: String) =
-        credential.copy(deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
+        credential.copy(contactId = "contact-$mailboxId", deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
 
     private fun gateway(status: HttpStatusCode) =
         HttpMailboxGateway(

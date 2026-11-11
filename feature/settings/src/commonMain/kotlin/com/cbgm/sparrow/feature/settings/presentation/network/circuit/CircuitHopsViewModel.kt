@@ -119,7 +119,7 @@ class CircuitHopsViewModel(
             CircuitStatus.Building -> CircuitUiStatus.Building
             is CircuitStatus.Unavailable -> CircuitUiStatus.Unavailable
             is CircuitStatus.Connected ->
-                CircuitUiStatus.Connected(hopCount, requestedHopCount, latencyMilliseconds, circuitsUp, requestedCircuitCount)
+                CircuitUiStatus.Connected(hopCount, requestedHopCount, latencyMilliseconds, circuitsUp, requestedCircuitCount, sessionOperators)
         }
 
     /** Each hop adds about the same share of the measured round trip. */
