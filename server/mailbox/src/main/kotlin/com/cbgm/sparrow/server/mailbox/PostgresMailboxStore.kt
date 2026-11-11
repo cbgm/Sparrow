@@ -90,7 +90,8 @@ internal class PostgresMailboxStore(
     override suspend fun store(
         mailboxId: String,
         sendCapability: String,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean
     ): MailboxResult =
         database.withConnection { connection ->
             connection.inMailboxTransaction {
@@ -118,6 +119,13 @@ internal class PostgresMailboxStore(
                 queries.purgeExpiredEnvelopes(connection, mailboxId)
                 if (queries.contains(connection, mailboxId, envelope.envelopeId)) {
                     return@inMailboxTransaction MailboxResult.Stored(duplicate = true)
+                }
+                val invitationRejection =
+                    InvitationMailboxes
+                        .rejection(queries.envelopeCount(connection, mailboxId), payloadBytes, depositPaid)
+                        .takeIf { mailbox.invitation }
+                if (invitationRejection != null) {
+                    return@inMailboxTransaction MailboxResult.Rejected(invitationRejection)
                 }
                 if (queries.storedBytes(
                         connection,
@@ -281,8 +289,9 @@ internal class PostgresMailboxStore(
                     owner_key_hash,
                     send_capability_hash,
                     retrieval_capability_hash,
-                    expires_at_epoch_milliseconds
-                ) VALUES (?, ?, ?, ?, ?)
+                    expires_at_epoch_milliseconds,
+                    invitation
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT (mailbox_id) DO NOTHING
                 """.trimIndent()
             ).use { statement ->
@@ -300,6 +309,7 @@ internal class PostgresMailboxStore(
                     MailboxInsertParameter.EXPIRES_AT,
                     request.expiresAtEpochMilliseconds
                 )
+                statement.setBoolean(MailboxInsertParameter.INVITATION, request.invitation)
                 statement.executeUpdate() == 1
             }
 
@@ -323,6 +333,7 @@ internal class PostgresMailboxStore(
         const val SEND_CAPABILITY_HASH = 3
         const val RETRIEVAL_CAPABILITY_HASH = 4
         const val EXPIRES_AT = 5
+        const val INVITATION = 6
     }
 
     private object EnvelopeInsertParameter {

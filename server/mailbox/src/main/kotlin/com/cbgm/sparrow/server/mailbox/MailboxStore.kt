@@ -35,10 +35,12 @@ interface MailboxStorage : AutoCloseable {
         maximumMailboxesPerOwner: Int
     ): MailboxCreationResult
 
+    /** [depositPaid]: the deposit came with a valid proof of work, which an invitation mailbox requires. */
     suspend fun store(
         mailboxId: String,
         sendCapability: String,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean = false
     ): MailboxResult
 
     suspend fun pending(
@@ -99,7 +101,8 @@ class MailboxStore(
                     ownerKeyHash = ownerKeyHash,
                     sendCapabilityHash = hashCapability(sendCapability),
                     retrievalCapabilityHash = hashCapability(retrievalCapability),
-                    expiresAtEpochMilliseconds = request.expiresAtEpochMilliseconds
+                    expiresAtEpochMilliseconds = request.expiresAtEpochMilliseconds,
+                    invitation = request.invitation
                 )
 
             MailboxCreationResult.Created(
@@ -123,7 +126,8 @@ class MailboxStore(
     override suspend fun store(
         mailboxId: String,
         sendCapability: String,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean
     ): MailboxResult {
         val mailbox = activeMailbox(mailboxId)
         return when {
@@ -140,7 +144,7 @@ class MailboxStore(
             envelope.mailboxRoute?.mailboxId != mailboxId ->
                 MailboxResult.Rejected("MAILBOX_ROUTE_MISMATCH")
 
-            else -> storeValidatedEnvelope(mailbox, envelope)
+            else -> storeValidatedEnvelope(mailbox, envelope, depositPaid)
         }
     }
 
@@ -213,16 +217,23 @@ class MailboxStore(
 
     private fun storeValidatedEnvelope(
         mailbox: InMemoryMailbox,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean
     ): MailboxResult {
         purgeExpiredEnvelopes(mailbox, now())
         val duplicate = mailbox.envelopes.containsKey(envelope.envelopeId)
         val projectedBytes = mailbox.storedPayloadBytes() + envelope.payloadBytes()
-        return if (!duplicate && projectedBytes > maximumMailboxBytes) {
-            MailboxResult.Rejected("MAILBOX_QUOTA_EXCEEDED")
-        } else {
-            mailbox.envelopes.putIfAbsent(envelope.envelopeId, envelope)
-            MailboxResult.Stored(duplicate)
+        val invitationRejection =
+            InvitationMailboxes
+                .rejection(mailbox.envelopes.size, envelope.payloadBytes(), depositPaid)
+                .takeIf { mailbox.invitation && !duplicate }
+        return when {
+            invitationRejection != null -> MailboxResult.Rejected(invitationRejection)
+            !duplicate && projectedBytes > maximumMailboxBytes -> MailboxResult.Rejected("MAILBOX_QUOTA_EXCEEDED")
+            else -> {
+                mailbox.envelopes.putIfAbsent(envelope.envelopeId, envelope)
+                MailboxResult.Stored(duplicate)
+            }
         }
     }
 }
@@ -232,6 +243,7 @@ private data class InMemoryMailbox(
     val sendCapabilityHash: ByteArray,
     val retrievalCapabilityHash: ByteArray,
     val expiresAtEpochMilliseconds: Long,
+    val invitation: Boolean = false,
     val envelopes: ConcurrentHashMap<String, FederatedEnvelope> = ConcurrentHashMap()
 ) {
     override fun equals(other: Any?): Boolean {
@@ -241,6 +253,7 @@ private data class InMemoryMailbox(
         other as InMemoryMailbox
 
         if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
+        if (invitation != other.invitation) return false
         if (ownerKeyHash != other.ownerKeyHash) return false
         if (!sendCapabilityHash.contentEquals(other.sendCapabilityHash)) return false
         if (!retrievalCapabilityHash.contentEquals(other.retrievalCapabilityHash)) return false
@@ -251,6 +264,7 @@ private data class InMemoryMailbox(
 
     override fun hashCode(): Int {
         var result = expiresAtEpochMilliseconds.hashCode()
+        result = 31 * result + invitation.hashCode()
         result = 31 * result + ownerKeyHash.hashCode()
         result = 31 * result + sendCapabilityHash.contentHashCode()
         result = 31 * result + retrievalCapabilityHash.contentHashCode()

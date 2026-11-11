@@ -40,24 +40,44 @@ class HttpMailboxGateway internal constructor(
         expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> =
         runCatching {
-            val work = creationWork.solve()
-            val response =
-                httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
-                    attributes.put(CircuitKey, contactId)
-                    contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work))
-                }
-            check(response.status == HttpStatusCode.Created) {
-                "Mailbox creation failed with ${response.status}"
-            }
-            val created = response.body<CreateMailboxResponse>()
-            LocalMailboxCredential(
-                contactId = contactId,
-                deliveryRoute = created.deliveryRoute,
-                accessEndpoint = accessEndpoint,
-                retrievalCapability = created.retrievalCapability
-            )
+            open(contactId, accessEndpoint) { work -> CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work) }
         }
+
+    override suspend fun createInvitation(
+        nodeId: String,
+        routeEndpoint: String,
+        accessEndpoint: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<LocalMailboxCredential> =
+        runCatching {
+            open(InvitationMailboxRenewal.CONTACT_ID, accessEndpoint) { work ->
+                CreateMailboxRequest(nodeId, routeEndpoint, routeSequence = 0L, expiresAtEpochMilliseconds, work, invitation = true)
+            }
+        }
+
+    private suspend fun open(
+        contactId: String,
+        accessEndpoint: String,
+        request: (MailboxCreationWork) -> CreateMailboxRequest
+    ): LocalMailboxCredential {
+        val work = creationWork.solve()
+        val response =
+            httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
+                attributes.put(CircuitKey, contactId)
+                contentType(ContentType.Application.Json)
+                setBody(request(work))
+            }
+        check(response.status == HttpStatusCode.Created) {
+            "Mailbox creation failed with ${response.status}"
+        }
+        val created = response.body<CreateMailboxResponse>()
+        return LocalMailboxCredential(
+            contactId = contactId,
+            deliveryRoute = created.deliveryRoute,
+            accessEndpoint = accessEndpoint,
+            retrievalCapability = created.retrievalCapability
+        )
+    }
 
     override suspend fun pending(credential: LocalMailboxCredential) =
         runCatching {
@@ -112,18 +132,22 @@ class HttpMailboxGateway internal constructor(
             }
         }
 
-    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> =
-        runCatching {
-            val route = requireNotNull(envelope.mailboxRoute) { "The envelope names no mailbox" }
-            val response =
-                httpClient.post("${route.nodeEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes") {
-                    attributes.put(CircuitKey, route.mailboxId)
-                    bearerAuth(route.sendCapability)
-                    contentType(ContentType.Application.Json)
-                    setBody(MailboxEnvelopeRequest(envelope))
-                }
-            check(response.status == HttpStatusCode.Accepted) { "Mailbox delivery failed with ${response.status}" }
-        }
+    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = runCatching { put(MailboxEnvelopeRequest(envelope)) }
+
+    override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> =
+        runCatching { put(MailboxEnvelopeRequest(envelope, depositWork = creationWork.solve())) }
+
+    private suspend fun put(request: MailboxEnvelopeRequest) {
+        val route = requireNotNull(request.envelope.mailboxRoute) { "The envelope names no mailbox" }
+        val response =
+            httpClient.post("${route.nodeEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes") {
+                attributes.put(CircuitKey, route.mailboxId)
+                bearerAuth(route.sendCapability)
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        check(response.status == HttpStatusCode.Accepted) { "Mailbox delivery failed with ${response.status}" }
+    }
 
     /** One wait per circuit, each naming only that circuit's mailboxes, so no session node sees them all. */
     override suspend fun ready(

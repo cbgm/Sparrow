@@ -3,6 +3,8 @@ package com.cbgm.sparrow.server.presence
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
+import com.cbgm.sparrow.server.protocol.InvitationRoute
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
 import com.cbgm.sparrow.server.security.ClientRoutingIds
 import com.cbgm.sparrow.server.security.ProtocolSignatures
 import java.util.concurrent.ConcurrentHashMap
@@ -24,6 +26,21 @@ interface PresenceStorage : AutoCloseable {
         claims: AliasClaims
     ): List<String>
 
+    /**
+     * Keeps the device's invitation route from its latest claim, as long as an alias binding; null removes it. The
+     * claim is signed with the device key, so only the device itself sets it.
+     */
+    suspend fun saveInvitationRoute(
+        deviceRoutingId: String,
+        invitationRoute: InvitationRoute?
+    )
+
+    /**
+     * The invitation route for a phone alias (of the device holding it) or a device routing ID, or null when there is
+     * none that is still valid.
+     */
+    suspend fun invitationRoute(routingId: String): InvitationRouteResult?
+
     suspend fun remove(routingId: String, connectionId: String)
 
     suspend fun resolve(routingId: String): ClientRoutingResult
@@ -37,6 +54,7 @@ class PresenceStore(
 ) : PresenceStorage {
     private val routes = ConcurrentHashMap<String, ConcurrentHashMap<String, ClientRoute>>()
     private val aliasOwners = ConcurrentHashMap<String, AliasBinding>()
+    private val invitationRoutes = ConcurrentHashMap<String, KeptInvitationRoute>()
     private val lock = Any()
     override val persistenceMode: String = "memory"
 
@@ -74,6 +92,26 @@ class PresenceStore(
                     aliasOwners[alias] = AliasBinding(deviceRoutingId, currentTime + ALIAS_BINDING_LIFETIME_MILLISECONDS)
                 }
         }
+
+    override suspend fun saveInvitationRoute(
+        deviceRoutingId: String,
+        invitationRoute: InvitationRoute?
+    ) {
+        val currentTime = now()
+        invitationRoutes.entries.removeIf { (_, kept) -> kept.expiresAtEpochMilliseconds <= currentTime }
+        when (invitationRoute) {
+            null -> invitationRoutes.remove(deviceRoutingId)
+            else -> invitationRoutes[deviceRoutingId] = KeptInvitationRoute(invitationRoute, currentTime + ALIAS_BINDING_LIFETIME_MILLISECONDS)
+        }
+    }
+
+    override suspend fun invitationRoute(routingId: String): InvitationRouteResult? {
+        val currentTime = now()
+        val device = aliasOwners[routingId]?.takeIf { it.expiresAtEpochMilliseconds > currentTime }?.owner ?: routingId
+        return invitationRoutes[device]
+            ?.takeIf { kept -> kept.expiresAtEpochMilliseconds > currentTime && kept.route.route.expiresAtEpochMilliseconds > currentTime }
+            ?.let { kept -> InvitationRouteResult(device, kept.route) }
+    }
 
     override suspend fun remove(routingId: String, connectionId: String) {
         synchronized(lock) {
@@ -114,6 +152,11 @@ class PresenceStore(
 
     private data class AliasBinding(
         val owner: String,
+        val expiresAtEpochMilliseconds: Long
+    )
+
+    private data class KeptInvitationRoute(
+        val route: InvitationRoute,
         val expiresAtEpochMilliseconds: Long
     )
 }

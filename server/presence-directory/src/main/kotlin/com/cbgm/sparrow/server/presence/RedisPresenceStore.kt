@@ -3,6 +3,8 @@ package com.cbgm.sparrow.server.presence
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
+import com.cbgm.sparrow.server.protocol.InvitationRoute
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
 import com.cbgm.sparrow.server.protocol.serverJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,7 +24,8 @@ internal class RedisPresenceStore(
         val generation: String,
         val routes: String,
         val expiries: String,
-        val owner: String
+        val owner: String,
+        val invitationRoute: String
     )
 
     private val pool: JedisPool
@@ -85,6 +88,27 @@ internal class RedisPresenceStore(
                 ) as Long
             } == REGISTERED_RESULT
         }
+
+    override suspend fun saveInvitationRoute(
+        deviceRoutingId: String,
+        invitationRoute: InvitationRoute?
+    ) {
+        val key = routingKeys(deviceRoutingId).invitationRoute
+        withJedis { jedis ->
+            when (invitationRoute) {
+                null -> jedis.del(key)
+                else -> jedis.psetex(key, ALIAS_BINDING_LIFETIME_MILLISECONDS, serverJson.encodeToString(invitationRoute))
+            }
+        }
+    }
+
+    override suspend fun invitationRoute(routingId: String): InvitationRouteResult? {
+        val device = withJedis { jedis -> jedis.get(routingKeys(routingId).owner) } ?: routingId
+        return withJedis { jedis -> jedis.get(routingKeys(device).invitationRoute) }
+            ?.let { encoded -> runCatching { serverJson.decodeFromString<InvitationRoute>(encoded) }.getOrNull() }
+            ?.takeIf { invitation -> invitation.route.expiresAtEpochMilliseconds > now() }
+            ?.let { invitation -> InvitationRouteResult(device, invitation) }
+    }
 
     override suspend fun remove(routingId: String, connectionId: String) {
         removeRoute(routingId, connectionId, now())
@@ -163,7 +187,8 @@ internal class RedisPresenceStore(
             generation = "$routingPrefix:generation",
             routes = "$routingPrefix:routes",
             expiries = "$routingPrefix:expiries",
-            owner = "$routingPrefix:owner"
+            owner = "$routingPrefix:owner",
+            invitationRoute = "$routingPrefix:invitation-route"
         )
     }
 

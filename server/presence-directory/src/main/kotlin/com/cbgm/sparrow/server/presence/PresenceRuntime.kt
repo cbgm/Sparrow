@@ -5,6 +5,7 @@ import com.cbgm.sparrow.server.persistence.ServiceEnvironment
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.BoundedRateLimiter
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import com.cbgm.sparrow.server.security.NodeDescriptorResolver
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
 import com.cbgm.sparrow.server.security.RateLimitPolicy
@@ -29,7 +30,9 @@ internal data class PresenceRuntime(
     /** Lets the control plane's push service resolve routes; nodes sign their requests instead. */
     val internalApiToken: String? = null,
     val aliasClaimKeys: AliasClaimKeys = AliasClaimKeys(),
-    val aliasClaimRateLimiter: BoundedRateLimiter = BoundedRateLimiter(ALIAS_CLAIM_RATE_LIMIT)
+    val aliasClaimRateLimiter: BoundedRateLimiter = BoundedRateLimiter(ALIAS_CLAIM_RATE_LIMIT),
+    /** The price of an invitation route lookup; the app solves 18 bits, like for a mailbox. */
+    val lookupWork: CreationWorkCheck = CreationWorkCheck(DEFAULT_LOOKUP_WORK_BITS)
 )
 
 /** An app claims its aliases when it connects and every few hours; a device needs only a few claims per window. */
@@ -52,7 +55,8 @@ internal fun createPresenceRuntime(store: PresenceStorage): PresenceRuntime {
         registryUrl = registryUrl,
         nodeRequestAuthorizer = NodeRequestAuthorizer(descriptorResolver),
         phoneVerification = createPhoneVerification(),
-        internalApiToken = ServiceEnvironment.secret("PRESENCE_INTERNAL_API_TOKEN")
+        internalApiToken = ServiceEnvironment.secret("PRESENCE_INTERNAL_API_TOKEN"),
+        lookupWork = CreationWorkCheck(ServiceEnvironment.int("PRESENCE_LOOKUP_WORK_BITS", DEFAULT_LOOKUP_WORK_BITS))
     )
 }
 
@@ -97,3 +101,4 @@ internal fun Application.installPresencePlugins(runtime: PresenceRuntime) {
 }
 
 private const val DEFAULT_NODE_REGISTRY_URL = "http://localhost:8090"
+private const val DEFAULT_LOOKUP_WORK_BITS = 18

@@ -2,6 +2,9 @@ package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
+import com.cbgm.sparrow.server.protocol.DeliveryRoute
+import com.cbgm.sparrow.server.protocol.InvitationRoute
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
 import com.cbgm.sparrow.server.security.ClientRoutingIds
@@ -106,6 +109,51 @@ class PresenceStoreTest {
         }
 
     @Test
+    fun theInvitationRouteIsFoundByTheDeviceAndByItsAliasWhileTheMailboxLives() =
+        runTest {
+            var now = 1_000L
+            val owner = NodeIdentity.generate()
+            val store = PresenceStore(now = { now })
+            val invitation = invitationRoute(expiresAt = 5_000L)
+            store.bindAliases(owner.routingId, FIRST_CLAIM)
+
+            store.saveInvitationRoute(owner.routingId, invitation)
+
+            assertEquals(InvitationRouteResult(owner.routingId, invitation), store.invitationRoute(ALIAS))
+            assertEquals(InvitationRouteResult(owner.routingId, invitation), store.invitationRoute(owner.routingId))
+            now = 5_000L
+            assertNull(store.invitationRoute(ALIAS))
+        }
+
+    @Test
+    fun aClaimWithoutInvitationRouteRemovesTheOldOne() =
+        runTest {
+            val owner = NodeIdentity.generate()
+            val store = PresenceStore(now = { 1_000L })
+            store.saveInvitationRoute(owner.routingId, invitationRoute(expiresAt = 5_000L))
+
+            store.saveInvitationRoute(owner.routingId, null)
+
+            assertNull(store.invitationRoute(owner.routingId))
+        }
+
+    @Test
+    fun anAliasLeadsToTheRouteOfTheDeviceHoldingIt() =
+        runTest {
+            val owner = NodeIdentity.generate()
+            val other = NodeIdentity.generate()
+            val store = PresenceStore(now = { 1_000L })
+            val invitation = invitationRoute(expiresAt = 5_000L)
+            store.bindAliases(owner.routingId, FIRST_CLAIM)
+            store.saveInvitationRoute(owner.routingId, invitation)
+
+            store.bindAliases(other.routingId, UNPROVEN_CLAIM)
+            store.saveInvitationRoute(other.routingId, invitationRoute(expiresAt = 6_000L))
+
+            assertEquals(InvitationRouteResult(owner.routingId, invitation), store.invitationRoute(ALIAS))
+        }
+
+    @Test
     fun aliasesTheRouteItselfNamesAreIgnored() =
         runTest {
             val store = PresenceStore(now = { 1_000L })
@@ -117,6 +165,22 @@ class PresenceStoreTest {
             )
             assertEquals(emptyList(), store.resolve(ALIAS).routes)
         }
+
+    private fun invitationRoute(expiresAt: Long) =
+        InvitationRoute(
+            route =
+                DeliveryRoute(
+                    routeId = "route",
+                    nodeId = "node-a",
+                    nodeEndpoint = "https://node-a.test",
+                    mailboxId = "mailbox",
+                    sendCapability = "capability",
+                    sequence = 0L,
+                    expiresAtEpochMilliseconds = expiresAt,
+                    identitySignature = byteArrayOf()
+                ),
+            encryptionPublicKey = ByteArray(32) { 3 }
+        )
 
     private val NodeIdentity.routingId: String
         get() = ClientRoutingIds.fromSigningPublicKey(encodedPublicKey)

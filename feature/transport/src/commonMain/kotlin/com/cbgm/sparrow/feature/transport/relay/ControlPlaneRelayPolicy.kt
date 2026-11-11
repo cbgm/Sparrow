@@ -15,7 +15,8 @@ internal class ControlPlaneRelayPolicy(
         val path = url.encodedPath
         return when {
             // A phone alias or phone token with the app's address is exactly what the relays keep apart.
-            path.endsWith(ALIAS_CLAIMS_PATH) || path.startsWith(PHONE_ATTESTATIONS_PATH) -> RelayRequirement.ROUTE_ONLY
+            path.endsWith(ALIAS_CLAIMS_PATH) || path.endsWith(INVITATION_ROUTES_PATH) || path.startsWith(PHONE_ATTESTATIONS_PATH) ->
+                RelayRequirement.ROUTE_ONLY
             path.endsWith(NODES_PATH) && trustedRoot(url.toString().substringBefore(NODES_PATH)) == null ->
                 RelayRequirement.DIRECT
 
@@ -35,6 +36,7 @@ internal class ControlPlaneRelayPolicy(
     private companion object {
         const val NODES_PATH = "/v1/nodes"
         const val ALIAS_CLAIMS_PATH = "/v1/alias-claims"
+        const val INVITATION_ROUTES_PATH = "/v1/invitation-routes"
         const val PHONE_ATTESTATIONS_PATH = "/v1/phone-attestations"
     }
 }

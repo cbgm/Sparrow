@@ -10,8 +10,10 @@ import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.SignedNodeDirectory
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
 import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import io.ktor.client.HttpClient
@@ -32,7 +34,8 @@ import kotlinx.serialization.json.Json
  * the relays of the Control Plane HTTP client ([com.cbgm.sparrow.feature.transport.relay.OnionRelayEngine]). For each
  * one it takes the presence directory's key from that Control Plane's own signed node directory, checked against its
  * pinned root, so neither a relay nor the gateway can swap in a key. A Control Plane whose root is not pinned yet is
- * skipped until the app has used it.
+ * skipped until the app has used it. Every claim names the device's invitation mailbox ([InvitationMailboxRenewal])
+ * with the identity's encryption key, so senders without a mailbox route of this device can still reach it.
  */
 internal class AliasClaimRegistrar(
     private val controlPlaneHttpClient: HttpClient,
@@ -46,6 +49,8 @@ internal class AliasClaimRegistrar(
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val phoneAttestationRemoteSource: PhoneAttestationRemoteSource,
+    private val invitationMailbox: InvitationMailboxRenewal,
+    private val encryptionKeyPairProvider: LocalEncryptionKeyPairProvider,
     private val json: Json,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) {
@@ -56,9 +61,10 @@ internal class AliasClaimRegistrar(
         val alias = localBootstrapRoutingIdProvider.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
         val attestation = phoneAttestation(routingId)
         val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val invitationRoute = invitationRoute()
         val results =
             controlPlaneConfiguration.endpoints.value.distinctBy(ControlPlaneEndpoint::baseUrl).map { endpoint ->
-                claimAt(endpoint.baseUrl, routingId, listOf(alias), attestation, signingKeyPair)
+                claimAt(endpoint.baseUrl, routingId, ClaimContent(listOf(alias), attestation, invitationRoute), signingKeyPair)
             }
         // The token proves the number once; it is not used again after a Control Plane answered its attestation.
         if (attestation != null && results.any { result -> result != ClaimOutcome.Unreachable }) {
@@ -82,6 +88,21 @@ internal class AliasClaimRegistrar(
             .getOrNull()
     }
 
+    /**
+     * The invitation mailbox, renewed first when due. When it cannot be renewed now (offline), the newest one that
+     * still lives: a claim without one would take it away from the presence directories.
+     */
+    private suspend fun invitationRoute(): InvitationRoute? {
+        val mailbox =
+            invitationMailbox
+                .current()
+                .onFailure { failure -> logger.warn { "Invitation mailbox not renewed: ${failure::class.simpleName}" } }
+                .getOrNull()
+                ?: invitationMailbox.receiving().getOrNull()?.firstOrNull()
+                ?: return null
+        return InvitationRoute(mailbox.deliveryRoute, encryptionKeyPairProvider.getEncryptionKeyPair().getOrThrow().publicKey)
+    }
+
     private suspend fun Throwable.reportLimit() {
         if (this is PhoneVerificationLimitReachedException) localPhoneNumberProvider.reportPhoneVerificationLimitReached()
     }
@@ -89,8 +110,7 @@ internal class AliasClaimRegistrar(
     private suspend fun claimAt(
         baseUrl: String,
         routingId: String,
-        aliases: List<String>,
-        attestation: String?,
+        content: ClaimContent,
         signingKeyPair: LocalSigningKeyPair
     ): ClaimOutcome =
         try {
@@ -98,14 +118,14 @@ internal class AliasClaimRegistrar(
             if (key == null) {
                 ClaimOutcome.Unreachable
             } else {
-                val sealed = sealedClaim(routingId, aliases, attestation, signingKeyPair, key)
+                val sealed = sealedClaim(routingId, content, signingKeyPair, key)
                 val result =
                     controlPlaneHttpClient
                         .post("${baseUrl.trimEnd('/')}/v1/alias-claims") {
                             contentType(ContentType.Application.Json)
                             setBody(json.encodeToString(AliasClaimRequest(sealed)))
                         }.body<AliasClaimResult>()
-                ClaimOutcome.Bound(result.acceptedAliasIndexes.mapNotNull(aliases::getOrNull))
+                ClaimOutcome.Bound(result.acceptedAliasIndexes.mapNotNull(content.aliases::getOrNull))
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -136,8 +156,7 @@ internal class AliasClaimRegistrar(
 
     private suspend fun sealedClaim(
         routingId: String,
-        aliases: List<String>,
-        attestation: String?,
+        content: ClaimContent,
         signingKeyPair: LocalSigningKeyPair,
         presenceKey: ByteArray
     ): ByteArray {
@@ -145,8 +164,9 @@ internal class AliasClaimRegistrar(
             UnsignedAliasClaim(
                 routingId = routingId,
                 clientSigningPublicKey = signingKeyPair.publicKey,
-                aliases = aliases,
-                phoneAttestation = attestation,
+                aliases = content.aliases,
+                phoneAttestation = content.attestation,
+                invitationRoute = content.invitationRoute,
                 issuedAtEpochMilliseconds = now()
             )
         val signature =
@@ -159,11 +179,18 @@ internal class AliasClaimRegistrar(
                 clientSigningPublicKey = unsigned.clientSigningPublicKey,
                 aliases = unsigned.aliases,
                 phoneAttestation = unsigned.phoneAttestation,
+                invitationRoute = unsigned.invitationRoute,
                 issuedAtEpochMilliseconds = unsigned.issuedAtEpochMilliseconds,
                 signature = signature
             )
         return cipher.seal(json.encodeToString(claim).encodeToByteArray(), presenceKey, ALIAS_CLAIM_CONTEXT).getOrThrow()
     }
+
+    private class ClaimContent(
+        val aliases: List<String>,
+        val attestation: String?,
+        val invitationRoute: InvitationRoute?
+    )
 
     private sealed interface ClaimOutcome {
         class Bound(

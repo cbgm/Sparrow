@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 /**
  * The device's phone aliases (same wire format as `AliasClaim` in `:server:protocol`), signed with its key and sealed
  * for one Control Plane's presence directory. The claims after sign-up carry the phone verifier's attestation
- * ([PhoneAttestationRemoteSource]).
+ * ([PhoneAttestationRemoteSource]); every claim names the device's invitation mailbox ([InvitationRoute]).
  */
 @Serializable
 internal class AliasClaim(
@@ -13,6 +13,7 @@ internal class AliasClaim(
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
@@ -25,6 +26,7 @@ internal class UnsignedAliasClaim(
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long
 ) {
     override fun toString(): String = "UnsignedAliasClaim(redacted)"

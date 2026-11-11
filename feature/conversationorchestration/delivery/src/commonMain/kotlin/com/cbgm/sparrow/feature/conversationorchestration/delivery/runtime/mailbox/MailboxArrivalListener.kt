@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -14,15 +15,16 @@ import kotlinx.coroutines.isActive
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Receives what contacts put into this device's mailboxes while the app is open: it keeps waiting at every node that
- * holds some of them (a wait lasts a few seconds, then the next one starts), and as soon as mailboxes hold envelopes
- * they are fetched and processed. Senders put envelopes there themselves, through their circuits, so this is how
- * messages arrive live.
+ * Receives what contacts put into this device's mailboxes while the app is open, and what others put into its
+ * invitation mailboxes: it keeps waiting at every node that holds some of them (a wait lasts a few seconds, then the
+ * next one starts), and as soon as mailboxes hold envelopes they are fetched and processed. Senders put envelopes there
+ * themselves, through their circuits, so this is how messages arrive live.
  */
 class MailboxArrivalListener(
     private val mailboxGateway: MailboxGateway,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val pendingSynchronizer: MailboxPendingSynchronizer,
+    private val invitationMailbox: InvitationMailboxRenewal,
     private val pauseMilliseconds: Long = DEFAULT_PAUSE_MILLISECONDS
 ) {
     private val logger = SparrowLog.withTag("MailboxArrivalListener")
@@ -40,7 +42,7 @@ class MailboxArrivalListener(
 
     /** Waits once at every node; how many envelopes arrived and were processed. */
     private suspend fun receiveOnce(): Int {
-        val credentials = mailboxRouteRepository.receiving().getOrThrow()
+        val credentials = mailboxRouteRepository.receiving().getOrThrow() + invitationMailbox.receiving().getOrThrow()
         if (credentials.isEmpty()) {
             delay(pauseMilliseconds.milliseconds)
             return 0

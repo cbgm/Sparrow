@@ -216,6 +216,15 @@ internal class RecordingMailboxGateway : MailboxGateway {
 
     override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
 
+    override suspend fun createInvitation(
+        nodeId: String,
+        routeEndpoint: String,
+        accessEndpoint: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<LocalMailboxCredential> = error("Not used")
+
+    override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
     override suspend fun ready(
         accessEndpoint: String,
         credentials: List<LocalMailboxCredential>

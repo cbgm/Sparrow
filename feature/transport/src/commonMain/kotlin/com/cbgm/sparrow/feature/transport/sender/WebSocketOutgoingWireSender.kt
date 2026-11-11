@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
@@ -24,7 +24,8 @@ class WebSocketOutgoingWireSender(
     private val transportConfig: TransportConfig,
     private val mailboxRouteRepository: MailboxRouteRepository? = null,
     private val mailboxGateway: MailboxGateway? = null,
-    private val sendingPolicy: DirectSendingPolicy? = null
+    private val sendingPolicy: DirectSendingPolicy? = null,
+    private val invitationLetters: InvitationLetters? = null
 ) : OutgoingWireSender {
     private val logger = SparrowLog.withTag("WebSocketOutgoingWireSender")
 
@@ -72,27 +73,15 @@ class WebSocketOutgoingWireSender(
                     ?.getOrThrow()
                     ?.takeIf { it.expiresAtEpochMilliseconds > createdAt }
 
-            if (route == null) {
-                // Without a mailbox route the message cannot use the circuit; the connected node learns the recipient.
-                sendingPolicy?.checkUnprotectedSendAllowed()
-                logger.debug { "Message sent through the connected node (no mailbox route for this contact yet)" }
-            }
             val expiresAt =
                 when (route) {
+                    // Without a mailbox route of the recipient (a first invitation, or before its route arrived), the
+                    // packet goes into the recipient's invitation mailbox, through the circuit like any mailbox.
                     null ->
-                        webSocketTransportClient
-                            .sendEnvelopeAndAwaitServerAcceptance(
-                                envelope =
-                                    TransportEnvelope(
-                                        envelopeId = envelopeId,
-                                        senderId = senderRoutingId,
-                                        recipientId = recipientAddress,
-                                        payload = encodedTransportPayload,
-                                        createdAtEpochMilliseconds = createdAt
-                                    ),
-                                timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
-                            ).getOrThrow()
-                            .expiresAtEpochMilliseconds
+                        checkNotNull(invitationLetters) { "No invitation mailboxes" }
+                            .send(senderRoutingId, recipientAddress, encodedTransportPayload, envelopeId, createdAt)
+                            .getOrThrow()
+                            .also { logger.debug { "Packet put into the recipient's invitation mailbox (no mailbox route of the recipient yet)" } }
 
                     else ->
                         sendToMailbox(

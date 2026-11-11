@@ -6,9 +6,11 @@ import com.cbgm.sparrow.server.protocol.AliasClaimResult
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.ErrorResponse
+import com.cbgm.sparrow.server.protocol.InvitationRouteLookup
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.UnsignedAliasClaim
 import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.security.ClientRoutingIds
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizationRequirements
 import com.cbgm.sparrow.server.security.enforceRateLimit
@@ -35,6 +37,7 @@ internal fun Application.installPresenceRoutes(runtime: PresenceRuntime) {
         installRouteResolution(runtime)
         installAliasClaimKey(runtime)
         installAliasClaims(runtime)
+        installInvitationRoutes(runtime)
     }
 }
 
@@ -168,6 +171,36 @@ private fun Route.installAliasClaims(runtime: PresenceRuntime) {
     }
 }
 
+/**
+ * Senders look up where to put a packet for a phone alias or a device routing ID that has no mailbox route of its own
+ * yet (a first invitation, or the answers before the contact's mailbox route arrived), through their circuit, so this
+ * directory does not learn who asks. Anyone may ask, so every lookup is paid with the mailbox proof of work, and
+ * nothing about it is kept.
+ */
+private fun Route.installInvitationRoutes(runtime: PresenceRuntime) {
+    post("/v1/invitation-routes") {
+        val lookup = runCatching { call.receive<InvitationRouteLookup>() }.getOrNull()?.takeIf { it.routingId.isLookedUp() }
+        when {
+            lookup == null -> call.respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_LOOKUP", "Invalid invitation route lookup"))
+            !runtime.lookupWork.accepts(lookup.work) ->
+                call.respond(HttpStatusCode.Forbidden, ErrorResponse("LOOKUP_WORK_REQUIRED", "A valid proof of work is required"))
+            else -> call.respondInvitationRoute(lookup.routingId, runtime)
+        }
+    }
+}
+
+private fun String.isLookedUp(): Boolean = ClientRoutingIds.isBootstrapRoutingId(this) || ClientRoutingIds.isDeviceRoutingId(this)
+
+private suspend fun ApplicationCall.respondInvitationRoute(
+    routingId: String,
+    runtime: PresenceRuntime
+) {
+    when (val result = runtime.store.invitationRoute(routingId)) {
+        null -> respond(HttpStatusCode.NotFound, ErrorResponse("NO_INVITATION_ROUTE", "No invitation route"))
+        else -> respond(result)
+    }
+}
+
 private suspend fun ApplicationCall.bindAliases(
     claim: UnsignedAliasClaim,
     runtime: PresenceRuntime
@@ -181,6 +214,7 @@ private suspend fun ApplicationCall.bindAliases(
 
         else -> {
             val bound = runtime.store.bindAliases(claim.routingId, claims)
+            runtime.store.saveInvitationRoute(claim.routingId, claim.invitationRoute)
             respond(AliasClaimResult(acceptedAliasIndexes = claim.aliases.indices.filter { index -> claim.aliases[index] in bound }))
         }
     }

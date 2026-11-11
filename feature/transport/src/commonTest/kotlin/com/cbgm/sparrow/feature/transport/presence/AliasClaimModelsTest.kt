@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.presence
 
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
+import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -46,9 +47,30 @@ class AliasClaimModelsTest {
 
     @Test
     fun aClaimWithoutAttestationLeavesTheFieldOut() {
-        val unsigned = UnsignedAliasClaim("scrouting1_device", byteArrayOf(1), listOf("scphone1_a"), null, 7L)
+        val unsigned = UnsignedAliasClaim("scrouting1_device", byteArrayOf(1), listOf("scphone1_a"), issuedAtEpochMilliseconds = 7L)
 
         assertTrue("phoneAttestation" !in json.encodeToString(unsigned))
+    }
+
+    @Test
+    fun theInvitationRouteIsSignedBetweenTheAttestationAndTheTime() {
+        val route = MailboxDeliveryRoute("route", "node-a", "https://node-a.test", "mailbox", "send", 0L, 9L, byteArrayOf())
+        val unsigned =
+            UnsignedAliasClaim(
+                routingId = "scrouting1_device",
+                clientSigningPublicKey = byteArrayOf(1),
+                aliases = listOf("scphone1_a"),
+                invitationRoute = InvitationRoute(route, byteArrayOf(3)),
+                issuedAtEpochMilliseconds = 7L
+            )
+
+        assertEquals(
+            """{"routingId":"scrouting1_device","clientSigningPublicKey":[1],"aliases":["scphone1_a"],""" +
+                """"invitationRoute":{"route":{"routeId":"route","nodeId":"node-a","nodeEndpoint":"https://node-a.test",""" +
+                """"mailboxId":"mailbox","sendCapability":"send","sequence":0,"expiresAtEpochMilliseconds":9,""" +
+                """"identitySignature":[]},"encryptionPublicKey":[3]},"issuedAtEpochMilliseconds":7}""",
+            json.encodeToString(unsigned)
+        )
     }
 
     @Test

@@ -64,7 +64,7 @@ Anyone can run a node, so a node may only act for its own clients.
 
 ## Offline mailbox
 
-`:server:mailbox` provides durable recipient-selected offline delivery. `MailboxStore` / `PostgresMailboxStore` own mailbox persistence; nothing wakes the owner, whose app waits at its mailboxes through its circuit. Mailbox capability/create/revoke/fetch routes are defined by the mailbox HTTP routing layer.
+`:server:mailbox` provides durable recipient-selected offline delivery. `MailboxStore` / `PostgresMailboxStore` own mailbox persistence; nothing wakes the owner, whose app waits at its mailboxes through its circuit. Mailbox capability/create/revoke/fetch routes are defined by the mailbox HTTP routing layer. A mailbox created with `invitation = true` is an invitation mailbox: its send capability is handed out by the Presence Directories, so every deposit must carry a proof of work (`MailboxEnvelopeRequest.depositWork`, refused with `DEPOSIT_WORK_REQUIRED` otherwise), and it holds at most 50 envelopes of up to 64 KiB (`InvitationMailboxes`).
 
 At the client, mailbox fetch ultimately enters the same incoming-envelope processing pipeline as live WebSocket delivery; the message is not treated as a different plaintext protocol.
 

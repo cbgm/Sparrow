@@ -6,7 +6,6 @@ import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCountStore
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.circuit.ReadableCircuitCipher
-import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.discovery.CachedNodeDirectory
@@ -14,6 +13,9 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.sparrow.feature.transport.mailbox.InvalidInvitationLetterException
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationRouteMissingException
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationTestWorld
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
@@ -162,40 +164,82 @@ class WebSocketOutgoingWireSenderTest {
         )
 
     @Test
-    fun withoutAMailboxRouteNothingGoesOutWhileSendingDirectlyIsOffAndNoCircuitProtects() =
+    fun withoutAMailboxRouteThePacketGoesIntoTheRecipientsInvitationMailbox() =
         runTest {
             val client = RecordingWebSocketTransportClient()
-            val sender =
-                WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
-                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
-                    transportConfig = TransportConfig(),
-                    sendingPolicy = policy(sendsDirectly = false)
-                )
+            val world = InvitationTestWorld()
+            val bob = world.device("bob")
+            world.publish(bob)
 
-            val result = sender.send("recipient-routing-id", "encoded-payload")
+            val acceptance = invitationSender(client, world).sendWithAcceptance(bob.routingId, "encoded-payload").getOrThrow()
 
-            assertTrue(result.exceptionOrNull()?.isWaitingForRoute() == true)
+            val envelope = world.mailboxes.deposited.single()
+            assertEquals(bob.route, envelope.mailboxRoute)
+            assertEquals(envelope.expiresAtEpochMilliseconds, acceptance.expiresAtEpochMilliseconds)
             assertEquals(null, client.envelope)
         }
 
     @Test
-    fun withoutAMailboxRouteTheConnectedNodeDeliversWhenSendingDirectlyIsAllowed() =
+    fun aFirstInvitationIsSentAsTheOwnPhoneAliasOnceItIsBound() =
         runTest {
             val client = RecordingWebSocketTransportClient()
+            val world = InvitationTestWorld()
+            val bob = world.device("bob")
+            world.publish(bob)
+
+            assertTrue(invitationSender(client, world).send(bob.alias, "encoded-payload").isSuccess)
+
+            assertEquals("local-bootstrap-routing-id", client.awaitedRoutingAlias)
+            val letter = world.letters(bob).open(world.mailboxes.deposited.single()).exceptionOrNull()
+            // The test sender's alias is not bound to its key in this world, so Bob refuses it: the alias was sent.
+            assertTrue(letter is InvalidInvitationLetterException)
+        }
+
+    @Test
+    fun aRecipientWithoutInvitationMailboxFailsTheSend() =
+        runTest {
+            val world = InvitationTestWorld()
+
+            val result = invitationSender(RecordingWebSocketTransportClient(), world).send("scrouting1_nobody", "encoded-payload")
+
+            assertTrue(result.exceptionOrNull() is InvitationRouteMissingException)
+            assertTrue(world.mailboxes.deposited.isEmpty())
+        }
+
+    @Test
+    fun localRoutingIdFailurePreventsTransportCall() =
+        runTest {
+            val expectedError = IllegalStateException("local routing ID unavailable")
+            val world = InvitationTestWorld()
+            world.publish(world.device("bob"))
             val sender =
                 WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    webSocketTransportClient = RecordingWebSocketTransportClient(),
+                    localRoutingIdProvider =
+                        object : LocalRoutingIdProvider {
+                            override suspend fun getLocalRoutingId(): Result<String> = Result.failure(expectedError)
+                        },
                     localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
                     transportConfig = TransportConfig(),
-                    sendingPolicy = policy(sendsDirectly = true)
+                    invitationLetters = world.letters(world.device("alice"))
                 )
 
-            assertTrue(sender.send("recipient-routing-id", "encoded-payload").isSuccess)
-            assertEquals("recipient-routing-id", client.envelope?.recipientId)
+            val result = sender.send("scrouting1_bob", "encoded-payload")
+
+            assertSame(expectedError, result.exceptionOrNull())
+            assertTrue(world.mailboxes.deposited.isEmpty())
         }
+
+    private fun invitationSender(
+        client: RecordingWebSocketTransportClient,
+        world: InvitationTestWorld
+    ) = WebSocketOutgoingWireSender(
+        webSocketTransportClient = client,
+        localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+        localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+        transportConfig = TransportConfig(acknowledgementTimeoutMilliseconds = 2_500L),
+        invitationLetters = world.letters(world.device("alice"))
+    )
 
     private object EmptyCache : NodeDirectoryCache {
         override suspend fun read(): CachedNodeDirectory? = null
@@ -237,6 +281,15 @@ class WebSocketOutgoingWireSenderTest {
             expiresAtEpochMilliseconds: Long
         ): Result<LocalMailboxCredential> = error("Not used")
 
+        override suspend fun createInvitation(
+            nodeId: String,
+            routeEndpoint: String,
+            accessEndpoint: String,
+            expiresAtEpochMilliseconds: Long
+        ): Result<LocalMailboxCredential> = error("Not used")
+
+        override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
         override suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>> = error("Not used")
 
         override suspend fun acknowledge(
@@ -259,121 +312,6 @@ class WebSocketOutgoingWireSenderTest {
 
         override suspend fun setSendsDirectly(sendsDirectly: Boolean) = Unit
     }
-
-    @Test
-    fun sendBuildsEnvelopeAndWaitsForGatewayAcceptance() =
-        runTest {
-            val client = RecordingWebSocketTransportClient()
-            val sender =
-                WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
-                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
-                    transportConfig =
-                        TransportConfig(
-                            acknowledgementTimeoutMilliseconds = 2_500L
-                        )
-                )
-
-            val result =
-                sender.send(
-                    recipientAddress = "recipient-routing-id",
-                    encodedTransportPayload = "encoded-payload"
-                )
-
-            assertTrue(result.isSuccess)
-            val envelope = requireNotNull(client.envelope)
-            assertTrue(envelope.envelopeId.isNotBlank())
-            assertEquals("local-routing-id", envelope.senderId)
-            assertEquals("recipient-routing-id", envelope.recipientId)
-            assertEquals("encoded-payload", envelope.payload)
-            assertTrue(envelope.createdAtEpochMilliseconds > 0L)
-            assertEquals(2_500L, client.timeoutMilliseconds)
-        }
-
-    @Test
-    fun bootstrapSendWaitsUntilLocalBootstrapAliasIsRegistered() =
-        runTest {
-            val client = RecordingWebSocketTransportClient()
-            val sender =
-                WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
-                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
-                    transportConfig =
-                        TransportConfig(
-                            acknowledgementTimeoutMilliseconds = 2_500L
-                        )
-                )
-
-            val result =
-                sender.send(
-                    recipientAddress = "scphone1_recipient",
-                    encodedTransportPayload = "encoded-payload"
-                )
-
-            assertTrue(result.isSuccess)
-            assertEquals("local-bootstrap-routing-id", client.awaitedRoutingAlias)
-            assertEquals(2_500L, client.aliasTimeoutMilliseconds)
-            val envelope = requireNotNull(client.envelope)
-            assertEquals("local-bootstrap-routing-id", envelope.senderId)
-            assertEquals("scphone1_recipient", envelope.recipientId)
-        }
-
-    @Test
-    fun gatewayAcceptanceFailureIsPropagated() =
-        runTest {
-            val expectedError = IllegalStateException("gateway rejected envelope")
-            val client =
-                RecordingWebSocketTransportClient(
-                    sendResult = Result.failure(expectedError)
-                )
-            val sender =
-                WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
-                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
-                    transportConfig =
-                        TransportConfig()
-                )
-
-            val result =
-                sender.send(
-                    recipientAddress = "recipient-routing-id",
-                    encodedTransportPayload = "encoded-payload"
-                )
-
-            assertTrue(result.isFailure)
-            assertSame(expectedError, result.exceptionOrNull())
-        }
-
-    @Test
-    fun localRoutingIdFailurePreventsTransportCall() =
-        runTest {
-            val expectedError = IllegalStateException("local routing ID unavailable")
-            val client = RecordingWebSocketTransportClient()
-            val sender =
-                WebSocketOutgoingWireSender(
-                    webSocketTransportClient = client,
-                    localRoutingIdProvider =
-                        object : LocalRoutingIdProvider {
-                            override suspend fun getLocalRoutingId(): Result<String> = Result.failure(expectedError)
-                        },
-                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
-                    transportConfig =
-                        TransportConfig()
-                )
-
-            val result =
-                sender.send(
-                    recipientAddress = "recipient-routing-id",
-                    encodedTransportPayload = "encoded-payload"
-                )
-
-            assertTrue(result.isFailure)
-            assertSame(expectedError, result.exceptionOrNull())
-            assertEquals(null, client.envelope)
-        }
 
     private class SuccessfulLocalRoutingIdProvider : LocalRoutingIdProvider {
         override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")

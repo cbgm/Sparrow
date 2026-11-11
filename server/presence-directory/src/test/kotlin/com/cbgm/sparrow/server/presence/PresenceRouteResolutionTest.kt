@@ -6,9 +6,13 @@ import com.cbgm.sparrow.server.protocol.AliasClaimResult
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
+import com.cbgm.sparrow.server.protocol.InvitationRouteLookup
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
+import com.cbgm.sparrow.server.protocol.MailboxCreationWork
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
 import com.cbgm.sparrow.server.security.ClientRoutingIds
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.NodeRequestAuthorizer
@@ -84,6 +88,40 @@ class PresenceRouteResolutionTest {
         }
 
     @Test
+    fun aPaidLookupFindsTheInvitationRouteOfAnAlias() =
+        withPresence { routingId ->
+            val invitation = AliasClaimKeysTest.invitationRoute(expiresAt = System.currentTimeMillis() + 60_000L)
+            client.post("/v1/alias-claims") {
+                contentType(ContentType.Application.Json)
+                val sealed =
+                    AliasClaimKeysTest.sealClaim(
+                        device = device,
+                        presenceKey = aliasClaimKey,
+                        issuedAt = System.currentTimeMillis(),
+                        aliases = listOf(PHONE_ALIAS),
+                        invitationRoute = invitation
+                    )
+                setBody(serverJson.encodeToString(AliasClaimRequest(sealed)))
+            }
+
+            assertEquals(HttpStatusCode.Forbidden, lookup(PHONE_ALIAS, MailboxCreationWork("unpaid-stamp-0000", System.currentTimeMillis(), 0L)).status)
+            val response = lookup(PHONE_ALIAS, paidWork())
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(InvitationRouteResult(routingId, invitation), serverJson.decodeFromString(response.bodyAsText()))
+            assertEquals(InvitationRouteResult(routingId, invitation), serverJson.decodeFromString(lookup(routingId, paidWork()).bodyAsText()))
+            assertEquals(HttpStatusCode.NotFound, lookup(ClientRoutingIds.fromPhoneNumber("+491709999999"), paidWork()).status)
+            assertEquals(HttpStatusCode.BadRequest, lookup("not-a-routing-id", paidWork()).status)
+        }
+
+    private suspend fun PresenceTestScope.lookup(
+        alias: String,
+        work: MailboxCreationWork
+    ) = client.post("/v1/invitation-routes") {
+        contentType(ContentType.Application.Json)
+        setBody(serverJson.encodeToString(InvitationRouteLookup(alias, work)))
+    }
+
+    @Test
     fun aClaimSealedForAnotherKeyIsRejected() =
         withPresence {
             val response =
@@ -108,7 +146,8 @@ class PresenceRouteResolutionTest {
                     registryUrl = "http://localhost",
                     nodeRequestAuthorizer = NodeRequestAuthorizer({ null }),
                     phoneVerification = PhoneVerification(PhoneAttestations(directoryPublicKey = null), testAliases = setOf(PHONE_ALIAS)),
-                    internalApiToken = TOKEN
+                    internalApiToken = TOKEN,
+                    lookupWork = CreationWorkCheck(WORK_BITS)
                 )
             application {
                 installPresencePlugins(runtime)
@@ -143,6 +182,28 @@ class PresenceRouteResolutionTest {
 
     private companion object {
         const val TOKEN = "presence-test-token"
+        const val WORK_BITS = 8
+
+        /** Solves the lookup proof of work the way the app does. */
+        fun paidWork(): MailboxCreationWork {
+            val stamp = java.util.UUID.randomUUID().toString()
+            val createdAt = System.currentTimeMillis()
+            var nonce = 0L
+            while (leadingZeroBits("sparrow-mailbox-work-v1|$stamp|$createdAt|$nonce") < WORK_BITS) nonce++
+            return MailboxCreationWork(stamp, createdAt, nonce)
+        }
+
+        private fun leadingZeroBits(value: String): Int {
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(value.encodeToByteArray())
+            var bits = 0
+            for (byte in digest) {
+                val unsigned = byte.toInt() and 0xFF
+                if (unsigned != 0) return bits + Integer.numberOfLeadingZeros(unsigned) - 24
+                bits += 8
+            }
+            return bits
+        }
+
         val PHONE_ALIAS = ClientRoutingIds.fromPhoneNumber("+491701234567")
     }
 }

@@ -129,7 +129,9 @@ private fun Module.registerMailbox() {
     }
     singleOf(::MailboxCredentialFactory)
     singleOf(::MailboxPendingSynchronizer)
-    single { MailboxArrivalListener(mailboxGateway = get(), mailboxRouteRepository = get(), pendingSynchronizer = get()) }
+    single {
+        MailboxArrivalListener(mailboxGateway = get(), mailboxRouteRepository = get(), pendingSynchronizer = get(), invitationMailbox = get())
+    }
     singleOf(::MailboxRouteProvisioner)
     single<MailboxCoordinator> {
         DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get(), arrivalListener = get())

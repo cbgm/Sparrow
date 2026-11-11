@@ -125,6 +125,8 @@ When direct online routing is unavailable or policy selects mailbox delivery, `O
 
 `MailboxPendingSynchronizer` processes every local mailbox, current and retiring (except those whose revocation is pending). An envelope that fails stays in its mailbox for the next sync and does not stop the envelopes behind it or the other mailboxes; a mailbox that cannot be read is skipped. Rejected envelopes are acknowledged and dropped, on the mailbox path and on the push-store path.
 
+A packet for a device whose mailbox route the app does not have yet (a first invitation, or the answers before the contact's route arrived) goes into the device's invitation mailbox instead, as a letter signed with the device key and sealed for the recipient; see [Invitation mailboxes](transport.md#invitation-mailboxes).
+
 The server `mailbox` service stores opaque encrypted envelopes behind recipient-selected capabilities. Push is a wake-up path, not decryption/interpretation by the server.
 
 ## Delivery/read receipts

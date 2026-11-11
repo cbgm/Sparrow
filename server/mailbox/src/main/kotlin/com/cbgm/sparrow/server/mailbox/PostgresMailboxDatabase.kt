@@ -83,6 +83,10 @@ internal class PostgresMailboxDatabase(
                 ALTER TABLE mailboxes
                 ADD COLUMN IF NOT EXISTS owner_key_hash TEXT NOT NULL DEFAULT ''
                 """.trimIndent(),
+                """
+                ALTER TABLE mailboxes
+                ADD COLUMN IF NOT EXISTS invitation BOOLEAN NOT NULL DEFAULT FALSE
+                """.trimIndent(),
                 // Wake tickets went with FCM: the stored ones are deleted.
                 """
                 ALTER TABLE mailboxes

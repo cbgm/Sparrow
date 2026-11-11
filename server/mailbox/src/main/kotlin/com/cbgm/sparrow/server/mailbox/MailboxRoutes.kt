@@ -36,7 +36,7 @@ internal fun Application.configureMailboxRoutes(
             call.respondReadyMailboxes(store, arrivals)
         }
         post("/v1/mailboxes/{mailboxId}/envelopes") {
-            call.storeEnvelope(store, arrivals)
+            call.storeEnvelope(store, arrivals, creationWork)
         }
         get("/v1/mailboxes/{mailboxId}/envelopes") {
             call.respondPendingEnvelopes(store)
@@ -98,14 +98,15 @@ private suspend fun ApplicationCall.respondReadyMailboxes(
 
 private suspend fun ApplicationCall.storeEnvelope(
     store: MailboxStorage,
-    arrivals: MailboxArrivals
+    arrivals: MailboxArrivals,
+    depositWork: CreationWorkCheck
 ) {
     val mailboxId = parameters["mailboxId"]
     val capability = bearerCapability()
     when {
         mailboxId == null -> respond(HttpStatusCode.BadRequest)
         capability == null -> respond(HttpStatusCode.Unauthorized)
-        else -> storeAuthorizedEnvelope(mailboxId, capability, store, arrivals)
+        else -> storeAuthorizedEnvelope(mailboxId, capability, store, arrivals, depositWork)
     }
 }
 
@@ -113,7 +114,8 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     mailboxId: String,
     capability: String,
     store: MailboxStorage,
-    arrivals: MailboxArrivals
+    arrivals: MailboxArrivals,
+    depositWork: CreationWorkCheck
 ) {
     val request = receive<MailboxEnvelopeRequest>()
     val envelope =
@@ -121,7 +123,9 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
             respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_ENVELOPE", "Envelope rejected"))
             return
         }
-    when (val result = store.store(mailboxId, capability, envelope)) {
+    // Only an invitation mailbox needs the work; checking it for every deposit would spend stamps for nothing.
+    val depositPaid = request.depositWork?.let(depositWork::accepts) == true
+    when (val result = store.store(mailboxId, capability, envelope, depositPaid)) {
         is MailboxResult.Stored -> {
             if (!result.duplicate) arrivals.stored(mailboxId)
             respond(

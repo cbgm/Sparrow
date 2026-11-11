@@ -2,6 +2,7 @@ package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
 import com.cbgm.sparrow.server.security.ClientRoutingIds
@@ -12,6 +13,7 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class RedisPresenceStoreIntegrationTest {
     @Test
@@ -69,6 +71,29 @@ class RedisPresenceStoreIntegrationTest {
                 assertEquals(listOf(alias), store.bindAliases(ownerRoutingId, unproven))
                 assertEquals(listOf(alias), store.bindAliases(otherRoutingId, firstClaim))
                 assertEquals(otherRoutingId, store.resolve(alias).ownerRoutingId)
+            }
+        }
+
+    @Test
+    fun theInvitationRouteIsKeptWithTheAliasBinding() =
+        runTest {
+            val redisUrl =
+                System.getenv("PRESENCE_TEST_REDIS_URL")
+                    ?.takeIf(String::isNotBlank)
+                    ?: return@runTest
+            val suffix = UUID.randomUUID().toString().replace("-", "")
+            val alias = ClientRoutingIds.fromPhoneNumber("+491701234567")
+            val owner = ClientRoutingIds.fromSigningPublicKey(NodeIdentity.generate().encodedPublicKey)
+            val invitation = AliasClaimKeysTest.invitationRoute(expiresAt = System.currentTimeMillis() + 60_000L)
+            val claim = AliasClaims(provenAlias = alias, aliases = listOf(alias))
+
+            createStore(redisUrl, "sparrow:test:presence:$suffix").use { store ->
+                store.bindAliases(owner, claim)
+                store.saveInvitationRoute(owner, invitation)
+                assertEquals(InvitationRouteResult(owner, invitation), store.invitationRoute(alias))
+                assertEquals(InvitationRouteResult(owner, invitation), store.invitationRoute(owner))
+                store.saveInvitationRoute(owner, null)
+                assertNull(store.invitationRoute(alias))
             }
         }
 

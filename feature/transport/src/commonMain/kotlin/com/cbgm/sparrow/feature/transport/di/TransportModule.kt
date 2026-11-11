@@ -5,6 +5,8 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
+import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
@@ -71,12 +73,18 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCa
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
+import com.cbgm.sparrow.feature.transport.mailbox.DataStoreInvitationMailboxStore
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxStore
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.SignedInvitationLetters
 import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
+import com.cbgm.sparrow.feature.transport.presence.InvitationRouteRemoteSource
 import com.cbgm.sparrow.feature.transport.presence.PhoneAttestationRemoteSource
 import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.relay.OnionRelayClient
@@ -94,6 +102,7 @@ import com.cbgm.sparrow.feature.transport.websocket.DefaultWebSocketTransportCli
 import com.cbgm.sparrow.feature.transport.websocket.GatewayPendingRequestRegistry
 import com.cbgm.sparrow.feature.transport.websocket.GatewayServerMessageHandler
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
@@ -261,6 +270,46 @@ val transportModule =
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
                 localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
                 phoneAttestationRemoteSource = get<PhoneAttestationRemoteSource>(),
+                invitationMailbox = get<InvitationMailboxRenewal>(),
+                encryptionKeyPairProvider = get<LocalEncryptionKeyPairProvider>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single {
+            InvitationRouteRemoteSource(
+                controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                work = MailboxCreationWorkSolver(get<CryptoHash>()),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single<InvitationMailboxStore> {
+            DataStoreInvitationMailboxStore(dataStore = get(), json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)))
+        }
+
+        single {
+            InvitationMailboxRenewal(
+                nodeEndpointResolver = get<NodeEndpointResolver>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
+                mailboxGateway = get<MailboxGateway>(),
+                store = get<InvitationMailboxStore>()
+            )
+        }
+
+        single<InvitationLetters> {
+            SignedInvitationLetters(
+                routes = get<InvitationRouteRemoteSource>(),
+                mailboxGateway = get<MailboxGateway>(),
+                signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
+                encryptionKeyPairProvider = get<LocalEncryptionKeyPairProvider>(),
+                signatureCrypto = get<DetachedSignatureCrypto>(),
+                transportCipher = get<TransportMessageCipher>(),
+                payloadCodec = get<TransportPayloadCodec>(),
+                routingIdGenerator = get<RoutingIdGenerator>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
+                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
@@ -454,7 +503,8 @@ val transportModule =
                 transportConfig = get<TransportConfig>(),
                 mailboxRouteRepository = get(),
                 mailboxGateway = get<MailboxGateway>(),
-                sendingPolicy = get<DirectSendingPolicy>()
+                sendingPolicy = get<DirectSendingPolicy>(),
+                invitationLetters = get<InvitationLetters>()
             )
         }
     }

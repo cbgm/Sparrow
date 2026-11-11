@@ -15,6 +15,17 @@ interface MailboxGateway {
         expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential>
 
+    /**
+     * Opens this device's invitation mailbox ([InvitationMailboxRenewal]): anyone who looks up the device at a
+     * presence directory may put envelopes there, each paid with a proof of work.
+     */
+    suspend fun createInvitation(
+        nodeId: String,
+        routeEndpoint: String,
+        accessEndpoint: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<LocalMailboxCredential>
+
     suspend fun pending(credential: LocalMailboxCredential): Result<List<FederatedEnvelope>>
 
     suspend fun acknowledge(
@@ -26,6 +37,9 @@ interface MailboxGateway {
 
     /** Puts [envelope] into the contact's mailbox it names ([FederatedEnvelope.mailboxRoute]). */
     suspend fun deliver(envelope: FederatedEnvelope): Result<Unit>
+
+    /** Puts [envelope] into the invitation mailbox it names, paying the deposit with a proof of work. */
+    suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit>
 
     /**
      * Waits a few seconds at [accessEndpoint] for envelopes in [credentials] (all kept there); the mailbox IDs that
@@ -43,7 +57,8 @@ internal data class CreateMailboxRequest(
     val nodeEndpoint: String,
     val routeSequence: Long,
     val expiresAtEpochMilliseconds: Long,
-    val creationWork: MailboxCreationWork
+    val creationWork: MailboxCreationWork,
+    val invitation: Boolean = false
 )
 
 /** The proof of work that pays for a new mailbox ([MailboxCreationWorkSolver]). */
@@ -56,7 +71,9 @@ internal data class MailboxCreationWork(
 
 @Serializable
 internal data class MailboxEnvelopeRequest(
-    val envelope: FederatedEnvelope
+    val envelope: FederatedEnvelope,
+    /** Only an invitation mailbox asks for it. */
+    val depositWork: MailboxCreationWork? = null
 )
 
 @Serializable

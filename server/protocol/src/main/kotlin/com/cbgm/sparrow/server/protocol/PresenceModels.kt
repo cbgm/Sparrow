@@ -131,6 +131,8 @@ data class AliasClaim(
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
+    /** Where others put packets for this device before they have its mailbox route ([InvitationRouteResult]). */
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
@@ -148,6 +150,7 @@ data class UnsignedAliasClaim(
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long
 ) {
     override fun toString(): String = "UnsignedAliasClaim(redacted)"
@@ -158,10 +161,11 @@ data class UnsignedAliasClaim(
             clientSigningPublicKey.contentEquals(other.clientSigningPublicKey) &&
             aliases == other.aliases &&
             phoneAttestation == other.phoneAttestation &&
+            invitationRoute == other.invitationRoute &&
             issuedAtEpochMilliseconds == other.issuedAtEpochMilliseconds
 
     override fun hashCode(): Int =
-        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneAttestation, issuedAtEpochMilliseconds)
+        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneAttestation, invitationRoute, issuedAtEpochMilliseconds)
             .hashCode()
 }
 
@@ -171,8 +175,42 @@ fun AliasClaim.unsigned(): UnsignedAliasClaim =
         clientSigningPublicKey = clientSigningPublicKey,
         aliases = aliases,
         phoneAttestation = phoneAttestation,
+        invitationRoute = invitationRoute,
         issuedAtEpochMilliseconds = issuedAtEpochMilliseconds
     )
+
+/**
+ * A device's invitation mailbox ([CreateMailboxRequest.invitation]) and its raw X25519 [encryptionPublicKey]: senders
+ * seal what they put there for that key, so the mailbox's node reads neither the invitation nor who sent it.
+ */
+@Serializable
+data class InvitationRoute(
+    val route: DeliveryRoute,
+    val encryptionPublicKey: ByteArray
+) {
+    override fun equals(other: Any?): Boolean =
+        other is InvitationRoute && route == other.route && encryptionPublicKey.contentEquals(other.encryptionPublicKey)
+
+    override fun hashCode(): Int = 31 * route.hashCode() + encryptionPublicKey.contentHashCode()
+}
+
+/**
+ * `POST /v1/invitation-routes` on the presence directory: the invitation route of [routingId] (a phone alias or a
+ * device routing ID), paid with [work] (the mailbox proof of work), because anyone may ask and the directory does not
+ * know who asks.
+ */
+@Serializable
+data class InvitationRouteLookup(
+    val routingId: String,
+    val work: MailboxCreationWork
+)
+
+/** The device ([ownerRoutingId]; for a phone alias the device holding it) and its [invitationRoute]. */
+@Serializable
+data class InvitationRouteResult(
+    val ownerRoutingId: String,
+    val invitationRoute: InvitationRoute
+)
 
 /** The presence directory's raw X25519 key for [AliasClaim]s; see [NodeDirectory.aliasClaimKey]. */
 @Serializable
