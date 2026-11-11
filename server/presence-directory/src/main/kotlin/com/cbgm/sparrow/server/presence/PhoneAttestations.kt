@@ -28,9 +28,12 @@ internal class PhoneAttestations(
             val keys = serverJson.decodeFromString<PhoneKeys>(signed.keys.verified(PHONE_KEYS_DOMAIN, directoryKey))
             val attestationKey = Signatures.decodePublicKey(decode(keys.attestationKey))
             val claim = serverJson.decodeFromString<PhoneAttestation>(signed.verified(ATTESTATION_DOMAIN, attestationKey))
-            claim.alias.takeIf { keys.protocol == PHONE_KEYS_PROTOCOL && claim.proves(routingId, now()) }
+            claim.alias.takeIf { keys.isWellFormed() && claim.proves(routingId, now()) }
         }.getOrNull()
     }
+
+    /** A certificate of this protocol with a raw X25519 request key next to the attestation key. */
+    private fun PhoneKeys.isWellFormed(): Boolean = protocol == PHONE_KEYS_PROTOCOL && decode(requestKey).size == RAW_KEY_BYTES
 
     private fun PhoneAttestation.proves(
         deviceRoutingId: String,
@@ -58,6 +61,7 @@ internal class PhoneAttestations(
         const val ATTESTATION_PROTOCOL = "sparrow-phone-attestation-v1"
         const val ATTESTATION_DOMAIN = "sparrow-phone-attestation-v1\n"
         const val CLOCK_SKEW_MILLISECONDS = 5L * 60L * 1_000L
+        const val RAW_KEY_BYTES = 32
     }
 }
 

@@ -71,30 +71,6 @@ sealed interface GatewayClientMessage {
     ) : GatewayClientMessage
 
     @Serializable
-    @SerialName("indicator_state")
-    data class IndicatorState(
-        val recipientId: String,
-        val indicatorType: String
-    ) : GatewayClientMessage {
-        init {
-            require(recipientId.isNotBlank()) {
-                "Recipient routing ID must not be blank"
-            }
-        }
-    }
-
-    @Serializable
-    @SerialName("request_blob_upload_ticket")
-    data class RequestBlobUploadTicket(
-        val requestId: String,
-        val blobId: String,
-        val maximumBytes: Long,
-        val readCapabilitySha256: String,
-        val deleteCapabilitySha256: String,
-        val blobExpiresAtEpochMilliseconds: Long
-    ) : GatewayClientMessage
-
-    @Serializable
     @SerialName("acknowledge_envelope")
     data class AcknowledgeEnvelope(
         val envelopeId: String

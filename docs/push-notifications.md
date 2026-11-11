@@ -1,90 +1,47 @@
-# Push notifications and offline delivery
+# Receiving messages and offline delivery
 
-Push is used as a **wake-up mechanism**, not as the canonical plaintext message transport.
+Sparrow uses no push service (no FCM, no Firebase Cloud Messaging). The app keeps its own connection
+through its circuit and waits at its mailboxes; nothing outside the user's device and the nodes it chose
+learns when a message arrives.
 
-## Components
+## Connection modes
 
-Client/common notification orchestration:
+The user chooses how messages reach the device while Sparrow is closed (onboarding page *Receiving
+messages*, later under the network settings). The choice is stored as `ConnectionMode` in the app's
+settings (`transport.connection_mode`).
 
-- `RegisterPushTokenUseCase`
-- `SynchronizePendingMessagesUseCase`
-- `ConversationNotificationCoordinator`
-- `AppVisibilityState`
+| Mode | Android | Effect |
+| --- | --- | --- |
+| `ALWAYS_CONNECTED` | `ConnectionService` (foreground service, `specialUse`) | Messages arrive at once; a permanent notification shows that Sparrow is connected. Needs the battery exemption. |
+| `WHILE_OPEN` | none | Messages arrive while Sparrow is open; closed, they wait in the mailboxes until the next start. |
+| `CHECK_PERIODICALLY` | `ConnectionCheckWorker` (every 15 minutes, connects for 45 s) | Offered in the settings only. Messages arrive with a delay. |
 
-Android implementation:
+`ConnectionModeApplier` starts or stops the service and the worker when the mode changes, and
+`ConnectionBootReceiver` applies it again after a reboot. iOS cannot keep a connection while the app is
+closed (`keepsConnectionWhileClosed()` is false there); the onboarding page shows a note instead of the
+choice.
 
-- `SparrowFirebaseMessagingService`
-- `PushTokenRegistrationWorker`
-- `PushTokenRenewalWorker`
-- `PendingMessageSyncWorker`
-- `AndroidNotificationRuntime`
-- `SparrowNotificationManager`
+While the process runs without a screen (service or worker), `HeadlessStart` starts only what receiving
+needs, and `ConnectionKeepAlive` holds the connection open.
 
-Transport gateways:
+## Offline delivery
 
-- `HttpPushTokenRegistrationGateway`
-- `HttpPendingEnvelopeGateway`
-- mailbox gateway in `:feature:transport`
+A sender puts the encrypted envelope into the recipient's mailbox through its own circuit (see
+[Transport](features/transport.md)). The recipient's app waits at its mailboxes through its circuit
+(`POST /v1/mailboxes/wait`) and fetches what arrived; mailbox envelopes enter the same incoming pipeline as
+every other envelope. Nothing wakes the device from outside: a closed app in `WHILE_OPEN` mode fetches
+the envelopes on its next start.
 
-Server:
+The Control Plane's `push` service only keeps pending envelopes of the old delivery path through the
+connected node (see [Push API](api/push.md)). It goes away together with that path.
 
-- `PushCoordinator`
-- `FirebasePushSender`
-- `PostgresPushDeviceStore`
-- `PostgresPendingEnvelopeStore`
-- `PostgresWakeUpStore`
-- `MailboxPushNotifier`
+## Phone verification
 
-## Device registration
-
-The app binds its FCM token to its device routing ID with `POST /push/devices`, signed with the identity
-key (see [Push API](api/push.md)). It registers again on every app start (once the identity is ready),
-on every return to the foreground, on every FCM token refresh (`SparrowFirebaseMessagingService.onNewToken`)
-and every 7 days in the background (`PushTokenRenewalWorker`), because the server forgets a binding 30 days
-after its last registration. A new proof is signed for every attempt; nothing about the proof is stored.
-
-## Normal offline flow
-
-```mermaid
-sequenceDiagram
-    participant S as Sender
-    participant F as Federation
-    participant M as Recipient mailbox
-    participant P as Push service
-    participant FCM as FCM
-    participant R as Android recipient
-
-    S->>F: opaque encrypted envelope
-    F->>M: store envelope
-    M->>P: wake-up identifier
-    P->>FCM: FCM data notification
-    FCM-->>R: wake
-    R->>M: fetch pending envelope
-    R->>R: decrypt/process locally
-    R->>M: acknowledge
-```
-
-On the phone, `SparrowFirebaseMessagingService` schedules `PendingMessageSyncWorker` as urgent work. The worker
-first prepares the control planes (`PrepareControlPlaneUseCase`), because a push can start the app's process while
-the app is closed and then none of the app's startup has run. On Android 10 and 11 urgent work runs as a foreground
-job and shows a silent "Checking for new messages" notification while it runs. A sync that is running is never
-cancelled by the next push (its notifications would be lost); the next push runs right after it. A sync that only
-waits for a retry is replaced by the new push.
-
-Legacy/compatibility pending-envelope behavior can exist for clients that do not yet have a usable mailbox route, but the preferred model is recipient-selected mailbox delivery.
-
-## Firebase credentials
-
-The Control Plane push service needs Firebase Admin credentials for real FCM delivery. Without them, local server health may still run depending on configuration, but real Android background wake-ups will not work.
-
-Operators select the service-account JSON in the server installer (**Push notifications and phone verification**, or `--firebase-file` on the command line); `server/control-plane/docker-compose.firebase.yml` mounts it read-only into `push`. The same file is mounted into `presence-directory`, which uses it to check the optional phone verification token sent at sign-up (see [Control Plane](server/control-plane.md)). The account therefore needs Firebase Cloud Messaging and Firebase Authentication access to the app's Firebase project (`FIREBASE_TARGET_PROJECT_ID`, default `sparrow-a9048`).
-
-Do not commit `firebase-admin.json` or other production credentials.
-
-### Android Firebase app after the Sparrow rebrand
-
-The Android application ID is now `com.cbgm.sparrow`. The app has no `google-services.json`; its Firebase project comes from `local.properties` (see [Local development](development/local-development.md)).
+Firebase is used only for the phone sign-in at sign-up. The app has no `google-services.json`; its
+Firebase project comes from `local.properties` (see [Local development](development/local-development.md)).
+The Control Plane Directory verifies the number (see [Control Plane](server/control-plane.md)).
 
 ## Force stop caveat
 
-Android's explicit **Force stop** prevents normal background scheduling/FCM behavior until the user launches the app again. Test “background delivery” by leaving the app/background process normally, not by relying on Force stop as a supported delivery state.
+Android's **Force stop** stops the service and the periodic check until the user opens the app again.
+Test receiving in the background by leaving the app normally, not with Force stop.

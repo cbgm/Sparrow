@@ -29,8 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,6 +38,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.rememberDelayedVisibility
+import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -180,13 +179,13 @@ private fun ReadyOverviewContent(
             IdentityProfilePictureSection(state = picture, onEdit = onEditProfilePicture)
         }
         Spacer(Modifier.height(MaterialTheme.spacing.medium))
-        val clipboard = LocalClipboardManager.current
+        val clipboard = rememberClipboardWriter()
         Text(
             text = localPhoneNumber,
             modifier = Modifier.combinedClickable(
                 onClick = {},
                 onLongClick = {
-                    clipboard.setText(AnnotatedString(localPhoneNumber))
+                    clipboard.copyText(localPhoneNumber)
                     onCopied()
                 }
             ),

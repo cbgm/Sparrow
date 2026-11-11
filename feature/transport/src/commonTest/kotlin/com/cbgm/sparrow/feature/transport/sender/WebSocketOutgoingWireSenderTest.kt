@@ -13,7 +13,6 @@ import com.cbgm.sparrow.feature.transport.discovery.CachedNodeDirectory
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.relay.RelaySelector
@@ -397,7 +396,6 @@ class WebSocketOutgoingWireSenderTest {
         override val connectionState: StateFlow<TransportConnectionState> =
             MutableStateFlow(TransportConnectionState.Connected("local-routing-id"))
         override val incomingEnvelopes: Flow<TransportEnvelope> = MutableSharedFlow()
-        override val incomingIndicatorEvents: Flow<GatewayIndicatorEvent> = MutableSharedFlow()
 
         override fun connect(
             serverUrl: String,
@@ -434,11 +432,6 @@ class WebSocketOutgoingWireSenderTest {
         }
 
         override suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit> = Result.success(Unit)
-
-        override suspend fun sendIndicatorState(
-            recipientId: String,
-            indicatorType: String
-        ): Result<Unit> = Result.success(Unit)
 
         override suspend fun disconnect() = Unit
     }

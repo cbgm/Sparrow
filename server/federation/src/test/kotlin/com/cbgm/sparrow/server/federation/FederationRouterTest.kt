@@ -5,7 +5,6 @@ import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.DeliveryRoute
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
@@ -210,83 +209,6 @@ class FederationRouterTest {
         }
 
     @Test
-    fun indicatorEventIsRoutedToRemoteNodePresence() =
-        kotlinx.coroutines.test.runTest {
-            var deliveredEvent: FederatedIndicatorEvent? = null
-            val event =
-                FederatedIndicatorEvent(
-                    senderRoutingId = "sender",
-                    recipientRoutingId = "recipient",
-                    indicatorType = "TYPING"
-                )
-            val router =
-                FederationRouter(
-                    localNodeId = "node-a",
-                    presenceDirectory =
-                        {
-                            ClientRoutingResult(
-                                routingId = it,
-                                routes =
-                                    listOf(
-                                        ClientRoute(
-                                            routingId = it,
-                                            nodeId = "node-b",
-                                            connectionId = "connection-b",
-                                            generation = 1L,
-                                            expiresAtEpochMilliseconds = 10_000L,
-                                            clientSignature = byteArrayOf(1)
-                                        )
-                                    )
-                            )
-                        },
-                    nodeRegistry = { testNodeDescriptor() },
-                    localGateway = { error("Envelope gateway must not be used") },
-                    remoteFederation = { _, _ -> error("Envelope federation must not be used") },
-                    mailbox = { error("Mailbox must not be used") },
-                    remoteIndicatorFederation =
-                        { _, candidate ->
-                            deliveredEvent = candidate
-                            true
-                        }
-                )
-
-            assertTrue(router.routeIndicator(event))
-            assertEquals(event, deliveredEvent)
-        }
-
-    @Test
-    fun onlyTheNodeASenderIsConnectedThroughSpeaksForIt() =
-        kotlinx.coroutines.test.runTest {
-            val router =
-                FederationRouter(
-                    localNodeId = "node-a",
-                    presenceDirectory = { routingId ->
-                        ClientRoutingResult(
-                            routingId = routingId,
-                            routes =
-                                listOf(
-                                    ClientRoute(
-                                        routingId = routingId,
-                                        nodeId = "node-b",
-                                        connectionId = "connection-b",
-                                        generation = 1L,
-                                        expiresAtEpochMilliseconds = 10_000L,
-                                        clientSignature = byteArrayOf(1)
-                                    )
-                                )
-                        )
-                    },
-                    nodeRegistry = { null },
-                    localGateway = { error("Not used") },
-                    remoteFederation = { _, _ -> error("Not used") },
-                    mailbox = { error("Not used") }
-                )
-
-            assertTrue(router.isConnectedThrough("sender", "node-b"))
-            assertFalse(router.isConnectedThrough("sender", "node-c"))
-        }
-
-    @Test
     fun initialRouteDoesNotWaitForControlPlaneFallback() =
         kotlinx.coroutines.test.runTest {
             var controlPlaneCalls = 0
@@ -361,45 +283,6 @@ class FederationRouterTest {
             )
         }
 
-    @Test
-    fun indicatorUsesPeerRouteWhenControlPlaneIsUnavailable() =
-        kotlinx.coroutines.test.runTest {
-            var deliveredEvent: FederatedIndicatorEvent? = null
-            val peer = testNodeDescriptor()
-            val peerClient =
-                TestPeerFederationClient(
-                    resolveRoute = { routingId ->
-                        if (routingId == "recipient-alias") "recipient" else null
-                    },
-                    deliverIndicator = { event ->
-                        deliveredEvent = event
-                        true
-                    }
-                )
-            val router =
-                FederationRouter(
-                    localNodeId = "node-a",
-                    presenceDirectory = { error("Control plane unavailable") },
-                    nodeRegistry = TestPeerNodeRegistry(peer),
-                    localGateway = { error("Envelope gateway must not be used") },
-                    remoteFederation = peerClient,
-                    mailbox = { error("Mailbox must not be used") },
-                    remoteIndicatorFederation = peerClient
-                )
-
-            val delivered =
-                router.routeIndicator(
-                    FederatedIndicatorEvent(
-                        senderRoutingId = "sender",
-                        recipientRoutingId = "recipient-alias",
-                        indicatorType = "TYPING"
-                    )
-                )
-
-            assertTrue(delivered)
-            assertEquals("recipient", requireNotNull(deliveredEvent).recipientRoutingId)
-        }
-
     private fun testEnvelope(): FederatedEnvelope =
         FederatedEnvelope(
             envelopeId = "envelope-1",
@@ -458,20 +341,13 @@ class FederationRouterTest {
                     envelopeId = envelope.envelopeId,
                     state = EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
                 )
-            },
-        private val deliverIndicator: suspend (FederatedIndicatorEvent) -> Boolean = { false }
+            }
     ) : RemoteFederationClient,
-        RemoteIndicatorFederationClient,
         RemoteRouteResolver {
         override suspend fun deliver(
             descriptor: SparrowNodeDescriptor,
             envelope: FederatedEnvelope
         ): FederationAcknowledgement = deliverEnvelope(envelope)
-
-        override suspend fun deliver(
-            descriptor: SparrowNodeDescriptor,
-            event: FederatedIndicatorEvent
-        ): Boolean = deliverIndicator(event)
 
         override suspend fun resolve(
             descriptor: SparrowNodeDescriptor,

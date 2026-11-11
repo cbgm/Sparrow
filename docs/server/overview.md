@@ -85,20 +85,13 @@ Key classes:
 
 ### `push`
 
-Stores Android device registrations and wake-up/pending fallback information. It integrates with Firebase Admin
-when credentials are configured (the same service account as phone verification). A device registration
-needs a signature with the routing ID's identity key and expires 30 days after the last registration
-(`PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS`); see [Push API](../api/push.md).
+Keeps pending envelopes of the old delivery path through the connected node for recipients that are not
+connected; it sends no notifications (no FCM, no device registrations). See [Push API](../api/push.md).
 
 Key classes:
 
 - `PushRuntime`
-- `PushCoordinator`
-- `PostgresPushDeviceStore`
 - `PostgresPendingEnvelopeStore`
-- `PostgresWakeUpStore`
-- `FirebasePushSender`
-- `PushDeviceRegistrationValidator`
 
 ## Community Node services
 
@@ -114,7 +107,7 @@ Key classes:
 - `GatewaySessionHandler`
 - `GatewaySessionValidator`
 - `ConnectionRegistry`
-- `BlobStore` / `BlobUploadPermitStore` / `GatewayBlobUploadTicketIssuer`
+- `BlobStore`
 
 ### `federation`
 
@@ -141,7 +134,6 @@ Key classes:
 - `configureMailboxRoutes()`
 - `MailboxStorage`
 - `PostgresMailboxStore`
-- `MailboxPushNotifier`
 
 ## Shared server modules
 
@@ -176,11 +168,7 @@ classDiagram
     class PhoneVerification
     class PhoneAttestations
     class PushRuntime
-    class PushCoordinator
-    class PostgresPushDeviceStore
     class PostgresPendingEnvelopeStore
-    class PostgresWakeUpStore
-    class FirebasePushSender
 
     RegistrySigningRuntime --> RegistryDirectorySigner
     NodeRegistryStore <|.. PostgresNodeRegistryStore
@@ -189,11 +177,7 @@ classDiagram
     PresenceStorage <|.. RedisPresenceStore
     PresenceRuntime --> PhoneVerification
     PhoneVerification --> PhoneAttestations
-    PushRuntime --> PushCoordinator
-    PushCoordinator --> PostgresPushDeviceStore
-    PushCoordinator --> PostgresPendingEnvelopeStore
-    PushCoordinator --> PostgresWakeUpStore
-    PushCoordinator --> FirebasePushSender
+    PushRuntime --> PostgresPendingEnvelopeStore
 ```
 
 ### Community Node
@@ -212,7 +196,6 @@ classDiagram
     class NodeRegistrationAgent
     class MailboxStorage
     class PostgresMailboxStore
-    class MailboxPushNotifier
 
     GatewayRuntime --> GatewayWebSocketHandler
     GatewayWebSocketHandler --> GatewaySessionHandler
@@ -225,7 +208,6 @@ classDiagram
     NodeRegistrationAgent --> FederationPeerRouter
 
     MailboxStorage <|.. PostgresMailboxStore
-    PostgresMailboxStore --> MailboxPushNotifier : store triggers notifier
 ```
 
 The diagrams show responsibility/usage relationships, not every constructor parameter.

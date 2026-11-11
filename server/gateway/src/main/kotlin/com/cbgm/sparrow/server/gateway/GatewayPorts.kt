@@ -2,14 +2,11 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 
 interface FederationClient {
     suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement
-
-    suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean = false
 
     suspend fun markStored(envelopeId: String) = Unit
 }

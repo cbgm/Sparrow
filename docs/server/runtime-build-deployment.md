@@ -71,7 +71,6 @@ Gateway:
 - `ConnectionRegistry`
 - `BlobStore`
 - `BlobCleanupAgent`
-- `BlobUploadPermitStore`, `GatewayBlobUploadTicketIssuer`
 - `HttpFederationClient`, `HttpPresenceClient`, `HttpNodePushClient`
 
 Federation:
@@ -88,7 +87,6 @@ Mailbox:
 
 - `MailboxStore`
 - `PostgresMailboxStore`
-- `MailboxPushNotifier`
 - mailbox capability/create/revoke/fetch HTTP routes in `MailboxRoutes`
 
 Registry/presence/push:
@@ -97,9 +95,7 @@ Registry/presence/push:
 - `RegistryDirectorySigner`, `DirectRegistryDirectorySigner`, `RotatingRegistryDirectorySigner`
 - `RegistryAuthorityCertificateStore`
 - `PhoneVerification`, `PhoneAttestations`
-- `PushCoordinator`
-- `FirebasePushSender`
-- PostgreSQL push stores
+- `PostgresPendingEnvelopeStore` (pending envelopes of the old delivery path)
 
 Link preview:
 

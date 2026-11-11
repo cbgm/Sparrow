@@ -99,7 +99,6 @@ class ChunkedBlobRoutesTest {
         application {
             install(ContentNegotiation) { json(serverJson) }
             routing {
-                installBlobRoutes(store, BlobUploadPermitStore())
                 installChunkedBlobRoutes(store, "node-a", CreationWorkCheck(workBits), maximumRetentionMilliseconds = 24L * 60L * 60L * 1_000L)
             }
         }

@@ -41,17 +41,11 @@ len | "sparrow-gateway-session-v1" | len | routingId (UTF-8) | len | connectionI
 
 Both sides build it in one place (`gatewaySessionPayload` in `:feature:transport`, `ProtocolSignatures.gatewaySessionContent` in `:server:security`) and both test suites pin the same byte vector.
 
-After sign-in every envelope must name the signed-in routing ID (or the device's own phone alias, which the gateway confirms once per session with a signed route lookup at the Control Plane) as sender, otherwise the gateway answers `SENDER_MISMATCH`. `SENDER_MISMATCH` and `ENVELOPE_REJECTED` errors carry the refused `envelopeId`, so the app fails exactly that send at once; a missing acknowledgement fails the send after the timeout like any other send error, and the outbox retries it. Acknowledgements, route refreshes and blob-upload tickets are only handled for a signed-in session and only delete pending envelopes of that session's routing IDs.
+After sign-in every envelope must name the signed-in routing ID (or the device's own phone alias, which the gateway confirms once per session with a signed route lookup at the Control Plane) as sender, otherwise the gateway answers `SENDER_MISMATCH`. `SENDER_MISMATCH` and `ENVELOPE_REJECTED` errors carry the refused `envelopeId`, so the app fails exactly that send at once; a missing acknowledgement fails the send after the timeout like any other send error, and the outbox retries it. Acknowledgements and route refreshes are only handled for a signed-in session and only delete pending envelopes of that session's routing IDs.
 
 ## Route registration and phone verification
 
 After sign-in, the signed route is published with a `RefreshRoute` frame; its routing ID and connection ID must match the signed-in session carrying a `ClientRouteRegistration` (`:server:protocol` / `:feature:transport`). The gateway forwards it to the Presence Directory (`PUT /v1/routes/{routingId}`). The route carries no phone aliases and the gateway answers `RouteRegistered` without any. The app claims its phone alias at each of its Control Planes directly, through two relays (see [Transport](../features/transport.md#onion-relays-to-control-planes)), so the gateway never learns it from a registration. See [Control Plane](../server/control-plane.md).
-
-## Blob upload tickets
-
-The authenticated gateway WebSocket is also the control channel for attachment uploads. The client can request a blob-upload ticket containing the intended blob ID, maximum bytes and expiry. The gateway returns either an issued short-lived permit or a rejection such as an invalid size/expiry. The actual encrypted bytes are then uploaded over the HTTP `/v1/blobs/{blobId}` endpoint.
-
-This keeps upload authorization tied to the authenticated gateway session while keeping large blob bytes out of WebSocket chat frames.
 
 ## Reliability boundary
 

@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.GatewayLoad
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
@@ -17,7 +16,6 @@ import io.ktor.server.routing.post
 
 internal fun Route.installGatewayInternalRoutes(runtime: GatewayRuntime, config: GatewayConfig) {
     installIncomingEnvelopeRoute(runtime, config)
-    installIncomingIndicatorRoute(runtime, config)
     installInternalLoadRoute(runtime, config)
     installInternalRouteResolution(runtime, config)
 }
@@ -30,17 +28,6 @@ private fun Route.installIncomingEnvelopeRoute(runtime: GatewayRuntime, config: 
         }
         val envelope = call.receive<FederatedEnvelope>()
         call.respondToIncomingEnvelope(envelope, runtime.handler.acceptIncoming(envelope))
-    }
-}
-
-private fun Route.installIncomingIndicatorRoute(runtime: GatewayRuntime, config: GatewayConfig) {
-    post("/internal/v1/indicator-events") {
-        if (!call.hasInternalAccess(config.gatewayInternalApiToken)) {
-            call.respond(HttpStatusCode.Unauthorized)
-            return@post
-        }
-        val delivered = runtime.handler.acceptIncomingIndicator(call.receive<FederatedIndicatorEvent>())
-        call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)
     }
 }
 

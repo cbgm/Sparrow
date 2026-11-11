@@ -63,7 +63,6 @@ data class GatewayConfig(
     val maximumBlobStorageBytes: Long,
     val maximumBlobRetentionMilliseconds: Long,
     val blobCleanupIntervalMilliseconds: Long,
-    val blobUploadTicketLifetimeMilliseconds: Long,
     val signInTimeoutMilliseconds: Long,
     /** Lets the relay reach LAN addresses; only for LAN installations, where Control Planes have private addresses. */
     val relayPrivateDestinations: Boolean = false,
@@ -84,11 +83,7 @@ data class GatewayConfig(
         }
         require(maximumBlobRetentionMilliseconds > 0L) { "Maximum blob retention must be positive" }
         require(blobCleanupIntervalMilliseconds > 0L) { "Blob cleanup interval must be positive" }
-        require(blobUploadTicketLifetimeMilliseconds > 0L) { "Blob upload ticket lifetime must be positive" }
         require(signInTimeoutMilliseconds > 0L) { "Sign-in timeout must be positive" }
-        require(blobUploadTicketLifetimeMilliseconds < maximumBlobRetentionMilliseconds) {
-            "Blob upload tickets must expire before maximum blob retention"
-        }
     }
 
     companion object {
@@ -156,11 +151,6 @@ data class GatewayConfig(
                         "BLOB_CLEANUP_INTERVAL_MILLISECONDS",
                         DEFAULT_BLOB_CLEANUP_INTERVAL_MILLISECONDS
                     ),
-                blobUploadTicketLifetimeMilliseconds =
-                    ServiceEnvironment.long(
-                        "BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS",
-                        DEFAULT_BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS
-                    ),
                 signInTimeoutMilliseconds =
                     ServiceEnvironment.long(
                         "SIGN_IN_TIMEOUT_MILLISECONDS",
@@ -202,7 +192,6 @@ data class GatewayConfig(
         private const val DEFAULT_MAXIMUM_BLOB_STORAGE_BYTES = 10L * 1024L * 1024L * 1024L
         private const val DEFAULT_MAXIMUM_BLOB_RETENTION_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
         private const val DEFAULT_BLOB_CLEANUP_INTERVAL_MILLISECONDS = 60L * 60L * 1_000L
-        private const val DEFAULT_BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS = 5L * 60L * 1_000L
         private const val DEFAULT_BLOB_CREATION_WORK_BITS = 18
 
         // Bounds how long an unauthenticated socket may hold a connection slot after the challenge.

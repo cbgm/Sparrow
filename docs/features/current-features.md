@@ -133,7 +133,7 @@ See [Startup architecture](../architecture/startup.md).
 - foreground WebSocket delivery;
 - durable protocol outbox;
 - recipient mailbox delivery;
-- Android FCM wake-up path;
+- receiving while closed (always connected, while open, or checking every 15 minutes);
 - synchronization workers and conversation notifications/deep links.
 
 ## Server

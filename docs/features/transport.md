@@ -73,19 +73,17 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 - `ClientRouteRegistrationFactory`
 - `Sha256RoutingIdGenerator`
 
-### Offline/push
+### Offline
 
 - `HttpMailboxGateway`
-- `HttpPushTokenRegistrationGateway`
-- `HttpPendingEnvelopeGateway`
 
-`HttpPushTokenRegistrationGateway` signs every registration with `CreatePushDeviceRegistrationUseCase` (identity signing key, payload `pushDeviceRegistrationPayload`, see [Push API](../api/push.md)). The shared HTTP client uses `expectSuccess`, so the gateway turns a 4xx (`ClientRequestException`) into `ControlPlaneRequestRejectedException` with the server's error code; the endpoint stays marked reachable.
+There is no push service; see [Receiving messages](../push-notifications.md).
 
 Mailbox provisioning, renewal and revocation are driven from `:feature:conversationorchestration:delivery` (`MailboxRouteProvisioner`, `DefaultMailboxCapabilityLifecycle`); see [Offline mailbox](message-transport-flow.md#offline-mailbox).
 
 ## WebSocket connection
 
-The selected node exposes `/v1/gateway`. `DefaultWebSocketTransportClient` first obtains gateway information, opens the WebSocket, waits for the gateway's session challenge, checks that it names the node chosen from the signed directory and signs in with the identity signing key (`CreateGatewaySessionProofUseCase`). Only then does it publish/refresh the signed presence route and send/receive envelopes, acknowledgements and ephemeral typing data. A missing challenge (10 s), a challenge from another node or an `INVALID_SESSION` rejection fails the connection attempt like any other connect failure, so the connection manager retries. See [Session sign-in](../api/websocket.md#session-sign-in-challenge-response). After sign-in, a frame the app cannot read (or a message type from a newer server) is skipped and the session goes on; an unreadable envelope whose ID is still readable is acknowledged so the gateway stops delivering it. The mailbox and push-inbox fetches read each envelope on its own the same way. Unknown JSON fields are ignored. The gateway refuses envelopes the app could not read (blank fields, negative timestamps), so they are never stored.
+The selected node exposes `/v1/gateway`. `DefaultWebSocketTransportClient` first obtains gateway information, opens the WebSocket, waits for the gateway's session challenge, checks that it names the node chosen from the signed directory and signs in with the identity signing key (`CreateGatewaySessionProofUseCase`). Only then does it publish/refresh the signed presence route and send/receive envelopes and acknowledgements. Typing indicators travel as encrypted packets through the mailboxes, not through the gateway. A missing challenge (10 s), a challenge from another node or an `INVALID_SESSION` rejection fails the connection attempt like any other connect failure, so the connection manager retries. See [Session sign-in](../api/websocket.md#session-sign-in-challenge-response). After sign-in, a frame the app cannot read (or a message type from a newer server) is skipped and the session goes on; an unreadable envelope whose ID is still readable is acknowledged so the gateway stops delivering it. The mailbox fetch reads each envelope on its own the same way. Unknown JSON fields are ignored. The gateway refuses envelopes the app could not read (blank fields, negative timestamps), so they are never stored.
 
 The server-side counterpart is `GatewayWebSocketHandler`/`GatewaySessionHandler`.
 

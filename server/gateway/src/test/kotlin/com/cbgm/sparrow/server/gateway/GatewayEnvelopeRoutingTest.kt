@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import kotlinx.coroutines.test.runTest
@@ -225,43 +224,12 @@ class GatewayEnvelopeRoutingTest {
         assertEquals(now + 24L * 60L * 60L * 1_000L, envelope.expiresAtEpochMilliseconds)
     }
 
-    @Test
-    fun remoteIndicatorEventIsPassedToFederation() =
-        runTest {
-            var routedEvent: FederatedIndicatorEvent? = null
-            val event = testIndicatorEvent()
-            val delivered =
-                routeFederatedIndicatorEvent(
-                    event = event,
-                    localDelivery = { false },
-                    federation =
-                        federationClient(
-                            indicatorDelegate = { candidate ->
-                                routedEvent = candidate
-                                true
-                            }
-                        ) { envelope ->
-                            acknowledgement(
-                                envelope = envelope,
-                                state = EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
-                            )
-                        }
-                )
-
-            assertTrue(delivered)
-            assertEquals(event, routedEvent)
-        }
-
     private fun federationClient(
-        indicatorDelegate: suspend (FederatedIndicatorEvent) -> Boolean = { false },
         delegate: suspend (FederatedEnvelope) -> FederationAcknowledgement
     ): FederationClient =
         object : FederationClient {
             override suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement =
                 delegate(envelope)
-
-            override suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean =
-                indicatorDelegate(event)
         }
 
     private fun acknowledgement(
@@ -291,12 +259,5 @@ class GatewayEnvelopeRoutingTest {
             recipientId = "recipient",
             payload = "ciphertext",
             createdAtEpochMilliseconds = 1_000L
-        )
-
-    private fun testIndicatorEvent(): FederatedIndicatorEvent =
-        FederatedIndicatorEvent(
-            senderRoutingId = "sender",
-            recipientRoutingId = "recipient",
-            indicatorType = "TYPING"
         )
 }

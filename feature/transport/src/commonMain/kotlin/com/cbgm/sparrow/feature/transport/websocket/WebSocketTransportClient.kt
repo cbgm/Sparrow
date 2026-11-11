@@ -2,10 +2,7 @@ package com.cbgm.sparrow.feature.transport.websocket
 
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 interface WebSocketTransportClient {
     val connectionState: StateFlow<TransportConnectionState>
     val incomingEnvelopes: Flow<TransportEnvelope>
-    val incomingIndicatorEvents: Flow<GatewayIndicatorEvent>
 
     /**
      * [expectedNodeId] is the node chosen from the signed directory; the gateway's session challenge
@@ -63,18 +59,7 @@ interface WebSocketTransportClient {
             )
         }
 
-    suspend fun requestBlobUploadTicket(
-        request: GatewayBlobUploadTicketRequest,
-        timeoutMilliseconds: Long
-    ): Result<GatewayBlobUploadTicket> =
-        Result.failure(UnsupportedOperationException("Blob upload tickets are not supported"))
-
     suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit>
-
-    suspend fun sendIndicatorState(
-        recipientId: String,
-        indicatorType: String
-    ): Result<Unit>
 
     suspend fun disconnect()
 }

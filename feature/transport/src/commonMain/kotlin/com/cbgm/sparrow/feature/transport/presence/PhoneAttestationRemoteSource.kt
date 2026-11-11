@@ -67,9 +67,7 @@ internal class PhoneAttestationRemoteSource(
     /** The verifier's X25519 request key, from the certificate the pinned Directory key signed. */
     private suspend fun requestKey(directoryUrl: String): ByteArray {
         val pinned = BASE64.decode(checkNotNull(pinnedDirectoryKey()) { "No pinned Directory key" })
-        require(pinned.size == ED25519_DER_PREFIX.size + RAW_KEY_BYTES && pinned.copyOf(ED25519_DER_PREFIX.size).contentEquals(ED25519_DER_PREFIX)) {
-            "Directory key must be X.509 DER Ed25519"
-        }
+        require(pinned.isEd25519Der()) { "Directory key must be X.509 DER Ed25519" }
         val certificate = json.decodeFromString<SignedPhoneKeys>(controlPlaneHttpClient.get("$directoryUrl$KEYS_PATH").bodyAsText())
         val payload = BASE64.decode(certificate.payload)
         signatureCrypto
@@ -79,9 +77,14 @@ internal class PhoneAttestationRemoteSource(
                 signature = BASE64.decode(certificate.signature)
             ).getOrThrow()
         val keys = json.decodeFromString<PhoneKeys>(payload.decodeToString())
-        require(keys.protocol == PHONE_KEYS_PROTOCOL) { "Unsupported phone key certificate" }
+        require(keys.protocol == PHONE_KEYS_PROTOCOL && BASE64.decode(keys.attestationKey).isEd25519Der()) {
+            "Unsupported phone key certificate"
+        }
         return BASE64.decode(keys.requestKey).also { key -> require(key.size == RAW_KEY_BYTES) { "Invalid phone request key" } }
     }
+
+    private fun ByteArray.isEd25519Der(): Boolean =
+        size == ED25519_DER_PREFIX.size + RAW_KEY_BYTES && copyOf(ED25519_DER_PREFIX.size).contentEquals(ED25519_DER_PREFIX)
 
     private companion object {
         const val ATTESTATIONS_PATH = "/v1/phone-attestations"

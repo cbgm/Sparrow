@@ -159,7 +159,7 @@ internal class RelayDestinationPolicy(
 
     /**
      * A request the session node makes for the app through its circuit: only the node mailbox operations, waiting for
-     * envelopes, and opening, sending, reading and deleting blobs in chunks (and reading ones sent in one piece).
+     * envelopes, and opening, sending, reading and deleting blobs in chunks.
      */
     fun sessionRequest(
         method: String,
@@ -214,8 +214,6 @@ internal class RelayDestinationPolicy(
                 "GET" to Regex("/v1/blobs/$BLOB_ID/chunks"),
                 "PUT" to Regex("/v1/blobs/$BLOB_ID/chunks/[0-9]{1,6}"),
                 "GET" to Regex("/v1/blobs/$BLOB_ID/chunks/[0-9]{1,6}"),
-                // Blobs sent in one piece before chunks existed; goes once those have expired.
-                "GET" to Regex("/v1/blobs/$BLOB_ID"),
                 "DELETE" to Regex("/v1/blobs/$BLOB_ID")
             )
         val CONTROL_PLANE_REQUESTS =

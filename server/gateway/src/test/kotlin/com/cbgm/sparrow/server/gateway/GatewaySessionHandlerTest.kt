@@ -321,15 +321,7 @@ class GatewaySessionHandlerTest {
                     }
                 },
             routeLifetimeMilliseconds = 90_000L,
-            signInTimeoutMilliseconds = signInTimeoutMilliseconds,
-            blobUploadTicketIssuer =
-                GatewayBlobUploadTicketIssuer(
-                    nodeId = NODE_ID,
-                    permitStore = BlobUploadPermitStore(),
-                    maximumBlobBytes = 1_024L,
-                    maximumRetentionMilliseconds = 60_000L,
-                    ticketLifetimeMilliseconds = 30_000L
-                )
+            signInTimeoutMilliseconds = signInTimeoutMilliseconds
         )
 
     private fun register(

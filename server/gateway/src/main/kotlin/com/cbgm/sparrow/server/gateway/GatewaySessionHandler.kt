@@ -161,15 +161,9 @@ internal class GatewaySessionHandler(
                 workDispatcher.dispatch(key = "envelope:${message.envelope.recipientDeviceRoutingId}") {
                     actions.sendFederatedEnvelope(connection, message)
                 }
-            is GatewayClientMessage.IndicatorState ->
-                workDispatcher.dispatch(key = "indicator:${message.recipientId}") {
-                    actions.deliverIndicator(connection, message)
-                }
             is GatewayClientMessage.AcknowledgeEnvelope ->
                 pushActions.acknowledge(connection, message.envelopeId)
             is GatewayClientMessage.RefreshRoute -> refreshRoute(connection, message.registration)
-            is GatewayClientMessage.RequestBlobUploadTicket ->
-                actions.issueBlobUploadTicket(connection, message)
         }
     }
 
@@ -294,10 +288,7 @@ internal data class GatewayPushActions(
 internal data class GatewayMessageActions(
     val sendEnvelope: suspend (GatewayConnection, GatewayClientMessage.SendEnvelope) -> Unit,
     val sendFederatedEnvelope:
-        suspend (GatewayConnection, GatewayClientMessage.SendFederatedEnvelope) -> Unit,
-    val deliverIndicator: suspend (GatewayConnection, GatewayClientMessage.IndicatorState) -> Unit,
-    val issueBlobUploadTicket:
-        suspend (GatewayConnection, GatewayClientMessage.RequestBlobUploadTicket) -> Unit
+        suspend (GatewayConnection, GatewayClientMessage.SendFederatedEnvelope) -> Unit
 )
 
 // Read by the sign-in deadline coroutine as well as the frame loop.

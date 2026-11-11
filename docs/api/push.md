@@ -1,86 +1,27 @@
-# Push API
+# Push API (pending envelopes)
 
-The push service (`:server:push`) runs on the Control Plane behind Caddy. Push only wakes the app; the
-payload is a short-lived wake-up ID, never message content.
+Despite its name, the push service (`:server:push`) sends no push notifications any more: there is no
+FCM and no device registration. It only keeps **pending envelopes** of the old delivery path through the
+connected node, for a recipient that is not connected when a gateway or federation delivers to it. The
+gateway hands them to the recipient when it signs in again, and the recipient acknowledges each one.
+Mailbox delivery through circuits does not use this service; it goes away together with the old path.
 
-## Register a device: `POST /push/devices`
+## Node endpoints
 
-Public, rate limited per client (`PUSH_DEVICE_REGISTRATION_RATE_LIMIT_*`). Binds one push token to the
-caller's device routing ID.
-
-```json
-{
-  "routingId": "scrouting1_…",
-  "token": "<FCM token>",
-  "platform": "ANDROID",
-  "issuedAtEpochMilliseconds": 1767225600000,
-  "clientSigningPublicKey": [ …32 bytes… ],
-  "clientSignature": [ …64 bytes… ]
-}
-```
-
-The signature is made with the identity signing key over a length-prefixed payload (4-byte big-endian
-length before every field):
-
-| Field | Value |
-| --- | --- |
-| domain | `sparrow-push-device-v1` |
-| routing ID | UTF-8 |
-| token | UTF-8 |
-| platform | UTF-8 (`ANDROID`, `IOS`) |
-| issued at | 8-byte big-endian epoch milliseconds |
-
-Server: `ProtocolSignatures.pushDeviceContent`; app: `pushDeviceRegistrationPayload`. Both sides pin the
-same byte vector in their tests.
-
-The server checks, in this order (`PushDeviceRegistrationValidator`):
-
-| Check | Status | `code` |
-| --- | --- | --- |
-| routing ID, token and platform present | 400 | `INVALID_PUSH_DEVICE` |
-| routing ID is not a phone alias (`scphone1_…`) | 403 | `PUSH_ROUTING_ID_NOT_ALLOWED` |
-| routing ID is derived from `clientSigningPublicKey` | 403 | `PUSH_ROUTING_ID_MISMATCH` |
-| `issuedAtEpochMilliseconds` within ±5 minutes of server time | 403 | `PUSH_PROOF_STALE` |
-| signature valid | 403 | `PUSH_PROOF_INVALID` |
-
-Rejections carry `{"code": "…", "message": "…"}`. A request without proof fields (an old app) fails with
-`PUSH_ROUTING_ID_MISMATCH`. Success is `204 No Content`.
-
-Rules for stored bindings:
-
-- One token belongs to exactly one routing ID: registering a token for another routing ID replaces the old
-  binding.
-- A binding expires `PUSH_DEVICE_REGISTRATION_LIFETIME_MILLISECONDS` (default 30 days) after its last
-  registration. Expired rows are deleted before every device read or write and are never used for a
-  wake-up. The app registers again on every start, every return to the foreground, every FCM token
-  refresh and every 7 days in the background.
-- Phone aliases cannot receive push. The app only registers its device routing ID.
-- A binding also ends when FCM reports the token unregistered.
-
-There is no public unregister or update endpoint; registration is the only public request that changes a
-binding.
-
-## Wake-up inbox
+Every `/v1/node-push/*` request is a signed Community Node request; a node may only store or read
+envelopes for routing IDs whose presence route points at it.
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /push/wake/{wakeUpId}/inbox` | pending envelopes of the woken recipient |
-| `POST /push/wake/{wakeUpId}/inbox/{envelopeId}/ack` | delete one acknowledged envelope |
+| `POST /v1/node-push/envelopes` | store one pending `TransportEnvelope` (`202`, or `507` when the store is full) |
+| `POST /v1/node-push/replicas/envelopes` | store a copy held by another Control Plane |
+| `GET /v1/node-push/recipients/{recipientId}/envelopes` | pending envelopes of a recipient |
+| `POST /v1/node-push/recipients/{recipientId}/envelopes/{envelopeId}/ack` | delete one acknowledged envelope |
 
-A wake-up ID is 32 bytes from `SecureRandom` (base64url), created per wake-up for one recipient, sent only
-in the FCM data message to that recipient's registered devices and valid for
-`PUSH_WAKE_UP_LIFETIME_MILLISECONDS` (default 15 minutes). An unknown or expired ID returns `404`.
+## Internal endpoints
 
-## Node and internal endpoints
+`/internal/v1/envelopes`, `/internal/v1/recipients/{recipientId}/envelopes` and
+`…/envelopes/{envelopeId}/ack` do the same for a gateway on the same host and need the internal API token
+(`PUSH_INTERNAL_API_TOKEN`).
 
-`/v1/node-push/*` need a signed Community Node request (and, for recipient data, a node that owns the
-routing ID in the presence directory). `/internal/v1/*` need the internal API token. Neither changes
-device bindings.
-
-`POST /v1/node-push/wake-ups/{routingId}` carries the device's `MailboxWakeTicket` as its body. Anyone can
-run a mailbox node, so a MAILBOX node may only wake a device that allowed exactly this node: the app signs
-the ticket (`sparrow-mailbox-wake-v1`: routing ID, mailbox node ID, expiry) with the key the routing ID is
-derived from when it creates a mailbox, and the mailbox node keeps it with the mailbox. Push answers `403`
-when the ticket is for another device or node, has expired or is not signed by the routing ID's key. A
-mailbox created without a ticket (by an older app) never wakes anyone; the app replaces it within the
-mailbox's 30-day lifetime.
+`GET /health` answers `ok persistence=<postgresql|memory> pendingEnvelopes=<n>`.

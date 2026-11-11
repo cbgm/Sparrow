@@ -1,13 +1,8 @@
 package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.BlobMetadata
-import com.cbgm.sparrow.server.protocol.BlobUploadTicketClaims
 import com.cbgm.sparrow.server.protocol.OpenBlobRequest
 import com.cbgm.sparrow.server.protocol.serverJson
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readAvailable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -24,7 +19,6 @@ class BlobStore(
 ) {
     private val capacityLock = Any()
     private var storedBytes = 0L
-    private var reservedBytes = 0L
 
     init {
         require(maximumBlobBytes > 0L)
@@ -39,124 +33,6 @@ class BlobStore(
             "Existing blob storage exceeds the configured maximum"
         }
     }
-
-    suspend fun store(
-        claims: BlobUploadTicketClaims,
-        channel: ByteReadChannel
-    ): BlobMetadata {
-        requireBlobId(claims.blobId)
-        val allowedBytes = minOf(claims.maximumBytes, maximumBlobBytes)
-        reserveCapacity(allowedBytes)
-
-        val paths = paths(claims.blobId)
-        withContext(Dispatchers.IO) {
-            paths.directory.createDirectories()
-        }
-        var reservationCommitted = false
-        try {
-            val written = writeBlobData(paths.data, channel, allowedBytes)
-            try {
-                validateBlobSize(written, claims.maximumBytes)
-                val metadata = claims.toBlobMetadata(written)
-                writeMetadataAndCommit(
-                    metadataPath = paths.metadata,
-                    metadata = metadata,
-                    reservedBytes = allowedBytes,
-                    storedBytes = written
-                )
-                reservationCommitted = true
-                return metadata
-            } catch (error: Exception) {
-                withContext(Dispatchers.IO) {
-                    Files.deleteIfExists(paths.data)
-                }
-                throw error
-            }
-        } finally {
-            if (!reservationCommitted) {
-                releaseCapacity(allowedBytes)
-            }
-        }
-    }
-
-    private suspend fun writeBlobData(
-        dataPath: Path,
-        channel: ByteReadChannel,
-        allowedBytes: Long
-    ): Long =
-        withContext(Dispatchers.IO) {
-            var created = false
-            try {
-                Files.newOutputStream(
-                    dataPath,
-                    java.nio.file.StandardOpenOption.CREATE_NEW,
-                    java.nio.file.StandardOpenOption.WRITE
-                ).also { created = true }.use { output ->
-                    copyBlobData(channel, output, allowedBytes)
-                }
-            } catch (_: java.nio.file.FileAlreadyExistsException) {
-                throw BlobAlreadyExistsException()
-            } catch (error: Exception) {
-                if (created) {
-                    Files.deleteIfExists(dataPath)
-                }
-                throw error
-            }
-        }
-
-    private suspend fun copyBlobData(
-        channel: ByteReadChannel,
-        output: java.io.OutputStream,
-        allowedBytes: Long
-    ): Long =
-        withContext(Dispatchers.IO) {
-            val buffer = ByteArray(BUFFER_BYTES)
-            var written = 0L
-            var read = channel.readAvailable(buffer)
-            while (read >= 0) {
-                if (read > 0) {
-                    written += read
-                    if (written > allowedBytes) {
-                        throw BlobTooLargeException()
-                    }
-                    output.write(buffer, 0, read)
-                }
-                read = channel.readAvailable(buffer)
-            }
-            written
-        }
-
-    private fun validateBlobSize(
-        written: Long,
-        expectedBytes: Long
-    ) {
-        require(written > 0L) { "Blob must not be empty" }
-        require(written == expectedBytes) {
-            "Blob byte size does not match the upload ticket"
-        }
-    }
-
-    private fun BlobUploadTicketClaims.toBlobMetadata(written: Long): BlobMetadata =
-        BlobMetadata(
-            blobId = blobId,
-            byteSize = written,
-            readCapabilitySha256 = readCapabilitySha256,
-            deleteCapabilitySha256 = deleteCapabilitySha256,
-            expiresAtEpochMilliseconds = blobExpiresAtEpochMilliseconds
-        )
-
-    private suspend fun writeMetadataAndCommit(
-        metadataPath: Path,
-        metadata: BlobMetadata,
-        reservedBytes: Long,
-        storedBytes: Long
-    ) =
-        withContext(Dispatchers.IO) {
-            synchronized(capacityLock) {
-                writeMetadata(metadataPath, metadata)
-                commitCapacity(reservedBytes = reservedBytes, storedBytes = storedBytes)
-            }
-        }
 
     private fun writeMetadata(
         metadataPath: Path,
@@ -199,7 +75,7 @@ class BlobStore(
         val paths = paths(request.blobId)
         synchronized(capacityLock) {
             if (paths.metadata.exists() || paths.data.exists()) throw BlobAlreadyExistsException()
-            if (request.byteSize > maximumStorageBytes - storedBytes - reservedBytes) throw BlobStorageCapacityExceededException()
+            if (request.byteSize > maximumStorageBytes - storedBytes) throw BlobStorageCapacityExceededException()
             paths.chunks.createDirectories()
             writeMetadata(paths.metadata, metadata)
             storedBytes += request.byteSize
@@ -284,22 +160,6 @@ class BlobStore(
         Files.move(part, metadataPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
     }
 
-    fun readableBlob(
-        blobId: String,
-        readCapability: String,
-        nowEpochMilliseconds: Long
-    ): Path? {
-        val metadata = metadata(blobId) ?: return null
-        if (metadata.expiresAtEpochMilliseconds <= nowEpochMilliseconds) {
-            deleteFiles(blobId)
-            return null
-        }
-        if (!constantTimeEquals(metadata.readCapabilitySha256, sha256Hex(readCapability))) {
-            return null
-        }
-        return paths(blobId).data.takeIf(Path::exists)
-    }
-
     fun delete(
         blobId: String,
         deleteCapability: String,
@@ -338,33 +198,6 @@ class BlobStore(
                         }
                     }
                 }
-        }
-    }
-
-    private fun reserveCapacity(bytes: Long) {
-        synchronized(capacityLock) {
-            val available = maximumStorageBytes - storedBytes - reservedBytes
-            if (bytes > available) {
-                throw BlobStorageCapacityExceededException()
-            }
-            reservedBytes += bytes
-        }
-    }
-
-    private fun commitCapacity(
-        reservedBytes: Long,
-        storedBytes: Long
-    ) {
-        synchronized(capacityLock) {
-            this.reservedBytes -= reservedBytes
-            this.storedBytes += storedBytes
-        }
-    }
-
-    private fun releaseCapacity(bytes: Long) {
-        synchronized(capacityLock) {
-            reservedBytes -= bytes
-            check(reservedBytes >= 0L) { "Blob storage reservation underflow" }
         }
     }
 
@@ -485,7 +318,6 @@ class BlobStore(
         private const val PART_SUFFIX = ".part"
         private val BLOB_ID = Regex("[A-Za-z0-9_-]{16,128}")
         private const val SHARD_LENGTH = 2
-        private const val BUFFER_BYTES = 64 * 1024
         private const val DATA_SUFFIX = ".blob"
         private const val METADATA_SUFFIX = ".meta.json"
     }

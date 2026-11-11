@@ -84,13 +84,6 @@ sealed interface GatewayClientMessage {
     ) : GatewayClientMessage
 
     @Serializable
-    @SerialName("indicator_state")
-    data class IndicatorState(
-        val recipientId: String,
-        val indicatorType: String
-    ) : GatewayClientMessage
-
-    @Serializable
     @SerialName("acknowledge_envelope")
     data class AcknowledgeEnvelope(
         val envelopeId: String
@@ -101,31 +94,6 @@ sealed interface GatewayClientMessage {
     data class RefreshRoute(
         val registration: ClientRouteRegistration
     ) : GatewayClientMessage
-
-    @Serializable
-    @SerialName("request_blob_upload_ticket")
-    data class RequestBlobUploadTicket(
-        val requestId: String,
-        val blobId: String,
-        val maximumBytes: Long,
-        val readCapabilitySha256: String,
-        val deleteCapabilitySha256: String,
-        val blobExpiresAtEpochMilliseconds: Long
-    ) : GatewayClientMessage {
-        init {
-            require(requestId.isNotBlank())
-            require(BLOB_ID.matches(blobId)) { "Invalid blob ID" }
-            require(maximumBytes > 0L)
-            require(SHA_256_HEX.matches(readCapabilitySha256)) { "Invalid read capability hash" }
-            require(SHA_256_HEX.matches(deleteCapabilitySha256)) { "Invalid delete capability hash" }
-            require(blobExpiresAtEpochMilliseconds > 0L)
-        }
-
-        private companion object {
-            val BLOB_ID = Regex("[A-Za-z0-9_-]{16,128}")
-            val SHA_256_HEX = Regex("[0-9a-f]{64}")
-        }
-    }
 }
 
 @Serializable
@@ -170,34 +138,10 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     @Serializable
-    @SerialName("indicator_state")
-    data class IndicatorState(
-        val senderId: String,
-        val indicatorType: String
-    ) : GatewayServerMessage
-
-    @Serializable
     @SerialName("envelope_accepted")
     data class EnvelopeAccepted(
         val envelopeId: String,
         val expiresAtEpochMilliseconds: Long
-    ) : GatewayServerMessage
-
-    @Serializable
-    @SerialName("blob_upload_ticket_issued")
-    data class BlobUploadTicketIssued(
-        val requestId: String,
-        val nodeId: String,
-        val uploadToken: String,
-        val blobExpiresAtEpochMilliseconds: Long
-    ) : GatewayServerMessage
-
-    @Serializable
-    @SerialName("blob_upload_ticket_rejected")
-    data class BlobUploadTicketRejected(
-        val requestId: String,
-        val code: String,
-        val message: String
     ) : GatewayServerMessage
 
     @Serializable

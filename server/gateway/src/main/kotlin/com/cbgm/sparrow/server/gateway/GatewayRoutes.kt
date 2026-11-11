@@ -20,7 +20,6 @@ internal fun Application.installGatewayRoutes(
         installInformationRoute(identity, config)
         installControlPlaneDiscoveryRoute(config)
         installGatewayWebSocketRoute(runtime)
-        installBlobRoutes(runtime.blobStore, runtime.blobUploadPermitStore)
         installChunkedBlobRoutes(runtime.blobStore, identity.nodeId, runtime.blobCreationWork, config.maximumBlobRetentionMilliseconds)
         installGatewayInternalRoutes(runtime, config)
         installRelayRoute(runtime.relay)

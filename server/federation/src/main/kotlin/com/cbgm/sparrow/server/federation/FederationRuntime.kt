@@ -84,8 +84,6 @@ internal fun createFederationRuntime(
             localGateway = localGateway,
             remoteFederation = remoteFederation,
             mailbox = HttpMailboxClient(httpClient),
-            localIndicatorGateway = localGateway,
-            remoteIndicatorFederation = remoteFederation,
             queue = outboundQueue,
             retryBaseDelayMilliseconds = config.outboundRetryBaseDelayMilliseconds,
             retryMaximumDelayMilliseconds = config.outboundRetryMaximumDelayMilliseconds

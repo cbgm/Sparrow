@@ -4,7 +4,6 @@ import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.ClientRoutingResult
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
@@ -40,15 +39,6 @@ class HttpFederationClient(
                 contentType(ContentType.Application.Json)
                 setBody(envelope)
             }.body()
-
-    override suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean =
-        httpClient
-            .post("${baseUrl.trimEnd('/')}/internal/v1/outgoing-indicator-events") {
-                internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
-                contentType(ContentType.Application.Json)
-                setBody(event)
-            }.status
-            .isSuccess()
 
     override suspend fun markStored(envelopeId: String) {
         httpClient.post(

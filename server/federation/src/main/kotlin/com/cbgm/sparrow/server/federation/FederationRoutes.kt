@@ -3,7 +3,6 @@ package com.cbgm.sparrow.server.federation
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.ErrorResponse
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.serverJson
@@ -26,7 +25,6 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 
 private const val FEDERATION_ENVELOPES_PATH = "/v1/federation/envelopes"
-private const val FEDERATION_INDICATOR_EVENTS_PATH = "/v1/federation/indicator-events"
 
 internal fun Application.installFederationRoutes(
     runtime: FederationRuntime,
@@ -63,15 +61,6 @@ private fun Routing.installInternalRoutes(
         }
         val acknowledgement = router.route(call.receive<FederatedEnvelope>())
         call.respond(HttpStatusCode.Accepted, acknowledgement)
-    }
-
-    post("/internal/v1/outgoing-indicator-events") {
-        if (!call.hasInternalAccess(config.federationInternalApiToken)) {
-            call.respond(HttpStatusCode.Unauthorized)
-            return@post
-        }
-        val delivered = router.routeIndicator(call.receive<FederatedIndicatorEvent>())
-        call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)
     }
 
     post("/internal/v1/outgoing-envelopes/{envelopeId}/stored") {
@@ -121,38 +110,6 @@ private fun Routing.installIncomingFederationRoutes(runtime: FederationRuntime) 
             )
         }
         call.respond(HttpStatusCode.Accepted, acknowledgement)
-    }
-
-    post(FEDERATION_INDICATOR_EVENTS_PATH) {
-        if (!call.enforceRateLimit(runtime.incomingRateLimiter)) {
-            return@post
-        }
-        val body = call.receiveText()
-        val event =
-            runCatching { serverJson.decodeFromString<FederatedIndicatorEvent>(body) }
-                .getOrElse {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("INVALID_INDICATOR_EVENT", "Invalid indicator event")
-                    )
-                    return@post
-                }
-        if (!call.hasValidNodeAuthentication(FEDERATION_INDICATOR_EVENTS_PATH, body, runtime)) {
-            call.respondInvalidNodeAuthentication()
-            return@post
-        }
-        // Indicators carry no client signature, so a node may only send them for its own clients.
-        val senderNodeId = requireNotNull(call.requestAuthentication()).nodeId
-        if (!runtime.router.isConnectedThrough(event.senderRoutingId, senderNodeId)) {
-            call.respond(
-                HttpStatusCode.Forbidden,
-                ErrorResponse("SENDER_NOT_CONNECTED", "Sender is not connected through this node")
-            )
-            return@post
-        }
-
-        val delivered = runtime.router.routeIndicator(event)
-        call.respond(if (delivered) HttpStatusCode.Accepted else HttpStatusCode.NotFound)
     }
 }
 

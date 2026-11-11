@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 
@@ -10,8 +9,7 @@ internal class FederationPeerRouter(
     private val localNodeId: String,
     private val peerNodeDirectory: PeerNodeDirectory,
     private val remoteRouteResolver: RemoteRouteResolver,
-    private val remoteFederation: RemoteFederationClient,
-    private val remoteIndicatorFederation: RemoteIndicatorFederationClient
+    private val remoteFederation: RemoteFederationClient
 ) {
     suspend fun routeEnvelope(envelope: FederatedEnvelope): FederationAcknowledgement? {
         for (descriptor in peerDescriptors()) {
@@ -40,32 +38,6 @@ internal class FederationPeerRouter(
             }
         }
         return null
-    }
-
-    suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean {
-        for (descriptor in peerDescriptors()) {
-            val canonicalRoutingId =
-                runCatching {
-                    remoteRouteResolver.resolve(
-                        descriptor = descriptor,
-                        routingId = event.recipientRoutingId
-                    )
-                }.getOrNull()
-                    ?: continue
-
-            val delivered =
-                runCatching {
-                    remoteIndicatorFederation.deliver(
-                        descriptor = descriptor,
-                        event = event.copy(recipientRoutingId = canonicalRoutingId)
-                    )
-                }.getOrDefault(false)
-
-            if (delivered) {
-                return true
-            }
-        }
-        return false
     }
 
     private suspend fun peerDescriptors(): List<SparrowNodeDescriptor> =

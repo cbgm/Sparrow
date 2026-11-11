@@ -65,18 +65,6 @@ data class FederatedEnvelope(
 }
 
 @Serializable
-data class FederatedIndicatorEvent(
-    val senderRoutingId: String,
-    val recipientRoutingId: String,
-    val indicatorType: String
-) {
-    init {
-        require(senderRoutingId.isNotBlank())
-        require(recipientRoutingId.isNotBlank())
-    }
-}
-
-@Serializable
 enum class EnvelopeAcceptanceState {
     QUEUED_AT_GATEWAY,
     STORED_AT_DESTINATION,

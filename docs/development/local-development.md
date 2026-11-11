@@ -118,7 +118,7 @@ The default LAN edge is normally reachable at:
 http://localhost:8390/index
 ```
 
-Real FCM delivery requires an administrator-owned Firebase service-account configuration authorized for the Android Firebase project. The rest of the Control Plane can still be exercised without claiming a real push delivery succeeded.
+Phone numbers are bound only with an attestation of a Directory that runs phone verification (or as test phone numbers in `PRESENCE_TEST_PHONE_ALIASES`).
 
 ### Community Node
 

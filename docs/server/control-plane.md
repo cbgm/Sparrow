@@ -14,8 +14,7 @@ flowchart LR
     R --> RDB[(PostgreSQL)]
     P --> REDIS[(Redis)]
     U --> UDB[(PostgreSQL)]
-    U --> FCM[Firebase Cloud Messaging]
-    P -. optional token check .-> FA[Firebase Authentication]
+    P -. attestation checked with the pinned Directory key .-> D[Control Plane Directory]
 ```
 
 Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis`, `presence-directory`, `push-database`, and `push`.
@@ -42,7 +41,7 @@ Each phone alias belongs to one device (`AliasClaims`). The Presence Directory k
 
 ### `:server:push`
 
-The push service stores the registration state required for wake-ups and coordinates Android FCM notification delivery. Important types include `PushCoordinator` and `FirebasePushSender`. Push wakes a client so it can fetch encrypted mailbox traffic; it is not a plaintext message-delivery channel. Device registrations must be signed with the routing ID's identity key and expire 30 days after the last registration; see [Push API](../api/push.md).
+Despite its name, the push service sends no notifications (there is no FCM). It only keeps pending envelopes of the old delivery path through the connected node, for recipients that are not connected; see [Push API](../api/push.md). Apps receive through their circuits and mailboxes instead; see [Receiving messages](../push-notifications.md).
 
 ## Control Plane vs. independent directory
 

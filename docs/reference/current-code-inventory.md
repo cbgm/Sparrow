@@ -3925,8 +3925,6 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GatewayNodeInformation` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/ClientRouteRegistration.kt` |
 | `UnsignedClientRoute` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/ClientRouteRegistration.kt` |
 | `FederatedEnvelope` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/FederatedEnvelope.kt` |
-| `GatewayBlobUploadTicket` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayBlobUploadTicket.kt` |
-| `GatewayBlobUploadTicketRequest` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayBlobUploadTicket.kt` |
 | `AcknowledgeEnvelope` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayClientMessage.kt` |
 | `GatewayClientMessage` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayClientMessage.kt` |
 | `IndicatorState` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayClientMessage.kt` |
@@ -3936,7 +3934,6 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `SendEnvelope` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayClientMessage.kt` |
 | `SendFederatedEnvelope` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayClientMessage.kt` |
 | `GatewayEnvelopeAcceptance` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayEnvelopeAcceptance.kt` |
-| `GatewayIndicatorEvent` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayIndicatorEvent.kt` |
 | `BlobUploadTicketIssued` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayServerMessage.kt` |
 | `BlobUploadTicketRejected` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayServerMessage.kt` |
 | `EnvelopeAccepted` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/gateway/model/GatewayServerMessage.kt` |
@@ -4507,14 +4504,12 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | Declaration | Kind | Source set | Path |
 |---|---|---|---|
 | `BlobMetadata` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/BlobModels.kt` |
-| `BlobUploadTicketClaims` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/BlobModels.kt` |
 | `CreateMailboxRequest` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `CreateMailboxResponse` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `DeliveryRoute` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `EnvelopeAcceptanceState` | enum class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `ErrorResponse` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `FederatedEnvelope` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
-| `FederatedIndicatorEvent` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `FederationAcknowledgement` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `MailboxEnvelopeRequest` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
 | `MailboxEnvelopesResponse` | data class | `main` | `server/protocol/src/main/kotlin/com/cbgm/sparrow/server/protocol/EnvelopeModels.kt` |
@@ -4670,13 +4665,10 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `BlobStorageCapacityExceededException` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/BlobStore.kt` |
 | `BlobStore` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/BlobStore.kt` |
 | `BlobTooLargeException` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/BlobStore.kt` |
-| `BlobUploadPermitCleanupAgent` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/BlobUploadPermitCleanupAgent.kt` |
-| `BlobUploadPermitStore` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/BlobUploadPermitStore.kt` |
 | `ConnectionRegistry` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/ConnectionRegistry.kt` |
 | `GatewayConnection` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/ConnectionRegistry.kt` |
 | `BoundedPresenceClient` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayBackgroundClients.kt` |
 | `GatewayPushDispatcher` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayBackgroundClients.kt` |
-| `GatewayBlobUploadTicketIssuer` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayBlobUploadTicketIssuer.kt` |
 | `GatewayControlPlaneDirectory` | data class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayControlPlaneDiscovery.kt` |
 | `GatewayControlPlaneDiscovery` | class | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayControlPlaneDiscovery.kt` |
 | `FederationClient` | interface | `main` | `server/gateway/src/main/kotlin/com/cbgm/sparrow/server/gateway/GatewayPorts.kt` |
@@ -4711,14 +4703,12 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `CachingNodeRegistryClient` | class | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/CachingNodeRegistryClient.kt` |
 | `FederationPeerRouter` | class | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPeerRouter.kt` |
 | `LocalGatewayClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
-| `LocalIndicatorGatewayClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `LocalRouteResolver` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `MailboxClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `NodeRegistryClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `PeerNodeDirectory` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `PresenceDirectoryClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `RemoteFederationClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
-| `RemoteIndicatorFederationClient` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `RemoteRouteResolver` | interface | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationPorts.kt` |
 | `FederationRouter` | class | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationRouter.kt` |
 | `FederationRuntime` | data class | `main` | `server/federation/src/main/kotlin/com/cbgm/sparrow/server/federation/FederationRuntime.kt` |

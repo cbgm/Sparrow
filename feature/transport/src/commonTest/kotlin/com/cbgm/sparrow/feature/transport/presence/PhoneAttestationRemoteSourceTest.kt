@@ -109,7 +109,7 @@ class PhoneAttestationRemoteSourceTest {
         }
 
     private fun certificate(): String {
-        val keys = """{"attestationKey":"a","protocol":"sparrow-phone-keys-v1","requestKey":"${base64.encode(requestKey)}"}"""
+        val keys = """{"attestationKey":"${base64.encode(DER_PREFIX + ByteArray(32) { 4 })}","protocol":"sparrow-phone-keys-v1","requestKey":"${base64.encode(requestKey)}"}"""
         return """{"payload":"${base64.encode(keys.encodeToByteArray())}","signature":"${base64.encode(ByteArray(64))}"}"""
     }
 

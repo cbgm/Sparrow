@@ -2,9 +2,7 @@ package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -18,9 +16,6 @@ class FederationRouter(
     private val localGateway: LocalGatewayClient,
     private val remoteFederation: RemoteFederationClient,
     private val mailbox: MailboxClient,
-    private val localIndicatorGateway: LocalIndicatorGatewayClient = LocalIndicatorGatewayClient { false },
-    private val remoteIndicatorFederation: RemoteIndicatorFederationClient =
-        RemoteIndicatorFederationClient { _, _ -> false },
     private val queue: OutboundEnvelopeStorage = OutboundEnvelopeQueue(),
     private val retryBaseDelayMilliseconds: Long = DEFAULT_RETRY_BASE_DELAY_MILLISECONDS,
     private val retryMaximumDelayMilliseconds: Long = DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS,
@@ -37,8 +32,7 @@ class FederationRouter(
                 nodeRegistry as? PeerNodeDirectory ?: PeerNodeDirectory { emptyList() },
             remoteRouteResolver =
                 remoteFederation as? RemoteRouteResolver ?: RemoteRouteResolver { _, _ -> null },
-            remoteFederation = remoteFederation,
-            remoteIndicatorFederation = remoteIndicatorFederation
+            remoteFederation = remoteFederation
         )
 
     init {
@@ -128,57 +122,6 @@ class FederationRouter(
 
     suspend fun markStored(envelopeId: String) {
         queue.markStored(envelopeId)
-    }
-
-    /** True when [routingId] has a live route at [nodeId], i.e. the client is connected through that node. */
-    suspend fun isConnectedThrough(
-        routingId: String,
-        nodeId: String
-    ): Boolean =
-        try {
-            presenceDirectory.resolve(routingId).routes.any { route -> route.nodeId == nodeId }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (_: Exception) {
-            false
-        }
-
-    suspend fun routeIndicator(event: FederatedIndicatorEvent): Boolean {
-        val localRoutingId =
-            runCatching {
-                localRouteResolver.resolve(event.recipientRoutingId)
-            }.getOrNull()
-        if (localRoutingId != null) {
-            return localIndicatorGateway.deliver(
-                event.copy(recipientRoutingId = localRoutingId)
-            )
-        }
-
-        if (peerRouter.routeIndicator(event)) {
-            return true
-        }
-
-        val routes =
-            runCatching {
-                presenceDirectory.resolve(event.recipientRoutingId).routes
-            }.getOrDefault(emptyList())
-        for (route in routes.sortedByDescending { it.generation }) {
-            val delivered =
-                runCatching {
-                    val routedEvent = event.copy(recipientRoutingId = route.routingId)
-                    if (route.nodeId == localNodeId) {
-                        localIndicatorGateway.deliver(routedEvent)
-                    } else {
-                        val descriptor = nodeRegistry.find(route.nodeId) ?: return@runCatching false
-                        remoteIndicatorFederation.deliver(descriptor, routedEvent)
-                    }
-                }.getOrDefault(false)
-
-            if (delivered) {
-                return true
-            }
-        }
-        return false
     }
 
     private suspend fun deliver(

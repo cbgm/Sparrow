@@ -35,7 +35,6 @@ internal data class GatewayRuntime(
     val connections: ConnectionRegistry,
     val handler: GatewayWebSocketHandler,
     val blobStore: BlobStore,
-    val blobUploadPermitStore: BlobUploadPermitStore,
     val blobCreationWork: CreationWorkCheck,
     val serviceScope: CoroutineScope,
     val relay: OnionRelay,
@@ -49,7 +48,6 @@ internal fun createGatewayRuntime(
 ): GatewayRuntime {
     val httpClient = suppliedHttpClient ?: createGatewayHttpClient()
     val connections = ConnectionRegistry()
-    val permitStore = BlobUploadPermitStore()
     val blobStore =
         BlobStore(
             root = Path.of(config.blobStoragePath),
@@ -63,20 +61,13 @@ internal fun createGatewayRuntime(
             cleanupIntervalMilliseconds = config.blobCleanupIntervalMilliseconds
         ).run()
     }
-    serviceScope.launch {
-        BlobUploadPermitCleanupAgent(
-            permitStore = permitStore,
-            cleanupIntervalMilliseconds = config.blobCleanupIntervalMilliseconds
-        ).run()
-    }
 
     return GatewayRuntime(
         httpClient = httpClient,
         ownsHttpClient = suppliedHttpClient == null,
         connections = connections,
-        handler = createGatewayHandler(identity, config, httpClient, connections, permitStore),
+        handler = createGatewayHandler(identity, config, httpClient, connections),
         blobStore = blobStore,
-        blobUploadPermitStore = permitStore,
         blobCreationWork = CreationWorkCheck(config.blobCreationWorkBits),
         serviceScope = serviceScope,
         relay =
@@ -105,8 +96,7 @@ private fun createGatewayHandler(
     identity: NodeIdentity,
     config: GatewayConfig,
     httpClient: HttpClient,
-    connections: ConnectionRegistry,
-    blobUploadPermitStore: BlobUploadPermitStore
+    connections: ConnectionRegistry
 ): GatewayWebSocketHandler {
     val signer = NodeRequestSigner(identity)
     val discoveryFile = System.getenv("DIRECTORY_DISCOVERY_PATH")
@@ -151,15 +141,7 @@ private fun createGatewayHandler(
             ),
         legacyPush = pushClient,
         routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
-        signInTimeoutMilliseconds = config.signInTimeoutMilliseconds,
-        blobUploadTicketIssuer =
-            GatewayBlobUploadTicketIssuer(
-                nodeId = identity.nodeId,
-                permitStore = blobUploadPermitStore,
-                maximumBlobBytes = config.maximumBlobBytes,
-                maximumRetentionMilliseconds = config.maximumBlobRetentionMilliseconds,
-                ticketLifetimeMilliseconds = config.blobUploadTicketLifetimeMilliseconds
-            )
+        signInTimeoutMilliseconds = config.signInTimeoutMilliseconds
     )
 }
 

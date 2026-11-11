@@ -63,8 +63,7 @@ class GatewayServerMessageHandlerTest {
                     onRouteRegistered = {},
                     onRouteRejected = {},
                     onIncomingEnvelope = { envelope -> received += envelope },
-                    onUnreadableEnvelope = { envelopeId -> dropped += envelopeId },
-                    onIndicatorEvent = {}
+                    onUnreadableEnvelope = { envelopeId -> dropped += envelopeId }
                 )
 
             handle(envelopeFrame(id = "poisoned", createdAt = -1))

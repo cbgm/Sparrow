@@ -36,7 +36,6 @@ Versions below are read from the current `gradle/libs.versions.toml` release sna
 | PostgreSQL JDBC | 42.7.13 |
 | HikariCP | 7.1.0 |
 | Jedis | 5.2.0 |
-| Firebase Admin | 9.10.0 (push FCM sending, phone-token verification) |
 | Micrometer | 1.17.1 |
 | Logback | 1.6.5 |
 | KSP | 2.3.9 |

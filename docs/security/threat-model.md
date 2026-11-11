@@ -23,11 +23,8 @@ The design aims to protect against:
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
 - taking over a phone alias another device holds (an alias stays with the first device that claims
-  it; only a phone verification token for that number moves it). The exception are the operator's
+  it; only an attestation of the Directory's phone verifier for that number moves it). The exception are the operator's
   configured test numbers, which any device can take;
-- a Community Node waking devices whose mailbox it does not hold (push wake-ups need the device's
-  signed wake ticket for that node) or sending indicator events for clients that are not connected
-  through it;
 - a node directory with an expired registry certificate, or one signed under a different registry
   root than the configured or first-seen one;
 - a Community Node learning its users' phone numbers: routes carry no phone aliases. The app claims its alias at

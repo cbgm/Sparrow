@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.gateway
 
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.FederatedIndicatorEvent
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import com.cbgm.sparrow.server.security.ClientRoutingIds
@@ -15,8 +14,7 @@ class GatewayWebSocketHandler(
     presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long,
-    private val signInTimeoutMilliseconds: Long,
-    private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
+    private val signInTimeoutMilliseconds: Long
 ) {
     private val boundedPresence = BoundedPresenceClient(presence)
     private val pushDispatcher =
@@ -44,16 +42,6 @@ class GatewayWebSocketHandler(
                     },
                     sendFederatedEnvelope = { connection, message ->
                         sendFederatedEnvelope(connection, message.envelope)
-                    },
-                    deliverIndicator = { connection, message ->
-                        deliverIndicator(
-                            sender = connection,
-                            recipientId = message.recipientId,
-                            indicatorType = message.indicatorType
-                        )
-                    },
-                    issueBlobUploadTicket = { connection, message ->
-                        connection.send(blobUploadTicketIssuer.issue(message))
                     }
                 )
         ).handle(session)
@@ -172,44 +160,6 @@ class GatewayWebSocketHandler(
                 )
             )
         }
-    }
-
-    private suspend fun deliverIndicator(
-        sender: GatewayConnection,
-        recipientId: String,
-        indicatorType: String
-    ) {
-        val event =
-            FederatedIndicatorEvent(
-                senderRoutingId = sender.routingId,
-                recipientRoutingId = recipientId,
-                indicatorType = indicatorType
-            )
-
-        routeFederatedIndicatorEvent(
-            event = event,
-            localDelivery = ::acceptIncomingIndicator,
-            federation = federation
-        )
-    }
-
-    suspend fun acceptIncomingIndicator(event: FederatedIndicatorEvent): Boolean {
-        val recipients = connections.find(event.recipientRoutingId)
-        if (recipients.isEmpty()) {
-            return false
-        }
-
-        recipients.forEach { recipient ->
-            runCatching {
-                recipient.send(
-                    GatewayServerMessage.IndicatorState(
-                        senderId = event.senderRoutingId,
-                        indicatorType = event.indicatorType
-                    )
-                )
-            }
-        }
-        return true
     }
 
     private suspend fun acceptLocallyIfConnected(
@@ -352,20 +302,6 @@ private suspend fun storeAndRouteEnvelope(
     // When neither federation has stored it at the recipient nor the push inbox
     // can accept it, report failure. The sender's outbox will retain/retry it.
     return storedForPush
-}
-
-internal suspend fun routeFederatedIndicatorEvent(
-    event: FederatedIndicatorEvent,
-    localDelivery: suspend (FederatedIndicatorEvent) -> Boolean,
-    federation: FederationClient
-): Boolean {
-    if (localDelivery(event)) {
-        return true
-    }
-
-    return runCatching {
-        federation.routeIndicator(event)
-    }.getOrDefault(false)
 }
 
 internal fun TransportEnvelope.toFederatedEnvelope(

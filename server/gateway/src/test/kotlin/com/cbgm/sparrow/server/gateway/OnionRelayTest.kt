@@ -16,7 +16,6 @@ import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import java.net.InetAddress
 import kotlin.test.Test
@@ -31,14 +30,13 @@ class OnionRelayTest {
     private val firstKeys = X25519KeyPair.generate()
     private val secondKeys = X25519KeyPair.generate()
     private val seenByControlPlane = mutableListOf<String>()
-    private lateinit var second: OnionRelay
 
     private val network =
         HttpClient(
             MockEngine { request ->
                 when (request.url.toString()) {
                     "https://relay-b.test/v1/relay" -> {
-                        when (val reply = runBlocking { second.relay(request.body.toByteArray()) }) {
+                        when (val reply = second.relay(request.body.toByteArray())) {
                             is RelayReply.Sealed -> respond(reply.bytes, HttpStatusCode.OK)
                             RelayReply.Refused -> respond("", HttpStatusCode.BadRequest)
                             RelayReply.NextRelayFailed -> respond("", HttpStatusCode.BadGateway)
@@ -57,9 +55,8 @@ class OnionRelayTest {
     private val policy = RelayDestinationPolicy(allowPrivateAddresses = false, resolve = { listOf(PUBLIC_ADDRESS) })
     private val first = OnionRelay(firstKeys, network, policy)
 
-    init {
-        second = OnionRelay(secondKeys, network, policy)
-    }
+    // The network above hands relay-b's traffic to it, so it is built on first use.
+    private val second: OnionRelay by lazy { OnionRelay(secondKeys, network, policy) }
 
     @Test
     fun twoRelaysCarryARequestNeitherCanRead() =

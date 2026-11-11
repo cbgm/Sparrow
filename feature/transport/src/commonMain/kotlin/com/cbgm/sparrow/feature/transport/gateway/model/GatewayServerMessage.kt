@@ -43,13 +43,6 @@ sealed interface GatewayServerMessage {
         val envelope: TransportEnvelope
     ) : GatewayServerMessage
 
-    @Serializable
-    @SerialName("indicator_state")
-    data class IndicatorState(
-        val senderId: String,
-        val indicatorType: String
-    ) : GatewayServerMessage
-
     /**
      * Confirms that the gateway accepted the envelope and owns delivery retries until the
      * server-declared expiry deadline.
@@ -59,23 +52,6 @@ sealed interface GatewayServerMessage {
     data class EnvelopeAccepted(
         val envelopeId: String,
         val expiresAtEpochMilliseconds: Long
-    ) : GatewayServerMessage
-
-    @Serializable
-    @SerialName("blob_upload_ticket_issued")
-    data class BlobUploadTicketIssued(
-        val requestId: String,
-        val nodeId: String,
-        val uploadToken: String,
-        val blobExpiresAtEpochMilliseconds: Long
-    ) : GatewayServerMessage
-
-    @Serializable
-    @SerialName("blob_upload_ticket_rejected")
-    data class BlobUploadTicketRejected(
-        val requestId: String,
-        val code: String,
-        val message: String
     ) : GatewayServerMessage
 
     @Serializable

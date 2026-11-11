@@ -7,11 +7,8 @@ import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.usecase.CreateGatewaySessionProofUseCase
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
@@ -76,11 +73,6 @@ class DefaultWebSocketTransportClient internal constructor(
     private val mutableIncomingEnvelopes =
         MutableSharedFlow<TransportEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
     override val incomingEnvelopes: Flow<TransportEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
-
-    private val mutableIncomingIndicatorEvents =
-        MutableSharedFlow<GatewayIndicatorEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
-    override val incomingIndicatorEvents: Flow<GatewayIndicatorEvent> =
-        mutableIncomingIndicatorEvents.asSharedFlow()
 
     private val sessionMutex = Mutex()
     private val sendMutex = Mutex()
@@ -148,31 +140,6 @@ class DefaultWebSocketTransportClient internal constructor(
             sendClientMessage(GatewayClientMessage.SendFederatedEnvelope(envelope))
         }
 
-    override suspend fun requestBlobUploadTicket(
-        request: GatewayBlobUploadTicketRequest,
-        timeoutMilliseconds: Long
-    ): Result<GatewayBlobUploadTicket> {
-        if (connectionState.value !is TransportConnectionState.Connected) {
-            return Result.failure(IllegalStateException("WebSocket transport is not connected"))
-        }
-
-        return pendingRequestRegistry.awaitBlobUploadTicket(
-            requestId = request.requestId,
-            timeoutMilliseconds = timeoutMilliseconds
-        ) {
-            sendClientMessage(
-                GatewayClientMessage.RequestBlobUploadTicket(
-                    requestId = request.requestId,
-                    blobId = request.blobId,
-                    maximumBytes = request.maximumBytes,
-                    readCapabilitySha256 = request.readCapabilitySha256,
-                    deleteCapabilitySha256 = request.deleteCapabilitySha256,
-                    blobExpiresAtEpochMilliseconds = request.blobExpiresAtEpochMilliseconds
-                )
-            )
-        }
-    }
-
     override suspend fun awaitRoutingAlias(
         routingAlias: String,
         timeoutMilliseconds: Long
@@ -196,25 +163,6 @@ class DefaultWebSocketTransportClient internal constructor(
             }
             sendClientMessage(
                 GatewayClientMessage.AcknowledgeEnvelope(envelopeId = envelopeId)
-            )
-        }
-
-    override suspend fun sendIndicatorState(
-        recipientId: String,
-        indicatorType: String
-    ): Result<Unit> =
-        runCatching {
-            require(recipientId.isNotBlank()) {
-                "Recipient routing ID must not be blank"
-            }
-            check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket transport is not connected"
-            }
-            sendClientMessage(
-                GatewayClientMessage.IndicatorState(
-                    recipientId = recipientId,
-                    indicatorType = indicatorType
-                )
             )
         }
 
@@ -384,8 +332,7 @@ class DefaultWebSocketTransportClient internal constructor(
                         onRouteRegistered = onRouteRegistered,
                         onRouteRejected = onRouteRejected,
                         onIncomingEnvelope = mutableIncomingEnvelopes::emit,
-                        onUnreadableEnvelope = ::dropUnreadableEnvelope,
-                        onIndicatorEvent = mutableIncomingIndicatorEvents::emit
+                        onUnreadableEnvelope = ::dropUnreadableEnvelope
                     )
 
                 is Frame.Close -> logCloseFrame()

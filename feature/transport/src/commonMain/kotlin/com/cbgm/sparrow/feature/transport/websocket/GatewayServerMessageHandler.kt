@@ -2,9 +2,7 @@ package com.cbgm.sparrow.feature.transport.websocket
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.gateway.codec.envelopeIdOrNull
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayIndicatorEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.presence.PresenceRouteRefreshRejectedException
@@ -41,8 +39,7 @@ internal class GatewayServerMessageHandler(
         onRouteRegistered: () -> Unit,
         onRouteRejected: (Throwable) -> Unit,
         onIncomingEnvelope: suspend (TransportEnvelope) -> Unit,
-        onUnreadableEnvelope: suspend (String) -> Unit,
-        onIndicatorEvent: suspend (GatewayIndicatorEvent) -> Unit
+        onUnreadableEnvelope: suspend (String) -> Unit
     ) {
         // One unreadable frame, or a message type from a newer server, is skipped instead of ending the session.
         val message = decodeOrNull(encodedMessage) ?: return skipUnreadable(encodedMessage, onUnreadableEnvelope)
@@ -64,39 +61,12 @@ internal class GatewayServerMessageHandler(
                 onIncomingEnvelope(message.envelope)
             }
 
-            is GatewayServerMessage.IndicatorState -> {
-                onIndicatorEvent(
-                    GatewayIndicatorEvent(
-                        senderId = message.senderId,
-                        indicatorType = message.indicatorType
-                    )
-                )
-            }
-
             is GatewayServerMessage.EnvelopeAccepted -> {
                 pendingRequestRegistry.completeEnvelopeAcceptance(
                     GatewayEnvelopeAcceptance(
                         envelopeId = message.envelopeId,
                         expiresAtEpochMilliseconds = message.expiresAtEpochMilliseconds
                     )
-                )
-            }
-
-            is GatewayServerMessage.BlobUploadTicketIssued -> {
-                pendingRequestRegistry.completeBlobUploadTicket(
-                    GatewayBlobUploadTicket(
-                        requestId = message.requestId,
-                        nodeId = message.nodeId,
-                        uploadToken = message.uploadToken,
-                        blobExpiresAtEpochMilliseconds = message.blobExpiresAtEpochMilliseconds
-                    )
-                )
-            }
-
-            is GatewayServerMessage.BlobUploadTicketRejected -> {
-                pendingRequestRegistry.rejectBlobUploadTicket(
-                    requestId = message.requestId,
-                    error = IllegalStateException("${message.code}: ${message.message}")
                 )
             }
 

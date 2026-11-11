@@ -97,37 +97,4 @@ class GatewaySerializationTest {
         assertContentEquals(byteArrayOf(1, 2, 3), message.clientSigningPublicKey)
         assertContentEquals(byteArrayOf(4, 5, 6), message.clientSignature)
     }
-
-    @Test
-    fun blobUploadTicketMessagesRoundTrip() {
-        val request =
-            GatewayClientMessage.RequestBlobUploadTicket(
-                requestId = "request-1",
-                blobId = "blob-1234567890123456",
-                maximumBytes = 1_024L,
-                readCapabilitySha256 = "a".repeat(64),
-                deleteCapabilitySha256 = "b".repeat(64),
-                blobExpiresAtEpochMilliseconds = 123_456L
-            )
-        val decodedRequest =
-            serverJson.decodeFromString<GatewayClientMessage>(
-                serverJson.encodeToString<GatewayClientMessage>(request)
-            )
-
-        assertEquals(request, decodedRequest)
-
-        val response =
-            GatewayServerMessage.BlobUploadTicketIssued(
-                requestId = "request-1",
-                nodeId = "node-a",
-                uploadToken = "upload-token",
-                blobExpiresAtEpochMilliseconds = 123_456L
-            )
-        val decodedResponse =
-            serverJson.decodeFromString<GatewayServerMessage>(
-                serverJson.encodeToString<GatewayServerMessage>(response)
-            )
-
-        assertEquals(response, decodedResponse)
-    }
 }
