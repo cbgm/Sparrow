@@ -28,6 +28,8 @@ import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitFallbackStore
 import com.cbgm.sparrow.feature.transport.circuit.DataStoreCircuitHopCountStore
+import com.cbgm.sparrow.feature.transport.circuit.DataStoreDecoyCountStore
+import com.cbgm.sparrow.feature.transport.circuit.DecoyCountStore
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.circuit.FileTransferCircuits
 import com.cbgm.sparrow.feature.transport.circuit.createMailboxHttpClient
@@ -63,6 +65,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackU
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
@@ -70,6 +73,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetDecoyCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.DataStoreInvitationMailboxStore
@@ -189,6 +193,7 @@ val transportModule =
 
         single<CircuitHopCountStore> { DataStoreCircuitHopCountStore(dataStore = get()) }
         single<CircuitCountStore> { DataStoreCircuitCountStore(dataStore = get()) }
+        single<DecoyCountStore> { DataStoreDecoyCountStore(dataStore = get()) }
 
         single<CircuitFallbackStore> { DataStoreCircuitFallbackStore(dataStore = get()) }
         single<ConnectionModeStore> { DataStoreConnectionModeStore(dataStore = get()) }
@@ -440,6 +445,8 @@ val transportModule =
         singleOf(::SetCircuitHopCountUseCase)
         singleOf(::ObserveCircuitCountUseCase)
         singleOf(::SetCircuitCountUseCase)
+        singleOf(::ObserveDecoyCountUseCase)
+        singleOf(::SetDecoyCountUseCase)
         singleOf(::ObserveCircuitStatusUseCase)
         singleOf(::ObserveCircuitFallbackUseCase)
         singleOf(::SetCircuitFallbackUseCase)

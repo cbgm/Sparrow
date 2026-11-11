@@ -14,6 +14,10 @@ data class CircuitHopsUiState(
     val selectedCircuitCount: Int = 2,
     val minimumCircuitCount: Int = 1,
     val maximumCircuitCount: Int = 3,
+    /** Decoy envelopes sent with each send; 0 is off. */
+    val selectedDecoyCount: Int = 0,
+    val minimumDecoyCount: Int = 0,
+    val maximumDecoyCount: Int = 5,
     /** How messages reach the device while Sparrow is closed. */
     val connectionMode: ConnectionMode = ConnectionMode.WHILE_OPEN,
     /** False on iOS: there only a note is shown. */

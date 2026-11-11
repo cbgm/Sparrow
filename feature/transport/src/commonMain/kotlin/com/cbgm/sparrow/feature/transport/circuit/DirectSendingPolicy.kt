@@ -36,5 +36,8 @@ class DirectSendingPolicy(
         }
     }
 
+    /** Whether a circuit through at least [CircuitHopCount.PROTECTING] hops is up, so a send hides the device's address. */
+    fun hasProtectingCircuit(): Boolean = circuits.currentCircuit(minimumHopCount = CircuitHopCount.PROTECTING) != null
+
     private fun CircuitStatus.protects(): Boolean = this is CircuitStatus.Connected && hopCount >= CircuitHopCount.PROTECTING
 }

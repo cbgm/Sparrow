@@ -524,6 +524,9 @@
     <string name="feature_settings_circuit_count">Routen: %1$d</string>
     <string name="feature_settings_circuit_count_hint">Deine Kontakte werden auf die Routen verteilt, die – wenn es genug Betreiber gibt – jeweils an einem Knoten eines anderen Betreibers enden, sodass kein Betreiber alle sieht. Jede Route braucht etwas mehr Akku und Daten.</string>
     <string name="feature_settings_circuit_count_open">%1$d von %2$d Routen offen</string>
+    <string name="feature_settings_decoy_count">Tarnumschläge: %1$d pro Nachricht</string>
+    <string name="feature_settings_decoy_count_off">Tarnumschläge: aus</string>
+    <string name="feature_settings_decoy_count_hint">Mit jeder Nachricht gehen gleichzeitig so viele Tarnumschläge in die Postfächer anderer Kontakte, damit ein Postfach-Knoten am Zeitpunkt nicht erkennt, wem du schreibst oder wer in einer Gruppe ist. Sie kosten etwas Daten bei dir und bei den Kontakten, die sie bekommen; Nachrichten werden nicht verzögert. Nur über eine schützende Route gesendet.</string>
     <string name="feature_settings_circuit_operators_fewer">Deine Routen enden nur bei %1$d von %2$d verschiedenen Betreibern: nicht genug Betreiber mit weiterleitenden Knoten</string>
     <string name="feature_settings_circuit_send_directly">Ohne Route direkt senden</string>
     <string name="feature_settings_circuit_send_directly_on">Solange keine Route über mindestens zwei Knoten verfügbar ist, laufen Senden und Empfangen über Postfächer direkt oder über einen einzigen Knoten: Nachrichten funktionieren weiter, aber ein Server sieht deine Adresse.</string>

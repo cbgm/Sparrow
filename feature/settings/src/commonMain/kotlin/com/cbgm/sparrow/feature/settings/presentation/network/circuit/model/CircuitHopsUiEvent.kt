@@ -16,6 +16,10 @@ sealed interface CircuitHopsUiEvent {
         val circuitCount: Int
     ) : CircuitHopsUiEvent
 
+    data class DecoyCountChanged(
+        val decoyCount: Int
+    ) : CircuitHopsUiEvent
+
     data class ConnectionModeChanged(
         val mode: ConnectionMode
     ) : CircuitHopsUiEvent

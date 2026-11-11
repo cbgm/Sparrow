@@ -42,6 +42,11 @@ used work stamps are kept for 10 minutes), mailboxes live at most 31 days
 and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
 container logs are capped at 3 × 10 MB per service.
 
+A mailbox node sees when envelopes are stored and fetched, and from that can guess which of its random mailboxes
+form a group or the two directions of one chat, and when their owner is online. The optional decoy envelopes
+(Settings > Network > Onion routing, off by default) hide which mailboxes a send was for; online status stays
+visible. See [Decoy envelopes](../features/transport.md#decoy-envelopes).
+
 Anyone can run a Community Node; registering one gives no power over other nodes' clients. The first relay of
 a circuit still sees the app's network address. The last relay sees the content of requests that are not sealed
 for the Control Plane (node directory fetches, invitation route lookups), but not who sent them.

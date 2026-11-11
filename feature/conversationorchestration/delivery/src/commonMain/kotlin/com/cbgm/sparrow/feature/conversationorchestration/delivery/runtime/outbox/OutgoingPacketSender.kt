@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outb
 
 import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoyEnvelopes
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
 import com.cbgm.sparrow.protocol.codec.PacketCodec
@@ -18,7 +19,8 @@ class OutgoingPacketSender(
     private val recipientRoutingResolver: OutgoingRecipientRoutingResolver,
     private val sendEncodedTransport: SendEncodedTransportUseCase,
     private val deliveryStateListener: OutboxDeliveryStateListener,
-    private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase
+    private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase,
+    private val decoyEnvelopes: DecoyEnvelopes
 ) {
     suspend fun send(item: ProtocolOutboxItem): Result<OutgoingWireAcceptance> =
         runCatching {
@@ -50,6 +52,8 @@ class OutgoingPacketSender(
                 ).getOrThrow()
 
             val recipientRoutingId = recipientRoutingResolver.resolve(item.contactId, packet)
+            // Decoys start together with the real envelope, so neither comes first.
+            decoyEnvelopes.depositAlongside(decoyEnvelopes.prepare(item.contactId))
             sendEncodedTransport(recipientRoutingId, encodedTransportPayload, recipientContactId = item.contactId)
                 .getOrElse { error ->
                     // Only a failure at the actual wire-send stage is retryable.

@@ -7,6 +7,7 @@ import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
 import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.CoverPacket
 import com.cbgm.sparrow.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupDescriptionUpdatedPacket
@@ -77,6 +78,7 @@ class OutgoingPacketTransportPolicy {
                 }
 
                 // Sent right after the handshake, before the identity is verified, with the key the handshake set.
+                is CoverPacket,
                 is IndicatorPacket,
                 is MailboxRoutePacket ->
                     OutgoingTransportRequirement(

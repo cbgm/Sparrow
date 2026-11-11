@@ -61,6 +61,9 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_on
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_building
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_connected
 import com.cbgm.sparrow.resources.feature_settings_circuit_status_unavailable
+import com.cbgm.sparrow.resources.feature_settings_decoy_count
+import com.cbgm.sparrow.resources.feature_settings_decoy_count_hint
+import com.cbgm.sparrow.resources.feature_settings_decoy_count_off
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -104,6 +107,11 @@ fun CircuitHopsScreen(
             item(key = "circuits") {
                 SparrowCardNoAnimation {
                     CircuitCountChooser(uiState = uiState, onUiEvent = onUiEvent)
+                }
+            }
+            item(key = "decoys") {
+                SparrowCardNoAnimation {
+                    DecoyCountChooser(uiState = uiState, onUiEvent = onUiEvent)
                 }
             }
             item(key = "fallback") {
@@ -194,6 +202,38 @@ private fun CircuitCountChooser(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+    }
+}
+
+@Composable
+private fun DecoyCountChooser(
+    uiState: CircuitHopsUiState,
+    onUiEvent: (CircuitHopsUiEvent) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MaterialTheme.spacing.base),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    ) {
+        Text(
+            text =
+                if (uiState.selectedDecoyCount == 0) {
+                    stringResource(Res.string.feature_settings_decoy_count_off)
+                } else {
+                    stringResource(Res.string.feature_settings_decoy_count, uiState.selectedDecoyCount)
+                },
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Slider(
+            value = uiState.selectedDecoyCount.toFloat(),
+            onValueChange = { value -> onUiEvent(CircuitHopsUiEvent.DecoyCountChanged(value.roundToInt())) },
+            valueRange = uiState.minimumDecoyCount.toFloat()..uiState.maximumDecoyCount.toFloat(),
+            steps = uiState.maximumDecoyCount - uiState.minimumDecoyCount - 1
+        )
+        StatusLine(text = stringResource(Res.string.feature_settings_decoy_count_hint))
     }
 }
 

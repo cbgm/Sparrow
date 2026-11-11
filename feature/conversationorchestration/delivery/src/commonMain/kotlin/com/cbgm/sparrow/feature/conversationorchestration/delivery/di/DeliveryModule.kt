@@ -13,6 +13,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.reposi
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.usecase.SendConversationIndicatorUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.event.ApplyDeliveryEventWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.transport.RecordPreparedTransportWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.CoverEnvelopeSealer
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.CoverPacketHandler
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoyEnvelopes
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoySealer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.delivery.OutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.IndicatorPacketHandler
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicatorGateway
@@ -35,6 +39,7 @@ import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUse
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
+import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
@@ -104,9 +109,21 @@ private fun Module.registerOutbox() {
             recipientRoutingResolver = get(),
             sendEncodedTransport = get<SendEncodedTransportUseCase>(),
             deliveryStateListener = get(),
-            observePendingRemoteIdentityChanges = get()
+            observePendingRemoteIdentityChanges = get(),
+            decoyEnvelopes = get()
         )
     }
+    single {
+        DecoyEnvelopes(
+            decoyCountStore = get(),
+            hasProtectingCircuit = get<DirectSendingPolicy>()::hasProtectingCircuit,
+            mailboxRouteRepository = get(),
+            sealer = get(),
+            mailboxGateway = get()
+        )
+    }
+    singleOf(::CoverEnvelopeSealer) { bind<DecoySealer>() }
+    singleOf(::CoverPacketHandler) { bind<TypedProtocolPacketHandler>() }
     single<OutboxProcessor> {
         val sender = get<OutgoingPacketSender>()
         DefaultOutboxProcessor(

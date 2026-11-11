@@ -524,6 +524,9 @@
     <string name="feature_settings_circuit_count">Circuits: %1$d</string>
     <string name="feature_settings_circuit_count_hint">Your contacts are spread across the circuits, each ending at a node of a different operator when there are enough, so no single operator sees all of them. Each circuit uses a little more battery and data.</string>
     <string name="feature_settings_circuit_count_open">%1$d of %2$d circuits open</string>
+    <string name="feature_settings_decoy_count">Decoy envelopes: %1$d per send</string>
+    <string name="feature_settings_decoy_count_off">Decoy envelopes: off</string>
+    <string name="feature_settings_decoy_count_hint">With each message, this many decoys go into other contacts' mailboxes at the same moment, so a mailbox node cannot tell from timing whom you wrote to or who is in a group. They cost a little data for you and the contacts that get them; messages are not delayed. Sent only through a protecting circuit.</string>
     <string name="feature_settings_circuit_operators_fewer">Your circuits end at only %1$d of %2$d different operators: not enough operators run relaying nodes</string>
     <string name="feature_settings_circuit_send_directly">Send directly without a route</string>
     <string name="feature_settings_circuit_send_directly_on">While no route through at least two nodes is available, sending and receiving through mailboxes go directly or through a single node: messages keep working, but a server sees your address.</string>

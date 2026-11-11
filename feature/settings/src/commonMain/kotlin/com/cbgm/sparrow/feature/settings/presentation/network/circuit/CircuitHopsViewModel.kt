@@ -10,16 +10,19 @@ import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 import com.cbgm.sparrow.feature.transport.circuit.CircuitCount
 import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
+import com.cbgm.sparrow.feature.transport.circuit.DecoyCount
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetDecoyCountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,11 +36,13 @@ class CircuitHopsViewModel(
     observeCircuitFallback: ObserveCircuitFallbackUseCase,
     observeCircuitCount: ObserveCircuitCountUseCase,
     observeConnectionMode: ObserveConnectionModeUseCase,
+    observeDecoyCount: ObserveDecoyCountUseCase,
     canConnectWhileClosed: CanConnectWhileClosedUseCase,
     private val setCircuitHopCount: SetCircuitHopCountUseCase,
     private val setCircuitFallback: SetCircuitFallbackUseCase,
     private val setCircuitCount: SetCircuitCountUseCase,
-    private val setConnectionMode: SetConnectionModeUseCase
+    private val setConnectionMode: SetConnectionModeUseCase,
+    private val setDecoyCount: SetDecoyCountUseCase
 ) : BaseViewModel() {
     private val connectsWhileClosed = canConnectWhileClosed()
     private val draftHopCount = MutableStateFlow<Int?>(null)
@@ -68,6 +73,9 @@ class CircuitHopsViewModel(
                 connectsWhileClosed = connectsWhileClosed
             )
         }.combine(observeConnectionMode()) { state, mode -> state.copy(connectionMode = mode) }
+            .combine(observeDecoyCount()) { state, decoyCount ->
+                state.copy(selectedDecoyCount = decoyCount, minimumDecoyCount = DecoyCount.MINIMUM, maximumDecoyCount = DecoyCount.MAXIMUM)
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLISECONDS), CircuitHopsUiState())
 
     fun onUiEvent(event: CircuitHopsUiEvent) {
@@ -77,6 +85,7 @@ class CircuitHopsViewModel(
             CircuitHopsUiEvent.HopCountChosen -> saveDraft()
             is CircuitHopsUiEvent.SendDirectlyChanged -> saveFallback(event.sendsDirectly)
             is CircuitHopsUiEvent.CircuitCountChanged -> saveCircuitCount(event.circuitCount)
+            is CircuitHopsUiEvent.DecoyCountChanged -> saveDecoyCount(event.decoyCount)
             is CircuitHopsUiEvent.ConnectionModeChanged -> saveConnectionMode(event.mode)
         }
     }
@@ -94,6 +103,14 @@ class CircuitHopsViewModel(
         viewModelScope.launch {
             setCircuitCount(circuitCount).onFailure { error ->
                 SparrowLog.error("CircuitHopsViewModel", "Circuit count could not be saved", error)
+            }
+        }
+    }
+
+    private fun saveDecoyCount(decoyCount: Int) {
+        viewModelScope.launch {
+            setDecoyCount(decoyCount).onFailure { error ->
+                SparrowLog.error("CircuitHopsViewModel", "Decoy count could not be saved", error)
             }
         }
     }
