@@ -11,7 +11,7 @@ Release/production server deployments may require material such as:
 - generated registry signing state;
 - database passwords/internal API tokens depending on deployment mode.
 
-In an installation created by the server installer, `control-plane/secrets/` holds the generated registry trust material and other generated secrets; the installer reuses them on every Start. Operators select the Firebase Admin JSON in the installer (**Push notifications and phone verification**, or `--firebase-file`). It is stored outside the bundle on Windows (`%LOCALAPPDATA%\Sparrow\Server\Secrets\<control-plane-id>\firebase-admin.json`) and as `control-plane/secrets/firebase-admin.json` on Linux/macOS, and mounted read-only into `push` and `presence-directory` through `docker-compose.firebase.yml`. The service account needs FCM and Firebase Authentication access to the app's Firebase project (`FIREBASE_TARGET_PROJECT_ID`, default `sparrow-a9048`).
+In an installation created by the server installer, `control-plane/secrets/` holds the generated registry trust material and other generated secrets; the installer reuses them on every Start. The server needs no Firebase credentials: phone numbers are verified by the phone verifier next to the Control Plane Directory, whose keys live only in its own Docker volume (`sparrow-phone-verifier-state`). The Directory operator imports the Firebase Admin service account file in the Directory installer; it is kept as `private/firebase-admin.json` in the Directory folder and mounted read-only into the phone verifier only.
 
 ## Repository helper
 

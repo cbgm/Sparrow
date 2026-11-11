@@ -216,7 +216,6 @@ jobs:
               "control-plane/docker-compose.release.yml",
               "control-plane/docker-compose.production.yml",
               "control-plane/docker-compose.shared-proxy.yml",
-              "control-plane/docker-compose.firebase.yml",
           }
           forbidden_prefixes = (
               "control-plane-directory/",

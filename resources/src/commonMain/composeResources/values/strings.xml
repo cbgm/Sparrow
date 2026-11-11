@@ -248,6 +248,7 @@
     <string name="feature_identity_incomplete_identity">Incomplete identity</string>
     <string name="feature_identity_incomplete_identity_description">Only part of your identity is available. Replacement keys will not be generated automatically.</string>
     <string name="feature_identity_private_keys_protected">Your private keys are protected locally</string>
+    <string name="feature_identity_phone_verification_limit">Daily limit of phone verifications reached. Contacts cannot find you by your number until it is verified.</string>
     <string name="feature_identity_public_keys_always_included">Your public encryption and signing keys are always included. Your private keys never leave this device.</string>
     <string name="feature_identity_raw_identity">RAW IDENTITY</string>
     <string name="feature_identity_scan_to_add_you">Let the other person scan this QR directly from your device to verify your identity.</string>

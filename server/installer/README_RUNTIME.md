@@ -27,9 +27,7 @@ On Linux/macOS, install a fresh combined public server with shared Caddy and aut
 
     ./Start-SparrowServer.sh install --component combined --mode public --auto-dns
 
-Use the same `install` action in the original installed folder to start/update without clearing server identity, stored messages, databases, or volumes. To configure Firebase Admin (push and phone verification, see below) on that deployment:
-
-    ./Start-SparrowServer.sh install --component combined --mode public --firebase-file /outside-the-installation/firebase-admin.json
+Use the same `install` action in the original installed folder to start/update without clearing server identity, stored messages, databases, or volumes.
 
 Management:
 
@@ -145,8 +143,8 @@ exist. The installer cannot take over an unrelated proxy that already binds
 80/443. In LAN mode, each node advertises a separate local host port, starting
 at 8500 and increasing by 5 for each additional managed instance. Check
 that the chosen ports and the advertised LAN address are reachable from
-clients. Public DNS, TLS/ACME, HTTPS/WSS, node registry publication, Firebase
-wakeups, message delivery, and multi-host behavior still require live tests
+clients. Public DNS, TLS/ACME, HTTPS/WSS, node registry publication,
+message delivery, and multi-host behavior still require live tests
 on the target deployment.
 
 Node-only instances are stored under `node-instances/<id>` in the **original
@@ -328,21 +326,23 @@ keeps the value. An empty value uses the default.
 ### Phone verification
 
 Phone numbers are verified once in the app during sign-up (Firebase SMS), when
-an identity is created or restored. Only the app's first route registration
-carries the one-time Firebase ID token; later registrations carry none. The
-Control Plane's `presence-directory` checks a token with the Firebase
-service-account credentials (the same import as push, mounted as
-`GOOGLE_APPLICATION_CREDENTIALS` through `docker-compose.firebase.yml`) and
-stores nothing about it:
+an identity is created or restored. The app sends the Firebase ID token, sealed
+and through two relays, to the phone verifier of the Control Plane Directory
+(`server/control-plane-directory/phone_verifier.py`), which answers with a
+signed attestation that the phone alias belongs to this device. The app puts
+the attestation into its alias claims. The Control Plane's `presence-directory`
+checks it with the pinned Directory key (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`
+in `control-plane/.env.runtime`, copied from `sparrow.conf` on every Start)
+and stores nothing about it:
 
-- no token, or no credentials imported: the registration is accepted;
-- a blank token, an invalid or expired token, a token that is not a phone
-  sign-in, or a phone alias that does not match the verified number: the
-  registration is rejected with HTTP 403 `PHONE_VERIFICATION_FAILED`.
+- no attestation: the claim proves nothing; a free phone alias is not bound,
+  one the device already holds stays with it;
+- an attestation that is not signed under the pinned Directory key, is
+  expired, or is for another device: the claim is rejected with HTTP 403
+  `PHONE_VERIFICATION_FAILED`.
 
-There is no server setting that makes verified phone numbers mandatory. The
-Firebase project is `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`); the
-service account needs Firebase Authentication access to it in addition to FCM.
+This server needs no Firebase credentials. Without a pinned Directory key,
+only test phone numbers can be bound.
 
 #### Test phone numbers
 

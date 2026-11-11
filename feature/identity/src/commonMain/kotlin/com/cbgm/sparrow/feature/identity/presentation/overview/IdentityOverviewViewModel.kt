@@ -12,6 +12,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusU
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePhoneVerificationLimitReachedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.presentation.backup.mapper.toUi
@@ -39,7 +40,8 @@ class IdentityOverviewViewModel(
     private val observeLocalProfilePicture: ObserveLocalProfilePictureUseCase,
     private val consumeAvatarEditResult: ConsumeAvatarEditResultUseCase,
     private val setLocalProfilePicture: SetLocalProfilePictureUseCase,
-    private val removeLocalProfilePicture: RemoveLocalProfilePictureUseCase
+    private val removeLocalProfilePicture: RemoveLocalProfilePictureUseCase,
+    private val observePhoneVerificationLimitReached: ObservePhoneVerificationLimitReachedUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<IdentityOverviewUiState>(IdentityOverviewUiState.Loading)
     val uiState = _uiState.asStateFlow()
@@ -49,8 +51,10 @@ class IdentityOverviewViewModel(
 
     private var pictureState = IdentityProfilePictureUiState()
     private var pictureJob: Job? = null
+    private var phoneVerificationLimitReached = false
 
     init {
+        observePhoneVerificationLimit()
         observePicture()
         refreshBackupStatus()
         load()
@@ -66,6 +70,17 @@ class IdentityOverviewViewModel(
             IdentityOverviewUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             IdentityOverviewUiEvent.OpenKeysClicked -> navigator.navigateTo(AppRoute.IdentityKeys)
             IdentityOverviewUiEvent.OpenBackupClicked -> navigator.navigateTo(AppRoute.IdentityBackup)
+        }
+    }
+
+    private fun observePhoneVerificationLimit() {
+        viewModelScope.launch {
+            observePhoneVerificationLimitReached().collect { reached ->
+                phoneVerificationLimitReached = reached
+                _uiState.update { state ->
+                    if (state is IdentityOverviewUiState.Ready) state.copy(phoneVerificationLimitReached = reached) else state
+                }
+            }
         }
     }
 
@@ -148,7 +163,13 @@ class IdentityOverviewViewModel(
                 loadFailed()
                 return@launch
             }
-            _uiState.value = IdentityOverviewUiState.Ready(phone, backupStatus, pictureState)
+            _uiState.value =
+                IdentityOverviewUiState.Ready(
+                    localPhoneNumber = phone,
+                    phoneVerificationLimitReached = phoneVerificationLimitReached,
+                    backupStatus = backupStatus,
+                    profilePicture = pictureState
+                )
         }
     }
 

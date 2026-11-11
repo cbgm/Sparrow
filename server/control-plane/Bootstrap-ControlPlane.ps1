@@ -232,85 +232,6 @@ function Assert-ComposeVersion {
     }
 }
 
-function Read-LocalProperty {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Name
-    )
-
-    $path = Join-Path $projectRoot "local.properties"
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        return $null
-    }
-
-    foreach ($line in Get-Content -LiteralPath $path) {
-        $trimmed = $line.Trim()
-        if ($trimmed.Length -eq 0 -or $trimmed.StartsWith("#")) {
-            continue
-        }
-
-        $separator = $trimmed.IndexOf("=")
-        if ($separator -le 0) {
-            continue
-        }
-
-        $key = $trimmed.Substring(0, $separator).Trim()
-        if ($key -ne $Name) {
-            continue
-        }
-
-        $value = $trimmed.Substring($separator + 1).Trim()
-        $value = $value.Replace("\:", ":")
-        $value = $value.Replace("\\", "\")
-        return $value
-    }
-
-    return $null
-}
-
-function Resolve-FirebaseCredentials {
-    $configured = Read-LocalProperty -Name "sparrow.firebase.adminCredentials"
-    if (-not [string]::IsNullOrWhiteSpace($configured)) {
-        $expanded = [Environment]::ExpandEnvironmentVariables($configured)
-        if (Test-Path -LiteralPath $expanded -PathType Leaf) {
-            return (Resolve-Path -LiteralPath $expanded).Path
-        }
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($env:FIREBASE_ADMIN_CREDENTIALS)) {
-        if (Test-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS -PathType Leaf) {
-            return (Resolve-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS).Path
-        }
-    }
-
-    $bundled = Join-Path $secretsDirectory "firebase-admin.json"
-    if (Test-Path -LiteralPath $bundled -PathType Leaf) {
-        return (Resolve-Path -LiteralPath $bundled).Path
-    }
-
-    $matches = @(
-        Get-ChildItem `
-            -LiteralPath $projectRoot `
-            -Recurse `
-            -File `
-            -ErrorAction SilentlyContinue |
-            Where-Object {
-                $_.Extension -eq ".json" -and
-                (
-                    $_.Name -match "(?i)firebase.*admin" -or
-                    $_.Name -match "(?i)service[-_ ]?account"
-                ) -and
-                $_.FullName -notmatch "[\\/](build|\.gradle|\.git)[\\/]"
-            }
-    )
-
-    if ($matches.Count -eq 1) {
-        return $matches[0].FullName
-    }
-
-    return $null
-}
-
 function New-RandomSecret {
     $bytes = New-Object byte[] 48
     $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -422,15 +343,17 @@ try {
         $pushTokenPath
     ) | ForEach-Object { Ensure-SecretFile -Path $_ }
 
-    $firebasePath = Resolve-FirebaseCredentials
-    $firebaseComposePath = if ($null -ne $firebasePath) { $firebasePath.Replace("\", "/") } else { "" }
+    # The presence directory checks phone attestations with the pinned Directory key.
+    $directoryKey = @(Get-Content -LiteralPath (Join-Path $deploymentDirectory "sparrow.conf") -ErrorAction SilentlyContinue |
+        Where-Object { $_ -like "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=*" } | Select-Object -First 1)
+    $directoryKey = if ($directoryKey.Count -gt 0) { ([string]$directoryKey[0]).Substring("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=".Length).Trim() } else { "" }
 
     $runtimeEnvironment = @(
         "CONTROL_PLANE_PROJECT_NAME=sparrow-control-plane",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
         "CONTROL_PLANE_SITE_ADDRESS=:80",
-        "FIREBASE_ADMIN_CREDENTIALS=$firebaseComposePath",
+        "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=$directoryKey",
         "NODE_REGISTRY_DATABASE_PASSWORD=$(Read-SecretFile -Path $registryPasswordPath)",
         "PRESENCE_REDIS_PASSWORD=$(Read-SecretFile -Path $presencePasswordPath)",
         "PUSH_DATABASE_PASSWORD=$(Read-SecretFile -Path $pushPasswordPath)",
@@ -450,10 +373,6 @@ try {
         "-f",
         $composePath
     )
-
-    if ($null -ne $firebasePath) {
-        $composeArguments += @("-f", (Join-Path $deploymentDirectory "docker-compose.firebase.yml"))
-    }
 
     Push-Location $deploymentDirectory
     try {

@@ -10,7 +10,7 @@
     "control-plane": [
       "docker-compose.yml", "docker-compose.release.yml", "docker-compose.production.yml",
       "docker-compose.shared-proxy.yml", "docker-compose.public-transition.yml",
-      "docker-compose.firebase.yml", "Caddyfile", "index.html",
+      "Caddyfile", "index.html",
       "Bootstrap-ControlPlane.ps1", "bootstrap-control-plane.sh"
     ],
     "public-proxy": ["docker-compose.yml"]

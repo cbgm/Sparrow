@@ -92,11 +92,6 @@ function Copy-ComponentSnapshot([string]$Folder, [string]$Name, [hashtable]$Runt
         $relative = $item.FullName.Substring($secrets.Length).TrimStart([char[]]@([char]92, [char]47))
         Copy-SnapshotFile $item.FullName "$prefix/secrets/$relative" $item.FullName
     }
-    if ($Name -eq 'control-plane' -and $Runtime['FIREBASE_ADMIN_CREDENTIALS']) {
-        $credential = $Runtime['FIREBASE_ADMIN_CREDENTIALS']
-        if (-not [System.IO.Path]::IsPathRooted($credential)) { throw 'FCM credential path is not absolute; cannot reliably preserve the secret.' }
-        Copy-SnapshotFile $credential 'external-secrets/control-plane/firebase-admin.json' $credential
-    }
 }
 
 $targetRoot = [System.IO.Path]::GetFullPath($BackupDirectory)

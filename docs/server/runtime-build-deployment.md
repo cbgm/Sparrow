@@ -96,7 +96,7 @@ Registry/presence/push:
 - `NodeRegistryStore`
 - `RegistryDirectorySigner`, `DirectRegistryDirectorySigner`, `RotatingRegistryDirectorySigner`
 - `RegistryAuthorityCertificateStore`
-- `PhoneVerification`, `FirebasePhoneTokenVerifier`, `CachingPhoneTokenVerifier`
+- `PhoneVerification`, `PhoneAttestations`
 - `PushCoordinator`
 - `FirebasePushSender`
 - PostgreSQL push stores

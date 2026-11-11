@@ -222,7 +222,10 @@ internal class RelayDestinationPolicy(
             listOf(
                 "GET" to Regex("/v1/nodes"),
                 "GET" to Regex("/health/registry"),
-                "POST" to Regex("/v1/alias-claims")
+                "POST" to Regex("/v1/alias-claims"),
+                // The phone verifier next to the Control Plane Directory: its certified keys and sealed attestations.
+                "GET" to Regex("/v1/phone-attestations/keys"),
+                "POST" to Regex("/v1/phone-attestations")
             )
     }
 }

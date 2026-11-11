@@ -93,44 +93,6 @@ def public_addresses():
             print(f"  WebSocket: wss://{host}/v1/gateway")
 
 
-def enable_firebase_credentials(source_file):
-    """Add Admin credentials to existing CP without replacing its identity/volumes."""
-    require(runtime("control-plane").is_file(), "Control Plane must be installed first.")
-    inspect_ownership("control-plane")
-    source = Path(source_file).expanduser().resolve(strict=True)
-    document = json.loads(source.read_text(encoding="utf-8"))
-    require(document.get("type") == "service_account" and document.get("private_key") and
-            document.get("client_email"), "Expected Firebase Admin service-account JSON.")
-    # The credential file is included via an optional Compose override; no
-    # secret content is printed to terminal or logs.
-    destination = ROOT / "control-plane" / "secrets" / "firebase-admin.json"
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    current = destination.read_bytes() if destination.is_file() else None
-    incoming = source.read_bytes()
-    runtime_file = runtime("control-plane")
-    previous_runtime = runtime_file.read_bytes()
-    if current is not None and current != incoming:
-        raise InstallerError("Different Firebase credentials are already installed; refusing implicit replacement.")
-    added = current is None
-    if added:
-        temporary = destination.with_name(".firebase-admin.pending")
-        temporary.write_bytes(incoming)
-        temporary.chmod(0o600)
-        temporary.replace(destination)
-    try:
-        update_installed_properties(runtime_file, {"FIREBASE_ADMIN_CREDENTIALS": str(destination)})
-        dc("control-plane", "config", "--quiet")
-        # Apply the optional Compose secret to both services that use it: push (FCM)
-        # and presence-directory (phone verification). Volumes remain intact.
-        dc("control-plane", "up", "-d", "--no-deps", "--pull", "never", "push", "presence-directory")
-    except Exception:
-        runtime_file.write_bytes(previous_runtime)
-        if added:
-            destination.unlink(missing_ok=True)
-        raise
-    print("Firebase Admin credentials configured for existing Control Plane (no reset).")
-
-
 def reinstall_public(args):
     """Opt-in destructive operation. Never use from normal Install / Start."""
     require(args.component == "combined" and args.mode == "public",
@@ -160,10 +122,6 @@ def reinstall_public(args):
         require(containers, "Cannot verify shared proxy ownership; refusing to delete its certificates.")
         inspect_ownership("proxy")
     # No resources are changed before all ownership and state checks succeed.
-    if args.firebase_file:
-        selected_file = Path(args.firebase_file).expanduser().resolve(strict=True)
-        require(ROOT / "control-plane" / "secrets" not in selected_file.parents,
-                "Select a credential JSON stored outside the installation for reinstall.")
     print("EXPLICIT REINSTALL: clearing the owned Combined deployment, including all its data and identities.")
     if (ROOT / "public-proxy" / "Caddyfile").is_file():
         dc("proxy", "down", "--volumes")
@@ -272,8 +230,6 @@ def compose(component):
         files.append("docker-compose.production.yml")
         if settings.get("SHARED_PROXY") == "true":
             files.append("docker-compose.shared-proxy.yml")
-    if component == "control-plane" and (directory / "secrets" / "firebase-admin.json").is_file():
-        files.append("docker-compose.firebase.yml")
     args = ["docker", "compose", "--env-file", str(runtime(component))]
     for name in files:
         require((directory / name).is_file(), f"Missing {directory / name}")
@@ -838,12 +794,6 @@ def install(args):
                 "Invalid Control Plane directory URL (HTTPS required in Public mode).")
     if args.component == "node" and not args.directory_url and not runtime("node").is_file():
         raise InstallerError("Node-only install requires --directory-url pointing to a trusted Control Plane.")
-    if args.firebase_file:
-        require("control-plane" in components, "--firebase-file requires Control Plane.")
-        source = Path(args.firebase_file).expanduser().resolve(strict=True)
-        document = json.loads(source.read_text(encoding="utf-8"))
-        require(document.get("type") == "service_account" and document.get("private_key") and document.get("client_email"),
-                "Expected service account JSON. Authorization to Android Firebase project must be configured separately.")
     if args.mode == "public" and not (ROOT / "public-proxy" / "Caddyfile").is_file():
         reject_public_port_conflicts()
     # Refresh discovery even if an unrelated Control Plane image pull later
@@ -867,12 +817,6 @@ def install(args):
                       "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
                       "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY": config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", ""),
                       "SPARROW_IMAGE_PREFIX": args.image_prefix, "SPARROW_IMAGE_TAG": args.image_tag})
-        if args.firebase_file:
-            dest = ROOT / "control-plane" / "secrets" / "firebase-admin.json"
-            dest.parent.mkdir(exist_ok=True, parents=True)
-            require(not dest.exists(), "Existing Firebase file must not be replaced automatically.")
-            shutil.copyfile(Path(args.firebase_file).expanduser(), dest)
-            dest.chmod(0o600)
         run(["bash", str(ROOT / "control-plane" / "bootstrap-control-plane.sh")])
     if "node" in components and not runtime("node").exists():
         cp_url = (f"https://{args.control_domain}" if args.mode == "public" else "http://localhost:8390") if args.component == "combined" else ""
@@ -919,10 +863,10 @@ def install(args):
         # Compose up recreates Caddy only when needed (new read-only proof mount)
         # and retains its persistent certificate volumes.
         dc("proxy", "up", "-d")
-    # Configure new credentials on an already installed Control Plane before the
-    # normal backend update. A freshly bootstrapped CP already imported them.
-    if args.firebase_file and runtime("control-plane").is_file():
-        enable_firebase_credentials(args.firebase_file)
+    # The presence directory checks phone attestations with the pinned Directory key.
+    if runtime("control-plane").is_file():
+        update_installed_properties(runtime("control-plane"), {
+            "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY": config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", "")})
     # Install / Start always refreshes existing Sparrow backend images from GHCR.
     # No database/Redis/Caddy image updates, no re-bootstrap or new identities.
     if "node" in components and runtime("node").is_file():
@@ -998,7 +942,6 @@ def parse_args():
     parser.add_argument("--directory-url", default="")
     parser.add_argument("--image-prefix", default=None, help="default: the installed or bundled prefix")
     parser.add_argument("--image-tag", default=None, help="default: the installed or bundled tag")
-    parser.add_argument("--firebase-file", default="", help="authorized Firebase Admin service-account JSON")
     parser.add_argument("--auto-dns", action="store_true", help="generate free sslip.io hostnames from WAN IPv4")
     parser.add_argument("--public-ip", default="", help="optional explicit public IPv4 for automatic DNS")
     parser.add_argument("--verify-public", action="store_true", help="require advertised public Node in the signed CP directory")

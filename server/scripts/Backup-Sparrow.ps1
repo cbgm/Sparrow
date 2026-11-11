@@ -255,7 +255,6 @@ try {
         databases = $databaseManifest
         identities = $identityManifest
         intentionallyExcluded = @(
-            "Firebase Admin credentials",
             "Compose secret files and environment files",
             "Redis presence routes because clients refresh these short-lived routes"
         )
@@ -279,7 +278,7 @@ try {
 
     Write-Host "Backup created: $archivePath"
     Write-Host "SHA-256: $(Get-LowercaseSha256 -Path $archivePath)"
-    Write-Host "Store the archive encrypted and separately back up server/secrets and Firebase credentials."
+    Write-Host "Store the archive encrypted and separately back up server/secrets."
 } finally {
     if (Test-Path -LiteralPath $stagingDirectory) {
         Remove-Item -LiteralPath $stagingDirectory -Recurse -Force

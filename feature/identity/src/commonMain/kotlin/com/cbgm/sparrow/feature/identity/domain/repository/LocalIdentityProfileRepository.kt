@@ -15,6 +15,9 @@ interface LocalIdentityProfileRepository {
     /** Keeps the token in memory for the first route registration; it is never stored. */
     fun keepPhoneVerificationToken(token: String)
 
+    /** True while the phone verifier's daily maximum keeps the number unverified. */
+    fun observePhoneVerificationLimitReached(): Flow<Boolean>
+
     suspend fun loadPhoneNumber(): Result<String?>
 
     suspend fun deletePhoneName(): Result<Unit>

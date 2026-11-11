@@ -735,21 +735,6 @@ function Ensure-RegistryAuthority {
     Write-Detail "Registry authority identity and certificate are ready in the secrets folder."
 }
 
-function Find-FirebaseCredentials {
-    if ($env:SPARROW_DISABLE_FCM -eq '1') { return $null }
-
-    if (-not [string]::IsNullOrWhiteSpace($env:FIREBASE_ADMIN_CREDENTIALS) -and
-        (Test-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS -PathType Leaf)) {
-        return (Resolve-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS).Path
-    }
-
-    $candidate = Join-Path $secretsDirectory "firebase-admin.json"
-    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-        return $candidate
-    }
-
-    return $null
-}
 
 function ConvertTo-ProcessArgument {
     param([Parameter(Mandatory = $true)][string]$Value)
@@ -1180,13 +1165,6 @@ try {
     $pushPassword = (Get-Content $pushPasswordPath -Raw).Trim()
     $pushToken = (Get-Content $pushTokenPath -Raw).Trim()
 
-    $firebaseCredentials = Find-FirebaseCredentials
-    if ($null -ne $firebaseCredentials) {
-        $script:ComposeFileArguments += @("-f", (Join-Path $deploymentDirectory "docker-compose.firebase.yml"))
-        Write-Detail "FCM configured using a separately supplied service account."
-    } else {
-        Write-Detail "FCM disabled: no service account was supplied. Messaging remains available."
-    }
     Ensure-RegistryAuthority -Config $config
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
@@ -1197,7 +1175,8 @@ try {
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
         "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
         "CONTROL_PLANE_DOMAIN=$publicDomain",
-        "FIREBASE_ADMIN_CREDENTIALS=$(if ($null -ne $firebaseCredentials) { $firebaseCredentials.Replace('\','/') } else { '' })",
+        # The presence directory checks phone attestations with the pinned Directory key.
+        "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=$($config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'])",
         "REGISTRY_AUTHORITY_IDENTITY_FILE=./secrets/registry-authority.identity",
         "REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",

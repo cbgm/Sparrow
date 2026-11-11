@@ -53,12 +53,53 @@ The window shows the Directory URL and public key (with Copy), its status, and t
 
 Never forward the loopback-only admin listener to Caddy or publish the admin token.
 
+## Phone verification
+
+The Directory verifies the phone numbers for all Control Planes; they need no Firebase file themselves.
+Under **Phone verification (Firebase)** tick **Verify phone numbers for all Control Planes**, choose the
+**Firebase Admin file** (the service account JSON of the app's Firebase project, `sparrow-a9048`) and click
+Start (command line: `install --phone-verification --firebase-admin-file <file>`). The file is copied to
+`private/firebase-admin.json` and mounted read-only into the phone verifier only; leave the field empty
+later to keep it. The phone verifier runs next to the Directory. It is a separate container (`sparrow-phone-verifier`, same image,
+`phone_verifier.py`) with its own keys in the Docker volume `sparrow-phone-verifier-state`; it never
+sees the Directory signing key.
+
+- On every Install / Start the Directory key certifies the verifier's two public keys (an Ed25519
+  attestation key and an X25519 request key) into `private/phone-key-certificate.json`. The keys are
+  created once and kept.
+- The app sends its Firebase phone sign-in token sealed for the request key, through two relays, to
+  `POST /v1/phone-attestations`. The verifier checks the token with the Firebase Admin SDK and that
+  file (signature, project, expiry, and that the sign-in was not revoked) and answers with a signed
+  attestation "this phone alias belongs to this device", sealed so only the app reads it. Nothing is
+  stored or logged: no token, number or alias.
+- **Verifications per day** (`install --phone-verifications-per-day N`, 0 = no limit) caps the
+  attestations per UTC day for all Control Planes together. Only successful verifications count. The
+  verifier keeps just the day and its count (`daily-count.json` in its volume, so a restart does not reset
+  it), nothing about users, so there is no limit per number or device. Beyond the maximum it answers
+  `429 PHONE_VERIFICATION_LIMIT`; the app keeps its token for a later try and shows "Daily limit of phone
+  verifications reached" under the phone number in the identity overview. **Status** and the window show
+  today's count. This does not cap the SMS Firebase sends; set SMS regions and limits in the Firebase console.
+- Every Control Plane's presence directory checks the attestation with the Directory key it already
+  pins (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`) and refuses phone numbers without one; only the
+  operator's test numbers need none.
+- The Caddy route gets `/v1/phone-attestations` and `/v1/phone-attestations/keys` for the verifier.
+  Untick the box (or `install --no-phone-verification`) to stop it and remove the paths again.
+
+## Updating
+
+**Update from source...** (card *Updates*) asks for the root of your Sparrow source checkout, copies the
+Directory program files of that version into this folder (never `private/`) and starts the Directory with its
+saved settings, which rebuilds its image from the new files. The signing identity, data, hostname, proxy mode
+and phone verification setting are kept; the window then reopens with the new version. The source folder is
+remembered for the next update.
+
 ## Without a desktop
 
 ```bash
 ./Start-SparrowDirectory.sh                       # install / start with the automatic name
 ./Start-SparrowDirectory.sh install --hostname directory.example.com --standalone
 ./Start-SparrowDirectory.sh install --server-folder ~/"Sparrow Server"
+./Start-SparrowDirectory.sh update --source ~/Sparrow     # update from a source checkout and start
 ./Start-SparrowDirectory.sh status|logs|planes|stop|detect
 ```
 

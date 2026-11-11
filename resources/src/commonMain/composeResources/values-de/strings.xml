@@ -249,6 +249,7 @@
     <string name="feature_identity_incomplete_identity">Unvollständige Identität</string>
     <string name="feature_identity_incomplete_identity_description">Nur ein Teil deiner Identität ist verfügbar. Ersatzschlüssel werden nicht automatisch erzeugt.</string>
     <string name="feature_identity_private_keys_protected">Deine privaten Schlüssel sind lokal geschützt</string>
+    <string name="feature_identity_phone_verification_limit">Tageslimit für Telefonverifizierungen erreicht. Kontakte finden dich erst über deine Nummer, wenn sie verifiziert ist.</string>
     <string name="feature_identity_public_keys_always_included">Deine öffentlichen Verschlüsselungs- und Signaturschlüssel werden immer mitgeteilt. Deine privaten Schlüssel verlassen dieses Gerät niemals.</string>
     <string name="feature_identity_raw_identity">ROHIDENTITÄT</string>
     <string name="feature_identity_scan_to_add_you">Lass die andere Person diesen QR-Code direkt von deinem Gerät scannen, um deine Identität zu verifizieren.</string>

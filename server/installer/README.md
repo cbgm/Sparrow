@@ -97,7 +97,7 @@ original runtime still exists elsewhere; run the installed manager instead, or m
 existing server here...**.
 
 The installer window contains the **Settings** card (reachability, automatic hostnames, Directory
-Server URL), **Push notifications and phone verification** (Firebase service account), the
+Server URL), **Phone verification** (test phone numbers), the
 **Server** card (installed addresses with Copy buttons, **Install** / **Start / apply settings**,
 **Stop**, **Status**, **Logs**, **Nodes...**) and the **Updates** card. **Cancel** stops a running
 task. **Advanced...** holds the image prefix/tag and **Reinstall from scratch...** (Public mode only;
@@ -119,27 +119,16 @@ leave already-created containers running; the start command is resumable.
 
 Use either two manually configured **different, DNS-resolvable hostnames** pointing at the same public IP or the **automatic free public hostnames** option described below (sslip.io DNS, no owned domain). Forward 80/TCP and 443/TCP (optional 443/UDP) to this host. The shared Caddy imports each component's existing route definitions and forwards by hostname directly to the component's service aliases on the `sparrow-public-edge` Docker network. Component Caddy remains available locally for diagnostics. The component projects keep their existing named volumes, identity directories, PostgreSQL/Redis instances, and localhost-only diagnostic ports. The proxy has its own persistent TLS certificate volumes. No automatic migration or copying of legacy standalone Caddy TLS volumes occurs. Run external HTTPS/WebSocket and DNS checks before advertising newly installed public endpoints.
 
-## Optional Firebase (push notifications and phone verification)
+## Phone verification
 
-For the Control Plane, optionally select an administrator-owned Google service-account JSON under
-**Push notifications and phone verification** (command line: `--firebase-file`). The importer checks
-that it is structurally a service account and stores it (Windows: below
-`%LOCALAPPDATA%\Sparrow\Server\Secrets\<control-plane-id>`; Linux/macOS:
-`control-plane/secrets/firebase-admin.json`), then attaches it read-only via
-`docker-compose.firebase.yml` to the `presence-directory`, which verifies the Firebase phone sign-in token
-that the app sends once, with its first route registration at sign-up (`GOOGLE_APPLICATION_CREDENTIALS`).
-Sparrow uses no push service: the app keeps its own connection instead.
-
-It uses the Firebase project `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`, the project of the
-Android app). The account therefore needs Firebase Authentication access to that project. The importer does **not** grant this access or verify a real device delivery;
-authorization must be set up separately by an operator with the proper privileges.
-
-Without the credential file, phone verification tokens are not checked (registrations are accepted with or without a token). With
-credentials, a registration that carries a token is accepted only if the token is a valid Firebase
-phone sign-in whose number matches the advertised phone alias; otherwise it is rejected with
-`PHONE_VERIFICATION_FAILED`. Registrations without a token (every later route refresh) are always
-accepted, and nothing about the verification is stored. Removing the file after installation
-requires a controlled restart/reconfiguration; do not remove data volumes.
+Phone numbers are verified by the phone verifier of the **Control Plane Directory**, not by this server; the
+server needs no Firebase credentials. The app sends its Firebase phone sign-in token, sealed and through two
+relays, to the verifier, which answers with a signed attestation. This Control Plane's `presence-directory`
+binds a phone number to a device only with that attestation, checked with the Directory key the server pins
+(`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`, copied into `control-plane/.env.runtime` on every Start). Without a
+pinned Directory key, or without an attestation, phone numbers are not bound; only the test phone numbers
+below work then. Nothing about the verification is stored. Sparrow uses no push service: the app keeps its
+own connection instead.
 
 ## Source and testing
 

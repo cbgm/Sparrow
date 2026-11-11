@@ -184,12 +184,6 @@ ensure_secret "$SECRETS_DIR/presence-redis-password.txt"
 ensure_secret "$SECRETS_DIR/push-database-password.txt"
 ensure_secret "$SECRETS_DIR/push-internal-api-token.txt"
 
-FIREBASE_CREDENTIALS="$SECRETS_DIR/firebase-admin.json"
-if [[ ! -f "$FIREBASE_CREDENTIALS" ]]; then
-  FIREBASE_CREDENTIALS=""
-  echo "FCM disabled: no service account was supplied. Core messaging remains available."
-fi
-
 REGISTRY_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/node-registry-database-password.txt")"
 PRESENCE_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/presence-redis-password.txt")"
 PUSH_PASSWORD="$(tr -d '\r\n' < "$SECRETS_DIR/push-database-password.txt")"
@@ -207,7 +201,7 @@ CONTROL_PLANE_BIND_ADDRESS=0.0.0.0
 CONTROL_PLANE_HTTP_PORT=$CONTROL_PLANE_HTTP_PORT
 CONTROL_PLANE_SITE_ADDRESS=$SITE_ADDRESS
 CONTROL_PLANE_DOMAIN=$PUBLIC_DOMAIN
-FIREBASE_ADMIN_CREDENTIALS=$FIREBASE_CREDENTIALS
+CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=${CONTROL_PLANE_DIRECTORY_PUBLIC_KEY:-}
 NODE_REGISTRY_DATABASE_PASSWORD=$REGISTRY_PASSWORD
 PRESENCE_REDIS_PASSWORD=$PRESENCE_PASSWORD
 PUSH_DATABASE_PASSWORD=$PUSH_PASSWORD
@@ -233,9 +227,6 @@ if [[ "$MODE" == "public" ]]; then
   if [[ "${SHARED_PROXY:-false}" == "true" ]]; then
     COMPOSE+=( -f "$SCRIPT_DIR/docker-compose.shared-proxy.yml" )
   fi
-fi
-if [[ -n "$FIREBASE_CREDENTIALS" ]]; then
-  COMPOSE+=( -f "$SCRIPT_DIR/docker-compose.firebase.yml" )
 fi
 
 cd "$SCRIPT_DIR"

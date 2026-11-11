@@ -80,7 +80,6 @@ internal class RedisPresenceStore(
                     listOf(
                         deviceRoutingId,
                         if (claims.isProven(alias)) "1" else "0",
-                        if (claims.allowsFreeAlias(alias)) "1" else "0",
                         ALIAS_BINDING_LIFETIME_MILLISECONDS.toString()
                     )
                 ) as Long
@@ -230,21 +229,15 @@ internal class RedisPresenceStore(
             return 1
             """.trimIndent()
 
-        // KEYS[1] the alias owner; ARGV[1] device routing ID, ARGV[2] alias proven, ARGV[3] free alias allowed,
-        // ARGV[4] binding lifetime. Returns 1 when bound and 0 when the alias stays with its owner.
+        // KEYS[1] the alias owner; ARGV[1] device routing ID, ARGV[2] alias proven, ARGV[3] binding lifetime.
+        // Returns 1 when bound and 0 when the alias stays free or with its owner.
         val BIND_ALIAS_SCRIPT =
             """
             local owner = redis.call('GET', KEYS[1])
-            if not owner then
-                if ARGV[3] ~= '1' then
-                    return 0
-                end
-            elseif owner ~= ARGV[1] then
-                if ARGV[2] ~= '1' then
-                    return 0
-                end
+            if owner ~= ARGV[1] and ARGV[2] ~= '1' then
+                return 0
             end
-            redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[4])
+            redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[3])
             return 1
             """.trimIndent()
 

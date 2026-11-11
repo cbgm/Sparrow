@@ -6,8 +6,6 @@ param(
 
     [switch]$BuildImages,
 
-    [switch]$RequireFcm,
-
     [ValidateRange(1, 600)]
     [int]$TimeoutSeconds = 180,
 
@@ -18,10 +16,7 @@ param(
     [int]$ExpectedMailboxCountA = -1,
 
     [ValidateRange(-1, 2147483647)]
-    [int]$ExpectedMailboxCountB = -1,
-
-    [ValidateRange(-1, 2147483647)]
-    [int]$ExpectedPushDevices = -1
+    [int]$ExpectedMailboxCountB = -1
 )
 
 $ErrorActionPreference = "Stop"
@@ -272,7 +267,7 @@ $checks = @(
     [pscustomobject]@{
         Name = "push"
         Url = "http://localhost:8095/health"
-        Pattern = '^ok fcmEnabled=(true|false) persistence=postgresql devices=\d+ pendingEnvelopes=\d+$'
+        Pattern = '^ok persistence=postgresql pendingEnvelopes=\d+$'
     }
 )
 if ($MultiNode) {
@@ -320,15 +315,6 @@ if ($MultiNode) {
         -Value $results["mailbox-b"] `
         -Field "mailboxes" `
         -Expected $ExpectedMailboxCountB
-}
-Assert-Count `
-    -Name "push" `
-    -Value $results["push"] `
-    -Field "devices" `
-    -Expected $ExpectedPushDevices
-
-if ($RequireFcm -and $results["push"] -notmatch '(?:^|\s)fcmEnabled=true(?:\s|$)') {
-    throw "Push service is healthy but Firebase Cloud Messaging is disabled: $($results['push'])"
 }
 
 $requestId = "sparrow-smoke-$([Guid]::NewGuid().ToString('N'))"

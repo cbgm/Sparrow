@@ -34,10 +34,6 @@ Install both for Public with your own two DNS names:
   ./Start-SparrowServer.sh install --component combined --mode public \
     --node-domain node.example.com --control-domain control.example.com
 
-Enable Firebase on an existing deployment (without deleting its data):
-  ./Start-SparrowServer.sh install --component combined --mode public \
-    --firebase-file /path/to/firebase-admin.json
-
 Explicit destructive reinstall (not used by install):
   ./Start-SparrowServer.sh reinstall-public --component combined --mode public \
     --confirm-delete-data

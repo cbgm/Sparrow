@@ -119,7 +119,8 @@ data class ClientRouteRegistration(
 }
 
 /**
- * The phone aliases a device holds, with the one-time phone verification token from sign-up in its first claim.
+ * The phone aliases a device holds, with the phone verifier's attestation (`phone_verifier.py` next to the Control
+ * Plane Directory) in the claims right after sign-up.
  * Signed with the device key ([clientSigningPublicKey] derives [routingId]) and sealed for one Control Plane's presence
  * directory ([NodeDirectory.aliasClaimKey]). The app sends it through two relays (see [RelayLayer]), so neither the
  * relays nor the gateway read it and the Control Plane does not see the app's address.
@@ -129,7 +130,7 @@ data class AliasClaim(
     val routingId: String,
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
-    val phoneVerificationToken: String? = null,
+    val phoneAttestation: String? = null,
     val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
@@ -146,7 +147,7 @@ data class UnsignedAliasClaim(
     val routingId: String,
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
-    val phoneVerificationToken: String? = null,
+    val phoneAttestation: String? = null,
     val issuedAtEpochMilliseconds: Long
 ) {
     override fun toString(): String = "UnsignedAliasClaim(redacted)"
@@ -156,11 +157,11 @@ data class UnsignedAliasClaim(
             routingId == other.routingId &&
             clientSigningPublicKey.contentEquals(other.clientSigningPublicKey) &&
             aliases == other.aliases &&
-            phoneVerificationToken == other.phoneVerificationToken &&
+            phoneAttestation == other.phoneAttestation &&
             issuedAtEpochMilliseconds == other.issuedAtEpochMilliseconds
 
     override fun hashCode(): Int =
-        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneVerificationToken, issuedAtEpochMilliseconds)
+        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneAttestation, issuedAtEpochMilliseconds)
             .hashCode()
 }
 
@@ -169,7 +170,7 @@ fun AliasClaim.unsigned(): UnsignedAliasClaim =
         routingId = routingId,
         clientSigningPublicKey = clientSigningPublicKey,
         aliases = aliases,
-        phoneVerificationToken = phoneVerificationToken,
+        phoneAttestation = phoneAttestation,
         issuedAtEpochMilliseconds = issuedAtEpochMilliseconds
     )
 

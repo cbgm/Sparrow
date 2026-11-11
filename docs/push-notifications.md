@@ -83,7 +83,7 @@ Do not commit `firebase-admin.json` or other production credentials.
 
 ### Android Firebase app after the Sparrow rebrand
 
-The Android application ID is now `com.cbgm.sparrow`. Register that Android app in the existing Firebase project and replace `androidApp/google-services.json` with the configuration downloaded for **that exact package name** before validating real FCM delivery. The server-side Firebase Admin service account can stay in the same Firebase project.
+The Android application ID is now `com.cbgm.sparrow`. The app has no `google-services.json`; its Firebase project comes from `local.properties` (see [Local development](development/local-development.md)).
 
 ## Force stop caveat
 

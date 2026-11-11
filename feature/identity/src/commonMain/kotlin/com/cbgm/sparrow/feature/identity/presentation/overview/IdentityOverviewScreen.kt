@@ -58,6 +58,7 @@ import com.cbgm.sparrow.resources.feature_identity_backup_title
 import com.cbgm.sparrow.resources.feature_identity_backup_warning
 import com.cbgm.sparrow.resources.feature_identity_checking_secure_identity
 import com.cbgm.sparrow.resources.feature_identity_own_fingerprint_title
+import com.cbgm.sparrow.resources.feature_identity_phone_verification_limit
 import com.cbgm.sparrow.resources.feature_identity_private_keys_protected
 import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import com.cbgm.sparrow.resources.feature_identity_something_went_wrong
@@ -96,6 +97,7 @@ fun IdentityOverviewScreen(
                 ) {
                     ReadyOverviewContent(
                         localPhoneNumber = uiState.localPhoneNumber,
+                        phoneVerificationLimitReached = uiState.phoneVerificationLimitReached,
                         profilePictureState = profilePictureState,
                         onShareIdentity = { onUiEvent(IdentityOverviewUiEvent.ShareIdentityClicked) },
                         onEditProfilePicture = onEditProfilePicture,
@@ -161,6 +163,7 @@ private fun LoadingContent() {
 @Composable
 private fun ReadyOverviewContent(
     localPhoneNumber: String,
+    phoneVerificationLimitReached: Boolean,
     profilePictureState: IdentityProfilePictureUiState?,
     onShareIdentity: () -> Unit,
     onEditProfilePicture: () -> Unit,
@@ -190,6 +193,15 @@ private fun ReadyOverviewContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (phoneVerificationLimitReached) {
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Text(
+                text = stringResource(Res.string.feature_identity_phone_verification_limit),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
         Spacer(Modifier.height(MaterialTheme.spacing.base))
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),

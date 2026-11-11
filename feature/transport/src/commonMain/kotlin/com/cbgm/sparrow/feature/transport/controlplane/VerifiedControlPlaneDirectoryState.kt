@@ -217,7 +217,6 @@ internal class VerifiedControlPlaneDirectoryState(
 
     private companion object {
         const val KEY_SIGNED_ENVELOPE = "transport.control_plane.signed_directory_envelope_v1"
-        const val KEY_TRUSTED_DIRECTORY_PUBLIC_KEY = "transport.control_plane.trusted_directory_public_key_v1"
         const val KEY_STALE_DISCOVERED_PLANES = "transport.control_plane.stale_discovered_planes_v1"
         const val DISCOVERED_STALE_GRACE_MILLISECONDS = 24L * 60L * 60L * 1_000L
         val CONTROL_PLANE_ID = Regex("^[0-9a-f]{64}$")
@@ -231,3 +230,6 @@ private data class StaleDirectoryPlane(
     val controlPlaneId: String,
     val staleSinceEpochMilliseconds: Long
 )
+
+/** The pinned Directory signing key (base64url X.509 DER Ed25519); the phone verifier's keys are certified with it. */
+internal const val KEY_TRUSTED_DIRECTORY_PUBLIC_KEY = "transport.control_plane.trusted_directory_public_key_v1"

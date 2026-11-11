@@ -16,7 +16,6 @@ $nodeCompose = Join-Path $serverDirectory "community-node/docker-compose.yml"
 $controlEnvironment = Join-Path $workDirectory "control-plane.env"
 $nodeAEnvironment = Join-Path $workDirectory "node-a.env"
 $nodeBEnvironment = Join-Path $workDirectory "node-b.env"
-$firebaseCredential = Join-Path $workDirectory "firebase-admin.invalid.json"
 
 $controlProject = "sparrow-control-plane-smoke"
 $nodeAProject = "sparrow-community-node-a-smoke"
@@ -554,8 +553,6 @@ function Stop-Project {
 }
 
 New-Item -ItemType Directory -Force -Path $workDirectory | Out-Null
-Write-Utf8File -Path $firebaseCredential -Lines @("{}")
-$firebasePath = $firebaseCredential.Replace("\", "/")
 
 Write-Utf8File -Path $controlEnvironment -Lines @(
     "CONTROL_PLANE_PROJECT_NAME=$controlProject",
@@ -571,8 +568,7 @@ Write-Utf8File -Path $controlEnvironment -Lines @(
     "NODE_REGISTRY_DATABASE_PASSWORD=standalone-smoke-registry",
     "PRESENCE_REDIS_PASSWORD=standalone-smoke-presence",
     "PUSH_DATABASE_PASSWORD=standalone-smoke-push",
-    "PUSH_INTERNAL_API_TOKEN=standalone-smoke-internal-token",
-    "FIREBASE_ADMIN_CREDENTIALS=$firebasePath"
+    "PUSH_INTERNAL_API_TOKEN=standalone-smoke-internal-token"
 )
 
 Write-Utf8File -Path $nodeAEnvironment -Lines @(
@@ -643,7 +639,7 @@ try {
     Wait-ForHealth `
         -Name "control-plane push" `
         -Url "http://localhost:8395/health" `
-        -Pattern '^ok fcmEnabled=(true|false) persistence=postgresql devices=\d+ pendingEnvelopes=\d+$'
+        -Pattern '^ok persistence=postgresql pendingEnvelopes=\d+$'
 
     Invoke-Compose $nodeAProject $nodeAEnvironment $nodeCompose $upArguments
     $nodeBUpArguments = @("up", "-d", "--remove-orphans")

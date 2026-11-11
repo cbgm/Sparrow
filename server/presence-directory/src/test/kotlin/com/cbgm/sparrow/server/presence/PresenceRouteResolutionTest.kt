@@ -107,7 +107,7 @@ class PresenceRouteResolutionTest {
                     httpClient = HttpClient(),
                     registryUrl = "http://localhost",
                     nodeRequestAuthorizer = NodeRequestAuthorizer({ null }),
-                    phoneVerification = PhoneVerification(verifier = null),
+                    phoneVerification = PhoneVerification(PhoneAttestations(directoryPublicKey = null), testAliases = setOf(PHONE_ALIAS)),
                     internalApiToken = TOKEN
                 )
             application {

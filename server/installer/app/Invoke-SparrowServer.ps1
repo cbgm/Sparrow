@@ -9,8 +9,6 @@ param(
     [string]$DirectoryUrl = '',
     [string]$ImagePrefix = 'ghcr.io/cbgm/sparrow',
     [string]$ImageTag = 'latest',
-    [string]$FirebaseCredentialsPath = '',
-    [ValidateSet('Enabled', 'Disabled')][string]$FirebaseMode = 'Enabled',
     [string]$ExistingNodeDirectory = '',
     [string]$ExistingControlPlaneDirectory = '',
     [string]$ExistingProxyDirectory = '',
@@ -392,15 +390,6 @@ function Show-ComponentStatus([string]$Directory) {
     $endpoint = if ($component.Mode -eq 'public') { "https://$($component.Hostname)" } elseif ($Directory -eq $cpRoot) { 'http://localhost:8390' } else { 'http://localhost:8490' }
     Write-Host "Configured endpoint: $endpoint (DNS/external availability not verified)"
     Invoke-ComponentCommand $Directory @('ps', '--all')
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties (Join-Path $Directory '.env.runtime')
-        $path = [string]$runtime['FIREBASE_ADMIN_CREDENTIALS']
-        if ($path -and (Test-Path -LiteralPath $path -PathType Leaf)) {
-            Write-Host 'FCM: service-account file configured. Authorization, FCM acceptance and delivery NOT verified.'
-        } else {
-            Write-Host 'FCM: not configured. Core encrypted messaging does not depend on push.'
-        }
-    }
 }
 function Require-Docker {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is not available.' }
@@ -454,13 +443,6 @@ function Get-ComposeArguments([string]$Directory) {
         $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.release.yml'))
         if ($conf['MODE'] -eq 'public') { $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.production.yml')) }
         if ($conf['MODE'] -eq 'public' -and $conf['SHARED_PROXY'] -eq 'true') { $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.shared-proxy.yml')) }
-    }
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties $runtimeFile
-        if (-not [string]::IsNullOrWhiteSpace($runtime['FIREBASE_ADMIN_CREDENTIALS']) -and
-            (Test-Path -LiteralPath $runtime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.firebase.yml'))
-        }
     }
     return ,$composeArgs
 }
@@ -559,20 +541,13 @@ function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string
             SPARROW_IMAGE_TAG = $config['SPARROW_IMAGE_TAG']
         }
     }
+    # The presence directory checks phone attestations with the pinned Directory key.
+    if ($Directory -eq $cpRoot -and
+        [string]$runtime['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] -ne [string]$config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) {
+        Write-Properties $runtimePath @{ CONTROL_PLANE_DIRECTORY_PUBLIC_KEY = [string]$config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] }
+    }
     $composeArgs = Get-ComposeArguments $Directory
     Invoke-Docker -Arguments ($composeArgs + @('config', '--quiet'))
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties $runtimePath
-        if (-not [string]::IsNullOrWhiteSpace($runtime['FIREBASE_ADMIN_CREDENTIALS']) -and
-            (Test-Path -LiteralPath $runtime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            # Compare the exact Compose file path, not a regex against serialized arguments.
-            # The previous double-escaped regex rejected the correctly appended file.
-            if ($composeArgs -notcontains (Join-Path $Directory 'docker-compose.firebase.yml')) {
-                throw 'Firebase credentials are saved but docker-compose.firebase.yml was not applied.'
-            }
-            Write-Host 'Firebase Compose override enabled for the existing Control Plane push service.'
-        }
-    }
     if ($null -eq $localImages) {
         Write-Host "Fetching the latest selected $project backend images from GHCR ..."
         Invoke-Docker -Arguments ($composeArgs + @('pull') + $BackendServices)
@@ -839,53 +814,6 @@ function Resolve-OrphanedTestData {
     }
 }
 
-function Get-PushCredential {
-    $cpConfigPath = Join-Path $cpRoot 'sparrow.conf'
-    $cpConfig = Read-Properties $cpConfigPath
-    $credentialOwner = [string]$cpConfig['CONTROL_PLANE_ID']
-    if ($credentialOwner -notmatch '^[a-zA-Z0-9-]{1,64}$') {
-        # A previously interrupted installation can leave CONTROL_PLANE_ID
-        # empty even though .env.runtime and the live Control Plane exist.
-        # That value is metadata, not a reason to reinstall or regenerate
-        # the registry signing identity. Store Firebase credentials under a
-        # separately persisted, opaque owner ID instead.
-        $credentialOwner = [string]$cpConfig['FIREBASE_CREDENTIAL_STORE_ID']
-        if ($credentialOwner -notmatch '^[a-zA-Z0-9-]{1,64}$') {
-            $credentialOwner = [Guid]::NewGuid().ToString('N')
-            Write-Properties $cpConfigPath @{ FIREBASE_CREDENTIAL_STORE_ID = $credentialOwner }
-        }
-    }
-    $secretRoot = Join-Path $env:LOCALAPPDATA "Sparrow\Server\Secrets\$credentialOwner"
-    $destination = Join-Path $secretRoot 'firebase-admin.json'
-    if ([string]::IsNullOrWhiteSpace($FirebaseCredentialsPath)) {
-        if (Test-Path -LiteralPath $destination -PathType Leaf) { return $destination }
-        return
-    }
-    if (-not (Test-Path -LiteralPath $FirebaseCredentialsPath -PathType Leaf)) {
-        Write-Host 'Firebase credentials not found; continuing without FCM.'; return
-    }
-    try {
-        $json = Get-Content -LiteralPath $FirebaseCredentialsPath -Raw | ConvertFrom-Json -ErrorAction Stop
-        if ($json.type -ne 'service_account' -or -not $json.client_email -or -not $json.private_key) {
-            throw 'Expected a Google service-account JSON.'
-        }
-    } catch {
-        Write-Host 'Firebase credentials could not be parsed; continuing without FCM.'; return
-    }
-    # This location is under the operator profile, NOT included in distributable archives.
-    New-Item -ItemType Directory -Path $secretRoot -Force | Out-Null
-    if ([System.IO.Path]::GetFullPath($FirebaseCredentialsPath) -ne [System.IO.Path]::GetFullPath($destination)) {
-        if (Test-Path -LiteralPath $destination -PathType Leaf) {
-            $backup = "$destination.backup.$(Get-Date -Format yyyyMMddHHmmss)"
-            Copy-Item -LiteralPath $destination -Destination $backup -ErrorAction Stop
-        }
-        Copy-Item -LiteralPath $FirebaseCredentialsPath -Destination $destination -Force
-    }
-    $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    & icacls.exe $destination /inheritance:r /grant:r "*${sid}:(F)" '*S-1-5-18:(F)' 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'Could not protect imported Firebase credentials with a restricted ACL.' }
-    return $destination
-}
 function Ensure-SharedNetwork {
     # Inspect of a *missing* network writes to stderr. With Windows PowerShell
     # 5.1 and ErrorActionPreference=Stop, 2>$null can still turn that routine
@@ -1107,11 +1035,8 @@ function Get-InstalledLanComposeFlavor([string]$Directory, [string]$Project) {
         throw "$Project already uses public Compose overrides although sparrow.conf says LAN. Inspect the original deployment before migration."
     }
     foreach ($filename in ($configuration -split ',' | ForEach-Object { [System.IO.Path]::GetFileName(([string]$_).Trim()) })) {
-        if ($filename -notin @('docker-compose.yml','docker-compose.release.yml','docker-compose.firebase.yml')) {
+        if ($filename -notin @('docker-compose.yml','docker-compose.release.yml')) {
             throw "Unrecognized live Compose override $filename for $Project. Preserve original service/identity configuration."
-        }
-        if ($filename -eq 'docker-compose.firebase.yml' -and $Project -ne 'sparrow-control-plane') {
-            throw "Unexpected Firebase override on $Project."
         }
     }
     return $(if ($configuration -match 'docker-compose\.release\.yml') { 'release' } else { 'base' })
@@ -1149,7 +1074,7 @@ function Get-SafeInstalledPublicMode([string]$Directory, [string]$Project) {
             throw "Existing $Project contains public or unknown Compose layers (container $id). Refusing automatic recovery; no state was changed."
         }
         foreach ($filename in ($files -split ',' | ForEach-Object { [System.IO.Path]::GetFileName(([string]$_).Trim()) })) {
-            if ($filename -notin @('docker-compose.yml','docker-compose.release.yml','docker-compose.firebase.yml')) {
+            if ($filename -notin @('docker-compose.yml','docker-compose.release.yml')) {
                 throw "Existing $Project has unknown live Compose file $filename. Refusing automatic recovery; no state was changed."
             }
         }
@@ -1165,13 +1090,6 @@ function Get-TransitionComposeArguments([string]$Directory, [string]$Runtime, [s
     $result = @('compose', '--env-file', $Runtime, '-f', (Join-Path $Directory 'docker-compose.yml'))
     if ($Flavor -eq 'release') { $result += @('-f', (Join-Path $Directory 'docker-compose.release.yml')) }
     $result += @('-f', (Join-Path $Directory 'docker-compose.public-transition.yml'))
-    if ($Directory -eq $cpRoot) {
-        $existing = Read-Properties (Join-Path $cpRoot '.env.runtime')
-        if ($existing['FIREBASE_ADMIN_CREDENTIALS'] -and
-            (Test-Path -LiteralPath $existing['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            $result += @('-f', (Join-Path $cpRoot 'docker-compose.firebase.yml'))
-        }
-    }
     return ,$result
 }
 function Write-PreflightProperties([string]$Path, [hashtable]$Updates) {
@@ -1629,30 +1547,8 @@ try {
             $previous = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
             $cpId = if ($previous['CONTROL_PLANE_ID']) { $previous['CONTROL_PLANE_ID'] } else { [Guid]::NewGuid().ToString('N') }
             if (Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf) {
-                # Normal Install / Start also configures Firebase for an already
-                # installed Control Plane. Previously only the fresh-install
-                # branch imported credentials, leaving FCM disabled forever.
-                # Do not change the existing Control Plane identity, databases,
-                # public hostnames, or Docker volumes.
-                if ($FirebaseMode -eq 'Enabled' -and
-                    -not [string]::IsNullOrWhiteSpace($FirebaseCredentialsPath)) {
-                    $credential = Get-PushCredential
-                    if (-not $credential -or -not (Test-Path -LiteralPath $credential -PathType Leaf)) {
-                        throw 'Firebase service-account import failed. Select a valid Firebase Admin service-account JSON; the installed Control Plane was not reset.'
-                    }
-                    # Persist the host path so Get-ComposeArguments includes the
-                    # optional Firebase override on subsequent starts/updates.
-                    Write-Properties (Join-Path $cpRoot '.env.runtime') @{
-                        FIREBASE_ADMIN_CREDENTIALS = $credential.Replace('\', '/')
-                    }
-                    Write-Host 'Firebase Admin credentials configured for existing Control Plane (no server reset).'
-                } elseif ($FirebaseMode -eq 'Disabled') {
-                    # An unchecked UI option on a routine update must not
-                    # silently strip an already working production FCM setup.
-                    Write-Host 'Firebase import not requested; existing installed push configuration preserved.'
-                }
                 # Updating only the image must never reset CP identity, public
-                # hostname, push mode, or existing configuration.
+                # hostname, or existing configuration.
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
@@ -1664,15 +1560,6 @@ try {
                     SHARED_PROXY = $(if ($shared) { 'true' } else { 'false' })
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
-                }
-                if ($FirebaseMode -eq 'Disabled') {
-                    $env:SPARROW_DISABLE_FCM = '1'
-                    Remove-Item Env:FIREBASE_ADMIN_CREDENTIALS -ErrorAction SilentlyContinue
-                    Write-Host 'FCM explicitly disabled by the operator.'
-                } else {
-                    Remove-Item Env:SPARROW_DISABLE_FCM -ErrorAction SilentlyContinue
-                    $credential = Get-PushCredential
-                    if ($credential) { $env:FIREBASE_ADMIN_CREDENTIALS = $credential }
                 }
             }
             if ($shared) {

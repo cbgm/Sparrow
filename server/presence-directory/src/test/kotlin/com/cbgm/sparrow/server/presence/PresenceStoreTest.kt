@@ -74,7 +74,7 @@ class PresenceStoreTest {
             val store = PresenceStore(now = { 1_000L })
 
             assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, FIRST_CLAIM))
-            assertEquals(emptyList(), store.bindAliases(attacker.routingId, FIRST_CLAIM))
+            assertEquals(emptyList(), store.bindAliases(attacker.routingId, UNPROVEN_CLAIM))
 
             assertEquals(owner.routingId, store.resolve(ALIAS).ownerRoutingId)
         }
@@ -85,12 +85,11 @@ class PresenceStoreTest {
             val owner = NodeIdentity.generate()
             val newDevice = NodeIdentity.generate()
             val store = PresenceStore(now = { 1_000L })
-            val verifiedServer = AliasClaims(provenAlias = null, unprovenClaimsAllowed = false, aliases = listOf(ALIAS))
 
-            assertEquals(emptyList(), store.bindAliases(owner.routingId, verifiedServer))
-            store.bindAliases(owner.routingId, verifiedServer.copy(provenAlias = ALIAS))
-            assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, verifiedServer))
-            assertEquals(listOf(ALIAS), store.bindAliases(newDevice.routingId, verifiedServer.copy(provenAlias = ALIAS)))
+            assertEquals(emptyList(), store.bindAliases(owner.routingId, UNPROVEN_CLAIM))
+            store.bindAliases(owner.routingId, FIRST_CLAIM)
+            assertEquals(listOf(ALIAS), store.bindAliases(owner.routingId, UNPROVEN_CLAIM))
+            assertEquals(listOf(ALIAS), store.bindAliases(newDevice.routingId, FIRST_CLAIM))
 
             assertEquals(newDevice.routingId, store.resolve(ALIAS).ownerRoutingId)
         }
@@ -103,8 +102,7 @@ class PresenceStoreTest {
             store.bindAliases(NodeIdentity.generate().routingId, FIRST_CLAIM)
 
             now += ALIAS_BINDING_LIFETIME_MILLISECONDS
-            val successor = NodeIdentity.generate()
-            assertEquals(listOf(ALIAS), store.bindAliases(successor.routingId, FIRST_CLAIM))
+            assertNull(store.resolve(ALIAS).ownerRoutingId)
         }
 
     @Test
@@ -149,6 +147,7 @@ class PresenceStoreTest {
 
     private companion object {
         val ALIAS = ClientRoutingIds.fromPhoneNumber("+491701234567")
-        val FIRST_CLAIM = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(ALIAS))
+        val FIRST_CLAIM = AliasClaims(provenAlias = ALIAS, aliases = listOf(ALIAS))
+        val UNPROVEN_CLAIM = AliasClaims(provenAlias = null, aliases = listOf(ALIAS))
     }
 }

@@ -45,6 +45,7 @@ internal class AliasClaimRegistrar(
     private val cipher: SealedMessageCipher,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val phoneAttestationRemoteSource: PhoneAttestationRemoteSource,
     private val json: Json,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) {
@@ -53,14 +54,14 @@ internal class AliasClaimRegistrar(
     /** Returns the aliases at least one Control Plane bound to [routingId]. */
     suspend fun claim(routingId: String): Set<String> {
         val alias = localBootstrapRoutingIdProvider.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
-        val token = localPhoneNumberProvider.getPhoneVerificationToken().getOrNull()
+        val attestation = phoneAttestation(routingId)
         val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
         val results =
             controlPlaneConfiguration.endpoints.value.distinctBy(ControlPlaneEndpoint::baseUrl).map { endpoint ->
-                claimAt(endpoint.baseUrl, routingId, listOf(alias), token, signingKeyPair)
+                claimAt(endpoint.baseUrl, routingId, listOf(alias), attestation, signingKeyPair)
             }
-        // The token proves the number once; it is not sent again after a Control Plane answered it.
-        if (token != null && results.any { result -> result != ClaimOutcome.Unreachable }) {
+        // The token proves the number once; it is not used again after a Control Plane answered its attestation.
+        if (attestation != null && results.any { result -> result != ClaimOutcome.Unreachable }) {
             localPhoneNumberProvider.clearPhoneVerificationToken()
         }
         val bound = results.filterIsInstance<ClaimOutcome.Bound>()
@@ -71,11 +72,25 @@ internal class AliasClaimRegistrar(
         return bound.flatMap(ClaimOutcome.Bound::aliases).toSet()
     }
 
+    /** The verifier's attestation while the sign-up token is still in memory; null without one or when it failed. */
+    private suspend fun phoneAttestation(routingId: String): String? {
+        val token = localPhoneNumberProvider.getPhoneVerificationToken().getOrNull() ?: return null
+        return phoneAttestationRemoteSource
+            .attest(token, routingId)
+            .onFailure { failure -> logger.warn { "Phone attestation failed: ${failure::class.simpleName}" } }
+            .onFailure { failure -> failure.reportLimit() }
+            .getOrNull()
+    }
+
+    private suspend fun Throwable.reportLimit() {
+        if (this is PhoneVerificationLimitReachedException) localPhoneNumberProvider.reportPhoneVerificationLimitReached()
+    }
+
     private suspend fun claimAt(
         baseUrl: String,
         routingId: String,
         aliases: List<String>,
-        token: String?,
+        attestation: String?,
         signingKeyPair: LocalSigningKeyPair
     ): ClaimOutcome =
         try {
@@ -83,7 +98,7 @@ internal class AliasClaimRegistrar(
             if (key == null) {
                 ClaimOutcome.Unreachable
             } else {
-                val sealed = sealedClaim(routingId, aliases, token, signingKeyPair, key)
+                val sealed = sealedClaim(routingId, aliases, attestation, signingKeyPair, key)
                 val result =
                     controlPlaneHttpClient
                         .post("${baseUrl.trimEnd('/')}/v1/alias-claims") {
@@ -122,7 +137,7 @@ internal class AliasClaimRegistrar(
     private suspend fun sealedClaim(
         routingId: String,
         aliases: List<String>,
-        token: String?,
+        attestation: String?,
         signingKeyPair: LocalSigningKeyPair,
         presenceKey: ByteArray
     ): ByteArray {
@@ -131,7 +146,7 @@ internal class AliasClaimRegistrar(
                 routingId = routingId,
                 clientSigningPublicKey = signingKeyPair.publicKey,
                 aliases = aliases,
-                phoneVerificationToken = token,
+                phoneAttestation = attestation,
                 issuedAtEpochMilliseconds = now()
             )
         val signature =
@@ -143,7 +158,7 @@ internal class AliasClaimRegistrar(
                 routingId = unsigned.routingId,
                 clientSigningPublicKey = unsigned.clientSigningPublicKey,
                 aliases = unsigned.aliases,
-                phoneVerificationToken = unsigned.phoneVerificationToken,
+                phoneAttestation = unsigned.phoneAttestation,
                 issuedAtEpochMilliseconds = unsigned.issuedAtEpochMilliseconds,
                 signature = signature
             )

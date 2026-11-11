@@ -116,10 +116,6 @@ def compose_arguments(directory: Path) -> list[str]:
             arguments += ["-f", str(directory / "docker-compose.production.yml")]
             if conf.get("SHARED_PROXY") == "true":
                 arguments += ["-f", str(directory / "docker-compose.shared-proxy.yml")]
-    if directory.name == "control-plane":
-        credentials = properties(runtime).get("FIREBASE_ADMIN_CREDENTIALS", "")
-        if (credentials and Path(credentials).is_file()) or (directory / "secrets" / "firebase-admin.json").is_file():
-            arguments += ["-f", str(directory / "docker-compose.firebase.yml")]
     return arguments
 
 
@@ -159,7 +155,7 @@ def copy_state(source: Path, target: Path) -> None:
 
 
 def rewrite_paths(source: Path, target: Path) -> None:
-    """Points absolute paths in the copied settings (for example Firebase credentials) at the new folder."""
+    """Points absolute paths in the copied settings (for example secret files) at the new folder."""
     old_forms = {str(source), str(source).replace("\\", "/"), str(source).replace("/", "\\")}
     new = str(target)
     for path in [*target.glob("*/.env.runtime"), *target.glob("*/sparrow.conf"),

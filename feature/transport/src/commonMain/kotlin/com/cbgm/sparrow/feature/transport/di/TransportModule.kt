@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
@@ -37,6 +38,7 @@ import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.controlplane.HttpNodeControlPlaneDirectorySource
+import com.cbgm.sparrow.feature.transport.controlplane.KEY_TRUSTED_DIRECTORY_PUBLIC_KEY
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.SignedControlPlaneDirectoryVerifier
@@ -75,6 +77,7 @@ import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
+import com.cbgm.sparrow.feature.transport.presence.PhoneAttestationRemoteSource
 import com.cbgm.sparrow.feature.transport.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.relay.OnionRelayClient
 import com.cbgm.sparrow.feature.transport.relay.OnionRelayEngine
@@ -257,6 +260,18 @@ val transportModule =
                 cipher = get<SealedMessageCipher>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
                 localPhoneNumberProvider = get<LocalPhoneNumberProvider>(),
+                phoneAttestationRemoteSource = get<PhoneAttestationRemoteSource>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single {
+            PhoneAttestationRemoteSource(
+                controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                pinnedDirectoryKey = { get<SparrowDataStore>().getString(KEY_TRUSTED_DIRECTORY_PUBLIC_KEY) },
+                signatureCrypto = get<DetachedSignatureCrypto>(),
+                cipher = get<SealedMessageCipher>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }

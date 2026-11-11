@@ -136,17 +136,6 @@ function Attached-ComposeArgs([object]$Part) {
         '-f',(Join-Path $folder 'docker-compose.release.yml'),
         '-f',(Join-Path $folder 'docker-compose.production.yml'),
         '-f',(Join-Path $folder 'docker-compose.shared-proxy.yml'))
-    if ($Part.Component -eq 'control-plane') {
-        $runtime = Attached-ReadProperties (Join-Path $folder '.env.runtime')
-        if ($runtime['FIREBASE_ADMIN_CREDENTIALS']) {
-            # Preserve the ORIGINAL override selected at cutover, not a newly
-            # imported credential from the fresh-install manager UI.
-            if (-not (Test-Path -LiteralPath $runtime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-                throw 'Attached Control Plane Firebase credential is missing; configuration must be reviewed manually.'
-            }
-            $args += @('-f',(Join-Path $folder 'docker-compose.firebase.yml'))
-        }
-    }
     return ,$args
 }
 function Attached-Validate([string]$Plan, [string]$RecordedHash = '') {

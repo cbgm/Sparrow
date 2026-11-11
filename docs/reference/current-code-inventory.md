@@ -4643,11 +4643,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | Declaration | Kind | Source set | Path |
 |---|---|---|---|
 | `PresenceConfig` | data class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/Application.kt` |
-| `CachingPhoneTokenVerifier` | class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/CachingPhoneTokenVerifier.kt` |
-| `FirebasePhoneTokenVerifier` | class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/FirebasePhoneTokenVerifier.kt` |
-| `PhoneTokenVerifier` | interface | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PhoneVerification.kt` |
+| `PhoneAttestations` | class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PhoneAttestations.kt` |
 | `PhoneVerification` | class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PhoneVerification.kt` |
-| `VerifiedPhone` | data class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PhoneVerification.kt` |
 | `PresenceRouteKey` | data class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceRoutes.kt` |
 | `PresenceRuntime` | data class | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceRuntime.kt` |
 | `Accepted` | object | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceStore.kt` |

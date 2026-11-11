@@ -78,28 +78,17 @@ class Installer(EngineWindow):
         self.node_only_hint = card.hint("Each node is added with the address of its Control Plane and managed "
                                         "under Nodes...")
 
-        push = Card(parent, "Push notifications and phone verification", self.fonts)
-        push.pack(fill="x", pady=(12, 0))
-        self.push = tk.BooleanVar(value=self.settings["push"])
-        self.push_check = push.add(ttk.Checkbutton(push, text="Enable push notifications (Firebase)",
-                                                   variable=self.push, command=self.update_fields), sticky="w")
-        self.firebase = tk.StringVar(value=self.settings["firebaseFile"])
-        chooser = tk.Frame(push, bg=COLORS["card"])
-        chooser.columnconfigure(0, weight=1)
-        self.firebase_entry = ttk.Entry(chooser, textvariable=self.firebase, font=self.fonts["body"])
-        self.firebase_entry.grid(row=0, column=0, sticky="ew")
-        self.firebase_button = self.button(chooser, "Choose...", self.choose_firebase)
-        self.firebase_button.grid(row=0, column=1, padx=(8, 0))
-        push.add(chooser, "Service account JSON")
-        push.hint("Leave the file empty to keep the installed credentials. "
-                  "They need FCM and Authentication access to Sparrow's Firebase project.")
+        phone = Card(parent, "Phone verification", self.fonts)
+        phone.pack(fill="x", pady=(12, 0))
+        phone.hint("Phone numbers are verified by the Control Plane Directory, not here: this Control Plane accepts "
+                   "a number only with the Directory's confirmation.")
         # One number per line; the setting is stored comma-separated.
-        self.test_phone_entry = tk.Text(push, height=4, width=28, font=self.fonts["body"], wrap="none",
+        self.test_phone_entry = tk.Text(phone, height=4, width=28, font=self.fonts["body"], wrap="none",
                                         relief="solid", borderwidth=1, highlightthickness=0, padx=5, pady=4)
         self.test_phone_entry.insert("1.0", "\n".join(number.strip() for number in
                                                        self.settings["testPhoneNumbers"].split(",") if number.strip()))
-        push.add(self.test_phone_entry, "Test phone numbers")
-        push.hint("Only for test devices: these numbers move to the device that registers them last, without SMS "
+        phone.add(self.test_phone_entry, "Test phone numbers")
+        phone.hint("Only for test devices: these numbers move to the device that registers them last, without SMS "
                   "verification. Real numbers stay with their device. One number per line, with country code, "
                   "e.g. +15550000001. "
                   "Applied with Start.")
@@ -182,11 +171,8 @@ class Installer(EngineWindow):
         # Community Node only: each node gets its own settings when it is added.
         combined = "disabled" if node_only else "normal"
         self.mode_combo.configure(state="disabled" if node_only else "readonly")
-        for widget in (self.auto_dns_check, self.directory_entry, self.push_check, self.test_phone_entry):
+        for widget in (self.auto_dns_check, self.directory_entry, self.test_phone_entry):
             widget.configure(state=combined)
-        push = "normal" if self.push.get() and not node_only else "disabled"
-        self.firebase_entry.configure(state=push)
-        self.firebase_button.configure(state=push)
         self.component_combo.configure(state="disabled" if installed() else "readonly")
         if node_only:
             self.node_only_hint.grid()
@@ -201,7 +187,6 @@ class Installer(EngineWindow):
             "mode": "public" if self.mode.get().startswith("Public") else "lan",
             "autoDns": self.auto_dns.get(), "nodeDomain": self.node_domain.get().strip(),
             "controlDomain": self.control_domain.get().strip(), "directoryUrl": self.directory_url.get().strip(),
-            "push": self.push.get(), "firebaseFile": self.firebase.get().strip(),
             "testPhoneNumbers": ",".join(line.strip() for line in self.test_phone_entry.get("1.0", "end").splitlines()
                                          if line.strip()),
             "imagePrefix": self.image_prefix.get().strip(), "imageTag": self.image_tag.get().strip(),
@@ -290,12 +275,6 @@ class Installer(EngineWindow):
                                "server identities and certificates are permanently erased. Apps must trust the "
                                "NEW server identities.", icon="warning"):
             self.run("Reinstalling", engine_command("reinstall", settings))
-
-    def choose_firebase(self) -> None:
-        path = filedialog.askopenfilename(title="Firebase service account",
-                                          filetypes=(("Service account JSON", "*.json"), ("All files", "*.*")))
-        if path:
-            self.firebase.set(path)
 
     def updated(self, installation: Path):
         def reopen():

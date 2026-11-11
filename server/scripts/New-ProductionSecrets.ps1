@@ -2,8 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Domain,
 
-    [Parameter(Mandatory = $true)]
-    [string]$FirebaseAdminCredentials
+    # The pinned Control Plane Directory key: phone aliases need its phone verifier's attestation.
+    [string]$DirectoryPublicKey = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,10 +11,6 @@ $ErrorActionPreference = "Stop"
 $serverDirectory = Split-Path -Parent $PSScriptRoot
 $secretDirectory = Join-Path $serverDirectory "secrets"
 $environmentFile = Join-Path $serverDirectory ".env.production"
-
-if (-not (Test-Path -LiteralPath $FirebaseAdminCredentials -PathType Leaf)) {
-    throw "Firebase Admin credential file does not exist: $FirebaseAdminCredentials"
-}
 
 New-Item -ItemType Directory -Path $secretDirectory -Force | Out-Null
 
@@ -59,7 +55,7 @@ if (Test-Path -LiteralPath $environmentFile) {
 } else {
     $content = @"
 SPARROW_DOMAIN=$Domain
-FIREBASE_ADMIN_CREDENTIALS=$FirebaseAdminCredentials
+CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=$DirectoryPublicKey
 COMPOSE_PARALLEL_LIMIT=1
 NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt
 PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt

@@ -28,6 +28,31 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+  # Phone verification for all Control Planes, only when the operator turns it on. Its own keys in its own volume;
+  # it never sees the Directory signing key, only the certificate the Directory issued for its keys.
+  phone-verifier:
+    logging: *default-logging
+    profiles: [phone-verification]
+    image: sparrow-central-directory:local
+    container_name: sparrow-phone-verifier
+    restart: unless-stopped
+    env_file:
+      - path: ./private/phone.env
+        required: false
+    entrypoint: ["python", "-u", "/app/phone_verifier.py"]
+    command: ["serve", "--state", "/phone", "--certificate", "/run/phone-key-certificate.json",
+              "--firebase-admin-file", "/run/firebase-admin.json", "--host", "0.0.0.0"]
+    volumes:
+      - phone-verifier-state:/phone
+      - ./private/phone-key-certificate.json:/run/phone-key-certificate.json:ro
+      # The Firebase Admin service account of the app's project: only this container reads it.
+      - ./private/firebase-admin.json:/run/firebase-admin.json:ro
+    networks:
+      - public-edge
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
   directory-caddy:
     logging: *default-logging
     profiles: [standalone]
@@ -53,6 +78,8 @@ networks:
 volumes:
   directory-state:
     name: sparrow-central-directory-state
+  phone-verifier-state:
+    name: sparrow-phone-verifier-state
   directory-caddy-data:
     name: sparrow-central-directory-caddy-data
   directory-caddy-config:

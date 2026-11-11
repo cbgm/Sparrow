@@ -242,6 +242,10 @@ jobs:
       - name: Create Android local.properties
         env:
           CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+          # The app's Firebase project for the phone sign-in (no google-services.json).
+          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -254,6 +258,9 @@ jobs:
           {
             echo "CONTROL_PLANE_DIRECTORY_URL=${CONTROL_PLANE_RELEASE_DIRECTORY_URL}"
             echo "CONTROL_PLANE_RELEASE_DIRECTORY_URL=${CONTROL_PLANE_RELEASE_DIRECTORY_URL}"
+            echo "FIREBASE_APP_ID=${FIREBASE_APP_ID:-}"
+            echo "FIREBASE_API_KEY=${FIREBASE_API_KEY:-}"
+            echo "FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}"
           } > local.properties
 
       - name: Prepare release signing key
@@ -668,7 +675,6 @@ jobs:
             control-plane/docker-compose.release.yml
             control-plane/docker-compose.production.yml
             control-plane/docker-compose.shared-proxy.yml
-            control-plane/docker-compose.firebase.yml
             community-node/docker-compose.yml
             community-node/docker-compose.release.yml
             community-node/docker-compose.production.yml

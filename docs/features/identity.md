@@ -43,14 +43,13 @@ The dialog only verifies. `IdentityCreateViewModel` creates the keys, and
 `IdentityRestoreViewModel` saves the restored backup, only after the result is `Verified`.
 
 The token is kept **in memory only** (`LocalIdentityProfileDataSource.keepPhoneVerificationToken`,
-lifetime 50 minutes) and is never persisted. `ClientPresenceRouteCoordinator` in
-`:feature:transport` sends it once as `ClientRouteRegistration.phoneVerificationToken` with the
-first presence-route registration that advertises phone aliases, and clears it afterwards (also
-when that registration fails). The presence directory verifies the token with Firebase and
-checks that the verified number matches the advertised phone alias. It keeps verified tokens only
-in a bounded in-memory cache until they expire and persists nothing about the verification. A
-registration without a token is accepted; the verification is part of sign-up, not of every
-connection.
+lifetime 50 minutes) and is never persisted. `AliasClaimRegistrar` in `:feature:transport` sends it
+once, sealed and through two relays, to the phone verifier next to the Control Plane Directory
+(`PhoneAttestationRemoteSource`), which checks it with Firebase and answers with an attestation
+signed under the pinned Directory key: this phone alias belongs to this device. The attestation goes
+into the alias claims (`AliasClaim.phoneAttestation`), stays in memory only, and the token is cleared
+once a Control Plane answered. Every presence directory checks the attestation; none sees the token
+or the number. The verification is part of sign-up, not of every connection.
 
 Debug builds: `DEBUG_SMS_CODE` in `local.properties` switches Firebase to test mode for the
 number, and the dialog offers *Skip (debug)*, which continues without a token. See

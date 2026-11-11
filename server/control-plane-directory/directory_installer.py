@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import importlib.util
 import ipaddress
 import json
 import os
@@ -27,16 +28,23 @@ COMPOSE = ROOT / "docker-compose.yml"
 PRIVATE = ROOT / "private"
 HOST_FILE = PRIVATE / "directory-host.txt"
 INFO_FILE = PRIVATE / "directory-public.json"
+PHONE_FILE = PRIVATE / "phone-verification.json"
+PHONE_CERTIFICATE = PRIVATE / "phone-key-certificate.json"
+PHONE_ENV = PRIVATE / "phone.env"
+SOURCE_FILE = PRIVATE / "source-folder.txt"
+FIREBASE_ADMIN = PRIVATE / "firebase-admin.json"
 WINDOWS = os.name == "nt"
 BEGIN = "# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE"
 END = "# END SPARROW INDEPENDENT DIRECTORY ROUTE"
 PUBLIC_PATHS = ("/health /.well-known/sparrow-directory /v1/control-planes /v1/registrations "
                 "/v1/registrations/challenge")
+PHONE_PATHS = "/v1/phone-attestations /v1/phone-attestations/keys"
 HOSTNAME = re.compile(
     r"(?=.{4,253}$)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+")
 AUTOMATIC = re.compile(r"directory-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io")
 PUBLIC_KEY = re.compile(r"[A-Za-z0-9_-]{58,100}")
 CONTAINER = "sparrow-central-directory"
+PHONE_CONTAINER = "sparrow-phone-verifier"
 PROXY_CONTAINER = "sparrow-central-directory-caddy"
 HIDDEN = subprocess.CREATE_NO_WINDOW if WINDOWS else 0
 
@@ -191,17 +199,25 @@ def find_server_folder() -> Path | None:
 
 
 # ---------------------------------------------------------------------- shared proxy route
-def directory_route(hostname: str) -> str:
-    return (f"{BEGIN}\n{hostname} {{\n    @directory_public path {PUBLIC_PATHS}\n"
+def phone_handle(upstream: str) -> str:
+    """The separate phone verifier's paths, in front of the Directory's own."""
+    return (f"    @phone_verification path {PHONE_PATHS}\n"
+            f"    handle @phone_verification {{\n        reverse_proxy {upstream}\n    }}\n")
+
+
+def directory_route(hostname: str, phone: bool = False) -> str:
+    return (f"{BEGIN}\n{hostname} {{\n" + (phone_handle(f"{PHONE_CONTAINER}:9082") if phone else "") +
+            f"    @directory_public path {PUBLIC_PATHS}\n"
             "    handle @directory_public {\n"
             "        reverse_proxy sparrow-central-directory:9080\n    }\n"
             '    handle {\n        respond "Not found" 404\n    }\n}\n' + END)
 
 
 def same_route(route: str, hostname: str) -> bool:
+    """The installer's own route, with or without phone verification."""
     route = route.replace("\r\n", "\n")
-    expected = directory_route(hostname)
-    return route in (expected, expected.replace(" /.well-known/sparrow-directory", ""))
+    expected = (directory_route(hostname), directory_route(hostname, phone=True))
+    return route in (*expected, expected[0].replace(" /.well-known/sparrow-directory", ""))
 
 
 def managed_route(contents: str) -> str:
@@ -230,7 +246,8 @@ def route_hostname(route: str) -> str:
 
 def is_sparrow_route(route: str) -> bool:
     upstreams = re.findall(r"(?m)^\s*reverse_proxy\s+([^\s#]+)\s*$", route)
-    return (bool(route_hostname(route)) and upstreams == ["sparrow-central-directory:9080"] and
+    return (bool(route_hostname(route)) and
+            upstreams in (["sparrow-central-directory:9080"], [f"{PHONE_CONTAINER}:9082", "sparrow-central-directory:9080"]) and
             re.search(r'respond\s+"Not found"\s+404', route) is not None and
             re.search(r"(?m)^\s*@directory_public\s+path\s+", route) is not None)
 
@@ -306,6 +323,58 @@ def server_files(server: Path) -> dict[str, Path]:
     return files
 
 
+def phone_settings() -> dict:
+    """Whether this Directory verifies phone numbers, with which Firebase project and how many a day (0 = no limit)."""
+    try:
+        saved = json.loads(PHONE_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        saved = {}
+    return {"enabled": saved.get("enabled") is True,
+            "firebaseProject": imported_firebase_project(),
+            "perDay": saved.get("perDay") if isinstance(saved.get("perDay"), int) and saved["perDay"] >= 0 else 0}
+
+
+def firebase_admin_project(path: Path) -> str:
+    """The project of a Firebase Admin service account file; refuses anything else."""
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise DirectoryError(f"{path} is not a Firebase Admin service account file.") from error
+    if not isinstance(document, dict) or document.get("type") != "service_account" or not all(
+            isinstance(document.get(name), str) and document[name]
+            for name in ("project_id", "private_key", "client_email")):
+        raise DirectoryError(f"{path} is not a Firebase Admin service account file.")
+    return document["project_id"]
+
+
+def imported_firebase_project() -> str:
+    try:
+        return firebase_admin_project(FIREBASE_ADMIN) if FIREBASE_ADMIN.is_file() else ""
+    except DirectoryError:
+        return ""
+
+
+def import_firebase_admin(source: Path) -> None:
+    """Copies the chosen service account file into private/; only the phone verifier container reads it."""
+    project = firebase_admin_project(source)
+    if source.resolve() != FIREBASE_ADMIN.resolve():
+        PRIVATE.mkdir(exist_ok=True)
+        shutil.copyfile(source, FIREBASE_ADMIN)
+    # private/ itself is closed to others; the container's user must read the mounted file.
+    FIREBASE_ADMIN.chmod(0o644)
+    print(f"Firebase Admin file of the project {project} imported.")
+
+
+def phone_verifications_today() -> str:
+    """Today's count of the running verifier, read inside its container; empty when it does not run."""
+    if container_status(PHONE_CONTAINER) != "running":
+        return ""
+    result = docker("exec", PHONE_CONTAINER, "python", "-c",
+                    "import json,urllib.request;print(json.load(urllib.request.urlopen("
+                    "'http://127.0.0.1:9082/health',timeout=5))['verificationsToday'])", check=False)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def ensure_admin_token() -> None:
     PRIVATE.mkdir(exist_ok=True)
     admin = PRIVATE / "admin.env"
@@ -356,9 +425,44 @@ def prepare_identity() -> str:
     return keys[-1]
 
 
-def start_standalone_proxy(hostname: str, previous: str) -> None:
+def start_phone_verifier(per_day: int) -> None:
+    """Keys of the separate phone verifier (created once, in its own volume), certified by the Directory key."""
+    print("Preparing phone verification ...", flush=True)
+    docker("run", "--rm", "--user", "0:0", "--cap-drop", "ALL", "--cap-add", "CHOWN", "--cap-add",
+           "FOWNER", "--cap-add", "DAC_OVERRIDE", "--mount",
+           "type=volume,source=sparrow-phone-verifier-state,target=/phone", "--entrypoint",
+           "/bin/sh", "sparrow-central-directory:local", "-c",
+           "mkdir -p /phone && chown -R 10001:10001 /phone && chmod 700 /phone")
+    lines = docker("run", "--rm", "--user", "10001:10001", "--cap-drop", "ALL", "--mount",
+                   "type=volume,source=sparrow-phone-verifier-state,target=/phone", "--entrypoint", "python",
+                   "sparrow-central-directory:local", "/app/phone_verifier.py", "init-keys",
+                   "--state", "/phone").stdout.splitlines()
+    keys = next((line.strip() for line in reversed(lines) if line.strip().startswith("{")), "")
+    certificate = compose("run", "--rm", "--no-deps", "directory", "certify-phone-keys", "--key-file",
+                          "/state/signing.pem", "--phone-keys", keys).stdout.splitlines()
+    certified = next((line.strip() for line in reversed(certificate) if line.strip().startswith("{")), "")
+    if not keys or not certified:
+        raise DirectoryError("Could not certify the phone verification keys; it was not started.")
+    # Public: the keys it certifies are public keys. Readable by the verifier's user in the container.
+    PHONE_CERTIFICATE.write_text(certified + "\n", encoding="utf-8")
+    PHONE_CERTIFICATE.chmod(0o644)
+    PHONE_ENV.write_text(f"PHONE_VERIFICATIONS_PER_DAY={per_day}\n", encoding="utf-8")
+    compose("--profile", "phone-verification", "up", "-d", "--no-deps", "--force-recreate", "phone-verifier")
+    print(f"This Directory verifies phone numbers for the Firebase project "
+          f"{firebase_admin_project(FIREBASE_ADMIN)}, "
+          f"{f'at most {per_day} a day' if per_day else 'without a daily maximum'}.")
+
+
+def stop_phone_verifier() -> None:
+    if container_status(PHONE_CONTAINER):
+        compose("--profile", "phone-verification", "rm", "--stop", "--force", "phone-verifier", check=False)
+        print("Phone verification stopped.")
+
+
+def start_standalone_proxy(hostname: str, previous: str, phone: bool) -> None:
     caddyfile = PRIVATE / "Caddyfile"
-    content = (f"{hostname} {{\n    @directory_public path {PUBLIC_PATHS}\n"
+    content = (f"{hostname} {{\n" + (phone_handle("phone-verifier:9082") if phone else "") +
+               f"    @directory_public path {PUBLIC_PATHS}\n"
                "    handle @directory_public {\n        reverse_proxy directory:9080\n    }\n"
                '    handle { respond "Not found" 404 }\n}\n')
     if caddyfile.is_file():
@@ -372,8 +476,8 @@ def start_standalone_proxy(hostname: str, previous: str) -> None:
 
 
 def update_server_route(proxy: str, caddyfile: Path, current: str, current_route: str,
-                        hostname: str) -> None:
-    route = directory_route(hostname)
+                        hostname: str, phone: bool) -> None:
+    route = directory_route(hostname, phone)
     if "\r\n" in current:
         route = route.replace("\n", "\r\n")
     updated = current.replace(current_route,
@@ -454,9 +558,17 @@ def register_control_plane(server: Path, url: str, key: str) -> None:
     )
 
 
-def install(hostname: str, server: Path | None) -> None:
+def install(hostname: str, server: Path | None, phone: bool, firebase_admin: Path | None = None,
+            per_day: int = 0) -> None:
     check_docker()
     hostname = validate_hostname(hostname.strip().lower())
+    if phone and firebase_admin is None and not FIREBASE_ADMIN.is_file():
+        raise DirectoryError("Phone verification needs the Firebase Admin service account file of the app's "
+                             "Firebase project. Choose it under Phone verification.")
+    if phone and firebase_admin is not None:
+        firebase_admin_project(firebase_admin)
+    if per_day < 0:
+        raise DirectoryError("The daily maximum of phone verifications must be 0 (no limit) or more.")
     if "sparrow-public-edge" not in docker_lines("network", "ls", "--format", "{{.Name}}"):
         docker("network", "create", "sparrow-public-edge")
     previous = installed_hostname()
@@ -493,10 +605,18 @@ def install(hostname: str, server: Path | None) -> None:
                 f"{files[name]} trusts a different Directory key; it is never replaced silently.")
     print("Starting the Directory ...", flush=True)
     compose("up", "-d", "--no-deps", "directory")
-    if server is None:
-        start_standalone_proxy(hostname, previous)
+    if phone and firebase_admin is not None:
+        import_firebase_admin(firebase_admin)
+    if phone:
+        start_phone_verifier(per_day)
     else:
-        update_server_route(proxy, files["caddyfile"], current, current_route, hostname)
+        stop_phone_verifier()
+    PHONE_FILE.write_text(json.dumps({"enabled": phone, "perDay": per_day}),
+                          encoding="utf-8")
+    if server is None:
+        start_standalone_proxy(hostname, previous, phone)
+    else:
+        update_server_route(proxy, files["caddyfile"], current, current_route, hostname, phone)
     if previous and previous != hostname:
         print(f"Directory hostname changed: {previous} -> {hostname} (signing identity unchanged).")
     HOST_FILE.write_text(hostname + "\n", encoding="utf-8")
@@ -516,6 +636,50 @@ def install(hostname: str, server: Path | None) -> None:
         "Apps fetch and pin this key automatically. Enter the URL in the app's settings "
         "if it changed."
     )
+
+
+# ---------------------------------------------------------------------- update from source
+def saved_source() -> str:
+    try:
+        return SOURCE_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def update_from_source(source: Path) -> None:
+    """Copies the Directory program files of a source checkout into this folder (never private/), then starts it
+    with its saved settings, which rebuilds the image from the new files."""
+    source = source.expanduser().resolve()
+    builder_file = source / "server" / "control-plane-directory" / "Build-SparrowDirectoryInstaller.py"
+    if not builder_file.is_file():
+        raise DirectoryError(f"{source} is not a Sparrow source folder (the repository root).")
+    if builder_file.parent == ROOT:
+        raise DirectoryError("This Directory runs from the source folder itself; Start uses its files already.")
+    info, hostname = installed_info(), installed_hostname()
+    if not hostname:
+        raise DirectoryError("Install the Directory first; Update keeps an installed Directory current.")
+    # The file list of the new version, so files it adds are copied too.
+    spec = importlib.util.spec_from_file_location("directory_builder", builder_file)
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    names = builder.WIN if WINDOWS else builder.LINUX
+    print(f"Copying the Directory program files from {source} ...", flush=True)
+    for name in names:
+        target = ROOT / name
+        shutil.copy2(builder.SHARED.get(name, builder_file.parent / name), target)
+        if name.endswith((".sh", ".command")):
+            target.chmod(0o755)
+    PRIVATE.mkdir(exist_ok=True)
+    SOURCE_FILE.write_text(str(source) + "\n", encoding="utf-8")
+    server = info.get("serverRoot", "")
+    arguments = ["install", "--hostname", hostname,
+                 *(["--server-folder", server] if server else ["--standalone"]),
+                 "--phone-verification" if phone_settings()["enabled"] else "--no-phone-verification"]
+    # The new engine runs the Start: this process still has the old code loaded.
+    result = subprocess.run([sys.executable, "-u", str(ROOT / "directory_installer.py"), *arguments],
+                            creationflags=HIDDEN)
+    if result.returncode:
+        raise DirectoryError("The files were updated, but the Start failed; see above. Click Start to retry.")
 
 
 # ---------------------------------------------------------------------- other actions
@@ -554,11 +718,22 @@ def main() -> int:
     install_command = commands.add_parser("install", help="install or start the Directory")
     install_command.add_argument("--hostname", default="",
                                  help="public hostname (default: automatic sslip.io)")
+    phone = install_command.add_mutually_exclusive_group()
+    phone.add_argument("--phone-verification", dest="phone", action="store_true", default=None,
+                       help="verify phone numbers for all Control Planes (Firebase phone sign-in)")
+    phone.add_argument("--no-phone-verification", dest="phone", action="store_false")
+    install_command.add_argument("--phone-verifications-per-day", type=int, default=None,
+                                 help="maximum phone verifications per UTC day, 0 = no limit (default: kept)")
+    install_command.add_argument("--firebase-admin-file", type=Path, default=None,
+                                 help="Firebase Admin service account JSON of the app's project (default: the imported one)")
     mode = install_command.add_mutually_exclusive_group()
     mode.add_argument("--server-folder", type=Path,
                       help="share the HTTPS proxy of this Sparrow Server")
     mode.add_argument("--standalone", action="store_true",
                       help="run an own HTTPS proxy on ports 80/443")
+    update_command = commands.add_parser("update", help="update this Directory from a source checkout and start it")
+    update_command.add_argument("--source", type=Path, default=None,
+                                help="repository root of the Sparrow source (default: the last one used)")
     for name, text in (("stop", "stop the Directory"), ("status", "show the containers"),
                        ("logs", "show recent Directory logs"), ("planes",
                                                                 "list registered Control Planes"),
@@ -574,16 +749,28 @@ def main() -> int:
             print(
                 f"Installing the Directory as {hostname} "
                 f"({'sharing ' + str(server) if server else 'own HTTPS proxy'}) ...", flush=True)
-            install(hostname, server)
+            saved = phone_settings()
+            install(hostname, server, saved["enabled"] if args.phone is None else args.phone,
+                    args.firebase_admin_file,
+                    saved["perDay"] if args.phone_verifications_per_day is None else args.phone_verifications_per_day)
+        elif args.command == "update":
+            source = args.source or (Path(saved_source()) if saved_source() else None)
+            if source is None:
+                raise DirectoryError("Name the Sparrow source folder with --source.")
+            update_from_source(source)
         elif args.command == "stop":
             check_docker()
-            streamed("compose", "-f", str(COMPOSE), "--profile", "standalone", "stop")
+            streamed("compose", "-f", str(COMPOSE), "--profile", "standalone", "--profile",
+                     "phone-verification", "stop")
         elif args.command == "status":
             check_docker()
             for line in docker_lines(
-                    "ps", "--all", "--filter", f"name={CONTAINER}", "--format",
+                    "ps", "--all", "--filter", f"name={CONTAINER}", "--filter", f"name={PHONE_CONTAINER}", "--format",
                     "{{.Names}}: {{.Status}}") or ["The Directory is not installed."]:
                 print(line)
+            today, maximum = phone_verifications_today(), phone_settings()["perDay"]
+            if today:
+                print(f"Phone verifications today (UTC): {today}" + (f" of {maximum}" if maximum else ", no daily maximum"))
         elif args.command == "logs":
             check_docker()
             streamed("compose", "-f", str(COMPOSE), "logs", "--tail", "200", "directory")

@@ -57,16 +57,17 @@ class RedisPresenceStoreIntegrationTest {
             val ownerRoutingId = ClientRoutingIds.fromSigningPublicKey(owner.encodedPublicKey)
             val other = NodeIdentity.generate()
             val otherRoutingId = ClientRoutingIds.fromSigningPublicKey(other.encodedPublicKey)
-            val firstClaim = AliasClaims(provenAlias = null, unprovenClaimsAllowed = true, aliases = listOf(alias))
+            val firstClaim = AliasClaims(provenAlias = alias, aliases = listOf(alias))
+            val unproven = AliasClaims(provenAlias = null, aliases = listOf(alias))
 
             createStore(redisUrl, "sparrow:test:presence:$suffix").use { store ->
                 store.register(registration(owner, ownerRoutingId, 1L, now))
                 assertEquals(listOf(alias), store.bindAliases(ownerRoutingId, firstClaim))
-                assertEquals(emptyList(), store.bindAliases(otherRoutingId, firstClaim))
+                assertEquals(emptyList(), store.bindAliases(otherRoutingId, unproven))
                 assertEquals(ownerRoutingId, store.resolve(alias).ownerRoutingId)
                 assertEquals(listOf(ownerRoutingId), store.resolve(alias).routes.map(ClientRoute::routingId))
-                assertEquals(listOf(alias), store.bindAliases(ownerRoutingId, firstClaim))
-                assertEquals(listOf(alias), store.bindAliases(otherRoutingId, firstClaim.copy(provenAlias = alias)))
+                assertEquals(listOf(alias), store.bindAliases(ownerRoutingId, unproven))
+                assertEquals(listOf(alias), store.bindAliases(otherRoutingId, firstClaim))
                 assertEquals(otherRoutingId, store.resolve(alias).ownerRoutingId)
             }
         }

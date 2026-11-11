@@ -81,7 +81,7 @@ Key classes:
 - `installPresenceRoutes()`
 - `RedisPresenceStore`
 - `NodeRequestAuthorizer`
-- `PhoneVerification`, `FirebasePhoneTokenVerifier`, `CachingPhoneTokenVerifier`
+- `PhoneVerification`, `PhoneAttestations`
 
 ### `push`
 
@@ -174,7 +174,7 @@ classDiagram
     class PresenceStorage
     class RedisPresenceStore
     class PhoneVerification
-    class FirebasePhoneTokenVerifier
+    class PhoneAttestations
     class PushRuntime
     class PushCoordinator
     class PostgresPushDeviceStore
@@ -188,7 +188,7 @@ classDiagram
     PresenceRuntime --> PresenceStorage
     PresenceStorage <|.. RedisPresenceStore
     PresenceRuntime --> PhoneVerification
-    PhoneVerification --> FirebasePhoneTokenVerifier : optional
+    PhoneVerification --> PhoneAttestations
     PushRuntime --> PushCoordinator
     PushCoordinator --> PostgresPushDeviceStore
     PushCoordinator --> PostgresPendingEnvelopeStore

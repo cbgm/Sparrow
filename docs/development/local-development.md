@@ -13,6 +13,20 @@ CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://<release-directory-host>
 
 The production discovery model is signed; do not model a new deployment as an unsigned hardcoded list of arbitrary nodes.
 
+### Firebase project of the app
+
+There is no `google-services.json`: the app starts Firebase (phone sign-in only) with these three
+values from `local.properties`. Take them from the Firebase console (Project settings → your Android
+app `com.cbgm.sparrow`), or from an old `google-services.json`: `client[0].client_info.mobilesdk_app_id`,
+`client[0].api_key[0].current_key` and `project_info.project_id`. Without them the app builds and runs,
+but phone verification reports that it is not set up.
+
+```properties
+FIREBASE_APP_ID=1:...:android:...
+FIREBASE_API_KEY=AIza...
+FIREBASE_PROJECT_ID=sparrow-a9048
+```
+
 ### Phone verification in debug builds
 
 Sign-up verifies the phone number once by SMS (Firebase). Debug builds show a **Skip (debug)**
