@@ -1161,7 +1161,7 @@ function Invoke-LanToPublicMigration {
     foreach ($key in @('CONTROL_PLANE_PROJECT_NAME','NODE_REGISTRY_DATABASE_PASSWORD','PRESENCE_REDIS_PASSWORD')) {
         if (-not $cpRuntime[$key]) { throw "Existing Control Plane lacks $key. No data changed." }
     }
-    foreach ($key in @('COMMUNITY_NODE_PROJECT_NAME','CLIENT_ENDPOINT','FEDERATION_ENDPOINT','MAILBOX_ENDPOINT','CONTROL_PLANE_URL')) {
+    foreach ($key in @('COMMUNITY_NODE_PROJECT_NAME','CLIENT_ENDPOINT','MAILBOX_ENDPOINT','CONTROL_PLANE_URL')) {
         if (-not $nodeRuntime[$key]) { throw "Existing Node lacks $key. No data changed." }
     }
     $candidateDirectory = ([string]$DirectoryUrl).Trim()
@@ -1209,7 +1209,6 @@ function Invoke-LanToPublicMigration {
         Write-PreflightProperties $nodeCandidate @{
             COMMUNITY_NODE_DOMAIN=$NodeDomain
             CLIENT_ENDPOINT="wss://$NodeDomain/v1/gateway"
-            FEDERATION_ENDPOINT="https://$NodeDomain"
             MAILBOX_ENDPOINT="https://$NodeDomain"
             CONTROL_PLANE_URL='http://sparrow-control-edge:8080'
             CONTROL_PLANE_URLS=('http://sparrow-control-edge:8080' + $(if ($cpConfigured.Count -gt 1) { ',' + ($cpConfigured[1..($cpConfigured.Count-1)] -join ',') } else { '' }))
@@ -1258,7 +1257,6 @@ function Invoke-LanToPublicMigration {
     Write-Properties (Join-Path $nodeRoot '.env.runtime') @{
         COMMUNITY_NODE_DOMAIN=$NodeDomain
         CLIENT_ENDPOINT="wss://$NodeDomain/v1/gateway"
-        FEDERATION_ENDPOINT="https://$NodeDomain"
         MAILBOX_ENDPOINT="https://$NodeDomain"
         CONTROL_PLANE_URL='http://sparrow-control-edge:8080'
         CONTROL_PLANE_URLS=('http://sparrow-control-edge:8080' + $(if ($cpConfigured.Count -gt 1) { ',' + ($cpConfigured[1..($cpConfigured.Count-1)] -join ',') } else { '' }))

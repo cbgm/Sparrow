@@ -18,7 +18,6 @@ object ProtocolSignatures {
             descriptor.copy(
                 nodeId = identity.nodeId,
                 identityPublicKey = identity.encodedPublicKey,
-                activeConnections = null,
                 signature = byteArrayOf()
             )
         return canonicalDescriptor.copy(

@@ -105,7 +105,6 @@ services:
       DIRECTORY_DISCOVERY_PATH: /directory-cache/advertised-control-planes.json
       NODE_REGISTRY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
       CLIENT_ENDPOINT: ${CLIENT_ENDPOINT:?Set CLIENT_ENDPOINT}
-      FEDERATION_ENDPOINT: ${FEDERATION_ENDPOINT:?Set FEDERATION_ENDPOINT}
       MAILBOX_ENDPOINT: ${MAILBOX_ENDPOINT:?Set MAILBOX_ENDPOINT}
       # Who runs this node, signed into its descriptor: apps never route through two nodes of one operator.
       NODE_OPERATOR: ${NODE_OPERATOR:-}

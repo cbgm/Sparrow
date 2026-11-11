@@ -53,11 +53,6 @@
         reverse_proxy gateway:8094
     }
 
-    @federation path /v1/federation /v1/federation/*
-    handle @federation {
-        reverse_proxy federation:8093
-    }
-
     @federation_health path /health/federation
     handle @federation_health {
         rewrite * /health/ready

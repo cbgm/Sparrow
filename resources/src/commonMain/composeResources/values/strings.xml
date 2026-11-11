@@ -343,7 +343,6 @@
     <string name="feature_settings_network_show_all_nodes">View all nodes (%1$d)</string>
     <string name="feature_settings_network_no_active_node">No node connected</string>
     <string name="feature_settings_network_no_nodes">No nodes discovered yet</string>
-    <string name="feature_settings_network_active_connections">Connections: %1$d</string>
     <string name="feature_settings_node_current">CURRENT</string>
     <string name="feature_settings_node_available">AVAILABLE</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>
@@ -530,10 +529,9 @@
     <string name="feature_settings_circuit_send_directly_on">While no route through at least two nodes is available, sending and receiving through mailboxes go directly or through a single node: messages keep working, but a server sees your address.</string>
     <string name="feature_settings_circuit_send_directly_off">Sending and receiving through mailboxes wait for a route through at least two nodes: your address stays hidden, but with fewer nodes reachable, messages wait until enough are back.</string>
     <string name="feature_settings_preferred_node_automatic">Automatic</string>
-    <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
+    <string name="feature_settings_preferred_node_automatic_description">Uses a node picked for this device</string>
     <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>
     <string name="feature_settings_preferred_node_search">Search address, IP or node ID</string>
-    <string name="feature_settings_preferred_node_connections">%1$d connections</string>
     <string name="feature_settings_preferred_node_none_found">No node matches your search</string>
     <string name="feature_settings_preferred_node_load_failed">Nodes could not be loaded</string>
     <string name="feature_settings_preferred_node_unlisted">Your favourite node is not in the current list. Sparrow uses other nodes until it is back.</string>

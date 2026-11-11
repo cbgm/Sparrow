@@ -345,7 +345,6 @@
     <string name="feature_settings_network_show_all_nodes">Alle Nodes anzeigen (%1$d)</string>
     <string name="feature_settings_network_no_active_node">Mit keinem Node verbunden</string>
     <string name="feature_settings_network_no_nodes">Noch keine Nodes gefunden</string>
-    <string name="feature_settings_network_active_connections">Verbindungen: %1$d</string>
     <string name="feature_settings_node_current">AKTUELL</string>
     <string name="feature_settings_node_available">VERFÜGBAR</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>
@@ -530,10 +529,9 @@
     <string name="feature_settings_circuit_send_directly_on">Solange keine Route über mindestens zwei Knoten verfügbar ist, laufen Senden und Empfangen über Postfächer direkt oder über einen einzigen Knoten: Nachrichten funktionieren weiter, aber ein Server sieht deine Adresse.</string>
     <string name="feature_settings_circuit_send_directly_off">Senden und Empfangen über Postfächer warten auf eine Route über mindestens zwei Knoten: deine Adresse bleibt verborgen, aber sind weniger Knoten erreichbar, warten Nachrichten, bis wieder genug da sind.</string>
     <string name="feature_settings_preferred_node_automatic">Automatisch</string>
-    <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
+    <string name="feature_settings_preferred_node_automatic_description">Nutzt einen für dieses Gerät gewählten Node</string>
     <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>
     <string name="feature_settings_preferred_node_search">Adresse, IP oder Node-ID suchen</string>
-    <string name="feature_settings_preferred_node_connections">%1$d Verbindungen</string>
     <string name="feature_settings_preferred_node_none_found">Kein Node passt zu deiner Suche</string>
     <string name="feature_settings_preferred_node_load_failed">Nodes konnten nicht geladen werden</string>
     <string name="feature_settings_preferred_node_unlisted">Deine bevorzugte Node ist gerade nicht in der Liste. Sparrow nutzt andere Nodes, bis sie wieder da ist.</string>

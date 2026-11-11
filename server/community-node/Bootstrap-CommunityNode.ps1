@@ -1310,7 +1310,6 @@ try {
         "LOCAL_CONTROL_PLANE_DOMAIN=$($config['LOCAL_CONTROL_PLANE_DOMAIN'])",
         "MANUAL_CONTROL_PLANE_URLS=$($config['CONTROL_PLANE_URLS'])",
         "CLIENT_ENDPOINT=$clientEndpoint",
-        "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",
         "SPARROW_IMAGE_PREFIX=$($config['SPARROW_IMAGE_PREFIX'])",
         "SPARROW_IMAGE_TAG=$($config['SPARROW_IMAGE_TAG'])",

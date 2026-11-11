@@ -169,7 +169,6 @@ services:
       NODE_IDENTITY_PATH: /data/node.identity
       NODE_REGISTRY_URL: http://node-registry:8090
       CLIENT_ENDPOINT: ws://localhost:8094/v1/gateway
-      FEDERATION_ENDPOINT: http://localhost:8093
       MAILBOX_ENDPOINT: http://localhost:8092
     ports:
       - "127.0.0.1:8093:8093"

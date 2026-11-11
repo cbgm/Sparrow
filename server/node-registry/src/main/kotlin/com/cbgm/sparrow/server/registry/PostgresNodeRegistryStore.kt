@@ -5,7 +5,6 @@ import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.security.ProtocolSignatures
 import java.sql.Connection
-import java.sql.Types
 
 internal class PostgresNodeRegistryStore(
     private val database: PostgresNodeRegistryDatabase,
@@ -37,12 +36,7 @@ internal class PostgresNodeRegistryStore(
                     """.trimIndent()
                 ).use { statement ->
                     statement.setString(1, descriptor.nodeId)
-                    statement.setString(
-                        2,
-                        serverJson.encodeToString(
-                            descriptor.copy(activeConnections = null)
-                        )
-                    )
+                    statement.setString(2, serverJson.encodeToString(descriptor))
                     statement.setLong(DESCRIPTOR_EXPIRATION_PARAMETER, descriptor.validUntilEpochMilliseconds)
                     statement.setLong(LAST_HEARTBEAT_PARAMETER, currentTime)
                     statement.executeUpdate()
@@ -73,16 +67,12 @@ internal class PostgresNodeRegistryStore(
                     .prepareStatement(
                         """
                         UPDATE registered_nodes
-                        SET last_heartbeat_at_epoch_milliseconds = ?,
-                            active_connections = COALESCE(?, active_connections)
+                        SET last_heartbeat_at_epoch_milliseconds = ?
                         WHERE node_id = ?
                         """.trimIndent()
                     ).use { statement ->
                         statement.setLong(1, currentTime)
-                        heartbeat.activeConnections?.let { activeConnections ->
-                            statement.setInt(2, activeConnections)
-                        } ?: statement.setNull(2, Types.INTEGER)
-                        statement.setString(3, heartbeat.nodeId)
+                        statement.setString(2, heartbeat.nodeId)
                         statement.executeUpdate()
                     }
                 RegistrationResult.Accepted
@@ -95,7 +85,7 @@ internal class PostgresNodeRegistryStore(
             connection
                 .prepareStatement(
                     """
-                    SELECT descriptor_json, active_connections
+                    SELECT descriptor_json
                     FROM registered_nodes
                     WHERE valid_until_epoch_milliseconds > ?
                       AND last_heartbeat_at_epoch_milliseconds >= ?
@@ -107,14 +97,7 @@ internal class PostgresNodeRegistryStore(
                     statement.executeQuery().use { results ->
                         buildList {
                             while (results.next()) {
-                                add(
-                                    serverJson
-                                        .decodeFromString<SparrowNodeDescriptor>(
-                                            results.getString(1)
-                                        ).copy(
-                                            activeConnections = results.connectionLoad(2)
-                                        )
-                                )
+                                add(serverJson.decodeFromString<SparrowNodeDescriptor>(results.getString(1)))
                             }
                         }
                     }
@@ -128,7 +111,7 @@ internal class PostgresNodeRegistryStore(
             connection
                 .prepareStatement(
                     """
-                    SELECT descriptor_json, active_connections
+                    SELECT descriptor_json
                     FROM registered_nodes
                     WHERE node_id = ?
                       AND valid_until_epoch_milliseconds > ?
@@ -140,12 +123,7 @@ internal class PostgresNodeRegistryStore(
                     statement.setLong(HEARTBEAT_CUTOFF_PARAMETER, currentTime - heartbeatGraceMilliseconds)
                     statement.executeQuery().use { results ->
                         if (results.next()) {
-                            serverJson
-                                .decodeFromString<SparrowNodeDescriptor>(
-                                    results.getString(1)
-                                ).copy(
-                                    activeConnections = results.connectionLoad(2)
-                                )
+                            serverJson.decodeFromString<SparrowNodeDescriptor>(results.getString(1))
                         } else {
                             null
                         }
@@ -213,11 +191,6 @@ internal class PostgresNodeRegistryStore(
                 )
                 statement.executeUpdate() == 1
             }
-
-    private fun java.sql.ResultSet.connectionLoad(columnIndex: Int): Int? =
-        getObject(columnIndex)?.let { value ->
-            (value as Number).toInt()
-        }
 
     private companion object {
         const val DESCRIPTOR_EXPIRATION_PARAMETER = 3

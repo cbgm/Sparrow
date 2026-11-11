@@ -135,7 +135,6 @@ services:
     environment:
       TRUST_PROXY_HEADERS: "true"
       CLIENT_ENDPOINT: wss://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}/v1/gateway
-      FEDERATION_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
       MAILBOX_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
     networks:
       - edge

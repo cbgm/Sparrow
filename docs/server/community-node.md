@@ -73,7 +73,7 @@ On the command line, Linux/macOS use `Start-SparrowServer.sh nodes --help` (`app
 
 A default LAN deployment exposes the node Caddy edge on port `8490`; the node's address in the node directory is normally `ws://<host>:8490/v1/gateway`, from which apps derive the relay, circuit, mailbox and blob URLs. Public mode uses HTTPS/WSS through the configured public hostname.
 
-`/index` provides links for gateway health, advertised Control Planes, federation capabilities/health and mailbox health.
+`/index` provides links for gateway health, advertised Control Planes, federation (node registration) health and mailbox health.
 
 ## Failure/retry behavior
 

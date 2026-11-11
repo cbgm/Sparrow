@@ -18,7 +18,6 @@ class ProtocolSignaturesTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node-a:8080/v1/gateway",
-                federationEndpoint = "http://node-a:8081",
                 mailboxEndpoint = "http://node-a:8082",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),
@@ -39,7 +38,6 @@ class ProtocolSignaturesTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node-a:8080/v1/gateway",
-                federationEndpoint = "http://node-a:8081",
                 mailboxEndpoint = "http://node-a:8082",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),

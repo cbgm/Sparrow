@@ -3,8 +3,7 @@ package com.cbgm.sparrow.feature.transport.discovery
 /** A gateway from the verified node directory, as the user can choose it. */
 data class GatewayNode(
     val nodeId: String,
-    val address: String,
-    val activeConnections: Int
+    val address: String
 ) {
     /**
      * True when [query] is part of the address or the node ID, ignoring case. Automatic sslip.io
@@ -21,6 +20,5 @@ data class GatewayNode(
 internal fun NodeEndpoint.toGatewayNode(): GatewayNode =
     GatewayNode(
         nodeId = nodeId,
-        address = websocketUrl.substringAfter("://").substringBefore('/'),
-        activeConnections = activeConnections
+        address = websocketUrl.substringAfter("://").substringBefore('/')
     )

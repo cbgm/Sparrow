@@ -55,7 +55,7 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
         localPrivateKey: ByteArray
     ): Result<ByteArray> =
         runCatching {
-            if (encryptedPayload.version !in READABLE_VERSIONS) {
+            if (encryptedPayload.version != CURRENT_VERSION) {
                 throw UnsupportedCryptoVersionException(
                     version =
                         encryptedPayload.version
@@ -79,8 +79,7 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
                     recipientsSecretKey = localPrivateKey.toUByteArray()
                 )
 
-            // Version 1 envelopes, sealed before padding, may still wait in mailboxes.
-            if (encryptedPayload.version == UNPADDED_VERSION) plaintext.toByteArray() else TransportPadding.unpad(plaintext.toByteArray())
+            TransportPadding.unpad(plaintext.toByteArray())
         }.recoverCatching { error ->
             when (error) {
                 is InvalidPublicKeyException,
@@ -117,8 +116,6 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
     private companion object {
         /** Version 2: the packet is padded to a size class before it is sealed ([TransportPadding]). */
         const val CURRENT_VERSION = 2
-        const val UNPADDED_VERSION = 1
-        val READABLE_VERSIONS = setOf(UNPADDED_VERSION, CURRENT_VERSION)
         const val BOX_PUBLIC_KEY_SIZE = 32
         const val BOX_PRIVATE_KEY_SIZE = 32
     }

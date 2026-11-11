@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class NodeCapability {
     GATEWAY,
-    FEDERATION,
     MAILBOX
 }
 
@@ -13,13 +12,11 @@ enum class NodeCapability {
 data class SparrowNodeDescriptor(
     val nodeId: String,
     val clientEndpoint: String,
-    val federationEndpoint: String,
     val mailboxEndpoint: String,
     val identityPublicKey: ByteArray,
     val protocolVersions: Set<Int>,
     val capabilities: Set<NodeCapability>,
     val validUntilEpochMilliseconds: Long,
-    val activeConnections: Int? = null,
     /** Raw X25519 key the node relays onion layers with ([RelayLayer]); null for nodes that do not relay. */
     val relayKey: ByteArray? = null,
     /**
@@ -32,12 +29,10 @@ data class SparrowNodeDescriptor(
     init {
         require(nodeId.isNotBlank())
         require(clientEndpoint.isNotBlank())
-        require(federationEndpoint.isNotBlank())
         require(mailboxEndpoint.isNotBlank())
         require(identityPublicKey.isNotEmpty())
         require(protocolVersions.isNotEmpty() && protocolVersions.all { it > 0 })
         require(validUntilEpochMilliseconds > 0L)
-        require(activeConnections == null || activeConnections >= 0)
         require(operator == null || operator.isNotBlank() && operator.length <= MAXIMUM_OPERATOR_LENGTH)
     }
 
@@ -52,10 +47,8 @@ data class SparrowNodeDescriptor(
         other as SparrowNodeDescriptor
 
         if (validUntilEpochMilliseconds != other.validUntilEpochMilliseconds) return false
-        if (activeConnections != other.activeConnections) return false
         if (nodeId != other.nodeId) return false
         if (clientEndpoint != other.clientEndpoint) return false
-        if (federationEndpoint != other.federationEndpoint) return false
         if (mailboxEndpoint != other.mailboxEndpoint) return false
         if (!identityPublicKey.contentEquals(other.identityPublicKey)) return false
         if (protocolVersions != other.protocolVersions) return false
@@ -69,10 +62,8 @@ data class SparrowNodeDescriptor(
 
     override fun hashCode(): Int {
         var result = validUntilEpochMilliseconds.hashCode()
-        result = 31 * result + (activeConnections ?: 0)
         result = 31 * result + nodeId.hashCode()
         result = 31 * result + clientEndpoint.hashCode()
-        result = 31 * result + federationEndpoint.hashCode()
         result = 31 * result + mailboxEndpoint.hashCode()
         result = 31 * result + identityPublicKey.contentHashCode()
         result = 31 * result + protocolVersions.hashCode()
@@ -88,7 +79,6 @@ data class SparrowNodeDescriptor(
 data class UnsignedNodeDescriptor(
     val nodeId: String,
     val clientEndpoint: String,
-    val federationEndpoint: String,
     val mailboxEndpoint: String,
     val identityPublicKey: ByteArray,
     val protocolVersions: Set<Int>,
@@ -106,7 +96,6 @@ data class UnsignedNodeDescriptor(
         if (validUntilEpochMilliseconds != other.validUntilEpochMilliseconds) return false
         if (nodeId != other.nodeId) return false
         if (clientEndpoint != other.clientEndpoint) return false
-        if (federationEndpoint != other.federationEndpoint) return false
         if (mailboxEndpoint != other.mailboxEndpoint) return false
         if (!identityPublicKey.contentEquals(other.identityPublicKey)) return false
         if (protocolVersions != other.protocolVersions) return false
@@ -121,7 +110,6 @@ data class UnsignedNodeDescriptor(
         var result = validUntilEpochMilliseconds.hashCode()
         result = 31 * result + nodeId.hashCode()
         result = 31 * result + clientEndpoint.hashCode()
-        result = 31 * result + federationEndpoint.hashCode()
         result = 31 * result + mailboxEndpoint.hashCode()
         result = 31 * result + identityPublicKey.contentHashCode()
         result = 31 * result + protocolVersions.hashCode()
@@ -136,7 +124,6 @@ fun SparrowNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
     UnsignedNodeDescriptor(
         nodeId = nodeId,
         clientEndpoint = clientEndpoint,
-        federationEndpoint = federationEndpoint,
         mailboxEndpoint = mailboxEndpoint,
         identityPublicKey = identityPublicKey,
         protocolVersions = protocolVersions,
@@ -156,13 +143,8 @@ data class NodeHeartbeatRequest(
     val nodeId: String,
     val timestampEpochMilliseconds: Long,
     val nonce: String,
-    val activeConnections: Int? = null,
     val signature: ByteArray
 ) {
-    init {
-        require(activeConnections == null || activeConnections >= 0)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -170,7 +152,6 @@ data class NodeHeartbeatRequest(
         other as NodeHeartbeatRequest
 
         if (timestampEpochMilliseconds != other.timestampEpochMilliseconds) return false
-        if (activeConnections != other.activeConnections) return false
         if (nodeId != other.nodeId) return false
         if (nonce != other.nonce) return false
         if (!signature.contentEquals(other.signature)) return false
@@ -180,7 +161,6 @@ data class NodeHeartbeatRequest(
 
     override fun hashCode(): Int {
         var result = timestampEpochMilliseconds.hashCode()
-        result = 31 * result + (activeConnections ?: 0)
         result = 31 * result + nodeId.hashCode()
         result = 31 * result + nonce.hashCode()
         result = 31 * result + signature.contentHashCode()
@@ -192,16 +172,14 @@ data class NodeHeartbeatRequest(
 data class UnsignedNodeHeartbeat(
     val nodeId: String,
     val timestampEpochMilliseconds: Long,
-    val nonce: String,
-    val activeConnections: Int?
+    val nonce: String
 )
 
 fun NodeHeartbeatRequest.unsigned(): UnsignedNodeHeartbeat =
     UnsignedNodeHeartbeat(
         nodeId = nodeId,
         timestampEpochMilliseconds = timestampEpochMilliseconds,
-        nonce = nonce,
-        activeConnections = activeConnections
+        nonce = nonce
     )
 
 @Serializable

@@ -49,7 +49,6 @@ class PostgresNodeRegistryStoreIntegrationTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node-${UUID.randomUUID()}/v1/gateway",
-                federationEndpoint = "http://node/federation",
                 mailboxEndpoint = "http://node/mailbox",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),

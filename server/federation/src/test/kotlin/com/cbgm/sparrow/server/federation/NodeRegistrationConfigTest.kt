@@ -10,7 +10,6 @@ class NodeRegistrationConfigTest {
         val config =
             NodeRegistrationConfig(
                 clientEndpoint = "wss://node.example/v1/gateway",
-                federationEndpoint = "https://node.example/federation",
                 mailboxEndpoint = "https://node.example/mailbox"
             )
 

@@ -67,13 +67,10 @@ private suspend fun ApplicationCall.createMailbox(
         val result =
             store.createWithQuota(
                 request = MailboxLifetimes.capped(request.copy(creationWork = null), System.currentTimeMillis()),
-                ownerKeyHash = UNATTRIBUTED_OWNER,
-                maximumMailboxes = config.maximumMailboxes,
-                maximumMailboxesPerOwner = Int.MAX_VALUE
+                maximumMailboxes = config.maximumMailboxes
             )
     ) {
         is MailboxCreationResult.Created -> respond(HttpStatusCode.Created, result.response)
-        MailboxCreationResult.OwnerQuotaExceeded,
         MailboxCreationResult.GlobalQuotaExceeded ->
             respond(
                 HttpStatusCode.InsufficientStorage,

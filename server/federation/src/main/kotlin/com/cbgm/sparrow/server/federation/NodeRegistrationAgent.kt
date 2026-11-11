@@ -124,7 +124,6 @@ private class NodeRegistrationClient(
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = config.clientEndpoint,
-                federationEndpoint = config.federationEndpoint,
                 mailboxEndpoint = config.mailboxEndpoint,
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(SUPPORTED_PROTOCOL_VERSION),
@@ -163,7 +162,6 @@ private class NodeRegistrationClient(
 
 data class NodeRegistrationConfig(
     val clientEndpoint: String,
-    val federationEndpoint: String,
     val mailboxEndpoint: String,
     /** Who runs this node, put into its descriptor; null when not declared. */
     val operator: String? = null,

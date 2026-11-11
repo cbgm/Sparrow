@@ -50,7 +50,7 @@ Settings includes attachment storage/management. Incoming image/video/file copie
 
 ## 10. Network settings and diagnostics
 
-Settings contains Control Plane configuration. The Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node, connection counts and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
+Settings contains Control Plane configuration. The Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
 
 ## 11. Background delivery
 

@@ -29,14 +29,10 @@ internal class PostgresMailboxStore(
 
     override suspend fun createWithQuota(
         request: CreateMailboxRequest,
-        ownerKeyHash: String,
-        maximumMailboxes: Int,
-        maximumMailboxesPerOwner: Int
+        maximumMailboxes: Int
     ): MailboxCreationResult {
         require(request.expiresAtEpochMilliseconds > now())
-        require(ownerKeyHash.isNotBlank())
         require(maximumMailboxes > 0)
-        require(maximumMailboxesPerOwner > 0)
 
         return database.withConnection { connection ->
             connection.inMailboxTransaction {
@@ -47,12 +43,6 @@ internal class PostgresMailboxStore(
                 if (queries.countMailboxes(connection) >= maximumMailboxes) {
                     return@inMailboxTransaction MailboxCreationResult.GlobalQuotaExceeded
                 }
-                if (
-                    queries.countMailboxes(connection, ownerKeyHash) >=
-                    maximumMailboxesPerOwner
-                ) {
-                    return@inMailboxTransaction MailboxCreationResult.OwnerQuotaExceeded
-                }
 
                 repeat(MAXIMUM_IDENTIFIER_ATTEMPTS) {
                     val credentials =
@@ -61,7 +51,7 @@ internal class PostgresMailboxStore(
                             sendCapability = randomToken(),
                             retrievalCapability = randomToken()
                         )
-                    if (insertMailbox(connection, request, ownerKeyHash, credentials)) {
+                    if (insertMailbox(connection, request, credentials)) {
                         return@inMailboxTransaction MailboxCreationResult.Created(
                             CreateMailboxResponse(
                                 deliveryRoute =
@@ -278,7 +268,6 @@ internal class PostgresMailboxStore(
     private fun insertMailbox(
         connection: Connection,
         request: CreateMailboxRequest,
-        ownerKeyHash: String,
         credentials: MailboxCredentials
     ): Boolean =
         connection
@@ -286,17 +275,15 @@ internal class PostgresMailboxStore(
                 """
                 INSERT INTO mailboxes (
                     mailbox_id,
-                    owner_key_hash,
                     send_capability_hash,
                     retrieval_capability_hash,
                     expires_at_epoch_milliseconds,
                     invitation
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT (mailbox_id) DO NOTHING
                 """.trimIndent()
             ).use { statement ->
                 statement.setString(MailboxInsertParameter.MAILBOX_ID, credentials.mailboxId)
-                statement.setString(MailboxInsertParameter.OWNER_KEY_HASH, ownerKeyHash)
                 statement.setBytes(
                     MailboxInsertParameter.SEND_CAPABILITY_HASH,
                     hash(credentials.sendCapability)
@@ -329,11 +316,10 @@ internal class PostgresMailboxStore(
 
     private object MailboxInsertParameter {
         const val MAILBOX_ID = 1
-        const val OWNER_KEY_HASH = 2
-        const val SEND_CAPABILITY_HASH = 3
-        const val RETRIEVAL_CAPABILITY_HASH = 4
-        const val EXPIRES_AT = 5
-        const val INVITATION = 6
+        const val SEND_CAPABILITY_HASH = 2
+        const val RETRIEVAL_CAPABILITY_HASH = 3
+        const val EXPIRES_AT = 4
+        const val INVITATION = 5
     }
 
     private object EnvelopeInsertParameter {

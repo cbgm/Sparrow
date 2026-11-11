@@ -6,8 +6,9 @@ class NodeEndpointSelector(
     private val config: TransportConfig
 ) {
     /**
-     * Orders the gateways by load. The [preferredNodeId] goes first while it is listed; the others
-     * stay behind it so a failed favourite fails over to them as usual.
+     * Orders the gateways in an order of their own for each device, so devices spread over them. The
+     * [preferredNodeId] goes first while it is listed; the others stay behind it so a failed favourite
+     * fails over to them as usual.
      */
     fun select(
         signedDirectory: SignedNodeDirectory,
@@ -29,19 +30,15 @@ class NodeEndpointSelector(
                         websocketUrl = descriptor.clientEndpoint,
                         mailboxRouteEndpoint = descriptor.mailboxEndpoint,
                         mailboxAccessEndpoint =
-                            descriptor.mailboxEndpoint.clientAccessibleFrom(descriptor.clientEndpoint),
-                        activeConnections = descriptor.activeConnections ?: 0
+                            descriptor.mailboxEndpoint.clientAccessibleFrom(descriptor.clientEndpoint)
                     )
                 }.distinctBy(NodeEndpoint::nodeId)
-                .sortedWith(
-                    compareBy<NodeEndpoint>(NodeEndpoint::activeConnections)
-                        .thenByDescending { endpoint ->
-                            stableSelectionScore(
-                                localRoutingId = localRoutingId,
-                                nodeId = endpoint.nodeId
-                            )
-                        }
-                )
+                .sortedByDescending { endpoint ->
+                    stableSelectionScore(
+                        localRoutingId = localRoutingId,
+                        nodeId = endpoint.nodeId
+                    )
+                }
 
         check(endpoints.isNotEmpty()) {
             "Node directory does not contain a compatible gateway"

@@ -366,7 +366,6 @@ class OnionRelayClientTest {
     ) = SparrowNodeDescriptor(
         nodeId = name,
         clientEndpoint = "wss://$name.test/v1/gateway",
-        federationEndpoint = "https://$name.test",
         mailboxEndpoint = "https://$name.test",
         identityPublicKey = byteArrayOf(1),
         protocolVersions = setOf(1),

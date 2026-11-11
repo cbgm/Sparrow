@@ -23,7 +23,6 @@ class NodeRegistryStoreTest {
                     SparrowNodeDescriptor(
                         nodeId = identity.nodeId,
                         clientEndpoint = "ws://node/v1/gateway",
-                        federationEndpoint = "http://node/federation",
                         mailboxEndpoint = "http://node/mailbox",
                         identityPublicKey = identity.encodedPublicKey,
                         protocolVersions = setOf(1),
@@ -43,51 +42,18 @@ class NodeRegistryStoreTest {
         }
 
     @Test
-    fun heartbeatUpdatesReportedConnectionLoad() =
+    fun aSignedHeartbeatKeepsTheNodeListed() =
         runTest {
-            val now = 1_000L
+            var now = 1_000L
             val identity = NodeIdentity.generate()
-            val descriptor = descriptor(identity)
-            val store = NodeRegistryStore(now = { now })
-
-            store.register(descriptor)
-            store.heartbeat(
-                signedHeartbeat(
-                    identity = identity,
-                    activeConnections = 3,
-                    now = now
-                )
-            )
-
-            assertEquals(3, store.healthyNodes().single().activeConnections)
-        }
-
-    @Test
-    fun heartbeatWithoutLoadPreservesLastReportedConnectionLoad() =
-        runTest {
-            val now = 1_000L
-            val identity = NodeIdentity.generate()
-            val store = NodeRegistryStore(now = { now })
+            val store = NodeRegistryStore(heartbeatGraceMilliseconds = 100L, now = { now })
 
             store.register(descriptor(identity))
-            store.heartbeat(
-                signedHeartbeat(
-                    identity = identity,
-                    activeConnections = 3,
-                    now = now,
-                    nonce = "load-3"
-                )
-            )
-            store.heartbeat(
-                signedHeartbeat(
-                    identity = identity,
-                    activeConnections = null,
-                    now = now,
-                    nonce = "load-unavailable"
-                )
-            )
+            now += 90L
+            assertEquals(RegistrationResult.Accepted, store.heartbeat(signedHeartbeat(identity = identity, now = now)))
+            now += 60L
 
-            assertEquals(3, store.healthyNodes().single().activeConnections)
+            assertEquals(identity.nodeId, store.healthyNodes().single().nodeId)
         }
 
     private fun descriptor(identity: NodeIdentity): SparrowNodeDescriptor =
@@ -95,7 +61,6 @@ class NodeRegistryStoreTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node/v1/gateway",
-                federationEndpoint = "http://node/federation",
                 mailboxEndpoint = "http://node/mailbox",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),
@@ -108,16 +73,14 @@ class NodeRegistryStoreTest {
 
     private fun signedHeartbeat(
         identity: NodeIdentity,
-        activeConnections: Int?,
         now: Long,
-        nonce: String = "nonce-$activeConnections"
+        nonce: String = "nonce"
     ): NodeHeartbeatRequest {
         val unsigned =
             NodeHeartbeatRequest(
                 nodeId = identity.nodeId,
                 timestampEpochMilliseconds = now,
                 nonce = nonce,
-                activeConnections = activeConnections,
                 signature = byteArrayOf()
             )
         return unsigned.copy(

@@ -79,7 +79,6 @@ internal fun Application.configureFederationLifecycle(
 private fun FederationConfig.toNodeRegistrationConfig(): NodeRegistrationConfig =
     NodeRegistrationConfig(
         clientEndpoint = clientEndpoint,
-        federationEndpoint = federationEndpoint,
         mailboxEndpoint = mailboxEndpoint,
         operator = operator
     )

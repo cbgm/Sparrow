@@ -20,5 +20,4 @@ services:
     logging: *default-logging
     environment:
       CLIENT_ENDPOINT: wss://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}/v1/gateway
-      FEDERATION_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}
       MAILBOX_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}

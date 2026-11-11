@@ -70,24 +70,13 @@ internal class PostgresMailboxQueries(
             }
     }
 
-    fun countMailboxes(
-        connection: Connection,
-        ownerKeyHash: String? = null
-    ): Int {
-        val sql =
-            if (ownerKeyHash == null) {
-                "SELECT COUNT(*) FROM mailboxes"
-            } else {
-                "SELECT COUNT(*) FROM mailboxes WHERE owner_key_hash = ?"
-            }
-        return connection.prepareStatement(sql).use { statement ->
-            ownerKeyHash?.let { statement.setString(1, it) }
+    fun countMailboxes(connection: Connection): Int =
+        connection.prepareStatement("SELECT COUNT(*) FROM mailboxes").use { statement ->
             statement.executeQuery().use { results ->
                 results.next()
                 results.getInt(1)
             }
         }
-    }
 
     fun purgeExpiredEnvelopes(
         connection: Connection,
