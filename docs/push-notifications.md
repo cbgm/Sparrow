@@ -28,6 +28,21 @@ its push service, and Sparrow does without it by choice. For a Play release, the
 needs a declaration under App content in the Play Console (description, impact of an interruption, demo video); the
 texts and the video script are in [play-console-declaration.md](play-console-declaration.md).
 
+Some makers stop apps in the background on their own (Xiaomi, Huawei, Honor, Oppo, Realme, OnePlus, Vivo, Samsung,
+Asus). On those phones, `BackgroundRestrictionHelp` (core:ui) shows one line on what to set and a button that opens the
+maker's own setting, or Sparrow's app settings when that screen cannot be opened; `PhoneMaker` holds the makers and
+their screens. On an emulator, a debug build can pretend to be one of these makers:
+
+```
+adb devices
+adb -s emulator-5554 shell "run-as com.cbgm.sparrow sh -c 'echo xiaomi > files/debug_phone_maker'"
+adb -s emulator-5554 shell "run-as com.cbgm.sparrow rm files/debug_phone_maker"
+```
+
+`adb devices` lists the running emulators; `-s` picks one (needed when several run). The double quotes keep the `>` on
+the device in both cmd and PowerShell. The second line sets the maker (`xiaomi`, `huawei`, `honor`, `oppo`, `vivo`, `samsung`, `asus`), the second goes back.
+The emulator has none of the makers' screens, so the button opens Sparrow's app settings there.
+
 ## Servers on the local network
 
 Apps targeting Android 17 need the runtime permission `ACCESS_LOCAL_NETWORK` to reach local network addresses;
