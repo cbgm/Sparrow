@@ -993,6 +993,13 @@
     <string name="feature_receiving_why_text">Sparrow nutzt keinen Google-Push, also erfährt keine Firma, wann du Nachrichten bekommst, und niemand braucht einen Schlüssel von uns, um einen Server zu betreiben. Android erlaubt einer App eine eigene Verbindung nur mit einer sichtbaren Benachrichtigung.</string>
     <string name="feature_local_network_denied">Ohne Zugriff auf das lokale Netzwerk erreicht Sparrow keine Server in deinem lokalen Netzwerk.</string>
     <string name="feature_receiving_battery_hint">Wähle in der Akku-Liste, die Android öffnet, „Alle Apps“, dann Sparrow, und stelle „Nicht optimieren“ ein.</string>
+    <string name="core_background_help_xiaomi">Xiaomi beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“ und stelle den Energiesparmodus auf „Keine Einschränkungen“.</string>
+    <string name="core_background_help_huawei">Dein Handy beendet Apps im Hintergrund von sich aus: Stelle Sparrow unter „App-Start“ auf „Manuell verwalten“ und schalte alle drei Schalter ein.</string>
+    <string name="core_background_help_oppo">Dein Handy beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“ und unter der Akkunutzung die Aktivität im Hintergrund.</string>
+    <string name="core_background_help_vivo">vivo beendet Apps im Hintergrund von sich aus: Erlaube Sparrow, im Hintergrund zu laufen und automatisch zu starten.</string>
+    <string name="core_background_help_samsung">Samsung beendet Apps im Hintergrund von sich aus: Füge Sparrow unter Akku, „Einschränkungen der Hintergrundnutzung“ zu „Apps, die nie in den Standby-Modus wechseln“ hinzu.</string>
+    <string name="core_background_help_asus">ASUS beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“.</string>
+    <string name="core_background_help_open">Handy-Einstellungen öffnen</string>
     <string name="feature_receiving_battery_declined">Ohne die Akku-Ausnahme kann Android die Verbindung im Tiefschlaf trennen.</string>
     <string name="feature_receiving_ios_note">Auf dem iPhone kann Sparrow die Verbindung wegen der Einschränkungen von iOS nicht im Hintergrund offen halten. Nachrichten kommen an, wenn du die App öffnest.</string>
 </resources>

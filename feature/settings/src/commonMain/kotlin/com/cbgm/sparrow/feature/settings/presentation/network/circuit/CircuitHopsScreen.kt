@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
@@ -293,6 +294,9 @@ private fun ConnectionModeChooser(
                 )
             }
             StatusLine(text = stringResource(Res.string.feature_receiving_why_text))
+            if (uiState.connectionMode == ConnectionMode.ALWAYS_CONNECTED) {
+                BackgroundRestrictionHelp()
+            }
         } else {
             StatusLine(text = stringResource(Res.string.feature_receiving_ios_note))
         }
