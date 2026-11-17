@@ -66,6 +66,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountU
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveLocalNetworkNeededUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
@@ -446,6 +447,7 @@ val transportModule =
         singleOf(::ObserveCircuitCountUseCase)
         singleOf(::SetCircuitCountUseCase)
         singleOf(::ObserveDecoyCountUseCase)
+        singleOf(::ObserveLocalNetworkNeededUseCase)
         singleOf(::SetDecoyCountUseCase)
         singleOf(::ObserveCircuitStatusUseCase)
         singleOf(::ObserveCircuitFallbackUseCase)

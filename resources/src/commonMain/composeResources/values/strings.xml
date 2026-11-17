@@ -987,6 +987,8 @@
     <string name="feature_receiving_check_consequence">Android checks every 15 minutes at most, less in deep sleep: messages come late, little battery.</string>
     <string name="feature_receiving_why">Why is that?</string>
     <string name="feature_receiving_why_text">Sparrow uses no Google push, so no company learns when you get messages, and nobody needs a key from us to run a server. Android only lets an app keep its own connection with a visible notification.</string>
+    <string name="feature_local_network_denied">Without local network access, Sparrow cannot reach servers on your local network.</string>
+    <string name="feature_receiving_battery_hint">In the battery list Android opens, choose All apps, then Sparrow, and set it to Not optimized.</string>
     <string name="feature_receiving_battery_declined">Without the battery exception, Android may drop the connection in deep sleep.</string>
     <string name="feature_receiving_ios_note">On iPhone, Sparrow cannot keep the connection open in the background because of iOS restrictions. Messages arrive when you open the app.</string>
 </resources>

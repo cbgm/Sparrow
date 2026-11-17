@@ -12,7 +12,7 @@ settings (`transport.connection_mode`).
 
 | Mode | Android | Effect |
 | --- | --- | --- |
-| `ALWAYS_CONNECTED` | `ConnectionService` (foreground service, `specialUse`) | Messages arrive at once; a permanent notification shows that Sparrow is connected. Needs the battery exemption. |
+| `ALWAYS_CONNECTED` | `ConnectionService` (foreground service, `specialUse`) | Messages arrive at once; a permanent notification shows that Sparrow is connected. Needs Sparrow set to "Not optimized" in the battery list. |
 | `WHILE_OPEN` | none | Messages arrive while Sparrow is open; closed, they wait in the mailboxes until the next start. |
 | `CHECK_PERIODICALLY` | `ConnectionCheckWorker` (every 15 minutes, connects for 45 s) | Offered in the settings only. Messages arrive with a delay. |
 
@@ -20,6 +20,21 @@ settings (`transport.connection_mode`).
 `ConnectionBootReceiver` applies it again after a reboot. iOS cannot keep a connection while the app is
 closed (`keepsConnectionWhileClosed()` is false there); the onboarding page shows a note instead of the
 choice.
+
+Choosing `ALWAYS_CONNECTED` opens Android's battery optimization list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`), where
+the user sets Sparrow to "Not optimized"; the onboarding page says so. Sparrow does not ask for the exemption
+directly (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`): Google Play allows that only for apps that technically cannot use
+its push service, and Sparrow does without it by choice. For a Play release, the `specialUse` foreground service
+needs a declaration under App content in the Play Console (description, impact of an interruption, demo video).
+
+## Servers on the local network
+
+Apps targeting Android 17 need the runtime permission `ACCESS_LOCAL_NETWORK` to reach local network addresses;
+without it, connections to them time out. `LocalNetworkAccess` in the app shell asks for it once per app start while
+the Control Plane directory, a Control Plane or a node from the node directory has a local address
+(`ObserveLocalNetworkNeededUseCase`, `LocalNetworkAddresses`: private and link-local IPs, `.local` names and
+sslip.io/nip.io names carrying a private IPv4). A refusal shows a short note that local servers cannot be reached.
+Public servers are not affected.
 
 While the process runs without a screen (service or worker), `HeadlessStart` starts only what receiving
 needs, and `ConnectionKeepAlive` holds the connection open.

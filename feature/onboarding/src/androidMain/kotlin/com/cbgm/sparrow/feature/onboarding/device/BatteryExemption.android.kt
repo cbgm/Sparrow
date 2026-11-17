@@ -1,9 +1,7 @@
 package com.cbgm.sparrow.feature.onboarding.device
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,9 +9,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
 
-@SuppressLint("BatteryLife")
+/**
+ * Opens Android's battery optimization list, where the user sets Sparrow to "Not optimized". Google Play allows the
+ * direct exemption dialog only for apps that technically cannot use its push service; Sparrow does without it by
+ * choice, so it uses the list every app may open.
+ */
 @Composable
 actual fun BatteryExemptionRequester(
     requestId: Int,
@@ -31,11 +32,7 @@ actual fun BatteryExemptionRequester(
             onResult(true)
             return@LaunchedEffect
         }
-        val request = Intent(
-            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-            "package:${context.packageName}".toUri()
-        )
-        runCatching { launcher.launch(request) }.onFailure { onResult(false) }
+        runCatching { launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }.onFailure { onResult(false) }
     }
 }
 

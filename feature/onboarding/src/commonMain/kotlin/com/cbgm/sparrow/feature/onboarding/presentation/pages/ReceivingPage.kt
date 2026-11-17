@@ -32,6 +32,7 @@ import com.cbgm.sparrow.resources.base_continue_action
 import com.cbgm.sparrow.resources.feature_receiving_always
 import com.cbgm.sparrow.resources.feature_receiving_always_consequence
 import com.cbgm.sparrow.resources.feature_receiving_battery_declined
+import com.cbgm.sparrow.resources.feature_receiving_battery_hint
 import com.cbgm.sparrow.resources.feature_receiving_description
 import com.cbgm.sparrow.resources.feature_receiving_ios_note
 import com.cbgm.sparrow.resources.feature_receiving_title
@@ -95,6 +96,13 @@ private fun Choices(
         selected = state.connectionMode == ConnectionMode.WHILE_OPEN,
         onClick = { onChoose(ConnectionMode.WHILE_OPEN) }
     )
+    if (state.connectionMode == ConnectionMode.ALWAYS_CONNECTED) {
+        Text(
+            text = stringResource(Res.string.feature_receiving_battery_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
     if (state.batteryExemptionDeclined) {
         Text(
             text = stringResource(Res.string.feature_receiving_battery_declined),
