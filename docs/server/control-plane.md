@@ -1,6 +1,6 @@
 # Control Plane
 
-A Sparrow Control Plane is the discovery, presence and push side of the network. It does **not** carry normal client WebSocket message traffic and it does not decrypt application messages.
+A Sparrow Control Plane is the discovery and presence side of the network: the signed node directory, the phone alias bindings and the invitation mailboxes of devices. It carries no messages and decrypts nothing.
 
 ## Runtime topology
 
@@ -10,15 +10,12 @@ A Sparrow Control Plane is the discovery, presence and push side of the network.
 flowchart LR
     C[Caddy] --> R[node-registry]
     C --> P[presence-directory]
-    C --> U[push]
     R --> RDB[(PostgreSQL)]
     P --> REDIS[(Redis)]
-    U --> UDB[(PostgreSQL)]
-    U --> FCM[Firebase Cloud Messaging]
-    P -. optional token check .-> FA[Firebase Authentication]
+    P -. attestation checked with the pinned Directory key .-> D[Control Plane Directory]
 ```
 
-Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis`, `presence-directory`, `push-database`, and `push`.
+Compose services are `caddy`, `node-registry-database`, `node-registry`, `presence-redis` and `presence-directory`.
 
 ## Kotlin server modules and important classes
 
@@ -30,27 +27,19 @@ The registry signing path matters because Sparrow does not treat an arbitrary li
 
 ### `:server:presence-directory`
 
-Presence is intentionally short-lived routing state. Redis is used for state that can be reconstructed as nodes/clients reconnect; it is not the authoritative store for conversations or messages.
+The presence directory keeps which device holds a phone alias, and each device's invitation mailbox. Redis holds this state; apps claim it again every few hours, so it is rebuilt after a loss. Devices hold no routes here: they receive only through their mailboxes.
 
-Route lookups (`GET /v1/routes/{routingId}`) are answered only for a node request signed by a registered node with the `FEDERATION` capability, or for the push service with the internal token (`PRESENCE_INTERNAL_API_TOKEN`, the same value as `PUSH_INTERNAL_API_TOKEN`); anything else gets `401`. The response leaves out the routes' phone aliases. Gateways use the same signed lookup to confirm that a client may send as its own phone alias (first invites), so a gateway learns a user's alias only when that user sends one.
+Apps claim their aliases with `POST /v1/alias-claims`, sent through two relays so the Control Plane does not see the app's address: an `AliasClaim` sealed for the Presence Directory's X25519 key (`AliasClaimKeys`, kept only in memory and replaced on every restart), signed with the device key its routing ID derives from and at most 5 minutes old. The node registry fetches the key from `GET /v1/alias-claim-key` (`PRESENCE_DIRECTORY_URL`, cached 30 seconds) and signs it into the node directory (`NodeDirectory.aliasClaimKey`), so a relay cannot hand the app its own key. Claims are rate-limited per device. A claim also names the device's invitation mailbox and encryption key (`InvitationRoute`); the Presence Directory keeps it for the device as long as an alias binding and replaces it with every claim (a claim without one removes it). `POST /v1/invitation-routes` (`{routingId, work}`, a phone alias or a device routing ID, paid with the mailbox proof of work, `PRESENCE_LOOKUP_WORK_BITS`, default 18) answers `{ownerRoutingId, invitationRoute}` for a live route, or 404. Apps send it through the relays; nothing about the lookup is kept. Senders use it for packets to a device whose mailbox route they do not have yet, and recipients use it to check that a phone alias a letter claims belongs to the device that signed it (see [Invitation mailboxes](../features/transport.md#invitation-mailboxes)).
 
-Routes carry no phone aliases; aliases the route itself names (older apps) are ignored. Apps claim their aliases with `POST /v1/alias-claims`, sent through two relays so the Control Plane does not see the app's address: an `AliasClaim` sealed for the Presence Directory's X25519 key (`AliasClaimKeys`, kept only in memory and replaced on every restart), signed with the device key its routing ID derives from and at most 5 minutes old. The node registry fetches the key from `GET /v1/alias-claim-key` (`PRESENCE_DIRECTORY_URL`, cached 30 seconds) and signs it into the node directory (`NodeDirectory.aliasClaimKey`), so a relay cannot hand the app its own key. Claims are rate-limited per device. An alias resolves to the device holding it (`ClientRoutingResult.ownerRoutingId`) and that device's routes at this Control Plane; when they are elsewhere, federation looks the device up at its other Control Planes.
+Phone numbers are verified centrally, by the phone verifier next to the Control Plane Directory (`server/control-plane-directory/phone_verifier.py`), never here. The app verifies the user's phone number once at sign-up (Firebase SMS), sends the Firebase ID token sealed and through two relays to that verifier, and puts the signed attestation it gets back into its alias claims right after sign-up (`AliasClaim.phoneAttestation`). `PhoneAttestations` checks it with the pinned Directory key (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`): the Directory key certifies the verifier's attestation key, the attestation names the alias (`ClientRoutingIds.fromPhoneNumber` of the verified number) and the claiming device's routing ID, and it is valid for one hour. An attestation that does not check out is answered with `403 PHONE_VERIFICATION_FAILED`. Nothing about it is stored.
 
-Phone verification is optional per registration. The app verifies the user's phone number once at sign-up (Firebase SMS) and sends the resulting Firebase ID token only with its first alias claims (`AliasClaim.phoneVerificationToken`). A present token is checked by `FirebasePhoneTokenVerifier` (cached per token until it expires by `CachingPhoneTokenVerifier`) and must be a phone sign-in; it proves the alias `ClientRoutingIds.fromPhoneNumber` of that number. A blank or failing token is answered with `403 PHONE_VERIFICATION_FAILED`. The token is never stored.
-
-Each phone alias belongs to one device (`AliasClaims`). The Presence Directory keeps only the alias and the device routing ID holding it (Redis key `…:owner`, no phone number, no token); every claim renews it and it is forgotten 30 days after the last one (`ALIAS_BINDING_LIFETIME_MILLISECONDS`). A device keeps an alias it holds without a token. A free alias needs a proof when phone verification is configured; without it the first device that claims it gets it, unverified. An alias held by another device moves only with a proof. The response `200 {"acceptedAliasIndexes": [...]}` lists the positions of the bound aliases in the claim, so the relay passing it on learns no alias. There is no setting that requires verified phone numbers. The operator's test numbers (`PRESENCE_TEST_PHONE_ALIASES`, comma-separated phone aliases, set from the installer's **Test phone numbers** field) count as proven for every claim, so they move to the device that claims them last.
-
-The verifier is enabled when `GOOGLE_APPLICATION_CREDENTIALS` points at a Firebase Admin service-account JSON; `docker-compose.firebase.yml` mounts the same `firebase-admin.json` secret as for `push`. `FIREBASE_TARGET_PROJECT_ID` selects the Firebase project (default `sparrow-a9048`). Without credentials, tokens are not checked and all registrations are accepted.
-
-### `:server:push`
-
-The push service stores the registration state required for wake-ups and coordinates Android FCM notification delivery. Important types include `PushCoordinator` and `FirebasePushSender`. Push wakes a client so it can fetch encrypted mailbox traffic; it is not a plaintext message-delivery channel. Device registrations must be signed with the routing ID's identity key and expire 30 days after the last registration; see [Push API](../api/push.md).
+Each phone alias belongs to one device (`AliasClaims`). The Presence Directory keeps only the alias and the device routing ID holding it (Redis key `…:owner`, no phone number, no token); every claim renews it and it is forgotten 30 days after the last one (`ALIAS_BINDING_LIFETIME_MILLISECONDS`). A device keeps an alias it holds without an attestation. A free alias needs one, and an alias held by another device moves only with one. The response `200 {"acceptedAliasIndexes": [...]}` lists the positions of the bound aliases in the claim, so the relay passing it on learns no alias. Without a pinned Directory key no attestation checks out, so only test numbers can be bound. The operator's test numbers (`PRESENCE_TEST_PHONE_ALIASES`, comma-separated phone aliases, set from the installer's **Test phone numbers** field) count as proven for every claim, so they move to the device that claims them last.
 
 ## Control Plane vs. independent directory
 
 Do not confuse a Control Plane with `server/control-plane-directory`.
 
-- A **Control Plane** publishes/serves node registry, presence and push services.
+- A **Control Plane** publishes/serves the node registry and the presence directory.
 - The **Independent Control Plane Directory** publishes a signed list of Control Plane origins and verifies ownership during Control Plane registration.
 - The independent directory is operator infrastructure and is deliberately excluded from the public Sparrow server bundle.
 
@@ -70,7 +59,7 @@ builds `dist/sparrow-server.zip` for distribution. A developer can also run the 
 
 ## LAN and public deployment
 
-In LAN mode the Control Plane Caddy edge is normally exposed on port `8390`. `/index` is the operator-friendly entry page and links to registry/presence/push health and node information.
+In LAN mode the Control Plane Caddy edge is normally exposed on port `8390`. `/index` is the operator-friendly entry page and links to registry/presence health and node information.
 
 Public mode uses Caddy/TLS and a public hostname. In a Combined installation, Control Plane and Community Node remain separate Compose projects; an optional shared public-edge Caddy routes their distinct hostnames.
 
@@ -79,7 +68,7 @@ Public mode uses Caddy/TLS and a public hostname. In a Combined installation, Co
 A valuable deployment must preserve at least:
 
 - registry signing/authority material;
-- PostgreSQL registry and push state;
+- PostgreSQL registry state;
 - Redis configuration/state as appropriate for the deployment;
 - generated runtime secrets;
 - Caddy/TLS state when used;
@@ -95,4 +84,4 @@ For development:
 docker compose -f server/control-plane/docker-compose.yml up -d --build
 ```
 
-Use `docker compose ... ps` and `logs` to inspect startup. Real Firebase push delivery and phone token verification additionally require correctly authorized service-account credentials (add `-f server/control-plane/docker-compose.firebase.yml` with `FIREBASE_ADMIN_CREDENTIALS` set to the JSON file); without them the rest of the stack can still be developed/tested, real FCM delivery is unavailable and phone tokens are not checked.
+Use `docker compose ... ps` and `logs` to inspect startup. Phone aliases additionally need the pinned Directory key (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`) of a Directory that runs phone verification; without it only test phone numbers (`PRESENCE_TEST_PHONE_ALIASES`) are bound.

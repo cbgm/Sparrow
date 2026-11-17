@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
@@ -11,8 +10,7 @@ class MailboxCredentialFactory(
     private val mailboxGateway: MailboxGateway,
     private val signingKeyPairProvider: LocalSigningKeyPairProvider,
     private val signatureCrypto: DetachedSignatureCrypto,
-    private val payloadEncoder: MailboxRoutePayloadEncoder,
-    private val createMailboxWakeTicket: CreateMailboxWakeTicketUseCase
+    private val payloadEncoder: MailboxRoutePayloadEncoder
 ) {
     suspend fun create(
         contactId: String,
@@ -30,8 +28,7 @@ class MailboxCredentialFactory(
                     routeEndpoint = routeEndpoint,
                     accessEndpoint = accessEndpoint,
                     sequence = sequence,
-                    expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
-                    wakeTicket = createMailboxWakeTicket(nodeId, expiresAtEpochMilliseconds).getOrThrow()
+                    expiresAtEpochMilliseconds = expiresAtEpochMilliseconds
                 ).getOrThrow()
         val keyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
         val unsignedRoute = created.deliveryRoute.copy(identitySignature = byteArrayOf())

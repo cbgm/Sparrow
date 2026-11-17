@@ -4,7 +4,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.observer.Conversat
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.DirectDeliveryDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.GroupRecipientDeliveryDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.MessageConversationDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.datasource.WebSocketIncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.DirectMessageDeliveryRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.GroupRecipientDeliveryRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.data.repository.MessageConversationRepositoryImpl
@@ -14,11 +13,17 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.reposi
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.usecase.SendConversationIndicatorUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.event.ApplyDeliveryEventWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.transport.RecordPreparedTransportWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.CoverEnvelopeSealer
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.CoverPacketHandler
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoyEnvelopes
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoySealer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.delivery.OutboxDeliveryStateRouter
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.IndicatorPacketHandler
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicatorGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.TransportConversationIndicatorObserver
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.WebSocketMessagingIndicatorGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCoordinator
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxArrivalListener
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxCredentialFactory
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRoutePacketHandler
@@ -31,12 +36,11 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routi
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupTransportKeyResolver
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
-import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
+import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
-import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
@@ -105,9 +109,21 @@ private fun Module.registerOutbox() {
             recipientRoutingResolver = get(),
             sendEncodedTransport = get<SendEncodedTransportUseCase>(),
             deliveryStateListener = get(),
-            observePendingRemoteIdentityChanges = get()
+            observePendingRemoteIdentityChanges = get(),
+            decoyEnvelopes = get()
         )
     }
+    single {
+        DecoyEnvelopes(
+            decoyCountStore = get(),
+            hasProtectingCircuit = get<DirectSendingPolicy>()::hasProtectingCircuit,
+            mailboxRouteRepository = get(),
+            sealer = get(),
+            mailboxGateway = get()
+        )
+    }
+    singleOf(::CoverEnvelopeSealer) { bind<DecoySealer>() }
+    singleOf(::CoverPacketHandler) { bind<TypedProtocolPacketHandler>() }
     single<OutboxProcessor> {
         val sender = get<OutgoingPacketSender>()
         DefaultOutboxProcessor(
@@ -115,9 +131,6 @@ private fun Module.registerOutbox() {
             send = { item -> sender.send(item) },
             deliveryStateListener = get()
         )
-    }
-    single<IncomingEnvelopeGateway> {
-        WebSocketIncomingEnvelopeGateway(webSocketTransportClient = get<WebSocketTransportClient>())
     }
 }
 
@@ -127,17 +140,19 @@ private fun Module.registerMailbox() {
     }
     singleOf(::MailboxCredentialFactory)
     singleOf(::MailboxPendingSynchronizer)
+    single {
+        MailboxArrivalListener(mailboxGateway = get(), mailboxRouteRepository = get(), pendingSynchronizer = get(), invitationMailbox = get())
+    }
     singleOf(::MailboxRouteProvisioner)
     single<MailboxCoordinator> {
-        DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get())
+        DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get(), arrivalListener = get())
     }
     singleOf(::MailboxRoutePacketHandler) { bind<TypedProtocolPacketHandler>() }
 }
 
 private fun Module.registerIndicators() {
-    single<MessagingIndicatorGateway> {
-        WebSocketMessagingIndicatorGateway(client = get<WebSocketTransportClient>())
-    }
+    singleOf(::MailboxMessagingIndicatorGateway) { bind<MessagingIndicatorGateway>() }
+    singleOf(::IndicatorPacketHandler) { bind<TypedProtocolPacketHandler>() }
     singleOf(::SendConversationIndicatorUseCase)
     singleOf(::TransportConversationIndicatorObserver) { bind<ConversationIndicatorObserver>() }
 }

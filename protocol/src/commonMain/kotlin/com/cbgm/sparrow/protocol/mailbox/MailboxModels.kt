@@ -69,6 +69,12 @@ interface MailboxRouteRepository {
 
     suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?>
 
+    /**
+     * The contact's mailbox route, found by the contact itself: a contact's routing table holds only its phone
+     * alias, not the address derived from its key that messages to a verified contact use.
+     */
+    suspend fun remoteForContact(contactId: String): Result<MailboxDeliveryRoute?>
+
     suspend fun allLocal(): Result<List<LocalMailboxCredential>>
 
     suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit>

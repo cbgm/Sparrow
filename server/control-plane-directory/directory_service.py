@@ -27,10 +27,13 @@ from urllib.parse import urlsplit
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
 
 PROTOCOL = "sparrow-control-plane-directory-v1"
 PROOF_DOMAIN = b"sparrow-control-plane-directory-registration-v1\n"
 SNAPSHOT_DOMAIN = b"sparrow-control-plane-directory-snapshot-v1\n"
+PHONE_KEYS_PROTOCOL = "sparrow-phone-keys-v1"
+PHONE_KEYS_DOMAIN = b"sparrow-phone-keys-v1\n"
 CHALLENGE_LIFETIME_MS = 10 * 60_000
 SNAPSHOT_LIFETIME_MS = 60 * 60_000
 MAX_PENDING = 500
@@ -72,6 +75,15 @@ def key_from_string(value: str) -> Ed25519PublicKey:
     if key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo) != raw:
         raise ValueError("Public key encoding is not canonical")
     return key
+
+
+def phone_keys_certificate(signing_key: Ed25519PrivateKey, attestation_key: str, request_key: str) -> dict:
+    """Certifies the keys of the separate phone verifier (phone_verifier.py): its Ed25519 attestation key and its
+    X25519 request key. Apps and Control Planes check the certificate with the Directory key they pin."""
+    key_from_string(attestation_key)
+    X25519PublicKey.from_public_bytes(decode(request_key, 32))
+    payload = canonical({"protocol": PHONE_KEYS_PROTOCOL, "attestationKey": attestation_key, "requestKey": request_key})
+    return {"payload": encode(payload), "signature": encode(signing_key.sign(PHONE_KEYS_DOMAIN + payload))}
 
 
 def normalized_url(value: str) -> tuple[str, str]:
@@ -487,12 +499,13 @@ def read_key(filename: Path) -> Ed25519PrivateKey:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Private Sparrow Control Plane Directory")
-    parser.add_argument("command", choices=("init-key", "serve", "show-key-id", "show-public-key"))
+    parser.add_argument("command", choices=("init-key", "serve", "show-key-id", "show-public-key", "certify-phone-keys"))
     parser.add_argument("--key-file", type=Path, required=True)
     parser.add_argument("--database", type=Path)
     parser.add_argument("--public-host", default="127.0.0.1")
     parser.add_argument("--public-port", type=int, default=9080)
     parser.add_argument("--admin-port", type=int, default=9081)
+    parser.add_argument("--phone-keys", help="certify-phone-keys: the JSON phone_verifier.py show-public-keys prints")
     args = parser.parse_args()
     if args.command == "init-key":
         args.key_file.parent.mkdir(parents=True, exist_ok=True)
@@ -504,6 +517,10 @@ def main() -> None:
     if args.command == "show-public-key":
         print(encode(key.public_key().public_bytes(
             serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)))
+        return
+    if args.command == "certify-phone-keys":
+        phone = json.loads(args.phone_keys or "")
+        print(json.dumps(phone_keys_certificate(key, phone["attestationKey"], phone["requestKey"])))
         return
     print("directory signing key ID:", key_id(key.public_key()))
     if args.command != "serve":

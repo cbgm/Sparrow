@@ -50,8 +50,8 @@ Settings includes attachment storage/management. Incoming image/video/file copie
 
 ## 10. Network settings and diagnostics
 
-Settings contains Control Plane configuration. The Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node, connection counts and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
+Settings contains Control Plane configuration. The Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
 
 ## 11. Background delivery
 
-When the app is not foregrounded normally, mailbox + Android FCM wake-up support can retrieve pending encrypted envelopes. Android Force stop disables normal background execution until the app is opened again.
+How messages arrive while Sparrow is closed depends on the connection mode chosen under *Receiving messages*: always connected, while open (they wait in the mailboxes until the next start), or checking every 15 minutes. See [Receiving messages](../push-notifications.md). Android Force stop disables normal background execution until the app is opened again.

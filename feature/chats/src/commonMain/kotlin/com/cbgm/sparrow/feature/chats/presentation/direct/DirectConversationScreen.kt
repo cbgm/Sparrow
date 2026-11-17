@@ -51,6 +51,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
@@ -75,6 +76,7 @@ fun DirectConversationScreen(
     indicatorState: IndicatorUiState,
     historyState: MessageHistoryUiState,
     modifier: Modifier = Modifier,
+    waitingForRoute: Boolean = false,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     onReconnectRequested: () -> Unit = {},
@@ -223,6 +225,9 @@ fun DirectConversationScreen(
                                 onVerifyIdentity = { onUiEvent(DirectConversationUiEvent.VerifyIdentityClicked) },
                                 onManualIdentitySetup = { showIdentitySetupDialog = true }
                             )
+                        }
+                        if (waitingForRoute) {
+                            RouteWaitingBanner()
                         }
                     }
                 },

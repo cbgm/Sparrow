@@ -91,6 +91,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityRead
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePhoneVerificationLimitReachedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.PrepareIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchangePeerUseCase
@@ -347,6 +348,9 @@ val identityModule =
         single {
             GetLocalPhoneNumberUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
         }
+        factory {
+            ObservePhoneVerificationLimitReachedUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
+        }
 
         factory {
             ObserveLocalProfilePictureUseCase(repository = get<LocalProfilePictureRepository>())
@@ -425,7 +429,8 @@ val identityModule =
                 observeLocalProfilePicture = get(),
                 consumeAvatarEditResult = get(),
                 setLocalProfilePicture = get(),
-                removeLocalProfilePicture = get()
+                removeLocalProfilePicture = get(),
+                observePhoneVerificationLimitReached = get()
             )
         }
         viewModel {

@@ -7,6 +7,7 @@ import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
 import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.CoverPacket
 import com.cbgm.sparrow.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupDescriptionUpdatedPacket
@@ -22,6 +23,7 @@ import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.protocol.packet.IndicatorPacket
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
@@ -75,6 +77,16 @@ class OutgoingPacketTransportPolicy {
                     )
                 }
 
+                // Sent right after the handshake, before the identity is verified, with the key the handshake set.
+                is CoverPacket,
+                is IndicatorPacket,
+                is MailboxRoutePacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = true,
+                        allowsEncryptionBeforeMutualIdentity = true,
+                        encryptionUnavailableMessage = "Mailbox route requires the contact's key from the handshake"
+                    )
+
                 is ChatMessagePacket,
                 is OperationMessagePacket ->
                     OutgoingTransportRequirement(
@@ -95,8 +107,7 @@ class OutgoingPacketTransportPolicy {
                 is GroupMemberActivationAcknowledgementPacket,
                 is GroupVerificationReceiptPacket,
                 is GroupVerificationSnapshotRequestPacket,
-                is GroupVerificationSnapshotPacket,
-                is MailboxRoutePacket ->
+                is GroupVerificationSnapshotPacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = true,
                         encryptionUnavailableMessage =

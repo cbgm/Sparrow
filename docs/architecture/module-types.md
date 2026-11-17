@@ -52,7 +52,7 @@ The current `settings.gradle.kts` declares 58 modules.
 - `:feature:expenses` — group expense creation, splits, balances, settlements and exchange rates.
 - `:feature:payment` — settle-up payments: stored bank details and SEPA payment QR codes.
 - `:feature:messaging` — durable outbox/incoming-envelope execution.
-- `:feature:transport` — discovery/WebSocket/presence/mailbox/push transport.
+- `:feature:transport` — discovery, circuits, alias claims and mailbox transport.
 - `:feature:onboarding` — onboarding.
 - `:feature:notification` — notification/background runtime.
 - `:feature:settings` — user/developer/network/AI/app-lock settings.
@@ -61,7 +61,7 @@ The current `settings.gradle.kts` declares 58 modules.
 
 ## Server modules
 
-`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview`, `:server:exchange-rates`.
+`:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:link-preview`, `:server:exchange-rates`.
 
 ## Quality
 

@@ -5,6 +5,8 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.TransportDiagnostics
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.discovery.FailedNodeTracker
@@ -12,8 +14,8 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeReturnPolicy
 import com.cbgm.sparrow.feature.transport.discovery.PreferredNodeStore
+import com.cbgm.sparrow.feature.transport.presence.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
-import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,20 +23,33 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 
-class DefaultTransportConnectionManager(
-    private val webSocketTransportClient: WebSocketTransportClient,
+/**
+ * Keeps the app reachable without a session at any node: it picks the home node (the preferred one when it is in the
+ * signed node directory, otherwise the first available), which is the first hop of the circuits and answers link
+ * previews and exchange rates, and counts as connected while a circuit is up. It keeps the node directory and the
+ * Control Plane discovery fresh, and claims the phone alias with the invitation mailbox at start and every
+ * [ALIAS_CLAIM_INTERVAL_MILLISECONDS]. Messages go through mailboxes; nothing arrives here.
+ */
+class DefaultTransportConnectionManager internal constructor(
+    private val circuits: CircuitRunner,
+    private val aliasClaims: AliasClaimRegistrar,
     private val localRoutingIdProvider: LocalRoutingIdProvider,
     private val transportConfig: TransportConfig,
     private val nodeEndpointResolver: NodeEndpointResolver,
@@ -48,7 +63,11 @@ class DefaultTransportConnectionManager(
     // IO, not Default: the many CPU-heavy startup tasks share Default and would delay connecting.
     private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var connectionLoopJob: Job? = null
+    private var aliasClaimJob: Job? = null
     private var directoryRefreshJob: Job? = null
+
+    /** Ends the time at the current home node, so the loop picks the node again (the preferred one first). */
+    private val reselect = Channel<Unit>(Channel.CONFLATED)
     private var resolvedEndpoints: List<NodeEndpoint> = emptyList()
 
     @Volatile
@@ -113,6 +132,24 @@ class DefaultTransportConnectionManager(
         }
 
         connectionLoopJob = connectionScope.launch { runConnectionLoop() }
+        aliasClaimJob = connectionScope.launch { runAliasClaims() }
+    }
+
+    /**
+     * Phone aliases go to the Control Planes through the relays. They are claimed at start and again every
+     * [ALIAS_CLAIM_INTERVAL_MILLISECONDS], which renews their binding and the invitation mailbox; a claim no Control
+     * Plane answered is repeated after [ALIAS_CLAIM_RETRY_MILLISECONDS].
+     */
+    private suspend fun runAliasClaims() {
+        while (connectionScope.isActive) {
+            val bound =
+                runCatching { aliasClaims.claim(localRoutingIdProvider.getLocalRoutingId().getOrThrow()) }
+                    .onFailure { failure ->
+                        if (failure is CancellationException) throw failure
+                        logger.warn { "Phone alias claim failed: ${failure::class.simpleName}" }
+                    }.getOrDefault(emptySet())
+            delay((if (bound.isEmpty()) ALIAS_CLAIM_RETRY_MILLISECONDS else ALIAS_CLAIM_INTERVAL_MILLISECONDS).milliseconds)
+        }
     }
 
     override suspend fun stop() {
@@ -120,8 +157,9 @@ class DefaultTransportConnectionManager(
 
         connectionLoopJob = null
         directoryRefreshJob?.cancel()
+        aliasClaimJob?.cancelAndJoin()
         activeJob?.cancelAndJoin()
-        webSocketTransportClient.disconnect()
+        connectedNodeId = null
         mutableConnectionState.value = TransportConnectionState.Disconnected
         diagnosticsState.stopped(
             cooldownUntilEpochMillisecondsByNodeId =
@@ -132,12 +170,12 @@ class DefaultTransportConnectionManager(
     override suspend fun moveTo(nodeId: String) {
         val connectedElsewhere = connectedNodeId?.let { connected -> connected != nodeId } ?: false
         if (connectionLoopJob?.isActive == true && connectedElsewhere) {
-            logger.info { "Reconnecting to move to the preferred node $nodeId" }
-            webSocketTransportClient.disconnect()
+            logger.info { "Moving to the preferred node $nodeId" }
+            reselect.trySend(Unit)
         }
     }
 
-    // Ends the session on a fallback node so the loop reconnects, favourite first.
+    // Leaves a fallback node so the loop picks the node again, favourite first.
     private suspend fun returnToPreferredNode(
         connected: NodeEndpoint,
         endpoints: List<NodeEndpoint>
@@ -151,8 +189,8 @@ class DefaultTransportConnectionManager(
                 coolingDownNodeIds = failedNodeTracker.unavailableNodeIds(endpoints)
             )
         if (shouldReturn) {
-            logger.info { "Preferred node $preferredNodeId is back; reconnecting to it" }
-            webSocketTransportClient.disconnect()
+            logger.info { "Preferred node $preferredNodeId is back; moving to it" }
+            reselect.trySend(Unit)
         }
     }
 
@@ -165,10 +203,6 @@ class DefaultTransportConnectionManager(
         while (connectionScope.isActive) {
             val connected = runConnectionAttempt(useCachedDirectory)
             useCachedDirectory = connected
-
-            runCatching {
-                webSocketTransportClient.disconnect()
-            }
 
             if (connected) {
                 reconnectDelay = INITIAL_RECONNECT_DELAY_MILLISECONDS
@@ -194,9 +228,9 @@ class DefaultTransportConnectionManager(
             val endpoint = resolveEndpoint(routingId, useCachedDirectory)
             selectedEndpoint = endpoint
 
-            connect(endpoint = endpoint, routingId = routingId)
+            select(endpoint = endpoint, routingId = routingId)
 
-            when (val connectionResult = awaitConnectionResult()) {
+            when (val connectionResult = awaitConnectionResult(routingId)) {
                 is TransportConnectionState.Connected -> {
                     mutableConnectionState.value = connectionResult
                     onConnected(endpoint = endpoint, routingId = connectionResult.routingId)
@@ -206,6 +240,7 @@ class DefaultTransportConnectionManager(
                 }
 
                 is TransportConnectionState.Failed -> {
+                    connectedNodeId = null
                     mutableConnectionState.value = connectionResult
                     onConnectionFailure(endpoint = endpoint, message = connectionResult.message)
                     false
@@ -221,6 +256,7 @@ class DefaultTransportConnectionManager(
                 TransportConnectionState.Failed(
                     message = error.message ?: "Transport connection error"
                 )
+            connectedNodeId = null
             mutableConnectionState.value = failure
             if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
                 logger.debug { "Transport unavailable; retrying: ${error.message ?: error::class.simpleName}" }
@@ -298,34 +334,25 @@ class DefaultTransportConnectionManager(
         )
     }
 
-    private fun connect(
+    /** The circuits start at the home node from now on ([connectedNodeId] is their first hop). */
+    private fun select(
         endpoint: NodeEndpoint,
         routingId: String
     ) {
+        connectedNodeId = endpoint.nodeId
         diagnosticsState.selected(
             endpoint = endpoint,
             cooldownUntilEpochMillisecondsByNodeId =
                 failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
-        logger.debug {
-            "Connecting to node ${endpoint.nodeId} as $routingId"
-        }
-        webSocketTransportClient.connect(
-            serverUrl = endpoint.websocketUrl,
-            localRoutingId = routingId,
-            expectedNodeId = endpoint.nodeId
-        )
+        logger.debug { "Home node ${endpoint.nodeId} for $routingId" }
     }
 
-    private suspend fun awaitConnectionResult(): TransportConnectionState =
-        withTimeout(CONNECTION_TIMEOUT_MILLISECONDS.milliseconds) {
-            webSocketTransportClient
-                .connectionState
-                .first { state ->
-                    state is TransportConnectionState.Connected ||
-                        state is TransportConnectionState.Failed
-                }
-        }
+    /** Connected once a circuit is up; failed when none came up within [CONNECTION_TIMEOUT_MILLISECONDS]. */
+    private suspend fun awaitConnectionResult(routingId: String): TransportConnectionState =
+        withTimeoutOrNull(CONNECTION_TIMEOUT_MILLISECONDS.milliseconds) { circuits.status.first { it is CircuitStatus.Connected } }
+            ?.let { TransportConnectionState.Connected(routingId) }
+            ?: TransportConnectionState.Failed("No circuit came up")
 
     private suspend fun onConnected(
         endpoint: NodeEndpoint,
@@ -454,10 +481,12 @@ class DefaultTransportConnectionManager(
                 }
 
             try {
-                webSocketTransportClient.connectionState.first { state ->
-                    state is TransportConnectionState.Disconnected ||
-                        state is TransportConnectionState.Failed
-                }
+                merge(
+                    circuits.status
+                        .filterIsInstance<CircuitStatus.Unavailable>()
+                        .map { TransportConnectionState.Failed("The circuits to ${endpoint.nodeId} closed") },
+                    reselect.receiveAsFlow().map { TransportConnectionState.Disconnected }
+                ).first()
             } finally {
                 refreshJob.cancelAndJoin()
                 controlPlaneDiscoveryJob.cancelAndJoin()
@@ -469,5 +498,7 @@ class DefaultTransportConnectionManager(
         const val INITIAL_RECONNECT_DELAY_MILLISECONDS = 1_000L
         const val MAX_RECONNECT_DELAY_MILLISECONDS = 30_000L
         const val CONTROL_PLANE_DISCOVERY_REFRESH_MILLISECONDS = 300_000L
+        const val ALIAS_CLAIM_INTERVAL_MILLISECONDS = 6L * 60L * 60L * 1_000L
+        const val ALIAS_CLAIM_RETRY_MILLISECONDS = 60_000L
     }
 }

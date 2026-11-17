@@ -18,4 +18,7 @@ interface ContactTransportRepository {
     suspend fun getMailboxContacts(): Result<List<MailboxContactFacts>>
 
     suspend fun getMutualSigningPublicKey(contactId: String): Result<ByteArray?>
+
+    /** The contact's signing key from the handshake, also before the identity is mutual. */
+    suspend fun getSigningPublicKey(contactId: String): Result<ByteArray?>
 }

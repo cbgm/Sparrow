@@ -3,6 +3,8 @@ package com.cbgm.sparrow.server.security
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.NodeDirectory
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
+import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.protocol.unsigned
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,7 +18,6 @@ class ProtocolSignaturesTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node-a:8080/v1/gateway",
-                federationEndpoint = "http://node-a:8081",
                 mailboxEndpoint = "http://node-a:8082",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),
@@ -28,6 +29,30 @@ class ProtocolSignaturesTest {
 
         assertTrue(ProtocolSignatures.verifyDescriptor(signed))
         assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(clientEndpoint = "ws://attacker")))
+    }
+
+    @Test
+    fun theOperatorIsSignedAndADescriptorWithoutOneSignsAsBefore() {
+        val identity = NodeIdentity.generate()
+        val unsigned =
+            SparrowNodeDescriptor(
+                nodeId = identity.nodeId,
+                clientEndpoint = "ws://node-a:8080/v1/gateway",
+                mailboxEndpoint = "http://node-a:8082",
+                identityPublicKey = identity.encodedPublicKey,
+                protocolVersions = setOf(1),
+                capabilities = NodeCapability.entries.toSet(),
+                validUntilEpochMilliseconds = Long.MAX_VALUE,
+                operator = "Example Org",
+                signature = byteArrayOf()
+            )
+        val signed = ProtocolSignatures.signDescriptor(unsigned, identity)
+
+        assertTrue(ProtocolSignatures.verifyDescriptor(signed))
+        assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(operator = "Someone Else")))
+        assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(operator = null)))
+        // Nodes that declare no operator keep the signed content they had before the field existed.
+        assertFalse(serverJson.encodeToString(signed.copy(operator = null).unsigned()).contains("operator"))
     }
 
     @Test
@@ -128,102 +153,5 @@ class ProtocolSignaturesTest {
             "scrouting1_A5BYxvLAy0ksUzsKTRTvd8wPeKvMztUofYShogEc-4E",
             ClientRoutingIds.fromSigningPublicKey(byteArrayOf(1, 2, 3))
         )
-    }
-
-    @Test
-    fun gatewaySessionContentMatchesTheSharedWireVector() {
-        val content =
-            ProtocolSignatures.gatewaySessionContent(
-                GatewaySessionBinding(
-                    routingId = "r",
-                    connectionId = "c",
-                    nodeId = "n",
-                    nonce = byteArrayOf(1, 2)
-                )
-            )
-
-        // The app builds the same bytes in feature/transport; both tests pin this vector.
-        assertEquals(GATEWAY_SESSION_VECTOR, content.toHexString())
-    }
-
-    @Test
-    fun gatewaySessionSignatureIsBoundToEveryField() {
-        val identity = NodeIdentity.generate()
-        val session =
-            GatewaySessionBinding(
-                routingId = "ab",
-                connectionId = "c",
-                nodeId = "node-a",
-                nonce = ByteArray(32) { 1 }
-            )
-        val signature = Signatures.sign(ProtocolSignatures.gatewaySessionContent(session), identity.privateKey)
-
-        assertTrue(ProtocolSignatures.verifyGatewaySession(session, identity.encodedPublicKey, signature))
-        listOf(
-            GatewaySessionBinding("a", "bc", session.nodeId, session.nonce),
-            GatewaySessionBinding(session.routingId, session.connectionId, "node-b", session.nonce),
-            GatewaySessionBinding(session.routingId, session.connectionId, session.nodeId, ByteArray(32))
-        ).forEach { other ->
-            assertFalse(ProtocolSignatures.verifyGatewaySession(other, identity.encodedPublicKey, signature))
-        }
-        assertFalse(
-            ProtocolSignatures.verifyGatewaySession(session, NodeIdentity.generate().encodedPublicKey, signature)
-        )
-    }
-
-    @Test
-    fun pushDeviceContentMatchesTheSharedWireVector() {
-        val content =
-            ProtocolSignatures.pushDeviceContent(
-                PushDeviceBinding(
-                    routingId = "r",
-                    token = "t",
-                    platform = "p",
-                    issuedAtEpochMilliseconds = 258L
-                )
-            )
-
-        // The app builds the same bytes in feature/transport; both tests pin this vector.
-        assertEquals(PUSH_DEVICE_VECTOR, content.toHexString())
-    }
-
-    @Test
-    fun mailboxWakeContentMatchesTheSharedWireVector() {
-        val content = ProtocolSignatures.mailboxWakeContent("routing", "node", 1_234_567_890_123L)
-
-        // The app builds the same bytes in feature/transport; both tests pin this vector.
-        assertEquals(MAILBOX_WAKE_VECTOR, content.toHexString())
-    }
-
-    @Test
-    fun pushDeviceSignatureIsBoundToEveryField() {
-        val identity = NodeIdentity.generate()
-        val device = PushDeviceBinding("routing", "token", "ANDROID", 1_000L)
-        val signature = Signatures.sign(ProtocolSignatures.pushDeviceContent(device), identity.privateKey)
-
-        assertTrue(ProtocolSignatures.verifyPushDevice(device, identity.encodedPublicKey, signature))
-        listOf(
-            PushDeviceBinding("other", device.token, device.platform, device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, "other", device.platform, device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, device.token, "IOS", device.issuedAtEpochMilliseconds),
-            PushDeviceBinding(device.routingId, device.token, device.platform, 1_001L)
-        ).forEach { other ->
-            assertFalse(ProtocolSignatures.verifyPushDevice(other, identity.encodedPublicKey, signature))
-        }
-        assertFalse(
-            ProtocolSignatures.verifyPushDevice(device, NodeIdentity.generate().encodedPublicKey, signature)
-        )
-    }
-
-    private companion object {
-        const val PUSH_DEVICE_VECTOR =
-            "0000001673706172726f772d707573682d6465766963652d7631" +
-                "000000017200000001740000000170000000080000000000000102"
-        const val MAILBOX_WAKE_VECTOR =
-            "0000001773706172726f772d6d61696c626f782d77616b652d7631" +
-                "00000007726f7574696e67000000046e6f6465000000080000011f71fb04cb"
-        const val GATEWAY_SESSION_VECTOR =
-            "0000001a73706172726f772d676174657761792d73657373696f6e2d7631" +
-                "00000001720000000163000000016e000000020102"
     }
 }

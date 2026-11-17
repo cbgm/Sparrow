@@ -4,7 +4,6 @@ import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.CreateMailboxResponse
 import com.cbgm.sparrow.server.protocol.DeliveryRoute
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
-import com.cbgm.sparrow.server.protocol.MailboxWakeTicket
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -16,30 +15,24 @@ interface MailboxStorage : AutoCloseable {
     suspend fun create(request: CreateMailboxRequest): CreateMailboxResponse =
         when (
             val result =
-                createWithQuota(
-                    request = request,
-                    ownerKeyHash = UNATTRIBUTED_OWNER,
-                    maximumMailboxes = Int.MAX_VALUE,
-                    maximumMailboxesPerOwner = Int.MAX_VALUE
-                )
+                createWithQuota(request = request, maximumMailboxes = Int.MAX_VALUE)
         ) {
             is MailboxCreationResult.Created -> result.response
-            MailboxCreationResult.GlobalQuotaExceeded,
-            MailboxCreationResult.OwnerQuotaExceeded ->
-                error("Unlimited mailbox creation was rejected")
+            MailboxCreationResult.GlobalQuotaExceeded -> error("Unlimited mailbox creation was rejected")
         }
 
+    /** Nothing about the creator is kept, so the only limit is the node's [maximumMailboxes]. */
     suspend fun createWithQuota(
         request: CreateMailboxRequest,
-        ownerKeyHash: String,
-        maximumMailboxes: Int,
-        maximumMailboxesPerOwner: Int
+        maximumMailboxes: Int
     ): MailboxCreationResult
 
+    /** [depositPaid]: the deposit came with a valid proof of work, which an invitation mailbox requires. */
     suspend fun store(
         mailboxId: String,
         sendCapability: String,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean = false
     ): MailboxResult
 
     suspend fun pending(
@@ -74,22 +67,14 @@ class MailboxStore(
 
     override suspend fun createWithQuota(
         request: CreateMailboxRequest,
-        ownerKeyHash: String,
-        maximumMailboxes: Int,
-        maximumMailboxesPerOwner: Int
+        maximumMailboxes: Int
     ): MailboxCreationResult =
         synchronized(creationLock) {
             require(request.expiresAtEpochMilliseconds > now())
-            validateCreation(ownerKeyHash, maximumMailboxes, maximumMailboxesPerOwner)
+            require(maximumMailboxes > 0) { "Maximum mailbox count must be positive" }
             purgeExpiredMailboxes(mailboxes, now())
             if (mailboxes.size >= maximumMailboxes) {
                 return@synchronized MailboxCreationResult.GlobalQuotaExceeded
-            }
-            if (
-                mailboxes.values.count { it.ownerKeyHash == ownerKeyHash } >=
-                maximumMailboxesPerOwner
-            ) {
-                return@synchronized MailboxCreationResult.OwnerQuotaExceeded
             }
 
             val mailboxId = randomToken(secureRandom)
@@ -97,11 +82,10 @@ class MailboxStore(
             val retrievalCapability = randomToken(secureRandom)
             mailboxes[mailboxId] =
                 InMemoryMailbox(
-                    ownerKeyHash = ownerKeyHash,
                     sendCapabilityHash = hashCapability(sendCapability),
                     retrievalCapabilityHash = hashCapability(retrievalCapability),
                     expiresAtEpochMilliseconds = request.expiresAtEpochMilliseconds,
-                    wakeTicket = request.wakeTicket
+                    invitation = request.invitation
                 )
 
             MailboxCreationResult.Created(
@@ -125,7 +109,8 @@ class MailboxStore(
     override suspend fun store(
         mailboxId: String,
         sendCapability: String,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean
     ): MailboxResult {
         val mailbox = activeMailbox(mailboxId)
         return when {
@@ -142,7 +127,7 @@ class MailboxStore(
             envelope.mailboxRoute?.mailboxId != mailboxId ->
                 MailboxResult.Rejected("MAILBOX_ROUTE_MISMATCH")
 
-            else -> storeValidatedEnvelope(mailbox, envelope)
+            else -> storeValidatedEnvelope(mailbox, envelope, depositPaid)
         }
     }
 
@@ -215,26 +200,32 @@ class MailboxStore(
 
     private fun storeValidatedEnvelope(
         mailbox: InMemoryMailbox,
-        envelope: FederatedEnvelope
+        envelope: FederatedEnvelope,
+        depositPaid: Boolean
     ): MailboxResult {
         purgeExpiredEnvelopes(mailbox, now())
         val duplicate = mailbox.envelopes.containsKey(envelope.envelopeId)
         val projectedBytes = mailbox.storedPayloadBytes() + envelope.payloadBytes()
-        return if (!duplicate && projectedBytes > maximumMailboxBytes) {
-            MailboxResult.Rejected("MAILBOX_QUOTA_EXCEEDED")
-        } else {
-            mailbox.envelopes.putIfAbsent(envelope.envelopeId, envelope)
-            MailboxResult.Stored(duplicate, mailbox.wakeTicket)
+        val invitationRejection =
+            InvitationMailboxes
+                .rejection(mailbox.envelopes.size, envelope.payloadBytes(), depositPaid)
+                .takeIf { mailbox.invitation && !duplicate }
+        return when {
+            invitationRejection != null -> MailboxResult.Rejected(invitationRejection)
+            !duplicate && projectedBytes > maximumMailboxBytes -> MailboxResult.Rejected("MAILBOX_QUOTA_EXCEEDED")
+            else -> {
+                mailbox.envelopes.putIfAbsent(envelope.envelopeId, envelope)
+                MailboxResult.Stored(duplicate)
+            }
         }
     }
 }
 
 private data class InMemoryMailbox(
-    val ownerKeyHash: String,
     val sendCapabilityHash: ByteArray,
     val retrievalCapabilityHash: ByteArray,
     val expiresAtEpochMilliseconds: Long,
-    val wakeTicket: MailboxWakeTicket?,
+    val invitation: Boolean = false,
     val envelopes: ConcurrentHashMap<String, FederatedEnvelope> = ConcurrentHashMap()
 ) {
     override fun equals(other: Any?): Boolean {
@@ -244,10 +235,9 @@ private data class InMemoryMailbox(
         other as InMemoryMailbox
 
         if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
-        if (ownerKeyHash != other.ownerKeyHash) return false
+        if (invitation != other.invitation) return false
         if (!sendCapabilityHash.contentEquals(other.sendCapabilityHash)) return false
         if (!retrievalCapabilityHash.contentEquals(other.retrievalCapabilityHash)) return false
-        if (wakeTicket != other.wakeTicket) return false
         if (envelopes != other.envelopes) return false
 
         return true
@@ -255,20 +245,17 @@ private data class InMemoryMailbox(
 
     override fun hashCode(): Int {
         var result = expiresAtEpochMilliseconds.hashCode()
-        result = 31 * result + ownerKeyHash.hashCode()
+        result = 31 * result + invitation.hashCode()
         result = 31 * result + sendCapabilityHash.contentHashCode()
         result = 31 * result + retrievalCapabilityHash.contentHashCode()
-        result = 31 * result + (wakeTicket?.hashCode() ?: 0)
         result = 31 * result + envelopes.hashCode()
         return result
     }
 }
 
 sealed interface MailboxResult {
-    /** [wakeTicket] is the owner's permission to wake its device, when the owner gave one. */
     data class Stored(
-        val duplicate: Boolean,
-        val wakeTicket: MailboxWakeTicket? = null
+        val duplicate: Boolean
     ) : MailboxResult
 
     data class Rejected(
@@ -290,18 +277,6 @@ sealed interface MailboxCreationResult {
     ) : MailboxCreationResult
 
     data object GlobalQuotaExceeded : MailboxCreationResult
-
-    data object OwnerQuotaExceeded : MailboxCreationResult
-}
-
-private fun validateCreation(
-    ownerKeyHash: String,
-    maximumMailboxes: Int,
-    maximumMailboxesPerOwner: Int
-) {
-    require(ownerKeyHash.isNotBlank()) { "Mailbox owner key must not be blank" }
-    require(maximumMailboxes > 0) { "Maximum mailbox count must be positive" }
-    require(maximumMailboxesPerOwner > 0) { "Per-owner mailbox count must be positive" }
 }
 
 private fun purgeExpiredEnvelopes(
@@ -342,7 +317,6 @@ private fun capabilityMatches(
     expectedHash: ByteArray
 ): Boolean = MessageDigest.isEqual(hashCapability(capability), expectedHash)
 
-private const val UNATTRIBUTED_OWNER = "unattributed"
 private const val DEFAULT_MAXIMUM_ENVELOPE_BYTES = 1_048_576
 private const val DEFAULT_MAXIMUM_MAILBOX_BYTES = 100L * DEFAULT_MAXIMUM_ENVELOPE_BYTES
 private const val CAPABILITY_TOKEN_BYTES = 32

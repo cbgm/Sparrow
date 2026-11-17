@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.sparrow.kmp.compose)
     alias(libs.plugins.sparrow.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.testing)
 }
 
 kotlin {

@@ -40,7 +40,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 - **Getting Started** — prerequisites, first build, project structure, development flow.
 - **Architecture** — Clean Architecture rules, module boundaries, conversation workflow state machines, Direct/Group separation.
 - **Features** — current Android functionality, attachments/media, local message search, message safety and implementation classes.
-- **Transport & API** — Control Plane discovery, node failover, WebSocket frames and packets.
+- **Transport & API** — Control Plane discovery, node failover, circuits, mailboxes and packets.
 - **Security** — identity, encryption, safety numbers, server trust and threat model.
 - **Server & Operations** — Control Plane/Community Node, unified runtime manager, independent signed directory, Docker, Caddy and durable state.
 - **Development** — local setup, extending the project, quality, testing, logging, contributing, releases.

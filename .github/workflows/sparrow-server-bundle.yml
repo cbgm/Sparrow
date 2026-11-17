@@ -105,7 +105,6 @@ jobs:
           ./gradlew \
             :server:node-registry:installDist \
             :server:presence-directory:installDist \
-            :server:push:installDist \
             :server:mailbox:installDist \
             :server:federation:installDist \
             :server:gateway:installDist \
@@ -130,7 +129,6 @@ jobs:
           services=(
             node-registry
             presence-directory
-            push
             mailbox
             federation
             gateway
@@ -216,7 +214,6 @@ jobs:
               "control-plane/docker-compose.release.yml",
               "control-plane/docker-compose.production.yml",
               "control-plane/docker-compose.shared-proxy.yml",
-              "control-plane/docker-compose.firebase.yml",
           }
           forbidden_prefixes = (
               "control-plane-directory/",

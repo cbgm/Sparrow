@@ -8,6 +8,7 @@ sealed interface IdentityOverviewUiState {
 
     data class Ready(
         val localPhoneNumber: String,
+        val phoneVerificationLimitReached: Boolean = false,
         val backupStatus: BackupStateUi = BackupStateUi.NOT_BACKED_UP,
         val profilePicture: IdentityProfilePictureUiState = IdentityProfilePictureUiState()
     ) : IdentityOverviewUiState

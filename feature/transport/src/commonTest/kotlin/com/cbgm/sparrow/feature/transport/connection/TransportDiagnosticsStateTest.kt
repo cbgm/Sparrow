@@ -7,11 +7,11 @@ import kotlin.test.assertEquals
 
 class TransportDiagnosticsStateTest {
     @Test
-    fun missingNodeRemainsVisibleAsCooldownWithZeroConnections() {
+    fun missingNodeRemainsVisibleAsCooldown() {
         var now = 1_000L
         val state = createState(now = { now })
-        val nodeA = node("node-a", activeConnections = 3)
-        val nodeB = node("node-b", activeConnections = 2)
+        val nodeA = node("node-a")
+        val nodeB = node("node-b")
 
         state.resolve(nodeA, nodeB)
         now += 1_000L
@@ -20,15 +20,14 @@ class TransportDiagnosticsStateTest {
         val missingNode = state.diagnostics.value.availableNodes.single { it.nodeId == nodeA.nodeId }
 
         assertEquals(TransportNodeDiagnosticState.COOLDOWN, missingNode.state)
-        assertEquals(0, missingNode.activeConnections)
         assertEquals(62_000L, missingNode.cooldownUntilEpochMilliseconds)
     }
 
     @Test
-    fun cooldownNodeUsesZeroConnectionsEvenWhileDirectoryStillReportsOldCount() {
+    fun aNodeInItsCooldownIsShownAsSuch() {
         val state = createState(now = { 1_000L })
-        val nodeA = node("node-a", activeConnections = 3)
-        val nodeB = node("node-b", activeConnections = 1)
+        val nodeA = node("node-a")
+        val nodeB = node("node-b")
 
         state.resolved(
             endpoints = listOf(nodeA, nodeB),
@@ -41,9 +40,7 @@ class TransportDiagnosticsStateTest {
         val availableNode = state.diagnostics.value.availableNodes.single { it.nodeId == nodeB.nodeId }
 
         assertEquals(TransportNodeDiagnosticState.COOLDOWN, cooldownNode.state)
-        assertEquals(0, cooldownNode.activeConnections)
         assertEquals(TransportNodeDiagnosticState.AVAILABLE, availableNode.state)
-        assertEquals(1, availableNode.activeConnections)
     }
 
     @Test
@@ -96,13 +93,9 @@ class TransportDiagnosticsStateTest {
         )
     }
 
-    private fun node(
-        nodeId: String,
-        activeConnections: Int = 0
-    ): NodeEndpoint =
+    private fun node(nodeId: String): NodeEndpoint =
         NodeEndpoint(
             nodeId = nodeId,
-            websocketUrl = "wss://$nodeId.example/v1/gateway",
-            activeConnections = activeConnections
+            websocketUrl = "wss://$nodeId.example/v1/gateway"
         )
 }

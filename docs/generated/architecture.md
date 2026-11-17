@@ -6,11 +6,11 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 64 |
+| Modules | 63 |
 | Module groups | 11 |
-| Project dependencies | 325 |
-| Kotlin files | 2562 |
-| Test Kotlin files | 188 |
+| Project dependencies | 327 |
+| Kotlin files | 2690 |
+| Test Kotlin files | 225 |
 | Resource files | 59 |
 
 ## Module groups
@@ -101,7 +101,6 @@ Generated automatically by `./gradlew architectureReport`.
 - [**persistence** (`:server:persistence`)](modules/server-persistence.md)
 - [**presence-directory** (`:server:presence-directory`)](modules/server-presence-directory.md)
 - [**protocol** (`:server:protocol`)](modules/server-protocol.md)
-- [**push** (`:server:push`)](modules/server-push.md)
 - [**security** (`:server:security`)](modules/server-security.md)
 
 ### shared
@@ -202,7 +201,6 @@ graph TD
         module_server_persistence[":server:persistence"]
         module_server_presence_directory[":server:presence-directory"]
         module_server_protocol[":server:protocol"]
-        module_server_push[":server:push"]
         module_server_security[":server:security"]
     end
 
@@ -258,6 +256,7 @@ graph TD
     module_feature_chats --> module_feature_payment
     module_feature_chats --> module_feature_polls
     module_feature_chats --> module_feature_safety
+    module_feature_chats --> module_feature_transport
     module_feature_chats --> module_feature_voice
     module_feature_chats --> module_protocol
     module_feature_contactimport --> module_core_ui
@@ -348,6 +347,7 @@ graph TD
     module_feature_conversationorchestration_message --> module_feature_identity
     module_feature_conversationorchestration_message --> module_feature_invite
     module_feature_conversationorchestration_message --> module_feature_membership
+    module_feature_conversationorchestration_message --> module_feature_transport
     module_feature_conversationorchestration_message --> module_protocol
     module_feature_embedding --> module_core_util
     module_feature_embedding --> module_data_datastore
@@ -393,7 +393,9 @@ graph TD
     module_feature_notification --> module_resources
     module_feature_ocr --> module_core_util
     module_feature_onboarding --> module_core_ui
+    module_feature_onboarding --> module_core_util
     module_feature_onboarding --> module_feature_identity
+    module_feature_onboarding --> module_feature_transport
     module_feature_payment --> module_core_base
     module_feature_payment --> module_core_ui
     module_feature_payment --> module_core_util
@@ -439,6 +441,7 @@ graph TD
     module_feature_voice --> module_protocol
     module_navigation --> module_core_ui
     module_navigation --> module_core_util
+    module_navigation --> module_feature_applock
     module_navigation --> module_feature_attachments
     module_navigation --> module_feature_autoreply
     module_navigation --> module_feature_chats
@@ -471,6 +474,7 @@ graph TD
     module_server_gateway --> module_server_protocol
     module_server_gateway --> module_server_security
     module_server_link_preview --> module_server_protocol
+    module_server_link_preview --> module_server_security
     module_server_mailbox --> module_server_observability
     module_server_mailbox --> module_server_persistence
     module_server_mailbox --> module_server_protocol
@@ -484,10 +488,6 @@ graph TD
     module_server_presence_directory --> module_server_persistence
     module_server_presence_directory --> module_server_protocol
     module_server_presence_directory --> module_server_security
-    module_server_push --> module_server_observability
-    module_server_push --> module_server_persistence
-    module_server_push --> module_server_protocol
-    module_server_push --> module_server_security
     module_server_security --> module_server_protocol
     module_shared --> module_core_crypto
     module_shared --> module_core_ui

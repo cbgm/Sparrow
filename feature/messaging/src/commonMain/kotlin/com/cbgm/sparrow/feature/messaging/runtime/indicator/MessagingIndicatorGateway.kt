@@ -7,5 +7,10 @@ import kotlinx.coroutines.flow.Flow
 interface MessagingIndicatorGateway {
     val incoming: Flow<MessagingIndicator>
 
-    suspend fun send(recipientRoutingId: String, indicatorType: String): Result<Unit>
+    /** Sends to one contact; nothing happens when no protected way to them exists, since a late indicator is useless. */
+    suspend fun send(
+        recipientContactId: String,
+        groupId: String?,
+        indicatorType: String
+    ): Result<Unit>
 }

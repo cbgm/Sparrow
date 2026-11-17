@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.mailbox
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.circuit.CircuitKey
 import com.cbgm.sparrow.feature.transport.gateway.codec.decodeEnvelopes
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
@@ -15,13 +16,18 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-class HttpMailboxGateway(
+class HttpMailboxGateway internal constructor(
     private val httpClient: HttpClient,
-    private val json: Json
+    private val json: Json,
+    private val creationWork: MailboxCreationWorkSolver,
+    private val circuitSlot: (String) -> Int = { 0 }
 ) : MailboxGateway {
     private val logger = SparrowLog.withTag("HttpMailboxGateway")
 
@@ -31,26 +37,47 @@ class HttpMailboxGateway(
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long,
-        wakeTicket: MailboxWakeTicket
+        expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> =
         runCatching {
-            val response =
-                httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
-                    contentType(ContentType.Application.Json)
-                    setBody(CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, wakeTicket))
-                }
-            check(response.status == HttpStatusCode.Created) {
-                "Mailbox creation failed with ${response.status}"
-            }
-            val created = response.body<CreateMailboxResponse>()
-            LocalMailboxCredential(
-                contactId = contactId,
-                deliveryRoute = created.deliveryRoute,
-                accessEndpoint = accessEndpoint,
-                retrievalCapability = created.retrievalCapability
-            )
+            open(contactId, accessEndpoint) { work -> CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work) }
         }
+
+    override suspend fun createInvitation(
+        nodeId: String,
+        routeEndpoint: String,
+        accessEndpoint: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<LocalMailboxCredential> =
+        runCatching {
+            open(InvitationMailboxRenewal.CONTACT_ID, accessEndpoint) { work ->
+                CreateMailboxRequest(nodeId, routeEndpoint, routeSequence = 0L, expiresAtEpochMilliseconds, work, invitation = true)
+            }
+        }
+
+    private suspend fun open(
+        contactId: String,
+        accessEndpoint: String,
+        request: (MailboxCreationWork) -> CreateMailboxRequest
+    ): LocalMailboxCredential {
+        val work = creationWork.solve()
+        val response =
+            httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes") {
+                attributes.put(CircuitKey, contactId)
+                contentType(ContentType.Application.Json)
+                setBody(request(work))
+            }
+        check(response.status == HttpStatusCode.Created) {
+            "Mailbox creation failed with ${response.status}"
+        }
+        val created = response.body<CreateMailboxResponse>()
+        return LocalMailboxCredential(
+            contactId = contactId,
+            deliveryRoute = created.deliveryRoute,
+            accessEndpoint = accessEndpoint,
+            retrievalCapability = created.retrievalCapability
+        )
+    }
 
     override suspend fun pending(credential: LocalMailboxCredential) =
         runCatching {
@@ -58,7 +85,10 @@ class HttpMailboxGateway(
             val response =
                 httpClient.get(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes"
-                ) { bearerAuth(credential.retrievalCapability) }
+                ) {
+                    attributes.put(CircuitKey, credential.contactId)
+                    bearerAuth(credential.retrievalCapability)
+                }
             check(response.status.isSuccess()) { "Mailbox retrieval failed with ${response.status}" }
             val envelopes = response.body<JsonObject>()["envelopes"] as? JsonArray ?: JsonArray(emptyList())
             val decoded = json.decodeEnvelopes<FederatedEnvelope>(envelopes)
@@ -78,7 +108,10 @@ class HttpMailboxGateway(
             val response =
                 httpClient.delete(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes/$envelopeId"
-                ) { bearerAuth(credential.retrievalCapability) }
+                ) {
+                    attributes.put(CircuitKey, credential.contactId)
+                    bearerAuth(credential.retrievalCapability)
+                }
             check(response.status == HttpStatusCode.NoContent) {
                 "Mailbox acknowledgement failed with ${response.status}"
             }
@@ -90,11 +123,66 @@ class HttpMailboxGateway(
             val response =
                 httpClient.delete(
                     "${credential.accessEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}"
-                ) { bearerAuth(credential.retrievalCapability) }
+                ) {
+                    attributes.put(CircuitKey, credential.contactId)
+                    bearerAuth(credential.retrievalCapability)
+                }
             check(response.status == HttpStatusCode.NoContent || response.status in MAILBOX_GONE) {
                 "Mailbox revocation failed with ${response.status}"
             }
         }
+
+    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = runCatching { put(MailboxEnvelopeRequest(envelope)) }
+
+    override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> =
+        runCatching { put(MailboxEnvelopeRequest(envelope, depositWork = creationWork.solve())) }
+
+    private suspend fun put(request: MailboxEnvelopeRequest) {
+        val route = requireNotNull(request.envelope.mailboxRoute) { "The envelope names no mailbox" }
+        val response =
+            httpClient.post("${route.nodeEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes") {
+                attributes.put(CircuitKey, route.mailboxId)
+                bearerAuth(route.sendCapability)
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        check(response.status == HttpStatusCode.Accepted) { "Mailbox delivery failed with ${response.status}" }
+    }
+
+    /** One wait per circuit, each naming only that circuit's mailboxes, so no session node sees them all. */
+    override suspend fun ready(
+        accessEndpoint: String,
+        credentials: List<LocalMailboxCredential>
+    ): Result<Set<String>> =
+        runCatching {
+            coroutineScope {
+                credentials
+                    .groupBy { credential -> circuitSlot(credential.contactId) }
+                    .values
+                    .map { onCircuit -> async { wait(accessEndpoint, onCircuit) } }
+                    .awaitAll()
+                    .flatten()
+                    .toSet()
+            }
+        }.markingNodeUnavailable()
+
+    private suspend fun wait(
+        accessEndpoint: String,
+        credentials: List<LocalMailboxCredential>
+    ): List<String> {
+        val response =
+            httpClient.post("${accessEndpoint.trimEnd('/')}/v1/mailboxes/wait") {
+                attributes.put(CircuitKey, credentials.first().contactId)
+                contentType(ContentType.Application.Json)
+                setBody(
+                    MailboxWaitRequest(
+                        credentials.map { credential -> MailboxWaitEntry(credential.deliveryRoute.mailboxId, credential.retrievalCapability) }
+                    )
+                )
+            }
+        check(response.status.isSuccess()) { "Waiting for mailbox envelopes failed with ${response.status}" }
+        return response.body<MailboxWaitResponse>().ready
+    }
 
     private companion object {
         /** The mailbox no longer exists for this capability; revoking it again can never succeed. */

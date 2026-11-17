@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -33,23 +34,29 @@ class SparrowNotificationManager(
     }
 
     /**
-     * The low-importance notification Android requires while the push sync runs as a foreground job, which
-     * WorkManager does for urgent work on Android 10 and 11.
+     * The notification Android requires while the connection service keeps Sparrow connected; tapping it opens the
+     * app. Silent and at the lowest importance, so it does not get in the way.
      */
-    fun createSyncNotification(): Notification {
+    fun createConnectionNotification(): Notification {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
-                SYNC_CHANNEL_ID,
-                context.getString(ResourcesR.string.notification_channel_sync),
+                CONNECTION_CHANNEL_ID,
+                context.getString(ResourcesR.string.notification_channel_connection),
                 NotificationManager.IMPORTANCE_MIN
             ).apply {
-                description = context.getString(ResourcesR.string.notification_channel_sync_description)
+                description = context.getString(ResourcesR.string.notification_channel_connection_description)
             }
         )
+        val openApp =
+            context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { launch ->
+                PendingIntent.getActivity(context, CONNECTION_NOTIFICATION_ID, launch, PendingIntent.FLAG_IMMUTABLE)
+            }
         return NotificationCompat
-            .Builder(context, SYNC_CHANNEL_ID)
+            .Builder(context, CONNECTION_CHANNEL_ID)
             .setSmallIcon(ResourcesR.drawable.ic_sparrow_notification)
-            .setContentTitle(context.getString(ResourcesR.string.notification_checking_messages))
+            .setContentTitle(context.getString(ResourcesR.string.notification_connected))
+            .setContentText(context.getString(ResourcesR.string.notification_connected_text))
+            .setContentIntent(openApp)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setSilent(true)
@@ -120,10 +127,12 @@ class SparrowNotificationManager(
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
 
-    private companion object {
-        const val WAKE_UP_NOTIFICATION_ID = 10_001
-        const val MESSAGE_CHANNEL_ID = "sparrow-messages"
-        const val SYNC_CHANNEL_ID = "sparrow-message-sync"
-        const val MESSAGE_GROUP_KEY = "sparrow-message-notifications"
+    companion object {
+        /** The connection service's notification, shown as long as it runs. */
+        const val CONNECTION_NOTIFICATION_ID = 10_003
+        private const val WAKE_UP_NOTIFICATION_ID = 10_001
+        private const val MESSAGE_CHANNEL_ID = "sparrow-messages"
+        private const val CONNECTION_CHANNEL_ID = "sparrow-connection"
+        private const val MESSAGE_GROUP_KEY = "sparrow-message-notifications"
     }
 }

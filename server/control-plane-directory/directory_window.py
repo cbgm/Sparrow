@@ -26,7 +26,7 @@ STANDALONE = "Own proxy (free ports 80/443)"
 class DirectoryInstaller(EngineWindow):
 
     def __init__(self, root: tk.Tk):
-        super().__init__(root, "Sparrow Directory", HERE, (1000, 720))
+        super().__init__(root, "Sparrow Directory", HERE, (1000, 800))
         self.public_ip = ""
         # The running server wins over the folder of the last installation, which may be gone.
         info = engine.installed_info()
@@ -37,7 +37,14 @@ class DirectoryInstaller(EngineWindow):
         self.proxy = tk.StringVar(
             value=STANDALONE if info and not info.get("serverRoot") else SHARED)
         self.server = tk.StringVar(value=str(server or ""))
+        phone = engine.phone_settings()
+        self.phone = tk.BooleanVar(value=phone["enabled"])
+        # Empty keeps the imported file; the label shows its project.
+        self.firebase_file = tk.StringVar(value="")
+        self.firebase_project = phone["firebaseProject"]
+        self.per_day = tk.StringVar(value=str(phone["perDay"]))
         self.build()
+        self.update_fields()
         self.refresh()
         threading.Thread(target=self.lookup_ip, daemon=True).start()
         self.root.after(100, self.pump)
@@ -74,6 +81,29 @@ class DirectoryInstaller(EngineWindow):
         card.hint("The running Sparrow Server is found automatically. Its Control Plane is "
                   "registered in the Directory. Identities and data are always kept.")
 
+        card = Card(left, "Phone verification (Firebase)", self.fonts)
+        card.pack(fill="x", pady=(12, 0))
+        card.add(ttk.Checkbutton(card, text="Verify phone numbers for all Control Planes",
+                                 variable=self.phone, command=self.update_fields), sticky="w")
+        chooser = tk.Frame(card, bg=COLORS["card"])
+        chooser.columnconfigure(0, weight=1)
+        self.firebase_entry = ttk.Entry(chooser, textvariable=self.firebase_file, font=self.fonts["body"])
+        self.firebase_entry.grid(row=0, column=0, sticky="ew")
+        self.firebase_button = self.button(chooser, "Choose...", self.choose_firebase)
+        self.firebase_button.grid(row=0, column=1, padx=(8, 0))
+        card.add(chooser, "Firebase Admin file (service account JSON)")
+        card.hint(f"Imported: project {self.firebase_project}. Leave empty to keep it." if self.firebase_project
+                  else "Not imported yet. Choose the service account file of the app's Firebase project.")
+        self.per_day_entry = card.add(
+            ttk.Entry(card, textvariable=self.per_day, font=self.fonts["body"]),
+            "Verifications per day (0 = no limit)")
+        self.today_label = tk.Label(card, font=self.fonts["small"], bg=COLORS["card"], fg=COLORS["muted"],
+                                    anchor="w", text="")
+        card.add(self.today_label, sticky="w")
+        card.hint("This Directory verifies the phone numbers for all Control Planes: it checks the app's "
+                  "Firebase phone sign-in with this file and signs a confirmation. Control Planes accept a "
+                  "number only with it and need no Firebase file themselves. Nothing is stored.")
+
         card = Card(right, "Directory", self.fonts)
         card.pack(fill="x")
         self.address_frame = tk.Frame(card, bg=COLORS["card"])
@@ -96,6 +126,15 @@ class DirectoryInstaller(EngineWindow):
         card.hint("Apps fetch and pin the Directory key automatically. When the URL changes, "
                   "enter the new one in the app's settings.")
 
+        card = Card(right, "Updates", self.fonts)
+        card.pack(fill="x", pady=(12, 0))
+        self.source_label = tk.Label(card, font=self.fonts["body"], bg=COLORS["card"], fg=COLORS["text"],
+                                     anchor="w", text=engine.saved_source() or "-")
+        card.add(self.source_label, "Source folder")
+        card.add(self.row_of(card, ("Update from source...", self.update_from_source, "")), sticky="w")
+        card.hint("Copies the Directory program from your Sparrow source folder into this folder and starts it. "
+                  "The signing identity, data and settings are kept.")
+
     # ------------------------------------------------------------------ state
     def lookup_ip(self) -> None:
         address = engine.public_ipv4()
@@ -106,6 +145,11 @@ class DirectoryInstaller(EngineWindow):
         self.update_fields()
         self.refresh()
 
+    def count_today(self) -> None:
+        today = engine.phone_verifications_today()
+        text = f"Today (UTC): {today} verified" if today else ""
+        self.root.after(0, lambda: self.today_label.configure(text=text))
+
     def update_fields(self) -> None:
         if self.automatic.get():
             if self.public_ip:
@@ -113,11 +157,14 @@ class DirectoryInstaller(EngineWindow):
             self.hostname_entry.configure(state="disabled")
         else:
             self.hostname_entry.configure(state="normal")
+        for widget in (self.firebase_entry, self.firebase_button, self.per_day_entry):
+            widget.configure(state="normal" if self.phone.get() else "disabled")
         shared = "normal" if self.proxy.get() == SHARED else "disabled"
         self.server_entry.configure(state=shared)
         self.server_button.configure(state=shared)
 
     def refresh(self) -> None:
+        threading.Thread(target=self.count_today, daemon=True).start()
         state, level = engine.state()
         self.set_pill(state, level)
         ip = f"public IP {self.public_ip}" if self.public_ip else "public IP unknown"
@@ -160,6 +207,35 @@ class DirectoryInstaller(EngineWindow):
     def engine(self, title: str, *arguments: str) -> None:
         self.run(title, [sys.executable, "-u", str(HERE / "directory_installer.py"), *arguments])
 
+    def choose_firebase(self) -> None:
+        path = filedialog.askopenfilename(title="Firebase Admin file (service account JSON)",
+                                          filetypes=(("Service account JSON", "*.json"), ("All files", "*.*")))
+        if path:
+            self.firebase_file.set(path)
+
+    def update_from_source(self) -> None:
+        if not engine.installed_hostname():
+            messagebox.showinfo("Update from source", "Install the Directory first.")
+            return
+        folder = filedialog.askdirectory(title="Your Sparrow source folder (repository root)",
+                                         initialdir=engine.saved_source() or str(Path.home()))
+        if not folder:
+            return
+        if not (Path(folder) / "server" / "control-plane-directory" / "directory_service.py").is_file():
+            messagebox.showerror("Update from source", f"{folder} is not a Sparrow source folder.")
+            return
+        if messagebox.askyesno("Update from source", f"Update the Directory from\n{folder}\nand start it? "
+                               "Its signing identity, data and settings are kept."):
+            self.run("Updating the Directory",
+                     [sys.executable, "-u", str(HERE / "directory_installer.py"), "update", "--source", folder],
+                     self.reopen)
+
+    def reopen(self) -> None:
+        """The window's own files may have changed: open the new version."""
+        messagebox.showinfo("Update from source", "The Directory is updated and running. The window reopens now.")
+        subprocess.Popen([sys.executable, str(HERE / "directory_window.py")], cwd=HERE)
+        self.root.destroy()
+
     def choose_server(self) -> None:
         folder = filedialog.askdirectory(title="Folder of your Sparrow Server")
         if folder:
@@ -172,6 +248,22 @@ class DirectoryInstaller(EngineWindow):
                                    "Enter the Directory hostname (the public IP is unknown).")
             return
         arguments = ["install", "--hostname", hostname]
+        if self.phone.get():
+            per_day = self.per_day.get().strip() or "0"
+            if not per_day.isdigit():
+                messagebox.showwarning("Sparrow Directory",
+                                       "Enter the verifications per day as a whole number (0 = no limit).")
+                return
+            firebase_file = self.firebase_file.get().strip()
+            if not firebase_file and not self.firebase_project:
+                messagebox.showwarning("Sparrow Directory",
+                                       "Choose the Firebase Admin file (service account JSON) of the app's project.")
+                return
+            arguments += ["--phone-verification", "--phone-verifications-per-day", per_day]
+            if firebase_file:
+                arguments += ["--firebase-admin-file", firebase_file]
+        else:
+            arguments.append("--no-phone-verification")
         if self.proxy.get() == SHARED:
             if not self.server.get().strip():
                 messagebox.showwarning("Sparrow Directory",

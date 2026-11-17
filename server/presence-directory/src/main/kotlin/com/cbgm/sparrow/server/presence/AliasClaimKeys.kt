@@ -2,6 +2,7 @@ package com.cbgm.sparrow.server.presence
 
 import com.cbgm.sparrow.server.protocol.ALIAS_CLAIM_CONTEXT
 import com.cbgm.sparrow.server.protocol.AliasClaim
+import com.cbgm.sparrow.server.protocol.InvitationRoute
 import com.cbgm.sparrow.server.protocol.UnsignedAliasClaim
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
@@ -42,10 +43,18 @@ internal class AliasClaimKeys(
             }.getOrDefault(false)
         val validAliases =
             claim.aliases.all(ClientRoutingIds::isBootstrapRoutingId) && claim.aliases.distinct() == claim.aliases
-        return claim.unsigned().takeIf { ownKey && fresh && signed && validAliases }
+        val validInvitationRoute = claim.invitationRoute?.isUsable() ?: true
+        return claim.unsigned().takeIf { ownKey && fresh && signed && validAliases && validInvitationRoute }
     }
+
+    /** A live mailbox at an http(s) node, with a raw X25519 key to seal for. */
+    private fun InvitationRoute.isUsable(): Boolean =
+        encryptionPublicKey.size == RAW_KEY_BYTES &&
+            route.expiresAtEpochMilliseconds > now() &&
+            (route.nodeEndpoint.startsWith("https://") || route.nodeEndpoint.startsWith("http://"))
 
     private companion object {
         const val MAXIMUM_CLAIM_AGE_MILLISECONDS = 5L * 60L * 1_000L
+        const val RAW_KEY_BYTES = 32
     }
 }

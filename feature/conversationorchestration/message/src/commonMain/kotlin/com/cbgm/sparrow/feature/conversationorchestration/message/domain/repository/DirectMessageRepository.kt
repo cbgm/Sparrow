@@ -45,6 +45,9 @@ interface DirectMessageRepository {
     /** Queued outgoing messages created before [createdBeforeEpochMilliseconds] whose packet is not in the outbox. */
     suspend fun findAwaitingOutbox(createdBeforeEpochMilliseconds: Long): Result<List<StoredMessage>>
 
+    /** Failed outgoing messages that never got a packet, oldest first; a retry creates one. */
+    suspend fun findUnsent(): Result<List<StoredMessage>>
+
     suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>>
 
     suspend fun markReadReceiptSent(messageId: String): Result<Boolean>

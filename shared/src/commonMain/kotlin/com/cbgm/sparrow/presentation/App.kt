@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.locale.AppLocaleEnvironment
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.feature.onboarding.presentation.localnetwork.LocalNetworkAccess
 import com.cbgm.sparrow.navigation.routing.AppNavigation
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
@@ -34,6 +35,7 @@ fun App(
 
     AppLocaleEnvironment {
         SparrowTheme {
+            LocalNetworkAccess()
             key(processKey) {
                 AppNavigation(
                     onStartupContentReady = onReleaseNativeSplash

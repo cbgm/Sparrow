@@ -15,6 +15,8 @@ import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MailboxRouteProvisioner(
     private val getMailboxContactStates: GetMailboxContactStatesUseCase,
@@ -27,7 +29,29 @@ class MailboxRouteProvisioner(
     private val credentialFactory: MailboxCredentialFactory,
     private val protocolOutbox: ProtocolOutbox
 ) {
-    suspend fun provision(): Result<Int> =
+    private val provisioning = Mutex()
+    private val log = SparrowLog.withTag("MailboxRouteProvisioner")
+
+    /**
+     * Provisions only when a contact that should have a mailbox has none yet, typically right after an invite: then
+     * the route goes out at once instead of at the next connect, and messages to that contact use mailboxes from
+     * then on. Cheap otherwise: no node is asked.
+     */
+    suspend fun provisionMissing(): Result<Int> =
+        runCatching {
+            val withMailbox = mailboxRouteRepository.allLocal().getOrThrow().mapTo(HashSet(), LocalMailboxCredential::contactId)
+            val blocked = contactBlocklistRepository.getBlockedContactIds().getOrThrow()
+            val missing =
+                getMailboxContactStates().getOrThrow().any { state ->
+                    state.isProvisioningEligible && state.contactId !in withMailbox && state.contactId !in blocked
+                }
+            if (missing) provision().getOrThrow() else 0
+        }
+
+    /** One provisioning at a time: the connect and the new-contact check must not create a mailbox twice. */
+    suspend fun provision(): Result<Int> = provisioning.withLock { provisionNow() }
+
+    private suspend fun provisionNow(): Result<Int> =
         runCatching {
             val now = SystemClock.nowEpochMilliseconds()
             // Node discovery validates signatures before returning a directory. It is
@@ -54,6 +78,7 @@ class MailboxRouteProvisioner(
             getMailboxContactStates().getOrThrow().forEach { contactState ->
                 val contactId = contactState.contactId
                 if (contactId in blockedContactIds) {
+                    log.info { "Contact $contactId is blocked: its mailbox is revoked" }
                     mailboxCapabilityLifecycle.revokeForContact(contactId)
                         .onFailure { failure ->
                             if (failure is CancellationException) throw failure
@@ -71,7 +96,10 @@ class MailboxRouteProvisioner(
                         }
                     return@forEach
                 }
-                if (!contactState.isProvisioningEligible) return@forEach
+                if (!contactState.isProvisioningEligible) {
+                    log.info { "Contact $contactId gets no mailbox: ${contactState.ineligibleReason}" }
+                    return@forEach
+                }
 
                 val current = mailboxRouteRepository.localForContact(contactId).getOrThrow()
                 // Only the signed node directory can retire an old mailbox. A previous installation's capability cannot retrieve from
@@ -79,7 +107,10 @@ class MailboxRouteProvisioner(
                 val retired = current != null && current.isRetiredFrom(availableNodes)
                 // Contacts still deliver to the old address of a moved node until a new route is shared.
                 val moved = current != null && current.hasMovedIn(availableNodes)
-                if (current?.revocationPending == true && !retired) return@forEach
+                if (current?.revocationPending == true && !retired) {
+                    log.info { "Contact $contactId gets no new mailbox yet: revoking its old one is still pending" }
+                    return@forEach
+                }
                 val credential =
                     if (
                         current != null && !retired && !moved &&
@@ -101,15 +132,17 @@ class MailboxRouteProvisioner(
                             }
                     }
 
-                protocolOutbox
-                    .enqueue(
-                        contactId = contactId,
-                        packet =
-                            MailboxRoutePacket(
-                                packetId = "mailbox-route-${credential.deliveryRoute.routeId}",
-                                deliveryRoute = credential.deliveryRoute
-                            )
-                    ).getOrThrow()
+                val queued =
+                    protocolOutbox
+                        .enqueue(
+                            contactId = contactId,
+                            packet =
+                                MailboxRoutePacket(
+                                    packetId = "mailbox-route-${credential.deliveryRoute.routeId}-$ROUTE_PACKET_GENERATION",
+                                    deliveryRoute = credential.deliveryRoute
+                                )
+                        ).getOrThrow()
+                log.info { "Mailbox route for contact $contactId: ${queued.packetId.take(20)}… is ${queued.status}" }
             }
             provisioned
         }
@@ -226,6 +259,13 @@ class MailboxRouteProvisioner(
 
     private companion object {
         const val ROUTE_LIFETIME_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
+
+        /**
+         * Part of the route packet's ID, so every route is sent once more when it changes. Generation 2: contacts
+         * rejected routes before their identity was verified; they accept them after the handshake now. Generation 3:
+         * sent once more to follow the route to the contact in the log.
+         */
+        const val ROUTE_PACKET_GENERATION = 3
         const val RENEWAL_WINDOW_MILLISECONDS = 3L * 24L * 60L * 60L * 1_000L
         const val RETIRING_GRACE_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }

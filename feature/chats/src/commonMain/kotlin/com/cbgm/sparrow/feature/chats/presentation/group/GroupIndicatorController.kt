@@ -163,7 +163,10 @@ class GroupIndicatorController(
 
     private companion object {
         val indicatorTimeout: Duration = 1500.milliseconds
-        val heartbeatInterval: Duration = 1500.milliseconds
-        val remoteTimeout: Duration = 3000.milliseconds
+
+        // Each indicator goes through a circuit into a mailbox: a heartbeat every few seconds, and the remote side
+        // keeps it a little longer than that.
+        val heartbeatInterval: Duration = 4000.milliseconds
+        val remoteTimeout: Duration = 7000.milliseconds
     }
 }

@@ -42,8 +42,6 @@ services:
         condition: service_healthy
       gateway:
         condition: service_healthy
-      push:
-        condition: service_healthy
       presence-directory:
         condition: service_healthy
 
@@ -97,17 +95,10 @@ services:
     <<: *hardened-service
     ports: !reset []
     environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
-      FIREBASE_TARGET_PROJECT_ID: ${FIREBASE_TARGET_PROJECT_ID:-sparrow-a9048}
       PRESENCE_REDIS_PASSWORD: !reset null
       PRESENCE_REDIS_PASSWORD_FILE: /run/secrets/presence-redis-password
-      PRESENCE_INTERNAL_API_TOKEN: !reset null
-      PRESENCE_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
     secrets:
-      - source: firebase-admin
-        target: firebase-admin.json
       - presence-redis-password
-      - push-internal-api-token
     networks:
       - edge
       - backend
@@ -131,55 +122,10 @@ services:
       TRUST_PROXY_HEADERS: "true"
       MAILBOX_DATABASE_PASSWORD: !reset null
       MAILBOX_DATABASE_PASSWORD_FILE: /run/secrets/mailbox-database-password
-      PUSH_INTERNAL_API_TOKEN: !reset null
-      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
     secrets:
       - mailbox-database-password
-      - push-internal-api-token
     networks:
       - edge
-      - backend
-
-  push-database:
-    logging: *default-logging
-    ports: !reset []
-    environment:
-      POSTGRES_PASSWORD: !reset null
-      POSTGRES_PASSWORD_FILE: /run/secrets/push-database-password
-    secrets:
-      - push-database-password
-    networks:
-      - backend
-
-  push:
-    logging: *default-logging
-    <<: *hardened-service
-    ports: !reset []
-    volumes: !reset []
-    environment:
-      TRUST_PROXY_HEADERS: "true"
-      PUSH_DATABASE_PASSWORD: !reset null
-      PUSH_DATABASE_PASSWORD_FILE: /run/secrets/push-database-password
-      PUSH_INTERNAL_API_TOKEN: !reset null
-      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
-    secrets:
-      - push-database-password
-      - push-internal-api-token
-      - source: firebase-admin
-        target: firebase-admin.json
-    networks:
-      - edge
-      - backend
-
-  federation-database:
-    logging: *default-logging
-    ports: !reset []
-    environment:
-      POSTGRES_PASSWORD: !reset null
-      POSTGRES_PASSWORD_FILE: /run/secrets/federation-database-password
-    secrets:
-      - federation-database-password
-    networks:
       - backend
 
   federation:
@@ -189,18 +135,7 @@ services:
     environment:
       TRUST_PROXY_HEADERS: "true"
       CLIENT_ENDPOINT: wss://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}/v1/gateway
-      FEDERATION_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
       MAILBOX_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
-      FEDERATION_DATABASE_PASSWORD: !reset null
-      FEDERATION_DATABASE_PASSWORD_FILE: /run/secrets/federation-database-password
-      FEDERATION_INTERNAL_API_TOKEN: !reset null
-      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
-      GATEWAY_INTERNAL_API_TOKEN: !reset null
-      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
-    secrets:
-      - federation-database-password
-      - federation-internal-api-token
-      - gateway-internal-api-token
     networks:
       - edge
       - backend
@@ -210,17 +145,7 @@ services:
     <<: *hardened-service
     ports: !reset []
     environment:
-      FEDERATION_INTERNAL_API_TOKEN: !reset null
-      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
-      GATEWAY_INTERNAL_API_TOKEN: !reset null
-      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
-      PUSH_INTERNAL_API_TOKEN: !reset null
-      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
       RELAY_PRIVATE_DESTINATIONS: "false"
-    secrets:
-      - federation-internal-api-token
-      - gateway-internal-api-token
-      - push-internal-api-token
     networks:
       - edge
       - backend
@@ -237,18 +162,6 @@ secrets:
     file: ${PRESENCE_REDIS_PASSWORD_FILE:?Set presence Redis password file}
   mailbox-database-password:
     file: ${MAILBOX_DATABASE_PASSWORD_FILE:?Set mailbox password file}
-  push-database-password:
-    file: ${PUSH_DATABASE_PASSWORD_FILE:?Set push password file}
-  federation-database-password:
-    file: ${FEDERATION_DATABASE_PASSWORD_FILE:?Set federation password file}
-  federation-internal-api-token:
-    file: ${FEDERATION_INTERNAL_API_TOKEN_FILE:?Set federation token file}
-  gateway-internal-api-token:
-    file: ${GATEWAY_INTERNAL_API_TOKEN_FILE:?Set gateway token file}
-  push-internal-api-token:
-    file: ${PUSH_INTERNAL_API_TOKEN_FILE:?Set push token file}
-  firebase-admin:
-    file: ${FIREBASE_ADMIN_CREDENTIALS:?Set Firebase Admin credential file}
 
 volumes:
   caddy-data:

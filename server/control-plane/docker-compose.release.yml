@@ -26,8 +26,6 @@ services:
         condition: service_started
       presence-directory:
         condition: service_started
-      push:
-        condition: service_started
 
   node-registry:
     logging: *default-logging
@@ -58,18 +56,6 @@ services:
       node-registry:
         condition: service_started
       presence-redis:
-        condition: service_healthy
-
-  push:
-    logging: *default-logging
-    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-push:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
-    build: !reset null
-    pull_policy: always
-    healthcheck: !reset null
-    depends_on:
-      node-registry:
-        condition: service_started
-      push-database:
         condition: service_healthy
 
 volumes:

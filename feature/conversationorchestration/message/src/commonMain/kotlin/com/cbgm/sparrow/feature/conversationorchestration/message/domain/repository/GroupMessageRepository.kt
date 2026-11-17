@@ -20,6 +20,9 @@ interface GroupMessageRepository {
 
     suspend fun findAwaitingOutbox(groupId: String): Result<List<StoredMessage>>
 
+    /** The groups holding own messages not yet encrypted for anyone ([findQueued]). */
+    suspend fun findGroupsWithQueued(): Result<List<String>>
+
     suspend fun saveOutgoing(
         message: StoredMessage,
         text: String,

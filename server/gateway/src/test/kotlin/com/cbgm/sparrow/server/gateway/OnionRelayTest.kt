@@ -16,7 +16,6 @@ import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import java.net.InetAddress
 import kotlin.test.Test
@@ -31,14 +30,13 @@ class OnionRelayTest {
     private val firstKeys = X25519KeyPair.generate()
     private val secondKeys = X25519KeyPair.generate()
     private val seenByControlPlane = mutableListOf<String>()
-    private lateinit var second: OnionRelay
 
     private val network =
         HttpClient(
             MockEngine { request ->
                 when (request.url.toString()) {
                     "https://relay-b.test/v1/relay" -> {
-                        when (val reply = runBlocking { second.relay(request.body.toByteArray()) }) {
+                        when (val reply = second.relay(request.body.toByteArray())) {
                             is RelayReply.Sealed -> respond(reply.bytes, HttpStatusCode.OK)
                             RelayReply.Refused -> respond("", HttpStatusCode.BadRequest)
                             RelayReply.NextRelayFailed -> respond("", HttpStatusCode.BadGateway)
@@ -57,9 +55,8 @@ class OnionRelayTest {
     private val policy = RelayDestinationPolicy(allowPrivateAddresses = false, resolve = { listOf(PUBLIC_ADDRESS) })
     private val first = OnionRelay(firstKeys, network, policy)
 
-    init {
-        second = OnionRelay(secondKeys, network, policy)
-    }
+    // The network above hands relay-b's traffic to it, so it is built on first use.
+    private val second: OnionRelay by lazy { OnionRelay(secondKeys, network, policy) }
 
     @Test
     fun twoRelaysCarryARequestNeitherCanRead() =
@@ -119,11 +116,23 @@ class OnionRelayTest {
     fun relaysReachOnlyControlPlanePathsAndOtherRelays() {
         assertNotNull(policy.controlPlane(RelayExit("GET", "https://control.test/v1/nodes")))
         assertNotNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/alias-claims")))
-        assertNotNull(policy.controlPlane(RelayExit("GET", "https://control.test/push/wake/abc_1/inbox")))
+        assertNotNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/invitation-routes")))
+        assertNotNull(policy.controlPlane(RelayExit("GET", "https://directory.test/v1/phone-attestations/keys")))
+        assertNotNull(policy.controlPlane(RelayExit("POST", "https://directory.test/v1/phone-attestations")))
+        assertNull(policy.controlPlane(RelayExit("GET", "https://directory.test/v1/phone-attestations")))
+        assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/push/devices")))
         assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/nodes")))
         assertNull(policy.controlPlane(RelayExit("GET", "https://control.test/v1/routes/scphone1_x")))
         assertNull(policy.controlPlane(RelayExit("GET", "https://user@control.test/v1/nodes")))
         assertNull(policy.controlPlane(RelayExit("GET", "file:///etc/passwd")))
+        assertNotNull(policy.sessionRequest("POST", "https://box.test/v1/mailboxes/wait"))
+        assertNotNull(policy.sessionRequest("POST", "https://box.test/v1/mailboxes/box-1/envelopes"))
+        assertNull(policy.sessionRequest("GET", "https://box.test/v1/mailboxes/wait"))
+        assertNull(policy.sessionRequest("POST", "https://box.test/v1/mailboxes/wait?all=1"))
+        assertNotNull(policy.sessionRequest("PUT", "https://node.test/v1/blobs/blob-0123456789abcdef/chunks/3"))
+        assertNotNull(policy.sessionRequest("GET", "https://node.test/v1/blobs/blob-0123456789abcdef/chunks"))
+        assertNull(policy.sessionRequest("PUT", "https://node.test/v1/blobs/blob-0123456789abcdef"))
+        assertNull(policy.sessionRequest("GET", "https://node.test/v1/blobs/blob-0123456789abcdef/chunks/../../internal"))
         assertNotNull(policy.nextRelay("https://relay-b.test/v1/relay"))
         assertNull(policy.nextRelay("https://relay-b.test/v1/relay?x=1"))
         assertNull(policy.nextRelay("https://relay-b.test/internal/v1/routes"))

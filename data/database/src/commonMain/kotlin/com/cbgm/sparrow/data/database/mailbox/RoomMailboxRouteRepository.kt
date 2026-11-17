@@ -15,6 +15,8 @@ class RoomMailboxRouteRepository(
 
     override suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?> = runCatching { dao.findRemoteByRoutingId(routingId)?.toMailboxDeliveryRoute() }
 
+    override suspend fun remoteForContact(contactId: String): Result<MailboxDeliveryRoute?> = runCatching { dao.findRemote(contactId)?.toMailboxDeliveryRoute() }
+
     override suspend fun allLocal(): Result<List<LocalMailboxCredential>> = runCatching { dao.allLocal().map(LocalMailboxCredentialEntity::toLocalMailboxCredential) }
 
     override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> = runCatching { dao.upsertLocal(credential.toLocalMailboxCredentialEntity()) }

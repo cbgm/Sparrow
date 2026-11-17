@@ -29,8 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,6 +38,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.rememberDelayedVisibility
+import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -58,6 +57,7 @@ import com.cbgm.sparrow.resources.feature_identity_backup_title
 import com.cbgm.sparrow.resources.feature_identity_backup_warning
 import com.cbgm.sparrow.resources.feature_identity_checking_secure_identity
 import com.cbgm.sparrow.resources.feature_identity_own_fingerprint_title
+import com.cbgm.sparrow.resources.feature_identity_phone_verification_limit
 import com.cbgm.sparrow.resources.feature_identity_private_keys_protected
 import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import com.cbgm.sparrow.resources.feature_identity_something_went_wrong
@@ -96,6 +96,7 @@ fun IdentityOverviewScreen(
                 ) {
                     ReadyOverviewContent(
                         localPhoneNumber = uiState.localPhoneNumber,
+                        phoneVerificationLimitReached = uiState.phoneVerificationLimitReached,
                         profilePictureState = profilePictureState,
                         onShareIdentity = { onUiEvent(IdentityOverviewUiEvent.ShareIdentityClicked) },
                         onEditProfilePicture = onEditProfilePicture,
@@ -161,6 +162,7 @@ private fun LoadingContent() {
 @Composable
 private fun ReadyOverviewContent(
     localPhoneNumber: String,
+    phoneVerificationLimitReached: Boolean,
     profilePictureState: IdentityProfilePictureUiState?,
     onShareIdentity: () -> Unit,
     onEditProfilePicture: () -> Unit,
@@ -177,19 +179,28 @@ private fun ReadyOverviewContent(
             IdentityProfilePictureSection(state = picture, onEdit = onEditProfilePicture)
         }
         Spacer(Modifier.height(MaterialTheme.spacing.medium))
-        val clipboard = LocalClipboardManager.current
+        val clipboard = rememberClipboardWriter()
         Text(
             text = localPhoneNumber,
             modifier = Modifier.combinedClickable(
                 onClick = {},
                 onLongClick = {
-                    clipboard.setText(AnnotatedString(localPhoneNumber))
+                    clipboard.copyText(localPhoneNumber)
                     onCopied()
                 }
             ),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (phoneVerificationLimitReached) {
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Text(
+                text = stringResource(Res.string.feature_identity_phone_verification_limit),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
         Spacer(Modifier.height(MaterialTheme.spacing.base))
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),

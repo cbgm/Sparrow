@@ -45,7 +45,7 @@ The current `settings.gradle.kts` declares **58 Gradle modules**.
 | `:feature:expenses` | group expenses, splits, balances, settlements, exchange rates |
 | `:feature:payment` | settle-up payments: bank details and SEPA payment QR codes |
 | `:feature:messaging` | durable outbox/incoming-envelope execution |
-| `:feature:transport` | discovery/WebSocket/routing/mailbox/push gateways |
+| `:feature:transport` | discovery, circuits, alias claims and mailbox gateways |
 | `:feature:onboarding` | onboarding flows |
 | `:feature:notification` | notification/background integration |
 | `:feature:settings` | user/developer/network/AI/app-lock settings |
@@ -55,7 +55,7 @@ The current `settings.gradle.kts` declares **58 Gradle modules**.
 
 ## Server modules
 
-The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:push`, `:server:link-preview` and `:server:exchange-rates`.
+The server family remains `:server:protocol`, `:server:security`, `:server:persistence`, `:server:observability`, `:server:node-registry`, `:server:presence-directory`, `:server:gateway`, `:server:federation`, `:server:mailbox`, `:server:link-preview` and `:server:exchange-rates`.
 
 Deployment folders under `server/control-plane`, `server/community-node`, `server/installer` and `server/control-plane-directory` are operator/runtime packaging rather than additional Gradle modules.
 

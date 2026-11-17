@@ -39,7 +39,7 @@ foreach ($part in $parts) {
         } else {
             @('node-registry-database-password.txt', 'presence-redis-password.txt', 'push-database-password.txt', 'push-internal-api-token.txt')
         }
-        $unknown = @($keys | Where-Object { $_.Name -notin $generated -and $_.Name -ne 'firebase-admin.json' })
+        $unknown = @($keys | Where-Object { $_.Name -notin $generated })
         # A routine orphan cleanup must never erase operator-supplied files.
         # In contrast, a CONFIRMED fresh Combined TEST reinstall must clear
         # the entire ACTIVE secrets directory: leaving unknown files behind
@@ -175,7 +175,7 @@ foreach ($part in $parts) {
             }
         }
     }
-    # Keep operator-supplied firebase-admin.json and bundled source templates.
+    # Keep operator-supplied files and bundled source templates.
 }
 if ($ReplaceInstalledTestData) {
     $caddyfile = Join-Path (Join-Path $root 'public-proxy') 'Caddyfile'

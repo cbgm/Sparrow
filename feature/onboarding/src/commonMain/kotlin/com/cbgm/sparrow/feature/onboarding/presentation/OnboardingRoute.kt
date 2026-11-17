@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreVie
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentitySetupDialogs
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberReader
 import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
+import com.cbgm.sparrow.feature.onboarding.device.BatteryExemptionRequester
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import org.koin.compose.viewmodel.koinViewModel
@@ -38,6 +39,10 @@ fun OnboardingRoute(
     OnboardingPermissionRequester(
         requestId = state.permissionRequestId,
         onResult = viewModel::onPermissionsResult
+    )
+    BatteryExemptionRequester(
+        requestId = state.batteryExemptionRequestId,
+        onResult = viewModel::onBatteryExemptionResult
     )
     AutomaticPhoneNumberReader(
         requestId = state.automaticPhoneRequestId,

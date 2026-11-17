@@ -16,9 +16,9 @@ class PreferredNodeSelectionTest {
                     validUntilEpochMilliseconds = 1L,
                     nodes =
                         listOf(
-                            descriptor("busy", activeConnections = 50),
-                            descriptor("quiet", activeConnections = 1),
-                            descriptor("medium", activeConnections = 10)
+                            descriptor("node-a"),
+                            descriptor("node-b"),
+                            descriptor("node-c")
                         )
                 ),
             authorityNodeId = "authority",
@@ -27,23 +27,28 @@ class PreferredNodeSelectionTest {
         )
 
     @Test
-    fun withoutAFavouriteTheLeastBusyNodeComesFirst() {
-        assertEquals(listOf("quiet", "medium", "busy"), select(preferredNodeId = null))
+    fun withoutAFavouriteEveryNodeIsListedInTheSameOrderEachTime() {
+        val automatic = select(preferredNodeId = null)
+
+        assertEquals(setOf("node-a", "node-b", "node-c"), automatic.toSet())
+        assertEquals(automatic, select(preferredNodeId = null))
     }
 
     @Test
     fun favouriteComesFirstAndTheOthersStayAsFailover() {
-        assertEquals(listOf("busy", "quiet", "medium"), select(preferredNodeId = "busy"))
+        val automatic = select(preferredNodeId = null)
+
+        assertEquals(listOf("node-b") + (automatic - "node-b"), select(preferredNodeId = "node-b"))
     }
 
     @Test
     fun aFavouriteMissingFromTheDirectoryChangesNothing() {
-        assertEquals(listOf("quiet", "medium", "busy"), select(preferredNodeId = "gone"))
+        assertEquals(select(preferredNodeId = null), select(preferredNodeId = "gone"))
     }
 
     @Test
     fun searchMatchesAddressNodeIdAndDottedIp() {
-        val node = GatewayNode("abcdef123456", "gateway-80-131-151-133.sslip.io", 3)
+        val node = GatewayNode("abcdef123456", "gateway-80-131-151-133.sslip.io")
 
         assertTrue(node.matches(""))
         assertTrue(node.matches("SSLIP"))
@@ -62,19 +67,15 @@ class PreferredNodeSelectionTest {
     private fun select(preferredNodeId: String?): List<String> =
         selector.select(directory, localRoutingId = "me", preferredNodeId = preferredNodeId).map(NodeEndpoint::nodeId)
 
-    private fun descriptor(
-        nodeId: String,
-        activeConnections: Int
-    ) = SparrowNodeDescriptor(
-        nodeId = nodeId,
-        clientEndpoint = "wss://$nodeId.example.org/v1/gateway",
-        federationEndpoint = "https://$nodeId.example.org",
-        mailboxEndpoint = "https://$nodeId.example.org/mailbox",
-        identityPublicKey = byteArrayOf(),
-        protocolVersions = setOf(TransportConfig().supportedProtocolVersion),
-        capabilities = setOf(NodeCapability.GATEWAY),
-        validUntilEpochMilliseconds = 1L,
-        activeConnections = activeConnections,
-        signature = byteArrayOf()
-    )
+    private fun descriptor(nodeId: String) =
+        SparrowNodeDescriptor(
+            nodeId = nodeId,
+            clientEndpoint = "wss://$nodeId.example.org/v1/gateway",
+            mailboxEndpoint = "https://$nodeId.example.org/mailbox",
+            identityPublicKey = byteArrayOf(),
+            protocolVersions = setOf(TransportConfig().supportedProtocolVersion),
+            capabilities = setOf(NodeCapability.GATEWAY),
+            validUntilEpochMilliseconds = 1L,
+            signature = byteArrayOf()
+        )
 }

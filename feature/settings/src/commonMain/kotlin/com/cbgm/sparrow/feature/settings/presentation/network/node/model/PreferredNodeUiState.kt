@@ -13,6 +13,5 @@ data class GatewayNodeUiModel(
     val nodeId: String,
     val shortNodeId: String,
     val address: String,
-    val activeConnections: Int,
     val isPreferred: Boolean
 )

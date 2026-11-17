@@ -41,7 +41,6 @@ import com.cbgm.sparrow.resources.feature_settings_current_node
 import com.cbgm.sparrow.resources.feature_settings_failover_count
 import com.cbgm.sparrow.resources.feature_settings_last_disconnect
 import com.cbgm.sparrow.resources.feature_settings_last_failed_node
-import com.cbgm.sparrow.resources.feature_settings_network_active_connections
 import com.cbgm.sparrow.resources.feature_settings_network_diagnostics
 import com.cbgm.sparrow.resources.feature_settings_network_no_active_node
 import com.cbgm.sparrow.resources.feature_settings_network_nodes
@@ -213,7 +212,6 @@ internal fun NodeDiagnosticRow(
             NodeDiagnosticHeader(
                 nodeId = node.nodeId,
                 state = effectiveState,
-                activeConnections = node.activeConnections,
                 cooldownRemainingSeconds = cooldown.remainingSeconds
             )
 
@@ -233,7 +231,6 @@ internal fun NodeDiagnosticRow(
 private fun NodeDiagnosticHeader(
     nodeId: String,
     state: TransportNodeDiagnosticState,
-    activeConnections: Int,
     cooldownRemainingSeconds: Long
 ) {
     Row(
@@ -259,15 +256,6 @@ private fun NodeDiagnosticHeader(
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = state.displayColor()
-            )
-            Text(
-                text =
-                    stringResource(
-                        Res.string.feature_settings_network_active_connections,
-                        activeConnections
-                    ),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

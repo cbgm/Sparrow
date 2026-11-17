@@ -287,9 +287,8 @@ class IdentityRepositoryImpl(
 
     override suspend fun getSigningPublicKey(): Result<ByteArray> =
         runCatching {
-            // FCM may ask for a routing ID before onboarding has created the identity.
-            // Use the typed absence signal so PushTokenRegistrationWorker can defer
-            // registration without publishing an expected startup state as a global error.
+            // Background work may ask before onboarding has created the identity. The typed absence
+            // signal lets it wait without publishing an expected startup state as a global error.
             val identity = getIdentity().getOrThrow() ?: throw LocalIdentityUnavailableException()
             identity.signingPublicKey.copyOf()
         }

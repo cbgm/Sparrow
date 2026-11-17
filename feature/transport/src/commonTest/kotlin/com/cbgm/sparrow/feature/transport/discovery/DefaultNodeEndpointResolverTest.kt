@@ -51,14 +51,12 @@ class DefaultNodeEndpointResolverTest {
                             descriptor(
                                 name = "node-a",
                                 endpoint = "wss://a.example/v1/gateway",
-                                seed = 2,
-                                activeConnections = 0
+                                seed = 2
                             ),
                             descriptor(
                                 name = "node-b",
                                 endpoint = "wss://b.example/v1/gateway",
-                                seed = 3,
-                                activeConnections = 5
+                                seed = 3
                             )
                         )
                 )
@@ -68,15 +66,13 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/v1/gateway",
-                                seed = 2,
-                                activeConnections = 5
+                                endpoint = "wss://a-moved.example/v1/gateway",
+                                seed = 2
                             ),
                             descriptor(
                                 name = "node-b",
-                                endpoint = "wss://b.example/v1/gateway",
-                                seed = 3,
-                                activeConnections = 0
+                                endpoint = "wss://b-moved.example/v1/gateway",
+                                seed = 3
                             )
                         )
                 )
@@ -95,7 +91,7 @@ class DefaultNodeEndpointResolverTest {
 
             val endpoints = resolver.resolve("routing-a").getOrThrow()
 
-            assertEquals("wss://a.example/v1/gateway", endpoints.first().websocketUrl)
+            assertEquals(setOf("wss://a.example/v1/gateway", "wss://b.example/v1/gateway"), endpoints.map(NodeEndpoint::websocketUrl).toSet())
             assertEquals(0, source.fetchCount)
         }
 
@@ -109,8 +105,7 @@ class DefaultNodeEndpointResolverTest {
                             descriptor(
                                 name = "node-a",
                                 endpoint = "wss://a.example/v1/gateway",
-                                seed = 2,
-                                activeConnections = 1
+                                seed = 2
                             )
                         )
                 )
@@ -120,9 +115,8 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/v1/gateway",
-                                seed = 2,
-                                activeConnections = 2
+                                endpoint = "wss://a-moved.example/v1/gateway",
+                                seed = 2
                             )
                         )
                 )
@@ -146,46 +140,9 @@ class DefaultNodeEndpointResolverTest {
                         forceRefresh = true
                     ).getOrThrow()
 
-            assertEquals(1, initial.single().activeConnections)
-            assertEquals(2, refreshed.single().activeConnections)
+            assertEquals("wss://a.example/v1/gateway", initial.single().websocketUrl)
+            assertEquals("wss://a-moved.example/v1/gateway", refreshed.single().websocketUrl)
             assertEquals(2, source.fetchCount)
-        }
-
-    @Test
-    fun leastLoadedNodeIsPreferred() =
-        runTest {
-            val directory =
-                signedDirectory(
-                    nodes =
-                        listOf(
-                            descriptor(
-                                name = "node-a",
-                                endpoint = "wss://a.example/v1/gateway",
-                                seed = 2,
-                                activeConnections = 4
-                            ),
-                            descriptor(
-                                name = "node-b",
-                                endpoint = "wss://b.example/v1/gateway",
-                                seed = 3,
-                                activeConnections = 1
-                            )
-                        )
-                )
-            val resolver =
-                resolver(
-                    source =
-                        RecordingNodeDirectorySource(
-                            Result.success(json.encodeToString(directory))
-                        ),
-                    cache = RecordingNodeDirectoryCache(),
-                    now = { NOW }
-                )
-
-            val endpoints = resolver.resolve("routing-a").getOrThrow()
-
-            assertEquals("wss://b.example/v1/gateway", endpoints.first().websocketUrl)
-            assertEquals(1, endpoints.first().activeConnections)
         }
 
     @Test
@@ -649,20 +606,17 @@ class DefaultNodeEndpointResolverTest {
         name: String,
         endpoint: String,
         seed: Int,
-        validUntil: Long = NOW + 10L * 60L * 1_000L,
-        activeConnections: Int = 0
+        validUntil: Long = NOW + 10L * 60L * 1_000L
     ): SparrowNodeDescriptor {
         val key = encodedPublicKey(seed)
         return SparrowNodeDescriptor(
             nodeId = nodeId(key),
             clientEndpoint = endpoint,
-            federationEndpoint = "https://$name.example/federation",
             mailboxEndpoint = "https://$name.example/mailbox",
             identityPublicKey = key,
             protocolVersions = setOf(1),
             capabilities = setOf(NodeCapability.GATEWAY),
             validUntilEpochMilliseconds = validUntil,
-            activeConnections = activeConnections,
             signature = byteArrayOf(seed.toByte())
         )
     }

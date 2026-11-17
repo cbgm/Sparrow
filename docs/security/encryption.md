@@ -21,7 +21,7 @@ Not every protocol packet can use the exact same transport protection at every p
 - is a bootstrap/invitation packet that must be deliverable before the normal identity relationship exists;
 - is Group traffic whose own group security context applies.
 
-Do not move this decision into the WebSocket layer. The WebSocket layer should receive an already prepared opaque transport payload.
+Do not move this decision into the transport layer. The transport layer should receive an already prepared opaque transport payload.
 
 ## Group encryption
 

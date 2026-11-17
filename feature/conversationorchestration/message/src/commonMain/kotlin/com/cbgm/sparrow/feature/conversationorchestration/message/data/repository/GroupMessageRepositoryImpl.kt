@@ -39,6 +39,8 @@ internal class GroupMessageRepositoryImpl(
     override suspend fun findQueued(groupId: String): Result<List<StoredMessage>> =
         safeSuspendCall { dataSource.findQueuedGroupMessages(groupId).map { it.toStoredMessage() } }
 
+    override suspend fun findGroupsWithQueued(): Result<List<String>> = safeSuspendCall { dataSource.findGroupsWithQueuedMessages() }
+
     override suspend fun findAwaitingOutbox(groupId: String): Result<List<StoredMessage>> =
         safeSuspendCall { dataSource.findGroupMessagesAwaitingOutbox(groupId).map { it.toStoredMessage() } }
 

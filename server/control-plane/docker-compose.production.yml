@@ -68,38 +68,8 @@ services:
     environment:
       PRESENCE_REDIS_PASSWORD: !reset null
       PRESENCE_REDIS_PASSWORD_FILE: /run/secrets/presence-redis-password
-      PRESENCE_INTERNAL_API_TOKEN: !reset null
-      PRESENCE_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
     secrets:
       - presence-redis-password
-      - push-internal-api-token
-    networks:
-      - edge
-      - backend
-
-  push-database:
-    logging: *default-logging
-    ports: !reset []
-    environment:
-      POSTGRES_PASSWORD: !reset null
-      POSTGRES_PASSWORD_FILE: /run/secrets/push-database-password
-    secrets:
-      - push-database-password
-    networks:
-      - backend
-
-  push:
-    logging: *default-logging
-    ports: !reset []
-    environment:
-      TRUST_PROXY_HEADERS: "true"
-      PUSH_DATABASE_PASSWORD: !reset null
-      PUSH_DATABASE_PASSWORD_FILE: /run/secrets/push-database-password
-      PUSH_INTERNAL_API_TOKEN: !reset null
-      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
-    secrets:
-      - push-database-password
-      - push-internal-api-token
     networks:
       - edge
       - backend
@@ -114,7 +84,3 @@ secrets:
     file: ${NODE_REGISTRY_DATABASE_PASSWORD_FILE:?Set node registry password file}
   presence-redis-password:
     file: ${PRESENCE_REDIS_PASSWORD_FILE:?Set presence Redis password file}
-  push-database-password:
-    file: ${PUSH_DATABASE_PASSWORD_FILE:?Set push password file}
-  push-internal-api-token:
-    file: ${PUSH_INTERNAL_API_TOKEN_FILE:?Set push token file}

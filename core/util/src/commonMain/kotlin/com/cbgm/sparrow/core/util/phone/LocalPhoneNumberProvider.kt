@@ -10,4 +10,7 @@ interface LocalPhoneNumberProvider {
     suspend fun getPhoneVerificationToken(): Result<String?>
 
     suspend fun clearPhoneVerificationToken(): Result<Unit>
+
+    /** The phone verifier reached its daily maximum: the number stays unverified for now. */
+    suspend fun reportPhoneVerificationLimitReached(): Result<Unit> = Result.success(Unit)
 }

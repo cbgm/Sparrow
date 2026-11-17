@@ -40,6 +40,9 @@ class ConversationMediaController(
         deleteLocalCopies(old)
     }
 
+    /** Empties the selection but keeps the files: a message being sent still needs them. */
+    fun releaseSelection(): List<MediaSelectionUi> = selected.value.also { _selected.value = emptyList() }
+
     fun deleteLocalCopies(media: List<MediaSelectionUi>) {
         if (media.isEmpty()) return
         applicationScope.launch {

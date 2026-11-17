@@ -156,6 +156,7 @@ class SettingsViewModel(
             SettingsUiEvent.AutoReplyClicked -> navigator.navigateTo(AppRoute.AutoReplySettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
             SettingsUiEvent.PreferredNodeClicked -> navigator.navigateTo(AppRoute.PreferredNode)
+            SettingsUiEvent.CircuitHopsClicked -> navigator.navigateTo(AppRoute.CircuitHops)
             SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }

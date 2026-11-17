@@ -1,40 +1,40 @@
 # Gateway API
 
-The Community Node Caddy edge exposes the gateway under the node's public base address.
+The gateway is the Community Node's edge for apps. Apps hold no session there: they reach every node through their
+circuits and put messages into mailboxes themselves (see [Transport](../features/transport.md)). The Community Node
+Caddy edge exposes the gateway under the node's public base address.
 
 ## Operator endpoints
 
 Use `/index` first. Relevant links include:
 
-- `/health/gateway`
-- `/v1/gateway/info`
-- `/v1/control-planes`
+- `/health/gateway` (`ok`)
+- `/v1/control-planes`: the Control Planes this node advertises to apps (`ADVERTISED_CONTROL_PLANE_URLS`)
 
-The health response includes current gateway connection information used by operator/client diagnostics.
-
-## Client WebSocket
+## Relays and circuits
 
 ```text
-/v1/gateway
+POST /v1/relay      one sealed onion layer for an HTTP request (OnionRelay)
+GET  /v1/circuit    WebSocket: one hop of a circuit (CircuitRelay)
 ```
 
-The client implementation is `DefaultWebSocketTransportClient`. Server handling is installed by `installGatewayRoutes()` and implemented by `GatewayWebSocketHandler`, `GatewaySessionHandler` and `GatewaySessionWorkDispatcher`.
-
-Every session starts with a gateway `challenge` that the client answers with a signed `register`; see [Session sign-in](websocket.md#session-sign-in-challenge-response). The connection carries protocol-level client/server frames for registration, envelopes, acknowledgements, route refresh and ephemeral typing behavior. Treat the concrete models in `:server:protocol` and `:feature:transport` as the source of truth; do not handcraft JSON from this documentation for production code.
+A relay passes a request on only to another relay and to the Control Plane, mailbox and blob paths the app uses.
+The node's address in the node directory (`clientEndpoint`, `wss://host/v1/gateway`) is only an address: apps
+derive the relay, circuit and blob URLs from it.
 
 ## Attachment blob HTTP API
 
-The Community Node gateway also exposes encrypted attachment blob operations through Caddy:
-
 ```text
-PUT    /v1/blobs/{blobId}
-GET    /v1/blobs/{blobId}
+POST   /v1/blobs                         open a blob, paid with a proof of work
+PUT    /v1/blobs/{blobId}/chunks/{index} upload one chunk
+GET    /v1/blobs/{blobId}/chunks         the chunks that are there
+GET    /v1/blobs/{blobId}/chunks/{index} download one chunk
 DELETE /v1/blobs/{blobId}
 ```
 
-Uploads require a short-lived bearer permit first requested over the authenticated gateway WebSocket (`RequestBlobUploadTicket`). The permit is bound to the blob ID, maximum size and expiry and is consumed by the upload. Downloads/deletes use the blob capability carried in the attachment's encrypted blob reference.
-
-The server stores opaque encrypted bytes; attachment payload decryption/meaning stays on the client. Blob size, retention/storage limits and cleanup are enforced by the gateway runtime.
+Every file transfer runs over a circuit of its own, so the blob node does not see the device's address. The server
+stores opaque encrypted bytes; attachment payload decryption and meaning stay on the client. Blob size,
+retention/storage limits and cleanup are enforced by the gateway runtime.
 
 ## Exchange rates
 
@@ -46,7 +46,3 @@ Returns the euro reference rates as a JSON list in the Frankfurter format
 (`[{"date": "...", "base": "EUR", "quote": "USD", "rate": 1.08}, ...]`), cached by the node for 24 hours
 (`Cache-Control: public, max-age=3600`). `502` means the node has no rates yet and its upstream
 (`EXCHANGE_RATES_URL`) failed. See [Community Node](../server/community-node.md#exchange-rates).
-
-## Internal delivery
-
-The gateway also participates in node-internal delivery from federation. Those endpoints are authenticated internal APIs and are not public client APIs.

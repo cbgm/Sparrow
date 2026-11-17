@@ -2,124 +2,9 @@ package com.cbgm.sparrow.server.protocol
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class GatewayNodeInformation(
-    val nodeId: String,
-    val routeLifetimeMilliseconds: Long,
-    val routeRefreshIntervalMilliseconds: Long
-) {
-    init {
-        require(nodeId.isNotBlank())
-        require(routeLifetimeMilliseconds > 0L)
-        require(routeRefreshIntervalMilliseconds in 1 until routeLifetimeMilliseconds)
-    }
-}
-
-@Serializable
-data class GatewayLoad(
-    val activeConnections: Int
-) {
-    init {
-        require(activeConnections >= 0)
-    }
-}
-
-@Serializable
-data class ClientRoute(
-    val routingId: String,
-    val nodeId: String,
-    val connectionId: String,
-    val generation: Long,
-    val expiresAtEpochMilliseconds: Long,
-    val aliases: List<String>? = null,
-    val clientSignature: ByteArray
-) {
-    init {
-        require(routingId.isNotBlank())
-        require(nodeId.isNotBlank())
-        require(connectionId.isNotBlank())
-        require(generation >= 0L)
-        require(expiresAtEpochMilliseconds > 0L)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ClientRoute
-
-        if (generation != other.generation) return false
-        if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
-        if (routingId != other.routingId) return false
-        if (nodeId != other.nodeId) return false
-        if (connectionId != other.connectionId) return false
-        if (aliases != other.aliases) return false
-        if (!clientSignature.contentEquals(other.clientSignature)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = generation.hashCode()
-        result = 31 * result + expiresAtEpochMilliseconds.hashCode()
-        result = 31 * result + routingId.hashCode()
-        result = 31 * result + nodeId.hashCode()
-        result = 31 * result + connectionId.hashCode()
-        result = 31 * result + (aliases?.hashCode() ?: 0)
-        result = 31 * result + clientSignature.contentHashCode()
-        return result
-    }
-}
-
-@Serializable
-data class UnsignedClientRoute(
-    val routingId: String,
-    val nodeId: String,
-    val connectionId: String,
-    val generation: Long,
-    val expiresAtEpochMilliseconds: Long,
-    val aliases: List<String>? = null
-)
-
-fun ClientRoute.unsigned(): UnsignedClientRoute =
-    UnsignedClientRoute(
-        routingId = routingId,
-        nodeId = nodeId,
-        connectionId = connectionId,
-        generation = generation,
-        expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
-        aliases = aliases
-    )
-
-/** Routes carry no phone aliases; the app claims them directly at each Control Plane ([AliasClaim]). */
-@Serializable
-data class ClientRouteRegistration(
-    val route: ClientRoute,
-    val clientSigningPublicKey: ByteArray
-) {
-    override fun toString(): String = "ClientRouteRegistration(redacted)"
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ClientRouteRegistration
-
-        if (route != other.route) return false
-        if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = route.hashCode()
-        result = 31 * result + clientSigningPublicKey.contentHashCode()
-        return result
-    }
-}
-
 /**
- * The phone aliases a device holds, with the one-time phone verification token from sign-up in its first claim.
+ * The phone aliases a device holds, with the phone verifier's attestation (`phone_verifier.py` next to the Control
+ * Plane Directory) in the claims right after sign-up.
  * Signed with the device key ([clientSigningPublicKey] derives [routingId]) and sealed for one Control Plane's presence
  * directory ([NodeDirectory.aliasClaimKey]). The app sends it through two relays (see [RelayLayer]), so neither the
  * relays nor the gateway read it and the Control Plane does not see the app's address.
@@ -129,7 +14,9 @@ data class AliasClaim(
     val routingId: String,
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
-    val phoneVerificationToken: String? = null,
+    val phoneAttestation: String? = null,
+    /** Where others put packets for this device before they have its mailbox route ([InvitationRouteResult]). */
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
@@ -146,7 +33,8 @@ data class UnsignedAliasClaim(
     val routingId: String,
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
-    val phoneVerificationToken: String? = null,
+    val phoneAttestation: String? = null,
+    val invitationRoute: InvitationRoute? = null,
     val issuedAtEpochMilliseconds: Long
 ) {
     override fun toString(): String = "UnsignedAliasClaim(redacted)"
@@ -156,11 +44,12 @@ data class UnsignedAliasClaim(
             routingId == other.routingId &&
             clientSigningPublicKey.contentEquals(other.clientSigningPublicKey) &&
             aliases == other.aliases &&
-            phoneVerificationToken == other.phoneVerificationToken &&
+            phoneAttestation == other.phoneAttestation &&
+            invitationRoute == other.invitationRoute &&
             issuedAtEpochMilliseconds == other.issuedAtEpochMilliseconds
 
     override fun hashCode(): Int =
-        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneVerificationToken, issuedAtEpochMilliseconds)
+        listOf(routingId, clientSigningPublicKey.contentHashCode(), aliases, phoneAttestation, invitationRoute, issuedAtEpochMilliseconds)
             .hashCode()
 }
 
@@ -169,9 +58,43 @@ fun AliasClaim.unsigned(): UnsignedAliasClaim =
         routingId = routingId,
         clientSigningPublicKey = clientSigningPublicKey,
         aliases = aliases,
-        phoneVerificationToken = phoneVerificationToken,
+        phoneAttestation = phoneAttestation,
+        invitationRoute = invitationRoute,
         issuedAtEpochMilliseconds = issuedAtEpochMilliseconds
     )
+
+/**
+ * A device's invitation mailbox ([CreateMailboxRequest.invitation]) and its raw X25519 [encryptionPublicKey]: senders
+ * seal what they put there for that key, so the mailbox's node reads neither the invitation nor who sent it.
+ */
+@Serializable
+data class InvitationRoute(
+    val route: DeliveryRoute,
+    val encryptionPublicKey: ByteArray
+) {
+    override fun equals(other: Any?): Boolean =
+        other is InvitationRoute && route == other.route && encryptionPublicKey.contentEquals(other.encryptionPublicKey)
+
+    override fun hashCode(): Int = 31 * route.hashCode() + encryptionPublicKey.contentHashCode()
+}
+
+/**
+ * `POST /v1/invitation-routes` on the presence directory: the invitation route of [routingId] (a phone alias or a
+ * device routing ID), paid with [work] (the mailbox proof of work), because anyone may ask and the directory does not
+ * know who asks.
+ */
+@Serializable
+data class InvitationRouteLookup(
+    val routingId: String,
+    val work: MailboxCreationWork
+)
+
+/** The device ([ownerRoutingId]; for a phone alias the device holding it) and its [invitationRoute]. */
+@Serializable
+data class InvitationRouteResult(
+    val ownerRoutingId: String,
+    val invitationRoute: InvitationRoute
+)
 
 /** The presence directory's raw X25519 key for [AliasClaim]s; see [NodeDirectory.aliasClaimKey]. */
 @Serializable
@@ -200,12 +123,4 @@ data class AliasClaimRequest(
 @Serializable
 data class AliasClaimResult(
     val acceptedAliasIndexes: List<Int> = emptyList()
-)
-
-/** For a phone alias, [ownerRoutingId] is the device holding it; [routes] are that device's routes here, if any. */
-@Serializable
-data class ClientRoutingResult(
-    val routingId: String,
-    val routes: List<ClientRoute>,
-    val ownerRoutingId: String? = null
 )

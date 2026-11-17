@@ -144,17 +144,12 @@ def edit_settings(settings: dict, preferences: dict) -> None:
             settings["controlDomain"] = ask("Control Plane hostname", settings["controlDomain"])
         elif label == "Directory Server URL":
             settings["directoryUrl"] = ask("Directory Server URL (empty = none)", settings["directoryUrl"])
-        elif label == "Push notifications":
-            settings["push"] = not settings["push"]
-        elif label == "Firebase credentials file":
-            path = ask("Path of the Firebase service account JSON (empty = keep installed)", settings["firebaseFile"])
-            if path and not Path(path).expanduser().is_file():
-                print(bad("File not found.")); pause()
-            else:
-                settings["firebaseFile"] = str(Path(path).expanduser().resolve()) if path else ""
         elif label == "Test phone numbers":
             numbers = ask("Test phone numbers, comma-separated (- = none)", settings["testPhoneNumbers"])
             settings["testPhoneNumbers"] = "" if numbers == "-" else numbers
+        elif label == "Operator name":
+            operator = ask("Operator name, the same on all your nodes (- = none)", settings["nodeOperator"])
+            settings["nodeOperator"] = "" if operator == "-" else operator
         elif label == "Images":
             if local_build_tag():
                 print(warn("A local build is installed; its images are used.")); pause()

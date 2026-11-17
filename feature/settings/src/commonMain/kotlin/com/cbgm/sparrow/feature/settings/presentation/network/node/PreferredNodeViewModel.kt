@@ -96,7 +96,6 @@ private fun GatewayNode.toUiModel(preferredNodeId: String?): GatewayNodeUiModel 
         nodeId = nodeId,
         shortNodeId = nodeId.take(SHORT_NODE_ID_LENGTH),
         address = address,
-        activeConnections = activeConnections,
         isPreferred = nodeId == preferredNodeId
     )
 

@@ -102,6 +102,8 @@ import com.cbgm.sparrow.resources.feature_settings_block_unknown_invites
 import com.cbgm.sparrow.resources.feature_settings_block_unknown_invites_subtitle
 import com.cbgm.sparrow.resources.feature_settings_blocked_contacts
 import com.cbgm.sparrow.resources.feature_settings_blocked_contacts_count
+import com.cbgm.sparrow.resources.feature_settings_circuit
+import com.cbgm.sparrow.resources.feature_settings_circuit_subtitle
 import com.cbgm.sparrow.resources.feature_settings_control_planes
 import com.cbgm.sparrow.resources.feature_settings_control_planes_settings_subtitle
 import com.cbgm.sparrow.resources.feature_settings_data_disclaimer
@@ -201,6 +203,15 @@ fun SettingsScreen(
                 title = stringResource(Res.string.feature_settings_preferred_node),
                 subtitle = stringResource(Res.string.feature_settings_preferred_node_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.PreferredNodeClicked) }
+            )
+
+            SettingsDivider()
+
+            SettingsRow(
+                icon = Icons.Default.Security,
+                title = stringResource(Res.string.feature_settings_circuit),
+                subtitle = stringResource(Res.string.feature_settings_circuit_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.CircuitHopsClicked) }
             )
         }
 

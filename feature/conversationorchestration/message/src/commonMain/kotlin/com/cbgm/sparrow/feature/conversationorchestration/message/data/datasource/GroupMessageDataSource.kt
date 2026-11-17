@@ -27,6 +27,8 @@ internal class GroupMessageDataSource(
 
     suspend fun findQueuedGroupMessages(groupId: String): List<MessageEntity> = chatDao.findQueuedGroupMessages(groupId)
 
+    suspend fun findGroupsWithQueuedMessages(): List<String> = chatDao.findGroupsWithQueuedMessages()
+
     suspend fun findGroupMessagesAwaitingOutbox(groupId: String): List<MessageEntity> =
         chatDao.findGroupMessagesAwaitingOutbox(groupId)
 

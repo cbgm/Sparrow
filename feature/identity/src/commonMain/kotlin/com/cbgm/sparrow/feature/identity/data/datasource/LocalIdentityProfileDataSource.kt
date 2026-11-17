@@ -6,6 +6,9 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class LocalIdentityProfileDataSource(
     private val dataStore: SparrowDataStore,
@@ -41,11 +44,19 @@ class LocalIdentityProfileDataSource(
     // The verification token lives in memory only; it is never stored.
     private var verificationToken: String? = null
     private var verificationTokenReceivedAt = 0L
+    private val phoneVerificationLimitReached = MutableStateFlow(false)
 
     fun keepPhoneVerificationToken(token: String) {
         verificationToken = token
         verificationTokenReceivedAt = SystemClock.nowEpochMilliseconds()
+        phoneVerificationLimitReached.value = false
     }
+
+    /** In memory only, like the token: a new verification or a restart starts over. */
+    fun observePhoneVerificationLimitReached(): StateFlow<Boolean> = phoneVerificationLimitReached.asStateFlow()
+
+    override suspend fun reportPhoneVerificationLimitReached(): Result<Unit> =
+        safeSuspendCall { phoneVerificationLimitReached.value = true }
 
     /** The token is only valid for a limited time; an expired one is dropped instead of sent. */
     override suspend fun getPhoneVerificationToken(): Result<String?> =
@@ -56,7 +67,10 @@ class LocalIdentityProfileDataSource(
         }
 
     override suspend fun clearPhoneVerificationToken(): Result<Unit> =
-        safeSuspendCall { verificationToken = null }
+        safeSuspendCall {
+            verificationToken = null
+            phoneVerificationLimitReached.value = false
+        }
 
     override suspend fun getLocalPhoneNumber(): Result<String> =
         runCatching {

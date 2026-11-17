@@ -39,17 +39,6 @@ function Compose-Args([object]$Component, [bool]$UseShared) {
         '-f',(Join-Path $root 'docker-compose.yml'),'-f',(Join-Path $root 'docker-compose.release.yml'),
         '-f',(Join-Path $root 'docker-compose.production.yml'))
     if ($UseShared) { $args += @('-f',(Join-Path $root 'docker-compose.shared-proxy.yml')) }
-    # Preserve an existing Firebase override; it is not a subject of this cutover.
-    if ($Component.Component -eq 'control-plane') {
-        $runtime = Read-Config (Join-Path $root '.env.runtime')
-        $credential = [string]$runtime['FIREBASE_ADMIN_CREDENTIALS']
-        if ($credential -and (Test-Path -LiteralPath $credential -PathType Leaf)) {
-            if (-not (Test-Path -LiteralPath (Join-Path $root 'docker-compose.firebase.yml') -PathType Leaf)) {
-                throw 'Original Firebase credentials exist but the original Firebase Compose override is missing.'
-            }
-            $args += @('-f',(Join-Path $root 'docker-compose.firebase.yml'))
-        }
-    }
     return ,$args
 }
 function Read-Config([string]$Path) {

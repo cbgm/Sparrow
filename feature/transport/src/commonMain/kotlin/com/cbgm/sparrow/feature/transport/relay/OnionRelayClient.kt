@@ -22,11 +22,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
-/** One relay of an onion route: [relayUrl] is its `POST /v1/relay`. */
+/**
+ * One relay of an onion route: [relayUrl] is its `POST /v1/relay`, [circuitUrl] its `/v1/circuit` WebSocket. [operator]
+ * is who runs it as declared in its descriptor, normalized; a node that declares none counts as its own operator.
+ */
 internal class RelayHop(
     val nodeId: String,
     val relayUrl: String,
-    val relayKey: ByteArray
+    val circuitUrl: String,
+    val relayKey: ByteArray,
+    val operator: String = nodeId
 )
 
 /**
@@ -50,7 +55,17 @@ internal class RelaySelector(
     private val failedAt = MutableStateFlow<Map<String, Long>>(emptyMap())
     private val singleHop = MutableStateFlow(false)
 
-    suspend fun route(): List<RelayHop> {
+    suspend fun route(): List<RelayHop> = circuitRoute(hopCount = 2).also(::reportHopCount)
+
+    /**
+     * Up to [hopCount] relays of different operators, the first as above; fewer when fewer operators run relaying
+     * nodes, since two hops of one operator could match both ends. The last hop, the session node, belongs to an
+     * operator not in [avoidLastOperators] when there is one, so the app's circuits end at different operators.
+     */
+    suspend fun circuitRoute(
+        hopCount: Int,
+        avoidLastOperators: Set<String> = emptySet()
+    ): List<RelayHop> {
         val relays =
             cache.read()
                 ?.let { cached -> runCatching { json.decodeFromString<SignedNodeDirectory>(cached.encodedDirectory) }.getOrNull() }
@@ -63,8 +78,17 @@ internal class RelaySelector(
         val available = relays.filterNot { hop -> hop.nodeId in coolingDown() }.ifEmpty { relays }
         val own = connectedNodeId() ?: preferredNodeStore?.get()
         val first = available.firstOrNull { hop -> hop.nodeId == own } ?: available.randomOrNull(random) ?: return emptyList()
-        val second = available.filter { hop -> hop.nodeId != first.nodeId }.randomOrNull(random)
-        return listOfNotNull(first, second).also(::reportHopCount)
+        val others = available.filter { hop -> hop.operator != first.operator }.shuffled(random).distinctBy(RelayHop::operator)
+        val chosen = others.take(hopCount - 1)
+        val replacement = others.drop(chosen.size).firstOrNull { hop -> hop.operator !in avoidLastOperators }
+        val ordered =
+            when {
+                chosen.isEmpty() || chosen.last().operator !in avoidLastOperators -> chosen
+                replacement != null -> chosen.dropLast(1) + replacement
+                // Every unused operator is avoided: a chosen hop that is not goes last, when there is one.
+                else -> chosen.partition { hop -> hop.operator in avoidLastOperators }.let { (avoided, free) -> avoided + free }
+            }
+        return listOf(first) + ordered
     }
 
     fun recordFailure(nodeId: String) {
@@ -202,8 +226,19 @@ class OnionRelayClient internal constructor(
     ): ByteArray = cipher.seal(json.encodeToString(layer).encodeToByteArray(), hop.relayKey, RELAY_CONTEXT).getOrThrow()
 }
 
-private fun SparrowNodeDescriptor.relayHop(): RelayHop? =
-    relayKey?.let { key -> relayUrl(clientEndpoint)?.let { url -> RelayHop(nodeId, url, key) } }
+private fun SparrowNodeDescriptor.relayHop(): RelayHop? {
+    val key = relayKey ?: return null
+    val relay = relayUrl(clientEndpoint) ?: return null
+    val circuit = circuitUrl(clientEndpoint) ?: return null
+    return RelayHop(nodeId, relay, circuit, key, operator?.trim()?.lowercase()?.takeIf(String::isNotEmpty) ?: nodeId)
+}
+
+/** `wss://host/v1/gateway` → `wss://host/v1/circuit`. */
+internal fun circuitUrl(clientEndpoint: String): String? {
+    val scheme = clientEndpoint.substringBefore("://", missingDelimiterValue = "").takeIf { it == "wss" || it == "ws" }
+    val authority = clientEndpoint.substringAfter("://").substringBefore('/').substringBefore('?')
+    return scheme?.let { authority.takeIf(String::isNotBlank)?.let { host -> "$it://$host/v1/circuit" } }
+}
 
 /** `wss://host/v1/gateway` → `https://host/v1/relay`. */
 internal fun relayUrl(clientEndpoint: String): String? {

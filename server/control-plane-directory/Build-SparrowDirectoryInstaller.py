@@ -19,7 +19,7 @@ SHARED = {'ui_window.py': ROOT.parent / 'installer' / 'app' / 'ui_window.py'}
 COMMON = (
     'directory_window.py', 'directory_installer.py', 'ui_window.py',
     'Dockerfile', '.dockerignore', 'docker-compose.yml',
-    'directory_service.py', 'directory_admin_cli.py', 'requirements.txt',
+    'directory_service.py', 'directory_admin_cli.py', 'phone_verifier.py', 'requirements.txt',
     'README-INSTALL.md',
 )
 WIN = ('Start-SparrowDirectory.cmd', *COMMON)

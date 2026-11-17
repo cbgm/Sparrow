@@ -11,11 +11,13 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiStat
 
 internal fun List<ConversationOverview>.toOverviewUiState(
     activeAutoReplyName: String?,
+    waitingForRoute: Boolean = false,
     error: String? = null
 ): OverviewUiState =
     OverviewUiState(
         conversations = map(ConversationOverview::toConversationListItem),
         activeAutoReplyName = activeAutoReplyName,
+        waitingForRoute = waitingForRoute,
         isLoading = false,
         error = error
     )

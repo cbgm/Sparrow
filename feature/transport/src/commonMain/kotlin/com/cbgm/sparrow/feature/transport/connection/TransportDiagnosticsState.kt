@@ -193,12 +193,6 @@ internal class TransportDiagnosticsState(
                     nodeId = endpoint.nodeId,
                     websocketUrl = endpoint.websocketUrl,
                     state = diagnosticState,
-                    activeConnections =
-                        if (diagnosticState == TransportNodeDiagnosticState.COOLDOWN) {
-                            0
-                        } else {
-                            endpoint.activeConnections
-                        },
                     cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
                 )
             }
@@ -213,7 +207,6 @@ internal class TransportDiagnosticsState(
                         } else {
                             TransportNodeDiagnosticState.COOLDOWN
                         },
-                    activeConnections = 0,
                     cooldownUntilEpochMilliseconds = missing.cooldownUntilEpochMilliseconds
                 )
             }

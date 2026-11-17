@@ -38,6 +38,7 @@ import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PermissionsPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PhonePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PrivacyPage
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.ReceivingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.WelcomePage
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_app_name
@@ -102,6 +103,13 @@ fun OnboardingScreen(
                             PermissionsPage {
                                 onUiEvent(OnboardingUiEvent.RequestPermissionsClicked)
                             }
+
+                        OnboardingPage.RECEIVING ->
+                            ReceivingPage(
+                                state = state,
+                                onChoose = { mode -> onUiEvent(OnboardingUiEvent.ConnectionModeChosen(mode)) },
+                                onNext = { onUiEvent(OnboardingUiEvent.NextClicked) }
+                            )
 
                         OnboardingPage.PHONE ->
                             PhonePage(

@@ -42,7 +42,6 @@ import com.cbgm.sparrow.resources.feature_settings_control_planes_refresh
 import com.cbgm.sparrow.resources.feature_settings_preferred_node
 import com.cbgm.sparrow.resources.feature_settings_preferred_node_automatic
 import com.cbgm.sparrow.resources.feature_settings_preferred_node_automatic_description
-import com.cbgm.sparrow.resources.feature_settings_preferred_node_connections
 import com.cbgm.sparrow.resources.feature_settings_preferred_node_hint
 import com.cbgm.sparrow.resources.feature_settings_preferred_node_load_failed
 import com.cbgm.sparrow.resources.feature_settings_preferred_node_none_found
@@ -119,9 +118,7 @@ fun PreferredNodeScreen(
                 SparrowCardNoAnimation {
                     NodeChoiceRow(
                         title = node.address,
-                        subtitle =
-                            "${node.shortNodeId} · " +
-                                stringResource(Res.string.feature_settings_preferred_node_connections, node.activeConnections),
+                        subtitle = node.shortNodeId,
                         selected = node.isPreferred,
                         onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
                     )
@@ -240,8 +237,8 @@ private fun PreferredNodeScreenPreview() {
                 preferredNodeId = "node-b",
                 isLoading = false,
                 nodes = listOf(
-                    GatewayNodeUiModel("node-b", "node-b", "gateway-80-131-151-133.sslip.io", 12, true),
-                    GatewayNodeUiModel("node-a", "node-a", "node.example.org", 3, false)
+                    GatewayNodeUiModel("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
+                    GatewayNodeUiModel("node-a", "node-a", "node.example.org", false)
                 )
             ),
             onUiEvent = {}

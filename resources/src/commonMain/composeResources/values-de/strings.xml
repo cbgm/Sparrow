@@ -249,6 +249,7 @@
     <string name="feature_identity_incomplete_identity">Unvollständige Identität</string>
     <string name="feature_identity_incomplete_identity_description">Nur ein Teil deiner Identität ist verfügbar. Ersatzschlüssel werden nicht automatisch erzeugt.</string>
     <string name="feature_identity_private_keys_protected">Deine privaten Schlüssel sind lokal geschützt</string>
+    <string name="feature_identity_phone_verification_limit">Tageslimit für Telefonverifizierungen erreicht. Kontakte finden dich erst über deine Nummer, wenn sie verifiziert ist.</string>
     <string name="feature_identity_public_keys_always_included">Deine öffentlichen Verschlüsselungs- und Signaturschlüssel werden immer mitgeteilt. Deine privaten Schlüssel verlassen dieses Gerät niemals.</string>
     <string name="feature_identity_raw_identity">ROHIDENTITÄT</string>
     <string name="feature_identity_scan_to_add_you">Lass die andere Person diesen QR-Code direkt von deinem Gerät scannen, um deine Identität zu verifizieren.</string>
@@ -344,7 +345,6 @@
     <string name="feature_settings_network_show_all_nodes">Alle Nodes anzeigen (%1$d)</string>
     <string name="feature_settings_network_no_active_node">Mit keinem Node verbunden</string>
     <string name="feature_settings_network_no_nodes">Noch keine Nodes gefunden</string>
-    <string name="feature_settings_network_active_connections">Verbindungen: %1$d</string>
     <string name="feature_settings_node_current">AKTUELL</string>
     <string name="feature_settings_node_available">VERFÜGBAR</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>
@@ -512,11 +512,29 @@
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
     <string name="feature_settings_preferred_node">Bevorzugte Node</string>
     <string name="feature_settings_preferred_node_subtitle">Automatisch oder ein Lieblings-Node</string>
+    <string name="feature_settings_circuit">Onion-Routing</string>
+    <string name="feature_settings_circuit_subtitle">Über wie viele Relays deine Verbindung läuft</string>
+    <string name="feature_settings_circuit_hint">Jedes Relay kennt nur das vorherige und das nächste. Mehr Hops machen dich schwerer zurückzuverfolgen, aber langsamer und etwas weniger zuverlässig. Sie helfen nur, wenn die Relays von verschiedenen Menschen betrieben werden.</string>
+    <string name="feature_settings_circuit_hops">Hops: %1$d</string>
+    <string name="feature_settings_circuit_status_building">Route wird aufgebaut…</string>
+    <string name="feature_settings_circuit_status_connected">Verbunden über %1$d Hops · Umlaufzeit %2$d ms</string>
+    <string name="feature_settings_circuit_status_unavailable">Route gerade nicht verfügbar</string>
+    <string name="feature_settings_circuit_estimate">Etwa %1$d ms mit %2$d Hops (Schätzung)</string>
+    <string name="feature_settings_circuit_fewer">Nur %1$d von %2$d Hops verfügbar: nicht genug Betreiber mit weiterleitenden Knoten</string>
+    <string name="feature_settings_circuit_count">Routen: %1$d</string>
+    <string name="feature_settings_circuit_count_hint">Deine Kontakte werden auf die Routen verteilt, die – wenn es genug Betreiber gibt – jeweils an einem Knoten eines anderen Betreibers enden, sodass kein Betreiber alle sieht. Jede Route braucht etwas mehr Akku und Daten.</string>
+    <string name="feature_settings_circuit_count_open">%1$d von %2$d Routen offen</string>
+    <string name="feature_settings_decoy_count">Tarnumschläge: %1$d pro Nachricht</string>
+    <string name="feature_settings_decoy_count_off">Tarnumschläge: aus</string>
+    <string name="feature_settings_decoy_count_hint">Mit jeder Nachricht gehen gleichzeitig so viele Tarnumschläge in die Postfächer anderer Kontakte, damit ein Postfach-Knoten am Zeitpunkt nicht erkennt, wem du schreibst oder wer in einer Gruppe ist. Sie kosten etwas Daten bei dir und bei den Kontakten, die sie bekommen; Nachrichten werden nicht verzögert. Nur über eine schützende Route gesendet.</string>
+    <string name="feature_settings_circuit_operators_fewer">Deine Routen enden nur bei %1$d von %2$d verschiedenen Betreibern: nicht genug Betreiber mit weiterleitenden Knoten</string>
+    <string name="feature_settings_circuit_send_directly">Ohne Route direkt senden</string>
+    <string name="feature_settings_circuit_send_directly_on">Solange keine Route über mindestens zwei Knoten verfügbar ist, laufen Senden und Empfangen über Postfächer direkt oder über einen einzigen Knoten: Nachrichten funktionieren weiter, aber ein Server sieht deine Adresse.</string>
+    <string name="feature_settings_circuit_send_directly_off">Senden und Empfangen über Postfächer warten auf eine Route über mindestens zwei Knoten: deine Adresse bleibt verborgen, aber sind weniger Knoten erreichbar, warten Nachrichten, bis wieder genug da sind.</string>
     <string name="feature_settings_preferred_node_automatic">Automatisch</string>
-    <string name="feature_settings_preferred_node_automatic_description">Nutzt den am wenigsten ausgelasteten Node</string>
+    <string name="feature_settings_preferred_node_automatic_description">Nutzt einen für dieses Gerät gewählten Node</string>
     <string name="feature_settings_preferred_node_hint">Deine bevorzugte Node wird zuerst genutzt. Ist sie nicht erreichbar, wechselt Sparrow automatisch zu einer anderen Node und kehrt zurück, sobald sie wieder da ist. Der Betreiber der Node, sieht deine IP-Adresse; deine Nachrichten bleiben Ende-zu-Ende-verschlüsselt.</string>
     <string name="feature_settings_preferred_node_search">Adresse, IP oder Node-ID suchen</string>
-    <string name="feature_settings_preferred_node_connections">%1$d Verbindungen</string>
     <string name="feature_settings_preferred_node_none_found">Kein Node passt zu deiner Suche</string>
     <string name="feature_settings_preferred_node_load_failed">Nodes konnten nicht geladen werden</string>
     <string name="feature_settings_preferred_node_unlisted">Deine bevorzugte Node ist gerade nicht in der Liste. Sparrow nutzt andere Nodes, bis sie wieder da ist.</string>
@@ -671,6 +689,8 @@
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 
 
+    <string name="feature_chats_route_waiting_title">Nachrichten warten</string>
+    <string name="feature_chats_route_waiting_description">Es gibt keine Onion-Route über mindestens 2 Knoten, und direktes Senden ist ausgeschaltet. Nachrichten gehen raus, sobald es eine gibt. Um trotzdem zu senden, schalte „Ohne Route direkt senden“ unter Einstellungen › Netzwerk › Onion-Routing ein.</string>
     <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
     <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt neue Schlüssel hat, erscheint eine Einladung zum Identitätswechsel im Postfach. Du kannst sie annehmen, ablehnen oder den Kontakt blockieren.</string>
     <string name="feature_chats_reconnect_confirm">Einladung senden</string>
@@ -961,4 +981,25 @@
     <string name="feature_identity_picture_save_failed">Das Profilbild konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_picture_remove_failed">Das Profilbild konnte nicht entfernt werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_backup_failed">Die Identitätssicherung konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
+    <string name="feature_receiving_title">Nachrichten empfangen</string>
+    <string name="feature_receiving_description">Wie sollen dich Nachrichten erreichen, während Sparrow geschlossen ist?</string>
+    <string name="feature_receiving_always">Immer verbunden (empfohlen)</string>
+    <string name="feature_receiving_always_consequence">Nachrichten kommen sofort an; eine dauerhafte Benachrichtigung ist zu sehen, und es kostet etwas Akku.</string>
+    <string name="feature_receiving_while_open">Nur wenn die App offen ist</string>
+    <string name="feature_receiving_while_open_consequence">Nachrichten warten, bis du Sparrow öffnest: bis zu 7 Tage, erste Einladungen 24 Stunden.</string>
+    <string name="feature_receiving_check">Ab und zu nachsehen</string>
+    <string name="feature_receiving_check_consequence">Android sieht höchstens alle 15 Minuten nach, im Tiefschlaf seltener: Nachrichten kommen spät, wenig Akku.</string>
+    <string name="feature_receiving_why">Warum ist das so?</string>
+    <string name="feature_receiving_why_text">Sparrow nutzt keinen Google-Push, also erfährt keine Firma, wann du Nachrichten bekommst, und niemand braucht einen Schlüssel von uns, um einen Server zu betreiben. Android erlaubt einer App eine eigene Verbindung nur mit einer sichtbaren Benachrichtigung.</string>
+    <string name="feature_local_network_denied">Ohne Zugriff auf das lokale Netzwerk erreicht Sparrow keine Server in deinem lokalen Netzwerk.</string>
+    <string name="feature_receiving_battery_hint">Wähle in der Akku-Liste, die Android öffnet, „Alle Apps“, dann Sparrow, und stelle „Nicht optimieren“ ein.</string>
+    <string name="core_background_help_xiaomi">Xiaomi beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“ und stelle den Energiesparmodus auf „Keine Einschränkungen“.</string>
+    <string name="core_background_help_huawei">Dein Handy beendet Apps im Hintergrund von sich aus: Stelle Sparrow unter „App-Start“ auf „Manuell verwalten“ und schalte alle drei Schalter ein.</string>
+    <string name="core_background_help_oppo">Dein Handy beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“ und unter der Akkunutzung die Aktivität im Hintergrund.</string>
+    <string name="core_background_help_vivo">vivo beendet Apps im Hintergrund von sich aus: Erlaube Sparrow, im Hintergrund zu laufen und automatisch zu starten.</string>
+    <string name="core_background_help_samsung">Samsung beendet Apps im Hintergrund von sich aus: Füge Sparrow unter Akku, „Einschränkungen der Hintergrundnutzung“ zu „Apps, die nie in den Standby-Modus wechseln“ hinzu.</string>
+    <string name="core_background_help_asus">ASUS beendet Apps im Hintergrund von sich aus: Erlaube Sparrow „Autostart“.</string>
+    <string name="core_background_help_open">Handy-Einstellungen öffnen</string>
+    <string name="feature_receiving_battery_declined">Ohne die Akku-Ausnahme kann Android die Verbindung im Tiefschlaf trennen.</string>
+    <string name="feature_receiving_ios_note">Auf dem iPhone kann Sparrow die Verbindung wegen der Einschränkungen von iOS nicht im Hintergrund offen halten. Nachrichten kommen an, wenn du die App öffnest.</string>
 </resources>

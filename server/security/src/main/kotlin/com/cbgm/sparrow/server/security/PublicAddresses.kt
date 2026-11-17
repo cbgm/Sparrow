@@ -16,20 +16,8 @@ fun InetAddress.isPublicUnicast(): Boolean =
 private fun InetAddress.isPrivateSpecialRange(): Boolean =
     when (this) {
         is Inet4Address -> {
-            val octets = address.map(Byte::toInt).map { it and 0xff }
-            val first = octets[0]
-            val second = octets[1]
-            when {
-                first == 0 -> true
-                first == 100 && second in 64..127 -> true
-                first == 192 && second == 0 && octets[2] == 0 -> true
-                first == 192 && second == 0 && octets[2] == 2 -> true
-                first == 198 && second in 18..19 -> true
-                first == 198 && second == 51 && octets[2] == 100 -> true
-                first == 203 && second == 0 && octets[2] == 113 -> true
-                first >= 240 -> true
-                else -> false
-            }
+            val value = address.fold(0) { result, byte -> (result shl 8) or (byte.toInt() and 0xff) }
+            RESERVED_IPV4_RANGES.any { range -> range.contains(value) }
         }
 
         is Inet6Address -> {
@@ -41,6 +29,32 @@ private fun InetAddress.isPrivateSpecialRange(): Boolean =
 
         else -> true
     }
+
+/** An IPv4 network: [network] with its first [prefixLength] bits fixed. */
+private class Ipv4Range(
+    network: String,
+    private val prefixLength: Int
+) {
+    private val network: Int = network.split('.').fold(0) { result, octet -> (result shl 8) or octet.toInt() }
+
+    fun contains(address: Int): Boolean {
+        val mask = if (prefixLength == 0) 0 else -1 shl (Int.SIZE_BITS - prefixLength)
+        return address and mask == network and mask
+    }
+}
+
+/** "This network", shared address space, IETF protocol assignments, documentation, benchmarking and reserved. */
+private val RESERVED_IPV4_RANGES =
+    listOf(
+        Ipv4Range("0.0.0.0", 8),
+        Ipv4Range("100.64.0.0", 10),
+        Ipv4Range("192.0.0.0", 24),
+        Ipv4Range("192.0.2.0", 24),
+        Ipv4Range("198.18.0.0", 15),
+        Ipv4Range("198.51.100.0", 24),
+        Ipv4Range("203.0.113.0", 24),
+        Ipv4Range("240.0.0.0", 4)
+    )
 
 private fun isIpv4MappedPrivate(bytes: ByteArray): Boolean {
     if (bytes.size != 16) return true

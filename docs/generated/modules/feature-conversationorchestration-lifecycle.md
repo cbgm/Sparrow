@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/conversationorchestration/lifecycle` |
 | Build file | `feature/conversationorchestration/lifecycle/build.gradle.kts` |
-| Kotlin files | 32 |
+| Kotlin files | 33 |
 | Production Kotlin files | 31 |
-| Test Kotlin files | 1 |
+| Test Kotlin files | 2 |
 | Resource files | 0 |
 | Direct dependencies | 11 |
 | Direct dependents | 2 |

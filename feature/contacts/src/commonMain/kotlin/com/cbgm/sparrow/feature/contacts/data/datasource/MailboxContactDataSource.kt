@@ -35,6 +35,10 @@ class MailboxContactDataSource(
             }
     }
 
+    /** The contact's signing key from the handshake, mutual or not. */
+    suspend fun findSigningPublicKey(contactId: String): ByteArray? =
+        contactDao.findPublicIdentityByContactId(contactId)?.signingPublicKey?.copyOf()?.takeIf { it.isNotEmpty() }
+
     suspend fun findMutualSigningPublicKey(contactId: String): ByteArray? {
         val identity = contactDao.findPublicIdentityByContactId(contactId) ?: return null
         if (identity.keyExchangeStatus != KeyExchangeStatus.MUTUAL.name) return null

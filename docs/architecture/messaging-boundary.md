@@ -7,15 +7,15 @@ Messaging crosses several modules, but the current code has a deliberate split b
 | Packet contracts/codecs | `:protocol` | `SparrowPacket`, `KotlinxPacketCodec`, packet data classes |
 | Persistent outbox contracts/state | `:protocol` | `ProtocolOutbox`, outbox state/event types |
 | Persistent outbox storage | `:data:database` | `ProtocolOutboxEntity`, `ProtocolOutboxDao`, `ProtocolOutboxFailureEventEntity` |
-| Generic outbox/incoming execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner` |
-| Send policy, delivery state | `:feature:conversationorchestration:delivery` | `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `OutboxDeliveryStateRouter`, `ApplyDeliveryEventWorkflow` |
+| Generic outbox execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor` |
+| Send policy, delivery state, mailbox receiving | `:feature:conversationorchestration:delivery` | `MailboxPendingSynchronizer`, `MailboxArrivalListener`, `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `OutboxDeliveryStateRouter`, `ApplyDeliveryEventWorkflow` |
 | Conversation write semantics | `:feature:conversationorchestration:message` / `membership` / `lifecycle` | `SendDirectMessageWorkflow`, `DeliverDirectMessageWorkflow`, `SendGroupMessageWorkflow`, group administration and invitation workflows |
 | Incoming packet handling | `:feature:conversationorchestration:incoming` | `IncomingEnvelopeProcessorImpl`, `IncomingTransportMessageHandler`, `RouteIncomingPacketWorkflow`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `Receive*Workflow` |
 | Conversation presentation/read side | `:feature:chats` | ViewModels/controllers, read repositories, observe use cases; writes via `ConversationOrchestrator` |
 | Invitation lifecycle | `:feature:invite` | `InvitationRepositoryImpl`, `InvitationLifecycleDataSource`, `InvitationResultObserver` (consumer in orchestration) |
 | Identity/trust/recovery | `:feature:identity` | `IdentityExchangeDataSource`, pending identity changes, approved reconnection repositories/use cases |
 | Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityManager`, membership use cases |
-| Wire/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, mailbox/push/control-plane clients |
+| Wire/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `CircuitRunner`, `MailboxOutgoingWireSender`, mailbox/control-plane clients |
 
 ## Outgoing boundary
 
@@ -46,16 +46,14 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant TR as WebSocketIncomingEnvelopeGateway
-    participant RUN as DefaultIncomingEnvelopeRunner
+    participant RUN as MailboxPendingSynchronizer
     participant PROC as IncomingEnvelopeProcessorImpl
     participant H as IncomingTransportMessageHandler
     participant ROUTE as RouteIncomingPacketWorkflow
     participant WF as Receive*Workflow / dispatchers
     participant PH as DefaultProtocolPacketHandler
 
-    TR-->>RUN: encrypted transport envelope
-    RUN->>PROC: process
+    RUN->>PROC: encrypted transport envelope from a mailbox
     PROC->>H: resolve sender, local keys
     H->>ROUTE: decrypted, decoded packet (WorkflowEngine)
     ROUTE->>WF: direct message / group packet / receipt / control packet
@@ -74,4 +72,4 @@ Attachments own blob transfer/cache/storage and transcripts. Voice builds record
 
 ## Server boundary
 
-Gateway/federation/mailbox/push route or store opaque encrypted application payloads. Conversation authorization, Group membership and identity replacement decisions are client concerns.
+Relays, circuits and mailboxes pass on or store opaque encrypted application payloads. Conversation authorization, Group membership and identity replacement decisions are client concerns.

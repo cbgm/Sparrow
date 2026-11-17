@@ -17,6 +17,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConv
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdministrationCommand
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +29,8 @@ class OverviewViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase,
     private val orchestrator: ConversationOrchestrator,
-    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
+    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
+    observeWaitingForRoute: ObserveWaitingForRouteUseCase
 ) : BaseViewModel() {
     private val logger = SparrowLog.withTag("OverviewViewModel")
     private val error = MutableStateFlow<String?>(null)
@@ -37,10 +39,12 @@ class OverviewViewModel(
         combine(
             observeConversationContext(),
             observeActiveAutoReply(),
+            observeWaitingForRoute(),
             error
-        ) { context, activeAutoReply, currentError ->
+        ) { context, activeAutoReply, waitingForRoute, currentError ->
             context.conversations.toOverviewUiState(
                 activeAutoReplyName = activeAutoReply?.name,
+                waitingForRoute = waitingForRoute,
                 error = currentError
             )
         }.stateIn(

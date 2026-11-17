@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -108,6 +107,8 @@ class DefaultMailboxCapabilityLifecycleTest {
         override suspend fun remoteForRecipientRoutingId(routingId: String) =
             Result.success<MailboxDeliveryRoute?>(null)
 
+        override suspend fun remoteForContact(contactId: String) = Result.success<MailboxDeliveryRoute?>(null)
+
         override suspend fun allLocal() = Result.success(listOfNotNull(credential))
 
         override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> {
@@ -156,8 +157,7 @@ class DefaultMailboxCapabilityLifecycleTest {
             routeEndpoint: String,
             accessEndpoint: String,
             sequence: Long,
-            expiresAtEpochMilliseconds: Long,
-            wakeTicket: MailboxWakeTicket
+            expiresAtEpochMilliseconds: Long
         ): Result<LocalMailboxCredential> = error("Not used")
 
         override suspend fun pending(credential: LocalMailboxCredential) =
@@ -176,6 +176,22 @@ class DefaultMailboxCapabilityLifecycleTest {
                 Result.success(Unit)
             }
         }
+
+        override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+        override suspend fun createInvitation(
+            nodeId: String,
+            routeEndpoint: String,
+            accessEndpoint: String,
+            expiresAtEpochMilliseconds: Long
+        ): Result<LocalMailboxCredential> = error("Not used")
+
+        override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+        override suspend fun ready(
+            accessEndpoint: String,
+            credentials: List<LocalMailboxCredential>
+        ): Result<Set<String>> = error("Not used")
     }
 
     private companion object {

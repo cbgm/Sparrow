@@ -248,6 +248,7 @@
     <string name="feature_identity_incomplete_identity">Incomplete identity</string>
     <string name="feature_identity_incomplete_identity_description">Only part of your identity is available. Replacement keys will not be generated automatically.</string>
     <string name="feature_identity_private_keys_protected">Your private keys are protected locally</string>
+    <string name="feature_identity_phone_verification_limit">Daily limit of phone verifications reached. Contacts cannot find you by your number until it is verified.</string>
     <string name="feature_identity_public_keys_always_included">Your public encryption and signing keys are always included. Your private keys never leave this device.</string>
     <string name="feature_identity_raw_identity">RAW IDENTITY</string>
     <string name="feature_identity_scan_to_add_you">Let the other person scan this QR directly from your device to verify your identity.</string>
@@ -342,7 +343,6 @@
     <string name="feature_settings_network_show_all_nodes">View all nodes (%1$d)</string>
     <string name="feature_settings_network_no_active_node">No node connected</string>
     <string name="feature_settings_network_no_nodes">No nodes discovered yet</string>
-    <string name="feature_settings_network_active_connections">Connections: %1$d</string>
     <string name="feature_settings_node_current">CURRENT</string>
     <string name="feature_settings_node_available">AVAILABLE</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>
@@ -512,11 +512,29 @@
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
     <string name="feature_settings_preferred_node">Preferred node</string>
     <string name="feature_settings_preferred_node_subtitle">Automatic or one favourite node</string>
+    <string name="feature_settings_circuit">Onion routing</string>
+    <string name="feature_settings_circuit_subtitle">How many relays your connection runs through</string>
+    <string name="feature_settings_circuit_hint">Each relay only knows the one before and after it. More hops make you harder to trace, but slower and a little less reliable. They only help when the relays are run by different people.</string>
+    <string name="feature_settings_circuit_hops">Hops: %1$d</string>
+    <string name="feature_settings_circuit_status_building">Building the route…</string>
+    <string name="feature_settings_circuit_status_connected">Connected through %1$d hops · round trip %2$d ms</string>
+    <string name="feature_settings_circuit_status_unavailable">Route not available right now</string>
+    <string name="feature_settings_circuit_estimate">About %1$d ms with %2$d hops (estimate)</string>
+    <string name="feature_settings_circuit_fewer">Only %1$d of %2$d hops available: not enough operators run relaying nodes</string>
+    <string name="feature_settings_circuit_count">Circuits: %1$d</string>
+    <string name="feature_settings_circuit_count_hint">Your contacts are spread across the circuits, each ending at a node of a different operator when there are enough, so no single operator sees all of them. Each circuit uses a little more battery and data.</string>
+    <string name="feature_settings_circuit_count_open">%1$d of %2$d circuits open</string>
+    <string name="feature_settings_decoy_count">Decoy envelopes: %1$d per send</string>
+    <string name="feature_settings_decoy_count_off">Decoy envelopes: off</string>
+    <string name="feature_settings_decoy_count_hint">With each message, this many decoys go into other contacts' mailboxes at the same moment, so a mailbox node cannot tell from timing whom you wrote to or who is in a group. They cost a little data for you and the contacts that get them; messages are not delayed. Sent only through a protecting circuit.</string>
+    <string name="feature_settings_circuit_operators_fewer">Your circuits end at only %1$d of %2$d different operators: not enough operators run relaying nodes</string>
+    <string name="feature_settings_circuit_send_directly">Send directly without a route</string>
+    <string name="feature_settings_circuit_send_directly_on">While no route through at least two nodes is available, sending and receiving through mailboxes go directly or through a single node: messages keep working, but a server sees your address.</string>
+    <string name="feature_settings_circuit_send_directly_off">Sending and receiving through mailboxes wait for a route through at least two nodes: your address stays hidden, but with fewer nodes reachable, messages wait until enough are back.</string>
     <string name="feature_settings_preferred_node_automatic">Automatic</string>
-    <string name="feature_settings_preferred_node_automatic_description">Uses the least busy node</string>
+    <string name="feature_settings_preferred_node_automatic_description">Uses a node picked for this device</string>
     <string name="feature_settings_preferred_node_hint">Your favourite node is used first. If it is unreachable, Sparrow switches to another node automatically and returns once it is back. Whoever runs the node you connect through can see your IP address; your messages stay end-to-end encrypted.</string>
     <string name="feature_settings_preferred_node_search">Search address, IP or node ID</string>
-    <string name="feature_settings_preferred_node_connections">%1$d connections</string>
     <string name="feature_settings_preferred_node_none_found">No node matches your search</string>
     <string name="feature_settings_preferred_node_load_failed">Nodes could not be loaded</string>
     <string name="feature_settings_preferred_node_unlisted">Your favourite node is not in the current list. Sparrow uses other nodes until it is back.</string>
@@ -667,6 +685,8 @@
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 
 
+    <string name="feature_chats_route_waiting_title">Messages are waiting</string>
+    <string name="feature_chats_route_waiting_description">No onion route through at least 2 nodes is available, and sending directly is switched off. Messages go out as soon as there is one. To send anyway, turn on “Send directly without a route” in Settings › Network › Onion routing.</string>
     <string name="feature_chats_reconnect_contact">Reconnect contact</string>
     <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact has new keys, an identity-change invitation appears in your Mailbox. You can accept, decline or block it.</string>
     <string name="feature_chats_reconnect_confirm">Send invitation</string>
@@ -957,4 +977,25 @@
     <string name="feature_identity_picture_save_failed">Profile picture could not be saved. Please try again.</string>
     <string name="feature_identity_picture_remove_failed">Profile picture could not be removed. Please try again.</string>
     <string name="feature_identity_backup_failed">The identity backup could not be completed. Please try again.</string>
+    <string name="feature_receiving_title">Receiving messages</string>
+    <string name="feature_receiving_description">How should messages reach you while Sparrow is closed?</string>
+    <string name="feature_receiving_always">Always connected (recommended)</string>
+    <string name="feature_receiving_always_consequence">Messages arrive at once; a permanent notification shows, and it costs a little battery.</string>
+    <string name="feature_receiving_while_open">Only while the app is open</string>
+    <string name="feature_receiving_while_open_consequence">Messages wait until you open Sparrow: up to 7 days, first invites 24 hours.</string>
+    <string name="feature_receiving_check">Check now and then</string>
+    <string name="feature_receiving_check_consequence">Android checks every 15 minutes at most, less in deep sleep: messages come late, little battery.</string>
+    <string name="feature_receiving_why">Why is that?</string>
+    <string name="feature_receiving_why_text">Sparrow uses no Google push, so no company learns when you get messages, and nobody needs a key from us to run a server. Android only lets an app keep its own connection with a visible notification.</string>
+    <string name="feature_local_network_denied">Without local network access, Sparrow cannot reach servers on your local network.</string>
+    <string name="feature_receiving_battery_hint">In the battery list Android opens, choose All apps, then Sparrow, and set it to Not optimized.</string>
+    <string name="core_background_help_xiaomi">Xiaomi stops apps in the background on its own: allow Autostart for Sparrow, and set its Battery saver to No restrictions.</string>
+    <string name="core_background_help_huawei">Your phone stops apps in the background on its own: under App launch, set Sparrow to Manage manually and allow all three switches.</string>
+    <string name="core_background_help_oppo">Your phone stops apps in the background on its own: allow Auto launch for Sparrow, and under its battery usage allow background activity.</string>
+    <string name="core_background_help_vivo">vivo stops apps in the background on its own: allow Sparrow to run in the background and to start automatically.</string>
+    <string name="core_background_help_samsung">Samsung stops apps in the background on its own: under Battery, Background usage limits, add Sparrow to Never sleeping apps.</string>
+    <string name="core_background_help_asus">ASUS stops apps in the background on its own: allow Auto-start for Sparrow.</string>
+    <string name="core_background_help_open">Open phone settings</string>
+    <string name="feature_receiving_battery_declined">Without the battery exception, Android may drop the connection in deep sleep.</string>
+    <string name="feature_receiving_ios_note">On iPhone, Sparrow cannot keep the connection open in the background because of iOS restrictions. Messages arrive when you open the app.</string>
 </resources>

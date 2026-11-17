@@ -105,18 +105,6 @@ $databaseDefinitions = @(
         Database = "sparrow_mailbox"
         User = "sparrow_mailbox"
         File = "databases/mailbox.dump"
-    },
-    [pscustomobject]@{
-        Service = "push-database"
-        Database = "sparrow_push"
-        User = "sparrow_push"
-        File = "databases/push.dump"
-    },
-    [pscustomobject]@{
-        Service = "federation-database"
-        Database = "sparrow_federation"
-        User = "sparrow_federation"
-        File = "databases/federation.dump"
     }
 )
 
@@ -140,12 +128,6 @@ if ($MultiNode) {
             Database = "sparrow_mailbox_b"
             User = "sparrow_mailbox_b"
             File = "databases/mailbox-b.dump"
-        },
-        [pscustomobject]@{
-            Service = "federation-b-database"
-            Database = "sparrow_federation_b"
-            User = "sparrow_federation_b"
-            File = "databases/federation-b.dump"
         }
     )
     $identityDefinitions += @(
@@ -255,7 +237,6 @@ try {
         databases = $databaseManifest
         identities = $identityManifest
         intentionallyExcluded = @(
-            "Firebase Admin credentials",
             "Compose secret files and environment files",
             "Redis presence routes because clients refresh these short-lived routes"
         )
@@ -279,7 +260,7 @@ try {
 
     Write-Host "Backup created: $archivePath"
     Write-Host "SHA-256: $(Get-LowercaseSha256 -Path $archivePath)"
-    Write-Host "Store the archive encrypted and separately back up server/secrets and Firebase credentials."
+    Write-Host "Store the archive encrypted and separately back up server/secrets."
 } finally {
     if (Test-Path -LiteralPath $stagingDirectory) {
         Remove-Item -LiteralPath $stagingDirectory -Recurse -Force

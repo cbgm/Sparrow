@@ -21,10 +21,8 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseC
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.domain.usecase.CreateMailboxWakeTicketUseCase
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxWakeTicket
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
@@ -75,10 +73,11 @@ internal fun mailboxCredential(
 internal fun facts(
     contactId: String,
     hasDirectConversation: Boolean = false,
-    sharesActiveGroup: Boolean = false
+    sharesActiveGroup: Boolean = false,
+    hasMutualIdentity: Boolean = true
 ) = MailboxContactFacts(
     contactId = contactId,
-    hasMutualIdentity = true,
+    hasMutualIdentity = hasMutualIdentity,
     hasRoutingId = true,
     hasDirectConversation = hasDirectConversation,
     sharesActiveGroup = sharesActiveGroup
@@ -107,8 +106,7 @@ internal class ProvisionerFakes {
                     gateway,
                     FakeSigningKeys,
                     FakeSignatures,
-                    MailboxRoutePayloadEncoder(),
-                    CreateMailboxWakeTicketUseCase(FakeLocalRoutingId, FakeSigningKeys, FakeSignatures)
+                    MailboxRoutePayloadEncoder()
                 ),
             protocolOutbox = outbox
         )
@@ -122,6 +120,8 @@ internal class InMemoryMailboxRoutes : MailboxRouteRepository {
 
     override suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?> =
         error(NOT_USED)
+
+    override suspend fun remoteForContact(contactId: String): Result<MailboxDeliveryRoute?> = error(NOT_USED)
 
     override suspend fun allLocal() = Result.success(local.values.toList())
 
@@ -179,8 +179,7 @@ internal class RecordingMailboxGateway : MailboxGateway {
         routeEndpoint: String,
         accessEndpoint: String,
         sequence: Long,
-        expiresAtEpochMilliseconds: Long,
-        wakeTicket: MailboxWakeTicket
+        expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> {
         created += contactId
         return Result.success(
@@ -214,6 +213,22 @@ internal class RecordingMailboxGateway : MailboxGateway {
         revoked += credential.deliveryRoute.routeId
         return Result.success(Unit)
     }
+
+    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+    override suspend fun createInvitation(
+        nodeId: String,
+        routeEndpoint: String,
+        accessEndpoint: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<LocalMailboxCredential> = error("Not used")
+
+    override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> = error("Not used")
+
+    override suspend fun ready(
+        accessEndpoint: String,
+        credentials: List<LocalMailboxCredential>
+    ): Result<Set<String>> = error("Not used")
 }
 
 internal class FakeContactTransport : ContactTransportRepository {
@@ -221,7 +236,8 @@ internal class FakeContactTransport : ContactTransportRepository {
 
     override suspend fun getMailboxContacts(): Result<List<MailboxContactFacts>> = Result.success(facts)
 
-    override suspend fun resolveRoutingId(contactId: String): Result<String> = error(NOT_USED)
+    /** Every contact's routing ID is `routing-<contactId>`. */
+    override suspend fun resolveRoutingId(contactId: String): Result<String> = Result.success("routing-$contactId")
 
     override suspend fun resolveBootstrapRoutingId(contactId: String): Result<String> = error(NOT_USED)
 
@@ -232,6 +248,8 @@ internal class FakeContactTransport : ContactTransportRepository {
     override suspend fun reconcileKnownContacts(): Result<Unit> = error(NOT_USED)
 
     override suspend fun getMutualSigningPublicKey(contactId: String): Result<ByteArray?> = error(NOT_USED)
+
+    override suspend fun getSigningPublicKey(contactId: String): Result<ByteArray?> = error(NOT_USED)
 }
 
 /** Only the peer state is read: peers in [establishedPeers] have an established exchange. */

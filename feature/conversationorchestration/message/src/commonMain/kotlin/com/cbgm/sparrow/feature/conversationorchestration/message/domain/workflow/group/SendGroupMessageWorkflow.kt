@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.G
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.OutgoingMessageContent
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredOutgoingMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.OutgoingMessageContentPolicy
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.UnsentMessagePolicy
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardGroupMessagesUseCase
@@ -28,7 +29,9 @@ import kotlin.reflect.KClass
  * -> [EncryptMessage -> SaveRecipientStates -> EnqueuePackets].
  *
  * Without an active recipient the message stays queued and is flushed once a member activates.
- * Older queued messages are flushed first so recipients receive them in order.
+ * Older queued messages are flushed first so recipients receive them in order. A message whose attachment could
+ * not go out yet ([UnsentMessagePolicy]) also stays queued and is flushed again later; any other failure to
+ * encrypt discards it.
  */
 class SendGroupMessageWorkflow internal constructor(
     private val engine: WorkflowEngine,
@@ -83,10 +86,9 @@ class SendGroupMessageWorkflow internal constructor(
                     recipients = step.recipients
                 )
             is Step.EncryptMessage ->
+                // Loads the parts again with their attachments uploaded; storing the message does not upload them.
                 encryptGroupMessage(
                     message = step.stored.message,
-                    text = step.stored.text,
-                    parts = step.stored.parts,
                     recipients = step.recipients
                 ).fold(
                     onSuccess = { packets -> Outcome.MessageEncrypted(step.stored, packets) },
@@ -116,8 +118,7 @@ class SendGroupMessageWorkflow internal constructor(
             is Outcome.QueueFlushed ->
                 Transition.Next(Step.StoreMessage(outcome.content, outcome.recipients, step.command))
             is Outcome.MessageStored -> sendOrKeepQueued(outcome.stored, outcome.recipients, step.command)
-            is Outcome.EncryptionFailed ->
-                Transition.Next(Step.DiscardMessage(outcome.stored, outcome.cause, step.command))
+            is Outcome.EncryptionFailed -> keepQueuedOrDiscard(outcome, step.command)
             is Outcome.MessageDiscarded -> Transition.Reject.because(outcome.cause)
             is Outcome.MessageEncrypted ->
                 Transition.Next(Step.SaveRecipientStates(outcome.stored, outcome.packets, step.command))
@@ -125,6 +126,17 @@ class SendGroupMessageWorkflow internal constructor(
                 Transition.Next(Step.EnqueuePackets(outcome.stored, outcome.packets, step.command))
             is Outcome.PacketsEnqueued ->
                 Transition.Complete(ConversationResult.GroupMessageSent(outcome.stored.message.id))
+        }
+
+    /** The message is already stored as queued: keeping it means leaving it there for the next flush. */
+    private fun keepQueuedOrDiscard(
+        failed: Outcome.EncryptionFailed,
+        command: GroupMessageCommand.SendMessage
+    ): Transition<Step> =
+        if (UnsentMessagePolicy.keepsMessage(failed.cause)) {
+            Transition.Reject.because(failed.cause)
+        } else {
+            Transition.Next(Step.DiscardMessage(failed.stored, failed.cause, command))
         }
 
     /** Older queued messages go first, but only when someone can receive them. */
