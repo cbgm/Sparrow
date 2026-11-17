@@ -11,7 +11,6 @@
     <string name="base_close">Schließen</string>
     <string name="base_contact">Kontakt</string>
     <string name="base_contacts">Kontakte</string>
-    <string name="base_continue_action">Weiter</string>
     <string name="base_custom">Benutzerdefiniert</string>
     <string name="base_developer">Entwickler</string>
     <string name="base_generating_secure_identity">Sichere Identität wird erstellt…</string>
@@ -29,7 +28,6 @@
     <string name="base_not_verified">Nicht verifiziert</string>
     <string name="base_notifications">Benachrichtigungen</string>
     <string name="base_other">Sonstige</string>
-    <string name="base_permissions">Berechtigungen</string>
     <string name="base_phone_number">Telefonnummer</string>
     <string name="base_phone_numbers">Telefonnummern</string>
     <string name="base_preferred">Bevorzugt</string>
@@ -37,7 +35,6 @@
     <string name="base_secure">Sicher</string>
     <string name="base_sparrow">Sparrow</string>
     <string name="base_share_contact">Kontakt teilen</string>
-    <string name="base_tagline">Privat. Verschlüsselt. Gehört dir.</string>
     <string name="base_unknown">Unbekannt</string>
     <string name="base_verify">Verifizieren</string>
     <string name="base_verify_contact">%1$s verifizieren</string>
@@ -273,37 +270,37 @@
 
 
     <!-- Feature: onboarding -->
-    <string name="feature_onboarding_allow_and_continue">Zulassen und fortfahren</string>
-    <string name="feature_onboarding_approve_create_identity">Bestätigen und Identität erstellen</string>
-    <string name="feature_onboarding_approve_phone_number">Telefonnummer bestätigen</string>
     <string name="feature_onboarding_camera">Kamera</string>
     <string name="feature_onboarding_camera_description">Scanne Sparrow-QR-Codes zur Identitätsfreigabe und nimm Fotos/Videos auf.</string>
     <string name="feature_onboarding_audio">Audio</string>
     <string name="feature_onboarding_audio_description">Nimm den Ton bei Videos und Sprachnachrichten auf.</string>
     <string name="feature_onboarding_storage">Speicher</string>
-    <string name="feature_onboarding_storage_description">Durchsuchen Sie den Speicher, um Dateien für Anhänge auszuwählen.</string>
+    <string name="feature_onboarding_storage_description">Durchsuche den Speicher, um Dateien für Anhänge auszuwählen.</string>
     <string name="feature_onboarding_contacts_permission_description">Finde und teile vorhandene Kontakte aus deinem Adressbuch.</string>
-    <string name="feature_onboarding_contacts_stay_local">Deine Kontakte bleiben lokal</string>
-    <string name="feature_onboarding_contacts_stay_local_description">Kontakte werden ausschließlich auf deinem Gerät verwendet, um Personen anhand ihrer Telefonnummer zu finden.</string>
     <string name="feature_onboarding_detected_automatically_confirm">Automatisch erkannt. Bestätige die Nummer oder ändere sie.</string>
-    <string name="feature_onboarding_e2ee_description">Nachrichten werden automatisch Ende-zu-Ende verschlüsselt, sobald beide Identitäten verfügbar sind.</string>
-    <string name="feature_onboarding_end_to_end_encryption">Ende-zu-Ende-Verschlüsselung</string>
-    <string name="feature_onboarding_identity_belongs_to_you">Deine Identität gehört dir</string>
-    <string name="feature_onboarding_identity_belongs_to_you_description">Deine privaten Identitätsschlüssel bleiben sicher auf diesem Gerät gespeichert.</string>
-    <string name="feature_onboarding_input_your_name">Gib deinen Namen ein</string>
     <string name="feature_onboarding_local_identity_incomplete">Die lokale Identität ist unvollständig. Sparrow ersetzt vorhandene Schlüssel nicht automatisch.</string>
     <string name="feature_onboarding_no_automatic_number">Es konnte keine Telefonnummer automatisch erkannt werden. Gib sie manuell ein oder wähle eine aus.</string>
     <string name="feature_onboarding_notifications_description">Erhalte Benachrichtigungen über neue Nachrichten, wenn die App geschlossen ist.</string>
-    <string name="feature_onboarding_permissions_description">Sparrow fordert nur Berechtigungen für Funktionen an, die du verwenden möchtest.</string>
     <string name="feature_onboarding_permissions_settings_hint">Abgelehnte Berechtigungen können später in den Systemeinstellungen aktiviert werden.</string>
     <string name="feature_onboarding_phone_number_permission_description">Versucht, deine SIM-Telefonnummer automatisch zu erkennen, ohne eine Auswahl anzuzeigen.</string>
-    <string name="feature_onboarding_phone_routing_description">Sie dient als deine dauerhafte Kontakt- und Routing-Adresse. Du kannst sie vor dem Fortfahren noch ändern.</string>
     <string name="feature_onboarding_preparing_phone_setup">Telefoneinrichtung wird vorbereitet…</string>
-    <string name="feature_onboarding_privacy_first">Deine Privatsphäre steht an erster Stelle</string>
     <string name="feature_onboarding_try_sim_number_again">SIM-Telefonnummer erneut erkennen</string>
-    <string name="feature_onboarding_welcome_description">Ein privater Messenger mit Ende-zu-Ende-Verschlüsselung und einer Identität, die dein Gerät niemals verlässt.</string>
-    <string name="feature_onboarding_welcome_to_sparrow">Willkommen bei Sparrow</string>
     <string name="feature_onboarding_your_name">Dein Name</string>
+    <string name="feature_onboarding_welcome_line">Nachrichten, die keine Spur hinterlassen.</string>
+    <string name="feature_onboarding_swipe">wischen</string>
+    <string name="feature_onboarding_onion_title">Niemand sieht, mit *wem* du schreibst.</string>
+    <string name="feature_onboarding_onion_description">Jede Nachricht wird in Schichten verpackt und über mehrere Relays geschickt. Jedes Relay entfernt eine Schicht und kennt nur den nächsten Schritt. Keines sieht beide Enden.</string>
+    <string name="feature_onboarding_onion_you">du</string>
+    <string name="feature_onboarding_onion_relay">Relay</string>
+    <string name="feature_onboarding_onion_contact">Kontakt</string>
+    <string name="feature_onboarding_permissions_title">Ein paar Berechtigungen.</string>
+    <string name="feature_onboarding_permissions_only_what_you_use">Nur für das, was du nutzt.</string>
+    <string name="feature_onboarding_allow">Erlauben</string>
+    <string name="feature_onboarding_receiving_title">Wenn Sparrow geschlossen ist …</string>
+    <string name="feature_onboarding_receiving_question">wie sollen dich Nachrichten erreichen?</string>
+    <string name="feature_onboarding_phone_title">Zum Schluss.</string>
+    <string name="feature_onboarding_phone_description">Dein Name und deine Nummer, damit dich Leute finden, die du kennst.</string>
+    <string name="feature_onboarding_create">Erstellen</string>
 
     <string name="feature_chats_create_group">Gruppe erstellen</string>
     <string name="feature_chats_group_name">Gruppenname</string>
@@ -982,7 +979,6 @@
     <string name="feature_identity_picture_remove_failed">Das Profilbild konnte nicht entfernt werden. Bitte versuche es erneut.</string>
     <string name="feature_identity_backup_failed">Die Identitätssicherung konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
     <string name="feature_receiving_title">Nachrichten empfangen</string>
-    <string name="feature_receiving_description">Wie sollen dich Nachrichten erreichen, während Sparrow geschlossen ist?</string>
     <string name="feature_receiving_always">Immer verbunden (empfohlen)</string>
     <string name="feature_receiving_always_consequence">Nachrichten kommen sofort an; eine dauerhafte Benachrichtigung ist zu sehen, und es kostet etwas Akku.</string>
     <string name="feature_receiving_while_open">Nur wenn die App offen ist</string>

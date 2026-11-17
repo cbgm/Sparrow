@@ -42,12 +42,6 @@ object Dimens {
         val searchClearButtonSize = 32.dp
     }
 
-    object PermissionsPage {
-        val dotSelectedSize = 8.dp
-        val dotUnselectedSize = 6.dp
-        val pagerHeight = 150.dp
-    }
-
     object MessageList {
         val loadingStroke = 2.dp
         val loadingSize = 20.dp
@@ -215,7 +209,21 @@ object Dimens {
     }
 
     object OnboardingScreen {
-        val animationSize = 180.dp
+        val horizontalPadding = 32.dp
+        val topPadding = 48.dp
+        val bottomPadding = 24.dp
+        val bottomBarHeight = 48.dp
+        val actionLineWidth = 40.dp
+        val lineWidth = 1.dp
+        val markSize = 210.dp
+        val markGraphicHeight = 300.dp
+        val onionGraphicHeight = 250.dp
+        val dotsGraphicHeight = 40.dp
+        val receivingGraphicHeight = 90.dp
+        val contactsGraphicHeight = 130.dp
+        val wordSlide = 8.dp
+        val rowSlide = 60.dp
+        val choiceMarkSize = 6.dp
     }
 
     object InvitationsScreen {

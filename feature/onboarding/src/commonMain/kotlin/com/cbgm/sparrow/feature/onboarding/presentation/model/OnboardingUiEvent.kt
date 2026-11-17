@@ -3,7 +3,10 @@ package com.cbgm.sparrow.feature.onboarding.presentation.model
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 
 sealed interface OnboardingUiEvent {
-    data object NextClicked : OnboardingUiEvent
+    /** The pager settled on [page], by swiping or after the app moved it. */
+    data class PageShown(
+        val page: OnboardingPage
+    ) : OnboardingUiEvent
 
     data object RequestPermissionsClicked : OnboardingUiEvent
 

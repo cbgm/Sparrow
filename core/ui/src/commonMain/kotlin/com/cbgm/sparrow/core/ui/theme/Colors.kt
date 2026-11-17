@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 
 object Colors {
@@ -47,11 +48,18 @@ object Colors {
 
     val Outline = Color(0xFF668095)
     val OutlineVariant = Color(0xFF2D4A62)
+
+    /** Lines between list items and under fields: only just lighter than the background. */
+    val Divider = Color(0xFF10273E)
     val Scrim = Color(0xFF000000)
 
     val InverseSurface = Color(0xFFE6EEF4)
     val InverseOnSurface = Color(0xFF10283D)
 }
+
+/** The faint line between list items and under fields. */
+val ColorScheme.divider: Color
+    get() = Colors.Divider
 
 /**
  * Fixed colors required by functional rendering.
