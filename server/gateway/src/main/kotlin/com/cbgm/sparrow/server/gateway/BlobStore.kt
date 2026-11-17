@@ -74,13 +74,21 @@ class BlobStore(
             )
         val paths = paths(request.blobId)
         synchronized(capacityLock) {
-            if (paths.metadata.exists() || paths.data.exists()) throw BlobAlreadyExistsException()
-            if (request.byteSize > maximumStorageBytes - storedBytes) throw BlobStorageCapacityExceededException()
+            requireRoomFor(paths, request.byteSize)
             paths.chunks.createDirectories()
             writeMetadata(paths.metadata, metadata)
             storedBytes += request.byteSize
         }
         return metadata
+    }
+
+    /** Fails when the blob exists already or the node has no room left for [byteSize] more. */
+    private fun requireRoomFor(
+        paths: BlobPaths,
+        byteSize: Long
+    ) {
+        if (paths.metadata.exists() || paths.data.exists()) throw BlobAlreadyExistsException()
+        if (byteSize > maximumStorageBytes - storedBytes) throw BlobStorageCapacityExceededException()
     }
 
     /**

@@ -25,7 +25,8 @@ class PhoneVerificationTest {
 
         assertEquals(alias, attestations.provenAlias(VECTOR_ATTESTATION, "scrouting1_device"))
         assertNull(attestations.provenAlias(VECTOR_ATTESTATION, "scrouting1_other"))
-        assertNull(PhoneAttestations(directoryPublicKey(VECTOR_DIRECTORY_KEY), now = { VECTOR_NOW + 61L * 60L * 1_000L }).provenAlias(VECTOR_ATTESTATION, "scrouting1_device"))
+        val expired = PhoneAttestations(directoryPublicKey(VECTOR_DIRECTORY_KEY), now = { VECTOR_NOW + 61L * 60L * 1_000L })
+        assertNull(expired.provenAlias(VECTOR_ATTESTATION, "scrouting1_device"))
         assertNull(PhoneAttestations(directory.publicKey, now = { VECTOR_NOW }).provenAlias(VECTOR_ATTESTATION, "scrouting1_device"))
     }
 
@@ -139,8 +140,13 @@ class PhoneVerificationTest {
         const val VECTOR_NOW = 1_800_000_000_000L
         const val VECTOR_DIRECTORY_KEY = "MCowBQYDK2VwAyEAiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w"
         const val VECTOR_ATTESTATION =
-            """{"keys":{"payload":"eyJhdHRlc3RhdGlvbktleSI6Ik1Db3dCUVlESzJWd0F5RUFnVGwzRHFoOUYxOVdvMVJtdzB4LXpNdU5pcEcwN2plaVhmWVBXNF9KczVRIiwicHJvdG9jb2wiOiJzcGFycm93LXBob25lLWtleXMtdjEiLCJyZXF1ZXN0S2V5IjoiWGY3ZE8ydlVmMi1panVGZGxwMWJzT3BUZDAxSWk5cjUzeHh1QVNTejd5SSJ9","signature":"sbifl_sr71SPyoMoED_UmZSxbnHiwb6pxdFmqBpgF-5XJ2vTUKmkZrO9m7UyBbCjP9F_jQyDK2GyEgvfT7YEBA"},""" +
-                """"payload":"eyJhbGlhcyI6InNjcGhvbmUxX3RDWjZJalRpQnktazB1alluNzV5ZkZEOFFVY3gxdXlzd3UwOUFQQlFPTkUiLCJleHBpcmVzQXRFcG9jaE1pbGxpc2Vjb25kcyI6MTgwMDAwMzYwMDAwMCwiaXNzdWVkQXRFcG9jaE1pbGxpc2Vjb25kcyI6MTgwMDAwMDAwMDAwMCwicHJvdG9jb2wiOiJzcGFycm93LXBob25lLWF0dGVzdGF0aW9uLXYxIiwicm91dGluZ0lkIjoic2Nyb3V0aW5nMV9kZXZpY2UifQ",""" +
-                """"signature":"7LiNnZXQ-hOVax1Zse4PmE8UHIbDP0LoBsxMsLlzhEvHVZvLGBoWNMHjLprs1v7xntTW4ljlo0ab9Fi5-eOxDA"}"""
+            """{"keys":{"payload":"eyJhdHRlc3RhdGlvbktleSI6Ik1Db3dCUVlESzJWd0F5RUFnVGwzRHFoOUYxOVdvMVJtdzB4LXpNdU5p""" +
+                """cEcwN2plaVhmWVBXNF9KczVRIiwicHJvdG9jb2wiOiJzcGFycm93LXBob25lLWtleXMtdjEiLCJyZXF1ZXN0S2V5IjoiWGY3ZE8y""" +
+                """dlVmMi1panVGZGxwMWJzT3BUZDAxSWk5cjUzeHh1QVNTejd5SSJ9","signature":"sbifl_sr71SPyoMoED_UmZSxbnHiwb6px""" +
+                """dFmqBpgF-5XJ2vTUKmkZrO9m7UyBbCjP9F_jQyDK2GyEgvfT7YEBA"},"payload":"eyJhbGlhcyI6InNjcGhvbmUxX3RDWjZJa""" +
+                """lRpQnktazB1alluNzV5ZkZEOFFVY3gxdXlzd3UwOUFQQlFPTkUiLCJleHBpcmVzQXRFcG9jaE1pbGxpc2Vjb25kcyI6MTgwMDAwM""" +
+                """zYwMDAwMCwiaXNzdWVkQXRFcG9jaE1pbGxpc2Vjb25kcyI6MTgwMDAwMDAwMDAwMCwicHJvdG9jb2wiOiJzcGFycm93LXBob25lL""" +
+                """WF0dGVzdGF0aW9uLXYxIiwicm91dGluZ0lkIjoic2Nyb3V0aW5nMV9kZXZpY2UifQ","signature":"7LiNnZXQ-hOVax1Zse4P""" +
+                """mE8UHIbDP0LoBsxMsLlzhEvHVZvLGBoWNMHjLprs1v7xntTW4ljlo0ab9Fi5-eOxDA"}"""
     }
 }

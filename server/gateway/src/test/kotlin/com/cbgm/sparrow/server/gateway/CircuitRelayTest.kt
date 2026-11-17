@@ -70,7 +70,14 @@ class CircuitRelayTest {
                 val answer =
                     request(
                         stream = 3,
-                        request = CircuitHttpRequest("POST", "https://mailbox.test/v1/mailboxes/box-1/envelopes", "capability", "application/json", ByteArray(2_500) { 1 })
+                        request =
+                            CircuitHttpRequest(
+                                "POST",
+                                "https://mailbox.test/v1/mailboxes/box-1/envelopes",
+                                "capability",
+                                "application/json",
+                                ByteArray(2_500) { 1 }
+                            )
                     )
 
                 assertEquals(RelayCommand.STREAM_END, answer.first)
@@ -84,7 +91,11 @@ class CircuitRelayTest {
         relays {
             circuit {
                 create(keysA)
-                val answer = request(stream = 1, request = CircuitHttpRequest("GET", "https://mailbox.test/v1/mailboxes/box-1/envelopes", "capability", null, ByteArray(0)))
+                val answer =
+                    request(
+                        stream = 1,
+                        request = CircuitHttpRequest("GET", "https://mailbox.test/v1/mailboxes/box-1/envelopes", "capability", null, ByteArray(0))
+                    )
 
                 assertEquals(RelayCommand.STREAM_END, answer.first)
                 assertContentEquals(ByteArray(LARGE_ANSWER_BYTES) { (it % 251).toByte() }, body(answer.second))
@@ -188,7 +199,10 @@ class CircuitRelayTest {
             request: CircuitHttpRequest
         ): Pair<Int, ByteArray> {
             val bytes = request.encode()
-            val parts = (bytes.indices step RelayPayload.MAXIMUM_DATA_BYTES).map { start -> bytes.copyOfRange(start, minOf(start + RelayPayload.MAXIMUM_DATA_BYTES, bytes.size)) }
+            val parts =
+                (bytes.indices step RelayPayload.MAXIMUM_DATA_BYTES).map { start ->
+                    bytes.copyOfRange(start, minOf(start + RelayPayload.MAXIMUM_DATA_BYTES, bytes.size))
+                }
             parts.dropLast(1).forEach { part -> send(RelayPayload(RelayCommand.STREAM_DATA, stream, part)) }
             send(RelayPayload(RelayCommand.STREAM_END, stream, parts.last()))
             var answer = ByteArray(0)

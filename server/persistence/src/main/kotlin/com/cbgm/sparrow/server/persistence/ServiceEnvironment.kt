@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.server.persistence
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -139,50 +140,52 @@ class ControlPlaneEndpointPool(
             return@synchronized cachedDiscoveryEntries
         }
         lastDiscoveryReadAt = currentTime
-        val parsed = try {
-            if (!Files.isRegularFile(file) || Files.size(file) > MAX_DISCOVERY_BYTES) throw IllegalArgumentException("Invalid directory publication")
-            val root = Json.parseToJsonElement(Files.readString(file)).jsonObject
-            if (root.keys != setOf("controlPlanes", "entries")) throw IllegalArgumentException("Invalid directory publication")
-            val urls = root.getValue("controlPlanes").jsonArray
-                .map { it.jsonPrimitive.content }
-            val entries = root.getValue("entries").jsonArray
-            if (entries.size > MAX_DIRECTORY_ENTRIES || entries.size != urls.size ||
-                urls.size != urls.distinct().size
-            ) {
-                throw IllegalArgumentException("Invalid directory publication")
-            }
-            val verified = linkedMapOf<String, ByteArray>()
-            for (item in entries) {
-                val entry = item.jsonObject
-                if (entry.keys != setOf("baseUrl", "controlPlaneId", "publicKey")) throw IllegalArgumentException("Invalid directory publication")
-                val url = entry.getValue("baseUrl").jsonPrimitive.content
-                val id = entry.getValue("controlPlaneId").jsonPrimitive.content
-                val encodedKey = entry.getValue("publicKey").jsonPrimitive.content
-                if (!isSafeDiscoveredOrigin(url) || !id.matches(Regex("[a-f0-9]{64}"))) throw IllegalArgumentException("Invalid directory publication")
-                val key = Base64.getUrlDecoder().decode(encodedKey)
-                if (key.size != ED25519_SPKI_BYTES ||
-                    Base64.getUrlEncoder().withoutPadding().encodeToString(key) != encodedKey ||
-                    MessageDigest.getInstance("SHA-256").digest(key)
-                        .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) } != id
-                ) {
-                    throw IllegalArgumentException("Invalid directory publication")
-                }
-                if (!KeyFactory.getInstance("Ed25519")
-                        .generatePublic(X509EncodedKeySpec(key)).encoded.contentEquals(key)
-                ) {
-                    throw IllegalArgumentException("Invalid directory publication")
-                }
-                if (verified.put(url, key) != null) throw IllegalArgumentException("Invalid directory publication")
-            }
-            if (verified.keys.toList() != urls) throw IllegalArgumentException("Invalid directory publication")
-            verified
-        } catch (_: Exception) {
-            // A missing or malformed publication is not an authority to
-            // enroll another signing identity or restore a revoked endpoint.
-            emptyMap()
-        }
+        // A missing or malformed publication is not an authority to
+        // enroll another signing identity or restore a revoked endpoint.
+        val parsed = runCatching { parseDiscoveryPublication(file) }.getOrDefault(emptyMap())
         cachedDiscoveryEntries = parsed
         parsed
+    }
+
+    /** The verified entries of the publication, by base URL in its order; fails on anything malformed. */
+    private fun parseDiscoveryPublication(file: Path): Map<String, ByteArray> {
+        require(Files.isRegularFile(file) && Files.size(file) <= MAX_DISCOVERY_BYTES) { INVALID_PUBLICATION }
+        val root = Json.parseToJsonElement(Files.readString(file)).jsonObject
+        require(root.keys == setOf("controlPlanes", "entries")) { INVALID_PUBLICATION }
+        val urls = root.getValue("controlPlanes").jsonArray
+            .map { it.jsonPrimitive.content }
+        val entries = root.getValue("entries").jsonArray
+        require(entries.size <= MAX_DIRECTORY_ENTRIES && entries.size == urls.size && urls.size == urls.distinct().size) {
+            INVALID_PUBLICATION
+        }
+        val verified = linkedMapOf<String, ByteArray>()
+        for (item in entries) {
+            val (url, key) = verifiedEntry(item.jsonObject)
+            require(verified.put(url, key) == null) { INVALID_PUBLICATION }
+        }
+        require(verified.keys.toList() == urls) { INVALID_PUBLICATION }
+        return verified
+    }
+
+    /** One entry's base URL and Ed25519 key, after checking that its ID is the SHA-256 of the key. */
+    private fun verifiedEntry(entry: JsonObject): Pair<String, ByteArray> {
+        require(entry.keys == setOf("baseUrl", "controlPlaneId", "publicKey")) { INVALID_PUBLICATION }
+        val url = entry.getValue("baseUrl").jsonPrimitive.content
+        val id = entry.getValue("controlPlaneId").jsonPrimitive.content
+        val encodedKey = entry.getValue("publicKey").jsonPrimitive.content
+        require(isSafeDiscoveredOrigin(url) && id.matches(Regex("[a-f0-9]{64}"))) { INVALID_PUBLICATION }
+        val key = Base64.getUrlDecoder().decode(encodedKey)
+        require(
+            key.size == ED25519_SPKI_BYTES &&
+                Base64.getUrlEncoder().withoutPadding().encodeToString(key) == encodedKey &&
+                MessageDigest.getInstance("SHA-256").digest(key)
+                    .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) } == id
+        ) { INVALID_PUBLICATION }
+        require(
+            KeyFactory.getInstance("Ed25519")
+                .generatePublic(X509EncodedKeySpec(key)).encoded.contentEquals(key)
+        ) { INVALID_PUBLICATION }
+        return url to key
     }
 
     private fun isCoolingDown(endpoint: String, currentTime: Long): Boolean =
@@ -198,6 +201,7 @@ class ControlPlaneEndpointPool(
             )
 
         private const val DEFAULT_FAILURE_COOLDOWN_MILLISECONDS = 15_000L
+        private const val INVALID_PUBLICATION = "Invalid directory publication"
         private const val MAX_DISCOVERY_BYTES = 512L * 1024L
         private const val MAX_DIRECTORY_ENTRIES = 2048
         private const val ED25519_SPKI_BYTES = 44

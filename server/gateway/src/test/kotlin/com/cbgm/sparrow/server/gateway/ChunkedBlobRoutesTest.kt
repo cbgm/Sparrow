@@ -95,7 +95,12 @@ class ChunkedBlobRoutesTest {
         workBits: Int = 0,
         block: suspend ApplicationTestBuilder.() -> Unit
     ) = testApplication {
-        val store = BlobStore(Files.createTempDirectory("blobs"), maximumBlobBytes = 8L * BlobStore.CHUNK_BYTES, maximumStorageBytes = 16L * BlobStore.CHUNK_BYTES)
+        val store =
+            BlobStore(
+                Files.createTempDirectory("blobs"),
+                maximumBlobBytes = 8L * BlobStore.CHUNK_BYTES,
+                maximumStorageBytes = 16L * BlobStore.CHUNK_BYTES
+            )
         application {
             install(ContentNegotiation) { json(serverJson) }
             routing {

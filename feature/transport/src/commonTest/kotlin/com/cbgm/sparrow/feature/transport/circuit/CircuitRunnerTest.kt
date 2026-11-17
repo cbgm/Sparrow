@@ -12,6 +12,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -25,6 +26,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The runner's privacy rules for several circuits, over simulated relays: the circuits end at different operators, and
@@ -34,6 +36,7 @@ class CircuitRunnerTest {
     private val json = createGatewayJson()
     private val cipher = ReadableCircuitCipher()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun circuitsBuiltAtTheSameTimeEndAtDifferentOperators() =
         runTest {
@@ -47,6 +50,7 @@ class CircuitRunnerTest {
             assertNotEquals(first.sessionOperator, second.sessionOperator)
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun whileItsCircuitIsRebuiltAContactsRequestsDoNotCrossToAnotherOperator() =
         runTest {
@@ -67,11 +71,12 @@ class CircuitRunnerTest {
             // A request about no mailbox in particular may still use the open circuit.
             assertNotNull(runner.currentCircuit())
 
-            advanceTimeBy(REBUILD_MILLISECONDS)
+            advanceTimeBy(REBUILD_MILLISECONDS.milliseconds)
             runCurrent()
             assertEquals(own.sessionOperator, runner.currentCircuit(key)?.sessionOperator)
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun withASingleOperatorTheOtherCircuitStandsInWhileOneIsRebuilt() =
         runTest {
@@ -93,13 +98,14 @@ class CircuitRunnerTest {
             assertSame(other, runner.currentCircuit(key))
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun TestScope.awaitBothCircuits(runner: CircuitRunner): Pair<Circuit, Circuit> {
         val keys = keyFor(runner, slot = 0) to keyFor(runner, slot = 1)
         repeat(MAXIMUM_STEPS) {
             val first = runner.currentCircuit(keys.first)
             val second = runner.currentCircuit(keys.second)
             if (first != null && second != null && first !== second) return first to second
-            advanceTimeBy(STEP_MILLISECONDS)
+            advanceTimeBy(STEP_MILLISECONDS.milliseconds)
             runCurrent()
         }
         error("The circuits were not built")

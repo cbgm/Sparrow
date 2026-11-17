@@ -297,15 +297,13 @@ internal class CircuitRelay(
                 link.scope.launch {
                     try {
                         for (frame in link.session.incoming) {
-                            val cell = (frame as? Frame.Binary)?.let { binary -> CircuitCell.decode(binary.readBytes()) } ?: continue
-                            when (cell.command) {
-                                CircuitCell.RELAY ->
-                                    counters.withLock {
-                                        val layered = CircuitLayer.stream(keys.backward, backwardCount++, cell.body)
-                                        inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, layered))
-                                    }
-                                CircuitCell.DESTROY -> break
-                                else -> Unit
+                            val cell = (frame as? Frame.Binary)?.let { binary -> CircuitCell.decode(binary.readBytes()) }
+                            if (cell?.command == CircuitCell.DESTROY) break
+                            if (cell?.command == CircuitCell.RELAY) {
+                                counters.withLock {
+                                    val layered = CircuitLayer.stream(keys.backward, backwardCount++, cell.body)
+                                    inbound.send(CircuitCell(circuitId, CircuitCell.RELAY, layered))
+                                }
                             }
                         }
                     } finally {
@@ -504,7 +502,7 @@ private fun ByteArrayOutputStream.writeField(
     lengthBytes: Int
 ) {
     require(value.size < (1 shl (8 * lengthBytes))) { "Field too long" }
-    (lengthBytes - 1 downTo 0).forEach { index -> write((value.size ushr (8 * index)) and 0xFF) }
+    for (index in lengthBytes - 1 downTo 0) write((value.size ushr (8 * index)) and 0xFF)
     write(value)
 }
 

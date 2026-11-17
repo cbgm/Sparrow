@@ -33,6 +33,21 @@ internal fun Route.installChunkedBlobRoutes(
     maximumRetentionMilliseconds: Long,
     now: () -> Long = System::currentTimeMillis
 ) {
+    installBlobOpenRoute(store, nodeId, creationWork, maximumRetentionMilliseconds, now)
+    installBlobChunkRoutes(store, now)
+    installBlobDeleteRoute(store, now)
+}
+
+/** How long an opened blob takes chunks; a transfer that waits for a protecting circuit can resume within it. */
+private const val CHUNKED_UPLOAD_WINDOW_MILLISECONDS = 6L * 60L * 60L * 1_000L
+
+private fun Route.installBlobOpenRoute(
+    store: BlobStore,
+    nodeId: String,
+    creationWork: CreationWorkCheck,
+    maximumRetentionMilliseconds: Long,
+    now: () -> Long
+) {
     post("/v1/blobs") {
         val request = runCatching { call.receive<OpenBlobRequest>() }.getOrNull() ?: return@post call.respond(HttpStatusCode.BadRequest)
         val openedAt = now()
@@ -49,6 +64,12 @@ internal fun Route.installChunkedBlobRoutes(
                 )
         }
     }
+}
+
+private fun Route.installBlobChunkRoutes(
+    store: BlobStore,
+    now: () -> Long
+) {
     put("/v1/blobs/{blobId}/chunks/{index}") {
         val blobId = call.parameters["blobId"] ?: return@put call.respond(HttpStatusCode.BadRequest)
         val index = call.parameters["index"]?.toIntOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest)
@@ -72,11 +93,7 @@ internal fun Route.installChunkedBlobRoutes(
         val chunk = runCatching { store.readableChunk(blobId, capability, index, now()) }.getOrNull() ?: return@get call.respond(HttpStatusCode.NotFound)
         call.respondFile(chunk.toFile())
     }
-    installBlobDeleteRoute(store, now)
 }
-
-/** How long an opened blob takes chunks; a transfer that waits for a protecting circuit can resume within it. */
-private const val CHUNKED_UPLOAD_WINDOW_MILLISECONDS = 6L * 60L * 60L * 1_000L
 
 private fun Route.installBlobDeleteRoute(
     store: BlobStore,
