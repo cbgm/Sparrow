@@ -2,9 +2,11 @@ package com.cbgm.sparrow.feature.transport.circuit
 
 import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.relay.RelayHop
 import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.websocket.WebSocketSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -17,6 +19,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -56,7 +60,8 @@ class CircuitRunner internal constructor(
     private val selector: RelaySelector,
     private val hopCountStore: CircuitHopCountStore,
     private val circuitCountStore: CircuitCountStore,
-    private val pingIntervalMilliseconds: Long = DEFAULT_PING_INTERVAL_MILLISECONDS
+    private val pingIntervalMilliseconds: Long = DEFAULT_PING_INTERVAL_MILLISECONDS,
+    private val openSession: suspend (String) -> WebSocketSession = { url -> httpClient.webSocketSession(url) }
 ) {
     private val logger = SparrowLog.withTag("CircuitRunner")
     private val mutableStatus = MutableStateFlow<CircuitStatus>(CircuitStatus.Building)
@@ -67,6 +72,13 @@ class CircuitRunner internal constructor(
     /** The operator each circuit last ended at: its mailboxes are known there, so they may go there while it is rebuilt. */
     private val sessionOperators = List(CircuitCount.MAXIMUM) { MutableStateFlow<String?>(null) }
     private val activeCount = MutableStateFlow(1)
+
+    /**
+     * The operator each circuit being built will end at, from the moment its route is chosen until it is up or failed:
+     * circuits built at the same time see each other's choice ([routeChoice]) and end at different operators.
+     */
+    private val reservedOperators = List(CircuitCount.MAXIMUM) { MutableStateFlow<String?>(null) }
+    private val routeChoice = Mutex()
 
     /** Which circuit requests with [key] (a mailbox or contact) use, as long as the number of circuits stays. */
     internal fun slotOf(key: String): Int = (key.hashCode() and Int.MAX_VALUE) % activeCount.value
@@ -119,7 +131,7 @@ class CircuitRunner internal constructor(
         block: suspend (Circuit) -> T
     ): T {
         val hopCount = hopCountStore.observe().first()
-        val circuit = build("for a transfer", hopCount, otherSessionOperators(slot = NO_SLOT), TRANSFER_ANSWER_TIMEOUT_MILLISECONDS)
+        val circuit = build("for a transfer", hopCount, slot = NO_SLOT, TRANSFER_ANSWER_TIMEOUT_MILLISECONDS)
         return try {
             if (circuit.nodeIds.size < minimumHopCount) throw ProtectedRouteMissingException()
             coroutineScope {
@@ -161,7 +173,7 @@ class CircuitRunner internal constructor(
         while (currentCoroutineContext().isActive) {
             if (next == null) setStatus(slot, hopCount, CircuitStatus.Building)
             try {
-                val circuit = next ?: build("${slot + 1}", hopCount, otherSessionOperators(slot))
+                val circuit = next ?: build("${slot + 1}", hopCount, slot)
                 next = null
                 retryDelay = FIRST_RETRY_MILLISECONDS
                 sessionOperators[slot].value = circuit.sessionOperator
@@ -219,22 +231,46 @@ class CircuitRunner internal constructor(
                 ?: CircuitStatus.Unavailable(hopCount)
     }
 
-    /** The operators the other circuits end at, so this one ends at another operator when it can. */
+    /** The operators the other circuits end at or are being built towards, so this one ends at another when it can. */
     private fun otherSessionOperators(slot: Int): Set<String> =
-        circuits.take(activeCount.value).filterIndexed { index, _ -> index != slot }.mapNotNullTo(HashSet()) { it.value?.sessionOperator }
+        (0 until activeCount.value)
+            .filter { index -> index != slot }
+            .flatMapTo(HashSet()) { index -> listOfNotNull(circuits[index].value?.sessionOperator, reservedOperators[index].value) }
 
+    /** Builds a circuit for [slot] ([NO_SLOT] for a transfer, which reserves nothing). */
     private suspend fun build(
         name: String,
         hopCount: Int,
-        avoidLastOperators: Set<String>,
+        slot: Int,
         answerTimeoutMilliseconds: Long? = null
+    ): Circuit =
+        try {
+            buildRoute(name, hopCount, chooseRoute(hopCount, slot), answerTimeoutMilliseconds)
+        } finally {
+            reservedOperators.getOrNull(slot)?.value = null
+        }
+
+    private suspend fun chooseRoute(
+        hopCount: Int,
+        slot: Int
+    ): List<RelayHop> =
+        routeChoice.withLock {
+            selector.circuitRoute(hopCount, avoidLastOperators = otherSessionOperators(slot)).also { route ->
+                reservedOperators.getOrNull(slot)?.value = route.lastOrNull()?.operator
+            }
+        }
+
+    private suspend fun buildRoute(
+        name: String,
+        hopCount: Int,
+        route: List<RelayHop>,
+        answerTimeoutMilliseconds: Long?
     ): Circuit {
-        val route = selector.circuitRoute(hopCount, avoidLastOperators = avoidLastOperators)
         check(route.isNotEmpty()) { "no relaying node known yet" }
         val first = route.first()
         val session =
             try {
-                httpClient.webSocketSession(first.circuitUrl)
+                openSession(first.circuitUrl)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (unreachable: Exception) {
@@ -283,7 +319,7 @@ class CircuitRunner internal constructor(
         val hops = circuit.nodeIds.size
         if (hops >= hopCount || selector.circuitRoute(hopCount).size <= hops) return null
         return try {
-            val built = build("${slot + 1}", hopCount, otherSessionOperators(slot))
+            val built = build("${slot + 1}", hopCount, slot)
             if (built.nodeIds.size > hops) {
                 built
             } else {
