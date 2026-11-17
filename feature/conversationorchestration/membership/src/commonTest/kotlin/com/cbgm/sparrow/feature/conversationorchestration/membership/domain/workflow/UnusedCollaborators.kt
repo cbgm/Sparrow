@@ -130,6 +130,8 @@ internal object UnusedDirectMessages : DirectMessageRepository {
     override suspend fun findAwaitingOutbox(createdBeforeEpochMilliseconds: Long): Result<List<StoredMessage>> =
         error(NOT_USED)
 
+    override suspend fun findUnsent(): Result<List<StoredMessage>> = error(NOT_USED)
+
     override suspend fun findAwaitingReadReceipt(conversationId: String): Result<List<UnreadIncomingMessage>> =
         error(NOT_USED)
 
@@ -198,6 +200,8 @@ internal object UnusedGroupMessages : GroupMessageRepository {
     override suspend fun findQueued(groupId: String): Result<List<StoredMessage>> = error(NOT_USED)
 
     override suspend fun findAwaitingOutbox(groupId: String): Result<List<StoredMessage>> = error(NOT_USED)
+
+    override suspend fun findGroupsWithQueued(): Result<List<String>> = error(NOT_USED)
 
     override suspend fun saveOutgoing(
         message: StoredMessage,
