@@ -25,7 +25,8 @@ Choosing `ALWAYS_CONNECTED` opens Android's battery optimization list (`ACTION_I
 the user sets Sparrow to "Not optimized"; the onboarding page says so. Sparrow does not ask for the exemption
 directly (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`): Google Play allows that only for apps that technically cannot use
 its push service, and Sparrow does without it by choice. For a Play release, the `specialUse` foreground service
-needs a declaration under App content in the Play Console (description, impact of an interruption, demo video).
+needs a declaration under App content in the Play Console (description, impact of an interruption, demo video); the
+texts and the video script are in [play-console-declaration.md](play-console-declaration.md).
 
 ## Servers on the local network
 
