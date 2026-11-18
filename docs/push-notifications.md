@@ -21,7 +21,7 @@ settings (`transport.connection_mode`).
 closed (`keepsConnectionWhileClosed()` is false there); the onboarding page shows a note instead of the
 choice.
 
-Choosing `ALWAYS_CONNECTED` opens Android's battery optimization list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`), where
+Choosing `ALWAYS_CONNECTED` (preselected in onboarding, where swiping on past the page counts as choosing it) opens Android's battery optimization list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`), where
 the user sets Sparrow to "Not optimized"; the onboarding page says so. Sparrow does not ask for the exemption
 directly (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`): Google Play allows that only for apps that technically cannot use
 its push service, and Sparrow does without it by choice. For a Play release, the `specialUse` foreground service

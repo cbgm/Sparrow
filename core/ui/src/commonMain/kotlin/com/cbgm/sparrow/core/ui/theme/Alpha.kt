@@ -95,10 +95,6 @@ object Alpha {
         const val accentText = 0.4f
     }
 
-    object PermissionsPage {
-        const val helperText = 0.58f
-    }
-
     object NetworkDiagnosticsCard {
         const val available = 0.7f
     }

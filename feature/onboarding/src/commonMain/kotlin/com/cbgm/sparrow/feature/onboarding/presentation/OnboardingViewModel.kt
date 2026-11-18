@@ -24,7 +24,7 @@ class OnboardingViewModel(
 
     fun onUiEvent(event: OnboardingUiEvent) {
         when (event) {
-            OnboardingUiEvent.NextClicked -> next()
+            is OnboardingUiEvent.PageShown -> showPage(event.page)
             OnboardingUiEvent.RequestPermissionsClicked -> requestPermissions()
             OnboardingUiEvent.RetryAutomaticNumberClicked -> retryAutomaticPhoneNumber()
             OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
@@ -32,21 +32,32 @@ class OnboardingViewModel(
         }
     }
 
-    private fun next() {
-        _uiState.value =
-            when (_uiState.value.page) {
-                OnboardingPage.WELCOME -> _uiState.value.copy(page = OnboardingPage.PRIVACY)
-                OnboardingPage.PRIVACY -> _uiState.value.copy(page = OnboardingPage.PERMISSIONS)
-                OnboardingPage.PERMISSIONS -> _uiState.value.copy(page = OnboardingPage.RECEIVING)
-                OnboardingPage.RECEIVING -> _uiState.value.copy(page = OnboardingPage.PHONE)
-                OnboardingPage.PHONE -> _uiState.value
-            }
+    /** Swiping on past a page does what its action would: asking for the permissions, saving the preselected mode. */
+    private fun showPage(page: OnboardingPage) {
+        val left = _uiState.value.page
+        _uiState.update { state -> state.copy(page = page) }
+        if (page <= left) return
+        when (left) {
+            OnboardingPage.PERMISSIONS -> requestPermissionsOnce()
+            OnboardingPage.RECEIVING -> saveConnectionModeOnce()
+            OnboardingPage.WELCOME, OnboardingPage.ONION, OnboardingPage.PHONE -> Unit
+        }
+    }
+
+    private fun requestPermissionsOnce() {
+        if (!_uiState.value.permissionsRequested) requestPermissions()
+    }
+
+    private fun saveConnectionModeOnce() {
+        val state = _uiState.value
+        if (state.connectsWhileClosed && !state.connectionModeSaved) chooseConnectionMode(state.connectionMode)
     }
 
     private fun requestPermissions() {
         _uiState.value =
             _uiState.value.copy(
-                permissionRequestId = _uiState.value.permissionRequestId + 1
+                permissionRequestId = _uiState.value.permissionRequestId + 1,
+                permissionsRequested = true
             )
     }
 
@@ -55,7 +66,7 @@ class OnboardingViewModel(
             _uiState.value.copy(
                 permissionsRequested = true,
                 phonePermissionGranted = result.phoneNumberGranted,
-                page = OnboardingPage.RECEIVING,
+                page = if (_uiState.value.page == OnboardingPage.PERMISSIONS) OnboardingPage.RECEIVING else _uiState.value.page,
                 automaticPhoneRequestId =
                     if (result.phoneNumberGranted) {
                         _uiState.value.automaticPhoneRequestId + 1
@@ -70,6 +81,7 @@ class OnboardingViewModel(
         _uiState.update { state ->
             state.copy(
                 connectionMode = mode,
+                connectionModeSaved = true,
                 batteryExemptionDeclined = false,
                 batteryExemptionRequestId = state.batteryExemptionRequestId + if (mode == ConnectionMode.ALWAYS_CONNECTED) 1 else 0
             )

@@ -1,0 +1,58 @@
+package com.cbgm.sparrow.feature.onboarding.presentation.pages.graphic
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
+
+/** You in the middle, pulsing; one by one, the people you know appear around you and connect. */
+@Composable
+fun ContactsGraphic(
+    clock: State<Long>,
+    modifier: Modifier = Modifier
+) {
+    val pulse by rememberInfiniteTransition(label = "contacts").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(PULSE_MILLISECONDS, easing = LinearEasing), RepeatMode.Restart),
+        label = "contactsPulse"
+    )
+    val you = MaterialTheme.colorScheme.primary
+    val contact = MaterialTheme.colorScheme.onBackground
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        CONTACTS.forEachIndexed { index, (x, y) ->
+            val point = Offset(x * size.width, y * size.height)
+            val start = FIRST_MILLISECONDS + index * STEP_MILLISECONDS
+            val reach = clock.progress(start + LINE_DELAY_MILLISECONDS, LINE_MILLISECONDS)
+            drawLine(you.copy(alpha = LINE_ALPHA), center, center + (point - center) * reach, strokeWidth = 1.1.dp.toPx())
+            drawCircle(contact.copy(alpha = clock.progress(start, DOT_MILLISECONDS)), 4.5.dp.toPx(), point)
+        }
+        drawCircle(you, 7.dp.toPx(), center)
+        drawCircle(you.copy(alpha = (1f - pulse) * PULSE_ALPHA), (7f + pulse * PULSE_GROWTH).dp.toPx(), center, style = Stroke(1.2.dp.toPx()))
+    }
+}
+
+/** Contacts around you, as fractions of the graphic. */
+private val CONTACTS = listOf(0.18f to 0.25f, 0.29f to 0.8f, 0.74f to 0.2f, 0.83f to 0.69f, 0.55f to 0.94f, 0.09f to 0.62f, 0.91f to 0.37f)
+private const val FIRST_MILLISECONDS = 500L
+private const val STEP_MILLISECONDS = 380L
+private const val LINE_DELAY_MILLISECONDS = 200L
+private const val LINE_MILLISECONDS = 600L
+private const val DOT_MILLISECONDS = 500L
+private const val LINE_ALPHA = 0.7f
+private const val PULSE_ALPHA = 0.6f
+private const val PULSE_GROWTH = 20f
+private const val PULSE_MILLISECONDS = 2_000
