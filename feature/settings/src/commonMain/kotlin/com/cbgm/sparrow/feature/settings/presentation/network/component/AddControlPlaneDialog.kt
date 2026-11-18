@@ -1,23 +1,19 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.component
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowChip
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -119,40 +115,38 @@ fun AddControlPlaneDialog(
             }
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                SparrowApprovalButton(
-                    onClick = onConfirm,
-                    enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
-                    text = if (isLoading) {
-                        ""
-                    } else {
-                        stringResource(
-                            if (editingDirectory) {
-                                Res.string.feature_settings_control_plane_directory_apply
-                            } else {
-                                Res.string.feature_settings_control_plane_add
-                            }
-                        )
-                    },
-                    content = {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(Dimens.Base.progressButtonIndicatorSize),
-                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+            SparrowDialogAction(
+                onClick = onConfirm,
+                enabled = !isLoading,
+                text = if (isLoading) {
+                    ""
+                } else {
+                    stringResource(
+                        if (editingDirectory) {
+                            Res.string.feature_settings_control_plane_directory_apply
+                        } else {
+                            Res.string.feature_settings_control_plane_add
                         }
+                    )
+                },
+                content = {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(Dimens.Base.progressButtonIndicatorSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-                )
-                SparrowOutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(Res.string.base_cancel)
-                )
-            }
+                }
+            )
         },
-        dismissButton = {}
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     )
 }
 
@@ -164,17 +158,11 @@ private fun AdaptedFilterChip(
     onSourceChanged: (ControlPlaneAddSource) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    FilterChip(
+    SparrowChip(
         selected = selectedSource == targetSource,
         onClick = { onSourceChanged(targetSource) },
-        modifier = modifier.fillMaxWidth(),
-        label = {
-            Text(
-                text = label,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        }
+        label = label,
+        modifier = modifier.fillMaxWidth()
     )
 }
 

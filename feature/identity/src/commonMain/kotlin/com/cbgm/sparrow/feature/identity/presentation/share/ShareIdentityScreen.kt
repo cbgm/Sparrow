@@ -17,14 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,10 +27,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +46,8 @@ import com.cbgm.sparrow.core.ui.component.BlockScreenshotEffect
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -163,27 +159,18 @@ private fun ShareIdentityTopBar(
     onShowOverflowMenuChange: (Boolean) -> Unit,
     onShowRawIdentityChange: (Boolean) -> Unit
 ) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_identity_my_identity_qr),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                text = stringResource(Res.string.feature_identity_my_identity_qr)
             )
         },
         navigationIcon = {
             if (showBackButton) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = SparrowIcons.ArrowBack,
                         contentDescription = null
                     )
                 }
@@ -198,7 +185,7 @@ private fun ShareIdentityTopBar(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = SparrowIcons.More,
                             contentDescription = null
                         )
                     }
@@ -319,7 +306,7 @@ private fun IdentityOptionsContent(
                     CircularProgressIndicator(
                         modifier = Modifier.size(Dimens.ShareIdentityScreen.progressSize),
                         strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = LocalContentColor.current
                     )
                 }
             }
@@ -368,28 +355,10 @@ private fun GeneratedIdentityContent(
 
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-                Button(
+                SparrowApprovalButton(
                     onClick = onShareIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null
-                    )
-
-                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-                    Text(
-                        text = stringResource(Res.string.feature_identity_share_identity_text),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                    text = stringResource(Res.string.feature_identity_share_identity_text)
+                )
 
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 

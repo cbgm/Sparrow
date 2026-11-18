@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
+import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal.Companion.LIFETIME_MILLISECONDS
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import kotlinx.coroutines.sync.Mutex

@@ -9,7 +9,7 @@ sealed interface VerifyContactQrUiEvent {
 
     data object ScannedIdentityDismissed : VerifyContactQrUiEvent
 
-    data object BackClicked : VerifyContactQrUiEvent
-
     data object ErrorDismissed : VerifyContactQrUiEvent
+
+    data object RetryClicked : VerifyContactQrUiEvent
 }

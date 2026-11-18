@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,8 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +37,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -97,28 +94,21 @@ fun InvitationsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            TopAppBar(
+            SparrowTopBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_invite_invitations_title),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_invite_invitations_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(InvitationUiEvent.CloseClicked) }) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = SparrowIcons.Close,
                             contentDescription = null
                         )
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = containerColor,
-                        scrolledContainerColor = containerColor,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                containerColor = containerColor
             )
         }
     ) { innerPadding, listState ->
@@ -229,27 +219,24 @@ private fun IdentityChangeInvitationItem(
         enabled = actionsEnabled,
         actions = listOf(
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                tone = SwipeActionTone.PRIMARY,
                 onClick = onAccept
             ) {
-                InvitationSwipeActionContent(Icons.Default.Check, stringResource(Res.string.feature_invite_accept_invitation))
+                InvitationSwipeActionContent(SparrowIcons.Check, stringResource(Res.string.feature_invite_accept_invitation))
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                tone = SwipeActionTone.NEUTRAL,
                 // Deleting an incoming identity proposal is a DECLINE: remove
                 // the pending row and send its signed decline when available.
                 onClick = onDecline
             ) {
-                InvitationSwipeActionContent(Icons.Default.DeleteOutline, stringResource(Res.string.feature_invite_decline_invitation))
+                InvitationSwipeActionContent(SparrowIcons.Delete, stringResource(Res.string.feature_invite_decline_invitation))
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
+                tone = SwipeActionTone.DESTRUCTIVE,
                 onClick = onBlock
             ) {
-                InvitationSwipeActionContent(Icons.Default.Block, stringResource(Res.string.feature_invite_block_invitation))
+                InvitationSwipeActionContent(SparrowIcons.Block, stringResource(Res.string.feature_invite_block_invitation))
             }
         )
     ) {
@@ -401,28 +388,26 @@ private fun IncomingInvitationItem(
             buildList {
                 add(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        tone = SwipeActionTone.PRIMARY,
                         onClick = {
                             onUiEvent(InvitationUiEvent.AcceptClicked(invitation.invitationId))
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.Check,
+                            icon = SparrowIcons.Check,
                             label = stringResource(Res.string.feature_invite_accept_invitation)
                         )
                     }
                 )
                 add(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tone = SwipeActionTone.NEUTRAL,
                         onClick = {
                             onUiEvent(InvitationUiEvent.DeclineClicked(invitation.invitationId))
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.Close,
+                            icon = SparrowIcons.Close,
                             label = stringResource(Res.string.feature_invite_decline_invitation)
                         )
                     }
@@ -430,14 +415,13 @@ private fun IncomingInvitationItem(
                 if (invitation.payloadType == InvitationUiPayloadType.DIRECT) {
                     add(
                         SwipeRevealAction(
-                            backgroundColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
+                            tone = SwipeActionTone.DESTRUCTIVE,
                             onClick = {
                                 onUiEvent(InvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
                             }
                         ) {
                             InvitationSwipeActionContent(
-                                icon = Icons.Default.Block,
+                                icon = SparrowIcons.Block,
                                 label = stringResource(Res.string.feature_invite_block_invitation)
                             )
                         }
@@ -467,8 +451,7 @@ private fun OutgoingInvitationItem(
             actions =
                 listOf(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
+                        tone = SwipeActionTone.DESTRUCTIVE,
                         onClick = {
                             onUiEvent(
                                 InvitationUiEvent.DeleteDeclinedOutgoingClicked(
@@ -478,7 +461,7 @@ private fun OutgoingInvitationItem(
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.DeleteOutline,
+                            icon = SparrowIcons.Delete,
                             label = stringResource(Res.string.feature_invite_delete_outgoing_invitation)
                         )
                     }

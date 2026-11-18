@@ -29,8 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.helper.darker
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.dialog
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_copy
@@ -59,7 +61,7 @@ internal fun MessageContextActionMenu(
 ) {
     Surface(
         modifier = Modifier.width(Dimens.ActionMenu.menuWidth + MaterialTheme.spacing.medium),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.dialog,
         color = color.darker(0.9f),
         shadowElevation = Dimens.ActionMenu.shadowElevation
     ) {
@@ -78,7 +80,7 @@ internal fun MessageContextActionMenu(
                     .forEach { emoji ->
                         Surface(
                             shape = MaterialTheme.shapes.medium,
-                            color = color.darker(0.8f),
+                            color = Color.Transparent,
                             onClick = { onReactionClick(emoji) }
                         ) {
                             Text(
@@ -90,15 +92,16 @@ internal fun MessageContextActionMenu(
                     }
             }
 
-            HorizontalDivider(thickness = Dimens.Base.dividerThickness)
+            HorizontalDivider(
+                thickness = Dimens.Base.dividerThickness,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+            )
 
             MessageActionItem(
                 text = stringResource(Res.string.feature_chats_reply),
                 onClick = onReplyClick,
                 icon = Icons.AutoMirrored.Filled.Reply
             )
-
-            HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
             MessageActionItem(
                 text = stringResource(Res.string.feature_chats_forward),
@@ -107,8 +110,6 @@ internal fun MessageContextActionMenu(
             )
 
             if (showPin) {
-                HorizontalDivider(thickness = Dimens.Base.dividerThickness)
-
                 MessageActionItem(
                     text = stringResource(
                         if (isPinned) {
@@ -123,16 +124,12 @@ internal fun MessageContextActionMenu(
             }
 
             if (showEdit) {
-                HorizontalDivider(thickness = Dimens.Base.dividerThickness)
-
                 MessageActionItem(
                     text = stringResource(Res.string.feature_chats_edit_message),
                     onClick = onEditClick,
                     icon = Icons.Default.Edit
                 )
             }
-
-            HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
             MessageActionItem(
                 text = stringResource(Res.string.feature_chats_copy),
@@ -141,7 +138,10 @@ internal fun MessageContextActionMenu(
             )
 
             if (showDelete) {
-                HorizontalDivider(thickness = Dimens.Base.dividerThickness)
+                HorizontalDivider(
+                    thickness = Dimens.Base.dividerThickness,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                )
 
                 MessageActionItem(
                     text = stringResource(Res.string.feature_chats_delete_message),
@@ -180,7 +180,7 @@ private fun MessageActionItem(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-            tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

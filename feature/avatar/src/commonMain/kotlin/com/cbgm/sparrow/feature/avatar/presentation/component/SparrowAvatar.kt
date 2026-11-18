@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -24,6 +27,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.AvatarViewModel
+import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarRing
 import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarUiState
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -34,7 +38,8 @@ fun SparrowAvatar(
     target: AvatarTarget?,
     modifier: Modifier = Modifier,
     size: Dp = Dimens.Avatar.defaultSize,
-    fallbackPainter: Painter? = null
+    fallbackPainter: Painter? = null,
+    ring: AvatarRing = AvatarRing.NONE
 ) {
     val uiState =
         if (target == null || LocalInspectionMode.current) {
@@ -48,13 +53,51 @@ fun SparrowAvatar(
             state
         }
 
-    Content(
-        name = name,
-        uiState = uiState,
-        modifier = modifier,
-        size = size,
-        fallbackPainter = fallbackPainter
-    )
+    if (ring == AvatarRing.NONE) {
+        Content(
+            name = name,
+            uiState = uiState,
+            modifier = modifier,
+            size = size,
+            fallbackPainter = fallbackPainter
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .size(size)
+                .avatarRing(ring),
+            contentAlignment = Alignment.Center
+        ) {
+            Content(
+                name = name,
+                uiState = uiState,
+                size = size - Dimens.Avatar.ringGap * 2,
+                fallbackPainter = fallbackPainter
+            )
+        }
+    }
+}
+
+@Composable
+private fun Modifier.avatarRing(ring: AvatarRing): Modifier {
+    val color =
+        when (ring) {
+            AvatarRing.VERIFIED -> MaterialTheme.colorScheme.primary
+            AvatarRing.PENDING,
+            AvatarRing.NONE -> MaterialTheme.colorScheme.outline
+        }
+    return drawBehind {
+        val stroke = Dimens.Avatar.ringStroke.toPx()
+        val dash = Dimens.Avatar.ringDash.toPx()
+        drawCircle(
+            color = color,
+            radius = (size.minDimension - stroke) / 2f,
+            style = Stroke(
+                width = stroke,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash)).takeIf { ring == AvatarRing.PENDING }
+            )
+        )
+    }
 }
 
 @Composable

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.core.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 
 object Colors {
     // Brand accent.
@@ -51,15 +52,28 @@ object Colors {
 
     /** Lines between list items and under fields: only just lighter than the background. */
     val Divider = Color(0xFF10273E)
+    val Warning = Color(0xFFE0B050)
+    val ErrorBright = Color(0xFFE07070)
+
+    val TintBase = Color(0xFF0B0F16)
     val Scrim = Color(0xFF000000)
 
     val InverseSurface = Color(0xFFE6EEF4)
     val InverseOnSurface = Color(0xFF10283D)
 }
 
+fun Color.asTint(alpha: Float): Color = copy(alpha = alpha).compositeOver(Colors.TintBase)
+
 /** The faint line between list items and under fields. */
 val ColorScheme.divider: Color
     get() = Colors.Divider
+
+/** Amber for things that wait: queued messages, a pending request. */
+val ColorScheme.warning: Color
+    get() = Colors.Warning
+
+val ColorScheme.errorBright: Color
+    get() = Colors.ErrorBright
 
 /**
  * Fixed colors required by functional rendering.

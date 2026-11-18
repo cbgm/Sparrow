@@ -1,38 +1,45 @@
 package com.cbgm.sparrow.core.ui.component
 
-import androidx.compose.foundation.border
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+
+/*
+ * Every input in the app looks the same: no box, the text on a hairline that turns cyan while typing
+ * (red on an error), thin icons and a cyan cursor. A label, when there is one, sits small above.
+ */
 
 @Composable
 fun SparrowSearchField(
@@ -44,83 +51,51 @@ fun SparrowSearchField(
     focusRequester: FocusRequester? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
 
     BasicTextField(
         value = searchQuery,
         onValueChange = onSearchQueryChanged,
         modifier = modifier
             .fillMaxWidth()
-            .height(Dimens.SearchField.searchHeight)
-            .border(
-                Dimens.Base.borderStrokeWidth,
-                MaterialTheme.colorScheme.outlineVariant,
-                MaterialTheme.shapes.extraSmall
-            )
             .focusRequester(focusRequester ?: FocusRequester.Cancel),
-        textStyle =
-            MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onSurface
-            ),
+        textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
         singleLine = true,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         interactionSource = interactionSource,
         decorationBox = { innerTextField ->
-            TextFieldDefaults.DecorationBox(
-                value = searchQuery,
-                innerTextField = innerTextField,
-                enabled = true,
-                singleLine = true,
-                visualTransformation = VisualTransformation.None,
-                interactionSource = interactionSource,
-                contentPadding =
-                    PaddingValues(
-                        horizontal = MaterialTheme.spacing.textField.horizontalPadding,
-                        vertical = MaterialTheme.spacing.textField.verticalPadding
-                    ),
-                leadingIcon = {
+            FieldBox(
+                focused = focused,
+                leading = {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = SparrowIcons.Search,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.size(Dimens.SearchField.searchIconSize)
                     )
                 },
-                trailingIcon = {
+                trailing = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(
-                            onClick = {
-                                onClear()
-                            },
+                            onClick = onClear,
                             modifier = Modifier.size(Dimens.SearchField.searchClearButtonSize)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = SparrowIcons.Close,
                                 contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.size(Dimens.SearchField.searchIconSize)
                             )
                         }
                     }
-                },
-                placeholder = {
-                    Text(
-                        text = placeholder,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                },
-                shape = MaterialTheme.shapes.extraSmall,
-                colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceContainer,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-            )
+                }
+            ) {
+                FieldText(
+                    isEmpty = searchQuery.isEmpty(),
+                    placeholder = placeholder,
+                    innerTextField = innerTextField
+                )
+            }
         }
     )
 }
@@ -138,77 +113,128 @@ fun SparrowInputField(
     maxLines: Int = if (isSingleLine) 1 else Int.MAX_VALUE,
     isError: Boolean = false,
     isEnabled: Boolean = true,
-    keyboardOptions: KeyboardOptions? = null
+    keyboardOptions: KeyboardOptions? = null,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    focusRequester: FocusRequester? = null
 ) {
     val defaultKeyboardOptions = KeyboardOptions(
         keyboardType = KeyboardType.Text,
         imeAction = ImeAction.Done
     )
-
     val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
 
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        enabled = isEnabled,
-        singleLine = isSingleLine,
-        minLines = minLines,
-        maxLines = maxLines,
-        textStyle = MaterialTheme.typography.bodySmall.copy(
-            color = MaterialTheme.colorScheme.onSurface
-        ),
-        keyboardOptions = keyboardOptions ?: defaultKeyboardOptions,
-        interactionSource = interactionSource,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        decorationBox = { innerTextField ->
-            OutlinedTextFieldDefaults.DecorationBox(
-                value = value,
-                innerTextField = innerTextField,
-                enabled = isEnabled,
-                singleLine = isSingleLine,
-                visualTransformation = VisualTransformation.None,
-                interactionSource = interactionSource,
-                isError = isError,
-                label = {
-                    Text(text = label)
-                },
-                placeholder = {
-                    Text(text = placeholderText)
-                },
-                supportingText =
-                    if (isError) {
-                        {
-                            Text(
-                                text = errorText,
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(
-                        alpha = Alpha.OpaqueText
-                    ),
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.placeholder),
-                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.placeholder)
-                ),
-                contentPadding = PaddingValues(
-                    horizontal = MaterialTheme.spacing.textField.horizontalPadding,
-                    vertical = MaterialTheme.spacing.textField.verticalPadding
-                )
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (label.isNotBlank()) {
+            Text(
+                text = label,
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.micro),
+                style = MaterialTheme.typography.labelMedium,
+                color =
+                    when {
+                        isError -> MaterialTheme.colorScheme.error
+                        focused -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.outline
+                    }
             )
         }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester ?: FocusRequester.Cancel),
+            enabled = isEnabled,
+            singleLine = isSingleLine,
+            minLines = minLines,
+            maxLines = maxLines,
+            textStyle = MaterialTheme.typography.bodySmall.copy(
+                color =
+                    if (isEnabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+            ),
+            keyboardOptions = keyboardOptions ?: defaultKeyboardOptions,
+            keyboardActions = keyboardActions,
+            visualTransformation = visualTransformation,
+            interactionSource = interactionSource,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorationBox = { innerTextField ->
+                FieldBox(focused = focused, isError = isError) {
+                    FieldText(
+                        isEmpty = value.isEmpty(),
+                        placeholder = placeholderText,
+                        innerTextField = innerTextField
+                    )
+                }
+            }
+        )
+        if (isError && errorText.isNotBlank()) {
+            Text(
+                text = errorText,
+                modifier = Modifier.padding(top = MaterialTheme.spacing.micro),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@Composable
+private fun FieldBox(
+    focused: Boolean,
+    isError: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    val line by animateColorAsState(
+        when {
+            isError -> MaterialTheme.colorScheme.error
+            focused -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.outlineVariant
+        },
+        label = "fieldLine"
     )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = Dimens.SearchField.searchHeight),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
+            leading?.invoke()
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = MaterialTheme.spacing.base)
+            ) {
+                content()
+            }
+            trailing?.invoke()
+        }
+        HorizontalDivider(thickness = Dimens.Base.borderStrokeWidth, color = line)
+    }
+}
+
+@Composable
+private fun FieldText(
+    isEmpty: Boolean,
+    placeholder: String,
+    innerTextField: @Composable () -> Unit
+) {
+    if (isEmpty && placeholder.isNotBlank()) {
+        Text(
+            text = placeholder,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline
+        )
+    }
+    innerTextField()
 }
 
 @Preview

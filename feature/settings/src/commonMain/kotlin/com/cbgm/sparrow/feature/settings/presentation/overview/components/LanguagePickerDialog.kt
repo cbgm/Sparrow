@@ -18,7 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -89,10 +89,10 @@ fun LanguagePickerDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = onDismiss,
-                fillMaxWidth = false,
-                text = stringResource(Res.string.base_cancel)
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         onDismissRequest = onDismiss

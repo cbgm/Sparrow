@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.util.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarRing
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewPreview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
@@ -37,6 +38,12 @@ internal fun ConversationOverview.toConversationListItem(): ConversationListItem
         timestamp = lastMessageTimestamp?.let(::formatMessageTimestamp).orEmpty(),
         unreadCount = unreadCount,
         isGroup = type == ConversationOverviewType.GROUP,
+        avatarRing =
+            when {
+                type == ConversationOverviewType.GROUP -> AvatarRing.NONE
+                isMutuallyVerified -> AvatarRing.VERIFIED
+                else -> AvatarRing.PENDING
+            },
         lastMessagePreview =
             when (lastMessagePreview) {
                 ConversationOverviewPreview.MEDIA -> LastMessagePreviewUi.MEDIA

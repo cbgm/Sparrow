@@ -5,17 +5,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -132,25 +129,19 @@ private fun TopBar(
     containerColor: Color = MaterialTheme.colorScheme.background,
     focusManager: FocusManager
 ) {
-    CenterAlignedTopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-            actionIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
                 stringResource(
                     if (uiState.isEditing) Res.string.feature_expenses_edit else Res.string.feature_expenses_add_multiple
-                ),
-                style = MaterialTheme.typography.titleSmall
+                )
             )
         },
         navigationIcon = {
             IconButton(onClick = { onUiEvent(CreateExpenseUiEvent.BackClicked) }) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
@@ -167,7 +158,7 @@ private fun TopBar(
                     enabled = uiState.canSend
                 ) {
                     Icon(
-                        Icons.Default.Check,
+                        SparrowIcons.Check,
                         contentDescription = stringResource(
                             if (uiState.isEditing) Res.string.feature_expenses_save else Res.string.feature_expenses_send_all
                         )

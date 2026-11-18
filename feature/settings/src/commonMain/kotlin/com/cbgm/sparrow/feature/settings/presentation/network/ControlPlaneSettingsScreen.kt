@@ -4,17 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.component.AddControlPlaneDialog
@@ -54,17 +51,11 @@ fun ControlPlaneSettingsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            SparrowFloatingButton(
+                icon = SparrowIcons.Add,
                 onClick = { onUiEvent(ControlPlaneSettingsUiEvent.AddClicked) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(Res.string.feature_settings_control_plane_add)
-                )
-            }
+                contentDescription = stringResource(Res.string.feature_settings_control_plane_add)
+            )
         }
     ) { innerPadding, listState ->
         val discovered = uiState.entries.filter { it.source != ControlPlaneUiSource.MANUAL }

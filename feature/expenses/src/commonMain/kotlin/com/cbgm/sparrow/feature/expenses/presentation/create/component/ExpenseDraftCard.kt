@@ -19,8 +19,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowChip
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -393,31 +392,12 @@ private fun CategorySelection(
     LazyRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
         items(ExpenseCategoryUi.entries.size) { index ->
             val category = ExpenseCategoryUi.entries[index]
-            FilterChip(
+            SparrowChip(
                 selected = category == draft.category,
                 onClick = { onUiEvent(CreateExpenseUiEvent.CategorySelected(category)) },
+                label = category.label(),
                 enabled = enabled,
-                label = {
-                    Text(
-                        text = category.label(),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    labelColor = MaterialTheme.colorScheme.onSurface,
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                leadingIcon = {
-                    Icon(
-                        imageVector = category.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                icon = category.icon
             )
         }
     }

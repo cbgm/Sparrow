@@ -14,17 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,8 +37,11 @@ import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -110,28 +109,21 @@ fun MessageSafetyDetailsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            CenterAlignedTopAppBar(
+            SparrowTopBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_safety_details_title),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_safety_details_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(MessageSafetyDetailsUiEvent.BackClicked) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = SparrowIcons.ArrowBack,
                             contentDescription = null
                         )
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = containerColor,
-                        scrolledContainerColor = containerColor,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                containerColor = containerColor
             )
         },
         bottomBar = { containerColor ->
@@ -238,20 +230,20 @@ fun MessageSafetyDetailsScreen(
             )
         },
         confirmButton = {
-            SparrowDestructiveButton(
+            SparrowDialogAction(
                 onClick = {
                     showBlockConfirmation = false
                     onUiEvent(MessageSafetyDetailsUiEvent.BlockUserClicked)
                 },
                 text = stringResource(Res.string.feature_safety_block_this_user_button),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = { showBlockConfirmation = false },
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )
@@ -328,18 +320,15 @@ private fun SectionTitle(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    Text(
+    SparrowSectionLabel(
         text = text,
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                start = MaterialTheme.spacing.screenPadding + MaterialTheme.spacing.base / 2,
+                start = MaterialTheme.spacing.screenPadding,
                 end = MaterialTheme.spacing.screenPadding,
                 bottom = MaterialTheme.spacing.base
-            ),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            )
     )
 }
 
@@ -374,7 +363,7 @@ private fun ReasonLink(
             color = MaterialTheme.colorScheme.onSurface
         )
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            imageVector = SparrowIcons.Chevron,
             contentDescription = null,
             modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon)

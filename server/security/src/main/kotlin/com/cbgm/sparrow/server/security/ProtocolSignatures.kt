@@ -8,6 +8,7 @@ import com.cbgm.sparrow.server.protocol.SignedNodeDirectory
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
+import com.cbgm.sparrow.server.security.ProtocolSignatures.directoryRootNodeId
 
 object ProtocolSignatures {
     fun signDescriptor(

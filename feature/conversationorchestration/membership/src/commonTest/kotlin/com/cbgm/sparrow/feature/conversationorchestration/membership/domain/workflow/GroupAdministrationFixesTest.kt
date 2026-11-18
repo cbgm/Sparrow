@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RefreshOwnedGroupVerificationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveGroupVerificationRoleUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.GroupAdministrationFixesTest.Companion.FAILING_CONTACT
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.administration.CreateGroupWorkflow
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRepository

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repos
 
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.ParkedMessageOperation
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository.Companion.RETENTION_MILLISECONDS
 
 /**
  * Operations whose message has not arrived yet, for example an edit that overtook its message after a

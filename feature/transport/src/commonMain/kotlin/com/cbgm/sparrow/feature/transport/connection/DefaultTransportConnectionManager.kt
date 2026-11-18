@@ -8,6 +8,9 @@ import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
+import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager.Companion.ALIAS_CLAIM_INTERVAL_MILLISECONDS
+import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager.Companion.ALIAS_CLAIM_RETRY_MILLISECONDS
+import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager.Companion.CONNECTION_TIMEOUT_MILLISECONDS
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.discovery.FailedNodeTracker
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint

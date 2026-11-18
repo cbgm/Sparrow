@@ -628,7 +628,15 @@ interface ChatDao {
                   AND messages.contentStatus = 'READABLE'
             ) + conversations.unseenLocalMessageCount
         ) AS unreadCount,
-        conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds
+        conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds,
+        EXISTS (
+            SELECT 1
+            FROM contact_public_identities
+            WHERE contact_public_identities.contactId = conversations.contactId
+              AND contact_public_identities.keyExchangeStatus = 'MUTUAL'
+              AND contact_public_identities.verificationStatus = 'VERIFIED'
+              AND contact_public_identities.verifiedByContact = 1
+        ) AS isMutuallyVerified
     FROM conversations
     LEFT JOIN contacts ON contacts.id = conversations.contactId
     LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id

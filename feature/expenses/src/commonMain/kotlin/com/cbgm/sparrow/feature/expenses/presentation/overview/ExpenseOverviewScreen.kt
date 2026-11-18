@@ -14,19 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,11 +35,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
-import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -183,17 +180,17 @@ private fun DeleteExpenseDialog(
         isVisible = expense != null,
         onDismissRequest = onDismiss,
         confirmButton = {
-            SparrowDestructiveButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.feature_expenses_delete_confirm),
                 onClick = { expense?.let(onConfirm) },
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.base_cancel),
                 onClick = onDismiss,
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         title = stringResource(Res.string.feature_expenses_delete_title),
@@ -214,12 +211,12 @@ private fun OverviewTopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+    SparrowTopBar(
+        containerColor = containerColor,
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
@@ -227,8 +224,7 @@ private fun OverviewTopBar(
         title = {
             Column {
                 Text(
-                    text = stringResource(Res.string.feature_expenses_board),
-                    style = MaterialTheme.typography.titleSmall
+                    text = stringResource(Res.string.feature_expenses_board)
                 )
                 if (uiState.currencyCode.isNotBlank()) {
                     Text(
@@ -237,7 +233,6 @@ private fun OverviewTopBar(
                             uiState.currencyCode,
                             uiState.activatedAtLabel
                         ),
-                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -551,22 +546,20 @@ private fun ExpensesSection(
                         } else {
                             listOf(
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    tone = SwipeActionTone.PRIMARY,
                                     onClick = { onEdit(expense) }
                                 ) {
                                     Icon(
-                                        Icons.Default.Edit,
+                                        SparrowIcons.Edit,
                                         contentDescription = stringResource(Res.string.feature_expenses_edit)
                                     )
                                 },
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError,
+                                    tone = SwipeActionTone.DESTRUCTIVE,
                                     onClick = { onDelete(expense) }
                                 ) {
                                     Icon(
-                                        Icons.Default.DeleteOutline,
+                                        SparrowIcons.Delete,
                                         contentDescription = stringResource(Res.string.feature_expenses_delete)
                                     )
                                 }

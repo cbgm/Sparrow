@@ -2,25 +2,22 @@ package com.cbgm.sparrow.feature.polls.presentation.create.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -67,16 +64,11 @@ fun PollOptionsEditor(
             }
         }
 
-        TextButton(
-            onClick = onAddOption,
+        SparrowLink(
+            text = stringResource(Res.string.feature_polls_add_option),
             enabled = options.size < PollConstants.MAX_OPTIONS,
-            contentPadding = PaddingValues(
-                MaterialTheme.spacing.zero
-            )
-        ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = null)
-            Text(text = stringResource(Res.string.feature_polls_add_option))
-        }
+            onClick = onAddOption
+        )
     }
 }
 

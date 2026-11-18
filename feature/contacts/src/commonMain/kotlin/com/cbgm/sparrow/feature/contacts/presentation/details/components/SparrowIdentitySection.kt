@@ -2,36 +2,29 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.SparrowIdentityUi
+import com.cbgm.sparrow.feature.identity.presentation.component.SparrowKeyBlock
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_not_verified
 import com.cbgm.sparrow.resources.feature_contacts_compare_before_trusting
-import com.cbgm.sparrow.resources.feature_contacts_encryption_fingerprint
-import com.cbgm.sparrow.resources.feature_contacts_identity_verified_description
-import com.cbgm.sparrow.resources.feature_contacts_mutually_verified
-import com.cbgm.sparrow.resources.feature_contacts_signing_fingerprint
 import com.cbgm.sparrow.resources.feature_contacts_sparrow_identity
 import com.cbgm.sparrow.resources.feature_contacts_verified_by_contact
 import com.cbgm.sparrow.resources.feature_contacts_verified_by_contact_description
 import com.cbgm.sparrow.resources.feature_contacts_verified_by_you
 import com.cbgm.sparrow.resources.feature_contacts_verified_by_you_description
 import com.cbgm.sparrow.resources.feature_contacts_verify_safety_number
+import com.cbgm.sparrow.resources.feature_identity_encryption_public_key
+import com.cbgm.sparrow.resources.feature_identity_encryption_public_key_description
+import com.cbgm.sparrow.resources.feature_identity_signing_public_key
+import com.cbgm.sparrow.resources.feature_identity_signing_public_key_description
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -42,10 +35,7 @@ internal fun SparrowIdentitySection(
     showTitle: Boolean = true
 ) {
     if (showTitle) {
-        SectionTitle(
-            icon = Icons.Default.Security,
-            title = stringResource(Res.string.feature_contacts_sparrow_identity)
-        )
+        SparrowSectionLabel(text = stringResource(Res.string.feature_contacts_sparrow_identity))
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
     }
 
@@ -53,19 +43,11 @@ internal fun SparrowIdentitySection(
         identity.mutualKeyExchange && identity.verifiedByContact
 
     when {
-        identity.verifiedByMe && verifiedByContact ->
-            ContactStatusRow(
-                icon = Icons.Default.Link,
-                iconColor = MaterialTheme.colorScheme.tertiary,
-                title = stringResource(Res.string.feature_contacts_mutually_verified),
-                titleColor = MaterialTheme.colorScheme.tertiary,
-                description = stringResource(Res.string.feature_contacts_identity_verified_description)
-            )
+        identity.verifiedByMe && verifiedByContact -> Unit
 
         identity.verifiedByMe ->
             ContactStatusRow(
-                icon = Icons.Default.Schedule,
-                iconColor = MaterialTheme.colorScheme.tertiary,
+                dotColor = MaterialTheme.colorScheme.primary,
                 title = stringResource(Res.string.feature_contacts_verified_by_you),
                 titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_you_description)
@@ -73,8 +55,7 @@ internal fun SparrowIdentitySection(
 
         verifiedByContact ->
             ContactStatusRow(
-                icon = Icons.Default.Security,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                dotColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.feature_contacts_verified_by_contact),
                 titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_contact_description)
@@ -82,43 +63,39 @@ internal fun SparrowIdentitySection(
 
         else ->
             ContactStatusRow(
-                icon = Icons.Default.LinkOff,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                dotColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.base_not_verified),
                 titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_compare_before_trusting)
             )
     }
 
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+    if (!identity.verifiedByMe || !verifiedByContact) {
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+    }
 
     if (safetyNumber != null) {
         if (!identity.verifiedByMe) {
             SparrowApprovalButton(
                 onClick = onVerifyIdentity,
                 fillMaxWidth = false,
-                content = {
-                    Icon(imageVector = Icons.Default.Security, contentDescription = null)
-                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-                    Text(text = stringResource(Res.string.feature_contacts_verify_safety_number))
-                }
+                text = stringResource(Res.string.feature_contacts_verify_safety_number)
             )
         }
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
     }
 
-    IdentityKeySection(
-        title = stringResource(Res.string.feature_contacts_signing_fingerprint),
-        fingerprint = identity.signingFingerprint
+    SparrowKeyBlock(
+        label = stringResource(Res.string.feature_identity_signing_public_key),
+        description = stringResource(Res.string.feature_identity_signing_public_key_description),
+        key = identity.signingFingerprint
     )
-    androidx.compose.material3.HorizontalDivider(
-        modifier = Modifier.padding(vertical = MaterialTheme.spacing.base),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-    )
-    IdentityKeySection(
-        title = stringResource(Res.string.feature_contacts_encryption_fingerprint),
-        fingerprint = identity.encryptionFingerprint
+    Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
+    SparrowKeyBlock(
+        label = stringResource(Res.string.feature_identity_encryption_public_key),
+        description = stringResource(Res.string.feature_identity_encryption_public_key_description),
+        key = identity.encryptionFingerprint
     )
 }
 

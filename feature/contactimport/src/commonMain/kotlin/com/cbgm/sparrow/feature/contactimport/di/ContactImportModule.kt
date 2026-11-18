@@ -49,9 +49,9 @@ val contactImportModule =
             )
         }
 
-        viewModel {
+        viewModel { (contactId: String) ->
             VerifyContactQrViewModel(
-                savedStateHandle = get(),
+                contactId = contactId,
                 decodeSharedIdentity = get(),
                 verifyContactByQr = get()
             )

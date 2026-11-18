@@ -31,7 +31,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -207,10 +207,10 @@ private fun AvatarSourceDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = onDismiss,
-                fillMaxWidth = false,
-                text = strings.cancel
+                text = strings.cancel,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowSwitch
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.polls.presentation.component.pollDurationLabel
@@ -144,7 +144,7 @@ private fun PollSettingSwitchRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        SparrowSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

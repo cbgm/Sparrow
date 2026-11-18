@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.identity.presentation.overview
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.util.extensions.toFingerprint
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.flatMap
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
@@ -166,6 +167,7 @@ class IdentityOverviewViewModel(
             _uiState.value =
                 IdentityOverviewUiState.Ready(
                     localPhoneNumber = phone,
+                    signingFingerprint = identity.signingPublicKey.toFingerprint(),
                     phoneVerificationLimitReached = phoneVerificationLimitReached,
                     backupStatus = backupStatus,
                     profilePicture = pictureState

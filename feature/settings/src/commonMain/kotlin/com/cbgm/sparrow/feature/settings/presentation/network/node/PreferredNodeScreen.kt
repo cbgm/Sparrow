@@ -10,18 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +25,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
@@ -168,7 +165,7 @@ private fun NodeChoiceRow(
                 ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        SparrowRadio(selected = selected, onClick = onClick)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -197,33 +194,26 @@ private fun PreferredNodeTopBar(
     onRefresh: () -> Unit
 ) {
     Column {
-        CenterAlignedTopAppBar(
+        SparrowTopBar(
             title = {
                 Text(
-                    text = stringResource(Res.string.feature_settings_preferred_node),
-                    style = MaterialTheme.typography.titleSmall
+                    text = stringResource(Res.string.feature_settings_preferred_node)
                 )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
                 }
             },
             actions = {
                 IconButton(onClick = onRefresh) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = SparrowIcons.Refresh,
                         contentDescription = stringResource(Res.string.feature_settings_control_planes_refresh)
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            )
+            containerColor = containerColor
         )
     }
 }

@@ -5,19 +5,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -95,28 +98,28 @@ private fun IdentityRepairPasswordDialog(
         text = {
             Column {
                 Text(stringResource(Res.string.feature_identity_repair_password_hint))
-                OutlinedTextField(
+                SparrowInputField(
                     value = uiState.password,
                     onValueChange = { onUiEvent(IdentityRepairUiEvent.PasswordChanged(it)) },
-                    label = { Text(stringResource(Res.string.feature_identity_backup_password)) },
+                    label = stringResource(Res.string.feature_identity_backup_password),
                     visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    isSingleLine = true
                 )
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 enabled = uiState.canConfirmPassword,
                 onClick = { onUiEvent(IdentityRepairUiEvent.PasswordConfirmed) },
-                text = stringResource(Res.string.feature_identity_repair_restore),
-                fillMaxWidth = false
+                text = stringResource(Res.string.feature_identity_repair_restore)
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = { onUiEvent(IdentityRepairUiEvent.PasswordDismissed) },
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )
@@ -133,17 +136,16 @@ private fun IdentityResetConfirmDialog(
         title = stringResource(Res.string.feature_identity_repair_reset),
         text = { Text(stringResource(Res.string.feature_identity_repair_reset_message)) },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 onClick = { onUiEvent(IdentityRepairUiEvent.ResetConfirmed) },
-                text = stringResource(Res.string.feature_identity_repair_reset_confirm),
-                fillMaxWidth = false
+                text = stringResource(Res.string.feature_identity_repair_reset_confirm)
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = { onUiEvent(IdentityRepairUiEvent.ResetDismissed) },
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

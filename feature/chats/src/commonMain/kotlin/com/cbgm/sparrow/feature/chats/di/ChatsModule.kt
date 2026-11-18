@@ -27,6 +27,7 @@ import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOve
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.contact.ReconnectContactUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveConversationQueueAvailabilityUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
@@ -129,6 +130,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::LoadOlderMessagesUseCase)
     singleOf(::FindMessageHistoryCursorUseCase)
     singleOf(::EncodeContactForSharingUseCase)
+    singleOf(::ReconnectContactUseCase)
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::ObserveConversationQueueAvailabilityUseCase)
@@ -226,9 +228,10 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
         )
     }
 
-    viewModel {
+    viewModel { (groupId: String, contactId: String) ->
         GroupMemberQrVerificationViewModel(
-            savedStateHandle = get(),
+            groupId = groupId,
+            contactId = contactId,
             decodeSharedIdentity = get(),
             getRemoteIdentity = get(),
             orchestrator = get()

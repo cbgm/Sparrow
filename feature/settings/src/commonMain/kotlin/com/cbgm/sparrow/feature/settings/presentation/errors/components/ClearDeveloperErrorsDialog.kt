@@ -2,11 +2,8 @@ package com.cbgm.sparrow.feature.settings.presentation.errors.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -36,21 +32,19 @@ internal fun ClearDeveloperErrorsDialog(
         isVisible = isVisible,
         onDismissRequest = onDismiss,
         confirmButton = {
-            Row {
-                SparrowDestructiveButton(
-                    onClick = onConfirm,
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(Res.string.feature_settings_clear_saved_errors)
-                )
-                Spacer(Modifier.width(MaterialTheme.spacing.base))
-                SparrowOutlinedButton(
-                    onClick = onDismiss,
-                    fillMaxWidth = false,
-                    text = stringResource(Res.string.base_cancel)
-                )
-            }
+            SparrowDialogAction(
+                onClick = onConfirm,
+                text = stringResource(Res.string.feature_settings_clear_saved_errors),
+                color = MaterialTheme.colorScheme.error
+            )
         },
-        dismissButton = {},
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
         title = stringResource(Res.string.feature_settings_clear_saved_errors_title),
         text = {
             Text(

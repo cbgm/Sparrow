@@ -13,10 +13,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
+import com.cbgm.sparrow.feature.identity.presentation.component.IdentityVerificationScreen
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import org.jetbrains.compose.resources.stringResource
@@ -31,7 +31,9 @@ private enum class ContactDetailsContent {
 fun ContactDetailsRoute(
     contactId: String,
     openVerification: Boolean,
+    qrScanner: @Composable (enabled: Boolean) -> Unit,
     onShareContact: (ContactDetailsContactUi) -> Unit,
+    onReconnect: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ContactDetailsViewModel = koinViewModel()
 ) {
@@ -103,6 +105,7 @@ fun ContactDetailsRoute(
                             ContactDetailsUiEvent.ShareContactClicked -> {
                                 contentState?.contact?.let(onShareContact)
                             }
+                            ContactDetailsUiEvent.ReconnectConfirmed -> onReconnect()
                             ContactDetailsUiEvent.VerifyIdentityClicked -> {
                                 if (contentState?.canVerify == true) {
                                     content = ContactDetailsContent.VerifyIdentity
@@ -130,9 +133,7 @@ fun ContactDetailsRoute(
                         onConfirm = {
                             viewModel.onUiEvent(ContactDetailsUiEvent.ConfirmVerificationClicked)
                         },
-                        onScanQrCode = {
-                            viewModel.onUiEvent(ContactDetailsUiEvent.ScanQrCodeClicked)
-                        },
+                        scanner = qrScanner,
                         onBack = {
                             if (!contentState.isSavingVerification) {
                                 viewModel.onUiEvent(ContactDetailsUiEvent.VerificationBackClicked)

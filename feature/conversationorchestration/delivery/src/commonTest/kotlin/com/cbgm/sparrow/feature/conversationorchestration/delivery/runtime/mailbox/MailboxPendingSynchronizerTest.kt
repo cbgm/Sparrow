@@ -1,6 +1,9 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizerTest.Companion.LETTER
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizerTest.Companion.SPOOFED_LETTER
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizerTest.Companion.UNCHECKED_LETTER
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint

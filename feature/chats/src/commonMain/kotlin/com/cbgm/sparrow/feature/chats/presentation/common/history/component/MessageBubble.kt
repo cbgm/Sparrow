@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -17,13 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,9 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -61,6 +60,7 @@ import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
@@ -78,7 +78,6 @@ import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyW
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_delivered
-import com.cbgm.sparrow.resources.feature_chats_encrypted
 import com.cbgm.sparrow.resources.feature_chats_failed
 import com.cbgm.sparrow.resources.feature_chats_invalid_message_packet
 import com.cbgm.sparrow.resources.feature_chats_invalid_packet
@@ -264,8 +263,7 @@ private fun SenderLabel(message: MessageBubbleUi) {
             bottom = MaterialTheme.spacing.messageBubble.senderBottomPadding
         ),
         style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
@@ -517,18 +515,12 @@ private fun MessageBubbleSurface(
             baseColor = state.bubbleColor,
             highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Subtle)
         )
-    val bubbleShape =
-        MessageBubbleShape(
-            isMine = message.isMine,
-            cornerRadius = bubbleShapes.cornerRadius,
-            tailWidth = bubbleShapes.tailWidth,
-            tailHeight = bubbleShapes.tailHeight,
-            tailReturnOffset = bubbleShapes.tailReturnOffset
-        )
+    val bubbleShape = if (message.isMine) bubbleShapes.mine else bubbleShapes.theirs
 
-    val contentPadding =
+    val verticalPadding =
         if (hasInnerPadding) MaterialTheme.spacing.base else MaterialTheme.spacing.zero
-    val tailPadding = bubbleShapes.tailWidth + contentPadding
+    val horizontalPadding =
+        if (hasInnerPadding) MaterialTheme.spacing.small else MaterialTheme.spacing.zero
 
     Surface(
         modifier = modifier
@@ -539,14 +531,8 @@ private fun MessageBubbleSurface(
         color = bubbleColor,
         contentColor = state.contentColor,
         shape = bubbleShape,
-        border = BorderStroke(
-            1.dp,
-            if (state.isContentFailed) {
-                MaterialTheme.colorScheme.error.copy(alpha = 0.40f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-            }
-        )
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.40f))
+            .takeIf { state.isContentFailed }
     ) {
         Column {
             reply?.let { replyPreview ->
@@ -560,11 +546,9 @@ private fun MessageBubbleSurface(
 
             Box(
                 modifier =
-                    Modifier.absolutePadding(
-                        left = if (message.isMine) contentPadding else tailPadding,
-                        top = contentPadding,
-                        right = if (message.isMine) tailPadding else contentPadding,
-                        bottom = contentPadding
+                    Modifier.padding(
+                        horizontal = horizontalPadding,
+                        vertical = verticalPadding
                     )
             ) {
                 content()
@@ -694,8 +678,14 @@ private fun MetadataIcon(
     )
 }
 
+/** Shown only when a message is not end-to-end encrypted or could not be read; encrypted is the norm. */
 @Composable
 private fun SecurityIndicator(message: MessageBubbleUi) {
+    val isNormal =
+        message.contentStatus == MessageContentStatus.READABLE &&
+            message.security == MessageSecurity.END_TO_END_ENCRYPTED
+    if (isNormal) return
+
     val text =
         when (message.contentStatus) {
             MessageContentStatus.INVALID_PACKET -> stringResource(Res.string.feature_chats_invalid_packet)
@@ -703,23 +693,20 @@ private fun SecurityIndicator(message: MessageBubbleUi) {
             MessageContentStatus.TRANSPORT_DECRYPTION_FAILED ->
                 stringResource(Res.string.feature_chats_unable_decrypt_secure_message)
 
-            MessageContentStatus.READABLE ->
-                when (message.security) {
-                    MessageSecurity.INSECURE -> stringResource(Res.string.feature_chats_not_encrypted)
-                    MessageSecurity.END_TO_END_ENCRYPTED -> stringResource(Res.string.feature_chats_encrypted)
-                }
+            MessageContentStatus.READABLE -> stringResource(Res.string.feature_chats_not_encrypted)
         }
 
     val icon =
-        when {
-            message.contentStatus != MessageContentStatus.READABLE -> Icons.Default.ErrorOutline
-            message.security == MessageSecurity.END_TO_END_ENCRYPTED -> Icons.Default.Lock
-            else -> Icons.Default.LockOpen
+        when (message.contentStatus) {
+            MessageContentStatus.READABLE -> Icons.Default.LockOpen
+            MessageContentStatus.INVALID_PACKET,
+            MessageContentStatus.INVALID_PLAINTEXT_PACKET,
+            MessageContentStatus.TRANSPORT_DECRYPTION_FAILED -> Icons.Default.ErrorOutline
         }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         MetadataIcon(icon)
-        Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
@@ -736,74 +723,51 @@ private fun DeliveryIndicator(
     when (deliveryStatus) {
         MessageDeliveryStatus.NOT_APPLICABLE -> Unit
 
-        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
-        MessageDeliveryStatus.QUEUED ->
-            DeliveryLabel(
-                text = stringResource(
-                    if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
-                        Res.string.feature_chats_waiting_for_authorization
-                    } else {
-                        Res.string.feature_chats_queued
-                    }
-                ),
-                icon = { MetadataIcon(Icons.Default.Schedule) }
-            )
+        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION ->
+            DeliveryLabel(stringResource(Res.string.feature_chats_waiting_for_authorization))
 
-        MessageDeliveryStatus.SENDING ->
-            DeliveryLabel(
-                text = stringResource(Res.string.feature_chats_sending),
-                icon = {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-                    )
-                }
-            )
+        MessageDeliveryStatus.QUEUED -> DeliveryLabel(stringResource(Res.string.feature_chats_queued))
+        MessageDeliveryStatus.SENDING -> DeliveryLabel(stringResource(Res.string.feature_chats_sending))
+        MessageDeliveryStatus.SENT ->
+            DeliveryDots(reached = 1, description = stringResource(Res.string.feature_chats_sent))
 
-        MessageDeliveryStatus.SENT -> CheckDeliveryLabel(stringResource(Res.string.feature_chats_sent))
         MessageDeliveryStatus.DELIVERED ->
-            DoubleCheckDeliveryLabel(
-                text = stringResource(Res.string.feature_chats_delivered),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            DeliveryDots(reached = 2, description = stringResource(Res.string.feature_chats_delivered))
 
         MessageDeliveryStatus.READ ->
-            DoubleCheckDeliveryLabel(
-                text = stringResource(Res.string.feature_chats_read),
-                color = MaterialTheme.colorScheme.primary
-            )
+            DeliveryDots(reached = 3, description = stringResource(Res.string.feature_chats_read))
 
         MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
     }
 }
 
+/** Three stops on a path: sent, delivered, read. The stops reached so far are cyan. */
 @Composable
-private fun CheckDeliveryLabel(text: String) {
-    DeliveryLabel(
-        text = text,
-        icon = { MetadataIcon(Icons.Default.Check) }
-    )
-}
-
-@Composable
-private fun DoubleCheckDeliveryLabel(
-    text: String,
-    color: Color
+private fun DeliveryDots(
+    reached: Int,
+    description: String
 ) {
-    DeliveryLabel(
-        text = text,
-        textColor = color,
-        icon = {
-            Row {
-                MetadataIcon(Icons.Default.Check, tint = color)
-                MetadataIcon(
-                    Icons.Default.Check,
-                    modifier = Modifier.padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
-                    tint = color
-                )
-            }
+    val on = MaterialTheme.colorScheme.primary
+    val off = MaterialTheme.colorScheme.outlineVariant
+    val path = MaterialTheme.colorScheme.divider
+    Canvas(
+        modifier = Modifier
+            .size(width = Dimens.MessageBubble.deliveryDotsWidth, height = Dimens.MessageBubble.deliveryDotsHeight)
+            .semantics { contentDescription = description }
+    ) {
+        val radius = Dimens.MessageBubble.deliveryDotRadius.toPx()
+        val stroke = Dimens.MessageBubble.deliveryLineWidth.toPx()
+        val centerY = size.height / 2f
+        val step = (size.width - radius * 2f) / 2f
+        val stops = List(3) { index -> Offset(radius + step * index, centerY) }
+        drawLine(color = path, start = stops.first(), end = stops.last(), strokeWidth = stroke)
+        if (reached > 1) {
+            drawLine(color = on, start = stops.first(), end = stops[reached - 1], strokeWidth = stroke)
         }
-    )
+        stops.forEachIndexed { index, center ->
+            drawCircle(color = if (index < reached) on else off, radius = radius, center = center)
+        }
+    }
 }
 
 @Composable
@@ -831,20 +795,12 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
 }
 
 @Composable
-private fun DeliveryLabel(
-    text: String,
-    icon: @Composable () -> Unit,
-    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        icon()
-        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = textColor
-        )
-    }
+private fun DeliveryLabel(text: String) {
+    Text(
+        text = text.lowercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.outline
+    )
 }
 
 @Composable
@@ -857,8 +813,10 @@ private fun bubbleState(message: MessageBubbleUi): BubbleState =
                 bubbleColor =
                     if (message.isMine) {
                         MaterialTheme.colorScheme.primaryContainer
+                            .copy(alpha = Alpha.MessageBubble.mine)
+                            .compositeOver(MaterialTheme.colorScheme.background)
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
+                        MaterialTheme.colorScheme.surfaceContainer
                     },
                 contentColor = if (message.isMine) {
                     MaterialTheme.colorScheme.onPrimaryContainer

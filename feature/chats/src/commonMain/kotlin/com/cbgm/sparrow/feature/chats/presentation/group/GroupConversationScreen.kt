@@ -16,12 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -191,13 +189,7 @@ fun GroupConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                background = {
-                    PatternBackground(
-                        modifier = Modifier.fillMaxSize(),
-                        backgroundColor = MaterialTheme.colorScheme.background,
-                        alpha = Alpha.PatternBackground.conversation
-                    )
-                },
+                containerColor = MaterialTheme.colorScheme.background,
                 topBar = { containerColor ->
                     Column {
                         HeaderContent(

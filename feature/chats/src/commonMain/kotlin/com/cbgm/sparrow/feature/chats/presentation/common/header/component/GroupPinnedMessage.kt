@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.header.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,14 +12,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +36,8 @@ import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -83,11 +81,7 @@ internal fun GroupPinnedMessageBar(
             )
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(
-            Dimens.Base.borderStrokeWidth,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
-        ),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.OpaqueBar)
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         when (pin) {
             is GroupPinUi.Expenses -> ExpensePinContent(pin = pin.summary)
@@ -275,26 +269,20 @@ private fun PinnedMessageTopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
+    SparrowTopBar(
         windowInsets = WindowInsets(MaterialTheme.spacing.zero),
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_chats_pinned_message),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_chats_pinned_message)
             )
         },
         actions = {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null
+                    imageVector = SparrowIcons.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.TopBar.iconSize)
                 )
             }
         }

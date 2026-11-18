@@ -26,6 +26,14 @@ actual fun CameraScanner(
 }
 
 @Composable
+actual fun QrCodePreview(
+    onScanned: (String) -> Unit,
+    modifier: Modifier
+) {
+    Box(modifier = modifier)
+}
+
+@Composable
 actual fun rememberCameraScannerLauncher(
     onResult: (CameraScanResult) -> Unit,
     onDismissed: () -> Unit,

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.presence
 
+import com.cbgm.sparrow.server.presence.AliasClaimKeys.Companion.MAXIMUM_CLAIM_AGE_MILLISECONDS
 import com.cbgm.sparrow.server.protocol.ALIAS_CLAIM_CONTEXT
 import com.cbgm.sparrow.server.protocol.AliasClaim
 import com.cbgm.sparrow.server.protocol.InvitationRoute

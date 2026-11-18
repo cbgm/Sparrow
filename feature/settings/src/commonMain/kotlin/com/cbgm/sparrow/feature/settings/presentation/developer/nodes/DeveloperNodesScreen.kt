@@ -10,16 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NodeDiagnosticRow
@@ -119,7 +116,7 @@ private fun PreferredNodeLink(onClick: () -> Unit) {
                 )
             }
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = SparrowIcons.Chevron,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -129,22 +126,16 @@ private fun PreferredNodeLink(onClick: () -> Unit) {
 
 @Composable
 private fun TopBar(containerColor: Color, onBack: () -> Unit) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_network_nodes),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_settings_network_nodes)
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
             }
         }
     )

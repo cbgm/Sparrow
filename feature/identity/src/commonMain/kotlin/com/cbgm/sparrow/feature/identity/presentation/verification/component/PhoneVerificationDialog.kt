@@ -5,16 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCodeField
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.device.PhoneVerificationHost
 import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
@@ -94,29 +93,27 @@ private fun PhoneVerificationDialogContent(
                     else -> PhoneVerificationCodeInput(state = state, onUiEvent = onUiEvent)
                 }
                 if (state.canSkip) {
-                    TextButton(
+                    SparrowLink(
+                        text = stringResource(Res.string.feature_identity_phone_verification_skip),
                         enabled = state.stage != PhoneVerificationStageUi.CONFIRMING,
                         onClick = { onUiEvent(PhoneVerificationUiEvent.SkipClicked) }
-                    ) {
-                        Text(stringResource(Res.string.feature_identity_phone_verification_skip))
-                    }
+                    )
                 }
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 enabled = state.canConfirm,
                 onClick = { onUiEvent(PhoneVerificationUiEvent.ConfirmClicked) },
-                text = stringResource(Res.string.feature_identity_phone_verification_confirm),
-                fillMaxWidth = false
+                text = stringResource(Res.string.feature_identity_phone_verification_confirm)
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 enabled = state.stage != PhoneVerificationStageUi.CONFIRMING,
                 onClick = { onUiEvent(PhoneVerificationUiEvent.DismissClicked) },
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         isVisible = state.isVisible
@@ -142,22 +139,19 @@ private fun PhoneVerificationCodeInput(
         length = PhoneVerificationUiState.CODE_LENGTH,
         isEnabled = state.stage == PhoneVerificationStageUi.CODE
     )
-    TextButton(
+    SparrowLink(
+        text =
+            if (state.resendInSeconds > 0) {
+                stringResource(
+                    Res.string.feature_identity_phone_verification_resend_in,
+                    state.resendInSeconds
+                )
+            } else {
+                stringResource(
+                    Res.string.feature_identity_phone_verification_resend
+                )
+            },
         enabled = state.canResend,
         onClick = { onUiEvent(PhoneVerificationUiEvent.ResendClicked) }
-    ) {
-        Text(
-            text =
-                if (state.resendInSeconds > 0) {
-                    stringResource(
-                        Res.string.feature_identity_phone_verification_resend_in,
-                        state.resendInSeconds
-                    )
-                } else {
-                    stringResource(
-                        Res.string.feature_identity_phone_verification_resend
-                    )
-                }
-        )
-    }
+    )
 }

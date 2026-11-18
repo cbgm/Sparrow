@@ -8,7 +8,6 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.sparrow.feature.chats.presentation.details.screen.DetailsRoute
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationRoute
-import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.sparrow.feature.safety.presentation.details.MessageSafetyDetailsRoute
 import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromLeft
@@ -90,13 +89,6 @@ fun NavGraphBuilder.chatsNavGraph() {
             target = DetailsTarget.Group(conversationId = destination.conversationId),
             openVerification = false,
             requestGroupLeave = destination.requestLeave
-        )
-    }
-
-    composable<AppRoute.VerifyIdentityQr> { backStackEntry ->
-        val destination = backStackEntry.toRoute<AppRoute.VerifyIdentityQr>()
-        VerificationRoute(
-            groupId = destination.groupId
         )
     }
 }

@@ -2,11 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,15 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -112,18 +105,20 @@ fun DirectConversationScreen(
         title = stringResource(Res.string.feature_chats_reconnect_contact),
         text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 onClick = {
                     showReconnectConfirmation = false
                     onReconnectRequested()
                 },
-                text = stringResource(Res.string.feature_chats_reconnect_confirm)
+                text = stringResource(Res.string.feature_chats_reconnect_confirm),
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = { showReconnectConfirmation = false },
-                text = stringResource(Res.string.feature_chats_reconnect_cancel)
+                text = stringResource(Res.string.feature_chats_reconnect_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         isVisible = showReconnectConfirmation
@@ -192,30 +187,13 @@ fun DirectConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                background = {
-                    PatternBackground(
-                        modifier = Modifier.fillMaxSize(),
-                        backgroundColor = MaterialTheme.colorScheme.background,
-                        alpha = Alpha.PatternBackground.conversation
-                    )
-                },
+                containerColor = MaterialTheme.colorScheme.background,
                 topBar = { containerColor ->
                     HeaderContent(
                         model = uiState.toHeaderUiModel(),
                         containerColor = containerColor,
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
-                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
-                        actions = {
-                            IconButton(
-                                onClick = { showReconnectConfirmation = true },
-                                enabled = !reconnectBusy && !uiState.isLoading
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = stringResource(Res.string.feature_chats_reconnect_contact)
-                                )
-                            }
-                        }
+                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) }
                     ) {
                         if (!uiState.isLoading) {
                             SecurityBanner(
@@ -223,7 +201,8 @@ fun DirectConversationScreen(
                                 identitySetupMode = uiState.identitySetupMode,
                                 isChatAuthorized = uiState.isChatAuthorized,
                                 onVerifyIdentity = { onUiEvent(DirectConversationUiEvent.VerifyIdentityClicked) },
-                                onManualIdentitySetup = { showIdentitySetupDialog = true }
+                                onManualIdentitySetup = { showIdentitySetupDialog = true },
+                                onReconnect = { showReconnectConfirmation = !reconnectBusy }
                             )
                         }
                         if (waitingForRoute) {

@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -23,8 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,11 +36,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
-import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -143,20 +139,20 @@ fun ExpenseDetailScreen(
         isVisible = confirmDeletion,
         onDismissRequest = { confirmDeletion = false },
         confirmButton = {
-            SparrowDestructiveButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.feature_expenses_delete_confirm),
                 onClick = {
                     confirmDeletion = false
                     onUiEvent(ExpenseDetailUiEvent.DeleteConfirmed)
                 },
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.base_cancel),
                 onClick = { confirmDeletion = false },
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         title = stringResource(Res.string.feature_expenses_delete_title),
@@ -178,33 +174,32 @@ private fun DetailTopBar(
     onUiEvent: (ExpenseDetailUiEvent) -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+    SparrowTopBar(
+        containerColor = containerColor,
         navigationIcon = {
             IconButton(onClick = { onUiEvent(ExpenseDetailUiEvent.BackClicked) }) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
         },
         title = {
             Text(
-                text = stringResource(Res.string.feature_expenses_detail_title),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_expenses_detail_title)
             )
         },
         actions = {
             if (canChange) {
                 IconButton(onClick = { onUiEvent(ExpenseDetailUiEvent.EditClicked) }) {
                     Icon(
-                        Icons.Default.Edit,
+                        SparrowIcons.Edit,
                         contentDescription = stringResource(Res.string.feature_expenses_edit)
                     )
                 }
                 IconButton(onClick = onDeleteClick) {
                     Icon(
-                        Icons.Default.DeleteOutline,
+                        SparrowIcons.Delete,
                         contentDescription = stringResource(Res.string.feature_expenses_delete),
                         tint = MaterialTheme.colorScheme.error
                     )

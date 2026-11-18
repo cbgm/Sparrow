@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.network
 
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -191,17 +192,16 @@ private fun AddControlPlaneDialog(
             )
         },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 onClick = onConfirm,
-                fillMaxWidth = false,
                 text = stringResource(Res.string.feature_settings_control_plane_add)
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = onDismiss,
-                fillMaxWidth = false,
-                text = stringResource(Res.string.base_cancel)
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

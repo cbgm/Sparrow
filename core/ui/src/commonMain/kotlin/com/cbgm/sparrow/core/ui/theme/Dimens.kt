@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.ui.theme
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 object Dimens {
     object Base {
@@ -50,7 +51,10 @@ object Dimens {
     object Avatar {
         val defaultSize = 48.dp
         val sourceActionSize = 22.dp
-        val editIconSize = 36.dp
+        val profileSize = 112.dp
+        val ringGap = 3.dp
+        val ringStroke = 1.2.dp
+        val ringDash = 3.dp
     }
 
     object Badge {
@@ -64,10 +68,53 @@ object Dimens {
         val actionLinePressedWidth = 52.dp
         val actionLineThickness = 1.dp
         val minTouchHeight = 48.dp
+        val height = 50.dp
         val borderWidth = 1.dp
         val iconButtonSize = 44.dp
         val loadingIndicatorSize = 18.dp
         val loadingIndicatorStrokeWidth = 2.dp
+    }
+
+    object SectionLabel {
+        val letterSpacing = 1.5.sp
+    }
+
+    object IdentityOverviewScreen {
+        val keyRingsSize = 200.dp
+        val keyRingStroke = 1.5.dp
+        val keyRingGap = 9.dp
+    }
+
+    object MediaGrid {
+        val gap = 2.dp
+    }
+
+    object Tabs {
+        val height = 48.dp
+        val lineWidth = 16.dp
+        val lineHeight = 1.5.dp
+        val letterSpacing = 0.8.sp
+    }
+
+    object FloatingButton {
+        val size = 48.dp
+    }
+
+    object Chip {
+        val iconSize = 16.dp
+    }
+
+    object TopBar {
+        val iconSize = 24.dp
+    }
+
+    object Banner {
+        val iconSize = 18.dp
+    }
+
+    object Dialog {
+        val padding = 22.dp
+        val actionHeight = 52.dp
     }
 
     object Card {
@@ -89,6 +136,10 @@ object Dimens {
         val progressSize = 12.dp
         val progressStrokeWidth = 1.5.dp
         val retrySize = 28.dp
+        val deliveryDotsWidth = 30.dp
+        val deliveryDotsHeight = 8.dp
+        val deliveryDotRadius = 2.dp
+        val deliveryLineWidth = 1.dp
         val retryIconSize = 16.dp
         val staticBubbleSize = 200.dp
     }
@@ -126,9 +177,10 @@ object Dimens {
         val messageFieldHeight = 30.dp
         val messageFieldHeightMax = 300.dp
         val buttonHeight = 29.dp
-        val composerHeight = 30.5.dp
         val overlap = 10.dp
         val iconSize = 16.dp
+        val actionSize = 40.dp
+        val actionIconSize = 22.dp
     }
 
     object MessageAttachment {
@@ -141,9 +193,10 @@ object Dimens {
     object MediaSelection {
         val previewPlayIconSize = 16.dp
         val previewRemoveButtonSize = 20.dp
-        val previewRemoveIconSize = 14.dp
-        val previewSize = 50.dp
-        val filePreviewWidth = 190.dp
+        val previewRemoveIconSize = 12.dp
+        val removeBadgeOverhang = 7.dp
+        val previewSize = 56.dp
+        val filePreviewWidth = 160.dp
         val filePreviewIconSize = 24.dp
     }
 
@@ -151,35 +204,12 @@ object Dimens {
         val playIconSize = 40.dp
     }
 
-    object PatternBackground {
-        val firstIconSize = 30.dp
-        val firstOffsetX = 10.dp
-        val firstOffsetY = 12.dp
-        val secondIconSize = 44.dp
-        val secondOffsetX = 72.dp
-        val secondOffsetY = 4.dp
-        val thirdIconSize = 26.dp
-        val thirdOffsetX = 142.dp
-        val thirdOffsetY = 34.dp
-        val fourthIconSize = 38.dp
-        val fourthOffsetX = 26.dp
-        val fourthOffsetY = 86.dp
-        val fifthIconSize = 32.dp
-        val fifthOffsetX = 104.dp
-        val fifthOffsetY = 104.dp
-        val sixthIconSize = 22.dp
-        val sixthOffsetX = 156.dp
-        val sixthOffsetY = 112.dp
-        val cellWidth = 190.dp
-        val cellHeight = 150.dp
-    }
-
     object SwipeRevealActions {
         val actionWidth = 80.dp
     }
 
     object MainScreen {
-        val navigationIconSize = 28.dp
+        val bottomBarHeight = 60.dp
     }
 
     object AppLockScreen {
@@ -188,15 +218,20 @@ object Dimens {
 
     object OverviewScreen {
         val unreadBadgeMinSize = 20.dp
-        val emptyStateIconContainerSize = 80.dp
-        val emptyStateIconSize = 36.dp
+        val emptyGraphicWidth = 96.dp
+        val emptyGraphicHeight = 16.dp
+        val emptyGraphicDotRadius = 5.dp
+        val emptyGraphicContactRadius = 6.dp
+        val emptyGraphicStroke = 1.dp
     }
 
     object GroupDetailsScreen {
+        val memberStatusIconSize = 18.dp
+        val cameraBadgeSize = 28.dp
+        val cameraIconSize = 16.dp
         val avatarProgressStrokeWidth = 3.dp
         val verificationProgressSize = 20.dp
         val loadingSize = 160.dp
-        val avatarSize = 128.dp
         val avatarProgressSize = 32.dp
         val sectionIconSize = 22.dp
     }
@@ -204,14 +239,12 @@ object Dimens {
     object GroupConversationScreen {
         val topBarAvatarSize = 36.dp
         val avatarSize = 28.dp
-        val noticeIconSize = 15.dp
         val pinBarWidth = 2.dp
     }
 
     object DirectConversationScreen {
         val topBarAvatarSize = 36.dp
         val authorizationIconSize = 16.dp
-        val statusIconSize = 14.dp
     }
 
     object OnboardingScreen {
@@ -247,10 +280,7 @@ object Dimens {
         val loadingSize = 160.dp
         val sectionIconSize = 18.dp
         val rowIconSize = 20.dp
-        val avatarSize = 112.dp
-        val verificationBadgeSize = 26.dp
-        val verificationBadgeIconSize = 14.dp
-        val headerStatusIconSize = 16.dp
+        val statusDotSize = 7.dp
     }
 
     object ContactsScreen {
@@ -261,7 +291,6 @@ object Dimens {
         val emptyStateIconContainerSize = 80.dp
         val emptyStateIconSize = 36.dp
         val addContactButtonSize = 50.dp
-        val addContactIconSize = 28.dp
         val menuIconContainerSize = 40.dp
         val dragHandleWidth = 36.dp
         val dragHandleHeight = 4.dp
@@ -280,7 +309,6 @@ object Dimens {
         val iconBadgeSize = 80.dp
         val iconBadgeBorderWidth = 1.dp
         val iconBadgeIconSize = 36.dp
-        val publicKeyIconSize = 16.dp
     }
 
     object SettingsScreen {
@@ -297,17 +325,35 @@ object Dimens {
     }
 
     object ImportIdentityScreen {
-        val headerIconSize = 18.dp
         val progressSize = 20.dp
         val resultIconSize = 18.dp
     }
 
-    object IdentityVerificationScreen {
-        val iconSize = 20.dp
+    object TypingIndicator {
+        val dotSize = 5.dp
+        val dotGap = 3.dp
+    }
+
+    object HoldAction {
+        val size = 76.dp
+        val iconSize = 24.dp
+        val outerStroke = 1.5.dp
+        val innerStroke = 1.dp
+        val progressStroke = 2.dp
+        val ringGap = 6.dp
+    }
+
+    object ScanFrame {
+        val height = 140.dp
+        val scanningHeight = 280.dp
+        val iconSize = 26.dp
+        val cornerInset = 14.dp
+        val cornerLength = 16.dp
+        val cornerStroke = 1.5.dp
     }
 
     object AttachmentBar {
-        val buttonSize = 50.dp
-        val iconSize = 25.dp
+        val buttonSize = 44.dp
+        val iconSize = 22.dp
     }
 }

@@ -2,17 +2,16 @@ package com.cbgm.sparrow.feature.chats.presentation.common.header
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.HeaderTitle
 import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiModel
 import com.cbgm.sparrow.resources.Res
@@ -31,20 +30,16 @@ fun HeaderContent(
     belowHeader: @Composable () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TopAppBar(
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+        SparrowTopBar(
+            containerColor = containerColor,
             title = { HeaderTitle(model = model, onClick = onHeaderClick) },
             actions = { actions() },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(Res.string.base_back)
+                        imageVector = SparrowIcons.ArrowBack,
+                        contentDescription = stringResource(Res.string.base_back),
+                        modifier = Modifier.size(Dimens.TopBar.iconSize)
                     )
                 }
             }

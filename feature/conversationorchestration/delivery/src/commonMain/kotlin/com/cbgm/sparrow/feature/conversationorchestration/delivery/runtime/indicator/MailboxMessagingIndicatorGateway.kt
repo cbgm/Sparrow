@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicatorGateway.Companion.LIFETIME_MILLISECONDS
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingTransportPayloadFactory
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway

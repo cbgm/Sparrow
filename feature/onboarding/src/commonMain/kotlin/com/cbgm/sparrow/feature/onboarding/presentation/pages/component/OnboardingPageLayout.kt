@@ -17,10 +17,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -28,15 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
-import com.cbgm.sparrow.core.ui.component.SparrowAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 
-/**
- * One onboarding page: its graphic at the top, then the text; at the bottom right the page's [action] if it has one, in
- * the middle a [hint].
- * The page number sits at the bottom left, drawn by the screen ([PageNumber]) with the same bottom bar placement.
- */
 @Composable
 fun OnboardingPageLayout(
     graphicHeight: Dp,
@@ -69,24 +61,6 @@ fun OnboardingPageLayout(
     }
 }
 
-/** The page's step forward at the bottom right: a word and a thin line, fading in from [startMillis]. */
-@Composable
-fun OnboardingAction(
-    text: String,
-    clock: State<Long>,
-    startMillis: Long,
-    onClick: () -> Unit,
-    enabled: Boolean = true
-) {
-    SparrowAction(
-        text = text,
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.graphicsLayer { alpha = clock.progress(startMillis, ACTION_FADE_MILLISECONDS) }
-    )
-}
-
-/** "02 / 05" at the bottom left, the current page brighter. */
 @Composable
 fun PageNumber(
     page: Int,
@@ -106,7 +80,6 @@ fun PageNumber(
     }
 }
 
-/** Titles: large, light and a little tighter than usual. */
 @Composable
 @ReadOnlyComposable
 fun onboardingTitleStyle(): TextStyle =
@@ -125,6 +98,5 @@ private fun Modifier.bottomBar(): Modifier =
 
 private fun twoDigits(number: Int): String = number.toString().padStart(2, '0')
 
-private const val ACTION_FADE_MILLISECONDS = 800L
 private const val PAGE_NUMBER_SPACING = 1.5f
 private const val TITLE_SPACING = -0.5f

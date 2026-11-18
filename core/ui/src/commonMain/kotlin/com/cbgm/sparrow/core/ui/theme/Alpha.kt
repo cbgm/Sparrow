@@ -11,18 +11,8 @@ object Alpha {
     const val divider = 0.2f
     const val itemDivider = 0.20f
 
-    object PatternBackground {
-        const val default = 0.06f
-        const val conversation = 0.04f
-    }
-
     object FloatingButton {
         const val opaque = 0.6f
-    }
-
-    object TextField {
-        const val unfocusedBorder = 0.18f
-        const val placeholder = 0.38f
     }
 
     object Badge {
@@ -30,15 +20,35 @@ object Alpha {
     }
 
     object MessageInput {
-        const val buttonBackground = 0.35f
+        const val placeholder = 0.7f
     }
 
     object MediaSelection {
         const val playButtonBackground = 0.9f
     }
 
-    object GroupDetailsScreen {
-        const val adminIcon = 0.73f
+    object MessageBubble {
+        const val mine = 0.7f
+    }
+
+    object Ripple {
+        const val pressed = 0.28f
+        const val hovered = 0.08f
+    }
+
+    object Button {
+        const val main = 0.22f
+        const val destructive = 0.14f
+        const val neutral = 0.08f
+        const val disabledContent = 0.55f
+    }
+
+    object Banner {
+        const val tint = 0.18f
+    }
+
+    object Chip {
+        const val selected = 0.14f
     }
 
     object DirectScreen {
@@ -49,14 +59,8 @@ object Alpha {
         const val membershipSystemMessage = 0.88f
     }
 
-    object OverviewScreen {
-        const val avatarBadge = 0.12f
-    }
-
     object ImportIdentityScreen {
         const val secondaryLabel = 0.4f
-        const val disabledButtonContainer = 0.3f
-        const val disabledButtonContent = 0.5f
         const val iconBackground = 0.15f
     }
 

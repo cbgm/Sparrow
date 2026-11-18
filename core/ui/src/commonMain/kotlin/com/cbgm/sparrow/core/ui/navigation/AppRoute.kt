@@ -49,12 +49,6 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
-    data class VerifyIdentityQr(
-        val contactId: String,
-        val groupId: String? = null
-    ) : AppRoute
-
-    @Serializable
     data object IdentityKeys : AppRoute
 
     @Serializable

@@ -8,22 +8,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -52,22 +51,17 @@ fun PaymentScreen(state: PaymentUiState, onEvent: (PaymentUiEvent) -> Unit) {
     SparrowLazyScaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+            SparrowTopBar(
+                containerColor = containerColor,
                 title = {
                     Text(
-                        stringResource(Res.string.feature_payment_title),
-                        style = MaterialTheme.typography.titleSmall
+                        stringResource(Res.string.feature_payment_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(PaymentUiEvent.Back) }) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            SparrowIcons.ArrowBack,
                             stringResource(Res.string.feature_payment_back)
                         )
                     }
@@ -165,7 +159,7 @@ private fun Content(
         }
         if (state.isPayer && state.hasSavedDetails) {
             item(key = "forget") {
-                SparrowOutlinedButton(
+                SparrowDestructiveButton(
                     text = stringResource(Res.string.feature_payment_forget),
                     onClick = { onEvent(PaymentUiEvent.ForgetDetails) },
                     enabled = !state.isBusy

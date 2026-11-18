@@ -21,7 +21,6 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 
-/** A label, the text on a thin line (cyan while typing) and an optional note below. */
 @Composable
 fun UnderlinedField(
     value: String,
@@ -29,6 +28,7 @@ fun UnderlinedField(
     label: String,
     modifier: Modifier = Modifier,
     note: String? = null,
+    enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -43,6 +43,7 @@ fun UnderlinedField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            enabled = enabled,
             keyboardOptions = keyboardOptions,
             interactionSource = interaction,
             textStyle =
@@ -53,7 +54,7 @@ fun UnderlinedField(
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.base)
         )
-        HorizontalDivider(thickness = Dimens.OnboardingScreen.lineWidth, color = line)
+        HorizontalDivider(thickness = Dimens.Base.borderStrokeWidth, color = line)
         if (note != null) {
             Text(
                 text = note,

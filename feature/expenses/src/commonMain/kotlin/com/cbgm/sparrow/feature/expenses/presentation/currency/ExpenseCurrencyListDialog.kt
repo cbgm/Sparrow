@@ -16,9 +16,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.ExpenseCurrencyUi
@@ -42,10 +42,10 @@ internal fun ExpenseCurrencyListDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.base_cancel),
                 onClick = onDismiss,
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         title = title,

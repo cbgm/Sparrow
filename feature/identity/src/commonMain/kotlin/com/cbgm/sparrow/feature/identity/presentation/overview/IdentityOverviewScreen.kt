@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.presentation.overview
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.combinedClickable
@@ -12,12 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,17 +28,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.FeedbackBubble
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.rememberDelayedVisibility
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
@@ -56,6 +60,7 @@ import com.cbgm.sparrow.resources.feature_identity_backup_imported
 import com.cbgm.sparrow.resources.feature_identity_backup_title
 import com.cbgm.sparrow.resources.feature_identity_backup_warning
 import com.cbgm.sparrow.resources.feature_identity_checking_secure_identity
+import com.cbgm.sparrow.resources.feature_identity_key_pattern_hint
 import com.cbgm.sparrow.resources.feature_identity_own_fingerprint_title
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_limit
 import com.cbgm.sparrow.resources.feature_identity_private_keys_protected
@@ -96,6 +101,7 @@ fun IdentityOverviewScreen(
                 ) {
                     ReadyOverviewContent(
                         localPhoneNumber = uiState.localPhoneNumber,
+                        signingFingerprint = uiState.signingFingerprint,
                         phoneVerificationLimitReached = uiState.phoneVerificationLimitReached,
                         profilePictureState = profilePictureState,
                         onShareIdentity = { onUiEvent(IdentityOverviewUiEvent.ShareIdentityClicked) },
@@ -162,6 +168,7 @@ private fun LoadingContent() {
 @Composable
 private fun ReadyOverviewContent(
     localPhoneNumber: String,
+    signingFingerprint: String,
     phoneVerificationLimitReached: Boolean,
     profilePictureState: IdentityProfilePictureUiState?,
     onShareIdentity: () -> Unit,
@@ -175,9 +182,24 @@ private fun ReadyOverviewContent(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        profilePictureState?.let { picture ->
-            IdentityProfilePictureSection(state = picture, onEdit = onEditProfilePicture)
+        Box(
+            modifier = Modifier.size(Dimens.IdentityOverviewScreen.keyRingsSize),
+            contentAlignment = Alignment.Center
+        ) {
+            KeyRings(
+                fingerprint = signingFingerprint,
+                modifier = Modifier.fillMaxSize()
+            )
+            profilePictureState?.let { picture ->
+                IdentityProfilePictureSection(state = picture, onEdit = onEditProfilePicture)
+            }
         }
+        Text(
+            text = stringResource(Res.string.feature_identity_key_pattern_hint),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(MaterialTheme.spacing.medium))
         val clipboard = rememberClipboardWriter()
         Text(
@@ -190,7 +212,14 @@ private fun ReadyOverviewContent(
                 }
             ),
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = FontWeight.Light,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = stringResource(Res.string.feature_identity_private_keys_protected),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
         if (phoneVerificationLimitReached) {
             Spacer(Modifier.height(MaterialTheme.spacing.small))
@@ -201,46 +230,85 @@ private fun ReadyOverviewContent(
                 textAlign = TextAlign.Center
             )
         }
-        Spacer(Modifier.height(MaterialTheme.spacing.base))
-        Text(
-            text = stringResource(Res.string.feature_identity_private_keys_protected),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.tertiary,
-            textAlign = TextAlign.Center
-        )
     }
     Spacer(Modifier.height(MaterialTheme.spacing.large))
-    SparrowCardNoAnimation {
-        Column {
-            SparrowDetailRow(
-                icon = Icons.Default.Share,
-                title = stringResource(Res.string.feature_identity_share_my_identity),
-                iconTint = MaterialTheme.colorScheme.primary,
-                onClick = onShareIdentity
-            )
-            SparrowDetailRow(
-                icon = Icons.Default.Fingerprint,
-                title = stringResource(Res.string.feature_identity_own_fingerprint_title),
-                iconTint = MaterialTheme.colorScheme.primary,
-                onClick = onOpenKeys
-            )
-            SparrowDetailRow(
-                icon = Icons.Default.Backup,
-                title = stringResource(Res.string.feature_identity_backup_title),
-                subtitle = stringResource(
-                    when (backupStatus) {
-                        BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
-                        BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_exported
-                        BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_imported
-                    }
-                ).substringBefore('.'),
-                iconTint = MaterialTheme.colorScheme.primary,
-                showDivider = false,
-                onClick = onOpenBackup
-            )
+    SparrowDetailRow(
+        icon = SparrowIcons.Share,
+        title = stringResource(Res.string.feature_identity_share_my_identity),
+        onClick = onShareIdentity
+    )
+    SparrowDetailRow(
+        icon = SparrowIcons.Fingerprint,
+        title = stringResource(Res.string.feature_identity_own_fingerprint_title),
+        subtitle = signingFingerprint.split('-').take(FingerprintPreviewGroups).joinToString(" ") + " \u2026",
+        onClick = onOpenKeys
+    )
+    SparrowDetailRow(
+        icon = SparrowIcons.Backup,
+        title = stringResource(Res.string.feature_identity_backup_title),
+        subtitle = stringResource(
+            when (backupStatus) {
+                BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
+                BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_exported
+                BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_imported
+            }
+        ).substringBefore('.'),
+        subtitleColor =
+            if (backupStatus == BackupStateUi.NOT_BACKED_UP) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        showDivider = false,
+        onClick = onOpenBackup
+    )
+}
+
+private const val FingerprintPreviewGroups = 4
+
+/**
+ * Rings of dashes around the picture, drawn from the signing key: every hex digit sets the length of one
+ * dash or gap, so the same keys always draw the same rings.
+ */
+@Composable
+private fun KeyRings(
+    fingerprint: String,
+    modifier: Modifier = Modifier
+) {
+    val bright = MaterialTheme.colorScheme.primary
+    val dim = MaterialTheme.colorScheme.outlineVariant
+    val digits = remember(fingerprint) {
+        fingerprint.filter(Char::isLetterOrDigit).map { char -> char.digitToIntOrNull(radix = 16) ?: 0 }
+    }
+    Canvas(modifier = modifier) {
+        if (digits.isEmpty()) return@Canvas
+        val stroke = Dimens.IdentityOverviewScreen.keyRingStroke.toPx()
+        val gap = Dimens.IdentityOverviewScreen.keyRingGap.toPx()
+        val outer = size.minDimension / 2f - stroke
+        var digit = 0
+        repeat(KeyRingCount) { ring ->
+            val radius = outer - ring * gap
+            var angle = digits[digit % digits.size] * 22.5f
+            while (angle < 360f + digits[ring % digits.size] * 22.5f - 12f) {
+                val sweep = 8f + digits[digit % digits.size] * 2.2f
+                val pause = 5f + digits[(digit + 1) % digits.size] * 1.1f
+                drawArc(
+                    color = if (digits[(digit + 2) % digits.size] % 3 == 0) dim else bright,
+                    startAngle = angle,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    topLeft = Offset(center.x - radius, center.y - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = stroke, cap = StrokeCap.Round)
+                )
+                angle += sweep + pause
+                digit += 3
+            }
         }
     }
 }
+
+private const val KeyRingCount = 3
 
 @Composable
 private fun ErrorContent(
@@ -279,7 +347,10 @@ private fun ErrorContent(
 private fun IdentityOverviewScreenPreview() {
     SparrowTheme {
         IdentityOverviewScreen(
-            uiState = IdentityOverviewUiState.Ready(localPhoneNumber = "+491701234567"),
+            uiState = IdentityOverviewUiState.Ready(
+                localPhoneNumber = "+491701234567",
+                signingFingerprint = "0F8D-95C9-36C5-B3A4-77E1-0A9C-5D2B-E348"
+            ),
             onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp),

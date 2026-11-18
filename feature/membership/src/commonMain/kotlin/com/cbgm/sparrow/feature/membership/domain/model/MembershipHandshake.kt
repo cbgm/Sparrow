@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.membership.domain.model
 
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake.Companion.VALIDITY_MILLISECONDS
+
 data class MembershipHandshake(
     val sourceId: String,
     val groupId: String,

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview.model
 
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarRing
 
 data class ConversationListItem(
     val conversationId: String,
@@ -12,7 +13,8 @@ data class ConversationListItem(
     val timestamp: String,
     val unreadCount: Int = 0,
     val isGroup: Boolean = false,
-    val lastMessagePreview: LastMessagePreviewUi? = null
+    val lastMessagePreview: LastMessagePreviewUi? = null,
+    val avatarRing: AvatarRing = AvatarRing.NONE
 )
 
 enum class LastMessagePreviewUi {

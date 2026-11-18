@@ -9,15 +9,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +27,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -116,25 +115,17 @@ private fun MediaViewerTopBar(
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit
 ) {
-    CenterAlignedTopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = FunctionalColors.MediaBackground,
-                scrolledContainerColor = FunctionalColors.MediaBackground,
-                titleContentColor = FunctionalColors.MediaForeground,
-                navigationIconContentColor = FunctionalColors.MediaForeground,
-                actionIconContentColor = FunctionalColors.MediaForeground
-            ),
+    SparrowTopBar(
+        containerColor = FunctionalColors.MediaBackground,
         title = {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall
+                text = title
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = null
                 )
             }

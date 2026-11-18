@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -167,20 +167,14 @@ private fun CurrentNodeSummary(
         )
     }
 
-    OutlinedButton(
+    SparrowSecondaryButton(
         onClick = onShowAllNodes,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = MaterialTheme.spacing.small),
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Text(
-            text = stringResource(
-                Res.string.feature_settings_network_show_all_nodes,
-                diagnostics.availableNodes.size
-            )
+        modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+        text = stringResource(
+            Res.string.feature_settings_network_show_all_nodes,
+            diagnostics.availableNodes.size
         )
-    }
+    )
 }
 
 @Composable

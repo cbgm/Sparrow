@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,6 +10,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.contacts.presentation.details.components.ContactDetailPage
@@ -18,8 +21,11 @@ import com.cbgm.sparrow.feature.contacts.presentation.details.components.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_contact
 import com.cbgm.sparrow.resources.base_phone_numbers
+import com.cbgm.sparrow.resources.feature_chats_reconnect_cancel
+import com.cbgm.sparrow.resources.feature_chats_reconnect_confirm
+import com.cbgm.sparrow.resources.feature_chats_reconnect_contact
+import com.cbgm.sparrow.resources.feature_chats_reconnect_warning
 import com.cbgm.sparrow.resources.feature_contacts_contact_details
 import com.cbgm.sparrow.resources.feature_contacts_sparrow_identity
 import org.jetbrains.compose.resources.stringResource
@@ -32,10 +38,11 @@ fun ContactDetailsScreen(
 ) {
     val contactId = (uiState as? ContactDetailsUiState.Content)?.contact?.id
     var page by rememberSaveable(contactId) { mutableStateOf(ContactDetailPage.Overview) }
+    var showReconnectConfirmation by rememberSaveable { mutableStateOf(false) }
     val title =
         when (uiState) {
             is ContactDetailsUiState.Content -> when (page) {
-                ContactDetailPage.Overview -> uiState.contact.displayName ?: stringResource(Res.string.base_contact)
+                ContactDetailPage.Overview -> ""
                 ContactDetailPage.Phones -> stringResource(Res.string.base_phone_numbers)
                 ContactDetailPage.Identity -> stringResource(Res.string.feature_contacts_sparrow_identity)
             }
@@ -71,10 +78,35 @@ fun ContactDetailsScreen(
             onShareContact = { onUiEvent(ContactDetailsUiEvent.ShareContactClicked) },
             onVerifyIdentity = { onUiEvent(ContactDetailsUiEvent.VerifyIdentityClicked) },
             onMediaAndFiles = { onUiEvent(ContactDetailsUiEvent.MediaAndFilesClicked) },
+            onReconnect = { showReconnectConfirmation = true },
             page = page,
             onPageSelected = { page = it }
         )
     }
+
+    SparrowAlertDialog(
+        isVisible = showReconnectConfirmation,
+        onDismissRequest = { showReconnectConfirmation = false },
+        title = stringResource(Res.string.feature_chats_reconnect_contact),
+        text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
+        confirmButton = {
+            SparrowDialogAction(
+                onClick = {
+                    showReconnectConfirmation = false
+                    onUiEvent(ContactDetailsUiEvent.ReconnectConfirmed)
+                },
+                text = stringResource(Res.string.feature_chats_reconnect_confirm),
+                color = MaterialTheme.colorScheme.error
+            )
+        },
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = { showReconnectConfirmation = false },
+                text = stringResource(Res.string.feature_chats_reconnect_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    )
 }
 
 @Preview

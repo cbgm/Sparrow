@@ -1,20 +1,11 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,10 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarRing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_no_sparrow_identity
@@ -56,50 +47,17 @@ internal fun ContactHeader(contact: ContactDetailsContactUi) {
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            SparrowAvatar(
-                name = contact.displayName.orEmpty(),
-                target = AvatarTarget.User(contact.id),
-                size = Dimens.ContactDetailsScreen.avatarSize
-            )
-
-            when {
-                isMutuallyVerified ->
-                    Surface(
-                        modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
-                        shape = MaterialTheme.shapes.circle,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiary,
-                                modifier = Modifier.size(Dimens.ContactDetailsScreen.headerStatusIconSize)
-                            )
-                        }
-                    }
-
-                verifiedByMe ->
-                    ContactVerificationBadge(
-                        icon = Icons.Default.Schedule,
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-
-                verifiedByContact ->
-                    ContactVerificationBadge(
-                        icon = Icons.Default.Security,
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-
-                identity != null ->
-                    ContactVerificationBadge(
-                        icon = Icons.Default.Warning,
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-            }
-        }
+        SparrowAvatar(
+            name = contact.displayName.orEmpty(),
+            target = AvatarTarget.User(contact.id),
+            size = Dimens.Avatar.profileSize,
+            ring =
+                when {
+                    isMutuallyVerified -> AvatarRing.VERIFIED
+                    identity != null -> AvatarRing.PENDING
+                    else -> AvatarRing.NONE
+                }
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
@@ -108,7 +66,7 @@ internal fun ContactHeader(contact: ContactDetailsContactUi) {
                 ?: stringResource(Res.string.feature_contacts_unnamed_contact),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Light,
             textAlign = TextAlign.Center
         )
 
@@ -132,7 +90,7 @@ internal fun ContactHeader(contact: ContactDetailsContactUi) {
                     else ->
                         stringResource(Res.string.feature_contacts_sparrow_contact_not_verified)
                 },
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color =
                 when {
                     identity == null -> MaterialTheme.colorScheme.error

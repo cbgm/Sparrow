@@ -70,7 +70,6 @@
     <string name="feature_chats_chat_verified_by_contact_description">Verifiziere seine Identität, um die gegenseitige Verifizierung abzuschließen.</string>
     <string name="feature_chats_chat_verified_by_me_keys_description">Nachrichten sind verschlüsselt. Du hast den Kontakt verifiziert; seine Bestätigung steht noch aus.</string>
     <string name="feature_chats_chat_verified_by_contact_keys_description">Nachrichten sind verschlüsselt. Der Kontakt hat dich verifiziert; verifiziere ihn für die gegenseitige Verifizierung.</string>
-    <string name="feature_chats_chat_verified_e2ee">Gegenseitig verifiziert und Ende-zu-Ende verschlüsselt</string>
     <string name="feature_chats_chat_verified_keys_description">Nachrichten verwenden die verifizierte Sparrow-Identität.</string>
     <string name="feature_chats_group_accept">Annehmen</string>
     <string name="feature_chats_group_decline">Ablehnen</string>
@@ -85,6 +84,7 @@
     <string name="feature_chats_group_status_joining">Warte auf die Aktivierung durch den Ersteller</string>
     <string name="feature_chats_group_status_waiting">Warte auf %1$d eingeladene Mitglieder</string>
     <string name="feature_chats_group_message_queued">Jetzt geschriebene Nachrichten bleiben in der Warteschlange, bis die Gruppe sicher aktiv ist.</string>
+    <string name="feature_chats_group_messages_queued_title">Nachrichten warten</string>
     <string name="feature_chats_group_member_accepted">Angenommen</string>
     <string name="feature_chats_group_member_active">Bereit</string>
     <string name="feature_chats_group_member_declined">Abgelehnt</string>
@@ -92,10 +92,8 @@
     <string name="feature_chats_group_member_failed">Nicht zugestellt</string>
     <string name="feature_chats_group_member_invited">Eingeladen</string>
     <string name="feature_chats_group_member_key_sent">Gruppenschlüssel wird gespeichert</string>
-    <string name="feature_chats_compare_safety_number_contact">Vergleiche diese Sicherheitsnummer mit %1$s über einen vertrauenswürdigen Kanal, z.B. telefonisch oder persönlich.</string>
     <string name="feature_chats_or_compare_safety_number">Oder vergleiche die vollständige Sicherheitsnummer</string>
     <string name="feature_chats_scan_identity_qr">Identitäts-QR scannen</string>
-    <string name="feature_chats_scan_identity_qr_description">Für die stärkste Verifizierung scannst du den QR-Code direkt vom Gerät des Kontakts.</string>
     <string name="feature_chats_confirm_matching_numbers_only">Bestätige nur, wenn auf beiden Geräten exakt dieselbe Nummer angezeigt wird.</string>
     <string name="feature_chats_decryption_failed">Entschlüsselung fehlgeschlagen</string>
     <string name="feature_chats_delivered">Zugestellt</string>
@@ -108,7 +106,7 @@
     <string name="feature_chats_no_conversations_hint">Tippe auf +, um einen Kontakt auszuwählen und einen Chat zu starten.</string>
     <string name="feature_chats_no_conversations_yet">Noch keine Unterhaltungen</string>
     <string name="feature_chats_not_encrypted">Nicht verschlüsselt</string>
-    <string name="feature_chats_numbers_match">Nummern stimmen überein</string>
+    <string name="feature_chats_numbers_match">Halten, wenn die Nummern übereinstimmen</string>
     <string name="feature_chats_queued">In Warteschlange</string>
     <string name="feature_chats_waiting_for_authorization">Warte auf Autorisierung</string>
     <string name="feature_chats_reply">Antworten</string>
@@ -184,12 +182,10 @@
     <string name="feature_contacts_device_contact_missing_description">Der verknüpfte Gerätekontakt existiert nicht mehr. Sparrow hat die Schlüssel und den Chatverlauf beibehalten.</string>
     <string name="feature_contacts_device_contact_not_linked_description">Dieser Sparrow-Kontakt ist nicht mit deinem Adressbuch verknüpft.</string>
     <string name="feature_contacts_encryption_fingerprint">Fingerabdruck des Verschlüsselungsschlüssels</string>
-    <string name="feature_contacts_identity_verified_description">Beide Geräte haben die aktuellen Identitäten unabhängig verifiziert.</string>
     <string name="feature_contacts_verified_by_you">Von dir verifiziert</string>
     <string name="feature_contacts_verified_by_you_description">Warte darauf, dass der Kontakt deine aktuelle Identität verifiziert.</string>
     <string name="feature_contacts_verified_by_contact">Der Kontakt hat dich verifiziert</string>
     <string name="feature_contacts_verified_by_contact_description">Verifiziere den Kontakt, um die gegenseitige Verifizierung abzuschließen.</string>
-    <string name="feature_contacts_mutually_verified">Gegenseitig verifiziert</string>
     <string name="feature_contacts_import_from_device">Vom Gerät importieren</string>
     <string name="feature_contacts_import_from_device_description">Füge Personen per Telefonnummer hinzu. Beim Auswählen einer Person wird automatisch eine sichere Einladung gesendet.</string>
     <string name="feature_contacts_import_sparrow_contact_description">Persönlichen QR-Code zur Verifizierung scannen oder Identitätstext als nicht verifizierte Alternative einfügen</string>
@@ -246,6 +242,7 @@
     <string name="feature_identity_incomplete_identity">Unvollständige Identität</string>
     <string name="feature_identity_incomplete_identity_description">Nur ein Teil deiner Identität ist verfügbar. Ersatzschlüssel werden nicht automatisch erzeugt.</string>
     <string name="feature_identity_private_keys_protected">Deine privaten Schlüssel sind lokal geschützt</string>
+    <string name="feature_identity_key_pattern_hint">Dieses Muster entsteht aus deinen Schlüsseln.</string>
     <string name="feature_identity_phone_verification_limit">Tageslimit für Telefonverifizierungen erreicht. Kontakte finden dich erst über deine Nummer, wenn sie verifiziert ist.</string>
     <string name="feature_identity_public_keys_always_included">Deine öffentlichen Verschlüsselungs- und Signaturschlüssel werden immer mitgeteilt. Deine privaten Schlüssel verlassen dieses Gerät niemals.</string>
     <string name="feature_identity_raw_identity">ROHIDENTITÄT</string>
@@ -689,6 +686,7 @@
     <string name="feature_chats_route_waiting_title">Nachrichten warten</string>
     <string name="feature_chats_route_waiting_description">Es gibt keine Onion-Route über mindestens 2 Knoten, und direktes Senden ist ausgeschaltet. Nachrichten gehen raus, sobald es eine gibt. Um trotzdem zu senden, schalte „Ohne Route direkt senden“ unter Einstellungen › Netzwerk › Onion-Routing ein.</string>
     <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
+    <string name="feature_chats_reconnect">Neu verbinden</string>
     <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt neue Schlüssel hat, erscheint eine Einladung zum Identitätswechsel im Postfach. Du kannst sie annehmen, ablehnen oder den Kontakt blockieren.</string>
     <string name="feature_chats_reconnect_confirm">Einladung senden</string>
     <string name="feature_chats_reconnect_cancel">Abbrechen</string>

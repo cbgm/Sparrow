@@ -2,19 +2,15 @@ package com.cbgm.sparrow.feature.polls.presentation.create.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -56,13 +52,10 @@ fun PollMediaEditor(
         )
 
         if (media.size < PollConstants.MAX_MEDIA_ITEMS) {
-            TextButton(
-                onClick = onAddMedia,
-                contentPadding = PaddingValues(MaterialTheme.spacing.zero)
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Text(text = stringResource(Res.string.feature_polls_add_media))
-            }
+            SparrowLink(
+                text = stringResource(Res.string.feature_polls_add_media),
+                onClick = onAddMedia
+            )
         }
     }
 }

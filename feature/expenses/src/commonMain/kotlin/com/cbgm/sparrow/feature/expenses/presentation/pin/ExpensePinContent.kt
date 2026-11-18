@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.automirrored.filled.CallReceived
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -91,7 +91,7 @@ fun ExpensePinContent(
         ExpensePinBalance(pin.balance)
 
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            imageVector = SparrowIcons.Chevron,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )

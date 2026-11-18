@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.autoreply.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,24 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,13 +28,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
+import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -75,42 +69,29 @@ fun AutoReplySettingsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { color ->
-            CenterAlignedTopAppBar(
+            SparrowTopBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_auto_reply),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_auto_reply)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(AutoReplyUiEvent.BackClicked) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = SparrowIcons.ArrowBack,
                             contentDescription = null
                         )
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = color,
-                        scrolledContainerColor = color,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                containerColor = color
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            SparrowFloatingButton(
+                icon = SparrowIcons.Add,
                 onClick = { onUiEvent(AutoReplyUiEvent.AddClicked) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(Res.string.feature_auto_reply_add)
-                )
-            }
+                contentDescription = stringResource(Res.string.feature_auto_reply_add)
+            )
         }
     ) { innerPadding, listState ->
         LazyColumn(
@@ -187,7 +168,7 @@ private fun AutoReplyOffItem(selected: Boolean, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        RadioButton(selected = selected, onClick = null)
+        SparrowRadio(selected = selected, onClick = null)
     }
 }
 
@@ -201,22 +182,20 @@ private fun AutoReplyItem(
     SparrowSwipeRevealItem(
         actions = listOf(
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                tone = SwipeActionTone.NEUTRAL,
                 onClick = onEdit
             ) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
+                    imageVector = SparrowIcons.Edit,
                     contentDescription = stringResource(Res.string.feature_auto_reply_edit)
                 )
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
+                tone = SwipeActionTone.DESTRUCTIVE,
                 onClick = onDelete
             ) {
                 Icon(
-                    imageVector = Icons.Default.DeleteOutline,
+                    imageVector = SparrowIcons.Delete,
                     contentDescription = null
                 )
             }
@@ -256,7 +235,7 @@ private fun AutoReplyItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            RadioButton(selected = reply.isActive, onClick = null)
+            SparrowRadio(selected = reply.isActive, onClick = null)
         }
     }
 }
@@ -314,22 +293,20 @@ private fun AutoReplyEditorDialog(
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                    SparrowApprovalButton(
-                        onClick = onSave,
-                        text = stringResource(Res.string.feature_auto_reply_save),
-                        modifier = Modifier.weight(1f),
-                        enabled = editor.canSave && !isSaving
-                    )
-                    SparrowOutlinedButton(
-                        onClick = onDismiss,
-                        text = stringResource(Res.string.base_cancel),
-                        modifier = Modifier.weight(1f),
-                        enabled = !isSaving
-                    )
-                }
+                SparrowDialogAction(
+                    onClick = onSave,
+                    text = stringResource(Res.string.feature_auto_reply_save),
+                    enabled = editor.canSave && !isSaving
+                )
             },
-            dismissButton = {}
+            dismissButton = {
+                SparrowDialogAction(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    enabled = !isSaving,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
     }
 }

@@ -14,7 +14,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowSwitch
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.payment.presentation.model.PaymentStatusUi
@@ -122,7 +122,7 @@ internal fun PaymentBankDetailsCard(state: PaymentUiState, onEvent: (PaymentUiEv
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Switch(
+                SparrowSwitch(
                     checked = state.rememberDetails,
                     onCheckedChange = { onEvent(PaymentUiEvent.RememberChanged(it)) },
                     enabled = !state.isBusy

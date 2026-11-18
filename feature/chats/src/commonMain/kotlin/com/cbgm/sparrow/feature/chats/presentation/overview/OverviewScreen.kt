@@ -1,13 +1,12 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,18 +14,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,16 +32,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowBanner
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
@@ -57,6 +59,7 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEven
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
+import com.cbgm.sparrow.resources.feature_auto_reply
 import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_contact_card
 import com.cbgm.sparrow.resources.feature_chats_location
@@ -124,16 +127,16 @@ private fun Content(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (uiState.waitingForRoute) {
-                        RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small))
+                        RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.micro))
                     }
                     uiState.activeAutoReplyName?.let { name ->
-                        ActiveAutoReplyChip(
+                        ActiveAutoReplyBanner(
                             name = name,
                             onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
                             modifier =
                                 Modifier.padding(
-                                    horizontal = MaterialTheme.spacing.screenPadding,
-                                    vertical = MaterialTheme.spacing.base
+                                    horizontal = MaterialTheme.spacing.small,
+                                    vertical = MaterialTheme.spacing.micro
                                 )
                         )
                     }
@@ -149,40 +152,33 @@ private fun Content(
                 ) {
                     if (uiState.waitingForRoute) {
                         item(key = "route-waiting") {
-                            RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small))
+                            RouteWaitingBanner(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.micro))
                         }
                     }
                     uiState.activeAutoReplyName?.let { name ->
                         item(key = "active-auto-reply") {
-                            Box(
+                            ActiveAutoReplyBanner(
+                                name = name,
+                                onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            horizontal = MaterialTheme.spacing.screenPadding,
-                                            vertical = MaterialTheme.spacing.base
-                                        ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ActiveAutoReplyChip(
-                                    name = name,
-                                    onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) }
-                                )
-                            }
+                                    Modifier.padding(
+                                        horizontal = MaterialTheme.spacing.small,
+                                        vertical = MaterialTheme.spacing.micro
+                                    )
+                            )
                         }
                     }
 
-                    items(
+                    itemsIndexed(
                         items = uiState.conversations,
-                        key = { conversation -> conversation.conversationId }
-                    ) { conversation ->
+                        key = { _, conversation -> conversation.conversationId }
+                    ) { index, conversation ->
                         SparrowSwipeRevealItem(
                             modifier = Modifier.fillMaxWidth(),
                             actions =
                                 listOf(
                                     SwipeRevealAction(
-                                        backgroundColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError,
+                                        tone = SwipeActionTone.DESTRUCTIVE,
                                         onClick = {
                                             onUiEvent(
                                                 OverviewUiEvent.DeleteConversation(
@@ -192,7 +188,7 @@ private fun Content(
                                         }
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.DeleteOutline,
+                                            imageVector = SparrowIcons.Delete,
                                             contentDescription = null
                                         )
                                     }
@@ -206,12 +202,15 @@ private fun Content(
                             )
                         }
 
-                        HorizontalDivider(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-                        )
+                        if (index < uiState.conversations.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = MaterialTheme.spacing.listDividerStart),
+                                thickness = Dimens.Base.dividerThickness,
+                                color = MaterialTheme.colorScheme.divider
+                            )
+                        }
                     }
                 }
 
@@ -230,47 +229,19 @@ private fun Content(
 }
 
 @Composable
-private fun ActiveAutoReplyChip(
+private fun ActiveAutoReplyBanner(
     name: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    SparrowBanner(
+        icon = Icons.AutoMirrored.Filled.Reply,
+        accent = MaterialTheme.colorScheme.primary,
+        title = stringResource(Res.string.feature_auto_reply),
+        description = name,
         onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.primary,
-        border =
-            BorderStroke(
-                width = Dimens.Button.borderWidth,
-                color = MaterialTheme.colorScheme.primary
-            )
-    ) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = MaterialTheme.spacing.actionItem.horizontalPadding,
-                    vertical = MaterialTheme.spacing.base
-                ),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Reply,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.SearchField.searchIconSize)
-            )
-
-            Text(
-                text = name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -290,7 +261,8 @@ private fun ConversationItem(
             leadingContent = {
                 SparrowAvatar(
                     name = conversation.contactName,
-                    target = conversation.avatarTarget
+                    target = conversation.avatarTarget,
+                    ring = conversation.avatarRing
                 )
             },
             headlineContent = {
@@ -299,7 +271,6 @@ private fun ConversationItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             },
@@ -329,8 +300,7 @@ private fun ConversationItem(
                             MaterialTheme.colorScheme.onBackground
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal
+                        }
                 )
             },
             trailingContent = {
@@ -392,38 +362,54 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(Dimens.OverviewScreen.emptyStateIconContainerSize)
-                    .background(
-                        MaterialTheme.colorScheme.primary.copy(alpha = Alpha.OverviewScreen.avatarBadge),
-                        MaterialTheme.shapes.circle
-                    ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.ChatBubbleOutline,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(Dimens.OverviewScreen.emptyStateIconSize)
-            )
-        }
+        EmptyCircuitGraphic()
 
         Text(
             text = stringResource(Res.string.feature_chats_no_conversations_yet),
-            modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.large),
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = stringResource(Res.string.feature_chats_no_conversations_hint),
-            modifier = Modifier.padding(MaterialTheme.spacing.base.div(2)),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            modifier = Modifier.padding(MaterialTheme.spacing.micro),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+/** You, a dotted path and a contact that is not there yet. */
+@Composable
+private fun EmptyCircuitGraphic() {
+    val you = MaterialTheme.colorScheme.onBackground
+    val path = MaterialTheme.colorScheme.outline
+    Canvas(
+        modifier = Modifier.size(
+            width = Dimens.OverviewScreen.emptyGraphicWidth,
+            height = Dimens.OverviewScreen.emptyGraphicHeight
+        )
+    ) {
+        val centerY = size.height / 2f
+        val dotRadius = Dimens.OverviewScreen.emptyGraphicDotRadius.toPx()
+        val contactRadius = Dimens.OverviewScreen.emptyGraphicContactRadius.toPx()
+        val stroke = Dimens.OverviewScreen.emptyGraphicStroke.toPx()
+        val dash = PathEffect.dashPathEffect(floatArrayOf(stroke, stroke * 4f))
+        drawCircle(color = you, radius = dotRadius, center = Offset(dotRadius, centerY))
+        drawLine(
+            color = path,
+            start = Offset(dotRadius * 3f, centerY),
+            end = Offset(size.width - contactRadius * 2f, centerY),
+            strokeWidth = stroke,
+            pathEffect = dash
+        )
+        drawCircle(
+            color = path,
+            radius = contactRadius,
+            center = Offset(size.width - contactRadius - stroke, centerY),
+            style = Stroke(width = stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(stroke * 2f, stroke * 2f)))
         )
     }
 }

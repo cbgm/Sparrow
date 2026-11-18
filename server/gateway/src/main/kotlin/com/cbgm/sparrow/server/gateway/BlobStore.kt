@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.gateway
 
+import com.cbgm.sparrow.server.gateway.BlobStore.Companion.CHUNK_BYTES
 import com.cbgm.sparrow.server.protocol.BlobMetadata
 import com.cbgm.sparrow.server.protocol.OpenBlobRequest
 import com.cbgm.sparrow.server.protocol.serverJson

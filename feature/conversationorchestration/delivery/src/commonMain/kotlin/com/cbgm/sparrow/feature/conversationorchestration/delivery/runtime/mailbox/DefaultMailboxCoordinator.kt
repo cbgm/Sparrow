@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCoordinator.Companion.NEW_CONTACT_CHECK_MILLISECONDS
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope

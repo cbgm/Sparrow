@@ -9,18 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
+import com.cbgm.sparrow.core.ui.component.SparrowSwitch
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
@@ -259,7 +257,7 @@ private fun FallbackChooser(
             )
             StatusLine(text = stringResource(fallbackExplanation(uiState.sendsDirectlyWithoutCircuit)))
         }
-        Switch(
+        SparrowSwitch(
             checked = uiState.sendsDirectlyWithoutCircuit,
             onCheckedChange = { checked -> onUiEvent(CircuitHopsUiEvent.SendDirectlyChanged(checked)) }
         )
@@ -317,7 +315,7 @@ private fun ConnectionModeRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
-        RadioButton(selected = selected, onClick = null)
+        SparrowRadio(selected = selected, onClick = null)
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             StatusLine(text = consequence)
@@ -362,21 +360,16 @@ private fun CircuitHopsTopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
+    SparrowTopBar(
         title = {
             Text(text = stringResource(Res.string.feature_settings_circuit), style = MaterialTheme.typography.titleSmall)
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-        )
+        containerColor = containerColor
     )
 }
 

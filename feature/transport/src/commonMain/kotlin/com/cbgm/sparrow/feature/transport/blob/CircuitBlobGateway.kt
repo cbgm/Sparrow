@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.transport.blob
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.blob.CircuitBlobGateway.Companion.CHUNK_BYTES
+import com.cbgm.sparrow.feature.transport.blob.CircuitBlobGateway.Companion.MAXIMUM_ATTEMPTS
 import com.cbgm.sparrow.feature.transport.circuit.CircuitRequestRefusedException
 import com.cbgm.sparrow.feature.transport.circuit.FileTransferRequest
 import com.cbgm.sparrow.feature.transport.circuit.FileTransferResponse

@@ -4,19 +4,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiEvent
@@ -38,23 +36,17 @@ fun IdentityBackupScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+            SparrowTopBar(
+                containerColor = containerColor,
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_identity_backup_title),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_identity_backup_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(IdentityBackupUiEvent.BackClicked) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = SparrowIcons.ArrowBack,
                             contentDescription = stringResource(Res.string.base_back)
                         )
                     }

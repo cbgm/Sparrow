@@ -26,8 +26,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
@@ -180,10 +180,10 @@ fun AddBlockedContactDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowOutlinedButton(
-                fillMaxWidth = false,
+            SparrowDialogAction(
                 onClick = onDismiss,
-                text = stringResource(Res.string.base_close)
+                text = stringResource(Res.string.base_close),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

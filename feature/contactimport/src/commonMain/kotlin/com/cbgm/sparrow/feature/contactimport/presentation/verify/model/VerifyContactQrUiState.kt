@@ -6,5 +6,6 @@ data class VerifyContactQrUiState(
     val scannedIdentityPreview: ScannedIdentityPreview? = null,
     val isVerifying: Boolean = false,
     val isVerified: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val scanAttempt: Int = 0
 )

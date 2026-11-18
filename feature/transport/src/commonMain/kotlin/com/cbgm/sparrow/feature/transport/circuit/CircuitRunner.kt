@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.transport.circuit
 
 import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.circuit.CircuitRunner.Companion.NO_SLOT
 import com.cbgm.sparrow.feature.transport.relay.RelayHop
 import com.cbgm.sparrow.feature.transport.relay.RelaySelector
 import io.ktor.client.HttpClient

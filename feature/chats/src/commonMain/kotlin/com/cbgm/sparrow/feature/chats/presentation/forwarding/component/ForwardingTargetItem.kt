@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
@@ -41,7 +40,6 @@ internal fun ForwardingTargetItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }

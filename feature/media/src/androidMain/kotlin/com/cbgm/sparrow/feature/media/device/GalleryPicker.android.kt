@@ -16,14 +16,10 @@ import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresExtension
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +35,8 @@ import androidx.photopicker.compose.ExperimentalPhotoPickerComposeApi
 import androidx.photopicker.compose.rememberEmbeddedPhotoPickerState
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.SparrowLog
@@ -228,11 +226,10 @@ private fun EmbeddedGalleryPickerDialog(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
-                TopAppBar(
+                SparrowTopBar(
                     title = {
                         Text(
-                            text = strings.title,
-                            style = MaterialTheme.typography.titleSmall
+                            text = strings.title
                         )
                     },
                     navigationIcon = {
@@ -246,18 +243,11 @@ private fun EmbeddedGalleryPickerDialog(
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Close,
+                                imageVector = SparrowIcons.Close,
                                 contentDescription = strings.closeContentDescription
                             )
                         }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                            scrolledContainerColor = MaterialTheme.colorScheme.background,
-                            titleContentColor = MaterialTheme.colorScheme.onBackground,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                        )
+                    }
                 )
             }
         ) { innerPadding ->

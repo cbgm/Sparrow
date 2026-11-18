@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.deco
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoyEnvelopes.Companion.BURST_WINDOW_MILLISECONDS
 import com.cbgm.sparrow.feature.transport.circuit.DecoyCountStore
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal

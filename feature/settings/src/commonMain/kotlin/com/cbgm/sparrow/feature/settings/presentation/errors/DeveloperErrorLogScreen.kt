@@ -8,16 +8,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.errors.components.ClearDeveloperErrorsDialog
@@ -134,24 +132,17 @@ private fun TopBar(
     containerColor: Color,
     onUiEvent: (DeveloperErrorLogUiEvent) -> Unit
 ) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_error_log),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_settings_error_log)
             )
         },
         navigationIcon = {
             IconButton(onClick = { onUiEvent(DeveloperErrorLogUiEvent.BackClicked) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = null
                 )
             }

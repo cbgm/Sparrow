@@ -70,7 +70,6 @@
     <string name="feature_chats_chat_verified_by_contact_description">Verify their identity to complete mutual verification.</string>
     <string name="feature_chats_chat_verified_by_me_keys_description">Messages are encrypted. You verified the contact; their confirmation is still pending.</string>
     <string name="feature_chats_chat_verified_by_contact_keys_description">Messages are encrypted. The contact verified you; verify them to complete mutual verification.</string>
-    <string name="feature_chats_chat_verified_e2ee">Mutually verified and end-to-end encrypted</string>
     <string name="feature_chats_chat_verified_keys_description">Messages use the verified Sparrow identity.</string>
     <string name="feature_chats_group_accept">Accept</string>
     <string name="feature_chats_group_decline">Decline</string>
@@ -85,6 +84,7 @@
     <string name="feature_chats_group_status_joining">Waiting for the creator to activate the group</string>
     <string name="feature_chats_group_status_waiting">Waiting for %1$d invited members</string>
     <string name="feature_chats_group_message_queued">Messages written now remain queued until the group is securely active.</string>
+    <string name="feature_chats_group_messages_queued_title">Messages are queued</string>
     <string name="feature_chats_group_member_accepted">Accepted</string>
     <string name="feature_chats_group_member_active">Ready</string>
     <string name="feature_chats_group_member_declined">Declined</string>
@@ -92,10 +92,8 @@
     <string name="feature_chats_group_member_failed">Not delivered</string>
     <string name="feature_chats_group_member_invited">Invited</string>
     <string name="feature_chats_group_member_key_sent">Storing group key</string>
-    <string name="feature_chats_compare_safety_number_contact">Compare this safety number with %1$s through a trusted channel, such as a phone call or in person.</string>
     <string name="feature_chats_or_compare_safety_number">Or compare the complete safety number</string>
     <string name="feature_chats_scan_identity_qr">Scan identity QR</string>
-    <string name="feature_chats_scan_identity_qr_description">For the strongest verification, scan the QR code directly from the contact's device.</string>
     <string name="feature_chats_confirm_matching_numbers_only">Only confirm when both devices display exactly the same number.</string>
     <string name="feature_chats_decryption_failed">Decryption failed</string>
     <string name="feature_chats_delivered">Delivered</string>
@@ -108,7 +106,7 @@
     <string name="feature_chats_no_conversations_hint">Press + to choose a contact and start chatting.</string>
     <string name="feature_chats_no_conversations_yet">No conversations yet</string>
     <string name="feature_chats_not_encrypted">Not encrypted</string>
-    <string name="feature_chats_numbers_match">Numbers match</string>
+    <string name="feature_chats_numbers_match">Hold if the numbers match</string>
     <string name="feature_chats_queued">Queued</string>
     <string name="feature_chats_waiting_for_authorization">Waiting for authorization</string>
     <string name="feature_chats_reply">Reply</string>
@@ -183,12 +181,10 @@
     <string name="feature_contacts_device_contact_missing_description">The linked device contact no longer exists. Sparrow kept its keys and conversation history.</string>
     <string name="feature_contacts_device_contact_not_linked_description">This Sparrow contact is not connected to your device address book.</string>
     <string name="feature_contacts_encryption_fingerprint">Encryption fingerprint</string>
-    <string name="feature_contacts_identity_verified_description">Both devices independently verified the current identities.</string>
     <string name="feature_contacts_verified_by_you">Verified by you</string>
     <string name="feature_contacts_verified_by_you_description">Waiting for the contact to verify your current identity.</string>
     <string name="feature_contacts_verified_by_contact">The contact verified you</string>
     <string name="feature_contacts_verified_by_contact_description">Verify the contact to complete mutual verification.</string>
-    <string name="feature_contacts_mutually_verified">Mutually verified</string>
     <string name="feature_contacts_import_from_device">Import from device</string>
     <string name="feature_contacts_import_from_device_description">Add people by phone number. Selecting a person sends a secure invitation automatically.</string>
     <string name="feature_contacts_import_sparrow_contact_description">Scan an in-person QR to verify, or paste identity text as an unverified fallback</string>
@@ -245,6 +241,7 @@
     <string name="feature_identity_incomplete_identity">Incomplete identity</string>
     <string name="feature_identity_incomplete_identity_description">Only part of your identity is available. Replacement keys will not be generated automatically.</string>
     <string name="feature_identity_private_keys_protected">Your private keys are protected locally</string>
+    <string name="feature_identity_key_pattern_hint">This pattern is drawn from your keys.</string>
     <string name="feature_identity_phone_verification_limit">Daily limit of phone verifications reached. Contacts cannot find you by your number until it is verified.</string>
     <string name="feature_identity_public_keys_always_included">Your public encryption and signing keys are always included. Your private keys never leave this device.</string>
     <string name="feature_identity_raw_identity">RAW IDENTITY</string>
@@ -404,7 +401,7 @@
     <string name="feature_chats_manual_identity_setup_description">Share your identity, then import or scan the contact identity on both devices. Opening the chat does not send an automatic invitation.</string>
     <string name="feature_chats_manual_identity_required_title">Manual identity exchange required</string>
     <string name="feature_chats_manual_identity_required_description">Share your identity and import the contact identity before end-to-end encryption can start.</string>
-    <string name="feature_chats_identity_not_fully_mutual_title">Not Fully Mutual</string>
+    <string name="feature_chats_identity_not_fully_mutual_title">Not fully mutual</string>
     <string name="feature_chats_manual_identity_incomplete_title">Manual identity exchange incomplete</string>
     <string name="feature_chats_manual_identity_incomplete_description">One identity is known. The other device must also import the matching identity.</string>
     <string name="feature_chats_manual_identity_setup_action">Set up</string>
@@ -685,6 +682,7 @@
     <string name="feature_chats_route_waiting_title">Messages are waiting</string>
     <string name="feature_chats_route_waiting_description">No onion route through at least 2 nodes is available, and sending directly is switched off. Messages go out as soon as there is one. To send anyway, turn on “Send directly without a route” in Settings › Network › Onion routing.</string>
     <string name="feature_chats_reconnect_contact">Reconnect contact</string>
+    <string name="feature_chats_reconnect">Reconnect</string>
     <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact has new keys, an identity-change invitation appears in your Mailbox. You can accept, decline or block it.</string>
     <string name="feature_chats_reconnect_confirm">Send invitation</string>
     <string name="feature_chats_reconnect_cancel">Cancel</string>

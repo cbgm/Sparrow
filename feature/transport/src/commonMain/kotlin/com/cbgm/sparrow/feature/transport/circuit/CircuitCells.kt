@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.transport.circuit
 
+import com.cbgm.sparrow.feature.transport.circuit.CircuitCell.Companion.SIZE
+
 /** A fixed-size circuit cell, as the gateway's `CircuitCell`: `circuit ID (4) || command (1) || body`, [SIZE] bytes. */
 internal class CircuitCell(
     val circuitId: Int,
