@@ -1,20 +1,15 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.pages.component
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +21,6 @@ import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -34,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import com.cbgm.sparrow.core.ui.component.SparrowAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 
@@ -83,22 +78,12 @@ fun OnboardingAction(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    Row(
-        modifier =
-            Modifier
-                .height(Dimens.OnboardingScreen.bottomBarHeight)
-                .graphicsLayer { alpha = clock.progress(startMillis, ACTION_FADE_MILLISECONDS) * if (enabled) 1f else DISABLED_ALPHA }
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-    ) {
-        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
-        Box(
-            Modifier
-                .size(Dimens.OnboardingScreen.actionLineWidth, Dimens.OnboardingScreen.lineWidth)
-                .background(MaterialTheme.colorScheme.primary)
-        )
-    }
+    SparrowAction(
+        text = text,
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.graphicsLayer { alpha = clock.progress(startMillis, ACTION_FADE_MILLISECONDS) }
+    )
 }
 
 /** "02 / 05" at the bottom left, the current page brighter. */
@@ -141,6 +126,5 @@ private fun Modifier.bottomBar(): Modifier =
 private fun twoDigits(number: Int): String = number.toString().padStart(2, '0')
 
 private const val ACTION_FADE_MILLISECONDS = 800L
-private const val DISABLED_ALPHA = 0.4f
 private const val PAGE_NUMBER_SPACING = 1.5f
 private const val TITLE_SPACING = -0.5f

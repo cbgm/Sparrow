@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.pages
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -17,9 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -178,26 +177,13 @@ private fun Links(
     onRestoreIdentity: () -> Unit
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-        Link(
+        SparrowLink(
             text = stringResource(if (phoneNumberBlank) Res.string.base_choose_phone_number else Res.string.base_choose_another_number),
             onClick = onChooseAnotherNumber
         )
-        if (canRetryAutomatic) Link(text = stringResource(Res.string.feature_onboarding_try_sim_number_again), onClick = onRetryAutomaticNumber)
-        if (canRestore) Link(text = stringResource(Res.string.feature_identity_backup_restore_action), onClick = onRestoreIdentity)
+        if (canRetryAutomatic) SparrowLink(text = stringResource(Res.string.feature_onboarding_try_sim_number_again), onClick = onRetryAutomaticNumber)
+        if (canRestore) SparrowLink(text = stringResource(Res.string.feature_identity_backup_restore_action), onClick = onRestoreIdentity)
     }
-}
-
-@Composable
-private fun Link(
-    text: String,
-    onClick: () -> Unit
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clickable(role = Role.Button, onClick = onClick).padding(vertical = MaterialTheme.spacing.base)
-    )
 }
 
 @Composable

@@ -58,6 +58,12 @@ object Dimens {
     }
 
     object Button {
+        val actionPadding = 16.dp
+        val linkPadding = 10.dp
+        val actionLineWidth = 36.dp
+        val actionLinePressedWidth = 52.dp
+        val actionLineThickness = 1.dp
+        val minTouchHeight = 48.dp
         val borderWidth = 1.dp
         val iconButtonSize = 44.dp
         val loadingIndicatorSize = 18.dp
@@ -213,7 +219,6 @@ object Dimens {
         val topPadding = 48.dp
         val bottomPadding = 24.dp
         val bottomBarHeight = 48.dp
-        val actionLineWidth = 40.dp
         val lineWidth = 1.dp
         val markSize = 210.dp
         val markGraphicHeight = 300.dp

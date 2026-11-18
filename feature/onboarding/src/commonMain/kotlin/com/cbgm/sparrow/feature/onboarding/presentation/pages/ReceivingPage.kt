@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.onboarding.presentation.pages
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +30,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowLink
+import com.cbgm.sparrow.core.ui.component.bleedHorizontally
+import com.cbgm.sparrow.core.ui.component.sparrowRipple
 import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -151,7 +153,15 @@ private fun ChoiceRow(
 ) {
     val titleColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline, label = "choiceTitle")
     val markColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, label = "choiceMark")
-    Column(modifier = Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onClick)) {
+    // The ripple spans the screen from edge to edge; the text stays in line with the page.
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .bleedHorizontally(Dimens.OnboardingScreen.horizontalPadding)
+                .selectable(selected = selected, interactionSource = null, indication = sparrowRipple(), role = Role.RadioButton, onClick = onClick)
+                .padding(horizontal = Dimens.OnboardingScreen.horizontalPadding)
+    ) {
         Row(
             modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
@@ -179,12 +189,7 @@ private fun ChoiceRow(
 private fun WhyIsThat() {
     var expanded by remember { mutableStateOf(false) }
     Column {
-        Text(
-            text = stringResource(Res.string.feature_receiving_why),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(role = Role.Button) { expanded = !expanded }
-        )
+        SparrowLink(text = stringResource(Res.string.feature_receiving_why), onClick = { expanded = !expanded })
         AnimatedVisibility(visible = expanded) {
             Note(text = stringResource(Res.string.feature_receiving_why_text), modifier = Modifier.padding(top = MaterialTheme.spacing.small))
         }
