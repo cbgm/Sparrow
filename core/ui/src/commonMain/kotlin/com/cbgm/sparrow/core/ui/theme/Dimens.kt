@@ -14,7 +14,10 @@ object Dimens {
 
     object Poll {
         val previewMediaSelectionSize = 80.dp
-        val buttonSize = 22.dp
+        val barHeight = 3.dp
+        val dashLength = 5.dp
+        val dashGap = 4.dp
+        val checkIconSize = 16.dp
     }
 
     object Payment {

@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -15,9 +12,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowLink
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -34,14 +32,18 @@ fun PollOptionsEditor(
     options: List<PollOptionEditorUi>,
     onOptionChanged: (String, String) -> Unit,
     onRemoveOption: (String) -> Unit,
-    onAddOption: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacing.small)) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+    ) {
         options.forEachIndexed { index, option ->
+            val removable = options.size > PollConstants.MIN_OPTIONS &&
+                !(index == options.lastIndex && option.text.isBlank())
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
             ) {
                 SparrowInputField(
@@ -49,26 +51,24 @@ fun PollOptionsEditor(
                     onValueChange = { value -> onOptionChanged(option.id, value) },
                     label = stringResource(Res.string.feature_polls_option, index + 1),
                     modifier = Modifier.weight(1f),
+                    placeholderText = stringResource(Res.string.feature_polls_add_option),
                     isSingleLine = true
                 )
                 IconButton(
                     onClick = { onRemoveOption(option.id) },
-                    enabled = options.size > PollConstants.MIN_OPTIONS,
-                    modifier = Modifier.size(Dimens.Button.iconButtonSize)
+                    enabled = removable,
+                    modifier = Modifier
+                        .size(Dimens.Button.iconButtonSize)
+                        .alpha(if (removable) 1f else 0f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(Res.string.feature_polls_remove_option)
+                        imageVector = SparrowIcons.Close,
+                        contentDescription = stringResource(Res.string.feature_polls_remove_option),
+                        tint = MaterialTheme.colorScheme.outline
                     )
                 }
             }
         }
-
-        SparrowLink(
-            text = stringResource(Res.string.feature_polls_add_option),
-            enabled = options.size < PollConstants.MAX_OPTIONS,
-            onClick = onAddOption
-        )
     }
 }
 
@@ -85,8 +85,7 @@ private fun PollOptionsEditorPreview() {
                         PollOptionEditorUi("3", "Stay at home")
                     ),
                 onOptionChanged = { _, _ -> },
-                onRemoveOption = {},
-                onAddOption = {}
+                onRemoveOption = {}
             )
         }
     }

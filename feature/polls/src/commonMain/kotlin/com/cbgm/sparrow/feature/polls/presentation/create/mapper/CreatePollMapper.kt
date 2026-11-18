@@ -25,7 +25,7 @@ internal fun CreatePollUiState.toPoll(
         id = id,
         question = question.trim(),
         description = description.trim().takeIf(String::isNotBlank),
-        options = options.map { PollOption(it.id, it.text.trim()) },
+        options = options.filter { it.text.isNotBlank() }.map { PollOption(it.id, it.text.trim()) },
         images = media.map { it.toMessagePart() as Image },
         allowMultipleSelection = allowMultipleSelection,
         allowVoteChange = allowVoteChange,

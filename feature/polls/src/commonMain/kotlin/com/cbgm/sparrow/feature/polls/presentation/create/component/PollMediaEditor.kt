@@ -1,16 +1,26 @@
 package com.cbgm.sparrow.feature.polls.presentation.create.component
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowLink
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -32,7 +42,7 @@ fun PollMediaEditor(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         Text(
@@ -44,19 +54,52 @@ fun PollMediaEditor(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        MediaSelectionPreview(
-            media = media,
-            onClick = { onAddMedia() },
-            onRemove = onRemoveMedia,
-            previewSize = Dimens.Poll.previewMediaSelectionSize
-        )
-
-        if (media.size < PollConstants.MAX_MEDIA_ITEMS) {
-            SparrowLink(
-                text = stringResource(Res.string.feature_polls_add_media),
-                onClick = onAddMedia
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+        ) {
+            MediaSelectionPreview(
+                media = media,
+                onClick = { onAddMedia() },
+                onRemove = onRemoveMedia,
+                previewSize = Dimens.Poll.previewMediaSelectionSize
             )
+            if (media.size < PollConstants.MAX_MEDIA_ITEMS) {
+                AddMediaTile(onClick = onAddMedia)
+            }
         }
+    }
+}
+
+@Composable
+private fun AddMediaTile(onClick: () -> Unit) {
+    val lineColor = MaterialTheme.colorScheme.outlineVariant
+    val shape = MaterialTheme.shapes.medium
+    Box(
+        modifier = Modifier
+            .size(Dimens.Poll.previewMediaSelectionSize)
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .drawBehind {
+                val stroke = Dimens.Base.borderStrokeWidth.toPx()
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = lineColor,
+                    style = Stroke(
+                        width = stroke,
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(Dimens.Poll.dashLength.toPx(), Dimens.Poll.dashGap.toPx())
+                        )
+                    )
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = SparrowIcons.Add,
+            contentDescription = stringResource(Res.string.feature_polls_add_media),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

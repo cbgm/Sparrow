@@ -203,7 +203,6 @@ internal fun GroupPinnedMessageContent(
             when (val part = message.parts.standalonePartOrNull()) {
                 is PollUi -> PollMessageContent(
                     part = part,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
                     onVoteSubmit = { selectedOptionIds ->
                         onPollVoteSubmit(message.id, part.id, selectedOptionIds)
                     },
