@@ -43,7 +43,7 @@ internal fun DeveloperErrorLogCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(MaterialTheme.spacing.medium),
+                    .padding(vertical = MaterialTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

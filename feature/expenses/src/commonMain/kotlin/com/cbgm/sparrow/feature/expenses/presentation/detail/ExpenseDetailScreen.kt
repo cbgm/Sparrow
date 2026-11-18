@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,15 +33,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.asTint
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.expenses.presentation.common.component.ExpenseMemberAvatar
 import com.cbgm.sparrow.feature.expenses.presentation.common.component.label
@@ -69,9 +69,10 @@ import com.cbgm.sparrow.resources.feature_expenses_detail_split_between
 import com.cbgm.sparrow.resources.feature_expenses_detail_title
 import com.cbgm.sparrow.resources.feature_expenses_edit
 import com.cbgm.sparrow.resources.feature_expenses_original_amount
-import com.cbgm.sparrow.resources.feature_expenses_paid_by
+import com.cbgm.sparrow.resources.feature_expenses_paid_by_member
 import com.cbgm.sparrow.resources.feature_expenses_receipt
 import com.cbgm.sparrow.resources.feature_expenses_receipt_missing
+import com.cbgm.sparrow.resources.feature_expenses_receipt_view
 import com.cbgm.sparrow.resources.feature_expenses_split_custom_title
 import org.jetbrains.compose.resources.stringResource
 
@@ -114,8 +115,8 @@ fun ExpenseDetailScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)
         ) {
             item(key = "header") { DetailHeader(uiState) }
-            item(key = "payment") { PaymentCard(uiState, onReceiptClick = { showReceipt = true }) }
             item(key = "split") { SplitSection(uiState) }
+            item(key = "receipt") { ReceiptSection(uiState, onReceiptClick = { showReceipt = true }) }
         }
     }
 
@@ -200,8 +201,7 @@ private fun DetailTopBar(
                 IconButton(onClick = onDeleteClick) {
                     Icon(
                         SparrowIcons.Delete,
-                        contentDescription = stringResource(Res.string.feature_expenses_delete),
-                        tint = MaterialTheme.colorScheme.error
+                        contentDescription = stringResource(Res.string.feature_expenses_delete)
                     )
                 }
             }
@@ -211,217 +211,170 @@ private fun DetailTopBar(
 
 @Composable
 private fun DetailHeader(uiState: ExpenseDetailUiState) {
+    val originalAmountLabel = uiState.originalAmountLabel
+    val rate = uiState.rate
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+        modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(Dimens.Expense.detailIconSize)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                .size(Dimens.Avatar.defaultSize)
+                .background(MaterialTheme.colorScheme.primary.asTint(Alpha.Button.main), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 uiState.category.icon,
-                contentDescription = null,
+                contentDescription = uiState.category.label(),
+                modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
         Text(
             text = uiState.description,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
         Text(
             text = uiState.amountLabel,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Light
         )
-        val originalAmountLabel = uiState.originalAmountLabel
-        val rate = uiState.rate
+        Text(
+            text = "${uiState.dateLabel} · ${stringResource(Res.string.feature_expenses_paid_by_member, uiState.payer.label())}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
         if (originalAmountLabel != null && rate != null) {
             Text(
-                text = stringResource(
-                    Res.string.feature_expenses_original_amount,
-                    originalAmountLabel,
-                    rate
-                ),
+                text = stringResource(Res.string.feature_expenses_original_amount, originalAmountLabel, rate),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
-        SparrowStatusBadge(
-            text = uiState.category.label(),
-            icon = uiState.category.icon,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
 @Composable
-private fun PaymentCard(
+private fun ReceiptSection(
     uiState: ExpenseDetailUiState,
     onReceiptClick: () -> Unit
 ) {
-    SparrowCardNoAnimation {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-            ) {
-                ExpenseMemberAvatar(uiState.payer)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(Res.string.feature_expenses_paid_by),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = uiState.payer.label(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Text(
-                    text = uiState.dateLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = Dimens.Base.dividerThickness
-            )
-            Row(
+    val receiptPath = uiState.receiptPath
+    Column {
+        SparrowSectionLabel(text = stringResource(Res.string.feature_expenses_receipt))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = receiptPath != null, onClick = onReceiptClick)
+                .padding(vertical = MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = uiState.receiptPath != null, onClick = onReceiptClick)
-                    .padding(MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                    .size(Dimens.GroupConversationScreen.avatarSize)
+                    .clip(MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(Dimens.GroupConversationScreen.avatarSize)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val receiptPath = uiState.receiptPath
-                    if (receiptPath != null) {
-                        SparrowImage(
-                            model = receiptPath,
-                            contentDescription = stringResource(Res.string.feature_expenses_receipt),
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Image,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-                        )
-                    }
-                }
-                Text(
-                    text = stringResource(Res.string.feature_expenses_receipt),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                if (uiState.receiptPath == null) {
-                    Text(
-                        text = stringResource(Res.string.feature_expenses_receipt_missing),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (receiptPath != null) {
+                    SparrowImage(
+                        model = receiptPath,
+                        contentDescription = stringResource(Res.string.feature_expenses_receipt),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        SparrowIcons.Receipt,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+                        tint = MaterialTheme.colorScheme.outline
                     )
                 }
+            }
+            Text(
+                text = stringResource(
+                    if (receiptPath != null) Res.string.feature_expenses_receipt_view else Res.string.feature_expenses_receipt_missing
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            if (receiptPath != null) {
+                Icon(
+                    SparrowIcons.Chevron,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                    tint = MaterialTheme.colorScheme.outline
+                )
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.divider,
+            thickness = Dimens.Base.dividerThickness
+        )
     }
 }
 
 @Composable
 private fun SplitSection(uiState: ExpenseDetailUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            SparrowSectionLabel(
                 text = stringResource(
                     Res.string.feature_expenses_detail_split_between,
                     uiState.shares.size
                 ),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = uiState.equalShareLabel
                     ?.let { stringResource(Res.string.feature_expenses_detail_equal_each, it) }
                     ?: stringResource(Res.string.feature_expenses_split_custom_title),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.outline
             )
         }
-        SparrowCardNoAnimation {
-            Column {
-                uiState.shares.forEachIndexed { index, share ->
-                    if (index > 0) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            thickness = Dimens.Base.dividerThickness
-                        )
-                    }
-                    ShareRow(share)
-                }
-            }
+        uiState.shares.forEach { share ->
+            MemberRow(member = share.member, amountLabel = share.amountLabel)
         }
     }
 }
 
 @Composable
-private fun ShareRow(share: ExpenseShareUi) {
-    val contentColor = if (share.member.isLocal) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (share.member.isLocal) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    Color.Transparent
-                }
+private fun MemberRow(
+    member: ExpenseParticipantUi,
+    amountLabel: String
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
+            ExpenseMemberAvatar(member)
+            Text(
+                text = member.label(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.base
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-    ) {
-        ExpenseMemberAvatar(share.member)
-        Text(
-            text = share.member.label(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = contentColor,
-            fontWeight = if (share.member.isLocal) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = share.amountLabel,
-            style = MaterialTheme.typography.bodyMedium,
-            color = contentColor,
-            fontWeight = FontWeight.SemiBold
+            Text(
+                text = amountLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.divider,
+            thickness = Dimens.Base.dividerThickness
         )
     }
 }

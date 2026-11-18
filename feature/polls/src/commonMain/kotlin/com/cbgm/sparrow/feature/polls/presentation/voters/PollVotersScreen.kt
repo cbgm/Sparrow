@@ -149,7 +149,7 @@ private fun PollVoterGroup(
                     text = stringResource(Res.string.feature_polls_no_votes),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.base),
+                        .padding(vertical = MaterialTheme.spacing.base),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -23,6 +23,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCat
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseConversion
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toExpenseCurrencyUi
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toReceiptImage
+import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withAmount
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withCurrency
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withReceiptScan
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.withSplitMode
@@ -126,7 +127,7 @@ class CreateExpenseViewModel(
             is CreateExpenseUiEvent.CurrencySelected ->
                 updateDraft { withCurrency(event.code, rateFor(event.code)) }
             is CreateExpenseUiEvent.CategorySelected -> updateDraft { copy(category = event.category) }
-            is CreateExpenseUiEvent.AmountChanged -> updateDraft { copy(amount = event.text.toAmountInput()) }
+            is CreateExpenseUiEvent.AmountChanged -> updateDraft { withAmount(event.text.toAmountInput()) }
             is CreateExpenseUiEvent.PayerSelected -> updateDraft {
                 if (state.participants.any { it.id == event.id }) copy(payerId = event.id) else this
             }

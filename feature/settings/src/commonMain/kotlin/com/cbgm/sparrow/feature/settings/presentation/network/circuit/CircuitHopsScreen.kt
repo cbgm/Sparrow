@@ -135,7 +135,7 @@ private fun HopCountChooser(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(MaterialTheme.spacing.base),
+            .padding(vertical = MaterialTheme.spacing.base),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
@@ -174,7 +174,7 @@ private fun CircuitCountChooser(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(MaterialTheme.spacing.base),
+            .padding(vertical = MaterialTheme.spacing.base),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
@@ -212,7 +212,7 @@ private fun DecoyCountChooser(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(MaterialTheme.spacing.base),
+            .padding(vertical = MaterialTheme.spacing.base),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
@@ -244,7 +244,7 @@ private fun FallbackChooser(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(MaterialTheme.spacing.base),
+            .padding(vertical = MaterialTheme.spacing.base),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
@@ -273,7 +273,7 @@ private fun ConnectionModeChooser(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(MaterialTheme.spacing.base),
+            .padding(vertical = MaterialTheme.spacing.base),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(

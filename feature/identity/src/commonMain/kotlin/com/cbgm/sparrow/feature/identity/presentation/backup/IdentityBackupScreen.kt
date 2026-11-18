@@ -66,7 +66,7 @@ fun IdentityBackupScreen(
                 )
         ) {
             SparrowCardNoAnimation {
-                Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)) {
                     IdentityBackupSection(
                         state = IdentityBackupUiState(
                             status = when (uiState.status) {

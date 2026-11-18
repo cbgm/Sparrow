@@ -88,7 +88,7 @@ private fun AddMediaTile(onClick: () -> Unit) {
                     style = Stroke(
                         width = stroke,
                         pathEffect = PathEffect.dashPathEffect(
-                            floatArrayOf(Dimens.Poll.dashLength.toPx(), Dimens.Poll.dashGap.toPx())
+                            floatArrayOf(Dimens.Base.dashLength.toPx(), Dimens.Base.dashGap.toPx())
                         )
                     )
                 )

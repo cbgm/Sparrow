@@ -20,7 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -117,14 +117,14 @@ private fun Content(
                     )
                 }
                 item(key = "mark-sent") {
-                    SparrowOutlinedButton(
+                    SparrowSecondaryButton(
                         text = stringResource(Res.string.feature_payment_mark_sent),
                         onClick = { onEvent(PaymentUiEvent.MarkSent) },
                         enabled = !state.isBusy
                     )
                 }
                 item(key = "edit") {
-                    SparrowOutlinedButton(
+                    SparrowSecondaryButton(
                         text = stringResource(Res.string.feature_payment_edit),
                         onClick = { onEvent(PaymentUiEvent.Edit) },
                         enabled = !state.isBusy

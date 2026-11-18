@@ -230,7 +230,7 @@ private fun ContactGroup(
             text = group.title,
             modifier =
                 Modifier.padding(
-                    start = MaterialTheme.spacing.small,
+                    start = MaterialTheme.spacing.screenPadding,
                     bottom = MaterialTheme.spacing.small
                 ),
             style = MaterialTheme.typography.bodyLarge,

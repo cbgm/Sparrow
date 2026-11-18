@@ -100,7 +100,7 @@ private fun PreferredNodeLink(onClick: () -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onClick)
-                    .padding(MaterialTheme.spacing.small),
+                    .padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {

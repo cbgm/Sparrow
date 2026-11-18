@@ -70,7 +70,7 @@ internal fun NetworkDiagnosticsCard(
 ) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium)
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_network_diagnostics),

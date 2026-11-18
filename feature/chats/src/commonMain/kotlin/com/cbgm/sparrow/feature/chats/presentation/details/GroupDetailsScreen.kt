@@ -816,10 +816,7 @@ private fun MemberRow(
                         Modifier
                     }
                 )
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.small
-                ),
+                .padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SparrowAvatar(
@@ -850,7 +847,7 @@ private fun MemberRow(
     if (showDivider) {
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth()
-                .padding(start = MaterialTheme.spacing.listDividerStart),
+                .padding(start = Dimens.Avatar.defaultSize + MaterialTheme.spacing.small),
             thickness = Dimens.Base.dividerThickness,
             color = MaterialTheme.colorScheme.divider
         )
@@ -929,10 +926,7 @@ private fun MembersCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.base
-                    ),
+                    .padding(vertical = MaterialTheme.spacing.base),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SparrowSectionLabel(
@@ -942,7 +936,6 @@ private fun MembersCard(
                 Text(
                     text = "${summary.totalMemberCount} \u00B7 ${summary.mutuallyVerifiedParticipantCount} " +
                         stringResource(Res.string.feature_chats_group_details_verified).lowercase(),
-                    modifier = Modifier.padding(end = MaterialTheme.spacing.small),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -984,10 +977,7 @@ private fun AddMembersRow(onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.small
-                ),
+                .padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -1010,7 +1000,7 @@ private fun AddMembersRow(onClick: () -> Unit) {
             )
         }
         HorizontalDivider(
-            modifier = Modifier.fillMaxWidth().padding(start = MaterialTheme.spacing.listDividerStart),
+            modifier = Modifier.fillMaxWidth().padding(start = Dimens.Avatar.defaultSize + MaterialTheme.spacing.small),
             thickness = Dimens.Base.dividerThickness,
             color = MaterialTheme.colorScheme.divider
         )

@@ -797,6 +797,7 @@
     <string name="feature_expenses_search_currency">Search currency</string>
     <string name="feature_expenses_original_amount">Paid %1$s at %2$s</string>
     <string name="feature_expenses_paid_by">Paid by</string>
+    <string name="feature_expenses_paid_by_member">Paid by %1$s</string>
     <string name="feature_expenses_participants">Participants</string>
     <string name="feature_expenses_equal_split">Split equally</string>
     <string name="feature_expenses_split_between">Split between</string>
@@ -895,6 +896,7 @@
     <string name="feature_expenses_detail_title">Expense</string>
     <string name="feature_expenses_receipt">Receipt</string>
     <string name="feature_expenses_receipt_missing">No receipt yet</string>
+    <string name="feature_expenses_receipt_view">Tap to view</string>
     <string name="feature_expenses_auto_import">Auto import</string>
     <string name="feature_expenses_receipt_attached">Receipt attached – tap to scan again</string>
     <string name="feature_expenses_remove_receipt">Remove receipt</string>

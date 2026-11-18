@@ -342,10 +342,7 @@ private fun ReasonLink(
         modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.small
-            ),
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
@@ -374,7 +371,7 @@ private fun ReasonLink(
 @Composable
 private fun SafetyRowDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+        modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
     )
 }

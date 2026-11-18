@@ -1,26 +1,20 @@
 package com.cbgm.sparrow.feature.expenses.presentation.create.component
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,21 +25,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowChip
+import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowSelectField
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.expenses.domain.ExpenseCurrencies
 import com.cbgm.sparrow.feature.expenses.presentation.common.mapper.toExpenseAmountLabel
-import com.cbgm.sparrow.feature.expenses.presentation.create.icon
 import com.cbgm.sparrow.feature.expenses.presentation.create.label
 import com.cbgm.sparrow.feature.expenses.presentation.create.mapper.toAvatarTarget
 import com.cbgm.sparrow.feature.expenses.presentation.create.model.CreateExpenseUiEvent
@@ -87,67 +85,56 @@ internal fun ExpenseDraftCard(
     onUiEvent: (CreateExpenseUiEvent) -> Unit,
     onScanReceipt: () -> Unit
 ) {
-    SparrowCardNoAnimation {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Text(
-                text = stringResource(Res.string.feature_expenses_category),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            CategorySelection(
-                draft = draft,
-                enabled = enabled,
-                onUiEvent = onUiEvent
-            )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+    ) {
+        SparrowSectionLabel(text = stringResource(Res.string.feature_expenses_category))
+        CategorySelection(
+            draft = draft,
+            enabled = enabled,
+            onUiEvent = onUiEvent
+        )
 
+        SparrowInputField(
+            value = draft.description,
+            onValueChange = { onUiEvent(CreateExpenseUiEvent.DescriptionChanged(it)) },
+            label = stringResource(Res.string.feature_expenses_description),
+            placeholderText = stringResource(Res.string.feature_expenses_description_hint),
+            isSingleLine = true,
+            isEnabled = enabled
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+            verticalAlignment = Alignment.Top
+        ) {
+            CurrencySelection(
+                draft = draft,
+                currencies = currencies,
+                enabled = enabled,
+                onUiEvent = onUiEvent,
+                modifier = Modifier.width(Dimens.Expense.currencyFieldWidth)
+            )
             SparrowInputField(
-                value = draft.description,
-                onValueChange = { onUiEvent(CreateExpenseUiEvent.DescriptionChanged(it)) },
-                label = stringResource(Res.string.feature_expenses_description),
-                placeholderText = stringResource(Res.string.feature_expenses_description_hint),
+                value = draft.amount,
+                onValueChange = { onUiEvent(CreateExpenseUiEvent.AmountChanged(it)) },
+                label = stringResource(Res.string.feature_expenses_amount),
+                modifier = Modifier.weight(1f),
                 isSingleLine = true,
+                placeholderText = "0.00",
                 isEnabled = enabled
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    CurrencySelection(
-                        draft = draft,
-                        currencies = currencies,
-                        enabled = enabled,
-                        onUiEvent = onUiEvent
-                    )
-                    SparrowInputField(
-                        value = draft.amount,
-                        onValueChange = { onUiEvent(CreateExpenseUiEvent.AmountChanged(it)) },
-                        label = stringResource(Res.string.feature_expenses_amount),
-                        modifier = Modifier.weight(1f),
-                        isSingleLine = true,
-                        placeholderText = "0.00",
-                        isEnabled = enabled
-                    )
-                }
-                PayerSelection(
-                    draft = draft,
-                    participants = participants,
-                    enabled = enabled,
-                    onUiEvent = onUiEvent,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            ConvertedAmount(draft = draft)
+            PayerSelection(
+                draft = draft,
+                participants = participants,
+                enabled = enabled,
+                onUiEvent = onUiEvent,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        ConvertedAmount(draft = draft)
+        Column {
             MemberSelection(
                 draft = draft,
                 participants = participants,
@@ -160,14 +147,56 @@ internal fun ExpenseDraftCard(
                 onUiEvent = onUiEvent,
                 onScanReceipt = onScanReceipt
             )
-            if (canAddExpense) {
-                SparrowApprovalButton(
-                    text = stringResource(Res.string.feature_expenses_add_another),
-                    onClick = { onUiEvent(CreateExpenseUiEvent.AddAnotherClicked) },
-                    enabled = draft.amount.isNotEmpty() && draft.description.isNotEmpty()
-                )
-            }
         }
+        if (canAddExpense && (draft.amount.isNotEmpty() || draft.description.isNotEmpty())) {
+            AddToListRow(
+                enabled = draft.amount.isNotEmpty() && draft.description.isNotEmpty(),
+                onClick = { onUiEvent(CreateExpenseUiEvent.AddAnotherClicked) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddToListRow(
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val lineColor = MaterialTheme.colorScheme.outlineVariant
+    val shape = MaterialTheme.shapes.medium
+    val contentColor = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(Dimens.Button.height)
+            .clip(shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .drawBehind {
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = lineColor,
+                    style = Stroke(
+                        width = Dimens.Base.borderStrokeWidth.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(Dimens.Base.dashLength.toPx(), Dimens.Base.dashGap.toPx())
+                        )
+                    )
+                )
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base, Alignment.CenterHorizontally)
+    ) {
+        Icon(
+            imageVector = SparrowIcons.Add,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+            tint = contentColor
+        )
+        Text(
+            text = stringResource(Res.string.feature_expenses_add_another),
+            style = MaterialTheme.typography.bodyMedium,
+            color = contentColor
+        )
     }
 }
 
@@ -198,29 +227,17 @@ private fun CurrencySelection(
     draft: ExpenseDraftUi,
     currencies: List<ExpenseCurrencyUi>,
     enabled: Boolean,
-    onUiEvent: (CreateExpenseUiEvent) -> Unit
+    onUiEvent: (CreateExpenseUiEvent) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.Bottom) {
-        Text(
-            text = stringResource(Res.string.feature_expenses_currency),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Row(
-            modifier = Modifier
-                .clickable(enabled = enabled) { expanded = true }
-                .padding(vertical = MaterialTheme.spacing.small / 2),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = ExpenseCurrencies.symbol(draft.currencyCode),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Icon(Icons.Default.ExpandMore, contentDescription = null)
-        }
-    }
+    SparrowSelectField(
+        label = stringResource(Res.string.feature_expenses_currency),
+        value = ExpenseCurrencies.symbol(draft.currencyCode),
+        onClick = { expanded = true },
+        modifier = modifier,
+        isEnabled = enabled
+    )
     if (expanded) {
         ExpenseCurrencyListDialog(
             title = stringResource(Res.string.feature_expenses_currency),
@@ -241,79 +258,56 @@ private fun ReceiptSelection(
     onUiEvent: (CreateExpenseUiEvent) -> Unit,
     onScanReceipt: () -> Unit
 ) {
+    if (receipt == null) {
+        SparrowDetailRow(
+            icon = SparrowIcons.Receipt,
+            title = stringResource(Res.string.feature_expenses_receipt),
+            subtitle = stringResource(Res.string.feature_expenses_auto_import),
+            onClick = onScanReceipt,
+            enabled = enabled
+        )
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .border(
-                Dimens.Base.borderStrokeWidth,
-                MaterialTheme.colorScheme.outlineVariant,
-                MaterialTheme.shapes.medium
-            )
             .clickable(enabled) { onScanReceipt() }
-            .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.medium
-            ),
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
-        if (receipt == null) {
-            Icon(
-                imageVector = Icons.Default.DocumentScanner,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        } else {
-            MediaThumbnail(
-                media = receipt,
-                modifier = Modifier
-                    .size(RECEIPT_THUMBNAIL_SIZE)
-                    .clip(MaterialTheme.shapes.small)
-            )
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
+        MediaThumbnail(
+            media = receipt,
+            modifier = Modifier
+                .size(Dimens.SettingsScreen.primaryIconSize)
+                .clip(MaterialTheme.shapes.extraSmall)
+        )
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(Res.string.feature_expenses_receipt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(
-                    if (receipt == null) {
-                        Res.string.feature_expenses_auto_import
-                    } else {
-                        Res.string.feature_expenses_receipt_attached
-                    }
-                ),
                 style = MaterialTheme.typography.bodyMedium
             )
-        }
-        if (receipt == null) {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = stringResource(Res.string.feature_expenses_receipt_attached),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        } else {
-            IconButton(
-                onClick = { onUiEvent(CreateExpenseUiEvent.RemoveReceiptClicked) },
-                enabled = enabled
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(Res.string.feature_expenses_remove_receipt),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
+        Icon(
+            imageVector = SparrowIcons.Close,
+            contentDescription = stringResource(Res.string.feature_expenses_remove_receipt),
+            modifier = Modifier
+                .size(Dimens.SettingsScreen.secondaryIconSize)
+                .clickable(enabled) { onUiEvent(CreateExpenseUiEvent.RemoveReceiptClicked) },
+            tint = MaterialTheme.colorScheme.outline
+        )
     }
+    HorizontalDivider(
+        modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
+        thickness = Dimens.Base.dividerThickness,
+        color = MaterialTheme.colorScheme.divider
+    )
 }
-
-private val RECEIPT_THUMBNAIL_SIZE = 32.dp
 
 @Composable
 private fun MemberSelection(
@@ -338,49 +332,13 @@ private fun MemberSelection(
             draft.participantIds.size
         )
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .border(
-                Dimens.Base.borderStrokeWidth,
-                MaterialTheme.colorScheme.outlineVariant,
-                MaterialTheme.shapes.medium
-            )
-            .clickable(enabled) { onUiEvent(CreateExpenseUiEvent.SplitPickerClicked) }
-            .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.medium
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Groups,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = stringResource(Res.string.feature_expenses_split_between),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = splitSummary,
-                style = MaterialTheme.typography.bodyMedium
-                // fontWeight = FontWeight.Medium
-            )
-        }
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    SparrowDetailRow(
+        icon = SparrowIcons.Group,
+        title = stringResource(Res.string.feature_expenses_split_between),
+        subtitle = splitSummary,
+        onClick = { onUiEvent(CreateExpenseUiEvent.SplitPickerClicked) },
+        enabled = enabled
+    )
 }
 
 @Composable
@@ -389,15 +347,16 @@ private fun CategorySelection(
     enabled: Boolean,
     onUiEvent: (CreateExpenseUiEvent) -> Unit
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-        items(ExpenseCategoryUi.entries.size) { index ->
-            val category = ExpenseCategoryUi.entries[index]
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        ExpenseCategoryUi.entries.forEach { category ->
             SparrowChip(
                 selected = category == draft.category,
                 onClick = { onUiEvent(CreateExpenseUiEvent.CategorySelected(category)) },
                 label = category.label(),
-                enabled = enabled,
-                icon = category.icon
+                enabled = enabled
             )
         }
     }
@@ -422,37 +381,12 @@ private fun PayerSelection(
         ) {
             var expanded by remember { mutableStateOf(false) }
 
-            Text(
-                text = stringResource(Res.string.feature_expenses_paid_by),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall
+            SparrowSelectField(
+                label = stringResource(Res.string.feature_expenses_paid_by),
+                value = participants.firstOrNull { it.id == draft.payerId }?.displayName.orEmpty(),
+                onClick = { expanded = true },
+                isEnabled = enabled
             )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = enabled) { expanded = true }
-                    .padding(vertical = MaterialTheme.spacing.small / 2),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-            ) {
-                val selected = participants.firstOrNull { it.id == draft.payerId }
-                if (selected != null) {
-                    SparrowAvatar(
-                        name = selected.displayName,
-                        target = if (LocalInspectionMode.current) null else selected.toAvatarTarget(),
-                        size = Dimens.GroupConversationScreen.avatarSize
-                    )
-                }
-                Text(
-                    text = selected?.displayName.orEmpty(),
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
-                )
-                Icon(Icons.Default.ExpandMore, contentDescription = null)
-            }
 
             DropdownMenu(
                 expanded = expanded,

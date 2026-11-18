@@ -60,10 +60,7 @@ fun SparrowDetailRow(
                         } else {
                             Modifier
                         }
-                    ).padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.small
-                    ),
+                    ).padding(vertical = MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -105,7 +102,7 @@ fun SparrowDetailRow(
         }
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+                modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
                 thickness = Dimens.Base.dividerThickness,
                 color = MaterialTheme.colorScheme.divider
             )
@@ -134,10 +131,7 @@ fun SparrowSwitchRow(
                         interactionSource = null,
                         indication = ripple(),
                         onClick = { onCheckedChange(!checked) }
-                    ).padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.small
-                    ),
+                    ).padding(vertical = MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -172,7 +166,7 @@ fun SparrowSwitchRow(
         }
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+                modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
                 thickness = Dimens.Base.dividerThickness,
                 color = MaterialTheme.colorScheme.divider
             )

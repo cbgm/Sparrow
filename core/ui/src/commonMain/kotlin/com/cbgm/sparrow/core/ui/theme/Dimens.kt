@@ -8,6 +8,8 @@ object Dimens {
         val zero = 0.dp
         val progressIndicatorStrokeWidth = 2.dp
         val dividerThickness = 0.5.dp
+        val dashLength = 5.dp
+        val dashGap = 4.dp
         val borderStrokeWidth = 1.dp
         val progressButtonIndicatorSize = 18.dp
     }
@@ -15,8 +17,6 @@ object Dimens {
     object Poll {
         val previewMediaSelectionSize = 80.dp
         val barHeight = 3.dp
-        val dashLength = 5.dp
-        val dashGap = 4.dp
         val checkIconSize = 16.dp
     }
 
@@ -26,10 +26,11 @@ object Dimens {
 
     object Expense {
         val numberBadgeSize = 25.dp
+        val currencyFieldWidth = 64.dp
         val categoryBadgeSize = 40.dp
         val pinIconTileSize = 36.dp
         val customAmountFieldWidth = 112.dp
-        val balanceBarHeight = 8.dp
+        val balanceBarHeight = 4.dp
         val detailIconSize = 64.dp
         val currencyListDialogHeight = 320.dp
     }

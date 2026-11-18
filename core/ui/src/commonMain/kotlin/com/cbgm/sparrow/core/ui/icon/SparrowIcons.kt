@@ -83,6 +83,26 @@ object SparrowIcons {
         )
     }
 
+    val Group: ImageVector by lazy {
+        lineIcon(
+            name = "Group",
+            autoMirror = false,
+            "M9,6 A3,3 0 1,1 8.99,6 Z",
+            "M3.5,18 C4.3,15 6.5,13.5 9,13.5 C11.5,13.5 13.7,15 14.5,18",
+            "M16,8 A2.3,2.3 0 1,1 15.99,8 Z",
+            "M15.5,14 C17.8,14 19.6,15.2 20.5,18"
+        )
+    }
+
+    val Receipt: ImageVector by lazy {
+        lineIcon(
+            name = "Receipt",
+            autoMirror = false,
+            "M6,3.5 H18 V20.5 L15.5,19 L13,20.5 L10.5,19 L8,20.5 L6,19 Z",
+            "M9,8 H15 M9,11.5 H15 M9,15 H12.5"
+        )
+    }
+
     val QrCode: ImageVector by lazy {
         lineIcon(
             name = "QrCode",

@@ -153,7 +153,7 @@ fun InvitationsScreen(
                                 Text(
                                     text = recoveryError,
                                     color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(MaterialTheme.spacing.medium)
+                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
                                 )
                             }
                         }
@@ -241,10 +241,7 @@ private fun IdentityChangeInvitationItem(
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.small
-            ),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SparrowAvatar(
@@ -485,7 +482,7 @@ private fun InvitationDivider() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(start = MaterialTheme.spacing.listDividerStart),
+                .padding(start = Dimens.Avatar.defaultSize + MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
     )
 }
@@ -534,10 +531,7 @@ private fun InvitationRow(
             ?: stringResource(Res.string.base_unknown)
 
     Row(
-        modifier = modifier.fillMaxWidth().padding(
-            horizontal = MaterialTheme.spacing.small,
-            vertical = MaterialTheme.spacing.small
-        ),
+        modifier = modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SparrowAvatar(

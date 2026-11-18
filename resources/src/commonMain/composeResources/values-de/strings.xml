@@ -801,6 +801,7 @@
     <string name="feature_expenses_search_currency">Währung suchen</string>
     <string name="feature_expenses_original_amount">Bezahlt %1$s zum Kurs %2$s</string>
     <string name="feature_expenses_paid_by">Bezahlt von</string>
+    <string name="feature_expenses_paid_by_member">Bezahlt von %1$s</string>
     <string name="feature_expenses_participants">Teilnehmer</string>
     <string name="feature_expenses_equal_split">Gleichmäßig aufteilen</string>
     <string name="feature_expenses_split_between">Aufteilen auf</string>
@@ -899,6 +900,7 @@
     <string name="feature_expenses_detail_title">Ausgabe</string>
     <string name="feature_expenses_receipt">Beleg</string>
     <string name="feature_expenses_receipt_missing">Noch kein Beleg</string>
+    <string name="feature_expenses_receipt_view">Zum Ansehen tippen</string>
     <string name="feature_expenses_auto_import">Automatisch importieren</string>
     <string name="feature_expenses_receipt_attached">Beleg angehängt – tippen zum erneuten Scannen</string>
     <string name="feature_expenses_remove_receipt">Beleg entfernen</string>

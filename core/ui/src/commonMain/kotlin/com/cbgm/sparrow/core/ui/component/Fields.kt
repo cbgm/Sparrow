@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -24,12 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -182,6 +185,51 @@ fun SparrowInputField(
         }
     }
 }
+
+@Composable
+fun SparrowSelectField(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEnabled: Boolean = true
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = isEnabled, onClick = onClick)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(bottom = MaterialTheme.spacing.micro),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+        FieldBox(
+            focused = false,
+            trailing = {
+                Icon(
+                    imageVector = SparrowIcons.Chevron,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(Dimens.SettingsScreen.secondaryIconSize)
+                        .rotate(QuarterTurn),
+                    tint = MaterialTheme.colorScheme.outline
+                )
+            }
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private const val QuarterTurn = 90f
 
 @Composable
 private fun FieldBox(

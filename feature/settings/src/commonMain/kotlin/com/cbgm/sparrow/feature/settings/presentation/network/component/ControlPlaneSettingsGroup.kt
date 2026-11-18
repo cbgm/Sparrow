@@ -67,7 +67,7 @@ fun ControlPlaneSettingsGroup(
 @Composable
 fun ControlPlaneSettingsDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+        modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
     )
 }
@@ -89,7 +89,7 @@ fun ControlPlaneSettingsEntry(
         else -> stringResource(Res.string.feature_settings_control_plane_status_checking)
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+        modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

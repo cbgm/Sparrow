@@ -94,7 +94,7 @@ fun ImportIdentityScreen(
 
             SparrowCardNoAnimation {
                 Column(
-                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                 ) {
                     Text(
@@ -128,7 +128,7 @@ fun ImportIdentityScreen(
 
             SparrowCardNoAnimation {
                 Column(
-                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                 ) {
                     Text(

@@ -136,7 +136,7 @@ private fun TopBar(
 private fun BuildInfoCard(buildInfo: BuildInfo) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium)
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_build_info),
@@ -181,7 +181,7 @@ private fun DangerZoneCard(
 ) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium)
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_danger_zone),

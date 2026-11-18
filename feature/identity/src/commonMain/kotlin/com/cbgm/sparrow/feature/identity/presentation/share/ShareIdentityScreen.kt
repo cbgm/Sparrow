@@ -391,7 +391,7 @@ private fun GeneratedIdentityContent(
 
                 SparrowCardNoAnimation {
                     Text(
-                        modifier = Modifier.padding(MaterialTheme.spacing.small),
+                        modifier = Modifier.padding(vertical = MaterialTheme.spacing.small),
                         text = encodedIdentity,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,

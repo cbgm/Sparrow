@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -159,13 +161,11 @@ private fun NodeChoiceRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.base
-                ),
+                .padding(vertical = MaterialTheme.spacing.base),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SparrowRadio(selected = selected, onClick = onClick)
+        SparrowRadio(selected = selected, onClick = null)
+        Spacer(Modifier.size(MaterialTheme.spacing.small))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,

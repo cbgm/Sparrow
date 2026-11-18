@@ -135,11 +135,7 @@ fun AttachmentStorageScreen(
                                         androidx.compose.runtime.key(summary.conversationId) {
                                             if (index > 0) {
                                                 HorizontalDivider(
-                                                    modifier = Modifier.padding(
-                                                        start = MaterialTheme.spacing.times(
-                                                            5
-                                                        )
-                                                    ),
+                                                    modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
                                                     color = MaterialTheme.colorScheme.outlineVariant.copy(
                                                         alpha = Alpha.divider
                                                     )
@@ -157,10 +153,7 @@ fun AttachmentStorageScreen(
                                                 }
                                             ) {
                                                 Row(
-                                                    modifier = Modifier.fillMaxWidth().padding(
-                                                        horizontal = MaterialTheme.spacing.small,
-                                                        vertical = MaterialTheme.spacing.small
-                                                    ),
+                                                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     Icon(

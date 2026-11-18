@@ -31,7 +31,7 @@ fun ControlPlaneSummaryCard(
 ) {
     ControlPlaneSettingsGroup(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

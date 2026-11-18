@@ -48,7 +48,7 @@ internal fun DeveloperErrorItem(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(MaterialTheme.spacing.small)
+                    .padding(vertical = MaterialTheme.spacing.small)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

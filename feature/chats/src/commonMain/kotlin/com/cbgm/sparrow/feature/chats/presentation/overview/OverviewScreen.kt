@@ -135,7 +135,7 @@ private fun Content(
                             onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
                             modifier =
                                 Modifier.padding(
-                                    horizontal = MaterialTheme.spacing.small,
+                                    horizontal = MaterialTheme.spacing.screenPadding,
                                     vertical = MaterialTheme.spacing.micro
                                 )
                         )
@@ -162,7 +162,7 @@ private fun Content(
                                 onClick = { onUiEvent(OverviewUiEvent.AutoReplyClicked) },
                                 modifier =
                                     Modifier.padding(
-                                        horizontal = MaterialTheme.spacing.small,
+                                        horizontal = MaterialTheme.spacing.screenPadding,
                                         vertical = MaterialTheme.spacing.micro
                                     )
                             )

@@ -114,7 +114,7 @@ fun AutoReplySettingsScreen(
                         )
                         uiState.replies.forEach { reply ->
                             HorizontalDivider(
-                                modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+                                modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
                             )
                             androidx.compose.runtime.key(reply.id) {
@@ -152,7 +152,7 @@ private fun AutoReplyOffItem(selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.small),
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -205,7 +205,7 @@ private fun AutoReplyItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onActivate)
-                .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.small),
+                .padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

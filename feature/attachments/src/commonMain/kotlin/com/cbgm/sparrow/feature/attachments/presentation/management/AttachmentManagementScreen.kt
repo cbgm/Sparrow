@@ -439,7 +439,7 @@ private fun FileList(
                             androidx.compose.runtime.key(attachment.id) {
                                 if (index > 0) {
                                     HorizontalDivider(
-                                        modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
+                                        modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
                                         thickness = Dimens.Base.dividerThickness,
                                         color = MaterialTheme.colorScheme.divider
                                     )
@@ -485,10 +485,7 @@ private fun AttachmentFileRow(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(
-            horizontal = MaterialTheme.spacing.small,
-            vertical = MaterialTheme.spacing.small
-        ),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
