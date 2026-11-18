@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
@@ -65,23 +64,19 @@ fun IdentityBackupScreen(
                     end = MaterialTheme.spacing.screenPadding
                 )
         ) {
-            SparrowCardNoAnimation {
-                Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)) {
-                    IdentityBackupSection(
-                        state = IdentityBackupUiState(
-                            status = when (uiState.status) {
-                                BackupStateUi.NOT_BACKED_UP -> BackupStateUi.NOT_BACKED_UP
-                                BackupStateUi.EXPORTED -> BackupStateUi.EXPORTED
-                                BackupStateUi.IMPORTED -> BackupStateUi.IMPORTED
-                            },
-                            busy = uiState.busy,
-                            message = uiState.message,
-                            error = uiState.error
-                        ),
-                        onExport = onExportIdentity
-                    )
-                }
-            }
+            IdentityBackupSection(
+                state = IdentityBackupUiState(
+                    status = when (uiState.status) {
+                        BackupStateUi.NOT_BACKED_UP -> BackupStateUi.NOT_BACKED_UP
+                        BackupStateUi.EXPORTED -> BackupStateUi.EXPORTED
+                        BackupStateUi.IMPORTED -> BackupStateUi.IMPORTED
+                    },
+                    busy = uiState.busy,
+                    message = uiState.message,
+                    error = uiState.error
+                ),
+                onExport = onExportIdentity
+            )
         }
     }
 }

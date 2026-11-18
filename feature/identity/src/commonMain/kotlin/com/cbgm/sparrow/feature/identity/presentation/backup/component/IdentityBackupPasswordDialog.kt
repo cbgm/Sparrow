@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -14,7 +15,8 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_identity_backup_export_action
-import com.cbgm.sparrow.resources.feature_identity_backup_password
+import com.cbgm.sparrow.resources.feature_identity_backup_password_hint
+import com.cbgm.sparrow.resources.feature_identity_backup_password_label
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -30,14 +32,19 @@ fun IdentityBackupPasswordDialog(
         onDismissRequest = onDismiss,
         title = stringResource(Res.string.feature_identity_backup_export_action),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
                 SparrowInputField(
                     value = password,
                     onValueChange = onPasswordChange,
-                    label = stringResource(Res.string.feature_identity_backup_password),
+                    label = stringResource(Res.string.feature_identity_backup_password_label),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isSingleLine = true
+                )
+                Text(
+                    text = stringResource(Res.string.feature_identity_backup_password_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },

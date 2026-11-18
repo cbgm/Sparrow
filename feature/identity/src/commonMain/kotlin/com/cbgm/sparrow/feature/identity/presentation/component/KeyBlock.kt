@@ -1,15 +1,19 @@
 package com.cbgm.sparrow.feature.identity.presentation.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -18,8 +22,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.common_copy
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SparrowKeyBlock(
@@ -29,8 +38,22 @@ fun SparrowKeyBlock(
     description: String? = null,
     onCopied: () -> Unit = {}
 ) {
+    val clipboard = rememberClipboardWriter()
     Column(modifier = modifier.fillMaxWidth()) {
-        SparrowSectionLabel(text = label)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SparrowSectionLabel(text = label, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = SparrowIcons.Copy,
+                contentDescription = stringResource(Res.string.common_copy),
+                modifier = Modifier
+                    .size(Dimens.SettingsScreen.secondaryIconSize)
+                    .clickable {
+                        clipboard.copyText(key.filter(Char::isLetterOrDigit).uppercase())
+                        onCopied()
+                    },
+                tint = MaterialTheme.colorScheme.outline
+            )
+        }
         description?.let { text ->
             Text(
                 text = text,

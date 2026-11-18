@@ -196,11 +196,12 @@ private fun ReadyOverviewContent(
         }
         Text(
             text = stringResource(Res.string.feature_identity_key_pattern_hint),
-            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(top = MaterialTheme.spacing.base),
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(Modifier.height(MaterialTheme.spacing.large))
         val clipboard = rememberClipboardWriter()
         Text(
             text = localPhoneNumber,
@@ -217,6 +218,7 @@ private fun ReadyOverviewContent(
         )
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.micro),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -231,7 +233,7 @@ private fun ReadyOverviewContent(
             )
         }
     }
-    Spacer(Modifier.height(MaterialTheme.spacing.large))
+    Spacer(Modifier.height(MaterialTheme.spacing.times(4)))
     SparrowDetailRow(
         icon = SparrowIcons.Share,
         title = stringResource(Res.string.feature_identity_share_my_identity),
@@ -259,7 +261,6 @@ private fun ReadyOverviewContent(
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-        showDivider = false,
         onClick = onOpenBackup
     )
 }

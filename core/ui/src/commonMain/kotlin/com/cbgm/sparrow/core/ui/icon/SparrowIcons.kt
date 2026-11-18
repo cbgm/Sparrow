@@ -103,6 +103,15 @@ object SparrowIcons {
         )
     }
 
+    val Copy: ImageVector by lazy {
+        lineIcon(
+            name = "Copy",
+            autoMirror = false,
+            "M9,9 H20 V20 H9 Z",
+            "M5,15 V4 H16"
+        )
+    }
+
     val QrCode: ImageVector by lazy {
         lineIcon(
             name = "QrCode",

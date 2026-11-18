@@ -13,7 +13,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.feature.identity.presentation.restore.model.IdentityRestoreUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.feature_identity_backup_password
+import com.cbgm.sparrow.resources.feature_identity_backup_password_label
 import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
 import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
 import org.jetbrains.compose.resources.stringResource
@@ -34,7 +34,7 @@ fun IdentityRestoreDialog(
                 SparrowInputField(
                     value = state.password,
                     onValueChange = onPasswordChange,
-                    label = stringResource(Res.string.feature_identity_backup_password),
+                    label = stringResource(Res.string.feature_identity_backup_password_label),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isSingleLine = true

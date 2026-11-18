@@ -93,12 +93,6 @@ object Alpha {
         const val publicKeyValue = 0.85f
     }
 
-    object ShareIdentityScreen {
-        const val codeBackground = 0.12f
-        const val codeBorder = 0.3f
-        const val accentText = 0.4f
-    }
-
     object NetworkDiagnosticsCard {
         const val available = 0.7f
     }

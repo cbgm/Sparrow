@@ -119,6 +119,7 @@
     <string name="feature_chats_edit_message">Edit</string>
     <string name="feature_chats_editing_message">Editing message</string>
     <string name="feature_chats_copy">Copy</string>
+    <string name="common_copy">Copy</string>
     <string name="common_copied">Copied</string>
     <string name="feature_chats_you">You</string>
     <string name="feature_chats_attachment">Attachment</string>
@@ -675,7 +676,11 @@
     <string name="feature_identity_backup_imported">Your original identity keys have been restored. Chats, contacts, and authorizations are not in this backup. To reconnect, use Chats → New chat to invite your contact again, or ask them to open your old conversation and choose Reconnect contact. They do not need to replace your identity when you restored the original keys. Keep your backup file and password safe.</string>
     <string name="feature_identity_backup_export_action">Back up</string>
     <string name="feature_identity_backup_restore_action">Restore</string>
-    <string name="feature_identity_backup_password">Backup password (12+ characters for export)</string>
+    <string name="feature_identity_backup_status_missing">Not backed up</string>
+    <string name="feature_identity_backup_status_exported">Backed up</string>
+    <string name="feature_identity_backup_status_imported">Restored</string>
+    <string name="feature_identity_backup_password_label">Backup password</string>
+    <string name="feature_identity_backup_password_hint">At least 12 characters</string>
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 
 

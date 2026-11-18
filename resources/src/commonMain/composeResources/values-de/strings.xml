@@ -119,6 +119,7 @@
     <string name="feature_chats_edit_message">Bearbeiten</string>
     <string name="feature_chats_editing_message">Nachricht bearbeiten</string>
     <string name="feature_chats_copy">Kopieren</string>
+    <string name="common_copy">Kopieren</string>
     <string name="common_copied">Kopiert</string>
     <string name="feature_chats_you">Du</string>
     <string name="feature_chats_attachment">Anhang</string>
@@ -679,7 +680,11 @@
     <string name="feature_identity_backup_imported">Deine ursprünglichen Identitätsschlüssel wurden wiederhergestellt. Chats, Kontakte und Berechtigungen sind nicht in diesem Backup enthalten. Öffne zum erneuten Verbinden Chats → Neuer Chat und lade den Kontakt erneut ein. Alternativ kann dein Kontakt euren alten Chat öffnen und „Kontakt erneut verbinden“ wählen. Da du die ursprünglichen Schlüssel wiederhergestellt hast, muss er deine Identität nicht ersetzen. Bewahre Backupdatei und Passwort sicher auf.</string>
     <string name="feature_identity_backup_export_action">Sichern</string>
     <string name="feature_identity_backup_restore_action">Wiederherstellen</string>
-    <string name="feature_identity_backup_password">Backup-Passwort (mindestens 12 Zeichen beim Export)</string>
+    <string name="feature_identity_backup_status_missing">Nicht gesichert</string>
+    <string name="feature_identity_backup_status_exported">Gesichert</string>
+    <string name="feature_identity_backup_status_imported">Wiederhergestellt</string>
+    <string name="feature_identity_backup_password_label">Sicherungspasswort</string>
+    <string name="feature_identity_backup_password_hint">Mindestens 12 Zeichen</string>
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 
 

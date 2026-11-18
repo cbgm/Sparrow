@@ -38,7 +38,7 @@ fun IdentityProfilePictureSection(
             SparrowAvatar(
                 name = "",
                 target = AvatarTarget.LocalUser,
-                size = Dimens.Avatar.profileSize,
+                size = Dimens.IdentityOverviewScreen.pictureSize,
                 fallbackPainter = painterResource(Res.drawable.ic_identity)
             )
 

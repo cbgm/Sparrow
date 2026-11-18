@@ -84,9 +84,10 @@ object Dimens {
     }
 
     object IdentityOverviewScreen {
-        val keyRingsSize = 200.dp
+        val keyRingsSize = 168.dp
         val keyRingStroke = 1.5.dp
         val keyRingGap = 9.dp
+        val pictureSize = 120.dp
     }
 
     object MediaGrid {
@@ -303,7 +304,6 @@ object Dimens {
 
     object ShareIdentityScreen {
         val avatarSize = 88.dp
-        val dividerWidth = 1.dp
         val actionIconContainerSize = 40.dp
         val progressSize = 20.dp
         val qrCodeSize = 240.dp

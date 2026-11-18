@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.component.SparrowSwitch
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -142,7 +141,7 @@ private fun PaymentField(label: String, value: String) {
             }
             IconButton(onClick = { clipboard.setText(AnnotatedString(value)) }) {
                 Icon(
-                    Icons.Default.ContentCopy,
+                    SparrowIcons.Copy,
                     stringResource(Res.string.feature_payment_copy),
                     modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
                     tint = MaterialTheme.colorScheme.outline
