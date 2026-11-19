@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,15 +21,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowRadio
+import com.cbgm.sparrow.core.ui.component.SparrowSlider
 import com.cbgm.sparrow.core.ui.component.SparrowSwitch
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.settings.presentation.network.circuit.component.CircuitHopsGraphic
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
@@ -53,6 +53,7 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_estimate
 import com.cbgm.sparrow.resources.feature_settings_circuit_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_hint
 import com.cbgm.sparrow.resources.feature_settings_circuit_hops
+import com.cbgm.sparrow.resources.feature_settings_circuit_hops_unavailable
 import com.cbgm.sparrow.resources.feature_settings_circuit_operators_fewer
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_off
@@ -63,7 +64,12 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_status_unavailable
 import com.cbgm.sparrow.resources.feature_settings_decoy_count
 import com.cbgm.sparrow.resources.feature_settings_decoy_count_hint
 import com.cbgm.sparrow.resources.feature_settings_decoy_count_off
+import com.cbgm.sparrow.resources.feature_settings_onion_circuit_summary_combined
+import com.cbgm.sparrow.resources.feature_settings_onion_circuits_count
+import com.cbgm.sparrow.resources.feature_settings_onion_decoys_count
+import com.cbgm.sparrow.resources.feature_settings_onion_hops_count
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -77,7 +83,10 @@ fun CircuitHopsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            CircuitHopsTopBar(containerColor = containerColor, onBack = { onUiEvent(CircuitHopsUiEvent.BackClicked) })
+            CircuitHopsTopBar(
+                containerColor = containerColor,
+                onBack = { onUiEvent(CircuitHopsUiEvent.BackClicked) }
+            )
         }
     ) { innerPadding, listState ->
         LazyColumn(
@@ -91,6 +100,26 @@ fun CircuitHopsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
+            item(key = "graphic") {
+                val summaryText = rememberCircuitSummaryText(
+                    hopCount = uiState.selectedHopCount,
+                    circuitCount = uiState.selectedCircuitCount,
+                    decoyCount = uiState.selectedDecoyCount
+                )
+                Text(
+                    text = if (uiState.status == CircuitUiStatus.Unavailable) {
+                        stringResource(Res.string.feature_settings_circuit_hops_unavailable)
+                    } else {
+                        summaryText
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                CircuitHopsGraphic(
+                    uiState = uiState,
+                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
+                )
+            }
             item(key = "hint") {
                 Text(
                     text = stringResource(Res.string.feature_settings_circuit_hint),
@@ -99,32 +128,40 @@ fun CircuitHopsScreen(
                 )
             }
             item(key = "hops") {
-                SparrowCardNoAnimation {
-                    HopCountChooser(uiState = uiState, onUiEvent = onUiEvent)
-                }
+                HopCountChooser(uiState = uiState, onUiEvent = onUiEvent)
             }
             item(key = "circuits") {
-                SparrowCardNoAnimation {
-                    CircuitCountChooser(uiState = uiState, onUiEvent = onUiEvent)
-                }
+                CircuitCountChooser(uiState = uiState, onUiEvent = onUiEvent)
             }
             item(key = "decoys") {
-                SparrowCardNoAnimation {
-                    DecoyCountChooser(uiState = uiState, onUiEvent = onUiEvent)
-                }
+                DecoyCountChooser(uiState = uiState, onUiEvent = onUiEvent)
             }
             item(key = "fallback") {
-                SparrowCardNoAnimation {
-                    FallbackChooser(uiState = uiState, onUiEvent = onUiEvent)
-                }
+                FallbackChooser(uiState = uiState, onUiEvent = onUiEvent)
             }
             item(key = "receiving") {
-                SparrowCardNoAnimation {
-                    ConnectionModeChooser(uiState = uiState, onUiEvent = onUiEvent)
-                }
+                ConnectionModeChooser(uiState = uiState, onUiEvent = onUiEvent)
             }
         }
     }
+}
+
+@Composable
+private fun rememberCircuitSummaryText(
+    hopCount: Int,
+    circuitCount: Int,
+    decoyCount: Int
+): String {
+    val hopsText = pluralStringResource(Res.plurals.feature_settings_onion_hops_count, hopCount, hopCount)
+    val circuitsText = pluralStringResource(Res.plurals.feature_settings_onion_circuits_count, circuitCount, circuitCount)
+    val decoysText = pluralStringResource(Res.plurals.feature_settings_onion_decoys_count, decoyCount, decoyCount)
+
+    return stringResource(
+        Res.string.feature_settings_onion_circuit_summary_combined,
+        hopsText,
+        circuitsText,
+        decoysText
+    )
 }
 
 @Composable
@@ -139,12 +176,15 @@ private fun HopCountChooser(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
-            text = stringResource(Res.string.feature_settings_circuit_hops, uiState.selectedHopCount),
+            text = stringResource(
+                Res.string.feature_settings_circuit_hops,
+                uiState.selectedHopCount
+            ),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Slider(
+        SparrowSlider(
             value = uiState.selectedHopCount.toFloat(),
             onValueChange = { value -> onUiEvent(CircuitHopsUiEvent.HopCountChanged(value.roundToInt())) },
             onValueChangeFinished = { onUiEvent(CircuitHopsUiEvent.HopCountChosen) },
@@ -153,13 +193,23 @@ private fun HopCountChooser(
         )
         StatusLine(text = statusText(uiState.status))
         uiState.estimatedLatencyMilliseconds?.let { estimate ->
-            StatusLine(text = stringResource(Res.string.feature_settings_circuit_estimate, estimate.toInt(), uiState.selectedHopCount))
+            StatusLine(
+                text = stringResource(
+                    Res.string.feature_settings_circuit_estimate,
+                    estimate.toInt(),
+                    uiState.selectedHopCount
+                )
+            )
         }
         (uiState.status as? CircuitUiStatus.Connected)
             ?.takeIf { connected -> connected.hopCount < connected.requestedHopCount }
             ?.let { connected ->
                 StatusLine(
-                    text = stringResource(Res.string.feature_settings_circuit_fewer, connected.hopCount, connected.requestedHopCount),
+                    text = stringResource(
+                        Res.string.feature_settings_circuit_fewer,
+                        connected.hopCount,
+                        connected.requestedHopCount
+                    ),
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -178,12 +228,15 @@ private fun CircuitCountChooser(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
-            text = stringResource(Res.string.feature_settings_circuit_count, uiState.selectedCircuitCount),
+            text = stringResource(
+                Res.string.feature_settings_circuit_count,
+                uiState.selectedCircuitCount
+            ),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Slider(
+        SparrowSlider(
             value = uiState.selectedCircuitCount.toFloat(),
             onValueChange = { value -> onUiEvent(CircuitHopsUiEvent.CircuitCountChanged(value.roundToInt())) },
             valueRange = uiState.minimumCircuitCount.toFloat()..uiState.maximumCircuitCount.toFloat(),
@@ -191,13 +244,23 @@ private fun CircuitCountChooser(
         )
         StatusLine(text = stringResource(Res.string.feature_settings_circuit_count_hint))
         (uiState.status as? CircuitUiStatus.Connected)?.let { connected ->
-            StatusLine(text = stringResource(Res.string.feature_settings_circuit_count_open, connected.circuitsUp, connected.requestedCircuitCount))
+            StatusLine(
+                text = stringResource(
+                    Res.string.feature_settings_circuit_count_open,
+                    connected.circuitsUp,
+                    connected.requestedCircuitCount
+                )
+            )
         }
         (uiState.status as? CircuitUiStatus.Connected)
             ?.takeIf { connected -> connected.sessionOperators < connected.circuitsUp }
             ?.let { connected ->
                 StatusLine(
-                    text = stringResource(Res.string.feature_settings_circuit_operators_fewer, connected.sessionOperators, connected.circuitsUp),
+                    text = stringResource(
+                        Res.string.feature_settings_circuit_operators_fewer,
+                        connected.sessionOperators,
+                        connected.circuitsUp
+                    ),
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -220,13 +283,16 @@ private fun DecoyCountChooser(
                 if (uiState.selectedDecoyCount == 0) {
                     stringResource(Res.string.feature_settings_decoy_count_off)
                 } else {
-                    stringResource(Res.string.feature_settings_decoy_count, uiState.selectedDecoyCount)
+                    stringResource(
+                        Res.string.feature_settings_decoy_count,
+                        uiState.selectedDecoyCount
+                    )
                 },
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Slider(
+        SparrowSlider(
             value = uiState.selectedDecoyCount.toFloat(),
             onValueChange = { value -> onUiEvent(CircuitHopsUiEvent.DecoyCountChanged(value.roundToInt())) },
             valueRange = uiState.minimumDecoyCount.toFloat()..uiState.maximumDecoyCount.toFloat(),
@@ -317,7 +383,11 @@ private fun ConnectionModeRow(
     ) {
         SparrowRadio(selected = selected, onClick = null)
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             StatusLine(text = consequence)
         }
     }
@@ -343,7 +413,11 @@ private fun statusText(status: CircuitUiStatus): String =
         CircuitUiStatus.Building -> stringResource(Res.string.feature_settings_circuit_status_building)
         CircuitUiStatus.Unavailable -> stringResource(Res.string.feature_settings_circuit_status_unavailable)
         is CircuitUiStatus.Connected ->
-            stringResource(Res.string.feature_settings_circuit_status_connected, status.hopCount, status.latencyMilliseconds.toInt())
+            stringResource(
+                Res.string.feature_settings_circuit_status_connected,
+                status.hopCount,
+                status.latencyMilliseconds.toInt()
+            )
     }
 
 @Composable
@@ -362,7 +436,10 @@ private fun CircuitHopsTopBar(
 ) {
     SparrowTopBar(
         title = {
-            Text(text = stringResource(Res.string.feature_settings_circuit), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(Res.string.feature_settings_circuit),
+                style = MaterialTheme.typography.titleSmall
+            )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
@@ -380,7 +457,11 @@ private fun CircuitHopsScreenPreview() {
         CircuitHopsScreen(
             uiState = CircuitHopsUiState(
                 selectedHopCount = 3,
-                status = CircuitUiStatus.Connected(hopCount = 2, requestedHopCount = 3, latencyMilliseconds = 180),
+                status = CircuitUiStatus.Connected(
+                    hopCount = 2,
+                    requestedHopCount = 3,
+                    latencyMilliseconds = 180
+                ),
                 estimatedLatencyMilliseconds = 270
             ),
             onUiEvent = {}

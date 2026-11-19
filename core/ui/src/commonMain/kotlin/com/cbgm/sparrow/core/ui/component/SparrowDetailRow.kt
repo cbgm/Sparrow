@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.core.ui.component
 
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,34 +10,34 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.ripple.RippleAlpha
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.ripple.createRippleModifierNode
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SparrowDetailRow(
-    icon: ImageVector,
-    title: String,
-    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    title: String,
+    onClick: (() -> Unit)? = null,
     subtitle: String? = null,
     enabled: Boolean = true,
     showChevron: Boolean = true,
@@ -46,58 +48,60 @@ fun SparrowDetailRow(
     rippleColor: Color = titleColor
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        CompositionLocalProvider(LocalRippleConfiguration provides rowRipple(rippleColor)) {
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .then(
-                        if (onClick != null) {
-                            Modifier.clickable(
-                                enabled = enabled,
-                                interactionSource = null,
-                                indication = ripple(),
-                                onClick = onClick
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ).padding(vertical = MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(
+                            enabled = enabled,
+                            interactionSource = null,
+                            indication = rememberRowRipple(rippleColor),
+                            onClick = onClick
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .padding(vertical = MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            icon?.let {
                 Icon(
-                    imageVector = icon,
+                    imageVector = it,
                     contentDescription = null,
                     modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
                     tint = if (enabled) iconTint else iconTint.copy(alpha = 0.45f)
                 )
                 Spacer(Modifier.size(MaterialTheme.spacing.small))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (enabled) {
-                            titleColor
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                    if (!subtitle.isNullOrBlank()) {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = subtitleColor,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (enabled) {
+                        titleColor
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
-                }
-                if (showChevron) {
-                    Icon(
-                        imageVector = SparrowIcons.Chevron,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon)
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = subtitleColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+            if (showChevron) {
+                Icon(
+                    imageVector = SparrowIcons.Chevron,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon)
+                )
             }
         }
         if (showDivider) {
@@ -110,7 +114,6 @@ fun SparrowDetailRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SparrowSwitchRow(
     icon: ImageVector,
@@ -123,46 +126,46 @@ fun SparrowSwitchRow(
     showDivider: Boolean = true
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        CompositionLocalProvider(LocalRippleConfiguration provides rowRipple(MaterialTheme.colorScheme.onSurface)) {
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .clickable(
-                        enabled = enabled,
-                        interactionSource = null,
-                        indication = ripple(),
-                        onClick = { onCheckedChange(!checked) }
-                    ).padding(vertical = MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
-                    tint = MaterialTheme.colorScheme.outline
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = null,
+                    indication = rememberRowRipple(MaterialTheme.colorScheme.onSurface),
+                    onClick = { onCheckedChange(!checked) }
                 )
-                Spacer(Modifier.size(MaterialTheme.spacing.small))
-                Column(modifier = Modifier.weight(1f)) {
+                .padding(vertical = MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+                tint = MaterialTheme.colorScheme.outline
+            )
+            Spacer(Modifier.size(MaterialTheme.spacing.small))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!subtitle.isNullOrBlank()) {
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    if (!subtitle.isNullOrBlank()) {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
-                SparrowSwitch(
-                    checked = checked,
-                    onCheckedChange = null,
-                    enabled = enabled
-                )
             }
+            SparrowSwitch(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = enabled
+            )
         }
         if (showDivider) {
             HorizontalDivider(
@@ -174,8 +177,27 @@ fun SparrowSwitchRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-private fun rowRipple(color: Color) = RippleConfiguration(color = color, rippleAlpha = RowRippleAlpha)
+@Composable
+private fun rememberRowRipple(color: Color): IndicationNodeFactory =
+    remember(color) { RowRippleNodeFactory(color) }
+
+private class RowRippleNodeFactory(
+    private val color: Color
+) : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        createRippleModifierNode(
+            interactionSource = interactionSource,
+            bounded = true,
+            radius = Dp.Unspecified,
+            color = { color },
+            rippleAlpha = { RowRippleAlpha }
+        )
+
+    override fun equals(other: Any?): Boolean =
+        this === other || (other is RowRippleNodeFactory && color == other.color)
+
+    override fun hashCode(): Int = color.hashCode()
+}
 
 private val RowRippleAlpha =
     RippleAlpha(
@@ -184,3 +206,16 @@ private val RowRippleAlpha =
         draggedAlpha = Alpha.Ripple.pressed,
         hoveredAlpha = Alpha.Ripple.hovered
     )
+
+@Preview
+@Composable
+private fun SparrowDetailRowPreview() {
+    SparrowTheme {
+        SparrowDetailRow(
+            title = "Blalalalaa",
+            subtitle = "fdsdfsedadfsdfsdf",
+            onClick = {},
+            showDivider = false
+        )
+    }
+}

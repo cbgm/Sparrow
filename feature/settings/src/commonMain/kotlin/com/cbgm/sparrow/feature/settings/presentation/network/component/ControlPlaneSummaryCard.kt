@@ -37,7 +37,7 @@ fun ControlPlaneSummaryCard(
             Icon(
                 imageVector = Icons.Default.Cloud,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
             )
             Spacer(Modifier.size(MaterialTheme.spacing.small))

@@ -315,6 +315,7 @@
     <string name="feature_settings_developer_menu">Developer menu</string>
     <string name="feature_settings_developer_menu_subtitle">Build info, feature flags, diagnostics</string>
     <string name="feature_settings_error_log">Error log</string>
+    <string name="feature_settings_errors_title">Errors</string>
     <string name="feature_settings_error_log_saved_count">Saved errors: %1$d</string>
     <string name="feature_settings_error_log_empty">No saved errors.</string>
     <string name="feature_settings_clear_saved_errors">Clear saved errors</string>
@@ -555,6 +556,23 @@
     <string name="feature_settings_control_planes_summary">%1$d available · %2$d unavailable</string>
     <string name="feature_settings_control_planes_auto_health_brief">Availability is checked automatically.</string>
     <string name="feature_settings_control_planes_auto_health">Availability is checked automatically. Unreachable addresses are de-prioritized and retried in the background.</string>
+    <plurals name="feature_settings_onion_hops_count">
+        <item quantity="one">%1$d hop</item>
+        <item quantity="other">%1$d hops</item>
+    </plurals>
+
+    <plurals name="feature_settings_onion_circuits_count">
+        <item quantity="one">%1$d circuit</item>
+        <item quantity="other">%1$d circuits</item>
+    </plurals>
+
+    <plurals name="feature_settings_onion_decoys_count">
+        <item quantity="zero">no decoys</item>
+        <item quantity="one">%1$d decoy</item>
+        <item quantity="other">%1$d decoys</item>
+    </plurals>
+    <string name="feature_settings_circuit_hops_unavailable">Keine Route, direkt senden</string>
+    <string name="feature_settings_onion_circuit_summary_combined">%1$s, %2$s, %3$s</string>
     <string name="feature_chats_group_promote_admin">Promote to admin</string>
     <string name="feature_chats_group_promote_admin_button">Promote</string>
     <string name="feature_chats_group_promote_admin_description">Promote %1$s to group admin? Admins can add and remove members and promote other admins.</string>

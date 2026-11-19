@@ -317,6 +317,7 @@
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
     <string name="feature_settings_developer_menu_subtitle">Build-Informationen, Feature-Flags und Diagnose</string>
     <string name="feature_settings_error_log">Fehlerprotokoll</string>
+    <string name="feature_settings_errors_title">Fehler</string>
     <string name="feature_settings_error_log_saved_count">Gespeicherte Fehler: %1$d</string>
     <string name="feature_settings_error_log_empty">Keine gespeicherten Fehler.</string>
     <string name="feature_settings_clear_saved_errors">Gespeicherte Fehler löschen</string>
@@ -555,6 +556,21 @@
     <string name="feature_settings_control_planes_summary">%1$d verfügbar · %2$d nicht erreichbar</string>
     <string name="feature_settings_control_planes_auto_health_brief">Die Verfügbarkeit wird automatisch geprüft.</string>
     <string name="feature_settings_control_planes_auto_health">Die Erreichbarkeit wird automatisch geprüft. Nicht erreichbare Adressen werden nachrangig verwendet und im Hintergrund erneut geprüft.</string>
+    <plurals name="feature_settings_onion_hops_count">
+        <item quantity="one">%1$d hop</item>
+        <item quantity="other">%1$d hops</item>
+    </plurals>
+    <plurals name="feature_settings_onion_circuits_count">
+        <item quantity="one">%1$d circuit</item>
+        <item quantity="other">%1$d circuits</item>
+    </plurals>
+    <plurals name="feature_settings_onion_decoys_count">
+        <item quantity="zero">no decoys</item>
+        <item quantity="one">%1$d decoy</item>
+        <item quantity="other">%1$d decoys</item>
+    </plurals>
+    <string name="feature_settings_circuit_hops_unavailable">No route, send directly</string>
+    <string name="feature_settings_onion_circuit_summary_combined">%1$s, %2$s, %3$s</string>
     <string name="feature_chats_group_promote_admin">Zum Admin machen</string>
     <string name="feature_chats_group_promote_admin_button">Hochstufen</string>
     <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>

@@ -1,6 +1,11 @@
 package com.cbgm.sparrow.core.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -9,14 +14,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -69,6 +78,39 @@ fun SparrowRadio(
                 selectedColor = MaterialTheme.colorScheme.primary,
                 unselectedColor = MaterialTheme.colorScheme.outline
             )
+    )
+}
+
+@Composable
+fun SparrowSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        valueRange = valueRange,
+        steps = steps,
+        track = { sliderState ->
+            SliderDefaults.Track(
+                sliderState = sliderState,
+                modifier = Modifier.height(Dimens.Slider.trackHeight),
+                thumbTrackGapSize = 0.dp,
+                drawStopIndicator = null
+            )
+        },
+        thumb = {
+            Box(
+                modifier = Modifier
+                    .height(Dimens.Slider.thumbHeight)
+                    .width(Dimens.Slider.thumbWidth)
+                    .background(MaterialTheme.colorScheme.primary, RectangleShape)
+            )
+        }
     )
 }
 
@@ -135,12 +177,18 @@ fun SparrowChip(
 @Composable
 private fun SparrowControlsPreview() {
     SparrowTheme {
-        androidx.compose.foundation.layout.Column {
+        Column {
             SparrowSwitch(checked = true, onCheckedChange = {})
             SparrowSwitch(checked = false, onCheckedChange = {})
             SparrowRadio(selected = true, onClick = {})
             SparrowChip(selected = true, onClick = {}, label = "Food")
             SparrowFloatingButton(icon = SparrowIcons.Add, onClick = {})
+            SparrowSlider(
+                value = 0.5f,
+                onValueChange = {},
+                onValueChangeFinished = {},
+                valueRange = 0f..1f
+            )
         }
     }
 }

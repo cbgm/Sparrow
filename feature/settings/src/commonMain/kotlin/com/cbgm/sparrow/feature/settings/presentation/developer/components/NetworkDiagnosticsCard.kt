@@ -1,34 +1,14 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.components
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
 import com.cbgm.sparrow.feature.transport.TransportDiagnostics
 import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
@@ -41,13 +21,8 @@ import com.cbgm.sparrow.resources.feature_settings_failover_count
 import com.cbgm.sparrow.resources.feature_settings_last_disconnect
 import com.cbgm.sparrow.resources.feature_settings_last_failed_node
 import com.cbgm.sparrow.resources.feature_settings_network_diagnostics
-import com.cbgm.sparrow.resources.feature_settings_network_no_active_node
 import com.cbgm.sparrow.resources.feature_settings_network_nodes
 import com.cbgm.sparrow.resources.feature_settings_network_show_all_nodes
-import com.cbgm.sparrow.resources.feature_settings_node_available
-import com.cbgm.sparrow.resources.feature_settings_node_cooldown
-import com.cbgm.sparrow.resources.feature_settings_node_cooldown_remaining
-import com.cbgm.sparrow.resources.feature_settings_node_current
 import com.cbgm.sparrow.resources.feature_settings_registry_authority
 import com.cbgm.sparrow.resources.feature_settings_registry_not_configured
 import com.cbgm.sparrow.resources.feature_settings_registry_pending
@@ -58,9 +33,7 @@ import com.cbgm.sparrow.resources.feature_settings_status_connecting
 import com.cbgm.sparrow.resources.feature_settings_status_disconnected
 import com.cbgm.sparrow.resources.feature_settings_status_failed
 import com.cbgm.sparrow.resources.feature_settings_websocket_endpoint
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
-import kotlin.time.Duration.Companion.seconds
 
 @Composable
 internal fun NetworkDiagnosticsCard(
@@ -73,236 +46,67 @@ internal fun NetworkDiagnosticsCard(
         SettingsSection(
             title = stringResource(Res.string.feature_settings_network_diagnostics)
         ) {
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_connection_status),
-                value = diagnostics.connectionState.displayText()
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_connection_status),
+                subtitle = diagnostics.connectionState.displayText(),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_current_node),
-                value = diagnostics.currentNodeId ?: stringResource(Res.string.base_unknown)
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_current_node),
+                subtitle = diagnostics.currentNodeId ?: stringResource(Res.string.base_unknown),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_websocket_endpoint),
-                value = diagnostics.currentWebSocketUrl ?: stringResource(Res.string.base_unknown)
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_websocket_endpoint),
+                subtitle = diagnostics.currentWebSocketUrl ?: stringResource(Res.string.base_unknown),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_registry_url),
-                value =
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_registry_url),
+                subtitle =
                     diagnostics.registryUrl
-                        ?: stringResource(Res.string.feature_settings_registry_not_configured)
+                        ?: stringResource(Res.string.feature_settings_registry_not_configured),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_registry_authority),
-                value = diagnostics.registryStatusText()
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_registry_authority),
+                subtitle = diagnostics.registryStatusText(),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_failover_count),
-                value = diagnostics.failoverCount.toString()
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_failover_count),
+                subtitle = diagnostics.failoverCount.toString(),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_last_failed_node),
-                value = diagnostics.lastFailedNodeId ?: stringResource(Res.string.base_unknown)
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_last_failed_node),
+                subtitle = diagnostics.lastFailedNodeId ?: stringResource(Res.string.base_unknown),
+                showChevron = false,
+                showDivider = true
             )
-            DiagnosticRow(
-                label = stringResource(Res.string.feature_settings_last_disconnect),
-                value = diagnostics.lastDisconnectReason ?: stringResource(Res.string.base_unknown)
+            SparrowDetailRow(
+                title = stringResource(Res.string.feature_settings_last_disconnect),
+                subtitle = diagnostics.lastDisconnectReason ?: stringResource(Res.string.base_unknown),
+                showChevron = false,
+                showDivider = true
             )
-
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.medium))
-            CurrentNodeSummary(
-                diagnostics = diagnostics,
-                onShowAllNodes = onShowAllNodes
-            )
-        }
-    }
-}
-
-@Composable
-private fun CurrentNodeSummary(
-    diagnostics: TransportDiagnostics,
-    onShowAllNodes: () -> Unit
-) {
-    Text(
-        text = stringResource(Res.string.feature_settings_network_nodes),
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface
-    )
-
-    // Do not show an old node as connected after the transport has disconnected.
-    val currentNode =
-        if (diagnostics.connectionState == TransportDiagnosticConnectionState.CONNECTED) {
-            diagnostics.availableNodes
-                .firstOrNull { node -> node.nodeId == diagnostics.currentNodeId }
-                ?.copy(state = TransportNodeDiagnosticState.CURRENT)
-                ?: diagnostics.currentNodeId?.let { nodeId ->
-                    diagnostics.currentWebSocketUrl?.let { websocketUrl ->
-                        TransportNodeDiagnostic(
-                            nodeId = nodeId,
-                            websocketUrl = websocketUrl,
-                            state = TransportNodeDiagnosticState.CURRENT
-                        )
-                    }
-                }
-        } else {
-            null
-        }
-
-    if (currentNode != null) {
-        NodeDiagnosticRow(node = currentNode)
-    } else {
-        Text(
-            text = stringResource(Res.string.feature_settings_network_no_active_node),
-            modifier = Modifier.padding(top = MaterialTheme.spacing.base),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    SparrowSecondaryButton(
-        onClick = onShowAllNodes,
-        modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-        text = stringResource(
-            Res.string.feature_settings_network_show_all_nodes,
-            diagnostics.availableNodes.size
-        )
-    )
-}
-
-@Composable
-internal fun NodeDiagnosticRow(
-    node: TransportNodeDiagnostic,
-    outlined: Boolean = false
-) {
-    val cooldown = rememberNodeCooldown(node)
-    val effectiveState =
-        if (node.state == TransportNodeDiagnosticState.COOLDOWN && cooldown.remainingSeconds == 0L) {
-            TransportNodeDiagnosticState.AVAILABLE
-        } else {
-            node.state
-        }
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (outlined) Modifier else Modifier.padding(top = MaterialTheme.spacing.small)),
-        color = if (outlined) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.medium,
-        border = if (outlined) {
-            BorderStroke(Dimens.Base.borderStrokeWidth, MaterialTheme.colorScheme.outlineVariant)
-        } else {
-            null
-        }
-    ) {
-        Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
-            NodeDiagnosticHeader(
-                nodeId = node.nodeId,
-                state = effectiveState,
-                cooldownRemainingSeconds = cooldown.remainingSeconds
-            )
-
-            Text(
-                text = node.websocketUrl,
-                modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
+            SparrowDetailRow(
+                icon = null,
+                title = stringResource(Res.string.feature_settings_network_nodes),
+                subtitle = stringResource(
+                    Res.string.feature_settings_network_show_all_nodes,
+                    diagnostics.availableNodes.size
+                ),
+                onClick = onShowAllNodes,
+                showDivider = true
             )
         }
-    }
-}
-
-@Composable
-private fun NodeDiagnosticHeader(
-    nodeId: String,
-    state: TransportNodeDiagnosticState,
-    cooldownRemainingSeconds: Long
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = nodeId,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Column(
-            modifier = Modifier.padding(start = MaterialTheme.spacing.small),
-            horizontalAlignment = Alignment.End
-        ) {
-            Text(
-                text = state.displayText(cooldownRemainingSeconds),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = state.displayColor()
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberNodeCooldown(node: TransportNodeDiagnostic): NodeCooldown {
-    val cooldownUntil = node.cooldownUntilEpochMilliseconds
-    var nowEpochMilliseconds by remember(cooldownUntil) {
-        mutableLongStateOf(SystemClock.nowEpochMilliseconds())
-    }
-
-    LaunchedEffect(cooldownUntil) {
-        while (cooldownUntil != null && nowEpochMilliseconds < cooldownUntil) {
-            delay(1.seconds)
-            nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-        }
-    }
-
-    val remainingMilliseconds =
-        cooldownUntil
-            ?.minus(nowEpochMilliseconds)
-            ?.coerceAtLeast(0L)
-            ?: 0L
-
-    return NodeCooldown(
-        remainingSeconds = (remainingMilliseconds + 999L) / 1_000L
-    )
-}
-
-private data class NodeCooldown(
-    val remainingSeconds: Long
-)
-
-@Composable
-private fun DiagnosticRow(
-    label: String,
-    value: String
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = MaterialTheme.spacing.base / 2)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Text(
-            text = value,
-            modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 
@@ -329,36 +133,6 @@ private fun TransportDiagnostics.registryStatusText(): String =
         registryAuthorityVerified == true -> stringResource(Res.string.feature_settings_registry_verified)
         registryAuthorityVerified == false -> stringResource(Res.string.feature_settings_status_failed)
         else -> stringResource(Res.string.feature_settings_registry_pending)
-    }
-
-@Composable
-private fun TransportNodeDiagnosticState.displayText(
-    cooldownRemainingSeconds: Long = 0L
-): String =
-    when (this) {
-        TransportNodeDiagnosticState.CURRENT ->
-            stringResource(Res.string.feature_settings_node_current)
-
-        TransportNodeDiagnosticState.AVAILABLE ->
-            stringResource(Res.string.feature_settings_node_available)
-
-        TransportNodeDiagnosticState.COOLDOWN ->
-            if (cooldownRemainingSeconds > 0L) {
-                stringResource(
-                    Res.string.feature_settings_node_cooldown_remaining,
-                    cooldownRemainingSeconds
-                )
-            } else {
-                stringResource(Res.string.feature_settings_node_cooldown)
-            }
-    }
-
-@Composable
-private fun TransportNodeDiagnosticState.displayColor(): Color =
-    when (this) {
-        TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.primary
-        TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.tertiary
-        TransportNodeDiagnosticState.COOLDOWN -> MaterialTheme.colorScheme.error
     }
 
 @Preview

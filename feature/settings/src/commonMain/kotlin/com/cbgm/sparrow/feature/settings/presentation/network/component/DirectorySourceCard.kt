@@ -66,7 +66,7 @@ fun DirectorySourceCard(
                 modifier = Modifier
                     .size(Dimens.SettingsScreen.primaryIconSize)
                     .infiniteFlashing(enabled = isSyncing),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.outline
             )
             Spacer(Modifier.size(MaterialTheme.spacing.small))
             Column(modifier = Modifier.weight(1f)) {

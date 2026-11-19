@@ -11,8 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -31,7 +32,9 @@ import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
@@ -112,14 +115,21 @@ fun PreferredNodeScreen(
             status?.let { text ->
                 item(key = "status") { StatusText(text) }
             }
-
-            items(items = uiState.nodes, key = GatewayNodeUiModel::nodeId) { node ->
-                SparrowCardNoAnimation {
-                    NodeChoiceRow(
-                        title = node.address,
-                        subtitle = node.shortNodeId,
-                        selected = node.isPreferred,
-                        onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
+            itemsIndexed(
+                items = uiState.nodes,
+                key = { _, node -> node.nodeId }
+            ) { index, node ->
+                NodeChoiceRow(
+                    title = node.address,
+                    subtitle = node.shortNodeId,
+                    selected = node.isPreferred,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
+                )
+                if (index < uiState.nodes.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
                     )
                 }
             }

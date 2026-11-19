@@ -12,6 +12,13 @@ object Dimens {
         val dashGap = 4.dp
         val borderStrokeWidth = 1.dp
         val progressButtonIndicatorSize = 18.dp
+        val screenBleed = 16.dp
+    }
+
+    object Slider {
+        val trackHeight = 8.dp
+        val thumbHeight = 24.dp
+        val thumbWidth = 4.dp
     }
 
     object Poll {
