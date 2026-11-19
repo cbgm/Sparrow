@@ -58,7 +58,7 @@ fun OnboardingPageLayout(
                 contentAlignment = Alignment.Center,
                 content = graphic
             )
-            Spacer(Modifier.height(MaterialTheme.spacing.base.times(5)))
+            Spacer(Modifier.height(MaterialTheme.spacing.base.times(if (isContentCentered) 5 else 3)))
             content()
 
             if (isContentCentered) {

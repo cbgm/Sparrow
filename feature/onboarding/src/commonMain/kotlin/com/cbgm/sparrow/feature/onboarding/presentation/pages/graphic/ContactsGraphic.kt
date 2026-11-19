@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
 
-/** You in the middle, pulsing; one by one, the people you know appear around you and connect. */
 @Composable
 fun ContactsGraphic(
     clock: State<Long>,
@@ -32,7 +31,7 @@ fun ContactsGraphic(
     val you = MaterialTheme.colorScheme.primary
     val contact = MaterialTheme.colorScheme.onBackground
     Canvas(modifier = modifier) {
-        val inset = DOT_RADIUS.dp.toPx()
+        val inset = DOT_RADIUS.dp.toPx() + size.height * VERTICAL_INSET
         val place = { x: Float, y: Float -> Offset(x * size.width, inset + y * (size.height - 2 * inset)) }
         val center = place(HUB.first, HUB.second)
         CONTACTS.forEachIndexed { index, (x, y) ->
@@ -47,9 +46,9 @@ fun ContactsGraphic(
     }
 }
 
-/** You and the contacts around you; x as a fraction of the width, y of the height between the top and bottom dot. */
 private val HUB = 0.5f to 0.41f
 private val CONTACTS = listOf(0.18f to 0.07f, 0.29f to 0.81f, 0.74f to 0f, 0.83f to 0.66f, 0.55f to 1f, 0.09f to 0.57f, 0.91f to 0.23f)
+private const val VERTICAL_INSET = 0.12f
 private const val DOT_RADIUS = 4.5f
 private const val FIRST_MILLISECONDS = 500L
 private const val STEP_MILLISECONDS = 380L

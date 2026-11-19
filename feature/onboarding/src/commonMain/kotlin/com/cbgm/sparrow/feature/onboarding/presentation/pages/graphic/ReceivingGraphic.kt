@@ -22,10 +22,6 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.sin
 
-/**
- * You and a relay. Always connected: a steady line with a pulse running from the relay to you. Only while open: the
- * line is dotted and dim, and a message waits at the relay.
- */
 @Composable
 fun ReceivingGraphic(
     alwaysConnected: Boolean,
@@ -50,10 +46,14 @@ fun ReceivingGraphic(
     val message = MaterialTheme.colorScheme.primary
     Canvas(modifier = modifier) {
         val labelHeight = measurer.measure(youLabel, labelStyle).size.height
-        val nodeY = size.height - LABEL_GAP.dp.toPx() - labelHeight
+        val bottomPadding = LABEL_GAP.dp.toPx() + labelHeight
+        val nodeY = (size.height - bottomPadding) * NODE_VERTICAL_POSITION
         val start = Offset(size.width * END_INSET, nodeY)
         val end = Offset(size.width * (1f - END_INSET), nodeY)
-        val bend = nodeY / CURVE_REACH
+
+        val maxSwing = minOf(nodeY, size.height - bottomPadding - nodeY)
+        val bend = maxSwing * CURVE_AMPLITUDE
+
         val first = Offset(start.x + (end.x - start.x) / 3f, start.y - bend)
         val second = Offset(start.x + (end.x - start.x) * 2f / 3f, start.y + bend)
         val line = Path().apply {
@@ -91,9 +91,8 @@ private fun bezier(
 }
 
 private const val END_INSET = 0.15f
-
-/** How far the curve swings above its ends, as a share of the control-point offset. */
-private const val CURVE_REACH = 0.289f
+private const val NODE_VERTICAL_POSITION = 0.5f
+private const val CURVE_AMPLITUDE = 2.6f
 private const val LABEL_GAP = 12f
 private const val WAIT_RING_ALPHA = 0.8f
 private const val WAIT_RING_GROWTH = 12f

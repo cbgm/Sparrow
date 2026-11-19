@@ -19,10 +19,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 
-/**
- * A message leaving "you" wrapped in three layers (rings), passing three relays to "contact"; each relay peels one
- * layer off. Loops while shown.
- */
 @Composable
 fun OnionGraphic(
     youLabel: String,
@@ -44,7 +40,7 @@ fun OnionGraphic(
     val end = MaterialTheme.colorScheme.onBackground
     val packet = MaterialTheme.colorScheme.primary
     Canvas(modifier = modifier) {
-        val inset = LABEL_GAP.dp.toPx() + measurer.measure(labels.first(), labelStyle).size.height
+        val inset = LABEL_GAP.dp.toPx() + measurer.measure(labels.first(), labelStyle).size.height + size.height * VERTICAL_INSET
         val points = NODES.map { (x, y) -> Offset(x * size.width, inset + y * (size.height - 2 * inset)) }
         val route = Path().apply { points.forEachIndexed { index, point -> if (index == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y) } }
         drawPath(route, path, style = Stroke(width = 1.2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 5.dp.toPx()))))
@@ -71,8 +67,8 @@ fun OnionGraphic(
 private fun easeInOut(value: Float): Float =
     if (value < 0.5f) 2f * value * value else 1f - (-2f * value + 2f) * (-2f * value + 2f) / 2f
 
-/** You, three relays, your contact; x as a fraction of the width, y of the height between the labels. */
 private val NODES = listOf(0.09f to 1f, 0.32f to 0.08f, 0.58f to 0.92f, 0.79f to 0f, 0.94f to 0.74f)
+private const val VERTICAL_INSET = 0.12f
 private const val LABEL_GAP = 14f
 private val LAYER_RADII = listOf(18f, 13f, 8f)
 private const val LAYER_FADE = 0.15f

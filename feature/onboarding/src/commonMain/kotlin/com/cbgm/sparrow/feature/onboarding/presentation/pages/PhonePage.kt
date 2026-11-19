@@ -105,9 +105,21 @@ fun PhonePage(
                     onNameChanged = onNameChanged
                 )
 
-            IdentityCreateUiState.Loading -> Working(text = stringResource(Res.string.feature_onboarding_preparing_phone_setup), clock = clock)
-            IdentityCreateUiState.Creating -> Working(text = stringResource(Res.string.base_generating_secure_identity), clock = clock)
-            IdentityCreateUiState.Completed -> Working(text = stringResource(Res.string.base_identity_ready_opening), clock = clock)
+            IdentityCreateUiState.Loading -> Working(
+                text = stringResource(Res.string.feature_onboarding_preparing_phone_setup),
+                clock = clock
+            )
+
+            IdentityCreateUiState.Creating -> Working(
+                text = stringResource(Res.string.base_generating_secure_identity),
+                clock = clock
+            )
+
+            IdentityCreateUiState.Completed -> Working(
+                text = stringResource(Res.string.base_identity_ready_opening),
+                clock = clock
+            )
+
             IdentityCreateUiState.IncompleteIdentity -> Problem(text = stringResource(Res.string.feature_onboarding_local_identity_incomplete))
             IdentityCreateUiState.Error -> Problem(text = stringResource(Res.string.feature_identity_something_went_wrong))
         }
@@ -137,7 +149,9 @@ private fun Form(
         modifier =
             Modifier
                 .padding(top = MaterialTheme.spacing.large)
-                .graphicsLayer { alpha = clock.progress(FIELDS_START_MILLISECONDS, FIELDS_MILLISECONDS) },
+                .graphicsLayer {
+                    alpha = clock.progress(FIELDS_START_MILLISECONDS, FIELDS_MILLISECONDS)
+                },
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         SparrowInputField(
@@ -183,10 +197,22 @@ private fun Links(
     FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
         SparrowLink(
             text = stringResource(if (phoneNumberBlank) Res.string.base_choose_phone_number else Res.string.base_choose_another_number),
-            onClick = onChooseAnotherNumber
+            onClick = onChooseAnotherNumber,
+            color = MaterialTheme.colorScheme.secondary
         )
-        if (canRetryAutomatic) SparrowLink(text = stringResource(Res.string.feature_onboarding_try_sim_number_again), onClick = onRetryAutomaticNumber)
-        if (canRestore) SparrowLink(text = stringResource(Res.string.feature_identity_backup_restore_action), onClick = onRestoreIdentity)
+        if (canRetryAutomatic) {
+            SparrowLink(
+                text = stringResource(Res.string.feature_onboarding_try_sim_number_again),
+                onClick = onRetryAutomaticNumber,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+        if (canRestore) {
+            SparrowLink(
+                text = stringResource(Res.string.feature_identity_backup_restore_action),
+                onClick = onRestoreIdentity
+            )
+        }
     }
 }
 
@@ -219,7 +245,10 @@ private fun Problem(text: String) {
 private fun PhonePagePreview() {
     SparrowTheme {
         PhonePage(
-            identityState = IdentityCreateUiState.Form(phoneNumber = "+491512345678", name = "Chris"),
+            identityState = IdentityCreateUiState.Form(
+                phoneNumber = "+491512345678",
+                name = "Chris"
+            ),
             active = true,
             isCreating = false,
             canRetryAutomatic = true,

@@ -63,12 +63,12 @@ fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
                             .padding(end = MaterialTheme.spacing.small)
                             .size(Dimens.Button.loadingIndicatorSize),
                         strokeWidth = Dimens.Button.loadingIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Text(
                     text = stringResource(Res.string.feature_identity_backup_export_action),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         )

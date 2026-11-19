@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
 
-/** One dot per permission on a thin line; each lights up, with a fading ring, when its row slides in. */
 @Composable
 fun PermissionDotsGraphic(
     count: Int,
