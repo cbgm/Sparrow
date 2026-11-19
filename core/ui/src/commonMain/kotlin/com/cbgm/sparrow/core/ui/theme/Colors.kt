@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.compositeOver
 object Colors {
     // Brand accent.
     val Primary = Color(0xFF35E6FF)
-    val OnPrimary = Color(0xFF071A2E)
+    val OnPrimary = Color(0xFF000000)
     val PrimaryContainer = Color(0xFF0C4450)
     val OnPrimaryContainer = Color(0xFFC8F9FF)
     val InversePrimary = Color(0xFF006A78)

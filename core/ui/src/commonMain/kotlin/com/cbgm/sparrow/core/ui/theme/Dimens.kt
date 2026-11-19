@@ -72,7 +72,8 @@ object Dimens {
         val actionLinePressedWidth = 52.dp
         val actionLineThickness = 1.dp
         val minTouchHeight = 48.dp
-        val height = 50.dp
+        val height = 44.dp
+        val cornerRadius = 14.dp
         val borderWidth = 1.dp
         val iconButtonSize = 44.dp
         val loadingIndicatorSize = 18.dp

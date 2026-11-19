@@ -3,6 +3,7 @@ package com.cbgm.sparrow.core.ui.component
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Indication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -50,6 +51,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.offset
@@ -78,8 +80,8 @@ fun SparrowApprovalButton(
         fillMaxWidth = fillMaxWidth,
         content = content,
         enabled = enabled,
-        containerColor = MaterialTheme.colorScheme.primary.asTint(Alpha.Button.main),
-        contentColor = MaterialTheme.colorScheme.primary
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
     )
 }
 
@@ -159,8 +161,9 @@ fun SparrowSecondaryButton(
         fillMaxWidth = fillMaxWidth,
         content = content,
         enabled = enabled,
-        containerColor = MaterialTheme.colorScheme.onSurfaceVariant.asTint(Alpha.Button.neutral),
-        contentColor = MaterialTheme.colorScheme.onSurface
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        borderColor = MaterialTheme.colorScheme.outlineVariant
     )
 }
 
@@ -180,8 +183,9 @@ fun SparrowOutlinedButton(
         fillMaxWidth = fillMaxWidth,
         content = content,
         enabled = enabled,
-        containerColor = MaterialTheme.colorScheme.onSurfaceVariant.asTint(Alpha.Button.neutral),
-        contentColor = MaterialTheme.colorScheme.onSurface
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        borderColor = MaterialTheme.colorScheme.outlineVariant
     )
 }
 
@@ -194,18 +198,21 @@ private fun TintedButton(
     content: @Composable () -> Unit,
     enabled: Boolean,
     containerColor: Color,
-    contentColor: Color
+    contentColor: Color,
+    borderColor: Color? = null
 ) {
+    val alpha = if (enabled) 1f else Alpha.Button.disabled
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(Dimens.Button.cornerRadius),
+        border = borderColor?.let { color -> BorderStroke(Dimens.Button.borderWidth, color.copy(alpha = color.alpha * alpha)) },
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = containerColor,
                 contentColor = contentColor,
-                disabledContainerColor = containerColor,
-                disabledContentColor = contentColor.copy(alpha = Alpha.Button.disabledContent)
+                disabledContainerColor = containerColor.copy(alpha = containerColor.alpha * Alpha.Button.disabled),
+                disabledContentColor = contentColor.copy(alpha = Alpha.Button.disabled)
             ),
         elevation = null,
         modifier =
@@ -222,7 +229,8 @@ private fun TintedButton(
         if (text.isNotBlank()) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
             )
         }
         content()
@@ -240,10 +248,10 @@ fun SparrowRoundApprovalButton(
         onClick = onClick,
         shape = MaterialTheme.shapes.circle,
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary.asTint(Alpha.Button.main),
-            contentColor = MaterialTheme.colorScheme.primary,
-            disabledContainerColor = MaterialTheme.colorScheme.onSurfaceVariant.asTint(Alpha.Button.neutral),
-            disabledContentColor = MaterialTheme.colorScheme.outline
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Button.disabled),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.Button.disabled)
         ),
         elevation = null,
         contentPadding = PaddingValues(MaterialTheme.spacing.button.iconContentPadding),

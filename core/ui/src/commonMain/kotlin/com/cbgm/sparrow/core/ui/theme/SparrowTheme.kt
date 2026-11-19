@@ -26,7 +26,7 @@ SURFACE CONTAINER HIGH
 PRIMARY
 bright cyan
 └─ Sparrow's main action / active accent
-   ├─ onPrimary = dark navy content
+   ├─ onPrimary = black content
    └─ primaryContainer = subdued cyan/navy-tinted highlight
 
 SECONDARY

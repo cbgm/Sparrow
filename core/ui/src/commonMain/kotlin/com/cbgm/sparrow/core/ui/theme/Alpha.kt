@@ -39,8 +39,7 @@ object Alpha {
     object Button {
         const val main = 0.22f
         const val destructive = 0.14f
-        const val neutral = 0.08f
-        const val disabledContent = 0.55f
+        const val disabled = 0.4f
     }
 
     object Banner {
