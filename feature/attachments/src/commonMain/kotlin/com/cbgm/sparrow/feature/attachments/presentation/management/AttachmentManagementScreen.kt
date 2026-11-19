@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
@@ -44,7 +45,6 @@ import com.cbgm.sparrow.core.base.messagepart.ui.model.ImageUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTabs
@@ -443,40 +443,35 @@ private fun FileList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = MaterialTheme.spacing.screenPadding,
             top = MaterialTheme.spacing.base,
-            end = MaterialTheme.spacing.screenPadding,
-            bottom = bottomPadding + MaterialTheme.spacing.small
+            bottom = bottomPadding + MaterialTheme.spacing.screenPadding
         )
     ) {
         if (attachments.isNotEmpty()) {
-            item(key = "attachment-files-group") {
-                SparrowCardNoAnimation {
-                    Column {
-                        attachments.forEachIndexed { index, attachment ->
-                            androidx.compose.runtime.key(attachment.id) {
-                                if (index > 0) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
-                                        thickness = Dimens.Base.dividerThickness,
-                                        color = MaterialTheme.colorScheme.divider
-                                    )
-                                }
-                                SelectableAttachmentFileRow(
-                                    attachment = attachment,
-                                    selectionIds = selectedIds,
-                                    selectionMode = isSelectionMode,
-                                    onClick = remember(onClick, attachment.id) {
-                                        {
-                                            onClick(
-                                                attachment.id
-                                            )
-                                        }
-                                    }
-                                )
-                            }
+            itemsIndexed(
+                items = attachments,
+                key = { _, attachment -> attachment.id }
+            ) { index, attachment ->
+                SelectableAttachmentFileRow(
+                    attachment = attachment,
+                    selectionIds = selectedIds,
+                    selectionMode = isSelectionMode,
+                    onClick = remember(onClick, attachment.id) {
+                        {
+                            onClick(
+                                attachment.id
+                            )
                         }
                     }
+                )
+                if (index < attachments.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = MaterialTheme.spacing.listDividerStart),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
+                    )
                 }
             }
         }
@@ -508,7 +503,8 @@ private fun AttachmentFileRow(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = MaterialTheme.spacing.small),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
@@ -153,7 +153,12 @@ fun MessageSafetyDetailsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = innerPadding,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.screenPadding,
+                bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
+                start = MaterialTheme.spacing.screenPadding,
+                end = MaterialTheme.spacing.screenPadding
+            ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             item(key = "summary") {
@@ -161,32 +166,27 @@ fun MessageSafetyDetailsScreen(
                     level = uiState.level,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = MaterialTheme.spacing.screenPadding)
                         .padding(top = MaterialTheme.spacing.base)
                 )
             }
 
             if (detectedReasons.isNotEmpty()) {
                 item(key = "detected-reasons-title") {
-                    SectionTitle(
+                    SparrowSectionLabel(
                         text = stringResource(Res.string.feature_safety_details_detected_reasons),
                         modifier = Modifier.padding(top = MaterialTheme.spacing.medium)
                     )
                 }
 
                 item(key = "detected-reasons-card") {
-                    SparrowCardNoAnimation(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
-                    ) {
-                        Column {
-                            detectedReasons.forEachIndexed { index, reason ->
-                                ReasonLink(
-                                    reason = reason,
-                                    onClick = { highlightedReason = reason }
-                                )
-                                if (index < detectedReasons.lastIndex) {
-                                    SafetyRowDivider()
-                                }
+                    Column {
+                        detectedReasons.forEachIndexed { index, reason ->
+                            ReasonLink(
+                                reason = reason,
+                                onClick = { highlightedReason = reason }
+                            )
+                            if (index < detectedReasons.lastIndex) {
+                                SafetyRowDivider()
                             }
                         }
                     }
@@ -194,7 +194,7 @@ fun MessageSafetyDetailsScreen(
             }
 
             item(key = "learn-more-title") {
-                SectionTitle(
+                SparrowSectionLabel(
                     text = stringResource(Res.string.feature_safety_details_learn_more),
                     modifier = Modifier.padding(top = MaterialTheme.spacing.medium)
                 )
@@ -206,8 +206,7 @@ fun MessageSafetyDetailsScreen(
             ) { reason ->
                 ReasonExplanation(
                     reason = reason,
-                    isHighlighted = reason == highlightedReason,
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+                    isHighlighted = reason == highlightedReason
                 )
             }
 
@@ -273,63 +272,44 @@ private fun SafetySummary(
 
     // Match Settings and Group Details: one outlined card, a subtle colored
     // header, and body text on the regular surface rather than a solid red panel.
-    SparrowCardNoAnimation(modifier = modifier) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.09f))
-                    .padding(MaterialTheme.spacing.small),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.WarningAmber,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Column(
-                modifier = Modifier.padding(MaterialTheme.spacing.small),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-            ) {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(Res.string.feature_safety_details_why_flagged),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.09f))
+                .padding(vertical = MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Column(
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+        ) {
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(Res.string.feature_safety_details_why_flagged),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
-}
-
-@Composable
-private fun SectionTitle(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    SparrowSectionLabel(
-        text = text,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = MaterialTheme.spacing.screenPadding,
-                end = MaterialTheme.spacing.screenPadding,
-                bottom = MaterialTheme.spacing.base
-            )
-    )
 }
 
 @Composable
@@ -379,8 +359,7 @@ private fun SafetyRowDivider() {
 @Composable
 private fun ReasonExplanation(
     reason: MessageSafetyWarningReason,
-    isHighlighted: Boolean,
-    modifier: Modifier = Modifier
+    isHighlighted: Boolean
 ) {
     val backgroundColor =
         rememberHighlightColor(
@@ -389,26 +368,24 @@ private fun ReasonExplanation(
             highlightColor = MaterialTheme.colorScheme.errorContainer
         )
 
-    SparrowCardNoAnimation(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(backgroundColor, MaterialTheme.shapes.medium)
-                .padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-        ) {
-            Text(
-                text = stringResource(reasonTitle(reason)),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(reasonExplanation(reason)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor, MaterialTheme.shapes.medium)
+            .padding(vertical = MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        Text(
+            text = stringResource(reasonTitle(reason)),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = stringResource(reasonExplanation(reason)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

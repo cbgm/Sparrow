@@ -28,7 +28,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -43,113 +42,110 @@ import org.jetbrains.compose.resources.stringResource
 @Suppress("DEPRECATION")
 @Composable
 internal fun DeveloperErrorItem(
-    error: DeveloperErrorUi,
-    modifier: Modifier = Modifier
+    error: DeveloperErrorUi
 ) {
     val clipboard = LocalClipboardManager.current
     var expanded by rememberSaveable(error.id) { mutableStateOf(false) }
 
-    SparrowCardNoAnimation(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = MaterialTheme.spacing.small)
-        ) {
-            Row {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = error.timestamp,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-                        Text(
-                            text = error.tag,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-                    error.exceptionType?.let { exceptionType ->
-                        Text(
-                            text = exceptionType,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-
-                    Text(
-                        text = error.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    IconButton(onClick = { clipboard.setText(AnnotatedString(error.message + error.stackTrace)) }) {
-                        Icon(
-                            SparrowIcons.Copy,
-                            stringResource(Res.string.feature_payment_copy),
-                            modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-            }
-
-            if (!error.stackTrace.isNullOrBlank()) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaterialTheme.spacing.small)
+    ) {
+        Row {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { expanded = !expanded }
-                            .padding(top = MaterialTheme.spacing.base),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text =
-                            stringResource(
-                                if (expanded) {
-                                    Res.string.feature_settings_error_details_hide
-                                } else {
-                                    Res.string.feature_settings_error_details_show
-                                }
-                            ),
-                        modifier = Modifier.weight(1f),
+                        text = error.timestamp,
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                if (expanded) {
+                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
                     Text(
-                        text = error.stackTrace,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = MaterialTheme.spacing.base)
-                            .clip(MaterialTheme.shapes.small)
-                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                            .padding(MaterialTheme.spacing.base),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = error.tag,
+                        style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+
+                error.exceptionType?.let { exceptionType ->
+                    Text(
+                        text = exceptionType,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Text(
+                    text = error.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                IconButton(onClick = { clipboard.setText(AnnotatedString(error.message + error.stackTrace)) }) {
+                    Icon(
+                        SparrowIcons.Copy,
+                        stringResource(Res.string.feature_payment_copy),
+                        modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                        tint = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+        }
+
+        if (!error.stackTrace.isNullOrBlank()) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded }
+                        .padding(top = MaterialTheme.spacing.base),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text =
+                        stringResource(
+                            if (expanded) {
+                                Res.string.feature_settings_error_details_hide
+                            } else {
+                                Res.string.feature_settings_error_details_show
+                            }
+                        ),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            if (expanded) {
+                Text(
+                    text = error.stackTrace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = MaterialTheme.spacing.base)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                        .padding(MaterialTheme.spacing.base),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

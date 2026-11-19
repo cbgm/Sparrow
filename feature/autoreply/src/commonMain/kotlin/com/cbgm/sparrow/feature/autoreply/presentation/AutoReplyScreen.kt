@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
@@ -99,32 +98,30 @@ fun AutoReplySettingsScreen(
             state = listState,
             contentPadding =
                 PaddingValues(
-                    top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.medium,
-                    bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(10)
+                    top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.screenPadding,
+                    bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
+                    start = MaterialTheme.spacing.screenPadding,
+                    end = MaterialTheme.spacing.screenPadding
                 )
         ) {
             item(key = "auto-reply-settings") {
-                SparrowCardNoAnimation(
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
-                ) {
-                    Column {
-                        AutoReplyOffItem(
-                            selected = uiState.replies.none { it.isActive },
-                            onClick = { onUiEvent(AutoReplyUiEvent.OffClicked) }
+                Column {
+                    AutoReplyOffItem(
+                        selected = uiState.replies.none { it.isActive },
+                        onClick = { onUiEvent(AutoReplyUiEvent.OffClicked) }
+                    )
+                    uiState.replies.forEach { reply ->
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
                         )
-                        uiState.replies.forEach { reply ->
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                        androidx.compose.runtime.key(reply.id) {
+                            AutoReplyItem(
+                                reply = reply,
+                                onActivate = { onUiEvent(AutoReplyUiEvent.ActivateClicked(reply.id)) },
+                                onEdit = { onUiEvent(AutoReplyUiEvent.EditClicked(reply.id)) },
+                                onDelete = { onUiEvent(AutoReplyUiEvent.DeleteClicked(reply.id)) }
                             )
-                            androidx.compose.runtime.key(reply.id) {
-                                AutoReplyItem(
-                                    reply = reply,
-                                    onActivate = { onUiEvent(AutoReplyUiEvent.ActivateClicked(reply.id)) },
-                                    onEdit = { onUiEvent(AutoReplyUiEvent.EditClicked(reply.id)) },
-                                    onDelete = { onUiEvent(AutoReplyUiEvent.DeleteClicked(reply.id)) }
-                                )
-                            }
                         }
                     }
                 }

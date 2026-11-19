@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
@@ -89,14 +88,12 @@ fun PreferredNodeScreen(
             }
 
             item(key = "automatic") {
-                SparrowCardNoAnimation {
-                    NodeChoiceRow(
-                        title = stringResource(Res.string.feature_settings_preferred_node_automatic),
-                        subtitle = stringResource(Res.string.feature_settings_preferred_node_automatic_description),
-                        selected = uiState.preferredNodeId == null,
-                        onClick = { onUiEvent(PreferredNodeUiEvent.AutomaticSelected) }
-                    )
-                }
+                NodeChoiceRow(
+                    title = stringResource(Res.string.feature_settings_preferred_node_automatic),
+                    subtitle = stringResource(Res.string.feature_settings_preferred_node_automatic_description),
+                    selected = uiState.preferredNodeId == null,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.AutomaticSelected) }
+                )
             }
 
             item(key = "search") {

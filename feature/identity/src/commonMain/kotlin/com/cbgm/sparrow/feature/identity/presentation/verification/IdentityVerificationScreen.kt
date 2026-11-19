@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.presentation.component
+package com.cbgm.sparrow.feature.identity.presentation.verification
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +30,7 @@ import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.identity.presentation.component.SparrowCodeGrid
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify_contact
 import com.cbgm.sparrow.resources.feature_chats_confirm_matching_numbers_only

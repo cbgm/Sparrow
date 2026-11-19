@@ -36,7 +36,7 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiS
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeavePrompt
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberVerificationFlow
-import com.cbgm.sparrow.feature.identity.presentation.component.IdentityVerificationScreen
+import com.cbgm.sparrow.feature.identity.presentation.verification.IdentityVerificationScreen
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_chats_group_leave

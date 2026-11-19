@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
@@ -132,63 +131,62 @@ fun AttachmentStorageScreen(
                         )
                     ) {
                         item(key = "conversation-storage-group") {
-                            SparrowCardNoAnimation {
-                                Column {
-                                    uiState.conversations.forEachIndexed { index, summary ->
-                                        key(summary.conversationId) {
-                                            if (index > 0) {
-                                                HorizontalDivider(
-                                                    modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
-                                                    color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = Alpha.divider
+                            Column {
+                                uiState.conversations.forEachIndexed { index, summary ->
+                                    key(summary.conversationId) {
+                                        if (index > 0) {
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                                    alpha = Alpha.divider
+                                                )
+                                            )
+                                        }
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = Color.Transparent,
+                                            onClick = {
+                                                onUiEvent(
+                                                    AttachmentStorageUiEvent.ConversationClicked(
+                                                        summary.conversationId
                                                     )
                                                 )
                                             }
-                                            Surface(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                color = Color.Transparent,
-                                                onClick = {
-                                                    onUiEvent(
-                                                        AttachmentStorageUiEvent.ConversationClicked(
-                                                            summary.conversationId
-                                                        )
-                                                    )
-                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .padding(vertical = MaterialTheme.spacing.small),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Folder,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
-                                                        tint = MaterialTheme.colorScheme.outline
-                                                    )
-                                                    Spacer(Modifier.size(MaterialTheme.spacing.small))
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                            summary.displayName,
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                        Text(
-                                                            stringResource(
-                                                                Res.string.feature_attachments_conversation_storage_description,
-                                                                summary.mediaCount,
-                                                                summary.fileCount
-                                                            ),
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
+                                                Icon(
+                                                    Icons.Default.Folder,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+                                                    tint = MaterialTheme.colorScheme.outline
+                                                )
+                                                Spacer(Modifier.size(MaterialTheme.spacing.small))
+                                                Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        formatBytes(summary.byteSize),
-                                                        style = MaterialTheme.typography.labelMedium,
+                                                        summary.displayName,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        stringResource(
+                                                            Res.string.feature_attachments_conversation_storage_description,
+                                                            summary.mediaCount,
+                                                            summary.fileCount
+                                                        ),
+                                                        style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
+                                                Text(
+                                                    formatBytes(summary.byteSize),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                         }
                                     }

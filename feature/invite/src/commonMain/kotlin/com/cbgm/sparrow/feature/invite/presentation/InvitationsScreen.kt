@@ -26,6 +26,7 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +35,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
@@ -142,7 +142,7 @@ fun InvitationsScreen(
                     state = listState,
                     contentPadding = PaddingValues(
                         top = MaterialTheme.spacing.medium,
-                        bottom = innerPadding.calculateBottomPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
                         start = MaterialTheme.spacing.screenPadding,
                         end = MaterialTheme.spacing.screenPadding
                     )
@@ -159,38 +159,32 @@ fun InvitationsScreen(
                         }
                         recoveryRequests.forEach { request ->
                             item(key = "identity-change:${request.peerId}:${request.invitationId}") {
-                                SparrowCardNoAnimation(
-                                    modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
-                                ) {
-                                    IdentityChangeInvitationItem(
-                                        request = request,
-                                        isProcessing = processingRecoveryId == request.invitationId,
-                                        actionsEnabled = processingRecoveryId == null && uiState.processingInvitationId == null,
-                                        onAccept = { onApproveRecovery(request) },
-                                        onDecline = { onDeclineRecovery(request) },
-                                        onBlock = { onBlockRecovery(request) }
-                                    )
-                                }
+                                IdentityChangeInvitationItem(
+                                    request = request,
+                                    isProcessing = processingRecoveryId == request.invitationId,
+                                    actionsEnabled = processingRecoveryId == null && uiState.processingInvitationId == null,
+                                    onAccept = { onApproveRecovery(request) },
+                                    onDecline = { onDeclineRecovery(request) },
+                                    onBlock = { onBlockRecovery(request) }
+                                )
                             }
                         }
                     }
                     if (uiState.selectedInvitations.isNotEmpty()) {
                         item(key = "invitations-settings-group") {
-                            SparrowCardNoAnimation {
-                                Column {
-                                    uiState.selectedInvitations.forEachIndexed { index, invitation ->
-                                        androidx.compose.runtime.key(invitation.invitationId) {
-                                            if (index > 0) InvitationDivider()
-                                            InvitationItem(
-                                                invitation = invitation,
-                                                isProcessing = uiState.processingInvitationId == invitation.invitationId,
-                                                actionsEnabled = uiState.processingInvitationId == null && processingRecoveryId == null,
-                                                identityApprovalPending = invitation.payloadType == InvitationUiPayloadType.GROUP &&
-                                                    invitation.direction == InvitationUiDirection.INCOMING &&
-                                                    recoveryRequests.any { it.peerId == invitation.peerId },
-                                                onUiEvent = onUiEvent
-                                            )
-                                        }
+                            Column {
+                                uiState.selectedInvitations.forEachIndexed { index, invitation ->
+                                    key(invitation.invitationId) {
+                                        if (index > 0) InvitationDivider()
+                                        InvitationItem(
+                                            invitation = invitation,
+                                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
+                                            actionsEnabled = uiState.processingInvitationId == null && processingRecoveryId == null,
+                                            identityApprovalPending = invitation.payloadType == InvitationUiPayloadType.GROUP &&
+                                                invitation.direction == InvitationUiDirection.INCOMING &&
+                                                recoveryRequests.any { it.peerId == invitation.peerId },
+                                            onUiEvent = onUiEvent
+                                        )
                                     }
                                 }
                             }
@@ -222,7 +216,10 @@ private fun IdentityChangeInvitationItem(
                 tone = SwipeActionTone.PRIMARY,
                 onClick = onAccept
             ) {
-                InvitationSwipeActionContent(SparrowIcons.Check, stringResource(Res.string.feature_invite_accept_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Check,
+                    stringResource(Res.string.feature_invite_accept_invitation)
+                )
             },
             SwipeRevealAction(
                 tone = SwipeActionTone.NEUTRAL,
@@ -230,13 +227,19 @@ private fun IdentityChangeInvitationItem(
                 // the pending row and send its signed decline when available.
                 onClick = onDecline
             ) {
-                InvitationSwipeActionContent(SparrowIcons.Delete, stringResource(Res.string.feature_invite_decline_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Delete,
+                    stringResource(Res.string.feature_invite_decline_invitation)
+                )
             },
             SwipeRevealAction(
                 tone = SwipeActionTone.DESTRUCTIVE,
                 onClick = onBlock
             ) {
-                InvitationSwipeActionContent(SparrowIcons.Block, stringResource(Res.string.feature_invite_block_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Block,
+                    stringResource(Res.string.feature_invite_block_invitation)
+                )
             }
         )
     ) {
@@ -600,7 +603,11 @@ private fun unverifiedClaimText(invitation: InvitationUi): String? {
     return when {
         !incomingDirect || !invitation.peerUnverified -> null
         invitation.phoneContactName != null ->
-            stringResource(Res.string.feature_invite_peer_matches_phone_contact, invitation.phoneContactName)
+            stringResource(
+                Res.string.feature_invite_peer_matches_phone_contact,
+                invitation.phoneContactName
+            )
+
         else -> stringResource(Res.string.feature_invite_peer_unverified)
     }
 }
@@ -668,22 +675,25 @@ private fun InvitationsScreenPreview() {
         InvitationsScreen(
             uiState =
                 InvitationUiState(
-                    selectedTab = InvitationTab.OUTGOING,
-                    outgoingInvitations =
+                    selectedTab = InvitationTab.INCOMING,
+                    incomingInvitations =
                         listOf(
                             InvitationUi(
                                 invitationId = "pending",
                                 peerId = "alice",
                                 peerDisplayName = "Alice",
                                 peerSecondaryText = "+49 123 456",
-                                direction = InvitationUiDirection.OUTGOING,
+                                direction = InvitationUiDirection.INCOMING,
                                 status = InvitationUiStatus.PENDING,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 1,
                                 hasUnreadUpdate = false,
                                 payloadId = "12",
                                 payloadType = InvitationUiPayloadType.DIRECT
-                            ),
+                            )
+                        ),
+                    outgoingInvitations =
+                        listOf(
                             InvitationUi(
                                 invitationId = "declined",
                                 peerId = "bob",
@@ -698,6 +708,16 @@ private fun InvitationsScreenPreview() {
                                 payloadType = InvitationUiPayloadType.DIRECT
                             )
                         )
+                ),
+            recoveryRequests =
+                listOf(
+                    MailboxReviewRequestUi(
+                        invitationId = "recovery-1",
+                        peerId = "charlie",
+                        peerDisplayName = "Charlie",
+                        proposedSigningFingerprint = "A1B2 C3D4 E5F6 7890 1234 5678 9ABC DEF0",
+                        proposedEncryptionFingerprint = "A1B2 C3D4 E5F6 7890 1234 5678 9ABC DEF0"
+                    )
                 ),
             onUiEvent = {}
         )

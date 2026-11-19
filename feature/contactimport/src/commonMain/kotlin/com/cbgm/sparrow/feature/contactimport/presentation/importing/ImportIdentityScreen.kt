@@ -28,10 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -53,7 +51,6 @@ import com.cbgm.sparrow.resources.feature_contactimport_normal_invitation_descri
 import com.cbgm.sparrow.resources.feature_contactimport_or_paste_manually
 import com.cbgm.sparrow.resources.feature_contactimport_paste_identity_title
 import com.cbgm.sparrow.resources.feature_contactimport_paste_shared_identity_description
-import com.cbgm.sparrow.resources.feature_contactimport_scan_qr_code
 import com.cbgm.sparrow.resources.feature_contactimport_shared_identity
 import org.jetbrains.compose.resources.stringResource
 
@@ -61,7 +58,8 @@ import org.jetbrains.compose.resources.stringResource
 fun ImportIdentityScreen(
     uiState: ImportIdentityUiState,
     onUiEvent: (ImportIdentityUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    scanner: @Composable (enabled: Boolean) -> Unit = {}
 ) {
     SparrowScrollScaffold(
         modifier = modifier,
@@ -92,30 +90,24 @@ fun ImportIdentityScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
-            SparrowCardNoAnimation {
-                Column(
-                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.feature_contactimport_in_person_qr_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+            Column(
+                modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                Text(
+                    text = stringResource(Res.string.feature_contactimport_in_person_qr_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
-                    Text(
-                        text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-                    )
+                Text(
+                    text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                )
 
-                    SparrowSecondaryButton(
-                        onClick = { onUiEvent(ImportIdentityUiEvent.ScanQrCodeClicked) },
-                        enabled = !uiState.isImporting,
-                        text = stringResource(Res.string.feature_contactimport_scan_qr_code)
-                    )
-                }
+                scanner(!uiState.isImporting)
             }
 
             Text(
@@ -126,43 +118,41 @@ fun ImportIdentityScreen(
                 textAlign = TextAlign.Center
             )
 
-            SparrowCardNoAnimation {
-                Column(
-                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.feature_contactimport_paste_identity_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+            Column(
+                modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                Text(
+                    text = stringResource(Res.string.feature_contactimport_paste_identity_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
-                    Text(
-                        text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-                    )
+                Text(
+                    text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                )
 
-                    SparrowInputField(
-                        value = uiState.encodedIdentity,
-                        onValueChange = { value ->
-                            onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = stringResource(Res.string.feature_contactimport_shared_identity),
-                        minLines = 4,
-                        isEnabled = !uiState.isImporting
-                    )
+                SparrowInputField(
+                    value = uiState.encodedIdentity,
+                    onValueChange = { value ->
+                        onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(Res.string.feature_contactimport_shared_identity),
+                    minLines = 1,
+                    isEnabled = !uiState.isImporting
+                )
 
-                    ImportButton(
-                        isImporting = uiState.isImporting,
-                        enabled = uiState.encodedIdentity.isNotBlank(),
-                        onClick = {
-                            onUiEvent(ImportIdentityUiEvent.ImportClicked)
-                        }
-                    )
-                }
+                ImportButton(
+                    isImporting = uiState.isImporting,
+                    enabled = uiState.encodedIdentity.isNotBlank(),
+                    onClick = {
+                        onUiEvent(ImportIdentityUiEvent.ImportClicked)
+                    }
+                )
             }
 
             uiState.importedContactName?.let { name ->
