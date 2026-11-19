@@ -34,6 +34,7 @@ fun OnboardingPageLayout(
     graphicHeight: Dp,
     graphic: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
+    isContentCentered: Boolean = false,
     action: @Composable () -> Unit = {},
     hint: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
@@ -48,9 +49,21 @@ fun OnboardingPageLayout(
                     .padding(horizontal = Dimens.OnboardingScreen.horizontalPadding)
                     .padding(top = Dimens.OnboardingScreen.topPadding)
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(graphicHeight), contentAlignment = Alignment.Center, content = graphic)
-            Spacer(Modifier.height(MaterialTheme.spacing.large))
+            if (isContentCentered) {
+                Spacer(Modifier.weight(1f))
+            }
+
+            Box(
+                modifier = Modifier.fillMaxWidth().height(graphicHeight),
+                contentAlignment = Alignment.Center,
+                content = graphic
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.base.times(5)))
             content()
+
+            if (isContentCentered) {
+                Spacer(Modifier.weight(1f))
+            }
         }
         Box(modifier = Modifier.align(Alignment.BottomCenter).bottomBar(), contentAlignment = Alignment.Center) {
             hint()

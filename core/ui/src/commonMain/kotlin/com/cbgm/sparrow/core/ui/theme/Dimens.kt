@@ -259,11 +259,12 @@ object Dimens {
         val bottomBarHeight = 48.dp
         val lineWidth = 1.dp
         val markSize = 210.dp
-        val markGraphicHeight = 300.dp
-        val onionGraphicHeight = 250.dp
-        val dotsGraphicHeight = 40.dp
-        val receivingGraphicHeight = 90.dp
-        val contactsGraphicHeight = 130.dp
+        val markMarginTop = 100.dp
+        val markMarginBottom = 30.dp
+        val onionGraphicHeight = 200.dp
+        val dotsGraphicHeight = 10.dp
+        val receivingGraphicHeight = 40.dp
+        val contactsGraphicHeight = 104.dp
         val wordSlide = 8.dp
         val rowSlide = 60.dp
         val choiceMarkSize = 6.dp

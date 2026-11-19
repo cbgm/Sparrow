@@ -49,9 +49,11 @@ fun ReceivingGraphic(
     val relay = MaterialTheme.colorScheme.outline
     val message = MaterialTheme.colorScheme.primary
     Canvas(modifier = modifier) {
-        val start = Offset(size.width * END_INSET, size.height * NODE_HEIGHT)
-        val end = Offset(size.width * (1f - END_INSET), size.height * NODE_HEIGHT)
-        val bend = size.height * BEND
+        val labelHeight = measurer.measure(youLabel, labelStyle).size.height
+        val nodeY = size.height - LABEL_GAP.dp.toPx() - labelHeight
+        val start = Offset(size.width * END_INSET, nodeY)
+        val end = Offset(size.width * (1f - END_INSET), nodeY)
+        val bend = nodeY / CURVE_REACH
         val first = Offset(start.x + (end.x - start.x) / 3f, start.y - bend)
         val second = Offset(start.x + (end.x - start.x) * 2f / 3f, start.y + bend)
         val line = Path().apply {
@@ -89,8 +91,9 @@ private fun bezier(
 }
 
 private const val END_INSET = 0.15f
-private const val NODE_HEIGHT = 0.4f
-private const val BEND = 0.35f
+
+/** How far the curve swings above its ends, as a share of the control-point offset. */
+private const val CURVE_REACH = 0.289f
 private const val LABEL_GAP = 12f
 private const val WAIT_RING_ALPHA = 0.8f
 private const val WAIT_RING_GROWTH = 12f

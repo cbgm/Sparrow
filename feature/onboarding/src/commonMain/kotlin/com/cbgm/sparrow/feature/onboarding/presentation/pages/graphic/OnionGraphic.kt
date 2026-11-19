@@ -44,7 +44,8 @@ fun OnionGraphic(
     val end = MaterialTheme.colorScheme.onBackground
     val packet = MaterialTheme.colorScheme.primary
     Canvas(modifier = modifier) {
-        val points = NODES.map { (x, y) -> Offset(x * size.width, y * size.height) }
+        val inset = LABEL_GAP.dp.toPx() + measurer.measure(labels.first(), labelStyle).size.height
+        val points = NODES.map { (x, y) -> Offset(x * size.width, inset + y * (size.height - 2 * inset)) }
         val route = Path().apply { points.forEachIndexed { index, point -> if (index == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y) } }
         drawPath(route, path, style = Stroke(width = 1.2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 5.dp.toPx()))))
         points.forEachIndexed { index, point ->
@@ -52,7 +53,7 @@ fun OnionGraphic(
             if (isEnd) drawCircle(end, radius = 5.dp.toPx(), center = point) else drawCircle(relay, 4.dp.toPx(), point, style = Stroke(1.3.dp.toPx()))
             val layout = measurer.measure(labels[index], labelStyle)
             val below = point.y > size.height / 2
-            val top = if (below) point.y + 14.dp.toPx() else point.y - 14.dp.toPx() - layout.size.height
+            val top = if (below) point.y + LABEL_GAP.dp.toPx() else point.y - LABEL_GAP.dp.toPx() - layout.size.height
             drawText(layout, topLeft = Offset(point.x - layout.size.width / 2f, top))
         }
         val hop = minOf(HOPS - 1, (time / HOP_MILLISECONDS).toInt())
@@ -70,8 +71,9 @@ fun OnionGraphic(
 private fun easeInOut(value: Float): Float =
     if (value < 0.5f) 2f * value * value else 1f - (-2f * value + 2f) * (-2f * value + 2f) / 2f
 
-/** You, three relays, your contact; as fractions of the graphic. */
-private val NODES = listOf(0.09f to 0.75f, 0.32f to 0.29f, 0.58f to 0.71f, 0.79f to 0.25f, 0.94f to 0.62f)
+/** You, three relays, your contact; x as a fraction of the width, y of the height between the labels. */
+private val NODES = listOf(0.09f to 1f, 0.32f to 0.08f, 0.58f to 0.92f, 0.79f to 0f, 0.94f to 0.74f)
+private const val LABEL_GAP = 14f
 private val LAYER_RADII = listOf(18f, 13f, 8f)
 private const val LAYER_FADE = 0.15f
 private const val HOPS = 4

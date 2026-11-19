@@ -111,6 +111,7 @@ fun SparrowInputField(
     modifier: Modifier = Modifier,
     placeholderText: String = "",
     errorText: String = "",
+    supportingText: String = "",
     isSingleLine: Boolean = false,
     minLines: Int = 1,
     maxLines: Int = if (isSingleLine) 1 else Int.MAX_VALUE,
@@ -175,12 +176,13 @@ fun SparrowInputField(
                 }
             }
         )
-        if (isError && errorText.isNotBlank()) {
+        val showError = isError && errorText.isNotBlank()
+        if (showError || supportingText.isNotBlank()) {
             Text(
-                text = errorText,
+                text = if (showError) errorText else supportingText,
                 modifier = Modifier.padding(top = MaterialTheme.spacing.micro),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error
+                color = if (showError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
             )
         }
     }

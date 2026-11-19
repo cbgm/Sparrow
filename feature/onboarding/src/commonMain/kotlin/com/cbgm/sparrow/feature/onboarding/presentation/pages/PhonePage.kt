@@ -16,8 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -26,7 +28,6 @@ import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreat
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.FadingText
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.OnboardingAction
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.OnboardingPageLayout
-import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.UnderlinedField
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.onboardingBodyStyle
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.onboardingTitleStyle
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
@@ -139,19 +140,22 @@ private fun Form(
                 .graphicsLayer { alpha = clock.progress(FIELDS_START_MILLISECONDS, FIELDS_MILLISECONDS) },
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
-        UnderlinedField(
+        SparrowInputField(
             value = form.name,
             onValueChange = onNameChanged,
-            label = stringResource(Res.string.feature_onboarding_your_name)
+            label = stringResource(Res.string.feature_onboarding_your_name),
+            isSingleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
         )
-        UnderlinedField(
+        SparrowInputField(
             value = form.phoneNumber,
             onValueChange = onPhoneNumberChanged,
             label = stringResource(Res.string.base_phone_number),
-            note =
+            supportingText =
                 stringResource(
                     if (form.phoneNumber.isBlank()) Res.string.feature_onboarding_no_automatic_number else Res.string.feature_onboarding_detected_automatically_confirm
                 ),
+            isSingleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
         )
         Links(
