@@ -281,7 +281,7 @@ private fun AutoReplyEditorDialog(
                         onValueChange = onTextChanged,
                         label = stringResource(Res.string.feature_auto_reply_message),
                         modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
-                        minLines = 3,
+                        minLines = 1,
                         maxLines = 7,
                         isEnabled = !isSaving,
                         keyboardOptions =

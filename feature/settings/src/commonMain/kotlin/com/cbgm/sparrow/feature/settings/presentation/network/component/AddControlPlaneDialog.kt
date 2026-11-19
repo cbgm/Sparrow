@@ -11,9 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowChip
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowTabs
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -22,17 +22,21 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_settings_control_plane_add
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_placeholder
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_support_directory
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_support_list
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_support_manual
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_tab_directory
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_tab_list
+import com.cbgm.sparrow.resources.feature_settings_control_plane_add_tab_manual
 import com.cbgm.sparrow.resources.feature_settings_control_plane_address
 import com.cbgm.sparrow.resources.feature_settings_control_plane_directory_apply
 import com.cbgm.sparrow.resources.feature_settings_control_plane_directory_edit
-import com.cbgm.sparrow.resources.feature_settings_control_plane_directory_title
 import com.cbgm.sparrow.resources.feature_settings_control_plane_error_duplicate
 import com.cbgm.sparrow.resources.feature_settings_control_plane_error_invalid_url
 import com.cbgm.sparrow.resources.feature_settings_control_plane_error_keep_one
 import com.cbgm.sparrow.resources.feature_settings_control_plane_error_save_failed
-import com.cbgm.sparrow.resources.feature_settings_control_plane_json_list
 import com.cbgm.sparrow.resources.feature_settings_control_plane_json_unverified
-import com.cbgm.sparrow.resources.feature_settings_control_plane_source_manual
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -61,36 +65,16 @@ fun AddControlPlaneDialog(
         ),
         text = {
             Column {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (!editingDirectory) {
-                        AdaptedFilterChip(
-                            selectedSource = source,
-                            targetSource = ControlPlaneAddSource.PLANE,
-                            label = stringResource(Res.string.feature_settings_control_plane_source_manual),
-                            onSourceChanged = onSourceChanged
-                        )
-                    }
-
-                    AdaptedFilterChip(
-                        selectedSource = source,
-                        targetSource = ControlPlaneAddSource.SIGNED_DIRECTORY,
-                        label = stringResource(Res.string.feature_settings_control_plane_directory_title),
-                        onSourceChanged = onSourceChanged
-                    )
-
-                    AdaptedFilterChip(
-                        selectedSource = source,
-                        targetSource = ControlPlaneAddSource.JSON_LIST,
-                        label = stringResource(Res.string.feature_settings_control_plane_json_list),
-                        onSourceChanged = onSourceChanged
-                    )
-                }
+                AddControlPlaneTabs(
+                    selectedSource = source,
+                    editingDirectory = editingDirectory,
+                    onSourceChanged = onSourceChanged
+                )
                 if (source == ControlPlaneAddSource.JSON_LIST) {
                     Text(
                         stringResource(Res.string.feature_settings_control_plane_json_unverified),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.small)
                     )
                 }
                 SparrowInputField(
@@ -100,6 +84,12 @@ fun AddControlPlaneDialog(
                         top = MaterialTheme.spacing.small,
                         bottom = MaterialTheme.spacing.base
                     ),
+                    placeholderText = stringResource(Res.string.feature_settings_control_plane_add_placeholder),
+                    supportingText = when (source) {
+                        ControlPlaneAddSource.PLANE -> stringResource(Res.string.feature_settings_control_plane_add_support_manual)
+                        ControlPlaneAddSource.SIGNED_DIRECTORY -> stringResource(Res.string.feature_settings_control_plane_add_support_directory)
+                        ControlPlaneAddSource.JSON_LIST -> stringResource(Res.string.feature_settings_control_plane_add_support_list)
+                    },
                     label = stringResource(Res.string.feature_settings_control_plane_address),
                     isError = error != null,
                     isSingleLine = true,
@@ -151,18 +141,34 @@ fun AddControlPlaneDialog(
 }
 
 @Composable
-private fun AdaptedFilterChip(
+private fun AddControlPlaneTabs(
     selectedSource: ControlPlaneAddSource,
-    targetSource: ControlPlaneAddSource,
-    label: String,
-    onSourceChanged: (ControlPlaneAddSource) -> Unit,
-    modifier: Modifier = Modifier
+    editingDirectory: Boolean,
+    onSourceChanged: (ControlPlaneAddSource) -> Unit
 ) {
-    SparrowChip(
-        selected = selectedSource == targetSource,
-        onClick = { onSourceChanged(targetSource) },
-        label = label,
-        modifier = modifier.fillMaxWidth()
+    val sources = if (editingDirectory) {
+        listOf(ControlPlaneAddSource.SIGNED_DIRECTORY, ControlPlaneAddSource.JSON_LIST)
+    } else {
+        listOf(
+            ControlPlaneAddSource.PLANE,
+            ControlPlaneAddSource.SIGNED_DIRECTORY,
+            ControlPlaneAddSource.JSON_LIST
+        )
+    }
+    val labels = sources.map { source ->
+        when (source) {
+            ControlPlaneAddSource.PLANE -> stringResource(Res.string.feature_settings_control_plane_add_tab_manual)
+            ControlPlaneAddSource.SIGNED_DIRECTORY -> stringResource(Res.string.feature_settings_control_plane_add_tab_directory)
+            ControlPlaneAddSource.JSON_LIST -> stringResource(Res.string.feature_settings_control_plane_add_tab_list)
+        }
+    }
+    val selectedIndex = sources.indexOf(selectedSource).coerceAtLeast(0)
+
+    SparrowTabs(
+        labels = labels,
+        selectedIndex = selectedIndex,
+        onSelect = { index -> onSourceChanged(sources[index]) },
+        isFullUnderLine = true
     )
 }
 

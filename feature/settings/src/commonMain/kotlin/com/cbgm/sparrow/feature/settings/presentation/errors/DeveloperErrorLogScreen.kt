@@ -7,8 +7,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +24,9 @@ import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.errors.components.ClearDeveloperErrorsDialog
 import com.cbgm.sparrow.feature.settings.presentation.errors.components.DeveloperErrorItem
@@ -117,11 +120,21 @@ private fun Content(
                 }
             }
         } else {
-            items(
+            itemsIndexed(
                 items = uiState.errors,
-                key = { error -> error.id }
-            ) { error ->
+                key = { _, error -> error.id }
+            ) { index, error ->
                 DeveloperErrorItem(error = error)
+
+                if (index < uiState.errors.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = MaterialTheme.spacing.listDividerStart),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
+                    )
+                }
             }
         }
     }

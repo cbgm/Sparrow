@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,7 +30,8 @@ fun SparrowTabs(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    height: Dp = Dimens.Tabs.height
+    height: Dp = Dimens.Tabs.height,
+    isFullUnderLine: Boolean = false
 ) {
     Row(modifier = modifier.fillMaxWidth().height(height)) {
         labels.forEachIndexed { index, label ->
@@ -63,7 +64,14 @@ fun SparrowTabs(
                 Box(
                     modifier = Modifier
                         .padding(top = MaterialTheme.spacing.micro)
-                        .size(width = Dimens.Tabs.lineWidth, height = Dimens.Tabs.lineHeight)
+                        .then(
+                            if (!isFullUnderLine) {
+                                Modifier.width(Dimens.Tabs.lineWidth)
+                            } else {
+                                Modifier.fillMaxWidth()
+                            }
+                        )
+                        .height(Dimens.Tabs.lineHeight)
                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                 )
             }

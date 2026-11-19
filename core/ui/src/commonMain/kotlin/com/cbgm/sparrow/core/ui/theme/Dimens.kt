@@ -92,7 +92,7 @@ object Dimens {
     }
 
     object MediaGrid {
-        val gap = 2.dp
+        val gap = 4.dp
     }
 
     object Tabs {

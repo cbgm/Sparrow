@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -30,12 +31,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -111,7 +111,12 @@ fun AttachmentManagementScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
+                .padding(
+                    start = MaterialTheme.spacing.screenPadding,
+                    top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.base,
+                    end = MaterialTheme.spacing.screenPadding,
+                    bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.small
+                )
         ) {
             AttachmentManagementBody(
                 mediaItems = mediaItems,
@@ -157,7 +162,6 @@ private fun AttachmentManagementBody(
             attachments = mediaItems,
             selectedIds = selectedIds,
             isSelectionMode = isSelectionMode,
-            bottomPadding = bottomPadding,
             onClick = onAttachmentClick
         )
 
@@ -284,7 +288,8 @@ private fun AttachmentTabs(
             stringResource(Res.string.feature_attachments_files)
         ),
         selectedIndex = tabs.indexOf(selectedTab),
-        onSelect = { index -> onTabSelected(tabs[index]) }
+        onSelect = { index -> onTabSelected(tabs[index]) },
+        isFullUnderLine = true
     )
 }
 
@@ -293,17 +298,10 @@ private fun MediaGrid(
     attachments: List<MessagePartUi>,
     selectedIds: State<Set<String>>,
     isSelectionMode: State<Boolean>,
-    bottomPadding: Dp,
     onClick: (String) -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        contentPadding = PaddingValues(
-            start = MaterialTheme.spacing.screenPadding,
-            top = MaterialTheme.spacing.base,
-            end = MaterialTheme.spacing.screenPadding,
-            bottom = bottomPadding + MaterialTheme.spacing.small
-        ),
         horizontalArrangement = Arrangement.spacedBy(Dimens.MediaGrid.gap),
         verticalArrangement = Arrangement.spacedBy(Dimens.MediaGrid.gap),
         modifier = Modifier.fillMaxSize()
@@ -326,17 +324,22 @@ private fun SelectableGridItem(
     selectionIds: State<Set<String>>,
     selectionMode: State<Boolean>
 ) {
-    val selected by remember(attachment.id, selectionIds, selectionMode) {
-        derivedStateOf { selectionMode.value && attachment.id in selectionIds.value }
-    }
-    GridItem(onClick = onClick, attachment = attachment, selected = selected)
+    val isSelectionMode = selectionMode.value
+    val selected = isSelectionMode && attachment.id in selectionIds.value
+    GridItem(
+        onClick = onClick,
+        attachment = attachment,
+        selected = selected,
+        isSelectionMode = isSelectionMode
+    )
 }
 
 @Composable
 private fun GridItem(
     onClick: () -> Unit,
     attachment: MessagePartUi,
-    selected: Boolean
+    selected: Boolean,
+    isSelectionMode: Boolean
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -347,6 +350,7 @@ private fun GridItem(
             AttachmentGridThumbnail(attachment)
             AttachmentSelectionIndicator(
                 selected = selected,
+                isSelectionMode = isSelectionMode,
                 modifier = Modifier.matchParentSize()
             )
         }
@@ -396,8 +400,11 @@ private fun AttachmentGridThumbnail(
 @Composable
 private fun AttachmentSelectionIndicator(
     selected: Boolean,
+    isSelectionMode: Boolean,
     modifier: Modifier = Modifier
 ) {
+    if (!isSelectionMode) return
+
     if (selected) {
         Box(
             modifier = modifier
@@ -408,6 +415,17 @@ private fun AttachmentSelectionIndicator(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.TopEnd).padding(MaterialTheme.spacing.micro)
+            )
+        }
+    } else {
+        Box(
+            modifier = modifier.padding(MaterialTheme.spacing.micro)
+        ) {
+            Icon(
+                imageVector = Icons.Default.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = Color.White,
                 modifier = Modifier.align(Alignment.TopEnd).padding(MaterialTheme.spacing.micro)
             )
         }
@@ -472,16 +490,21 @@ private fun SelectableAttachmentFileRow(
     selectionMode: State<Boolean>,
     onClick: () -> Unit
 ) {
-    val selected by remember(attachment.id, selectionIds, selectionMode) {
-        derivedStateOf { selectionMode.value && attachment.id in selectionIds.value }
-    }
-    AttachmentFileRow(attachment = attachment, selected = selected, onClick = onClick)
+    val isSelectionMode = selectionMode.value
+    val selected = isSelectionMode && attachment.id in selectionIds.value
+    AttachmentFileRow(
+        attachment = attachment,
+        selected = selected,
+        isSelectionMode = isSelectionMode,
+        onClick = onClick
+    )
 }
 
 @Composable
 private fun AttachmentFileRow(
     attachment: FileUi,
     selected: Boolean,
+    isSelectionMode: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -509,17 +532,28 @@ private fun AttachmentFileRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        AttachmentFileSelectionIndicator(selected)
+        AttachmentFileSelectionIndicator(selected = selected, isSelectionMode = isSelectionMode)
     }
 }
 
 @Composable
-private fun AttachmentFileSelectionIndicator(selected: Boolean) {
+private fun AttachmentFileSelectionIndicator(
+    selected: Boolean,
+    isSelectionMode: Boolean
+) {
+    if (!isSelectionMode) return
+
     if (selected) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline
         )
     }
 }

@@ -23,16 +23,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.storage.model.AttachmentStorageUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.storage.model.AttachmentStorageUiState
@@ -108,7 +111,7 @@ fun AttachmentStorageScreen(
                                 Icon(
                                     Icons.Default.Folder,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.outline
                                 )
                                 Text(
                                     text = stringResource(Res.string.feature_attachments_storage_empty),
@@ -132,7 +135,7 @@ fun AttachmentStorageScreen(
                             SparrowCardNoAnimation {
                                 Column {
                                     uiState.conversations.forEachIndexed { index, summary ->
-                                        androidx.compose.runtime.key(summary.conversationId) {
+                                        key(summary.conversationId) {
                                             if (index > 0) {
                                                 HorizontalDivider(
                                                     modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
@@ -160,7 +163,7 @@ fun AttachmentStorageScreen(
                                                         Icons.Default.Folder,
                                                         contentDescription = null,
                                                         modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
-                                                        tint = MaterialTheme.colorScheme.primary
+                                                        tint = MaterialTheme.colorScheme.outline
                                                     )
                                                     Spacer(Modifier.size(MaterialTheme.spacing.small))
                                                     Column(modifier = Modifier.weight(1f)) {
@@ -228,3 +231,16 @@ private fun formatBytes(bytes: Long): String =
         bytes >= 1024L -> "${bytes / 1024L} KB"
         else -> "$bytes B"
     }
+
+@Preview
+@Composable
+private fun AttachmentStorageScreenPreview() {
+    SparrowTheme {
+        AttachmentStorageScreen(
+            uiState = AttachmentStorageUiState.Content(
+                conversations = listOf()
+            ),
+            onUiEvent = {}
+        )
+    }
+}

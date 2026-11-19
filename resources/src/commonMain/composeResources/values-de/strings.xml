@@ -542,6 +542,13 @@
     <string name="feature_settings_control_plane_directory_sync_failed">Verzeichnis nicht erreichbar. Die letzte erfolgreiche Liste wird weiter verwendet.</string>
     <string name="feature_settings_control_plane_directory_error_invalid_url">Gib eine gültige http://- oder https://Verzeichnis-URL ein.</string>
     <string name="feature_settings_control_plane_directory_error_save_failed">Die Verzeichnis-URL konnte nicht gespeichert werden.</string>
+    <string name="feature_settings_control_plane_add_tab_manual">Manuell</string>
+    <string name="feature_settings_control_plane_add_tab_directory">Verzeichnis</string>
+    <string name="feature_settings_control_plane_add_tab_list">JSON Liste</string>
+    <string name="feature_settings_control_plane_add_placeholder">https://</string>
+    <string name="feature_settings_control_plane_add_support_manual">Eine Control-Plane-URL.</string>
+    <string name="feature_settings_control_plane_add_support_directory">Eine Control-Plane Verzeichnis URL.</string>
+    <string name="feature_settings_control_plane_add_support_list">Eine JSON-Liste URL.</string>
     <string name="feature_settings_control_plane_source_manual">Manuell</string>
     <string name="feature_settings_control_plane_source_directory">Verzeichnis</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manuell + Verzeichnis</string>

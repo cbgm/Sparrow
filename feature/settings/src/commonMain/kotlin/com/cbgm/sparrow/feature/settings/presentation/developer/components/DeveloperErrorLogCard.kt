@@ -49,7 +49,7 @@ internal fun DeveloperErrorLogCard(
             Icon(
                 imageVector = Icons.Default.BugReport,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
             )
 

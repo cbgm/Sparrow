@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.settings.presentation.overview
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
-import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.component.SparrowSwitchRow
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -56,6 +54,7 @@ import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.presentation.developer.components.SettingsSection
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.AppLockTimeoutDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
@@ -600,20 +599,6 @@ private fun messageSafetySubtitle(
                 MessageSafetyState.Ready -> stringResource(Res.string.feature_settings_message_safety_ready)
                 is MessageSafetyState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
             }
-    }
-}
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column {
-        SparrowSectionLabel(
-            text = title,
-            modifier = Modifier.padding(bottom = MaterialTheme.spacing.micro)
-        )
-        content()
     }
 }
 

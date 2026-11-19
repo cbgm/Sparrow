@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -68,17 +67,12 @@ internal fun NetworkDiagnosticsCard(
     diagnostics: TransportDiagnostics,
     onShowAllNodes: () -> Unit
 ) {
-    SparrowCardNoAnimation {
-        Column(
-            modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
+    Column(
+        modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
+    ) {
+        SettingsSection(
+            title = stringResource(Res.string.feature_settings_network_diagnostics)
         ) {
-            Text(
-                text = stringResource(Res.string.feature_settings_network_diagnostics),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 
             DiagnosticRow(
