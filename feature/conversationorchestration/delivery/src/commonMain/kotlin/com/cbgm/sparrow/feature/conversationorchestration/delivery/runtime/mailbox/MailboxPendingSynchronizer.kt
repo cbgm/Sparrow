@@ -12,6 +12,7 @@ import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
 import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.mailbox.isMailboxServerError
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.sync.Mutex
@@ -142,7 +143,7 @@ class MailboxPendingSynchronizer(
             error.isWaitingForRoute() ->
                 logger.info { "Mailbox of contact ${credential.contactId} not read: waiting for a circuit through enough hops" }
 
-            error is MailboxNodeUnavailableException ->
+            error is MailboxNodeUnavailableException || error.isMailboxServerError() ->
                 logger.info { "Mailbox node of contact ${credential.contactId} is unavailable; retried on the next sync" }
 
             else -> logger.warn(error) { "Mailbox of contact ${credential.contactId} could not be read" }
