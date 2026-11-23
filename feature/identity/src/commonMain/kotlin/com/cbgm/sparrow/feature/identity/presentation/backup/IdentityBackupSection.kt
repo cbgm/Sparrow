@@ -13,10 +13,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowBanner
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiState
@@ -80,5 +82,21 @@ fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun IdentityBackupSectionPreview() {
+    SparrowTheme {
+        IdentityBackupSection(
+            state = IdentityBackupUiState(
+                status = BackupStateUi.EXPORTED,
+                busy = true,
+                message = null,
+                error = false
+            ),
+            onExport = {}
+        )
     }
 }

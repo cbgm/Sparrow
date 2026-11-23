@@ -1,3 +1,4 @@
+
 package com.cbgm.sparrow.navigation.routing
 
 import androidx.compose.runtime.Composable
@@ -19,8 +20,16 @@ fun NavHostController.bind(navigator: AppNavigator) {
             navigator.navigationEvents.collect { event ->
                 when (event) {
                     is AppNavigationEvent.NavigateTo -> {
+                        val currentEntry = currentBackStackEntry
+
+                        // Ignore navigation requests while the current entry is transitioning.
+                        if (currentEntry?.lifecycle?.currentState != Lifecycle.State.RESUMED) {
+                            return@collect
+                        }
+
                         navigate(event.route) {
                             launchSingleTop = true
+
                             event.popUpTo?.let { route ->
                                 popUpTo(route) {
                                     inclusive = event.inclusive
@@ -30,11 +39,15 @@ fun NavHostController.bind(navigator: AppNavigator) {
                     }
 
                     AppNavigationEvent.PopBackStack -> {
-                        popBackStack()
+                        if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                            popBackStack()
+                        }
                     }
 
                     is AppNavigationEvent.PopBackStackTo -> {
-                        popBackStack(event.route, event.inclusive)
+                        if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                            popBackStack(event.route, event.inclusive)
+                        }
                     }
                 }
             }
