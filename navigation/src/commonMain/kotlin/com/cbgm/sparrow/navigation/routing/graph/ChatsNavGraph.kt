@@ -19,8 +19,12 @@ fun NavGraphBuilder.chatsNavGraph() {
     composable<AppRoute.MessageSearch>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
-    ) {
-        MessageSearchRoute()
+    ) { backStackEntry ->
+        val destination = backStackEntry.toRoute<AppRoute.MessageSearch>()
+        val savedStateHandle = backStackEntry.savedStateHandle.apply {
+            set("conversationId", destination.conversationId)
+        }
+        MessageSearchRoute(savedStateHandle = savedStateHandle)
     }
 
     composable<AppRoute.MessageSafetyDetails>(

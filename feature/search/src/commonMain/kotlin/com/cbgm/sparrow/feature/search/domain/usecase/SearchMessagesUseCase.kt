@@ -12,12 +12,14 @@ class SearchMessagesUseCase(
 ) {
     suspend operator fun invoke(
         query: String,
+        conversationId: String? = null,
         limit: Int = 30
     ): Result<List<MessageSearchResult>> =
-        safeSuspendCall(logFailure = false) { search(query, limit) }
+        safeSuspendCall(logFailure = false) { search(query, conversationId, limit) }
 
     private suspend fun search(
         query: String,
+        conversationId: String?,
         limit: Int
     ): List<MessageSearchResult> {
         val normalizedQuery = query.trim()
@@ -27,6 +29,7 @@ class SearchMessagesUseCase(
         val exactResults =
             messageSearchRepository.search(
                 query = normalizedQuery,
+                conversationId = conversationId,
                 limit = resultLimit
             ).getOrThrow()
         if (exactResults.size >= resultLimit) return exactResults
@@ -34,6 +37,7 @@ class SearchMessagesUseCase(
         val semanticResults =
             semanticSearchRepository.search(
                 query = normalizedQuery,
+                conversationId = conversationId,
                 limit = resultLimit
             ).getOrElse { failure ->
                 SparrowLog.error("SearchMessagesUseCase", "Semantic search failed; using exact matches", failure)

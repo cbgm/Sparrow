@@ -106,6 +106,7 @@ interface MessageSearchDao {
             ON conversation_contacts.id = conversations.contactId
         WHERE messages.contentStatus = 'READABLE'
           AND TRIM(message_text.text) != ''
+          AND (:conversationId IS NULL OR messages.conversationId = :conversationId)
           AND INSTR(LOWER(message_text.text), LOWER(:query)) > 0
         ORDER BY messages.createdAtEpochMilliseconds DESC
         LIMIT :limit
@@ -113,6 +114,7 @@ interface MessageSearchDao {
     )
     suspend fun searchExactMessages(
         query: String,
+        conversationId: String? = null,
         limit: Int
     ): List<StoredMessageSearchMatchDto>
 
@@ -148,7 +150,11 @@ interface MessageSearchDao {
         WHERE message_search_embeddings.modelVersion = :modelVersion
           AND messages.contentStatus = 'READABLE'
           AND TRIM(message_text.text) != ''
+          AND (:conversationId IS NULL OR messages.conversationId = :conversationId)
         """
     )
-    suspend fun getIndexedMessages(modelVersion: Int): List<StoredMessageEmbeddingDto>
+    suspend fun getIndexedMessages(
+        modelVersion: Int,
+        conversationId: String? = null
+    ): List<StoredMessageEmbeddingDto>
 }

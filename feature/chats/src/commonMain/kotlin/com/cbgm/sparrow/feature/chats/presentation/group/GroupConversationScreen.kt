@@ -3,7 +3,10 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +23,8 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -59,6 +64,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.currency.ExpenseCurrencyPi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
+import com.cbgm.sparrow.resources.feature_search_title
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -196,7 +202,16 @@ fun GroupConversationScreen(
                             model = uiState.toHeaderUiModel(subtitle(uiState, membershipState)),
                             containerColor = containerColor,
                             onBackClick = { onUiEvent(GroupConversationUiEvent.BackClicked) },
-                            onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) }
+                            onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) },
+                            actions = {
+                                IconButton(onClick = { onUiEvent(GroupConversationUiEvent.SearchClicked) }) {
+                                    Icon(
+                                        imageVector = SparrowIcons.Search,
+                                        contentDescription = stringResource(Res.string.feature_search_title),
+                                        modifier = Modifier.size(Dimens.TopBar.iconSize)
+                                    )
+                                }
+                            }
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
                             if (waitingForRoute) {

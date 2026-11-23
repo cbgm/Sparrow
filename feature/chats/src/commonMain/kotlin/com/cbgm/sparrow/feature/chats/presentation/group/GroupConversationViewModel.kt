@@ -286,6 +286,12 @@ class GroupConversationViewModel(
                 )
             )
 
+            GroupConversationUiEvent.SearchClicked -> navigator.navigateTo(
+                AppRoute.MessageSearch(
+                    conversationId = groupId
+                )
+            )
+
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             is GroupConversationUiEvent.ActivateExpensesClicked ->
                 expenseController.activateBoard(event.currencyCode)

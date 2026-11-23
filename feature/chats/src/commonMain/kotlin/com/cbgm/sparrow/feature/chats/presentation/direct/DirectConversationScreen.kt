@@ -2,7 +2,10 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +24,8 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -58,6 +63,7 @@ import com.cbgm.sparrow.resources.feature_chats_reconnect_confirm
 import com.cbgm.sparrow.resources.feature_chats_reconnect_contact
 import com.cbgm.sparrow.resources.feature_chats_reconnect_warning
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
+import com.cbgm.sparrow.resources.feature_search_title
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -193,7 +199,16 @@ fun DirectConversationScreen(
                         model = uiState.toHeaderUiModel(),
                         containerColor = containerColor,
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
-                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) }
+                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
+                        actions = {
+                            IconButton(onClick = { onUiEvent(DirectConversationUiEvent.SearchClicked) }) {
+                                Icon(
+                                    imageVector = SparrowIcons.Search,
+                                    contentDescription = stringResource(Res.string.feature_search_title),
+                                    modifier = Modifier.size(Dimens.TopBar.iconSize)
+                                )
+                            }
+                        }
                     ) {
                         if (!uiState.isLoading) {
                             SecurityBanner(

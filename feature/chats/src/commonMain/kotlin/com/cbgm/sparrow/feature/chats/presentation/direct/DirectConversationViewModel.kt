@@ -248,6 +248,12 @@ class DirectConversationViewModel(
                 )
             )
 
+            DirectConversationUiEvent.SearchClicked -> navigator.navigateTo(
+                AppRoute.MessageSearch(
+                    conversationId = conversationId
+                )
+            )
+
             DirectConversationUiEvent.BackClicked ->
                 if (targetMessageId != null) {
                     navigator.popBackStack()

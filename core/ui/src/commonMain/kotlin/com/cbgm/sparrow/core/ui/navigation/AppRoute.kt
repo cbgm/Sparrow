@@ -10,7 +10,9 @@ sealed interface AppRoute {
     data object Main : AppRoute
 
     @Serializable
-    data object MessageSearch : AppRoute
+    data class MessageSearch(
+        val conversationId: String? = null
+    ) : AppRoute
 
     @Serializable
     data class MessageSafetyDetails(
