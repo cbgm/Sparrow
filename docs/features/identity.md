@@ -7,6 +7,7 @@
 Key types include:
 
 - `IdentityRepository` / `IdentityRepositoryImpl`
+- `DirectIdentitySetupModeRepository` / `DirectIdentitySetupModeRepositoryImpl` with `DirectIdentitySetupModeLocalDataSource`: whether a new direct contact gets the identity with the invitation or by hand; Settings only shows and changes it
 - `LocalIdentityKeyDataSource`: the device's keys for every other module (`LocalPublicIdentitySource`, `LocalSigningKeyPairSource`, `LocalEncryptionKeyPairSource`, `LocalSigningPublicKeySource`)
 - `PublicIdentity`
 - `CreateIdentityUseCase`

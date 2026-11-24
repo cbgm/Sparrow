@@ -24,13 +24,6 @@ class DataStoreSettingsLocalDataSource(
         dataStore.edit { putBoolean(KEY_DEVELOPER_MODE_ENABLED, enabled) }
     }
 
-    override suspend fun getDirectIdentitySetupMode(): String? =
-        dataStore.getString(KEY_DIRECT_IDENTITY_SETUP_MODE)
-
-    override suspend fun setDirectIdentitySetupMode(mode: String) {
-        dataStore.edit { putString(KEY_DIRECT_IDENTITY_SETUP_MODE, mode) }
-    }
-
     override suspend fun getBlockUnknownContactInvites(): Boolean =
         dataStore.getBoolean(KEY_BLOCK_UNKNOWN_CONTACT_INVITES)
 
@@ -49,7 +42,6 @@ class DataStoreSettingsLocalDataSource(
             removeString(KEY_LANGUAGE_TAG)
             removeString(KEY_THEME_MODE)
             removeBoolean(KEY_DEVELOPER_MODE_ENABLED)
-            removeString(KEY_DIRECT_IDENTITY_SETUP_MODE)
             removeBoolean(KEY_BLOCK_UNKNOWN_CONTACT_INVITES)
             removeString(KEY_BLOCKED_CONTACT_IDS)
         }
@@ -60,7 +52,6 @@ class DataStoreSettingsLocalDataSource(
         const val KEY_LANGUAGE_TAG = "${PREFIX}language_tag"
         const val KEY_THEME_MODE = "${PREFIX}theme_mode"
         const val KEY_DEVELOPER_MODE_ENABLED = "${PREFIX}developer_mode_enabled"
-        const val KEY_DIRECT_IDENTITY_SETUP_MODE = "${PREFIX}direct_identity_setup_mode"
         const val KEY_BLOCK_UNKNOWN_CONTACT_INVITES = "${PREFIX}block_unknown_contact_invites"
         const val KEY_BLOCKED_CONTACT_IDS = "${PREFIX}blocked_contact_ids"
     }

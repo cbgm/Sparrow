@@ -2,13 +2,11 @@ package com.cbgm.sparrow.feature.settings.di
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.DataStoreSettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.repository.ContactBlocklistRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.DeveloperErrorLogRepositoryImpl
-import com.cbgm.sparrow.feature.settings.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.LicencesRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
 import com.cbgm.sparrow.feature.settings.domain.repository.DeveloperErrorLogRepository
@@ -43,7 +41,6 @@ import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettin
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.CircuitHopsViewModel
 import com.cbgm.sparrow.feature.settings.presentation.network.node.PreferredNodeViewModel
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsViewModel
-import com.cbgm.sparrow.protocol.identity.DirectIdentitySetupModeSource
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -52,8 +49,6 @@ val settingsModule =
         single<SettingsLocalDataSource> {
             DataStoreSettingsLocalDataSource(dataStore = get())
         }
-
-        single<DirectIdentitySetupModeSource> { get<SettingsLocalDataSource>() }
 
         single(createdAtStart = true) {
             DeveloperErrorLogStorageDataSource(dataStore = get()).also(SparrowLog::installErrorSink)
@@ -69,10 +64,6 @@ val settingsModule =
                 settingsDataSource = get(),
                 systemLanguageDataSource = get()
             )
-        }
-
-        single<DirectIdentitySetupModeRepository> {
-            DirectIdentitySetupModeRepositoryImpl(settingsDataSource = get())
         }
 
         single<ContactBlocklistRepository> {
@@ -158,7 +149,7 @@ val settingsModule =
         }
 
         factory {
-            ClearLocalDataUseCase(settingsRepository = get())
+            ClearLocalDataUseCase(settingsRepository = get(), directIdentitySetupModeRepository = get())
         }
 
         factory {

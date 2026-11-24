@@ -7,8 +7,6 @@ class InMemorySettingsLocalDataSource : SettingsLocalDataSource {
 
     private var developerModeEnabled: Boolean = false
 
-    private var directIdentitySetupMode: String? = null
-
     private var blockUnknownContactInvites: Boolean = false
 
     private var blockedContactIds: String? = null
@@ -35,14 +33,6 @@ class InMemorySettingsLocalDataSource : SettingsLocalDataSource {
         developerModeEnabled = enabled
     }
 
-    override suspend fun getDirectIdentitySetupMode(): String? = directIdentitySetupMode
-
-    override suspend fun setDirectIdentitySetupMode(
-        mode: String
-    ) {
-        directIdentitySetupMode = mode
-    }
-
     override suspend fun getBlockUnknownContactInvites(): Boolean = blockUnknownContactInvites
 
     override suspend fun setBlockUnknownContactInvites(
@@ -62,7 +52,6 @@ class InMemorySettingsLocalDataSource : SettingsLocalDataSource {
     override suspend fun clear() {
         languageTag = null
         developerModeEnabled = false
-        directIdentitySetupMode = null
         blockUnknownContactInvites = false
         blockedContactIds = null
     }

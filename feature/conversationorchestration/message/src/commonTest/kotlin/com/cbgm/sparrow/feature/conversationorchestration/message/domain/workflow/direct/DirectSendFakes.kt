@@ -194,6 +194,8 @@ private object NoSetupMode : DirectIdentitySetupModeRepository {
     override suspend fun getMode(): Result<DirectIdentitySetupMode> = error(NOT_USED)
 
     override suspend fun setMode(mode: DirectIdentitySetupMode): Result<Unit> = error(NOT_USED)
+
+    override suspend fun resetMode(): Result<Unit> = error(NOT_USED)
 }
 
 private object NoInvitations : InvitationRepository {

@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityAcknowledgementCry
 import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.IdentityLocalResetHandler
 import com.cbgm.sparrow.feature.identity.data.datasource.ApprovedIdentityReconnectionDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.DirectIdentitySetupModeLocalDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
@@ -25,6 +26,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDat
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.protocol.IdentityVerificationReceiptEncoder
 import com.cbgm.sparrow.feature.identity.data.repository.ApprovedIdentityReconnectionRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityBackupRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
@@ -39,6 +41,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepos
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupCodec
 import com.cbgm.sparrow.feature.identity.domain.repository.ApprovedIdentityReconnectionRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
@@ -161,6 +164,8 @@ val identityModule =
         factory { ObserveLocalIdentitySharedUseCase(repository = get()) }
         factory { RecordLocalIdentitySharedUseCase(repository = get()) }
         singleOf(::IdentityExchangeStoreDataSource)
+        singleOf(::DirectIdentitySetupModeLocalDataSource)
+        singleOf(::DirectIdentitySetupModeRepositoryImpl) { bind<DirectIdentitySetupModeRepository>() }
         singleOf(::IdentityExchangeDataSource)
         singleOf(::ManualIdentityExchangeDataSource)
         singleOf(::IdentityExchangeRepositoryImpl) { bind<IdentityExchangeRepository>() }

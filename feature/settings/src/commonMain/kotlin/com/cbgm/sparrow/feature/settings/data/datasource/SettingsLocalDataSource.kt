@@ -1,10 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.datasource
 
-import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
-import com.cbgm.sparrow.feature.settings.data.mapper.toDirectIdentitySetupMode
-import com.cbgm.sparrow.protocol.identity.DirectIdentitySetupModeSource
-
-interface SettingsLocalDataSource : DirectIdentitySetupModeSource {
+interface SettingsLocalDataSource {
     suspend fun getLanguageTag(): String?
 
     suspend fun setLanguageTag(languageTag: String)
@@ -16,13 +12,6 @@ interface SettingsLocalDataSource : DirectIdentitySetupModeSource {
     suspend fun getDeveloperModeEnabled(): Boolean
 
     suspend fun setDeveloperModeEnabled(enabled: Boolean)
-
-    suspend fun getDirectIdentitySetupMode(): String?
-
-    suspend fun setDirectIdentitySetupMode(mode: String)
-
-    override suspend fun sharesIdentityAutomatically(): Boolean =
-        getDirectIdentitySetupMode().toDirectIdentitySetupMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION
 
     suspend fun getBlockUnknownContactInvites(): Boolean
 
