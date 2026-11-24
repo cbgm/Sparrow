@@ -6,13 +6,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 internal class AndroidNotificationRuntime(
-    private val notificationManager: SparrowNotificationManager,
+    private val notificationPresenter: AndroidConversationNotificationPresenter,
     private val observeConnectionMode: ObserveConnectionModeUseCase,
     private val connectionModeApplier: ConnectionModeApplier,
     private val applicationScope: ApplicationCoroutineScope
 ) : PlatformNotificationRuntime {
     override fun initialize() {
-        notificationManager.createChannels()
+        notificationPresenter.createChannels()
         // The chosen way of receiving messages while Sparrow is closed follows every change of the setting.
         applicationScope.launch {
             observeConnectionMode().distinctUntilChanged().collect(connectionModeApplier::apply)

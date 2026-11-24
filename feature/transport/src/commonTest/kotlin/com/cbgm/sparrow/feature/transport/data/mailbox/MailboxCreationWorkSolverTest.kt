@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.mailbox
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,7 +8,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class MailboxCreationWorkSolverTest {
-    private val hash = DefaultCryptoHash()
+    private val hash = Sha256CryptoHash()
 
     @Test
     fun theSolvedWorkStartsWithTheAskedZeroBits() =

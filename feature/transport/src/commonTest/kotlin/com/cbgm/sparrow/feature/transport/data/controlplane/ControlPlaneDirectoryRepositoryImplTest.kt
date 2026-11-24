@@ -100,7 +100,7 @@ class ControlPlaneDirectoryRepositoryImplTest {
             // runTest can otherwise advance virtual time to the 8 s timeout before
             // the engine gets scheduled, producing a false TimeoutCancellationException.
             withContext(Dispatchers.Default) {
-                ControlPlaneDirectoryRemoteSource(client, json).fetchJsonAddresses(
+                ControlPlaneDirectoryRemoteDataSource(client, json).fetchJsonAddresses(
                     "https://directory.example.test/directory.json"
                 )
             }

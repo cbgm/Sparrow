@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Hist
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistorySenderAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageList
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.rememberDissolvingMessageListState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.HistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.HistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
@@ -24,7 +24,7 @@ import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyW
 
 @Composable
 internal fun HistoryContent(
-    model: HistoryUiModel,
+    model: HistoryUi,
     listState: LazyListState,
     innerPadding: PaddingValues,
     targetMessageId: String?,
@@ -103,7 +103,7 @@ internal fun HistoryContent(
 private fun HistoryContentPreview() {
     SparrowTheme {
         HistoryContent(
-            model = HistoryUiModel(
+            model = HistoryUi(
                 messages = emptyList(),
                 isLoading = false,
                 emptyTitle = "dfsf",

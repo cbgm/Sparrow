@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.mailbox
 
-import com.cbgm.sparrow.core.crypto.transport.DefaultTransportPayloadCodec
+import com.cbgm.sparrow.core.crypto.transport.Base64TransportPayloadCodec
 import com.cbgm.sparrow.core.crypto.transport.EncryptedTransportPayload
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
@@ -95,7 +95,7 @@ class InvitationLettersTest {
     @Test
     fun anUnsealedOrUnreadablePayloadIsRefused() =
         runTest {
-            val codec = DefaultTransportPayloadCodec()
+            val codec = Base64TransportPayloadCodec()
             val plaintext = codec.encode(EncryptedTransportPayload(1, TransportEncryptionMode.PLAINTEXT, "invite".encodeToByteArray()))
 
             assertIs<InvalidInvitationLetterException>(world.letters(bob).open(envelope(plaintext)).exceptionOrNull())
@@ -130,12 +130,12 @@ class InvitationLettersTest {
             world.publish(bob)
             world.letters(alice).send(alice.routingId, bob.routingId, "accepted", "envelope-1", 1_000L).getOrThrow()
             val json = createGatewayJson()
-            val codec = DefaultTransportPayloadCodec()
+            val codec = Base64TransportPayloadCodec()
             val sealed = codec.decode(world.mailboxes.deposited.single().encryptedPayload).getOrThrow()
             val prefix = bob.key + byteArrayOf(0)
-            val letter = json.decodeFromString<InvitationLetter>(sealed.payload.copyOfRange(prefix.size, sealed.payload.size).decodeToString())
+            val letter = json.decodeFromString<InvitationLetterDto>(sealed.payload.copyOfRange(prefix.size, sealed.payload.size).decodeToString())
             val changed =
-                InvitationLetter(letter.senderRoutingId, letter.recipientRoutingId, letter.signingPublicKey, "changed", letter.createdAtEpochMilliseconds, letter.signature)
+                InvitationLetterDto(letter.senderRoutingId, letter.recipientRoutingId, letter.signingPublicKey, "changed", letter.createdAtEpochMilliseconds, letter.signature)
             val resealed = codec.encode(EncryptedTransportPayload(1, TransportEncryptionMode.SEALED_BOX, prefix + json.encodeToString(changed).encodeToByteArray()))
 
             assertIs<InvalidInvitationLetterException>(world.letters(bob).open(envelope(resealed)).exceptionOrNull())

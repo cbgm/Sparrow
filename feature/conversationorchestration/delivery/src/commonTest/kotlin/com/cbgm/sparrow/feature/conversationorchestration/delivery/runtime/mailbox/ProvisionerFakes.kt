@@ -86,7 +86,7 @@ internal fun facts(
 /** Everything [MailboxRouteProvisioner] talks to, kept in memory. */
 internal class ProvisionerFakes {
     val routes = InMemoryMailboxRoutes()
-    val gateway = RecordingMailboxGateway()
+    val mailboxRepository = RecordingMailboxRepository()
     val contacts = FakeContactTransport()
     val identity = FakeIdentityExchanges()
     val outbox = RecordingOutbox()
@@ -97,13 +97,13 @@ internal class ProvisionerFakes {
                 GetMailboxContactStatesUseCase(contacts, GetIdentityPeerStateUseCase(identity, NoPendingChanges)),
             routingIdRepository = FakeRoutingIds,
             nodeEndpointResolver = SingleNodeResolver,
-            mailboxRepository = gateway,
+            mailboxRepository = mailboxRepository,
             mailboxRouteRepository = routes,
             mailboxCapabilityLifecycle = NoOpMailboxCapabilityLifecycle,
             contactBlocklistRepository = NoBlockedContacts,
             credentialFactory =
                 MailboxCredentialFactory(
-                    gateway,
+                    mailboxRepository,
                     FakeSigningKeys,
                     FakeSignatures,
                     MailboxRoutePayloadEncoder()
@@ -168,7 +168,7 @@ internal class InMemoryMailboxRoutes : MailboxRouteRepository {
 }
 
 /** Creates mailboxes on node-a; routes in [pendingRoutes] still hold envelopes. */
-internal class RecordingMailboxGateway : MailboxRepository {
+internal class RecordingMailboxRepository : MailboxRepository {
     val created = mutableListOf<String>()
     val revoked = mutableListOf<String>()
     val pendingRoutes = mutableSetOf<String>()

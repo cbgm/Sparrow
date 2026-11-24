@@ -37,7 +37,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.header.component.Group
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.GroupPinnedMessageContent
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.StatusHint
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.subtitle
-import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.HistoryContent
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddSharedContactDialog
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistorySenderAvatar
@@ -45,7 +45,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Mess
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
@@ -200,7 +200,7 @@ fun GroupConversationScreen(
                 topBar = { containerColor ->
                     Column {
                         HeaderContent(
-                            model = uiState.toHeaderUiModel(subtitle(uiState, membershipState)),
+                            model = uiState.toHeaderUi(subtitle(uiState, membershipState)),
                             containerColor = containerColor,
                             onBackClick = { onUiEvent(GroupConversationUiEvent.BackClicked) },
                             onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) },
@@ -248,7 +248,7 @@ fun GroupConversationScreen(
                 }
             ) { innerPadding, listState ->
                 HistoryContent(
-                    model = uiState.toHistoryUiModel(
+                    model = uiState.toHistoryUi(
                         emptyDescription = stringResource(Res.string.feature_chats_no_messages_yet)
                     ),
                     listState = listState,

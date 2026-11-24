@@ -39,7 +39,7 @@ import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_missing
@@ -53,13 +53,13 @@ import com.cbgm.sparrow.resources.feature_contacts_unnamed_contact
 import org.jetbrains.compose.resources.stringResource
 
 fun LazyListScope.contactGroups(
-    groups: List<ContactGroupEntity>,
+    groups: List<ContactGroupUi>,
     onContactClick: (ContactUi) -> Unit,
     trailingContent: @Composable (ContactUi) -> Unit
 ) {
     items(
         items = groups,
-        key = ContactGroupEntity::title
+        key = ContactGroupUi::title
     ) { group ->
         ContactGroup(
             group = group,
@@ -221,7 +221,7 @@ fun ContactsErrorContent(
 
 @Composable
 private fun ContactGroup(
-    group: ContactGroupEntity,
+    group: ContactGroupUi,
     onContactClick: (ContactUi) -> Unit,
     trailingContent: @Composable (ContactUi) -> Unit
 ) {

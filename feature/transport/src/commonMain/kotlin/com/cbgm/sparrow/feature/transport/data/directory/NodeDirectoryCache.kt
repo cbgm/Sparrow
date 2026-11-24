@@ -4,13 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 internal interface NodeDirectoryCache {
-    suspend fun read(): CachedNodeDirectory?
+    suspend fun read(): CachedNodeDirectoryDto?
 
-    suspend fun write(directory: CachedNodeDirectory)
+    suspend fun write(directory: CachedNodeDirectoryDto)
 }
 
 @Serializable
-internal data class CachedNodeDirectory(
+internal data class CachedNodeDirectoryDto(
     val encodedDirectory: String,
     @SerialName("trustedAuthorityNodeId")
     val trustedRootNodeId: String,

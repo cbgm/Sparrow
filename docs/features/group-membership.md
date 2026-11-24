@@ -17,7 +17,7 @@ State/protocol/security:
 - `GroupMembershipLock`
 - `GroupMembershipPacketProtocol`
 - `GroupMembershipPayloadEncoder`
-- `GroupSecurityManager`
+- `GroupSecurityRepositoryImpl`
 - `GroupWelcomeSecurity`
 - `GroupActivationPolicy`
 - `resolveInvitationUpdatedAt()` (in `GroupInvitationTimestampPolicy.kt`)
@@ -148,7 +148,7 @@ A title, description, avatar, pin or unpin is saved locally first, marked as not
 
 ## Security epoch
 
-`GroupSecurityManager` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
+`GroupSecurityRepositoryImpl` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
 
 - **Rotation and welcomes commit together.** `GroupEpochSecurityDataSource.rotateOwnedGroup` stores the new epoch and queues its welcomes in one database transaction (`DatabaseTransactionRunner`), so no member is left without the new key after a crash or a failed enqueue.
 - **Welcomes install one epoch at a time.** A welcome that skips an epoch waits (`GroupPacketEpochPolicy`) until the welcome before it is installed, the same way early group messages wait for their epoch.

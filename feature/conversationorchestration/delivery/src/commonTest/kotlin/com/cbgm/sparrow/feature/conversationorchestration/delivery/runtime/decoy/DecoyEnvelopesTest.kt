@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy
 
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.InMemoryMailboxRoutes
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.RecordingMailboxGateway
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.RecordingMailboxRepository
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.mailboxCredential
 import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
@@ -87,20 +87,20 @@ class DecoyEnvelopesTest {
     fun preparedDecoysAreDeposited() =
         runTest {
             count.value = 2
-            val gateway = DepositRecorder()
-            val decoys = decoys(this, gateway = gateway)
+            val mailboxRepository = DepositRecorder()
+            val decoys = decoys(this, mailboxRepository = mailboxRepository)
 
             decoys.depositAlongside(decoys.prepare("recipient"))
             advanceUntilIdle()
 
-            assertEquals(2, gateway.deposited.size)
+            assertEquals(2, mailboxRepository.deposited.size)
         }
 
     private fun decoys(
         scope: CoroutineScope,
         protecting: Boolean = true,
         unsealable: Set<String> = emptySet(),
-        gateway: MailboxRepository = DepositRecorder()
+        mailboxRepository: MailboxRepository = DepositRecorder()
     ) = DecoyEnvelopes(
         observeDecoyCount = ObserveDecoyCountUseCase(DecoyPreferences(count)),
         hasProtectingCircuit = { protecting },
@@ -121,14 +121,14 @@ class DecoyEnvelopesTest {
                     )
                 }
             },
-        mailboxRepository = gateway,
+        mailboxRepository = mailboxRepository,
         random = Random(1),
         now = { time },
         scope = scope
     )
 
     private class DepositRecorder(
-        base: MailboxRepository = RecordingMailboxGateway()
+        base: MailboxRepository = RecordingMailboxRepository()
     ) : MailboxRepository by base {
         val deposited = mutableListOf<FederatedEnvelope>()
 

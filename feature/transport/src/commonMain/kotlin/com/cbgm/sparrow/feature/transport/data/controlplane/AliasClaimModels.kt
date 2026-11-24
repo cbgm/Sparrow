@@ -5,40 +5,40 @@ import kotlinx.serialization.Serializable
 /**
  * The device's phone aliases (same wire format as `AliasClaim` in `:server:protocol`), signed with its key and sealed
  * for one Control Plane's presence directory. The claims after sign-up carry the phone verifier's attestation
- * ([PhoneAttestationRemoteSource]); every claim names the device's invitation mailbox ([InvitationRoute]).
+ * ([PhoneAttestationRemoteDataSource]); every claim names the device's invitation mailbox ([InvitationRouteDto]).
  */
 @Serializable
-internal class AliasClaim(
+internal class AliasClaimDto(
     val routingId: String,
     @Suppress("unused") val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
-    val invitationRoute: InvitationRoute? = null,
+    val invitationRoute: InvitationRouteDto? = null,
     val issuedAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
-    override fun toString(): String = "AliasClaim(redacted)"
+    override fun toString(): String = "AliasClaimDto(redacted)"
 }
 
 @Serializable
-internal class UnsignedAliasClaim(
+internal class UnsignedAliasClaimDto(
     val routingId: String,
     val clientSigningPublicKey: ByteArray,
     val aliases: List<String>,
     val phoneAttestation: String? = null,
-    val invitationRoute: InvitationRoute? = null,
+    val invitationRoute: InvitationRouteDto? = null,
     val issuedAtEpochMilliseconds: Long
 ) {
-    override fun toString(): String = "UnsignedAliasClaim(redacted)"
+    override fun toString(): String = "UnsignedAliasClaimDto(redacted)"
 }
 
 @Serializable
-internal class AliasClaimRequest(
+internal class AliasClaimRequestDto(
     val sealedClaim: ByteArray
 )
 
 @Serializable
-internal class AliasClaimResult(
+internal class AliasClaimResultDto(
     val acceptedAliasIndexes: List<Int> = emptyList()
 )
 

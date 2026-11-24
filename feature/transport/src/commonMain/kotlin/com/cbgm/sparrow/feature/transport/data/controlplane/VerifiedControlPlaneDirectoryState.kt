@@ -19,9 +19,9 @@ internal class VerifiedControlPlaneDirectoryState(
 ) {
     private val logger = SparrowLog.withTag("ControlPlaneDirectory")
     private var loaded = false
-    private var lastVerified: DirectoryPayload? = null
+    private var lastVerified: DirectoryPayloadDto? = null
     private var trustedPublicKey: String? = null
-    private var stalePlanesByBaseUrl: Map<String, StaleDirectoryPlane> = emptyMap()
+    private var stalePlanesByBaseUrl: Map<String, StaleDirectoryPlaneDto> = emptyMap()
 
     val hasCachedSnapshot: Boolean get() = lastVerified != null
 
@@ -103,7 +103,7 @@ internal class VerifiedControlPlaneDirectoryState(
         loaded = true
     }
 
-    private suspend fun applyRestored(payload: DirectoryPayload) {
+    private suspend fun applyRestored(payload: DirectoryPayloadDto) {
         val retainedStalePlanes = pruneStalePlanes(payload, stalePlanesByBaseUrl)
         configuration.replaceVerifiedDirectory(
             rootsByBaseUrl = mergedRoots(payload, retainedStalePlanes),
@@ -116,8 +116,8 @@ internal class VerifiedControlPlaneDirectoryState(
         lastVerified = payload
     }
 
-    private fun nextStalePlanes(payload: DirectoryPayload): Map<String, StaleDirectoryPlane> {
-        val currentUrls = payload.controlPlanes.mapTo(mutableSetOf(), DirectoryPlane::baseUrl)
+    private fun nextStalePlanes(payload: DirectoryPayloadDto): Map<String, StaleDirectoryPlaneDto> {
+        val currentUrls = payload.controlPlanes.mapTo(mutableSetOf(), DirectoryPlaneDto::baseUrl)
         val revokedIds = payload.revokedControlPlaneIds.toSet()
         val timestamp = now()
         val next = pruneStalePlanes(payload, stalePlanesByBaseUrl).toMutableMap()
@@ -132,7 +132,7 @@ internal class VerifiedControlPlaneDirectoryState(
                 previous.baseUrl !in next
             ) {
                 next[previous.baseUrl] =
-                    StaleDirectoryPlane(
+                    StaleDirectoryPlaneDto(
                         baseUrl = previous.baseUrl,
                         controlPlaneId = previous.controlPlaneId,
                         staleSinceEpochMilliseconds = timestamp
@@ -143,10 +143,10 @@ internal class VerifiedControlPlaneDirectoryState(
     }
 
     private fun pruneStalePlanes(
-        payload: DirectoryPayload,
-        candidates: Map<String, StaleDirectoryPlane>
-    ): Map<String, StaleDirectoryPlane> {
-        val currentUrls = payload.controlPlanes.mapTo(mutableSetOf(), DirectoryPlane::baseUrl)
+        payload: DirectoryPayloadDto,
+        candidates: Map<String, StaleDirectoryPlaneDto>
+    ): Map<String, StaleDirectoryPlaneDto> {
+        val currentUrls = payload.controlPlanes.mapTo(mutableSetOf(), DirectoryPlaneDto::baseUrl)
         val revokedIds = payload.revokedControlPlaneIds.toSet()
         val timestamp = now()
         return candidates.filterValues { stale ->
@@ -157,34 +157,34 @@ internal class VerifiedControlPlaneDirectoryState(
     }
 
     private fun mergedRoots(
-        payload: DirectoryPayload,
-        stalePlanes: Map<String, StaleDirectoryPlane>
+        payload: DirectoryPayloadDto,
+        stalePlanes: Map<String, StaleDirectoryPlaneDto>
     ): Map<String, String> = buildMap {
         // Fresh signed entries always come first. Retained stale entries are a
         // fallback only and must not outrank an endpoint from the latest snapshot.
         payload.controlPlanes.forEach { plane -> put(plane.baseUrl, plane.controlPlaneId) }
         stalePlanes.values
-            .sortedBy(StaleDirectoryPlane::staleSinceEpochMilliseconds)
+            .sortedBy(StaleDirectoryPlaneDto::staleSinceEpochMilliseconds)
             .forEach { stale -> putIfAbsent(stale.baseUrl, stale.controlPlaneId) }
     }
 
-    private fun decodeStalePlanes(encoded: String?): Map<String, StaleDirectoryPlane> {
+    private fun decodeStalePlanes(encoded: String?): Map<String, StaleDirectoryPlaneDto> {
         if (encoded.isNullOrBlank()) return emptyMap()
         return runCatching {
-            json.decodeFromString<List<StaleDirectoryPlane>>(encoded)
+            json.decodeFromString<List<StaleDirectoryPlaneDto>>(encoded)
                 .filter { stale ->
                     stale.baseUrl.startsWith("https://") &&
                         CONTROL_PLANE_ID.matches(stale.controlPlaneId) &&
                         stale.staleSinceEpochMilliseconds >= 0L
                 }
-                .associateBy(StaleDirectoryPlane::baseUrl)
+                .associateBy(StaleDirectoryPlaneDto::baseUrl)
         }.getOrElse { error ->
             logger.warn { "Ignoring invalid stale Control Plane cache: ${error.message}" }
             emptyMap()
         }
     }
 
-    private suspend fun persistStalePlanes(stalePlanes: Map<String, StaleDirectoryPlane>) {
+    private suspend fun persistStalePlanes(stalePlanes: Map<String, StaleDirectoryPlaneDto>) {
         dataStore.edit {
             if (stalePlanes.isEmpty()) {
                 removeString(KEY_STALE_DISCOVERED_PLANES)
@@ -200,7 +200,7 @@ internal class VerifiedControlPlaneDirectoryState(
     private fun isGraceExpired(staleSince: Long, currentTime: Long): Boolean =
         currentTime > staleSince && currentTime - staleSince > DISCOVERED_STALE_GRACE_MILLISECONDS
 
-    private fun checkNoRollback(next: DirectoryPayload) {
+    private fun checkNoRollback(next: DirectoryPayloadDto) {
         val previous = lastVerified ?: return
         require(next.version >= previous.version) { "Control Plane directory version rollback" }
         if (next.version == previous.version) {
@@ -224,7 +224,7 @@ internal class VerifiedControlPlaneDirectoryState(
 
 @Suppress("UnsafeOptInUsageError")
 @Serializable
-private data class StaleDirectoryPlane(
+private data class StaleDirectoryPlaneDto(
     val baseUrl: String,
     val controlPlaneId: String,
     val staleSinceEpochMilliseconds: Long

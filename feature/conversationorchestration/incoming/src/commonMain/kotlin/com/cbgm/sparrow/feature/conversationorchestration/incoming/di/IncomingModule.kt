@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.di
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.datasource.ParkedEnvelopeDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.datasource.ParkedMessageOperationDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.DirectMessagePacketReaderImpl
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.ChatDirectMessagePacketReader
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.repository.ParkedEnvelopeRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.repository.ParkedMessageOperationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.ControlPacketDispatcher
@@ -66,8 +66,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workfl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationReceiptWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationSnapshotRequestWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationSnapshotWorkflow
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.IncomingEnvelopeProcessorImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.IncomingTransportMessageHandler
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.ParkingIncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
 import org.koin.core.module.Module
@@ -81,13 +81,13 @@ val conversationIncomingModule =
         registerUseCases()
         registerInternalWorkflows()
         singleOf(::IncomingTransportMessageHandler) { bind<IncomingMessageHandler>() }
-        singleOf(::IncomingEnvelopeProcessorImpl) { bind<IncomingEnvelopeProcessor>() }
+        singleOf(::ParkingIncomingEnvelopeProcessor) { bind<IncomingEnvelopeProcessor>() }
         singleOf(::ControlPacketDispatcher)
         singleOf(::GroupPacketDispatcher)
     }
 
 private fun Module.registerData() {
-    singleOf(::DirectMessagePacketReaderImpl) { bind<DirectMessagePacketReader>() }
+    singleOf(::ChatDirectMessagePacketReader) { bind<DirectMessagePacketReader>() }
     singleOf(::ParkedMessageOperationDataSource)
     singleOf(::ParkedMessageOperationRepositoryImpl) { bind<ParkedMessageOperationRepository>() }
     singleOf(::ParkedEnvelopeDataSource)

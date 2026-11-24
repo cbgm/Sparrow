@@ -20,7 +20,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class NodeEndpointRepositoryImpl(
-    private val source: NodeDirectorySource,
+    private val source: NodeDirectoryRemoteDataSource,
     private val json: Json,
     private val cache: NodeDirectoryCache,
     private val verifier: NodeDirectoryVerifier,
@@ -123,7 +123,7 @@ internal class NodeEndpointRepositoryImpl(
     // Never keep selecting nodes from an endpoint removed from configuration.
     // Older cache entries do not record their source; preserve their short-lived
     // fallback until we can associate a verified response with an endpoint.
-    private fun isCachedSourceConfigured(cached: CachedNodeDirectory?): Boolean =
+    private fun isCachedSourceConfigured(cached: CachedNodeDirectoryDto?): Boolean =
         cached?.sourceControlPlaneBaseUrl?.let { source ->
             controlPlaneConfiguration.endpoints.value.any { it.baseUrl == source } &&
                 (
@@ -136,9 +136,9 @@ internal class NodeEndpointRepositoryImpl(
         )
 
     private suspend fun fetchConfiguredDirectory(
-        cached: CachedNodeDirectory?,
+        cached: CachedNodeDirectoryDto?,
         currentTime: Long
-    ): Result<SignedNodeDirectory> {
+    ): Result<SignedNodeDirectoryDto> {
         val beforeRefresh = controlPlaneConfiguration.endpoints.value.map { it.baseUrl }
         val initialResult = fetchFromCurrentControlPlanes(cached, currentTime)
         if (initialResult.isSuccess) return initialResult
@@ -171,9 +171,9 @@ internal class NodeEndpointRepositoryImpl(
     }
 
     private suspend fun fetchFromCurrentControlPlanes(
-        cached: CachedNodeDirectory?,
+        cached: CachedNodeDirectoryDto?,
         currentTime: Long
-    ): Result<SignedNodeDirectory> {
+    ): Result<SignedNodeDirectoryDto> {
         var lastError: Throwable? = null
 
         controlPlaneConfiguration.orderedEndpoints().forEach { endpoint ->
@@ -214,7 +214,7 @@ internal class NodeEndpointRepositoryImpl(
     }
 
     private suspend fun isReusable(
-        cachedDirectory: SignedNodeDirectory?,
+        cachedDirectory: SignedNodeDirectoryDto?,
         trustedRootNodeId: String?,
         currentTime: Long
     ): Boolean {
@@ -234,11 +234,11 @@ internal class NodeEndpointRepositoryImpl(
 
     private suspend fun fetchAndCache(
         endpoint: ControlPlaneEndpoint,
-        cached: CachedNodeDirectory?,
+        cached: CachedNodeDirectoryDto?,
         currentTime: Long
-    ): Result<SignedNodeDirectory> =
+    ): Result<SignedNodeDirectoryDto> =
         source.fetch(endpoint.baseUrl).mapCatching { encodedDirectory ->
-            val remoteDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+            val remoteDirectory = json.decodeFromString<SignedNodeDirectoryDto>(encodedDirectory)
             val rootNodeId = trustedRoot(endpoint, remoteDirectory, cached)
             verifier
                 .verify(
@@ -253,8 +253,8 @@ internal class NodeEndpointRepositoryImpl(
 
     private fun trustedRoot(
         endpoint: ControlPlaneEndpoint,
-        remoteDirectory: SignedNodeDirectory,
-        cached: CachedNodeDirectory?
+        remoteDirectory: SignedNodeDirectoryDto,
+        cached: CachedNodeDirectoryDto?
     ): String {
         // A root pinned for Control Plane A must not be applied to Control Plane B.
         // The previous implementation used one cached root globally; switching to
@@ -323,9 +323,9 @@ internal class NodeEndpointRepositoryImpl(
 
     private suspend fun cacheVerifiedDirectory(
         endpoint: ControlPlaneEndpoint,
-        remoteDirectory: SignedNodeDirectory,
+        remoteDirectory: SignedNodeDirectoryDto,
         rootNodeId: String,
-        previous: CachedNodeDirectory?
+        previous: CachedNodeDirectoryDto?
     ) {
         runCatching {
             // Persist the endpoint/root binding ONLY after signature verification.
@@ -341,7 +341,7 @@ internal class NodeEndpointRepositoryImpl(
             }
             trustedRoots[endpoint.baseUrl] = rootNodeId
             cache.write(
-                CachedNodeDirectory(
+                CachedNodeDirectoryDto(
                     encodedDirectory = json.encodeToString(remoteDirectory),
                     trustedRootNodeId = rootNodeId,
                     sourceControlPlaneBaseUrl = endpoint.baseUrl,
@@ -355,11 +355,11 @@ internal class NodeEndpointRepositoryImpl(
     }
 
     private suspend fun cachedFallback(
-        cachedDirectory: SignedNodeDirectory?,
+        cachedDirectory: SignedNodeDirectoryDto?,
         trustedRootNodeId: String?,
         currentTime: Long,
         remoteError: Throwable
-    ): SignedNodeDirectory {
+    ): SignedNodeDirectoryDto {
         val fallbackDirectory = cachedDirectory ?: throw remoteError
         val fallbackRootNodeId = trustedRootNodeId ?: throw remoteError
         val cacheExpiry =
@@ -387,8 +387,8 @@ internal class NodeEndpointRepositoryImpl(
         const val DIRECTORY_RECOVERY_RETRY_MILLISECONDS = 10_000L
     }
 
-    private fun CachedNodeDirectory.decode(): SignedNodeDirectory? =
+    private fun CachedNodeDirectoryDto.decode(): SignedNodeDirectoryDto? =
         runCatching {
-            json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+            json.decodeFromString<SignedNodeDirectoryDto>(encodedDirectory)
         }.getOrNull()
 }

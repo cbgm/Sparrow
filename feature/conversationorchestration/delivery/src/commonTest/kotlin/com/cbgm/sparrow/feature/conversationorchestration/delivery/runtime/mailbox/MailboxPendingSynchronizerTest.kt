@@ -28,8 +28,8 @@ class MailboxPendingSynchronizerTest {
     @Test
     fun failingEnvelopeOrMailboxDoesNotStopTheOthers() =
         runTest {
-            val gateway =
-                FakeMailboxGateway(
+            val mailboxRepository =
+                FakeMailboxRepository(
                     pending =
                         mapOf(
                             UNREACHABLE to null,
@@ -38,7 +38,7 @@ class MailboxPendingSynchronizerTest {
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxRepository = gateway,
+                    mailboxRepository = mailboxRepository,
                     mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE))),
                     incomingEnvelopeProcessor = FakeProcessor,
                     resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -48,19 +48,19 @@ class MailboxPendingSynchronizerTest {
 
             assertEquals(1, synchronizer.synchronize().getOrThrow())
             // The failing envelope stays in its mailbox for the next sync; the rejected one is dropped.
-            assertEquals(listOf(PROCESSED, REJECTED), gateway.acknowledged)
+            assertEquals(listOf(PROCESSED, REJECTED), mailboxRepository.acknowledged)
         }
 
     @Test
     fun retiringMailboxIsStillSynchronizedUntilItIsRevoked() =
         runTest {
-            val gateway =
-                FakeMailboxGateway(
+            val mailboxRepository =
+                FakeMailboxRepository(
                     pending = mapOf(REACHABLE to emptyList(), RETIRING to listOf(envelope(PROCESSED)))
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxRepository = gateway,
+                    mailboxRepository = mailboxRepository,
                     mailboxRouteRepository =
                         FakeMailboxRouteRepository(
                             credentials = listOf(credential(REACHABLE)),
@@ -73,48 +73,48 @@ class MailboxPendingSynchronizerTest {
                 )
 
             assertEquals(1, synchronizer.synchronize().getOrThrow())
-            assertEquals(listOf(PROCESSED), gateway.acknowledged)
+            assertEquals(listOf(PROCESSED), mailboxRepository.acknowledged)
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun envelopesAreFetchedAsTheyArriveAndOnlyFromTheMailboxesThatGotSome() =
         runTest {
-            val gateway =
-                FakeMailboxGateway(
+            val mailboxRepository =
+                FakeMailboxRepository(
                     pending = mapOf(UNREACHABLE to null, REACHABLE to listOf(envelope(PROCESSED))),
                     readyOnce = setOf("mailbox-$REACHABLE")
                 )
             val routes = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE)))
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    gateway,
+                    mailboxRepository,
                     routes,
                     FakeProcessor,
                     ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
                     invitationMailbox(),
                     FakeLetters
                 )
-            val listener = MailboxArrivalListener(gateway, routes, synchronizer, invitationMailbox())
+            val listener = MailboxArrivalListener(mailboxRepository, routes, synchronizer, invitationMailbox())
 
             val listening = backgroundScope.launch { listener.listen() }
             advanceTimeBy(20_000.milliseconds)
 
-            assertEquals(listOf(REACHABLE), gateway.fetched)
-            assertEquals(listOf(PROCESSED), gateway.acknowledged)
+            assertEquals(listOf(REACHABLE), mailboxRepository.fetched)
+            assertEquals(listOf(PROCESSED), mailboxRepository.acknowledged)
             listening.cancel()
         }
 
     @Test
     fun theSenderIsTheMailboxesContactWhateverTheEnvelopeNames() =
         runTest {
-            val gateway =
-                FakeMailboxGateway(
+            val mailboxRepository =
+                FakeMailboxRepository(
                     pending = mapOf(REACHABLE to listOf(envelope(PROCESSED).copy(senderRoutingId = "someone-else"), envelope("hidden").withoutRoutingIds()))
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxRepository = gateway,
+                    mailboxRepository = mailboxRepository,
                     mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(REACHABLE))),
                     incomingEnvelopeProcessor = FakeProcessor,
                     resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -130,31 +130,31 @@ class MailboxPendingSynchronizerTest {
     @Test
     fun aProvenLetterFromTheInvitationMailboxIsProcessedAsItsSender() =
         runTest {
-            val gateway = FakeMailboxGateway(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(LETTER))))
+            val mailboxRepository = FakeMailboxRepository(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(1, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(1, synchronizer(mailboxRepository, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(listOf("scphone1_alice"), FakeProcessor.senders)
-            assertEquals(listOf(LETTER), gateway.acknowledged)
+            assertEquals(listOf(LETTER), mailboxRepository.acknowledged)
         }
 
     @Test
     fun aLetterThatCanNeverBeAcceptedIsDroppedAndOneThatCannotBeCheckedYetStays() =
         runTest {
-            val gateway =
-                FakeMailboxGateway(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
+            val mailboxRepository =
+                FakeMailboxRepository(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(0, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(0, synchronizer(mailboxRepository, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(emptyList(), FakeProcessor.senders)
-            assertEquals(listOf(SPOOFED_LETTER), gateway.acknowledged)
+            assertEquals(listOf(SPOOFED_LETTER), mailboxRepository.acknowledged)
         }
 
     private fun synchronizer(
-        gateway: FakeMailboxGateway,
+        mailboxRepository: FakeMailboxRepository,
         invitations: List<LocalMailboxCredential>
     ) = MailboxPendingSynchronizer(
-        mailboxRepository = gateway,
+        mailboxRepository = mailboxRepository,
         mailboxRouteRepository = FakeMailboxRouteRepository(emptyList()),
         incomingEnvelopeProcessor = FakeProcessor,
         resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -203,7 +203,7 @@ class MailboxPendingSynchronizerTest {
             }
     }
 
-    private class FakeMailboxGateway(
+    private class FakeMailboxRepository(
         private val pending: Map<String, List<FederatedEnvelope>?>,
         private var readyOnce: Set<String> = emptySet()
     ) : MailboxRepository {

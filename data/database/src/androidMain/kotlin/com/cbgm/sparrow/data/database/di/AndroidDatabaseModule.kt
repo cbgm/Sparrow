@@ -6,7 +6,7 @@ import com.cbgm.sparrow.data.database.factory.createAndroidDatabaseBuilder
 import com.cbgm.sparrow.data.database.identity.LocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.identity.RoomLocalIdentityDataResetter
 import com.cbgm.sparrow.data.database.mailbox.RoomMailboxRouteRepository
-import com.cbgm.sparrow.data.database.outbox.DefaultProtocolOutbox
+import com.cbgm.sparrow.data.database.outbox.RoomProtocolOutbox
 import com.cbgm.sparrow.data.database.transaction.DatabaseTransactionRunner
 import com.cbgm.sparrow.data.database.transaction.RoomDatabaseTransactionRunner
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -145,7 +145,7 @@ val androidDatabaseModule =
         }
 
         single<ProtocolOutbox> {
-            DefaultProtocolOutbox(
+            RoomProtocolOutbox(
                 outboxDao = get(),
                 packetCodec = get()
             )

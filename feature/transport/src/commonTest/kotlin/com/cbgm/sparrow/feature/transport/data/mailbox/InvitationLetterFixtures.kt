@@ -2,15 +2,15 @@ package com.cbgm.sparrow.feature.transport.data.mailbox
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.core.crypto.transport.DefaultTransportPayloadCodec
+import com.cbgm.sparrow.core.crypto.transport.Base64TransportPayloadCodec
 import com.cbgm.sparrow.core.crypto.transport.EncryptedTransportPayload
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRoute
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteLookup
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteResult
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteDto
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteLookupDto
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteResultDto
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
@@ -41,28 +41,28 @@ internal class InvitationTestWorld {
     private val json = createGatewayJson()
 
     /** What the presence directory answers, by phone alias or device routing ID. */
-    val presence = mutableMapOf<String, InvitationRouteResult>()
-    val mailboxes = RecordingInvitationGateway()
+    val presence = mutableMapOf<String, InvitationRouteResultDto>()
+    val mailboxes = RecordingInvitationMailboxRepository()
     var presenceFails = false
 
     fun device(name: String): Device = Device(name)
 
     /** Publishes the invitation mailbox of [device] under its routing ID and its phone alias. */
     fun publish(device: Device) {
-        val result = InvitationRouteResult(device.routingId, InvitationRoute(device.route, device.key))
+        val result = InvitationRouteResultDto(device.routingId, InvitationRouteDto(device.route, device.key))
         presence[device.routingId] = result
         presence[device.alias] = result
     }
 
     fun letters(device: Device): InvitationLetterRepository =
         InvitationLetterRepositoryImpl(
-            routes = InvitationRouteRemoteSource(presenceClient(), Configuration, MailboxCreationWorkSolver(ZeroHash, bits = 0), json),
+            routes = InvitationRouteRemoteDataSource(presenceClient(), Configuration, MailboxCreationWorkSolver(ZeroHash, bits = 0), json),
             mailboxRepository = mailboxes,
             signingKeyPairSource = SigningKeys(device.key),
             encryptionKeyPairSource = EncryptionKeys(device.key),
             signatureCrypto = ReadableSignatures,
             transportCipher = ReadableTransportCipher,
-            payloadCodec = DefaultTransportPayloadCodec(),
+            payloadCodec = Base64TransportPayloadCodec(),
             routingIdGenerator = NameRoutingIds,
             routingIdRepository = object : RoutingIdRepository {
                 override suspend fun getLocalRoutingId(): Result<String> = Result.success(device.routingId)
@@ -75,7 +75,7 @@ internal class InvitationTestWorld {
     private fun presenceClient(): HttpClient =
         HttpClient(
             MockEngine { request ->
-                val lookup = json.decodeFromString<InvitationRouteLookup>((request.body as TextContent).text)
+                val lookup = json.decodeFromString<InvitationRouteLookupDto>((request.body as TextContent).text)
                 val found = presence[lookup.routingId]
                 val headers = headersOf(HttpHeaders.ContentType, "application/json")
                 when {
@@ -105,7 +105,7 @@ internal class InvitationTestWorld {
             )
     }
 
-    class RecordingInvitationGateway : MailboxRepository {
+    class RecordingInvitationMailboxRepository : MailboxRepository {
         val deposited = mutableListOf<FederatedEnvelope>()
 
         override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> {

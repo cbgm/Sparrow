@@ -18,10 +18,10 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderAvatarKind
-import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUi
 
 @Composable
-internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
+internal fun HeaderTitle(model: HeaderUi, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)

@@ -27,7 +27,7 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUi
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import com.cbgm.sparrow.resources.Res
@@ -73,7 +73,7 @@ fun ControlPlaneSettingsDivider() {
 
 @Composable
 fun ControlPlaneSettingsEntry(
-    entry: ControlPlaneUiModel,
+    entry: ControlPlaneUi,
     onRemove: () -> Unit
 ) {
     val statusColor = when (entry.status) {
@@ -142,7 +142,7 @@ private fun ControlPlaneSettingsGroupPreview() {
     SparrowTheme {
         ControlPlaneSettingsGroup(title = "Discovered Control Planes") {
             ControlPlaneSettingsEntry(
-                entry = ControlPlaneUiModel(
+                entry = ControlPlaneUi(
                     url = "https://controlplane.example.com",
                     source = ControlPlaneUiSource.DIRECTORY,
                     canRemove = false,
@@ -152,7 +152,7 @@ private fun ControlPlaneSettingsGroupPreview() {
             )
             ControlPlaneSettingsDivider()
             ControlPlaneSettingsEntry(
-                entry = ControlPlaneUiModel(
+                entry = ControlPlaneUi(
                     url = "https://manual.example.com",
                     source = ControlPlaneUiSource.MANUAL,
                     canRemove = true,

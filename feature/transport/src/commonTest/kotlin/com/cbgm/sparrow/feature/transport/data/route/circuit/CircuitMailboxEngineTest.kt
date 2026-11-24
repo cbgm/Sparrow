@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
 import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
-import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
+import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectoryDto
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
@@ -77,8 +77,8 @@ class CircuitMailboxEngineTest {
         )
 
     private object EmptyCache : NodeDirectoryCache {
-        override suspend fun read(): CachedNodeDirectory? = null
+        override suspend fun read(): CachedNodeDirectoryDto? = null
 
-        override suspend fun write(directory: CachedNodeDirectory) = Unit
+        override suspend fun write(directory: CachedNodeDirectoryDto) = Unit
     }
 }

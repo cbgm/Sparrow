@@ -16,7 +16,7 @@ internal class MailboxCreationWorkSolver(
     private val bits: Int = REQUIRED_BITS,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) {
-    suspend fun solve(): MailboxCreationWork =
+    suspend fun solve(): MailboxCreationWorkDto =
         withContext(Dispatchers.Default) {
             val stamp = IdGenerator.generate()
             val createdAt = now()
@@ -25,7 +25,7 @@ internal class MailboxCreationWorkSolver(
                 nonce++
                 if (nonce % CANCELLATION_CHECK_INTERVAL == 0L) ensureActive()
             }
-            MailboxCreationWork(stamp = stamp, createdAtEpochMilliseconds = createdAt, nonce = nonce)
+            MailboxCreationWorkDto(stamp = stamp, createdAtEpochMilliseconds = createdAt, nonce = nonce)
         }
 
     private fun leadingZeroBits(digest: ByteArray): Int {

@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationLetterContent
@@ -21,7 +21,7 @@ import kotlinx.serialization.json.Json
 
 /** [InvitationLetterRepository] signed with the device key and sealed with the transport cipher. */
 internal class InvitationLetterRepositoryImpl(
-    private val routes: InvitationRouteRemoteSource,
+    private val routes: InvitationRouteRemoteDataSource,
     private val mailboxRepository: MailboxRepository,
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val encryptionKeyPairSource: LocalEncryptionKeyPairSource,
@@ -42,7 +42,7 @@ internal class InvitationLetterRepositoryImpl(
         safeSuspendCall(logFailure = false) {
             val invitation = (routes.find(recipientRoutingId).getOrThrow() ?: throw InvitationRouteMissingException()).invitationRoute
             val keyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
-            val unsigned = UnsignedInvitationLetter(senderRoutingId, recipientRoutingId, keyPair.publicKey, payload, createdAtEpochMilliseconds)
+            val unsigned = UnsignedInvitationLetterDto(senderRoutingId, recipientRoutingId, keyPair.publicKey, payload, createdAtEpochMilliseconds)
             val signature = signatureCrypto.sign(unsigned.signedBytes(), keyPair.privateKey).getOrThrow()
             val letter = json.encodeToString(unsigned.signed(signature)).encodeToByteArray()
             val sealed = transportCipher.encryptForRecipient(letter, invitation.encryptionPublicKey).getOrThrow()
@@ -79,7 +79,7 @@ internal class InvitationLetterRepositoryImpl(
             InvitationLetterContent(senderRoutingId = letter.senderRoutingId, payload = letter.payload)
         }
 
-    private suspend fun read(encryptedPayload: String): InvitationLetter {
+    private suspend fun read(encryptedPayload: String): InvitationLetterDto {
         val keys = encryptionKeyPairSource.getEncryptionKeyPair().getOrThrow()
         val sealed =
             payloadCodec
@@ -91,7 +91,7 @@ internal class InvitationLetterRepositoryImpl(
             transportCipher
                 .decryptFromSender(sealed, keys.publicKey, keys.privateKey)
                 .getOrElse { throw InvalidInvitationLetterException("Invitation letter does not open") }
-        return runCatching { json.decodeFromString<InvitationLetter>(plaintext.decodeToString()) }
+        return runCatching { json.decodeFromString<InvitationLetterDto>(plaintext.decodeToString()) }
             .getOrElse { throw InvalidInvitationLetterException("Invitation letter is unreadable") }
     }
 
@@ -106,7 +106,7 @@ internal class InvitationLetterRepositoryImpl(
             else -> false
         }
 
-    private fun UnsignedInvitationLetter.signedBytes(): ByteArray = (SIGNATURE_DOMAIN + json.encodeToString(this)).encodeToByteArray()
+    private fun UnsignedInvitationLetterDto.signedBytes(): ByteArray = (SIGNATURE_DOMAIN + json.encodeToString(this)).encodeToByteArray()
 
     private companion object {
         const val SIGNATURE_DOMAIN = "sparrow-invitation-letter-v1\n"
@@ -116,19 +116,19 @@ internal class InvitationLetterRepositoryImpl(
 }
 
 @Serializable
-internal class UnsignedInvitationLetter(
+internal class UnsignedInvitationLetterDto(
     val senderRoutingId: String,
     val recipientRoutingId: String,
     val signingPublicKey: ByteArray,
     val payload: String,
     val createdAtEpochMilliseconds: Long
 ) {
-    fun signed(signature: ByteArray): InvitationLetter =
-        InvitationLetter(senderRoutingId, recipientRoutingId, signingPublicKey, payload, createdAtEpochMilliseconds, signature)
+    fun signed(signature: ByteArray): InvitationLetterDto =
+        InvitationLetterDto(senderRoutingId, recipientRoutingId, signingPublicKey, payload, createdAtEpochMilliseconds, signature)
 }
 
 @Serializable
-internal class InvitationLetter(
+internal class InvitationLetterDto(
     val senderRoutingId: String,
     val recipientRoutingId: String,
     val signingPublicKey: ByteArray,
@@ -136,8 +136,8 @@ internal class InvitationLetter(
     val createdAtEpochMilliseconds: Long,
     val signature: ByteArray
 ) {
-    fun unsigned(): UnsignedInvitationLetter =
-        UnsignedInvitationLetter(senderRoutingId, recipientRoutingId, signingPublicKey, payload, createdAtEpochMilliseconds)
+    fun unsigned(): UnsignedInvitationLetterDto =
+        UnsignedInvitationLetterDto(senderRoutingId, recipientRoutingId, signingPublicKey, payload, createdAtEpochMilliseconds)
 
-    override fun toString(): String = "InvitationLetter(redacted)"
+    override fun toString(): String = "InvitationLetterDto(redacted)"
 }

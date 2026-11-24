@@ -35,14 +35,14 @@ import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.Message
 import com.cbgm.sparrow.feature.chats.presentation.common.header.HeaderContent
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.SecurityBanner
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.securityDescription
-import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.HistoryContent
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddSharedContactDialog
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
@@ -197,7 +197,7 @@ fun DirectConversationScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = { containerColor ->
                     HeaderContent(
-                        model = uiState.toHeaderUiModel(),
+                        model = uiState.toHeaderUi(),
                         containerColor = containerColor,
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
                         onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
@@ -238,7 +238,7 @@ fun DirectConversationScreen(
                 }
             ) { innerPadding, listState ->
                 HistoryContent(
-                    model = uiState.toHistoryUiModel(
+                    model = uiState.toHistoryUi(
                         emptyTitle = stringResource(
                             Res.string.feature_chats_start_conversation_with,
                             uiState.contactName

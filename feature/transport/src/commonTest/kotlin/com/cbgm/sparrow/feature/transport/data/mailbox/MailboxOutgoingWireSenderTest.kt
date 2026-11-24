@@ -24,7 +24,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MailboxOutgoingWireSenderTest {
     private val world = InvitationTestWorld()
     private val bob = world.device("bob")
-    private val mailboxes = RecordingMailboxGateway()
+    private val mailboxes = RecordingMailboxRepository()
 
     @Test
     fun aContactWithAMailboxGetsTheEnvelopePutIntoIt() =
@@ -136,7 +136,7 @@ class MailboxOutgoingWireSenderTest {
         aliasBinding = binding
     )
 
-    private class RecordingMailboxGateway : MailboxRepository {
+    private class RecordingMailboxRepository : MailboxRepository {
         var fails = false
         val delivered = mutableListOf<FederatedEnvelope>()
 

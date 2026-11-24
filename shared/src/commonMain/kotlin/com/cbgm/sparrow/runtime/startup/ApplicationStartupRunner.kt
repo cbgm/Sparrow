@@ -2,7 +2,7 @@ package com.cbgm.sparrow.runtime.startup
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
-import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
+import com.cbgm.sparrow.runtime.foreground.ForegroundRuntime
 import com.cbgm.sparrow.startup.domain.model.StartupResult
 import com.cbgm.sparrow.startup.domain.runner.StartupRunner
 import kotlinx.coroutines.CancellationException
@@ -34,7 +34,7 @@ import kotlinx.coroutines.sync.withLock
 class ApplicationStartupRunner(
     private val startupTasks: List<StartupTask>,
     private val backgroundScope: CoroutineScope,
-    private val foregroundRuntime: ForegroundRuntimeCoordinator
+    private val foregroundRuntime: ForegroundRuntime
 ) : StartupRunner {
     private val logger = SparrowLog.withTag("ApplicationStartupRunner")
 

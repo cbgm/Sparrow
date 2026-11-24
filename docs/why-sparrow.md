@@ -41,7 +41,7 @@ The exact Sparrow pieces are implemented by classes such as:
 
 - `ControlPlaneDirectoryRepositoryImpl` — loads the external Control Plane directory;
 - `SignedDirectoryControlPlaneCandidateVerifier` — verifies Control Plane candidates;
-- `HttpNodeDirectorySource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
+- `HttpNodeDirectoryRemoteDataSource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
 - `HomeNodeConnection` — selects the home node and fails over between nodes;
 - `FailedNodeTracker` — keeps temporarily failed nodes out of immediate reselection;
 - `CircuitRunner` — keeps a circuit through relays, starting at the home node;
@@ -112,7 +112,7 @@ services work with encrypted protocol payloads/envelopes rather than chat plaint
 Client-side implementations include:
 
 - `SodiumTransportMessageCipher` for sealed-box Direct transport payloads;
-- `SodiumGroupCrypto` and `GroupSecurityManager` for Group content/key handling;
+- `SodiumGroupCrypto` and `GroupSecurityRepositoryImpl` for Group content/key handling;
 - `SodiumDetachedSignatureCrypto` for detached signatures;
 - `AndroidPrivateKeyStorage` for Android private-key protection at rest.
 

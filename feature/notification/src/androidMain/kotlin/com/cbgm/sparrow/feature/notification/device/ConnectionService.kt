@@ -24,7 +24,7 @@ class ConnectionService : Service() {
     private val logger = SparrowLog.withTag("ConnectionService")
     private val keepAlive by inject<ConnectionKeepAlivePort>()
     private val headlessStart by inject<HeadlessStartPort>()
-    private val notificationManager by inject<SparrowNotificationManager>()
+    private val notificationPresenter by inject<AndroidConversationNotificationPresenter>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -57,11 +57,11 @@ class ConnectionService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startInForeground() {
-        val notification = notificationManager.createConnectionNotification()
+        val notification = notificationPresenter.createConnectionNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(SparrowNotificationManager.CONNECTION_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(AndroidConversationNotificationPresenter.CONNECTION_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
-            startForeground(SparrowNotificationManager.CONNECTION_NOTIFICATION_ID, notification)
+            startForeground(AndroidConversationNotificationPresenter.CONNECTION_NOTIFICATION_ID, notification)
         }
     }
 }

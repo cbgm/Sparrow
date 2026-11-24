@@ -4,9 +4,9 @@ import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
 import com.cbgm.sparrow.feature.transport.data.directory.DataStoreNodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.HttpNodeDirectorySource
+import com.cbgm.sparrow.feature.transport.data.directory.HttpNodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectorySource
+import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointSelector
@@ -41,7 +41,7 @@ internal val directoryModule =
 
         single<NodeEndpointRepository> {
             NodeEndpointRepositoryImpl(
-                source = HttpNodeDirectorySource(httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))),
+                source = HttpNodeDirectoryRemoteDataSource(httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 cache = get(),
                 verifier = get(),
@@ -54,7 +54,7 @@ internal val directoryModule =
             )
         }
 
-        single<NodeDirectorySource> {
-            HttpNodeDirectorySource(httpClient = get<HttpClient>())
+        single<NodeDirectoryRemoteDataSource> {
+            HttpNodeDirectoryRemoteDataSource(httpClient = get<HttpClient>())
         }
     }

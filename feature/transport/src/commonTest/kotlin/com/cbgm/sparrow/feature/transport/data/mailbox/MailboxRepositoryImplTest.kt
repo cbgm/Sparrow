@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.mailbox
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.MailboxGoneException
 import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
@@ -33,7 +33,7 @@ class MailboxRepositoryImplTest {
     @Test
     fun aDownNodeAnsweredByItsProxyIsReportedAsUnavailable() =
         runTest {
-            val result = appGateway(HttpStatusCode.BadGateway).pending(credential)
+            val result = mailboxRepository(HttpStatusCode.BadGateway).pending(credential)
 
             assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
         }
@@ -52,7 +52,7 @@ class MailboxRepositoryImplTest {
                     expiresAtEpochMilliseconds = 2L
                 )
 
-            val result = appGateway(HttpStatusCode.BadGateway).deliver(envelope)
+            val result = mailboxRepository(HttpStatusCode.BadGateway).deliver(envelope)
 
             assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
         }
@@ -60,7 +60,7 @@ class MailboxRepositoryImplTest {
     @Test
     fun aMailboxTheNodeNoLongerKnowsIsGone() =
         runTest {
-            val result = appGateway(HttpStatusCode.NotFound).pending(credential)
+            val result = mailboxRepository(HttpStatusCode.NotFound).pending(credential)
 
             assertIs<MailboxGoneException>(result.exceptionOrNull())
         }
@@ -100,7 +100,7 @@ class MailboxRepositoryImplTest {
                         install(ContentNegotiation) { json(createGatewayJson()) }
                     },
                     createGatewayJson(),
-                    MailboxCreationWorkSolver(DefaultCryptoHash())
+                    MailboxCreationWorkSolver(Sha256CryptoHash())
                 )
 
             val envelopes = gateway.pending(credential).getOrThrow()
@@ -127,7 +127,7 @@ class MailboxRepositoryImplTest {
                 MailboxRepositoryImpl(
                     HttpClient(engine) { install(ContentNegotiation) { json(createGatewayJson()) } },
                     createGatewayJson(),
-                    MailboxCreationWorkSolver(DefaultCryptoHash()),
+                    MailboxCreationWorkSolver(Sha256CryptoHash()),
                     circuitSlot = { contactId -> if (contactId == "contact-box-a") 0 else 1 }
                 )
 
@@ -142,20 +142,20 @@ class MailboxRepositoryImplTest {
         credential.copy(contactId = "contact-$mailboxId", deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
 
     /** Like the app's mailbox client: status codes are checked by the gateway, not thrown by the client. */
-    private fun appGateway(status: HttpStatusCode) =
+    private fun mailboxRepository(status: HttpStatusCode) =
         MailboxRepositoryImpl(
             HttpClient(MockEngine { respond(content = "", status = status) }) {
                 install(ContentNegotiation) { json(createGatewayJson()) }
             },
             createGatewayJson(),
-            MailboxCreationWorkSolver(DefaultCryptoHash())
+            MailboxCreationWorkSolver(Sha256CryptoHash())
         )
 
     private fun gateway(status: HttpStatusCode) =
         MailboxRepositoryImpl(
             HttpClient(MockEngine { respond(content = "", status = status) }) { expectSuccess = true },
             createGatewayJson(),
-            MailboxCreationWorkSolver(DefaultCryptoHash())
+            MailboxCreationWorkSolver(Sha256CryptoHash())
         )
 
     private val credential =

@@ -19,7 +19,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
@@ -64,7 +64,7 @@ internal class GroupMembershipRepositoryImpl(
     private val incomingRemoval: GroupIncomingRemovalDataSource,
     private val operations: GroupMembershipLifecycleDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val groupSecurityRepository: GroupSecurityRepositoryImpl,
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val membershipLock: GroupMembershipLock
 ) : GroupMembershipRepository {
@@ -385,7 +385,7 @@ internal class GroupMembershipRepositoryImpl(
             check(signingKeyPair.publicKey.contentEquals(localSigningPublicKey)) {
                 "Local group signing identity does not match"
             }
-            groupSecurityManager.initializeOwnedGroup(
+            groupSecurityRepository.initializeOwnedGroup(
                 groupId = groupId,
                 createdAtEpochMilliseconds = rows.minOf { it.createdAtEpochMilliseconds },
                 localSigningKeyPair = signingKeyPair

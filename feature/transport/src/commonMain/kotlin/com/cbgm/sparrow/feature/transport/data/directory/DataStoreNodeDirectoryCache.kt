@@ -8,14 +8,14 @@ internal class DataStoreNodeDirectoryCache(
     private val dataStore: SparrowDataStore,
     private val json: Json
 ) : NodeDirectoryCache {
-    override suspend fun read(): CachedNodeDirectory? =
+    override suspend fun read(): CachedNodeDirectoryDto? =
         dataStore.getString(DIRECTORY_KEY)?.let { encoded ->
-            runCatching { json.decodeFromString<CachedNodeDirectory>(encoded) }
+            runCatching { json.decodeFromString<CachedNodeDirectoryDto>(encoded) }
                 .onFailure { error -> SparrowLog.error("DataStoreNodeDirectoryCache", "Saved node directory could not be decoded", error) }
                 .getOrNull()
         }
 
-    override suspend fun write(directory: CachedNodeDirectory) {
+    override suspend fun write(directory: CachedNodeDirectoryDto) {
         dataStore.edit {
             putString(DIRECTORY_KEY, json.encodeToString(directory))
         }

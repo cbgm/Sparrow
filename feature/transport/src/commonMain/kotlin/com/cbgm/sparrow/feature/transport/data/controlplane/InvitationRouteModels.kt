@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
-import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWork
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkDto
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.serialization.Serializable
 
@@ -10,21 +10,21 @@ import kotlinx.serialization.Serializable
  * packets there, sealed for [encryptionPublicKey].
  */
 @Serializable
-internal class InvitationRoute(
+internal class InvitationRouteDto(
     val route: MailboxDeliveryRoute,
     val encryptionPublicKey: ByteArray
 )
 
 /** `POST /v1/invitation-routes`: [routingId] is a phone alias or a device routing ID. */
 @Serializable
-internal class InvitationRouteLookup(
+internal class InvitationRouteLookupDto(
     val routingId: String,
-    val work: MailboxCreationWork
+    val work: MailboxCreationWorkDto
 )
 
 /** The device ([ownerRoutingId]; for a phone alias the device holding it) and its [invitationRoute]. */
 @Serializable
-internal class InvitationRouteResult(
+internal class InvitationRouteResultDto(
     val ownerRoutingId: String,
-    val invitationRoute: InvitationRoute
+    val invitationRoute: InvitationRouteDto
 )

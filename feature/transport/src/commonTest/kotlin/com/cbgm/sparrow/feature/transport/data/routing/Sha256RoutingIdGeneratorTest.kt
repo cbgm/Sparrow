@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.transport.data.routing
 
-import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.DigitPhoneNumberNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class Sha256RoutingIdGeneratorTest {
-    private val generator = Sha256RoutingIdGenerator(DefaultPhoneNumberNormalizer())
+    private val generator = Sha256RoutingIdGenerator(DigitPhoneNumberNormalizer())
 
     @Test
     fun sameSigningIdentityProducesSameRoutingId() {

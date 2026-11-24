@@ -12,9 +12,9 @@ import kotlin.test.assertTrue
 class PreferredNodeSelectionTest {
     private val selector = NodeEndpointSelector(TransportConfig())
     private val directory =
-        SignedNodeDirectory(
+        SignedNodeDirectoryDto(
             directory =
-                NodeDirectory(
+                NodeDirectoryDto(
                     generatedAtEpochMilliseconds = 0L,
                     validUntilEpochMilliseconds = 1L,
                     nodes =
@@ -71,13 +71,13 @@ class PreferredNodeSelectionTest {
         selector.select(directory, localRoutingId = "me", preferredNodeId = preferredNodeId).map(NodeEndpoint::nodeId)
 
     private fun descriptor(nodeId: String) =
-        SparrowNodeDescriptor(
+        SparrowNodeDescriptorDto(
             nodeId = nodeId,
             clientEndpoint = "wss://$nodeId.example.org/v1/gateway",
             mailboxEndpoint = "https://$nodeId.example.org/mailbox",
             identityPublicKey = byteArrayOf(),
             protocolVersions = setOf(TransportConfig().supportedProtocolVersion),
-            capabilities = setOf(NodeCapability.GATEWAY),
+            capabilities = setOf(NodeCapabilityDto.GATEWAY),
             validUntilEpochMilliseconds = 1L,
             signature = byteArrayOf()
         )

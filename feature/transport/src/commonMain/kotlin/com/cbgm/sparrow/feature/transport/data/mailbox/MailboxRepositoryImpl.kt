@@ -41,7 +41,7 @@ internal class MailboxRepositoryImpl internal constructor(
         expiresAtEpochMilliseconds: Long
     ): Result<LocalMailboxCredential> =
         runCatching {
-            open(contactId, accessEndpoint) { work -> CreateMailboxRequest(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work) }
+            open(contactId, accessEndpoint) { work -> CreateMailboxRequestDto(nodeId, routeEndpoint, sequence, expiresAtEpochMilliseconds, work) }
         }
 
     override suspend fun createInvitation(
@@ -52,14 +52,14 @@ internal class MailboxRepositoryImpl internal constructor(
     ): Result<LocalMailboxCredential> =
         runCatching {
             open(InvitationMailboxRepository.CONTACT_ID, accessEndpoint) { work ->
-                CreateMailboxRequest(nodeId, routeEndpoint, routeSequence = 0L, expiresAtEpochMilliseconds, work, invitation = true)
+                CreateMailboxRequestDto(nodeId, routeEndpoint, routeSequence = 0L, expiresAtEpochMilliseconds, work, invitation = true)
             }
         }
 
     private suspend fun open(
         contactId: String,
         accessEndpoint: String,
-        request: (MailboxCreationWork) -> CreateMailboxRequest
+        request: (MailboxCreationWorkDto) -> CreateMailboxRequestDto
     ): LocalMailboxCredential {
         val work = creationWork.solve()
         val response =
@@ -69,7 +69,7 @@ internal class MailboxRepositoryImpl internal constructor(
                 setBody(request(work))
             }
         response.checkMailboxStatus("Mailbox creation", accepted = response.status == HttpStatusCode.Created)
-        val created = response.body<CreateMailboxResponse>()
+        val created = response.body<CreateMailboxResponseDto>()
         return LocalMailboxCredential(
             contactId = contactId,
             deliveryRoute = created.deliveryRoute,
@@ -130,12 +130,12 @@ internal class MailboxRepositoryImpl internal constructor(
         }
 
     override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> =
-        runCatching { put(MailboxEnvelopeRequest(envelope.toDto())) }.markingNodeUnavailable()
+        runCatching { put(MailboxEnvelopeRequestDto(envelope.toDto())) }.markingNodeUnavailable()
 
     override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> =
-        runCatching { put(MailboxEnvelopeRequest(envelope.toDto(), depositWork = creationWork.solve())) }.markingNodeUnavailable()
+        runCatching { put(MailboxEnvelopeRequestDto(envelope.toDto(), depositWork = creationWork.solve())) }.markingNodeUnavailable()
 
-    private suspend fun put(request: MailboxEnvelopeRequest) {
+    private suspend fun put(request: MailboxEnvelopeRequestDto) {
         val route = requireNotNull(request.envelope.mailboxRoute) { "The envelope names no mailbox" }
         val response =
             httpClient.post("${route.nodeEndpoint.trimEnd('/')}/v1/mailboxes/${route.mailboxId}/envelopes") {
@@ -173,12 +173,12 @@ internal class MailboxRepositoryImpl internal constructor(
                 attributes.put(CircuitKey, credentials.first().contactId)
                 contentType(ContentType.Application.Json)
                 setBody(
-                    MailboxWaitRequest(
-                        credentials.map { credential -> MailboxWaitEntry(credential.deliveryRoute.mailboxId, credential.retrievalCapability) }
+                    MailboxWaitRequestDto(
+                        credentials.map { credential -> MailboxWaitEntryDto(credential.deliveryRoute.mailboxId, credential.retrievalCapability) }
                     )
                 )
             }
         response.checkMailboxStatus("Waiting for mailbox envelopes", accepted = response.status.isSuccess())
-        return response.body<MailboxWaitResponse>().ready
+        return response.body<MailboxWaitResponseDto>().ready
     }
 }

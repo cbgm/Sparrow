@@ -17,7 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 /**
- * Sends a request through the relays from [RelaySelector], one sealed layer per relay ([RelayLayer]). The first relay
+ * Sends a request through the relays from [RelaySelector], one sealed layer per relay ([RelayLayerDto]). The first relay
  * learns the app's address but not the destination, the last the destination but not the address; neither can read
  * the request or the answer.
  */
@@ -33,7 +33,7 @@ internal class OnionRelayClient internal constructor(
      * Null when no node relays yet; throws when the route fails, so a request is never sent around the relays. A
      * failed relay is left out and the request is sent once more through the remaining ones, if any.
      */
-    suspend fun send(exit: RelayExit): RelayExitResponse? {
+    suspend fun send(exit: RelayExitDto): RelayExitResponseDto? {
         val route = selector.route().takeIf(List<RelayHop>::isNotEmpty) ?: return null
         return try {
             sendRecordingFailures(route, exit)
@@ -48,8 +48,8 @@ internal class OnionRelayClient internal constructor(
 
     private suspend fun sendRecordingFailures(
         route: List<RelayHop>,
-        exit: RelayExit
-    ): RelayExitResponse =
+        exit: RelayExitDto
+    ): RelayExitResponseDto =
         try {
             sendThrough(route, exit)
         } catch (failure: RelayHopFailedException) {
@@ -60,14 +60,14 @@ internal class OnionRelayClient internal constructor(
 
     private suspend fun sendThrough(
         route: List<RelayHop>,
-        exit: RelayExit
-    ): RelayExitResponse {
+        exit: RelayExitDto
+    ): RelayExitResponseDto {
         val replyKeys = route.map { cipher.newReplyKey() }
         var layer =
-            seal(RelayLayer(replyKey = replyKeys.last(), exit = exit), route.last())
+            seal(RelayLayerDto(replyKey = replyKeys.last(), exit = exit), route.last())
         for (index in route.lastIndex - 1 downTo 0) {
-            val forward = RelayForward(relayUrl = route[index + 1].relayUrl, layer = layer)
-            layer = seal(RelayLayer(replyKey = replyKeys[index], forward = forward), route[index])
+            val forward = RelayForwardDto(relayUrl = route[index + 1].relayUrl, layer = layer)
+            layer = seal(RelayLayerDto(replyKey = replyKeys[index], forward = forward), route[index])
         }
         logger.debug { "Control Plane request through ${route.size} relay(s): ${route.joinToString(" -> ") { it.nodeId.take(8) }}" }
         val response =
@@ -90,7 +90,7 @@ internal class OnionRelayClient internal constructor(
             replyKeys.fold(response.readRawBytes()) { sealed, replyKey ->
                 checkNotNull(cipher.openReply(sealed, replyKey)) { "Relay reply could not be opened" }
             }
-        return json.decodeFromString<RelayExitResponse>(reply.decodeToString())
+        return json.decodeFromString<RelayExitResponseDto>(reply.decodeToString())
     }
 
     /**
@@ -109,7 +109,7 @@ internal class OnionRelayClient internal constructor(
         }
 
     private suspend fun seal(
-        layer: RelayLayer,
+        layer: RelayLayerDto,
         hop: RelayHop
     ): ByteArray = cipher.seal(json.encodeToString(layer).encodeToByteArray(), hop.relayKey, RELAY_CONTEXT).getOrThrow()
 }

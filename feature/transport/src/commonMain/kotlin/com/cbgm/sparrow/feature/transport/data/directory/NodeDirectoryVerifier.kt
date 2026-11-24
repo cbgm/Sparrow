@@ -10,7 +10,7 @@ internal class NodeDirectoryVerifier(
     private val json: Json
 ) {
     suspend fun verify(
-        signedDirectory: SignedNodeDirectory,
+        signedDirectory: SignedNodeDirectoryDto,
         trustedRootNodeId: String,
         supportedProtocolVersion: Int,
         nowEpochMilliseconds: Long,
@@ -68,14 +68,14 @@ internal class NodeDirectoryVerifier(
             require(
                 signedDirectory.directory.nodes.any { descriptor ->
                     supportedProtocolVersion in descriptor.protocolVersions &&
-                        NodeCapability.GATEWAY in descriptor.capabilities
+                        NodeCapabilityDto.GATEWAY in descriptor.capabilities
                 }
             ) {
                 "Node directory does not contain a compatible gateway"
             }
         }
 
-    fun rootNodeId(signedDirectory: SignedNodeDirectory): Result<String> =
+    fun rootNodeId(signedDirectory: SignedNodeDirectoryDto): Result<String> =
         runCatching {
             val certificate = signedDirectory.authorityCertificate
             if (certificate == null) {
@@ -93,7 +93,7 @@ internal class NodeDirectoryVerifier(
         }
 
     private suspend fun verifyAuthority(
-        signedDirectory: SignedNodeDirectory,
+        signedDirectory: SignedNodeDirectoryDto,
         trustedRootNodeId: String,
         nowEpochMilliseconds: Long
     ) {
@@ -124,7 +124,7 @@ internal class NodeDirectoryVerifier(
     }
 
     private fun verifyDirectRoot(
-        signedDirectory: SignedNodeDirectory,
+        signedDirectory: SignedNodeDirectoryDto,
         trustedRootNodeId: String
     ) {
         require(signedDirectory.signingCertificate == null) {
@@ -139,7 +139,7 @@ internal class NodeDirectoryVerifier(
     }
 
     private suspend fun verifyAuthorityCertificate(
-        certificate: RegistryAuthorityCertificate,
+        certificate: RegistryAuthorityCertificateDto,
         trustedRootNodeId: String,
         nowEpochMilliseconds: Long
     ) {
@@ -167,8 +167,8 @@ internal class NodeDirectoryVerifier(
     }
 
     private fun verifyDirectorySignerMatchesAuthority(
-        signedDirectory: SignedNodeDirectory,
-        certificate: RegistryAuthorityCertificate
+        signedDirectory: SignedNodeDirectoryDto,
+        certificate: RegistryAuthorityCertificateDto
     ) {
         require(certificate.authorityNodeId == signedDirectory.authorityNodeId) {
             "Directory signer does not match its registry authority certificate"
@@ -179,9 +179,9 @@ internal class NodeDirectoryVerifier(
     }
 
     private suspend fun verifySigningCertificate(
-        signedDirectory: SignedNodeDirectory,
-        authorityCertificate: RegistryAuthorityCertificate,
-        signingCertificate: RegistrySigningCertificate,
+        signedDirectory: SignedNodeDirectoryDto,
+        authorityCertificate: RegistryAuthorityCertificateDto,
+        signingCertificate: RegistrySigningCertificateDto,
         nowEpochMilliseconds: Long
     ) {
         require(signingCertificate.authorityNodeId == authorityCertificate.authorityNodeId) {
@@ -244,7 +244,7 @@ internal class NodeDirectoryVerifier(
     }
 
     private suspend fun verifyDescriptor(
-        descriptor: SparrowNodeDescriptor,
+        descriptor: SparrowNodeDescriptorDto,
         nowEpochMilliseconds: Long,
         expiryGraceMilliseconds: Long
     ) {

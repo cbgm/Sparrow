@@ -13,26 +13,26 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 /** The directory's authenticated wire format, shared with the independent Python service. */
 @OptIn(kotlinx.serialization.InternalSerializationApi::class)
 @Serializable
-internal data class DirectoryEnvelope(
-    val payload: DirectoryPayload,
+internal data class DirectoryEnvelopeDto(
+    val payload: DirectoryPayloadDto,
     val keyId: String,
     val signature: String
 )
 
 @OptIn(kotlinx.serialization.InternalSerializationApi::class)
 @Serializable
-internal data class DirectoryPayload(
+internal data class DirectoryPayloadDto(
     val protocol: String,
     val version: Long,
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
-    val controlPlanes: List<DirectoryPlane>,
+    val controlPlanes: List<DirectoryPlaneDto>,
     val revokedControlPlaneIds: List<String>
 )
 
 @OptIn(kotlinx.serialization.InternalSerializationApi::class)
 @Serializable
-internal data class DirectoryPlane(
+internal data class DirectoryPlaneDto(
     val controlPlaneId: String,
     val baseUrl: String,
     val publicKey: String
@@ -45,13 +45,13 @@ internal class SignedControlPlaneDirectoryVerifier(
     private val hash: CryptoHash,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) {
-    internal suspend fun verify(document: String, pinnedPublicKey: String, allowExpired: Boolean = false): DirectoryPayload {
+    internal suspend fun verify(document: String, pinnedPublicKey: String, allowExpired: Boolean = false): DirectoryPayloadDto {
         require(document.encodeToByteArray().size <= MAX_DOCUMENT_BYTES) { "Directory document is too large" }
         val raw = json.parseToJsonElement(document).jsonObject
         require(raw.keys == ENVELOPE_KEYS) { "Unexpected directory envelope fields" }
         val payloadJson = raw.getValue("payload").jsonObject
         require(payloadJson.keys == PAYLOAD_KEYS) { "Unexpected directory payload fields" }
-        val envelope = json.decodeFromString<DirectoryEnvelope>(document)
+        val envelope = json.decodeFromString<DirectoryEnvelopeDto>(document)
         val payload = envelope.payload
         val der = decodeCanonicalBase64Url(pinnedPublicKey)
         val publicKey = rawPublicKey(der)
@@ -101,7 +101,7 @@ internal class SignedControlPlaneDirectoryVerifier(
         return payload
     }
 
-    private fun canonicalPayload(payload: DirectoryPayload): String = buildString {
+    private fun canonicalPayload(payload: DirectoryPayloadDto): String = buildString {
         // Python: json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         // All wire strings here are restricted to ASCII (identifiers, base64url, canonical DNS origins).
         append("{\"controlPlanes\":[")

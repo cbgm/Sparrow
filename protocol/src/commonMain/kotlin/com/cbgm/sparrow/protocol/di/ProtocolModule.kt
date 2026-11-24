@@ -5,7 +5,7 @@ import com.cbgm.sparrow.protocol.authorization.DirectChatAuthorizationRevocation
 import com.cbgm.sparrow.protocol.codec.KotlinxPacketCodec
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.codec.createProtocolJson
-import com.cbgm.sparrow.protocol.handler.DefaultProtocolPacketHandler
+import com.cbgm.sparrow.protocol.handler.DispatchingProtocolPacketHandler
 import com.cbgm.sparrow.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
@@ -50,6 +50,6 @@ val protocolModule =
         }
 
         single<ProtocolPacketHandler> {
-            DefaultProtocolPacketHandler(handlers = getAll<TypedProtocolPacketHandler>())
+            DispatchingProtocolPacketHandler(handlers = getAll<TypedProtocolPacketHandler>())
         }
     }

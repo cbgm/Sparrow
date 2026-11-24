@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.transport.data.controlplane
 
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectorySource
+import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
-import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
+import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.milliseconds
@@ -14,7 +14,7 @@ internal interface ControlPlaneCandidateVerifier {
 }
 
 internal class SignedDirectoryControlPlaneCandidateVerifier(
-    private val nodeDirectorySource: NodeDirectorySource,
+    private val nodeDirectoryRemoteDataSource: NodeDirectoryRemoteDataSource,
     private val json: Json,
     private val verifier: NodeDirectoryVerifier,
     private val transportConfig: TransportConfig
@@ -27,8 +27,8 @@ internal class SignedDirectoryControlPlaneCandidateVerifier(
         }
 
     private suspend fun verifySignedDirectory(baseUrl: String) {
-        val encodedDirectory = nodeDirectorySource.fetch(baseUrl).getOrThrow()
-        val signedDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+        val encodedDirectory = nodeDirectoryRemoteDataSource.fetch(baseUrl).getOrThrow()
+        val signedDirectory = json.decodeFromString<SignedNodeDirectoryDto>(encodedDirectory)
         val trustedRootNodeId =
             transportConfig.trustedRegistryRootNodeId
                 ?: verifier.rootNodeId(signedDirectory).getOrThrow()

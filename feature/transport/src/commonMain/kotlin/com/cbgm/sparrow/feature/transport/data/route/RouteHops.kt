@@ -3,8 +3,8 @@ package com.cbgm.sparrow.feature.transport.data.route
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
-import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptor
+import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptorDto
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -59,12 +59,12 @@ internal class RelaySelector(
     ): List<RelayHop> {
         val relays =
             cache.read()
-                ?.let { cached -> runCatching { json.decodeFromString<SignedNodeDirectory>(cached.encodedDirectory) }.getOrNull() }
+                ?.let { cached -> runCatching { json.decodeFromString<SignedNodeDirectoryDto>(cached.encodedDirectory) }.getOrNull() }
                 ?.directory
                 ?.nodes
                 .orEmpty()
                 .filter { node -> node.validUntilEpochMilliseconds > now() }
-                .mapNotNull(SparrowNodeDescriptor::relayHop)
+                .mapNotNull(SparrowNodeDescriptorDto::relayHop)
         // When every relay failed recently, they are all tried again rather than none.
         val available = relays.filterNot { hop -> hop.nodeId in coolingDown() }.ifEmpty { relays }
         val own = connectedNodeId() ?: preferences?.observePreferredNode()?.first()
@@ -119,7 +119,7 @@ internal class RelayHopFailedException(
     message: String
 ) : IllegalStateException(message)
 
-private fun SparrowNodeDescriptor.relayHop(): RelayHop? {
+private fun SparrowNodeDescriptorDto.relayHop(): RelayHop? {
     val key = relayKey ?: return null
     val relay = relayUrl(clientEndpoint) ?: return null
     val circuit = circuitUrl(clientEndpoint) ?: return null

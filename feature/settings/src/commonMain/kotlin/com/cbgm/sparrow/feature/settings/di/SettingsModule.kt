@@ -3,9 +3,9 @@ package com.cbgm.sparrow.feature.settings.di
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.settings.data.datasource.DataStoreSettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorageImpl
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.repository.ContactBlocklistRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.DeveloperErrorLogRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.DirectIdentitySetupModeRepositoryImpl
@@ -48,8 +48,8 @@ import org.koin.dsl.module
 
 val settingsModule =
     module {
-        single<SettingsStorage> {
-            SettingsStorageImpl(dataStore = get())
+        single<SettingsLocalDataSource> {
+            DataStoreSettingsLocalDataSource(dataStore = get())
         }
 
         single(createdAtStart = true) {
@@ -62,18 +62,18 @@ val settingsModule =
 
         single<SettingsRepository> {
             SettingsRepositoryImpl(
-                buildInfoSource = get(),
-                settingsStorage = get(),
-                systemLanguageSource = get()
+                buildInfoDataSource = get(),
+                settingsDataSource = get(),
+                systemLanguageDataSource = get()
             )
         }
 
         single<DirectIdentitySetupModeRepository> {
-            DirectIdentitySetupModeRepositoryImpl(settingsStorage = get())
+            DirectIdentitySetupModeRepositoryImpl(settingsDataSource = get())
         }
 
         single<ContactBlocklistRepository> {
-            ContactBlocklistRepositoryImpl(settingsStorage = get())
+            ContactBlocklistRepositoryImpl(settingsDataSource = get())
         }
 
         single<LicensesRepository> {

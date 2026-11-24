@@ -8,7 +8,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.DataStoreInvitationMailboxStore
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationLetterRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxRepositoryImpl
@@ -52,7 +52,7 @@ internal val mailboxModule =
 
         single<InvitationLetterRepository> {
             InvitationLetterRepositoryImpl(
-                routes = get<InvitationRouteRemoteSource>(),
+                routes = get<InvitationRouteRemoteDataSource>(),
                 mailboxRepository = get<MailboxRepository>(),
                 signingKeyPairSource = get<LocalSigningKeyPairSource>(),
                 encryptionKeyPairSource = get<LocalEncryptionKeyPairSource>(),

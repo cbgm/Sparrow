@@ -175,7 +175,7 @@ private fun DeveloperErrorLogScreenPreview() {
                             DeveloperErrorUi(
                                 id = "1",
                                 timestamp = "25.08.2026 03:35:42.123",
-                                tag = "DefaultOutboxRunner",
+                                tag = "RetryingOutboxRunner",
                                 message = "Outgoing message failed",
                                 exceptionType = "IllegalStateException",
                                 stackTrace = "java.lang.IllegalStateException: Invalid outbox transition"

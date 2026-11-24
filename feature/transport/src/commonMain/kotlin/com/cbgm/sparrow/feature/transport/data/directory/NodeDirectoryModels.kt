@@ -3,19 +3,19 @@ package com.cbgm.sparrow.feature.transport.data.directory
 import kotlinx.serialization.Serializable
 
 @Serializable
-internal enum class NodeCapability {
+internal enum class NodeCapabilityDto {
     GATEWAY,
     MAILBOX
 }
 
 @Serializable
-internal data class SparrowNodeDescriptor(
+internal data class SparrowNodeDescriptorDto(
     val nodeId: String,
     val clientEndpoint: String,
     val mailboxEndpoint: String,
     val identityPublicKey: ByteArray,
     val protocolVersions: Set<Int>,
-    val capabilities: Set<NodeCapability>,
+    val capabilities: Set<NodeCapabilityDto>,
     val validUntilEpochMilliseconds: Long,
     /** Raw X25519 key the node relays onion layers with; null for nodes that do not relay. */
     val relayKey: ByteArray? = null,
@@ -27,7 +27,7 @@ internal data class SparrowNodeDescriptor(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as SparrowNodeDescriptor
+        other as SparrowNodeDescriptorDto
 
         if (validUntilEpochMilliseconds != other.validUntilEpochMilliseconds) return false
         if (nodeId != other.nodeId) return false
@@ -59,13 +59,13 @@ internal data class SparrowNodeDescriptor(
 }
 
 @Serializable
-internal data class UnsignedNodeDescriptor(
+internal data class UnsignedNodeDescriptorDto(
     val nodeId: String,
     val clientEndpoint: String,
     val mailboxEndpoint: String,
     val identityPublicKey: ByteArray,
     val protocolVersions: Set<Int>,
-    val capabilities: Set<NodeCapability>,
+    val capabilities: Set<NodeCapabilityDto>,
     val validUntilEpochMilliseconds: Long,
     val relayKey: ByteArray? = null,
     val operator: String? = null
@@ -74,7 +74,7 @@ internal data class UnsignedNodeDescriptor(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as UnsignedNodeDescriptor
+        other as UnsignedNodeDescriptorDto
 
         if (validUntilEpochMilliseconds != other.validUntilEpochMilliseconds) return false
         if (nodeId != other.nodeId) return false
@@ -103,8 +103,8 @@ internal data class UnsignedNodeDescriptor(
     }
 }
 
-internal fun SparrowNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
-    UnsignedNodeDescriptor(
+internal fun SparrowNodeDescriptorDto.unsigned(): UnsignedNodeDescriptorDto =
+    UnsignedNodeDescriptorDto(
         nodeId = nodeId,
         clientEndpoint = clientEndpoint,
         mailboxEndpoint = mailboxEndpoint,
@@ -117,7 +117,7 @@ internal fun SparrowNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
     )
 
 @Serializable
-internal data class RegistryAuthorityCertificate(
+internal data class RegistryAuthorityCertificateDto(
     val rootNodeId: String,
     val rootPublicKey: ByteArray,
     val authorityNodeId: String,
@@ -131,7 +131,7 @@ internal data class RegistryAuthorityCertificate(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as RegistryAuthorityCertificate
+        other as RegistryAuthorityCertificateDto
 
         if (keyVersion != other.keyVersion) return false
         if (validFromEpochMilliseconds != other.validFromEpochMilliseconds) return false
@@ -159,7 +159,7 @@ internal data class RegistryAuthorityCertificate(
 }
 
 @Serializable
-internal data class UnsignedRegistryAuthorityCertificate(
+internal data class UnsignedRegistryAuthorityCertificateDto(
     val rootNodeId: String,
     val rootPublicKey: ByteArray,
     val authorityNodeId: String,
@@ -172,7 +172,7 @@ internal data class UnsignedRegistryAuthorityCertificate(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as UnsignedRegistryAuthorityCertificate
+        other as UnsignedRegistryAuthorityCertificateDto
 
         if (keyVersion != other.keyVersion) return false
         if (validFromEpochMilliseconds != other.validFromEpochMilliseconds) return false
@@ -197,8 +197,8 @@ internal data class UnsignedRegistryAuthorityCertificate(
     }
 }
 
-internal fun RegistryAuthorityCertificate.unsigned(): UnsignedRegistryAuthorityCertificate =
-    UnsignedRegistryAuthorityCertificate(
+internal fun RegistryAuthorityCertificateDto.unsigned(): UnsignedRegistryAuthorityCertificateDto =
+    UnsignedRegistryAuthorityCertificateDto(
         rootNodeId = rootNodeId,
         rootPublicKey = rootPublicKey,
         authorityNodeId = authorityNodeId,
@@ -209,7 +209,7 @@ internal fun RegistryAuthorityCertificate.unsigned(): UnsignedRegistryAuthorityC
     )
 
 @Serializable
-internal data class RegistrySigningCertificate(
+internal data class RegistrySigningCertificateDto(
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
     val signingNodeId: String,
@@ -232,7 +232,7 @@ internal data class RegistrySigningCertificate(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as RegistrySigningCertificate
+        other as RegistrySigningCertificateDto
 
         if (keyVersion != other.keyVersion) return false
         if (validFromEpochMilliseconds != other.validFromEpochMilliseconds) return false
@@ -260,7 +260,7 @@ internal data class RegistrySigningCertificate(
 }
 
 @Serializable
-internal data class UnsignedRegistrySigningCertificate(
+internal data class UnsignedRegistrySigningCertificateDto(
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
     val signingNodeId: String,
@@ -273,7 +273,7 @@ internal data class UnsignedRegistrySigningCertificate(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as UnsignedRegistrySigningCertificate
+        other as UnsignedRegistrySigningCertificateDto
 
         if (keyVersion != other.keyVersion) return false
         if (validFromEpochMilliseconds != other.validFromEpochMilliseconds) return false
@@ -298,8 +298,8 @@ internal data class UnsignedRegistrySigningCertificate(
     }
 }
 
-internal fun RegistrySigningCertificate.unsigned(): UnsignedRegistrySigningCertificate =
-    UnsignedRegistrySigningCertificate(
+internal fun RegistrySigningCertificateDto.unsigned(): UnsignedRegistrySigningCertificateDto =
+    UnsignedRegistrySigningCertificateDto(
         authorityNodeId = authorityNodeId,
         authorityPublicKey = authorityPublicKey,
         signingNodeId = signingNodeId,
@@ -311,17 +311,17 @@ internal fun RegistrySigningCertificate.unsigned(): UnsignedRegistrySigningCerti
 
 /** [aliasClaimKey] is the presence directory's key that alias claims are sealed for, signed with the directory. */
 @Serializable
-internal data class NodeDirectory(
+internal data class NodeDirectoryDto(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
-    val nodes: List<SparrowNodeDescriptor>,
+    val nodes: List<SparrowNodeDescriptorDto>,
     val aliasClaimKey: ByteArray? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as NodeDirectory
+        other as NodeDirectoryDto
 
         if (generatedAtEpochMilliseconds != other.generatedAtEpochMilliseconds) return false
         if (validUntilEpochMilliseconds != other.validUntilEpochMilliseconds) return false
@@ -341,19 +341,19 @@ internal data class NodeDirectory(
 }
 
 @Serializable
-internal data class SignedNodeDirectory(
-    val directory: NodeDirectory,
+internal data class SignedNodeDirectoryDto(
+    val directory: NodeDirectoryDto,
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
-    val authorityCertificate: RegistryAuthorityCertificate? = null,
-    val signingCertificate: RegistrySigningCertificate? = null,
+    val authorityCertificate: RegistryAuthorityCertificateDto? = null,
+    val signingCertificate: RegistrySigningCertificateDto? = null,
     val signature: ByteArray
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as SignedNodeDirectory
+        other as SignedNodeDirectoryDto
 
         if (directory != other.directory) return false
         if (authorityNodeId != other.authorityNodeId) return false

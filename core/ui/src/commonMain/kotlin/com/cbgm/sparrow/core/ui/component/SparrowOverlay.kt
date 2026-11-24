@@ -58,12 +58,12 @@ fun SparrowOverlay(
                 }
     ) {
         val anchorBounds = anchor.boundsInRoot.relativeTo(originInRoot)
-        val scope = remember(anchorBounds) { SparrowOverlayScopeImpl(anchorBounds) }
+        val scope = remember(anchorBounds) { AnchoredOverlayScope(anchorBounds) }
         scope.content()
     }
 }
 
-private class SparrowOverlayScopeImpl(
+private class AnchoredOverlayScope(
     override val anchorBounds: IntRect
 ) : SparrowOverlayScope
 

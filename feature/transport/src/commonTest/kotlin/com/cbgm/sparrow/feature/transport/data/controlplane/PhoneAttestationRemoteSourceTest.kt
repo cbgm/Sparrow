@@ -30,7 +30,7 @@ class PhoneAttestationRemoteSourceTest {
     private val cipher = ReadableTestCipher()
     private val signatures = RecordingSignatures()
     private val requests = mutableListOf<String>()
-    private var sentRequest: PhoneAttestationRequest? = null
+    private var sentRequest: PhoneAttestationRequestDto? = null
     private var limitReached = false
 
     @Test
@@ -75,7 +75,7 @@ class PhoneAttestationRemoteSourceTest {
         }
 
     private fun source(pinned: String? = base64.encode(DER_PREFIX + directoryKey)) =
-        PhoneAttestationRemoteSource(
+        PhoneAttestationRemoteDataSource(
             controlPlaneHttpClient = client(),
             controlPlaneConfiguration = configuration(),
             pinnedDirectoryKey = { pinned },
@@ -93,9 +93,9 @@ class PhoneAttestationRemoteSourceTest {
                     request.method == HttpMethod.Get -> respond(certificate(), headers = json)
                     limitReached -> respond("""{"error":"PHONE_VERIFICATION_LIMIT"}""", HttpStatusCode.TooManyRequests, json)
                     else -> {
-                        val sealed = Json.decodeFromString<SealedPhoneAttestationRequest>((request.body as TextContent).text)
+                        val sealed = Json.decodeFromString<SealedPhoneAttestationRequestDto>((request.body as TextContent).text)
                         val plaintext = base64.decode(sealed.sealedRequest).drop(1).toByteArray()
-                        val sent = Json.decodeFromString<PhoneAttestationRequest>(plaintext.decodeToString())
+                        val sent = Json.decodeFromString<PhoneAttestationRequestDto>(plaintext.decodeToString())
                         sentRequest = sent
                         val reply = byteArrayOf(base64.decode(sent.replyKey).first()) + ATTESTATION.encodeToByteArray()
                         respond("""{"sealedAttestation":"${base64.encode(reply)}"}""", headers = json)

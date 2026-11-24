@@ -19,15 +19,15 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoySealer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.delivery.OutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.IndicatorPacketHandler
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicatorGateway
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.MailboxMessagingIndicators
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indicator.TransportConversationIndicatorObserver
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCapabilityLifecycle
-import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.DefaultMailboxCoordinator
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxArrivalListener
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxCredentialFactory
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizer
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRoutePacketHandler
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRouteProvisioner
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRuntime
+import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.NodeMailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingPacketSender
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingPacketTransportPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingRecipientRoutingResolver
@@ -35,10 +35,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbo
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupRoutingResolver
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.routing.GroupTransportKeyResolver
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
+import com.cbgm.sparrow.feature.messaging.domain.port.MailboxPort
+import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
-import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
-import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
-import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.PersistentOutboxProcessor
 import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
@@ -126,7 +126,7 @@ private fun Module.registerOutbox() {
     singleOf(::CoverPacketHandler) { bind<TypedProtocolPacketHandler>() }
     single<OutboxProcessor> {
         val sender = get<OutgoingPacketSender>()
-        DefaultOutboxProcessor(
+        PersistentOutboxProcessor(
             protocolOutbox = get<ProtocolOutbox>(),
             send = { item -> sender.send(item) },
             deliveryStateListener = get()
@@ -136,7 +136,7 @@ private fun Module.registerOutbox() {
 
 private fun Module.registerMailbox() {
     single<MailboxCapabilityLifecycle> {
-        DefaultMailboxCapabilityLifecycle(repository = get(), gateway = get())
+        NodeMailboxCapabilityLifecycle(repository = get(), mailboxRepository = get())
     }
     singleOf(::MailboxCredentialFactory)
     singleOf(::MailboxPendingSynchronizer)
@@ -144,14 +144,14 @@ private fun Module.registerMailbox() {
         MailboxArrivalListener(mailboxRepository = get(), mailboxRouteRepository = get(), pendingSynchronizer = get(), invitationMailbox = get())
     }
     singleOf(::MailboxRouteProvisioner)
-    single<MailboxCoordinator> {
-        DefaultMailboxCoordinator(routeProvisioner = get(), pendingSynchronizer = get(), arrivalListener = get())
+    single<MailboxPort> {
+        MailboxRuntime(routeProvisioner = get(), pendingSynchronizer = get(), arrivalListener = get())
     }
     singleOf(::MailboxRoutePacketHandler) { bind<TypedProtocolPacketHandler>() }
 }
 
 private fun Module.registerIndicators() {
-    singleOf(::MailboxMessagingIndicatorGateway) { bind<MessagingIndicatorGateway>() }
+    singleOf(::MailboxMessagingIndicators) { bind<MessagingIndicatorPort>() }
     singleOf(::IndicatorPacketHandler) { bind<TypedProtocolPacketHandler>() }
     singleOf(::SendConversationIndicatorUseCase)
     singleOf(::TransportConversationIndicatorObserver) { bind<ConversationIndicatorObserver>() }

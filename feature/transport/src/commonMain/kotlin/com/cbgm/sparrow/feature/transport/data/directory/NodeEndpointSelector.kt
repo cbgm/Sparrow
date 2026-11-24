@@ -12,7 +12,7 @@ internal class NodeEndpointSelector(
      * fails over to them as usual.
      */
     fun select(
-        signedDirectory: SignedNodeDirectory,
+        signedDirectory: SignedNodeDirectoryDto,
         localRoutingId: String,
         preferredNodeId: String? = null
     ): List<NodeEndpoint> {
@@ -24,7 +24,7 @@ internal class NodeEndpointSelector(
             signedDirectory.directory.nodes
                 .filter { descriptor ->
                     config.supportedProtocolVersion in descriptor.protocolVersions &&
-                        NodeCapability.GATEWAY in descriptor.capabilities
+                        NodeCapabilityDto.GATEWAY in descriptor.capabilities
                 }.map { descriptor ->
                     NodeEndpoint(
                         nodeId = descriptor.nodeId,

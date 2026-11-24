@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.CHUNK_BYTES
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.MAXIMUM_ATTEMPTS
-import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWork
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkDto
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRequestRefusedException
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRequest
@@ -101,7 +101,7 @@ internal class BlobRepositoryImpl(
     ): OpenedBlob {
         val (_, baseUrl) = route.sessionNodeId?.let { id -> route.sessionNodeBaseUrl?.let { url -> id to url } } ?: directNode()
         val request =
-            OpenBlobRequest(
+            OpenBlobRequestDto(
                 blobId = blob.blobId,
                 byteSize = byteSize,
                 readCapabilitySha256 = blob.readCapabilitySha256,
@@ -113,7 +113,7 @@ internal class BlobRepositoryImpl(
         val response =
             route.request(FileTransferRequest("POST", "$baseUrl/v1/blobs", contentType = JSON, body = json.encodeToString(request).encodeToByteArray()))
         response.requireSuccess("Opening the blob")
-        val opened = json.decodeFromString<OpenBlobResponse>(response.body.decodeToString())
+        val opened = json.decodeFromString<OpenBlobResponseDto>(response.body.decodeToString())
         check(opened.chunkBytes == CHUNK_BYTES) { "The blob node uses chunks of ${opened.chunkBytes} bytes" }
         return OpenedBlob(opened.nodeId, baseUrl, opened.expiresAtEpochMilliseconds)
     }
@@ -125,7 +125,7 @@ internal class BlobRepositoryImpl(
     ): List<Int> {
         val response = route.request(FileTransferRequest("GET", "$baseUrl/v1/blobs/${blob.blobId}/chunks", blob.uploadCapability))
         response.requireSuccess("Asking for the stored chunks")
-        return json.decodeFromString<BlobChunksResponse>(response.body.decodeToString()).stored
+        return json.decodeFromString<BlobChunksResponseDto>(response.body.decodeToString()).stored
     }
 
     /** Sends a chunk; the node answers the hash of what it stored, and a chunk that arrived changed is sent once more. */
@@ -141,7 +141,7 @@ internal class BlobRepositoryImpl(
             val response =
                 route.request(FileTransferRequest("PUT", "$baseUrl/v1/blobs/${blob.blobId}/chunks/$index", blob.uploadCapability, OCTET_STREAM, chunk))
             response.requireSuccess("Blob chunk $index upload")
-            if (json.decodeFromString<BlobChunkStored>(response.body.decodeToString()).sha256 == expected) return
+            if (json.decodeFromString<BlobChunkStoredDto>(response.body.decodeToString()).sha256 == expected) return
             logger.warn { "Blob chunk $index arrived changed; sending it again" }
         }
         error("Blob chunk $index did not arrive intact")
@@ -284,30 +284,30 @@ internal class BlobRejectedException(
 ) : IllegalStateException(message)
 
 @Serializable
-private data class OpenBlobRequest(
+private data class OpenBlobRequestDto(
     val blobId: String,
     val byteSize: Long,
     val readCapabilitySha256: String,
     val deleteCapabilitySha256: String,
     val uploadCapabilitySha256: String,
     val expiresAtEpochMilliseconds: Long,
-    val creationWork: MailboxCreationWork
+    val creationWork: MailboxCreationWorkDto
 )
 
 @Serializable
-private data class OpenBlobResponse(
+private data class OpenBlobResponseDto(
     val nodeId: String,
     val chunkBytes: Int,
     val expiresAtEpochMilliseconds: Long
 )
 
 @Serializable
-private data class BlobChunksResponse(
+private data class BlobChunksResponseDto(
     val stored: List<Int>
 )
 
 @Serializable
-private data class BlobChunkStored(
+private data class BlobChunkStoredDto(
     val index: Int,
     val sha256: String
 )

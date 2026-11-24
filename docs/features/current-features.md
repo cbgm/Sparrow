@@ -108,7 +108,7 @@ See [App lock](app-lock.md).
 
 ## Startup/runtime
 
-Application startup is task-based through `ApplicationStartupRunner` and concrete `StartupTask` instances. Only waiting tasks block navigation. Non-waiting observers/runtime work starts after `AppRoute.Main` through `startPostNavigationRuntime()` and `ForegroundRuntimeCoordinator`.
+Application startup is task-based through `ApplicationStartupRunner` and concrete `StartupTask` instances. Only waiting tasks block navigation. Non-waiting observers/runtime work starts after `AppRoute.Main` through `startPostNavigationRuntime()` and `ForegroundRuntime`.
 
 See [Startup architecture](../architecture/startup.md).
 
@@ -183,7 +183,7 @@ Invitation lifecycle is now a dedicated `:feature:invite` concern, while the `:f
 
 ### Group membership module
 
-Group membership/security is implemented in `:feature:membership` rather than inside Chats. This includes `GroupMembershipStateMachine`, `GroupSecurityManager`, Group welcome/activation datasources, admin promotion/removal/leave, current epoch/member routing, and the membership result stream. See [Group membership and group security](group-membership.md).
+Group membership/security is implemented in `:feature:membership` rather than inside Chats. This includes `GroupMembershipStateMachine`, `GroupSecurityRepositoryImpl`, Group welcome/activation datasources, admin promotion/removal/leave, current epoch/member routing, and the membership result stream. See [Group membership and group security](group-membership.md).
 
 ### Voice and transcription
 

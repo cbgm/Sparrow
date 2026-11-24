@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.autoreply.presentation.mapper
 
 import com.cbgm.sparrow.feature.autoreply.domain.model.AutoReply
-import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiItem
+import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyItemUi
 
-internal fun AutoReply.toUiItem(): AutoReplyUiItem =
-    AutoReplyUiItem(
+internal fun AutoReply.toAutoReplyItemUi(): AutoReplyItemUi =
+    AutoReplyItemUi(
         id = id,
         name = name,
         text = text,

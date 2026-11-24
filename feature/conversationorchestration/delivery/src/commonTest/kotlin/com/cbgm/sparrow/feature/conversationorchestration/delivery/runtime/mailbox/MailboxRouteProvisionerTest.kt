@@ -24,7 +24,7 @@ class MailboxRouteProvisionerTest {
             val renewed = fakes.routes.local.getValue(CONTACT_ID)
             assertNotEquals(old.deliveryRoute.routeId, renewed.deliveryRoute.routeId)
             assertEquals(listOf(old), fakes.routes.retiring.values.toList())
-            assertTrue(fakes.gateway.revoked.isEmpty())
+            assertTrue(fakes.mailboxRepository.revoked.isEmpty())
             val packet = fakes.outbox.enqueued.single().second as MailboxRoutePacket
             assertEquals(renewed.deliveryRoute.routeId, packet.deliveryRoute.routeId)
         }
@@ -79,11 +79,11 @@ class MailboxRouteProvisionerTest {
             fakes.routes.retiring[drained.deliveryRoute.routeId] = drained
             fakes.routes.retiring[full.deliveryRoute.routeId] = full
             fakes.routes.local[CONTACT_ID] = current
-            fakes.gateway.pendingRoutes += full.deliveryRoute.routeId
+            fakes.mailboxRepository.pendingRoutes += full.deliveryRoute.routeId
 
             fakes.provisioner().provision().getOrThrow()
 
-            assertEquals(listOf(drained.deliveryRoute.routeId), fakes.gateway.revoked)
+            assertEquals(listOf(drained.deliveryRoute.routeId), fakes.mailboxRepository.revoked)
             assertEquals(listOf(full), fakes.routes.retiring.values.toList())
             assertEquals(current, fakes.routes.local[CONTACT_ID])
         }
@@ -96,7 +96,7 @@ class MailboxRouteProvisionerTest {
 
             fakes.provisioner().provision().getOrThrow()
 
-            assertTrue(fakes.gateway.revoked.isEmpty())
+            assertTrue(fakes.mailboxRepository.revoked.isEmpty())
             assertEquals(listOf(retiring), fakes.routes.retiring.values.toList())
         }
 
@@ -112,7 +112,7 @@ class MailboxRouteProvisionerTest {
             assertNotEquals(old, fakes.routes.local.getValue(CONTACT_ID))
             // The node may only restart: what was put there before the contact learned the new route still arrives.
             assertEquals(old, fakes.routes.retiring[old.deliveryRoute.routeId])
-            assertTrue(fakes.gateway.revoked.isEmpty())
+            assertTrue(fakes.mailboxRepository.revoked.isEmpty())
         }
 
     @Test
@@ -124,7 +124,7 @@ class MailboxRouteProvisionerTest {
 
             assertEquals(0, fakes.provisioner().provision().getOrThrow())
 
-            assertTrue(fakes.gateway.created.isEmpty())
+            assertTrue(fakes.mailboxRepository.created.isEmpty())
             assertTrue(fakes.outbox.enqueued.isEmpty())
         }
 
@@ -140,7 +140,7 @@ class MailboxRouteProvisionerTest {
 
             assertEquals(1, fakes.provisioner().provision().getOrThrow())
 
-            assertEquals(listOf(OTHER_CONTACT_ID), fakes.gateway.created)
+            assertEquals(listOf(OTHER_CONTACT_ID), fakes.mailboxRepository.created)
             assertEquals(listOf(OTHER_CONTACT_ID), fakes.outbox.enqueued.map { it.first })
         }
 
@@ -151,7 +151,7 @@ class MailboxRouteProvisionerTest {
 
             assertEquals(1, fakes.provisioner().provision().getOrThrow())
 
-            assertEquals(listOf(CONTACT_ID), fakes.gateway.created)
+            assertEquals(listOf(CONTACT_ID), fakes.mailboxRepository.created)
         }
 
     private companion object {

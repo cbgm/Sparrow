@@ -26,7 +26,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `ForegroundRuntimeDependencies` | data class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/presentation/model/ForegroundRuntimeDependencies.kt` |
 | `AttachmentConversationNameObserver` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/AttachmentConversationNameObserver.kt` |
 | `ForegroundConnectionHandler` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/foreground/ForegroundConnectionHandler.kt` |
-| `ForegroundRuntimeCoordinator` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/foreground/ForegroundRuntimeCoordinator.kt` |
+| `ForegroundRuntime` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/foreground/ForegroundRuntime.kt` |
 | `ApplicationStartupRunner` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/ApplicationStartupRunner.kt` |
 | `Completed` | object | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/StartupTask.kt` |
 | `IdentityReady` | object | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/StartupTask.kt` |
@@ -47,7 +47,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `StartApprovedIdentityReconnectionObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartApprovedIdentityReconnectionObserverStartupTask.kt` |
 | `StartAttachmentConversationNameObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartAttachmentConversationNameObserverStartupTask.kt` |
 | `StartContactBlockObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartContactBlockObserverStartupTask.kt` |
-| `StartConversationNotificationCoordinatorStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartConversationNotificationCoordinatorStartupTask.kt` |
+| `StartConversationNotificationDispatcherStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartConversationNotificationDispatcherStartupTask.kt` |
 | `StartDirectIdentityResultObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartDirectIdentityResultObserverStartupTask.kt` |
 | `StartInvitationResultObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartInvitationResultObserverStartupTask.kt` |
 | `StartMembershipResultObserverStartupTask` | class | `commonMain` | `shared/src/commonMain/kotlin/com/cbgm/sparrow/runtime/startup/task/StartMembershipResultObserverStartupTask.kt` |
@@ -72,11 +72,11 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `EmbeddingMathTest` | class | `androidHostTest` | `feature/embedding/src/androidHostTest/kotlin/com/cbgm/sparrow/feature/embedding/data/model/EmbeddingMathTest.kt` |
 | `AndroidLocalEmbeddingModelDownloader` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/AndroidLocalEmbeddingModelDownloader.kt` |
 | `AndroidLocalEmbeddingModelFiles` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/AndroidLocalEmbeddingModelFiles.kt` |
-| `AndroidLocalEmbeddingModelManager` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/AndroidLocalEmbeddingModelManager.kt` |
+| `AndroidEmbeddingModelLocalDataSource` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/AndroidEmbeddingModelLocalDataSource.kt` |
 | `MediaPipeLocalTextEmbedder` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/MediaPipeLocalTextEmbedder.kt` |
 | `LocalEmbeddingModelDownloadWorker` | class | `androidMain` | `feature/embedding/src/androidMain/kotlin/com/cbgm/sparrow/feature/embedding/work/LocalEmbeddingModelDownloadWorker.kt` |
 | `LocalEmbeddingModel` | object | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/model/LocalEmbeddingModel.kt` |
-| `LocalEmbeddingModelManager` | interface | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/LocalEmbeddingModelManager.kt` |
+| `EmbeddingModelLocalDataSource` | interface | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/EmbeddingModelLocalDataSource.kt` |
 | `EmbeddingInputType` | enum class | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/LocalTextEmbedder.kt` |
 | `LocalTextEmbedder` | interface | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/platform/LocalTextEmbedder.kt` |
 | `LocalEmbeddingRepositoryImpl` | class | `commonMain` | `feature/embedding/src/commonMain/kotlin/com/cbgm/sparrow/feature/embedding/data/repository/LocalEmbeddingRepositoryImpl.kt` |
@@ -539,7 +539,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `NotFound` | object | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/details/model/ContactDetailsUiState.kt` |
 | `ContactsListMode` | enum class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/ContactsScreen.kt` |
 | `ContactsViewModel` | class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/ContactsViewModel.kt` |
-| `ContactGroupEntity` | data class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/model/ContactGroupEntity.kt` |
+| `ContactGroupUi` | data class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/model/ContactGroupUi.kt` |
 | `ContactUi` | data class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/model/ContactUi.kt` |
 | `BackRequested` | object | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/model/ContactsEffect.kt` |
 | `ContactSelected` | data class | `commonMain` | `feature/contacts/src/commonMain/kotlin/com/cbgm/sparrow/feature/contacts/presentation/overview/model/ContactsEffect.kt` |
@@ -667,7 +667,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `StoredMessageEmbeddingDto` | data class | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/model/StoredMessageEmbeddingDto.kt` |
 | `StoredMessageSearchMatchDto` | data class | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/model/StoredMessageSearchMatchDto.kt` |
 | `UnreadIncomingMessageDto` | data class | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/model/UnreadIncomingMessageDto.kt` |
-| `DefaultProtocolOutbox` | class | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/outbox/DefaultProtocolOutbox.kt` |
+| `RoomProtocolOutbox` | class | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/outbox/RoomProtocolOutbox.kt` |
 | `DatabaseConstants` | object | `commonMain` | `data/database/src/commonMain/kotlin/com/cbgm/sparrow/data/database/util/DatabaseConstants.kt` |
 
 ### `:feature:contactimport`
@@ -735,7 +735,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `OffClicked` | object | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiEvent.kt` |
 | `ShowSnackbar` | data class | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiEvent.kt` |
 | `AutoReplyEditorUiState` | data class | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
-| `AutoReplyUiItem` | data class | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
+| `AutoReplyItemUi` | data class | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
 | `AutoReplyUiState` | data class | `commonMain` | `feature/autoreply/src/commonMain/kotlin/com/cbgm/sparrow/feature/autoreply/presentation/model/AutoReplyUiState.kt` |
 
 ### `:feature:avatar`
@@ -905,15 +905,15 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `ConversationVoiceController` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/controller/ConversationVoiceController.kt` |
 | `DirectIdentityController` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/controller/DirectIdentityController.kt` |
 | `SharedContactController` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/controller/SharedContactController.kt` |
-| `HeaderAvatarKind` | enum class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUiModel.kt` |
-| `HeaderUiModel` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUiModel.kt` |
+| `HeaderAvatarKind` | enum class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUi.kt` |
+| `HeaderUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUi.kt` |
 | `SecurityBannerState` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/SecurityBannerState.kt` |
 | `BubbleState` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubble.kt` |
 | `PrimaryContent` | enum class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubble.kt` |
 | `MessageBubbleShape` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubbleShape.kt` |
 | `DissolvingMessageListState` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageDissolve.kt` |
 | `BurstItemProperties` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageReactionBurstOverlay.kt` |
-| `HistoryUiModel` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/HistoryUiModel.kt` |
+| `HistoryUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/HistoryUi.kt` |
 | `DeliveryProgressUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
 | `MessageBubbleUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
 | `MessageReactionUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
@@ -1100,8 +1100,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `Loading` | object | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupPinUi.kt` |
 | `Message` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupPinUi.kt` |
 | `OverviewViewModel` | class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/OverviewViewModel.kt` |
-| `ConversationListItem` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItem.kt` |
-| `LastMessagePreviewUi` | enum class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItem.kt` |
+| `ConversationListItemUi` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItemUi.kt` |
+| `LastMessagePreviewUi` | enum class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItemUi.kt` |
 | `AutoReplyClicked` | object | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/OverviewUiEvent.kt` |
 | `ChatClicked` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/OverviewUiEvent.kt` |
 | `DeleteConversation` | data class | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/OverviewUiEvent.kt` |
@@ -1294,8 +1294,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `OutboxDeliveryStateRouter` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/delivery/OutboxDeliveryStateRouter.kt` |
 | `TransportConversationIndicatorObserver` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/indicator/TransportConversationIndicatorObserver.kt` |
 | `WebSocketMessagingIndicatorGateway` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/indicator/WebSocketMessagingIndicatorGateway.kt` |
-| `DefaultMailboxCapabilityLifecycle` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCapabilityLifecycle.kt` |
-| `DefaultMailboxCoordinator` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCoordinator.kt` |
+| `NodeMailboxCapabilityLifecycle` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/NodeMailboxCapabilityLifecycle.kt` |
+| `MailboxRuntime` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/MailboxRuntime.kt` |
 | `MailboxCredentialFactory` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/MailboxCredentialFactory.kt` |
 | `MailboxPendingSynchronizer` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/MailboxPendingSynchronizer.kt` |
 | `MailboxRoutePacketHandler` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/MailboxRoutePacketHandler.kt` |
@@ -1310,10 +1310,10 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupTransportKeyResolver` | class | `commonMain` | `feature/conversationorchestration/delivery/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/routing/GroupTransportKeyResolver.kt` |
 | `DirectMessageDeliveryStateMachineTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/domain/model/DirectMessageDeliveryStateMachineTest.kt` |
 | `GroupMessageDeliveryStateMachineTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/domain/model/GroupMessageDeliveryStateMachineTest.kt` |
-| `ConnectTimeoutException` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCapabilityLifecycleTest.kt` |
-| `DefaultMailboxCapabilityLifecycleTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCapabilityLifecycleTest.kt` |
-| `FakeMailboxGateway` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCapabilityLifecycleTest.kt` |
-| `FakeMailboxRouteRepository` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/DefaultMailboxCapabilityLifecycleTest.kt` |
+| `ConnectTimeoutException` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/NodeMailboxCapabilityLifecycleTest.kt` |
+| `NodeMailboxCapabilityLifecycleTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/NodeMailboxCapabilityLifecycleTest.kt` |
+| `FakeMailboxRepository` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/NodeMailboxCapabilityLifecycleTest.kt` |
+| `FakeMailboxRouteRepository` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/NodeMailboxCapabilityLifecycleTest.kt` |
 | `MailboxRouteNodeRetirementTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/mailbox/MailboxRouteNodeRetirementTest.kt` |
 | `IdentityRecoveryOutboundGateTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/outbox/IdentityRecoveryOutboundGateTest.kt` |
 | `OutgoingPacketTransportPolicyTest` | class | `commonTest` | `feature/conversationorchestration/delivery/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/delivery/runtime/outbox/OutgoingPacketTransportPolicyTest.kt` |
@@ -1326,8 +1326,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `DirectMessageDataSource` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/datasource/DirectMessageDataSource.kt` |
 | `GroupMessageDataSource` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/datasource/GroupMessageDataSource.kt` |
 | `MessageReactionDataSource` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/datasource/MessageReactionDataSource.kt` |
-| `DirectMessagePacketFactoryImpl` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/packet/DirectMessagePacketFactoryImpl.kt` |
-| `GroupMessagePlaintextCodecImpl` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/packet/GroupMessagePlaintextCodecImpl.kt` |
+| `ProfileDirectMessagePacketFactory` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/packet/ProfileDirectMessagePacketFactory.kt` |
+| `ContentGroupMessagePlaintextCodec` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/packet/ContentGroupMessagePlaintextCodec.kt` |
 | `ConversationUnseenCountRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/repository/ConversationUnseenCountRepositoryImpl.kt` |
 | `DirectConversationRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/repository/DirectConversationRepositoryImpl.kt` |
 | `DirectMessageRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/message/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/message/data/repository/DirectMessageRepositoryImpl.kt` |
@@ -1735,10 +1735,10 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupAvatarDto` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/model/GroupMetadataDtos.kt` |
 | `GroupDescriptionDto` | data class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/model/GroupMetadataDtos.kt` |
 | `GroupTitleDto` | data class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/model/GroupMetadataDtos.kt` |
-| `GroupAvatarPacketCodecImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/GroupAvatarPacketCodecImpl.kt` |
-| `GroupDescriptionPacketCodecImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/GroupDescriptionPacketCodecImpl.kt` |
-| `GroupPinPacketCodecImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/GroupPinPacketCodecImpl.kt` |
-| `GroupTitlePacketCodecImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/GroupTitlePacketCodecImpl.kt` |
+| `EncryptedGroupAvatarPacketCodec` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/EncryptedGroupAvatarPacketCodec.kt` |
+| `EncryptedGroupDescriptionPacketCodec` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/EncryptedGroupDescriptionPacketCodec.kt` |
+| `EncryptedGroupPinPacketCodec` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/EncryptedGroupPinPacketCodec.kt` |
+| `EncryptedGroupTitlePacketCodec` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/packet/EncryptedGroupTitlePacketCodec.kt` |
 | `GroupAvatarRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/repository/GroupAvatarRepositoryImpl.kt` |
 | `GroupDescriptionRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/repository/GroupDescriptionRepositoryImpl.kt` |
 | `GroupPinRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/groupstate/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/groupstate/data/repository/GroupPinRepositoryImpl.kt` |
@@ -1973,7 +1973,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupSystemMessageFactory` | object | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/mapper/GroupSystemMessageFactory.kt` |
 | `GroupSystemMessageDto` | data class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/model/GroupSystemMessageDto.kt` |
 | `PreviousGroupMembershipDto` | data class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/model/PreviousGroupMembershipDto.kt` |
-| `GroupVerificationPacketCodecImpl` | class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/packet/GroupVerificationPacketCodecImpl.kt` |
+| `SignedGroupVerificationPacketCodec` | class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/packet/SignedGroupVerificationPacketCodec.kt` |
 | `GroupVerificationPayloadEncoder` | class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/packet/GroupVerificationPayloadEncoder.kt` |
 | `GroupConversationRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/repository/GroupConversationRepositoryImpl.kt` |
 | `GroupIncomingConversationRepositoryImpl` | class | `commonMain` | `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/data/repository/GroupIncomingConversationRepositoryImpl.kt` |
@@ -2407,7 +2407,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 
 | Declaration | Kind | Source set | Path |
 |---|---|---|---|
-| `DirectMessagePacketReaderImpl` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/data/packet/DirectMessagePacketReaderImpl.kt` |
+| `ChatDirectMessagePacketReader` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/data/packet/ChatDirectMessagePacketReader.kt` |
 | `ApplyRemoteMessageOperation` | data class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/command/IncomingCommand.kt` |
 | `CompleteManualIdentity` | data class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/command/IncomingCommand.kt` |
 | `IncomingCommand` | interface | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/command/IncomingCommand.kt` |
@@ -2874,7 +2874,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `ReceiveVerificationSnapshotWorkflow` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/verification/ReceiveVerificationSnapshotWorkflow.kt` |
 | `SnapshotApplied` | object | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/verification/ReceiveVerificationSnapshotWorkflow.kt` |
 | `Step` | interface | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/verification/ReceiveVerificationSnapshotWorkflow.kt` |
-| `IncomingEnvelopeProcessorImpl` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/runtime/IncomingEnvelopeProcessorImpl.kt` |
+| `ParkingIncomingEnvelopeProcessor` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/runtime/ParkingIncomingEnvelopeProcessor.kt` |
 | `IncomingTransportMessageHandler` | class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/runtime/IncomingTransportMessageHandler.kt` |
 | `Unreadable` | enum class | `commonMain` | `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/runtime/IncomingTransportMessageHandler.kt` |
 | `GroupInvitationIdentityPolicyTest` | class | `commonTest` | `feature/conversationorchestration/incoming/src/commonTest/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/policy/GroupInvitationIdentityPolicyTest.kt` |
@@ -2940,7 +2940,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupMembershipPayloadEncoder` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/protocol/GroupMembershipPayloadEncoder.kt` |
 | `GroupMembershipRepositoryImpl` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/repository/GroupMembershipRepositoryImpl.kt` |
 | `MembershipRepositoryImpl` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/repository/MembershipRepositoryImpl.kt` |
-| `GroupSecurityManager` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityManager.kt` |
+| `GroupSecurityRepositoryImpl` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityRepositoryImpl.kt` |
 | `GroupWelcomeSecurity` | class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupWelcomeSecurity.kt` |
 | `GroupAdministrationState` | data class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/domain/model/GroupAdministrationState.kt` |
 | `GroupConversationMembershipProjection` | data class | `commonMain` | `feature/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/membership/domain/model/GroupConversationMembershipProjection.kt` |
@@ -3035,10 +3035,10 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `PendingGroupRemovalPolicyTest` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/policy/PendingGroupRemovalPolicyTest.kt` |
 | `DeterministicGroupCrypto` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/protocol/GroupMembershipPacketProtocolTest.kt` |
 | `GroupMembershipPacketProtocolTest` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/protocol/GroupMembershipPacketProtocolTest.kt` |
-| `DeterministicGroupCrypto` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityManagerTest.kt` |
-| `GroupSecurityManagerTest` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityManagerTest.kt` |
-| `InMemoryGroupKeyStore` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityManagerTest.kt` |
-| `InMemoryGroupSecurityDao` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityManagerTest.kt` |
+| `DeterministicGroupCrypto` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityRepositoryImplTest.kt` |
+| `GroupSecurityRepositoryImplTest` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityRepositoryImplTest.kt` |
+| `InMemoryGroupKeyStore` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityRepositoryImplTest.kt` |
+| `InMemoryGroupSecurityDao` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/data/security/GroupSecurityRepositoryImplTest.kt` |
 | `GroupConversationMembershipProjectorTest` | class | `commonTest` | `feature/membership/src/commonTest/kotlin/com/cbgm/sparrow/feature/membership/domain/model/GroupConversationMembershipProjectorTest.kt` |
 
 ### `:feature:attachments`
@@ -3105,7 +3105,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `Content` | data class | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/presentation/storage/model/AttachmentStorageUiState.kt` |
 | `Error` | data class | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/presentation/storage/model/AttachmentStorageUiState.kt` |
 | `Loading` | object | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/presentation/storage/model/AttachmentStorageUiState.kt` |
-| `MessageAttachmentCacheCoordinator` | class | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/runtime/MessageAttachmentCacheCoordinator.kt` |
+| `MessageAttachmentCacheQueue` | class | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/runtime/MessageAttachmentCacheQueue.kt` |
 | `ContactAttachmentPayload` | object | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/util/ContactAttachmentPayload.kt` |
 | `LocationAttachmentPayload` | object | `commonMain` | `feature/attachments/src/commonMain/kotlin/com/cbgm/sparrow/feature/attachments/util/LocationAttachmentPayload.kt` |
 | `MessagePartPersistenceMapperTest` | class | `commonTest` | `feature/attachments/src/commonTest/kotlin/com/cbgm/sparrow/feature/attachments/data/mapper/MessagePartPersistenceMapperTest.kt` |
@@ -3628,7 +3628,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `SparrowLog` | object | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/logging/SparrowLogger.kt` |
 | `SparrowLogger` | interface | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/logging/SparrowLogger.kt` |
 | `StartupTrace` | object | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/logging/StartupTrace.kt` |
-| `DefaultPhoneNumberNormalizer` | class | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/phone/DefaultPhoneNumberNormalizer.kt` |
+| `DigitPhoneNumberNormalizer` | class | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/phone/DigitPhoneNumberNormalizer.kt` |
 | `LocalPhoneNumberProvider` | interface | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/phone/LocalPhoneNumberProvider.kt` |
 | `PhoneNumberNormalizer` | interface | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/phone/PhoneNumberNormalizer.kt` |
 | `SystemClock` | object | `commonMain` | `core/util/src/commonMain/kotlin/com/cbgm/sparrow/core/util/time/SystemClock.kt` |
@@ -3657,7 +3657,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `UnsupportedCryptoVersionException` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/error/CryptoException.kt` |
 | `SignatureVerificationException` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/error/SignatureVerificationException.kt` |
 | `CryptoHash` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/hash/CryptoHash.kt` |
-| `DefaultCryptoHash` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/hash/DefaultCryptoHash.kt` |
+| `Sha256CryptoHash` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/hash/Sha256CryptoHash.kt` |
 | `SecureRandomGenerator` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/random/SecureRandomGenerator.kt` |
 | `SodiumSecureRandomGenerator` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/random/SodiumSecureRandomGenerator.kt` |
 | `DetachedSignatureCrypto` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/signature/DetachedSignatureCrypto.kt` |
@@ -3667,15 +3667,15 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `InvalidPacket` | data class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/DecodedTransportMessage.kt` |
 | `InvalidPlaintext` | data class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/DecodedTransportMessage.kt` |
 | `Readable` | data class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/DecodedTransportMessage.kt` |
-| `DefaultIncomingTransportMessageDecoder` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/DefaultIncomingTransportMessageDecoder.kt` |
-| `DefaultTransportPayloadCodec` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/DefaultTransportPayloadCodec.kt` |
+| `EncryptedIncomingTransportMessageDecoder` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/EncryptedIncomingTransportMessageDecoder.kt` |
+| `Base64TransportPayloadCodec` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/Base64TransportPayloadCodec.kt` |
 | `EncryptedTransportPayload` | data class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/EncryptedTransportPayload.kt` |
 | `IncomingTransportMessageDecoder` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/IncomingTransportMessageDecoder.kt` |
 | `SodiumTransportMessageCipher` | class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/SodiumTransportMessageCipher.kt` |
 | `TransportEncryptionMode` | enum class | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/TransportEncryptionMode.kt` |
 | `TransportMessageCipher` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/TransportMessageCipher.kt` |
 | `TransportPayloadCodec` | interface | `commonMain` | `core/crypto/src/commonMain/kotlin/com/cbgm/sparrow/core/crypto/transport/TransportPayloadCodec.kt` |
-| `DefaultTransportPayloadCodecTest` | class | `commonTest` | `core/crypto/src/commonTest/kotlin/com/cbgm/sparrow/core/crypto/transport/DefaultTransportPayloadCodecTest.kt` |
+| `Base64TransportPayloadCodecTest` | class | `commonTest` | `core/crypto/src/commonTest/kotlin/com/cbgm/sparrow/core/crypto/transport/Base64TransportPayloadCodecTest.kt` |
 
 ### `:protocol`
 
@@ -3691,7 +3691,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupAvatarSnapshot` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/avatar/GroupAvatarProvider.kt` |
 | `KotlinxPacketCodec` | class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/codec/KotlinxPacketCodec.kt` |
 | `PacketCodec` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/codec/PacketCodec.kt` |
-| `DefaultProtocolPacketHandler` | class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/handler/DefaultProtocolPacketHandler.kt` |
+| `DispatchingProtocolPacketHandler` | class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/handler/DispatchingProtocolPacketHandler.kt` |
 | `IncomingMessageHandler` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/handler/IncomingMessageHandler.kt` |
 | `IncomingMessageRejectedException` | class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/handler/IncomingMessageRejectedException.kt` |
 | `IncomingPacketContext` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/handler/IncomingPacketContext.kt` |
@@ -3795,8 +3795,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `GroupVerificationPacketCodecTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/codec/GroupVerificationPacketCodecTest.kt` |
 | `KotlinxPacketCodecTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/codec/KotlinxPacketCodecTest.kt` |
 | `MailboxRoutePacketCodecTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/codec/MailboxRoutePacketCodecTest.kt` |
-| `DefaultProtocolPacketHandlerTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/handler/DefaultProtocolPacketHandlerTest.kt` |
-| `RecordingHandler` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/handler/DefaultProtocolPacketHandlerTest.kt` |
+| `DispatchingProtocolPacketHandlerTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/handler/DispatchingProtocolPacketHandlerTest.kt` |
+| `RecordingHandler` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/handler/DispatchingProtocolPacketHandlerTest.kt` |
 | `ContactInvitationDeclineProtocolTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/invitation/ContactInvitationDeclineProtocolTest.kt` |
 | `RecordingCrypto` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/invitation/ContactInvitationDeclineProtocolTest.kt` |
 | `ContactInvitationPacketCreationTest` | class | `commonTest` | `protocol/src/commonTest/kotlin/com/cbgm/sparrow/protocol/invitation/ContactInvitationPacketCreationTest.kt` |
@@ -3831,12 +3831,12 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `IncomingEnvelopeProcessingResult` | enum class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/incoming/IncomingEnvelopeProcessor.kt` |
 | `IncomingEnvelopeProcessor` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/incoming/IncomingEnvelopeProcessor.kt` |
 | `IncomingEnvelopeRunner` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/incoming/IncomingEnvelopeRunner.kt` |
-| `MessagingIndicatorGateway` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/indicator/MessagingIndicatorGateway.kt` |
-| `MailboxCoordinator` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/mailbox/MailboxCoordinator.kt` |
+| `MessagingIndicatorPort` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/indicator/MessagingIndicatorPort.kt` |
+| `MailboxPort` | interface | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/mailbox/MailboxPort.kt` |
 | `MailboxRoutePayloadEncoder` | class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/mailbox/MailboxRoutePayloadEncoder.kt` |
-| `DefaultOutboxProcessor` | class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxProcessor.kt` |
-| `DefaultOutboxRunner` | class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxRunner.kt` |
-| `FakeGateway` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/MessagingIndicatorUseCasesTest.kt` |
+| `PersistentOutboxProcessor` | class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/PersistentOutboxProcessor.kt` |
+| `RetryingOutboxRunner` | class | `commonMain` | `feature/messaging/src/commonMain/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/RetryingOutboxRunner.kt` |
+| `FakeIndicatorPort` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/MessagingIndicatorUseCasesTest.kt` |
 | `MessagingIndicatorUseCasesTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/MessagingIndicatorUseCasesTest.kt` |
 | `FakeOutbox` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/ObserveMessagingFailureEventsUseCaseTest.kt` |
 | `ObserveMessagingFailureEventsUseCaseTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/ObserveMessagingFailureEventsUseCaseTest.kt` |
@@ -3846,12 +3846,12 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `SendEncodedTransportUseCaseTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/domain/usecase/SendEncodedTransportUseCaseTest.kt` |
 | `DefaultIncomingEnvelopeRunnerTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/incoming/DefaultIncomingEnvelopeRunnerTest.kt` |
 | `FakeIncomingEnvelopeGateway` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/incoming/DefaultIncomingEnvelopeRunnerTest.kt` |
-| `DefaultOutboxProcessorTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxProcessorTest.kt` |
-| `RecordingDeliveryListener` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxProcessorTest.kt` |
-| `RecordingOutbox` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxProcessorTest.kt` |
-| `DefaultOutboxRunnerTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxRunnerTest.kt` |
-| `FakeProtocolOutbox` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxRunnerTest.kt` |
-| `RecordingOutboxProcessor` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/DefaultOutboxRunnerTest.kt` |
+| `PersistentOutboxProcessorTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/PersistentOutboxProcessorTest.kt` |
+| `RecordingDeliveryListener` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/PersistentOutboxProcessorTest.kt` |
+| `RecordingOutbox` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/PersistentOutboxProcessorTest.kt` |
+| `RetryingOutboxRunnerTest` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/RetryingOutboxRunnerTest.kt` |
+| `FakeProtocolOutbox` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/RetryingOutboxRunnerTest.kt` |
+| `RecordingOutboxProcessor` | class | `commonTest` | `feature/messaging/src/commonTest/kotlin/com/cbgm/sparrow/feature/messaging/runtime/outbox/RetryingOutboxRunnerTest.kt` |
 
 ### `:feature:transport`
 
@@ -3883,16 +3883,16 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `ControlPlaneCandidateVerifier` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneCandidateVerifier.kt` |
 | `SignedDirectoryControlPlaneCandidateVerifier` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneCandidateVerifier.kt` |
 | `ControlPlaneConfigurationImpl` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneConfigurationImpl.kt` |
-| `ControlPlaneDirectoryRemoteSource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneDirectoryRemoteSource.kt` |
-| `SignedDirectoryDownload` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneDirectoryRemoteSource.kt` |
+| `ControlPlaneDirectoryRemoteDataSource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneDirectoryRemoteDataSource.kt` |
+| `SignedDirectoryDownload` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneDirectoryRemoteDataSource.kt` |
 | `ControlPlaneRequestRejectedException` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneRequestExceptions.kt` |
 | `ControlPlaneUnavailableException` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneRequestExceptions.kt` |
 | `ControlPlaneRequestRouter` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/ControlPlaneRequestRouter.kt` |
 | `HttpControlPlaneDirectorySynchronizer` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/HttpControlPlaneDirectorySynchronizer.kt` |
 | `HttpControlPlaneHealthMonitor` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/HttpControlPlaneHealthMonitor.kt` |
-| `HttpNodeControlPlaneDirectorySource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectorySource.kt` |
-| `NodeControlPlaneDirectory` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectorySource.kt` |
-| `NodeControlPlaneDirectorySource` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectorySource.kt` |
+| `HttpNodeControlPlaneDirectoryRemoteDataSource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectoryRemoteDataSource.kt` |
+| `NodeControlPlaneDirectory` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectoryRemoteDataSource.kt` |
+| `NodeControlPlaneDirectoryRemoteDataSource` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDirectoryRemoteDataSource.kt` |
 | `NodeControlPlaneDiscoverySynchronizer` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/NodeControlPlaneDiscoverySynchronizer.kt` |
 | `DirectoryEnvelope` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/SignedControlPlaneDirectory.kt` |
 | `DirectoryPayload` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/controlplane/SignedControlPlaneDirectory.kt` |
@@ -3915,8 +3915,8 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `UnsignedNodeDescriptor` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryModels.kt` |
 | `UnsignedRegistryAuthorityCertificate` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryModels.kt` |
 | `UnsignedRegistrySigningCertificate` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryModels.kt` |
-| `HttpNodeDirectorySource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectorySource.kt` |
-| `NodeDirectorySource` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectorySource.kt` |
+| `HttpNodeDirectoryRemoteDataSource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryRemoteDataSource.kt` |
+| `NodeDirectoryRemoteDataSource` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryRemoteDataSource.kt` |
 | `NodeDirectoryVerifier` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeDirectoryVerifier.kt` |
 | `NodeEndpointResolver` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeEndpointResolver.kt` |
 | `NodeEndpointSelector` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/discovery/NodeEndpointSelector.kt` |
@@ -4096,7 +4096,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `SparrowFirebaseMessagingService` | class | `androidMain` | `feature/notification/src/androidMain/kotlin/com/cbgm/sparrow/feature/notification/device/SparrowFirebaseMessagingService.kt` |
 | `SparrowNotificationIntentFactory` | object | `androidMain` | `feature/notification/src/androidMain/kotlin/com/cbgm/sparrow/feature/notification/device/SparrowNotificationIntentFactory.kt` |
 | `SparrowNotificationIntentHandler` | class | `androidMain` | `feature/notification/src/androidMain/kotlin/com/cbgm/sparrow/feature/notification/device/SparrowNotificationIntentHandler.kt` |
-| `SparrowNotificationManager` | class | `androidMain` | `feature/notification/src/androidMain/kotlin/com/cbgm/sparrow/feature/notification/device/SparrowNotificationManager.kt` |
+| `AndroidConversationNotificationPresenter` | class | `androidMain` | `feature/notification/src/androidMain/kotlin/com/cbgm/sparrow/feature/notification/device/AndroidConversationNotificationPresenter.kt` |
 | `PlatformNotificationRuntime` | interface | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/device/PlatformNotificationRuntime.kt` |
 | `AppVisibilityState` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/domain/model/AppVisibilityState.kt` |
 | `ConversationNotification` | data class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/domain/model/ConversationNotification.kt` |
@@ -4111,7 +4111,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `RegisterPushTokenUseCase` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/domain/usecase/RegisterPushTokenUseCase.kt` |
 | `ResolveNotificationConversationUseCase` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/domain/usecase/ResolveNotificationConversationUseCase.kt` |
 | `SynchronizePendingMessagesUseCase` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/domain/usecase/SynchronizePendingMessagesUseCase.kt` |
-| `ConversationNotificationCoordinator` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/presentation/ConversationNotificationCoordinator.kt` |
+| `ConversationNotificationDispatcher` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/presentation/ConversationNotificationDispatcher.kt` |
 | `ConversationNotificationPresenter` | interface | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/presentation/ConversationNotificationPresenter.kt` |
 | `NotificationNavigationController` | class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/presentation/navigation/NotificationNavigationController.kt` |
 | `Conversation` | data class | `commonMain` | `feature/notification/src/commonMain/kotlin/com/cbgm/sparrow/feature/notification/presentation/navigation/NotificationNavigationTarget.kt` |
@@ -4122,7 +4122,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 
 | Declaration | Kind | Source set | Path |
 |---|---|---|---|
-| `BlockScreenshotFlagManager` | object | `androidMain` | `core/ui/src/androidMain/kotlin/com/cbgm/sparrow/core/ui/component/BlockScreenshotEffect.android.kt` |
+| `SecureWindowFlags` | object | `androidMain` | `core/ui/src/androidMain/kotlin/com/cbgm/sparrow/core/ui/component/BlockScreenshotEffect.android.kt` |
 | `SecureWindowState` | data class | `androidMain` | `core/ui/src/androidMain/kotlin/com/cbgm/sparrow/core/ui/component/BlockScreenshotEffect.android.kt` |
 | `LocalAppLocale` | object | `androidMain` | `core/ui/src/androidMain/kotlin/com/cbgm/sparrow/core/ui/locale/LocaleAppLocale.android.kt` |
 | `FeedbackOverlayData` | data class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/AnchoredFeedback.kt` |
@@ -4134,7 +4134,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `SparrowTabbedScrollStates` | class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/Scaffold.kt` |
 | `SparrowOverlayAnchor` | data class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/SparrowOverlay.kt` |
 | `SparrowOverlayScope` | interface | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/SparrowOverlay.kt` |
-| `SparrowOverlayScopeImpl` | class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/SparrowOverlay.kt` |
+| `AnchoredOverlayScope` | class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/SparrowOverlay.kt` |
 | `ParsedSparrowPath` | data class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/StartupArtwork.kt` |
 | `SparrowPathSpec` | data class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/StartupArtwork.kt` |
 | `SwipeRevealAction` | data class | `commonMain` | `core/ui/src/commonMain/kotlin/com/cbgm/sparrow/core/ui/component/SwipeRevealActions.kt` |
@@ -4284,9 +4284,9 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `Command` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/DeveloperErrorLogStorageDataSource.kt` |
 | `DeveloperErrorLogStorageDataSource` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/DeveloperErrorLogStorageDataSource.kt` |
 | `Record` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/DeveloperErrorLogStorageDataSource.kt` |
-| `InMemorySettingsStorage` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/InMemorySettingsStorage.kt` |
-| `SettingsStorage` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/SettingsStorage.kt` |
-| `SettingsStorageImpl` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/SettingsStorageImpl.kt` |
+| `InMemorySettingsLocalDataSource` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/InMemorySettingsLocalDataSource.kt` |
+| `SettingsLocalDataSource` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/SettingsLocalDataSource.kt` |
+| `DataStoreSettingsLocalDataSource` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/datasource/DataStoreSettingsLocalDataSource.kt` |
 | `DeveloperErrorDto` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/model/DeveloperErrorDto.kt` |
 | `ContactBlocklistRepositoryImpl` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/repository/ContactBlocklistRepositoryImpl.kt` |
 | `DeveloperErrorLogRepositoryImpl` | class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/data/repository/DeveloperErrorLogRepositoryImpl.kt` |
@@ -4362,7 +4362,7 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `ControlPlaneSettingsError` | enum class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
 | `ControlPlaneSettingsUiEvent` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
 | `ControlPlaneSettingsUiState` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
-| `ControlPlaneUiModel` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
+| `ControlPlaneUi` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
 | `ControlPlaneUiSource` | enum class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
 | `ControlPlaneUiStatus` | enum class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |
 | `DirectoryApply` | object | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/presentation/network/model/ControlPlaneSettingsUiState.kt` |

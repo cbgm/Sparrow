@@ -8,35 +8,35 @@ import kotlinx.serialization.Serializable
  * [replyKey].
  */
 @Serializable
-internal class RelayLayer(
+internal class RelayLayerDto(
     val replyKey: ByteArray,
-    val forward: RelayForward? = null,
-    val exit: RelayExit? = null
+    val forward: RelayForwardDto? = null,
+    val exit: RelayExitDto? = null
 )
 
 @Serializable
-internal class RelayForward(
+internal class RelayForwardDto(
     val relayUrl: String,
     val layer: ByteArray
 )
 
 @Serializable
-internal class RelayExit(
+internal class RelayExitDto(
     val method: String,
     val url: String,
     val contentType: String? = null,
     val body: ByteArray? = null
 ) {
-    override fun toString(): String = "RelayExit(redacted)"
+    override fun toString(): String = "RelayExitDto(redacted)"
 }
 
 @Serializable
-internal class RelayExitResponse(
+internal class RelayExitResponseDto(
     val status: Int,
     val contentType: String? = null,
     val body: ByteArray = byteArrayOf()
 ) {
-    override fun toString(): String = "RelayExitResponse(status=$status)"
+    override fun toString(): String = "RelayExitResponseDto(status=$status)"
 }
 
 internal const val RELAY_CONTEXT = "sparrow-relay-v1"

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.blob
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRequestRefusedException
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRequest
@@ -26,7 +26,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BlobRepositoryImplTest {
-    private val hash = DefaultCryptoHash()
+    private val hash = Sha256CryptoHash()
     private val node = FakeBlobNode()
     private val ciphertext = Random(7).nextBytes(BlobRepositoryImpl.CHUNK_BYTES * 2 + 5_000)
 

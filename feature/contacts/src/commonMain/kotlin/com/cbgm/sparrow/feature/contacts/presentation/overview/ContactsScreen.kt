@@ -33,7 +33,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.components.Loadin
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.MemberSelectionContactsTopBar
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.OverviewContactsTopBar
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.contactGroups
-import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsScreenMode
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
@@ -243,7 +243,7 @@ private fun ContactsContent(
 
 @Composable
 private fun ContactsList(
-    groups: List<ContactGroupEntity>,
+    groups: List<ContactGroupUi>,
     listMode: ContactsListMode,
     innerPadding: PaddingValues,
     listState: LazyListState,

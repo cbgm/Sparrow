@@ -3,14 +3,14 @@ package com.cbgm.sparrow.feature.settings.data.repository
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 
 class DirectIdentitySetupModeRepositoryImpl(
-    private val settingsStorage: SettingsStorage
+    private val settingsDataSource: SettingsLocalDataSource
 ) : DirectIdentitySetupModeRepository {
     private val mode = MutableStateFlow(DirectIdentitySetupMode.AUTOMATIC_INVITATION)
 
@@ -29,12 +29,12 @@ class DirectIdentitySetupModeRepositoryImpl(
 
     override suspend fun setMode(mode: DirectIdentitySetupMode): Result<Unit> =
         safeSuspendCall {
-            settingsStorage.setDirectIdentitySetupMode(mode.name)
+            settingsDataSource.setDirectIdentitySetupMode(mode.name)
             this.mode.value = mode
         }
 
     private suspend fun loadMode(): DirectIdentitySetupMode =
-        settingsStorage
+        settingsDataSource
             .getDirectIdentitySetupMode()
             ?.let { storedValue ->
                 DirectIdentitySetupMode.entries.firstOrNull { candidate ->

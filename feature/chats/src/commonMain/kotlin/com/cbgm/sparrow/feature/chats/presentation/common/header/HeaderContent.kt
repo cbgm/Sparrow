@@ -13,7 +13,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.HeaderTitle
-import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import org.jetbrains.compose.resources.stringResource
@@ -22,7 +22,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeaderContent(
-    model: HeaderUiModel,
+    model: HeaderUi,
     containerColor: Color,
     onBackClick: () -> Unit,
     onHeaderClick: () -> Unit,

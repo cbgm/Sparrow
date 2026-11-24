@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
@@ -16,7 +16,7 @@ internal class GroupOwnerWelcomeDataSource(
     private val store: GroupMembershipStoreDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val epoch: GroupEpochDataSource,
-    private val initialSecurity: GroupSecurityManager,
+    private val initialSecurity: GroupSecurityRepositoryImpl,
     private val epochSecurity: GroupEpochSecurityDataSource,
     private val broadcaster: GroupPacketBroadcaster,
     private val lock: GroupMembershipLock,

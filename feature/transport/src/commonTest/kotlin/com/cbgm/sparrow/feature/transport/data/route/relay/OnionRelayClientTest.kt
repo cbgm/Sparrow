@@ -2,12 +2,12 @@ package com.cbgm.sparrow.feature.transport.data.route.relay
 
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
-import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
-import com.cbgm.sparrow.feature.transport.data.directory.NodeCapability
-import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectory
+import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.NodeCapabilityDto
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
-import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptor
+import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptorDto
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
 import com.cbgm.sparrow.feature.transport.data.route.relayUrl
@@ -46,12 +46,12 @@ class OnionRelayClientTest {
                         assertEquals("https://other.test/v1/relay", forward.relayUrl)
                         val inner = cipher.openLayer(forward.layer, key = 2)
                         assertEquals("https://control.test/v1/nodes", inner.exit!!.url)
-                        val response = json.encodeToString(RelayExitResponse(200, "application/json", "{}".encodeToByteArray()))
+                        val response = json.encodeToString(RelayExitResponseDto(200, "application/json", "{}".encodeToByteArray()))
                         cipher.sealReply(cipher.sealReply(response.encodeToByteArray(), inner.replyKey), outer.replyKey)
                     }
                 )
 
-            val response = client.send(RelayExit("GET", "https://control.test/v1/nodes"))
+            val response = client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))
 
             assertEquals(listOf("https://own.test/v1/relay"), seen)
             assertEquals(200, response?.status)
@@ -68,11 +68,11 @@ class OnionRelayClientTest {
                     network = { _, body ->
                         val layer = cipher.openLayer(body, key = 1)
                         assertEquals("https://control.test/health/registry", layer.exit!!.url)
-                        cipher.sealReply(json.encodeToString(RelayExitResponse(204)).encodeToByteArray(), layer.replyKey)
+                        cipher.sealReply(json.encodeToString(RelayExitResponseDto(204)).encodeToByteArray(), layer.replyKey)
                     }
                 )
 
-            assertEquals(204, client.send(RelayExit("GET", "https://control.test/health/registry"))?.status)
+            assertEquals(204, client.send(RelayExitDto("GET", "https://control.test/health/registry"))?.status)
         }
 
     @Test
@@ -80,7 +80,7 @@ class OnionRelayClientTest {
         runTest {
             val client = onionClient(nodes = listOf(node("old", null)), preferred = null, network = { _, _ -> error("No request") })
 
-            assertNull(client.send(RelayExit("GET", "https://control.test/v1/nodes")))
+            assertNull(client.send(RelayExitDto("GET", "https://control.test/v1/nodes")))
         }
 
     @Test
@@ -118,7 +118,7 @@ class OnionRelayClientTest {
                     }
                 )
 
-            repeat(5) { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
+            repeat(5) { client.send(RelayExitDto("GET", "https://control.test/v1/nodes")) }
 
             assertEquals(List(5) { "https://c.test/v1/relay" }, firstHops)
         }
@@ -137,9 +137,9 @@ class OnionRelayClientTest {
                     }
                 )
 
-            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            assertEquals(200, client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))?.status)
             // The retry and the next request use the remaining relay alone.
-            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            assertEquals(200, client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))?.status)
             assertEquals(3, firstHops.size)
         }
 
@@ -157,7 +157,7 @@ class OnionRelayClientTest {
                     }
                 )
 
-            repeat(4) { assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status) }
+            repeat(4) { assertEquals(200, client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))?.status) }
 
             // Every request that reached the Control Plane went through the own node and the third one.
             assertTrue(routes.isNotEmpty())
@@ -180,7 +180,7 @@ class OnionRelayClientTest {
                     }
                 )
 
-            assertEquals(200, client.send(RelayExit("GET", "https://control.test/v1/nodes"))?.status)
+            assertEquals(200, client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))?.status)
             assertEquals(listOf("https://own.test/v1/relay", "https://other.test/v1/relay"), firstHops)
         }
 
@@ -201,11 +201,11 @@ class OnionRelayClientTest {
                     }
                 )
 
-            client.send(RelayExit("GET", "https://control.test/v1/nodes"))
+            client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))
             downIsDown = false
             clock = 1L + COOLDOWN
             routes.clear()
-            client.send(RelayExit("GET", "https://control.test/v1/nodes"))
+            client.send(RelayExitDto("GET", "https://control.test/v1/nodes"))
 
             assertEquals(listOf(2), routes)
         }
@@ -225,8 +225,8 @@ class OnionRelayClientTest {
                     }
                 )
 
-            assertFailsWith<IllegalStateException> { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
-            assertFailsWith<IllegalStateException> { client.send(RelayExit("GET", "https://control.test/v1/nodes")) }
+            assertFailsWith<IllegalStateException> { client.send(RelayExitDto("GET", "https://control.test/v1/nodes")) }
+            assertFailsWith<IllegalStateException> { client.send(RelayExitDto("GET", "https://control.test/v1/nodes")) }
             // No retry: both requests went once through the same two relays.
             assertEquals(2, calls)
         }
@@ -250,7 +250,7 @@ class OnionRelayClientTest {
             if (forward == null) {
                 hops?.add(depth)
                 path?.add(visited + url)
-                json.encodeToString(RelayExitResponse(200, "application/json", "{}".encodeToByteArray())).encodeToByteArray()
+                json.encodeToString(RelayExitResponseDto(200, "application/json", "{}".encodeToByteArray())).encodeToByteArray()
             } else {
                 if (forward.relayUrl in failing) throw RelayDown()
                 relayNetwork(forward.relayUrl, forward.layer, failing, hops, depth + 1, path, visited + url)
@@ -258,7 +258,7 @@ class OnionRelayClientTest {
         return cipher.sealReply(reply, layer.replyKey)
     }
 
-    private fun peel(body: ByteArray): RelayLayer = json.decodeFromString(body.copyOfRange(1, body.size).decodeToString())
+    private fun peel(body: ByteArray): RelayLayerDto = json.decodeFromString(body.copyOfRange(1, body.size).decodeToString())
 
     private class RelayDown : RuntimeException()
 
@@ -304,7 +304,7 @@ class OnionRelayClientTest {
         }
 
     private fun onionClient(
-        nodes: List<SparrowNodeDescriptor>,
+        nodes: List<SparrowNodeDescriptorDto>,
         preferred: String?,
         connected: () -> String? = { null },
         now: () -> Long = { 1L },
@@ -312,17 +312,17 @@ class OnionRelayClientTest {
         network: suspend (String, ByteArray) -> ByteArray
     ): OnionRelayClient {
         val directory =
-            SignedNodeDirectory(
-                directory = NodeDirectory(generatedAtEpochMilliseconds = 1L, validUntilEpochMilliseconds = 2L, nodes = nodes),
+            SignedNodeDirectoryDto(
+                directory = NodeDirectoryDto(generatedAtEpochMilliseconds = 1L, validUntilEpochMilliseconds = 2L, nodes = nodes),
                 authorityNodeId = "root",
                 authorityPublicKey = byteArrayOf(1),
                 signature = byteArrayOf(1)
             )
         val cache =
             object : NodeDirectoryCache {
-                override suspend fun read() = CachedNodeDirectory(json.encodeToString(directory), "root")
+                override suspend fun read() = CachedNodeDirectoryDto(json.encodeToString(directory), "root")
 
-                override suspend fun write(directory: CachedNodeDirectory) = Unit
+                override suspend fun write(directory: CachedNodeDirectoryDto) = Unit
             }
         val store = FakeTransportPreferencesRepository(preferredNode = preferred)
         // Like the app's shared client: failed answers would be thrown unless the request asks otherwise.
@@ -356,13 +356,13 @@ class OnionRelayClientTest {
         name: String,
         relayKey: Int?,
         operator: String? = null
-    ) = SparrowNodeDescriptor(
+    ) = SparrowNodeDescriptorDto(
         nodeId = name,
         clientEndpoint = "wss://$name.test/v1/gateway",
         mailboxEndpoint = "https://$name.test",
         identityPublicKey = byteArrayOf(1),
         protocolVersions = setOf(1),
-        capabilities = NodeCapability.entries.toSet(),
+        capabilities = NodeCapabilityDto.entries.toSet(),
         validUntilEpochMilliseconds = 10L,
         relayKey = relayKey?.let { key -> ByteArray(32) { key.toByte() } },
         operator = operator,
@@ -389,7 +389,7 @@ class OnionRelayClientTest {
         fun openLayer(
             sealed: ByteArray,
             key: Int
-        ): RelayLayer {
+        ): RelayLayerDto {
             assertEquals(key.toByte(), sealed.first())
             return json.decodeFromString(sealed.copyOfRange(1, sealed.size).decodeToString())
         }

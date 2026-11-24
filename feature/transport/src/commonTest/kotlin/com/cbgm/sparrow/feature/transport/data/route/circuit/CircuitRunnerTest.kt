@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
 import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
-import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
-import com.cbgm.sparrow.feature.transport.data.directory.NodeCapability
-import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectory
+import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.NodeCapabilityDto
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
-import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptor
+import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
+import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptorDto
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
 import io.ktor.client.HttpClient
@@ -121,17 +121,17 @@ class CircuitRunnerTest {
     ): CircuitRunner {
         val nodes = listOf(node("own", "Home")) + operators.map { (name, operator) -> node(name, operator) }
         val directory =
-            SignedNodeDirectory(
-                directory = NodeDirectory(generatedAtEpochMilliseconds = 1L, validUntilEpochMilliseconds = 2L, nodes = nodes),
+            SignedNodeDirectoryDto(
+                directory = NodeDirectoryDto(generatedAtEpochMilliseconds = 1L, validUntilEpochMilliseconds = 2L, nodes = nodes),
                 authorityNodeId = "root",
                 authorityPublicKey = byteArrayOf(1),
                 signature = byteArrayOf(1)
             )
         val cache =
             object : NodeDirectoryCache {
-                override suspend fun read() = CachedNodeDirectory(json.encodeToString(directory), "root")
+                override suspend fun read() = CachedNodeDirectoryDto(json.encodeToString(directory), "root")
 
-                override suspend fun write(directory: CachedNodeDirectory) = Unit
+                override suspend fun write(directory: CachedNodeDirectoryDto) = Unit
             }
         return CircuitRunner(
             httpClient = HttpClient(MockEngine { respond("") }),
@@ -145,13 +145,13 @@ class CircuitRunnerTest {
     private fun node(
         name: String,
         operator: String
-    ) = SparrowNodeDescriptor(
+    ) = SparrowNodeDescriptorDto(
         nodeId = name,
         clientEndpoint = "wss://$name.test/v1/gateway",
         mailboxEndpoint = "https://$name.test",
         identityPublicKey = byteArrayOf(1),
         protocolVersions = setOf(1),
-        capabilities = NodeCapability.entries.toSet(),
+        capabilities = NodeCapabilityDto.entries.toSet(),
         validUntilEpochMilliseconds = 10L,
         relayKey = ByteArray(32) { name.first().code.toByte() },
         operator = operator,

@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 
 internal class NodeControlPlaneDiscoverySynchronizer(
-    private val source: NodeControlPlaneDirectorySource,
+    private val source: NodeControlPlaneDirectoryRemoteDataSource,
     private val candidateVerifier: ControlPlaneCandidateVerifier,
     private val configuration: ControlPlaneEndpointStore
 ) {

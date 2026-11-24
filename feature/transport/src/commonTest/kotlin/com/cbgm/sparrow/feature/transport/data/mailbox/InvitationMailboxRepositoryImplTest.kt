@@ -17,7 +17,7 @@ class InvitationMailboxRepositoryImplTest {
     private var now = 0L
     private var nodes: Result<List<NodeEndpoint>> = Result.success(listOf(NODE_A))
     private val store = MemoryStore()
-    private val gateway = OpeningGateway()
+    private val gateway = OpeningMailboxRepository()
     private val renewal =
         InvitationMailboxRepositoryImpl(
             nodeEndpointResolver =
@@ -98,7 +98,7 @@ class InvitationMailboxRepositoryImplTest {
         }
     }
 
-    private class OpeningGateway : MailboxRepository {
+    private class OpeningMailboxRepository : MailboxRepository {
         var opened = 0
 
         override suspend fun createInvitation(

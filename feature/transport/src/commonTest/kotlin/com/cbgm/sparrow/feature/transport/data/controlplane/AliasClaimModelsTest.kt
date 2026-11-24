@@ -14,7 +14,7 @@ class AliasClaimModelsTest {
     @Test
     fun aSignedClaimIsTheUnsignedClaimWithItsSignature() {
         val unsigned =
-            UnsignedAliasClaim(
+            UnsignedAliasClaimDto(
                 routingId = "scrouting1_device",
                 clientSigningPublicKey = byteArrayOf(1, 2),
                 aliases = listOf("scphone1_a"),
@@ -22,7 +22,7 @@ class AliasClaimModelsTest {
                 issuedAtEpochMilliseconds = 7L
             )
         val claim =
-            AliasClaim(
+            AliasClaimDto(
                 routingId = unsigned.routingId,
                 clientSigningPublicKey = unsigned.clientSigningPublicKey,
                 aliases = unsigned.aliases,
@@ -39,7 +39,7 @@ class AliasClaimModelsTest {
         )
         assertEquals(unsignedJson.dropLast(1) + ""","signature":[9]}""", json.encodeToString(claim))
 
-        val decoded = json.decodeFromString<AliasClaim>(json.encodeToString(claim))
+        val decoded = json.decodeFromString<AliasClaimDto>(json.encodeToString(claim))
         assertEquals(listOf("scphone1_a"), decoded.aliases)
         assertEquals("attestation", decoded.phoneAttestation)
         assertEquals(7L, decoded.issuedAtEpochMilliseconds)
@@ -47,7 +47,7 @@ class AliasClaimModelsTest {
 
     @Test
     fun aClaimWithoutAttestationLeavesTheFieldOut() {
-        val unsigned = UnsignedAliasClaim("scrouting1_device", byteArrayOf(1), listOf("scphone1_a"), issuedAtEpochMilliseconds = 7L)
+        val unsigned = UnsignedAliasClaimDto("scrouting1_device", byteArrayOf(1), listOf("scphone1_a"), issuedAtEpochMilliseconds = 7L)
 
         assertTrue("phoneAttestation" !in json.encodeToString(unsigned))
     }
@@ -56,11 +56,11 @@ class AliasClaimModelsTest {
     fun theInvitationRouteIsSignedBetweenTheAttestationAndTheTime() {
         val route = MailboxDeliveryRoute("route", "node-a", "https://node-a.test", "mailbox", "send", 0L, 9L, byteArrayOf())
         val unsigned =
-            UnsignedAliasClaim(
+            UnsignedAliasClaimDto(
                 routingId = "scrouting1_device",
                 clientSigningPublicKey = byteArrayOf(1),
                 aliases = listOf("scphone1_a"),
-                invitationRoute = InvitationRoute(route, byteArrayOf(3)),
+                invitationRoute = InvitationRouteDto(route, byteArrayOf(3)),
                 issuedAtEpochMilliseconds = 7L
             )
 
@@ -72,7 +72,7 @@ class AliasClaimModelsTest {
             json.encodeToString(unsigned)
         )
         val claim =
-            AliasClaim(
+            AliasClaimDto(
                 routingId = unsigned.routingId,
                 clientSigningPublicKey = unsigned.clientSigningPublicKey,
                 aliases = unsigned.aliases,
@@ -80,16 +80,16 @@ class AliasClaimModelsTest {
                 issuedAtEpochMilliseconds = unsigned.issuedAtEpochMilliseconds,
                 signature = byteArrayOf(9)
             )
-        val decoded = json.decodeFromString<AliasClaim>(json.encodeToString(claim)).invitationRoute
+        val decoded = json.decodeFromString<AliasClaimDto>(json.encodeToString(claim)).invitationRoute
         assertEquals(route, decoded?.route)
         assertContentEquals(byteArrayOf(3), decoded?.encryptionPublicKey)
     }
 
     @Test
     fun theRequestCarriesOnlyTheSealedClaim() {
-        val request = AliasClaimRequest(byteArrayOf(4, 5))
+        val request = AliasClaimRequestDto(byteArrayOf(4, 5))
 
         assertEquals("""{"sealedClaim":[4,5]}""", json.encodeToString(request))
-        assertContentEquals(byteArrayOf(4, 5), json.decodeFromString<AliasClaimRequest>("""{"sealedClaim":[4,5]}""").sealedClaim)
+        assertContentEquals(byteArrayOf(4, 5), json.decodeFromString<AliasClaimRequestDto>("""{"sealedClaim":[4,5]}""").sealedClaim)
     }
 }

@@ -6,10 +6,10 @@ import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
-import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
+import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
-import com.cbgm.sparrow.feature.settings.device.BuildInfoSource
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
+import com.cbgm.sparrow.feature.settings.device.BuildInfoLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageLocalDataSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
@@ -39,13 +39,13 @@ class OnboardingViewModelTest {
     private val store = RecordingStore()
     private val settingsRepository =
         SettingsRepositoryImpl(
-            buildInfoSource =
-                object : BuildInfoSource {
+            buildInfoDataSource =
+                object : BuildInfoLocalDataSource {
                     override val build = BuildInfo("test", 1, "test", null)
                 },
-            settingsStorage = InMemorySettingsStorage(),
-            systemLanguageSource =
-                object : SystemLanguageSource {
+            settingsDataSource = InMemorySettingsLocalDataSource(),
+            systemLanguageDataSource =
+                object : SystemLanguageLocalDataSource {
                     override fun getLanguageTag(): String = "en"
                 }
         )

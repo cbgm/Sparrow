@@ -15,16 +15,16 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneHealthRe
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusRepositoryImpl
-import com.cbgm.sparrow.feature.transport.data.controlplane.HttpNodeControlPlaneDirectorySource
-import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.HttpNodeControlPlaneDirectoryRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.KEY_TRUSTED_DIRECTORY_PUBLIC_KEY
-import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDirectorySource
+import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDiscoverySynchronizer
-import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAttestationRemoteSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAttestationRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.SignedControlPlaneDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.controlplane.SignedDirectoryControlPlaneCandidateVerifier
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
-import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectorySource
+import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
@@ -97,7 +97,7 @@ internal val controlPlaneModule =
                 cipher = get<SealedMessageCipher>(),
                 routingIdRepository = get<RoutingIdRepository>(),
                 localPhoneNumberSource = get<LocalPhoneNumberSource>(),
-                phoneAttestationRemoteSource = get<PhoneAttestationRemoteSource>(),
+                phoneAttestationRemoteDataSource = get<PhoneAttestationRemoteDataSource>(),
                 invitationMailbox = get<InvitationMailboxRepository>(),
                 encryptionKeyPairSource = get<LocalEncryptionKeyPairSource>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
@@ -105,7 +105,7 @@ internal val controlPlaneModule =
         }
 
         single {
-            InvitationRouteRemoteSource(
+            InvitationRouteRemoteDataSource(
                 controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
                 work = MailboxCreationWorkSolver(get<CryptoHash>()),
@@ -114,7 +114,7 @@ internal val controlPlaneModule =
         }
 
         single {
-            PhoneAttestationRemoteSource(
+            PhoneAttestationRemoteDataSource(
                 controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
                 pinnedDirectoryKey = { get<SparrowDataStore>().getString(KEY_TRUSTED_DIRECTORY_PUBLIC_KEY) },
@@ -159,15 +159,15 @@ internal val controlPlaneModule =
             )
         }
 
-        single<NodeControlPlaneDirectorySource> {
-            HttpNodeControlPlaneDirectorySource(
+        single<NodeControlPlaneDirectoryRemoteDataSource> {
+            HttpNodeControlPlaneDirectoryRemoteDataSource(
                 httpClient = get<HttpClient>()
             )
         }
 
         single<ControlPlaneCandidateVerifier> {
             SignedDirectoryControlPlaneCandidateVerifier(
-                nodeDirectorySource = get<NodeDirectorySource>(),
+                nodeDirectoryRemoteDataSource = get<NodeDirectoryRemoteDataSource>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 verifier = get<NodeDirectoryVerifier>(),
                 transportConfig = get<TransportConfig>()
@@ -176,7 +176,7 @@ internal val controlPlaneModule =
 
         single {
             NodeControlPlaneDiscoverySynchronizer(
-                source = get<NodeControlPlaneDirectorySource>(),
+                source = get<NodeControlPlaneDirectoryRemoteDataSource>(),
                 candidateVerifier = get<ControlPlaneCandidateVerifier>(),
                 configuration = get<ControlPlaneEndpointStore>()
             )

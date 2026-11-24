@@ -23,7 +23,7 @@ import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlP
 import com.cbgm.sparrow.feature.settings.presentation.network.component.DirectorySourceCard
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUi
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import com.cbgm.sparrow.resources.Res
@@ -142,25 +142,25 @@ fun ControlPaneSettingsScreenPreview() {
         ControlPlaneSettingsScreen(
             uiState = ControlPlaneSettingsUiState(
                 entries = listOf(
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.CHECKING
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example4.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.AVAILABLE
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example3.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.UNREACHABLE
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example6.com",
                         source = ControlPlaneUiSource.DIRECTORY,
                         canRemove = true,

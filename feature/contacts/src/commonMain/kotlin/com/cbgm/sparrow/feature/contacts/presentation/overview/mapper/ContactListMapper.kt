@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.mapper
 
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
 
@@ -30,7 +30,7 @@ fun List<Contact>.filterContacts(query: String): List<Contact> {
     }
 }
 
-fun List<ContactUi>.groupContactsByInitial(): List<ContactGroupEntity> =
+fun List<ContactUi>.groupContactsByInitial(): List<ContactGroupUi> =
     sortedBy { contact ->
         contact.displayName.orEmpty().lowercase()
     }.groupBy { contact ->
@@ -42,7 +42,7 @@ fun List<ContactUi>.groupContactsByInitial(): List<ContactGroupEntity> =
             ?.toString()
             ?: "#"
     }.map { (title, contacts) ->
-        ContactGroupEntity(
+        ContactGroupUi(
             title = title,
             contacts = contacts
         )
@@ -66,7 +66,7 @@ internal fun List<Contact>.toContactsUiState(query: String): ContactsUiState {
 }
 
 /** Converts domain contacts to presentation data before grouping. */
-fun List<Contact>.toContactGroups(): List<ContactGroupEntity> =
+fun List<Contact>.toContactGroups(): List<ContactGroupUi> =
     map(Contact::toContactUi).groupContactsByInitial()
 
 /** Search used by presentation-only contact lists such as the group picker. */

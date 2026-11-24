@@ -35,7 +35,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUi
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiState
 import com.cbgm.sparrow.resources.Res
@@ -234,8 +234,8 @@ private fun PreferredNodeScreenPreview() {
                 preferredNodeId = "node-b",
                 isLoading = false,
                 nodes = listOf(
-                    GatewayNodeUiModel("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
-                    GatewayNodeUiModel("node-a", "node-a", "node.example.org", false)
+                    GatewayNodeUi("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
+                    GatewayNodeUi("node-a", "node-a", "node.example.org", false)
                 )
             ),
             onUiEvent = {}

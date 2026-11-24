@@ -53,7 +53,7 @@ import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ScrollToBottomButton
 import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
-import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
+import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItemUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.LastMessagePreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
@@ -246,7 +246,7 @@ private fun ActiveAutoReplyBanner(
 
 @Composable
 private fun ConversationItem(
-    conversation: ConversationListItem,
+    conversation: ConversationListItemUi,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -423,7 +423,7 @@ private fun OverviewScreenPreview() {
                 OverviewUiState(
                     conversations =
                         listOf(
-                            ConversationListItem(
+                            ConversationListItemUi(
                                 contactId = "1",
                                 contactName = "Alice",
                                 avatarTarget = AvatarTarget.User("1"),
@@ -432,7 +432,7 @@ private fun OverviewScreenPreview() {
                                 unreadCount = 3,
                                 conversationId = "5"
                             ),
-                            ConversationListItem(
+                            ConversationListItemUi(
                                 contactId = "2",
                                 contactName = "Bob",
                                 avatarTarget = AvatarTarget.User("2"),

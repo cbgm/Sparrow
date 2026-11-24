@@ -43,8 +43,8 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyEditorUiState
+import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyItemUi
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiEvent
-import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiItem
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -171,7 +171,7 @@ private fun AutoReplyOffItem(selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun AutoReplyItem(
-    reply: AutoReplyUiItem,
+    reply: AutoReplyItemUi,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -318,13 +318,13 @@ private fun AutoReplySettingsScreenPreview() {
                     AutoReplyUiState(
                         replies =
                             listOf(
-                                AutoReplyUiItem(
+                                AutoReplyItemUi(
                                     id = "1",
                                     name = "Vacation",
                                     text = "I'm currently on vacation and will reply when I'm back.",
                                     isActive = true
                                 ),
-                                AutoReplyUiItem(
+                                AutoReplyItemUi(
                                     id = "2",
                                     name = "Meeting",
                                     text = "I'm currently in a meeting.",

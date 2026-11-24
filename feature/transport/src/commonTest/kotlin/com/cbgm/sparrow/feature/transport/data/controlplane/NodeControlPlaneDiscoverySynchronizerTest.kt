@@ -75,7 +75,7 @@ class NodeControlPlaneDiscoverySynchronizerTest {
 
     private class FakeNodeControlPlaneDirectorySource(
         private val urls: List<String>
-    ) : NodeControlPlaneDirectorySource {
+    ) : NodeControlPlaneDirectoryRemoteDataSource {
         override suspend fun fetch(websocketUrl: String): Result<List<String>> = Result.success(urls)
     }
 

@@ -13,7 +13,7 @@ sequenceDiagram
     participant DEL as DeliverDirectMessageWorkflow
     participant DB as Room
     participant OUT as ProtocolOutbox
-    participant RUN as DefaultOutboxRunner
+    participant RUN as RetryingOutboxRunner
     participant SEND as OutgoingPacketSender
     participant MB as MailboxOutgoingWireSender
 
@@ -53,7 +53,7 @@ Retrying a failed Direct message (`RetryDirectMessageWorkflow`) resends its pack
 ```mermaid
 sequenceDiagram
     participant MB as MailboxArrivalListener / MailboxPendingSynchronizer
-    participant IP as IncomingEnvelopeProcessorImpl
+    participant IP as ParkingIncomingEnvelopeProcessor
     participant H as IncomingTransportMessageHandler
     participant ROUTE as RouteIncomingPacketWorkflow
     participant CTRL as ControlPacketDispatcher
@@ -80,7 +80,7 @@ Whole packets can also arrive too early: a group packet before the welcome of it
 welcome of a group the user just joined), or a direct message or operation of a contact whose invitation is
 still in flight (the accepter sends `ContactInviteAccepted` and then a message, and the message is processed
 first). `RouteIncomingPacketWorkflow` then fails with `IncomingPacketDeferredException`;
-`IncomingEnvelopeProcessorImpl` parks the envelope and acknowledges it, because an unacknowledged live envelope
+`ParkingIncomingEnvelopeProcessor` parks the envelope and acknowledges it, because an unacknowledged live envelope
 is lost and a mailbox envelope would be redelivered until it expires. After each envelope that was handled, the
 parked envelopes whose wait is met are processed again in arrival order
 ([Conversation orchestration](../architecture/conversation-orchestration.md#packets-that-arrive-too-early)).
@@ -110,13 +110,13 @@ Explicit recovery/reconnection is documented separately in [Identity recovery](i
 
 ## Offline mailbox
 
-Every packet goes into a mailbox: `OutgoingPacketSender` hands it to `MailboxOutgoingWireSender`, which uses the recipient's mailbox route when the app has it and the recipient's invitation mailbox otherwise. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `MailboxRepositoryImpl`.
+Every packet goes into a mailbox: `OutgoingPacketSender` hands it to `MailboxOutgoingWireSender`, which uses the recipient's mailbox route when the app has it and the recipient's invitation mailbox otherwise. Client mailbox lifecycle is implemented around `MailboxRuntime`, `NodeMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `MailboxRepositoryImpl`.
 
 `MailboxRouteProvisioner` decides from the freshly verified, signed node directory, never from a socket failure:
 
 - **Moved node:** a node keeps its node ID when its address changes (for example a new public IP). Saved mailbox credentials whose node ID is in the directory under a new address switch to the node's new mailbox access endpoint. A mailbox whose delivery route still points to the old address is renewed and the new route is shared with the contact (`MailboxRoutePacket`), because contacts keep delivering to the old address until then.
 - **Retired node:** a node ID that is missing from the verified directory means the old mailbox is gone; a replacement is saved without revoking the old one.
-- **Unreachable or refusing node:** `DefaultMailboxCapabilityLifecycle.revokeForContact` deletes the remote route and marks the local mailbox revocation pending. If the revocation fails for any reason, it stays pending instead of failing the caller (for example deleting a chat or approving an identity change); provisioning retries every pending revocation, and one that keeps failing does not hold up the others. A node that answers 404, 410 or 401 no longer has the mailbox, so the revocation counts as done.
+- **Unreachable or refusing node:** `NodeMailboxCapabilityLifecycle.revokeForContact` deletes the remote route and marks the local mailbox revocation pending. If the revocation fails for any reason, it stays pending instead of failing the caller (for example deleting a chat or approving an identity change); provisioning retries every pending revocation, and one that keeps failing does not hold up the others. A node that answers 404, 410 or 401 no longer has the mailbox, so the revocation counts as done.
 - **Renewal:** the replacement is saved and its route shared (`MailboxRoutePacket`, queued in the outbox), but the old mailbox is not revoked yet: it may still hold envelopes, and the contact keeps sending to the old route until the packet arrived. The old credential becomes a *retiring* credential (`retiring_mailbox_credentials`, one row per route, saved together with the replacement in one transaction). It stays readable until it expires; after its expiry provisioning revokes it once the pending synchronization emptied it (or after a grace period of 7 days). A revocation that fails because the node is unreachable is retried by the next provisioning; any other failure drops the local copy and the node expires the mailbox itself. A retiring mailbox on a retired node is dropped without revocation.
 - **Eligibility:** `GetMailboxContactStatesUseCase` (Contacts) gives a contact a mailbox only with a mutual identity and a routing ID, and only while it is someone we still talk to: a direct conversation with an established identity exchange, or an active group we share (group packets also arrive through the mailbox). A contact whose direct chat was deleted (exchange revoked, conversation removed, mailbox revoked) therefore never gets a fresh mailbox or route, even though it stays MUTUAL.
 - **Blocked contact / deleted chat:** `revokeForContact` revokes the current and every retiring mailbox of the contact; `revokeAll` and the pending-revocation retry cover retiring mailboxes too.

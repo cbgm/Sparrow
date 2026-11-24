@@ -7,7 +7,7 @@ import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
-import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
+import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
@@ -51,7 +51,7 @@ internal class AliasClaimRegistrar(
     private val cipher: SealedMessageCipher,
     private val routingIdRepository: RoutingIdRepository,
     private val localPhoneNumberSource: LocalPhoneNumberSource,
-    private val phoneAttestationRemoteSource: PhoneAttestationRemoteSource,
+    private val phoneAttestationRemoteDataSource: PhoneAttestationRemoteDataSource,
     private val invitationMailbox: InvitationMailboxRepository,
     private val encryptionKeyPairSource: LocalEncryptionKeyPairSource,
     private val json: Json,
@@ -94,7 +94,7 @@ internal class AliasClaimRegistrar(
     /** The verifier's attestation while the sign-up token is still in memory; null without one or when it failed. */
     private suspend fun phoneAttestation(routingId: String): String? {
         val token = localPhoneNumberSource.getPhoneVerificationToken().getOrNull() ?: return null
-        return phoneAttestationRemoteSource
+        return phoneAttestationRemoteDataSource
             .attest(token, routingId)
             .onFailure { failure -> logger.warn { "Phone attestation failed: ${failure::class.simpleName}" } }
             .onFailure { failure -> failure.reportLimit() }
@@ -105,7 +105,7 @@ internal class AliasClaimRegistrar(
      * The invitation mailbox, renewed first when due. When it cannot be renewed now (offline), the newest one that
      * still lives: a claim without one would take it away from the presence directories.
      */
-    private suspend fun invitationRoute(): InvitationRoute? {
+    private suspend fun invitationRoute(): InvitationRouteDto? {
         val mailbox =
             invitationMailbox
                 .current()
@@ -113,7 +113,7 @@ internal class AliasClaimRegistrar(
                 .getOrNull()
                 ?: invitationMailbox.receiving().getOrNull()?.firstOrNull()
                 ?: return null
-        return InvitationRoute(mailbox.deliveryRoute, encryptionKeyPairSource.getEncryptionKeyPair().getOrThrow().publicKey)
+        return InvitationRouteDto(mailbox.deliveryRoute, encryptionKeyPairSource.getEncryptionKeyPair().getOrThrow().publicKey)
     }
 
     private suspend fun Throwable.reportLimit() {
@@ -136,8 +136,8 @@ internal class AliasClaimRegistrar(
                     controlPlaneHttpClient
                         .post("${baseUrl.trimEnd('/')}/v1/alias-claims") {
                             contentType(ContentType.Application.Json)
-                            setBody(json.encodeToString(AliasClaimRequest(sealed)))
-                        }.body<AliasClaimResult>()
+                            setBody(json.encodeToString(AliasClaimRequestDto(sealed)))
+                        }.body<AliasClaimResultDto>()
                 ClaimOutcome.Bound(result.acceptedAliasIndexes.mapNotNull(content.aliases::getOrNull))
             }
         } catch (cancellation: CancellationException) {
@@ -154,7 +154,7 @@ internal class AliasClaimRegistrar(
     private suspend fun aliasClaimKey(baseUrl: String): ByteArray? {
         val root = relayPolicy.trustedRoot(baseUrl) ?: return null
         val directory =
-            json.decodeFromString<SignedNodeDirectory>(
+            json.decodeFromString<SignedNodeDirectoryDto>(
                 controlPlaneHttpClient.get("${baseUrl.trimEnd('/')}/v1/nodes").bodyAsText()
             )
         directoryVerifier
@@ -174,7 +174,7 @@ internal class AliasClaimRegistrar(
         presenceKey: ByteArray
     ): ByteArray {
         val unsigned =
-            UnsignedAliasClaim(
+            UnsignedAliasClaimDto(
                 routingId = routingId,
                 clientSigningPublicKey = signingKeyPair.publicKey,
                 aliases = content.aliases,
@@ -187,7 +187,7 @@ internal class AliasClaimRegistrar(
                 .sign(json.encodeToString(unsigned).encodeToByteArray(), signingKeyPair.privateKey)
                 .getOrThrow()
         val claim =
-            AliasClaim(
+            AliasClaimDto(
                 routingId = unsigned.routingId,
                 clientSigningPublicKey = unsigned.clientSigningPublicKey,
                 aliases = unsigned.aliases,
@@ -202,7 +202,7 @@ internal class AliasClaimRegistrar(
     private class ClaimContent(
         val aliases: List<String>,
         val attestation: String?,
-        val invitationRoute: InvitationRoute?
+        val invitationRoute: InvitationRouteDto?
     )
 
     private sealed interface ClaimOutcome {

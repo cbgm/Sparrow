@@ -18,7 +18,7 @@ import com.cbgm.sparrow.feature.attachments.domain.usecase.SaveMessageAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.AttachmentViewModel
 import com.cbgm.sparrow.feature.attachments.presentation.management.AttachmentManagementViewModel
 import com.cbgm.sparrow.feature.attachments.presentation.storage.AttachmentStorageViewModel
-import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheQueue
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -30,7 +30,7 @@ val attachmentsModule =
         singleOf(::LocalAttachmentDataSource)
         singleOf(::MessageAttachmentDataSource)
         singleOf(::AttachmentContentDataSource)
-        singleOf(::MessageAttachmentCacheCoordinator)
+        singleOf(::MessageAttachmentCacheQueue)
         singleOf(::MessageAttachmentOperationsRepositoryImpl) {
             bind<MessageAttachmentOperationsRepository>()
         }

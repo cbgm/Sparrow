@@ -9,7 +9,7 @@ import com.cbgm.sparrow.protocol.packet.SparrowPacket
 
 /** Shows an indicator that arrived in a mailbox; one sent too long ago would show a state that is over. */
 class IndicatorPacketHandler(
-    private val indicators: MailboxMessagingIndicatorGateway
+    private val indicators: MailboxMessagingIndicators
 ) : TypedProtocolPacketHandler {
     private val logger = SparrowLog.withTag("IndicatorPacketHandler")
 

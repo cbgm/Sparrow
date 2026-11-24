@@ -18,7 +18,7 @@ import com.cbgm.sparrow.runtime.startup.task.RestoreControlPlaneDirectoryStartup
 import com.cbgm.sparrow.runtime.startup.task.StartApprovedIdentityReconnectionObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartAttachmentConversationNameObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartContactBlockObserverStartupTask
-import com.cbgm.sparrow.runtime.startup.task.StartConversationNotificationCoordinatorStartupTask
+import com.cbgm.sparrow.runtime.startup.task.StartConversationNotificationDispatcherStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartDirectIdentityResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartInvitationResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartMembershipResultObserverStartupTask
@@ -41,7 +41,7 @@ fun createApplicationStartupTasks(
         ResolveIdentityStatusStartupTask(initialization),
         RestoreControlPlaneDirectoryStartupTask(initialization),
         InitializeNotificationRuntimeStartupTask(initialization),
-        StartConversationNotificationCoordinatorStartupTask(initialization),
+        StartConversationNotificationDispatcherStartupTask(initialization),
         StartAttachmentConversationNameObserverStartupTask(initialization),
         StartInvitationResultObserverStartupTask(initialization),
         StartMembershipResultObserverStartupTask(initialization),

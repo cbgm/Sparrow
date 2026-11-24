@@ -39,7 +39,7 @@ class ForegroundConnectionHandler(
         // Sending does not depend on the mailboxes below, and their requests may wait for a circuit.
         foreground.outboxRunner.start()
 
-        val initialProvisioning = foreground.mailboxCoordinator.provisionRoutes()
+        val initialProvisioning = foreground.mailboxPort.provisionRoutes()
         val initialFailure = initialProvisioning.exceptionOrNull()
         if (initialFailure is CancellationException) throw initialFailure
 
@@ -50,7 +50,7 @@ class ForegroundConnectionHandler(
                 }
             }.onFailure { error -> logDeferred("Mailbox route provisioning deferred", error) }
 
-        foreground.mailboxCoordinator.synchronizePending()
+        foreground.mailboxPort.synchronizePending()
             .onSuccess { processed ->
                 logger.info {
                     "Mailbox synchronization completed; processed=$processed"
@@ -76,7 +76,7 @@ class ForegroundConnectionHandler(
         while (true) {
             delay(backoffMilliseconds.milliseconds)
 
-            val result = foreground.mailboxCoordinator.provisionRoutes()
+            val result = foreground.mailboxPort.provisionRoutes()
             val failure = result.exceptionOrNull()
             if (failure is CancellationException) throw failure
 

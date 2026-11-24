@@ -50,7 +50,7 @@ internal class OnionRelayEngine(
                 else -> error("Control Plane requests need a byte body")
             }
         val exit =
-            RelayExit(
+            RelayExitDto(
                 method = data.method.value,
                 url = data.url.toString(),
                 contentType = body?.let { data.body.contentType?.toString() ?: ContentType.Application.Json.toString() },
@@ -76,7 +76,7 @@ internal class OnionRelayEngine(
         logger.info { "Control Plane request sent directly, no relaying node known yet: ${url.encodedPath}" }
     }
 
-    private suspend fun direct(exit: RelayExit): RelayExitResponse {
+    private suspend fun direct(exit: RelayExitDto): RelayExitResponseDto {
         val response =
             directClient.request(exit.url) {
                 method = HttpMethod.parse(exit.method)
@@ -85,7 +85,7 @@ internal class OnionRelayEngine(
                     setBody(bytes)
                 }
             }
-        return RelayExitResponse(response.status.value, response.headers[HttpHeaders.ContentType], response.readRawBytes())
+        return RelayExitResponseDto(response.status.value, response.headers[HttpHeaders.ContentType], response.readRawBytes())
     }
 }
 

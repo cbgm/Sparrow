@@ -5,8 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasourc
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.DirectMessageDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.GroupMessageDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.datasource.MessageReactionDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.DirectMessagePacketFactoryImpl
-import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.GroupMessagePlaintextCodecImpl
+import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.ContentGroupMessagePlaintextCodec
+import com.cbgm.sparrow.feature.conversationorchestration.message.data.packet.ProfileDirectMessagePacketFactory
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.ConversationUnseenCountRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.DirectConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.message.data.repository.DirectMessageRepositoryImpl
@@ -116,8 +116,8 @@ private fun Module.registerData() {
     singleOf(::DirectMessageRepositoryImpl) { bind<DirectMessageRepository>() }
     singleOf(::GroupMessageRepositoryImpl) { bind<GroupMessageRepository>() }
     singleOf(::MessageReactionRepositoryImpl) { bind<MessageReactionRepository>() }
-    singleOf(::DirectMessagePacketFactoryImpl) { bind<DirectMessagePacketFactory>() }
-    singleOf(::GroupMessagePlaintextCodecImpl) { bind<GroupMessagePlaintextCodec>() }
+    singleOf(::ProfileDirectMessagePacketFactory) { bind<DirectMessagePacketFactory>() }
+    singleOf(::ContentGroupMessagePlaintextCodec) { bind<GroupMessagePlaintextCodec>() }
 }
 
 private fun Module.registerUseCases() {

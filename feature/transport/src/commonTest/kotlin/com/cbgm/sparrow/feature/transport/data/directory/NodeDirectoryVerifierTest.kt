@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.directory
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import kotlinx.coroutines.test.runTest
@@ -8,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class NodeDirectoryVerifierTest {
-    private val cryptoHash = DefaultCryptoHash()
+    private val cryptoHash = Sha256CryptoHash()
     private val verifier =
         NodeDirectoryVerifier(
             signatureCrypto = AcceptingSignatureCrypto,
@@ -222,7 +222,7 @@ class NodeDirectoryVerifierTest {
             val directory =
                 signedDirectory(
                     protocolVersions = setOf(2),
-                    capabilities = setOf(NodeCapability.MAILBOX)
+                    capabilities = setOf(NodeCapabilityDto.MAILBOX)
                 )
 
             val result =
@@ -239,13 +239,13 @@ class NodeDirectoryVerifierTest {
     private fun signedDirectory(
         directoryValidUntil: Long = NOW + 60_000L,
         protocolVersions: Set<Int> = setOf(1),
-        capabilities: Set<NodeCapability> = setOf(NodeCapability.GATEWAY),
+        capabilities: Set<NodeCapabilityDto> = setOf(NodeCapabilityDto.GATEWAY),
         authoritySeed: Int = 2,
         keyVersion: Long = 1L,
         certificateValidUntil: Long = NOW + 120_000L,
         legacyRootSigning: Boolean = false,
         signingSeed: Int? = null
-    ): SignedNodeDirectory {
+    ): SignedNodeDirectoryDto {
         val rootKey = encodedPublicKey(seed = 1)
         val certifiedAuthorityKey =
             if (legacyRootSigning) rootKey else encodedPublicKey(seed = authoritySeed)
@@ -256,7 +256,7 @@ class NodeDirectoryVerifierTest {
             if (legacyRootSigning) {
                 null
             } else {
-                RegistryAuthorityCertificate(
+                RegistryAuthorityCertificateDto(
                     rootNodeId = nodeId(rootKey),
                     rootPublicKey = rootKey,
                     authorityNodeId = nodeId(certifiedAuthorityKey),
@@ -269,7 +269,7 @@ class NodeDirectoryVerifierTest {
             }
         val signingCertificate =
             signingSeed?.let {
-                RegistrySigningCertificate(
+                RegistrySigningCertificateDto(
                     authorityNodeId = nodeId(certifiedAuthorityKey),
                     authorityPublicKey = certifiedAuthorityKey,
                     signingNodeId = nodeId(directorySigningKey),
@@ -281,7 +281,7 @@ class NodeDirectoryVerifierTest {
                 )
             }
         val node =
-            SparrowNodeDescriptor(
+            SparrowNodeDescriptorDto(
                 nodeId = nodeId(nodeKey),
                 clientEndpoint = "wss://node.example/v1/gateway",
                 mailboxEndpoint = "https://node.example/mailbox",
@@ -291,9 +291,9 @@ class NodeDirectoryVerifierTest {
                 validUntilEpochMilliseconds = NOW + 120_000L,
                 signature = byteArrayOf(2)
             )
-        return SignedNodeDirectory(
+        return SignedNodeDirectoryDto(
             directory =
-                NodeDirectory(
+                NodeDirectoryDto(
                     generatedAtEpochMilliseconds = NOW - 1_000L,
                     validUntilEpochMilliseconds = directoryValidUntil,
                     nodes = listOf(node)

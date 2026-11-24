@@ -22,7 +22,7 @@ internal class ControlPlaneDirectoryRepositoryImpl(
 ) : ControlPlaneDirectoryRepository {
     private val logger = SparrowLog.withTag("ControlPlaneDirectory")
     private val mutex = Mutex()
-    private val remote = ControlPlaneDirectoryRemoteSource(httpClient, json)
+    private val remote = ControlPlaneDirectoryRemoteDataSource(httpClient, json)
     private val verified = VerifiedControlPlaneDirectoryState(configuration, verifier, dataStore, json)
 
     override suspend fun restoreCached(): Result<Int> = mutex.withLock {

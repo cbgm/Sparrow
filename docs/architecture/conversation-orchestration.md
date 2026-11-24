@@ -19,13 +19,13 @@ This page explains the engine and how the modules fit together. The [workflow ca
 | Module | Owns | Main classes |
 |---|---|---|
 | `api` | the public contract Chats depends on | `ConversationOrchestrator`, `awaitResult`, `ConversationCommand` (`DirectConversationCommand`, `GroupMessageCommand`, `GroupAdministrationCommand`, `ForwardMessage`), `ConversationState`, `ConversationResult`, `ConversationFailure`, `ConversationFailureReason`, `ConversationIndicatorObserver` |
-| `engine` | the state-machine runtime | `WorkflowStateMachine`, `ConversationWorkflow`, `WorkflowCommand`, `WorkflowStep`, `Transition`, `WorkflowEngine`, `WorkflowRegistry`, `WorkflowLocks`, `ConversationFailureMapper`, `DefaultConversationOrchestrator` |
-| `delivery` | outbox and transport progress, sending policy, mailbox and routing | [2 workflows](workflows/delivery.md), `DeliveryCommand`, `OutboxDeliveryStateRouter`, `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `GroupRoutingResolver`, `DefaultMailboxCoordinator`, `TransportConversationIndicatorObserver` |
+| `engine` | the state-machine runtime | `WorkflowStateMachine`, `ConversationWorkflow`, `WorkflowCommand`, `WorkflowStep`, `Transition`, `WorkflowEngine`, `WorkflowRegistry`, `WorkflowLocks`, `ConversationFailureMapper` |
+| `delivery` | outbox and transport progress, sending policy, mailbox and routing | [2 workflows](workflows/delivery.md), `DeliveryCommand`, `OutboxDeliveryStateRouter`, `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `GroupRoutingResolver`, `MailboxRuntime`, `TransportConversationIndicatorObserver` |
 | `message` | Direct and Group messages, operations, polls, forwarding | [22 workflows](workflows/message.md), `MessageCommand`, `DirectMessageRepository`, `GroupMessageRepository`, `OutgoingMessageContentPolicy`, `DirectReauthorizationPort`, `PendingAuthorizationCleanupRunner` |
 | `groupstate` | state an admin sets for the whole group: title, description, avatar, pin, expense board | [12 workflows](workflows/groupstate.md), `GroupStateCommand`, `GroupPinRepository`, `GroupTitleRepository`, `GroupDescriptionRepository`, `GroupAvatarRepository`, `RequireGroupAdminContextUseCase`, `ClearGroupStateUseCase` |
 | `membership` | group administration, joining a group, verification | [14 workflows](workflows/membership.md), `MembershipCommand`, `GroupConversationRepository`, `GroupVerificationRepository`, `MembershipResultObserver` |
 | `lifecycle` | how a direct chat opens, gets authorized, loses and regains its authorization | [14 workflows](workflows/lifecycle.md) in `direct/`, `result/`, `recovery/`, `LifecycleCommand`, runtime observers, `WorkflowDirectReauthorization` |
-| `incoming` | routing every decrypted packet to the workflow that applies it | [30 workflows](workflows/incoming.md), `IncomingCommand`, `IncomingEnvelopeProcessorImpl`, `IncomingTransportMessageHandler`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `IncomingPacketCommandMapper` |
+| `incoming` | routing every decrypted packet to the workflow that applies it | [30 workflows](workflows/incoming.md), `IncomingCommand`, `ParkingIncomingEnvelopeProcessor`, `IncomingTransportMessageHandler`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `IncomingPacketCommandMapper` |
 
 All module paths are `:feature:conversationorchestration:<module>`.
 
@@ -96,9 +96,6 @@ classDiagram
         <<interface, api>>
         +execute(command: ConversationCommand) Flow~ConversationState~
     }
-    class DefaultConversationOrchestrator {
-        -engine: WorkflowEngine
-    }
     class WorkflowEngine {
         +execute(command: ConversationCommand) Flow~ConversationState~
         +run(command: WorkflowCommand, acquireLock) Result~ConversationResult~
@@ -136,8 +133,7 @@ classDiagram
         <<interface>>
         +name: String
     }
-    ConversationOrchestrator <|.. DefaultConversationOrchestrator
-    DefaultConversationOrchestrator --> WorkflowEngine
+    ConversationOrchestrator <|.. WorkflowEngine
     WorkflowEngine --> WorkflowRegistry
     WorkflowEngine --> WorkflowLocks
     WorkflowRegistry --> "*" WorkflowStateMachine
@@ -157,7 +153,6 @@ classDiagram
 | `WorkflowEngine` | Runs a command's workflow step by step under its lock and publishes the states. |
 | `WorkflowLocks` | One mutex per lock key; workflows without a key run unrestricted. Not reentrant. |
 | `ConversationFailureMapper` | Turns an exception into a `ConversationFailure`. |
-| `DefaultConversationOrchestrator` | The `api` implementation; hands Chats' commands to the engine. |
 
 ### The run loop
 
@@ -369,7 +364,7 @@ The read side and the write side use different repositories over the same tables
 
 ```mermaid
 flowchart LR
-    RUN["MailboxPendingSynchronizer<br/>(:feature:conversationorchestration:delivery)"] --> PROC[IncomingEnvelopeProcessorImpl]
+    RUN["MailboxPendingSynchronizer<br/>(:feature:conversationorchestration:delivery)"] --> PROC[ParkingIncomingEnvelopeProcessor]
     PROC --> HANDLER["IncomingTransportMessageHandler<br/>decrypt + decode"]
     HANDLER -->|"IncomingCommand.RouteIncomingPacket"| ROUTE[RouteIncomingPacketWorkflow]
     ROUTE -->|ReceiveDirectMessage| DIRECT[ReceiveDirectMessageWorkflow]
@@ -440,7 +435,7 @@ not acknowledged is gone) or block a mailbox for 7 days:
 
 `RouteIncomingPacketWorkflow` then rejects the transition with `IncomingPacketDeferredException(wait)`, where
 the `DeferredPacketWait` is `GroupEpoch(groupId, epoch)` or `ContactExchange(contactId)`.
-`IncomingEnvelopeProcessorImpl` parks the whole envelope in `parked_envelopes` under the wait's key
+`ParkingIncomingEnvelopeProcessor` parks the whole envelope in `parked_envelopes` under the wait's key
 (deduplicated by envelope ID, entries older than 7 days are purged) and reports it as processed, so every
 transport acknowledges it. After each envelope that was handled, the processor runs
 `ReplayParkedEnvelopesUseCase`: for every key whose wait is met (`CheckDeferredPacketReadyUseCase`: the epoch
@@ -566,7 +561,7 @@ Every workflow is registered in its module's Koin module with the same line:
 singleOf(::SendDirectMessageWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
 ```
 
-`conversationEngineModule` provides `WorkflowLocks`, `WorkflowRegistry { getAll<WorkflowStateMachine<*, *, *>>() }`, `WorkflowEngine` and `DefaultConversationOrchestrator` (bound to `ConversationOrchestrator`). `ApplicationModules` loads `conversationEngineModule`, `conversationDeliveryModule`, `conversationMessageModule`, `conversationGroupStateModule`, `conversationMembershipModule`, `conversationLifecycleModule` and `conversationIncomingModule`.
+`conversationEngineModule` provides `WorkflowLocks`, `WorkflowRegistry { getAll<WorkflowStateMachine<*, *, *>>() }`, `WorkflowEngine` (bound to `ConversationOrchestrator`). `ApplicationModules` loads `conversationEngineModule`, `conversationDeliveryModule`, `conversationMessageModule`, `conversationGroupStateModule`, `conversationMembershipModule`, `conversationLifecycleModule` and `conversationIncomingModule`.
 
 ## Adding a workflow
 

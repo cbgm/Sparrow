@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.directory
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 
 class NodeEndpointRepositoryImplTest {
     private val json = createGatewayJson()
-    private val cryptoHash = DefaultCryptoHash()
+    private val cryptoHash = Sha256CryptoHash()
 
     @Test
     fun validRemoteDirectoryIsCachedAndReusedUntilRefresh() =
@@ -83,7 +83,7 @@ class NodeEndpointRepositoryImplTest {
                 )
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(cachedDirectory),
                         trustedRootNodeId = cachedDirectory.authorityNodeId
                     )
@@ -153,7 +153,7 @@ class NodeEndpointRepositoryImplTest {
             val directory = signedDirectory(directoryValidUntil = NOW + 1_000L)
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(directory),
                         trustedRootNodeId = directory.authorityNodeId
                     )
@@ -186,7 +186,7 @@ class NodeEndpointRepositoryImplTest {
                 )
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(cachedDirectory),
                         trustedRootNodeId = cachedDirectory.authorityNodeId
                     )
@@ -215,7 +215,7 @@ class NodeEndpointRepositoryImplTest {
             val source = RecordingNodeDirectorySource(Result.success(json.encodeToString(signedDirectory())))
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(directory),
                         trustedRootNodeId = directory.authorityNodeId
                     )
@@ -235,7 +235,7 @@ class NodeEndpointRepositoryImplTest {
             val source = RecordingNodeDirectorySource(Result.success(json.encodeToString(signedDirectory())))
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(directory),
                         trustedRootNodeId = directory.authorityNodeId
                     )
@@ -263,7 +263,7 @@ class NodeEndpointRepositoryImplTest {
             val directory = signedDirectory(directoryValidUntil = NOW + 1_000L)
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(directory),
                         trustedRootNodeId = directory.authorityNodeId
                     )
@@ -333,7 +333,7 @@ class NodeEndpointRepositoryImplTest {
             val newDirectory = signedDirectory(authoritySeed = 7)
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(oldDirectory),
                         trustedRootNodeId = oldDirectory.authorityNodeId
                     )
@@ -374,7 +374,7 @@ class NodeEndpointRepositoryImplTest {
             val url = "http://192.168.178.60:8390"
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(trusted),
                         trustedRootNodeId = trusted.authorityNodeId,
                         sourceControlPlaneBaseUrl = url,
@@ -398,7 +398,7 @@ class NodeEndpointRepositoryImplTest {
             val url = "https://control.example"
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(oldDirectory),
                         trustedRootNodeId = oldDirectory.authorityNodeId,
                         sourceControlPlaneBaseUrl = url,
@@ -427,7 +427,7 @@ class NodeEndpointRepositoryImplTest {
             val url = "https://control.example"
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(trusted),
                         trustedRootNodeId = trusted.authorityNodeId,
                         sourceControlPlaneBaseUrl = url,
@@ -452,7 +452,7 @@ class NodeEndpointRepositoryImplTest {
             val url = "https://directory-discovered.example"
             val cache =
                 RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
+                    CachedNodeDirectoryDto(
                         encodedDirectory = json.encodeToString(trusted),
                         trustedRootNodeId = trusted.authorityNodeId,
                         sourceControlPlaneBaseUrl = url,
@@ -505,7 +505,7 @@ class NodeEndpointRepositoryImplTest {
         }
 
     private fun perPlaneResolver(
-        source: NodeDirectorySource,
+        source: NodeDirectoryRemoteDataSource,
         cache: NodeDirectoryCache,
         configuration: FakeControlPlaneConfiguration,
         now: () -> Long = { NOW }
@@ -529,7 +529,7 @@ class NodeEndpointRepositoryImplTest {
 
     private class RecordingPerPlaneSource(
         var results: Map<String, Result<String>>
-    ) : NodeDirectorySource {
+    ) : NodeDirectoryRemoteDataSource {
         val visited = mutableListOf<String>()
 
         override suspend fun fetch(registryBaseUrl: String): Result<String> {
@@ -539,7 +539,7 @@ class NodeEndpointRepositoryImplTest {
     }
 
     private fun resolver(
-        source: NodeDirectorySource,
+        source: NodeDirectoryRemoteDataSource,
         cache: NodeDirectoryCache,
         now: () -> Long
     ): NodeEndpointRepositoryImpl {
@@ -571,13 +571,13 @@ class NodeEndpointRepositoryImplTest {
     private fun signedDirectory(
         directoryValidUntil: Long = NOW + 60_000L,
         descriptorValidUntil: Long = NOW + 10L * 60L * 1_000L,
-        nodes: List<SparrowNodeDescriptor>? = null,
+        nodes: List<SparrowNodeDescriptorDto>? = null,
         authoritySeed: Int = 1
-    ): SignedNodeDirectory {
+    ): SignedNodeDirectoryDto {
         val authorityKey = encodedPublicKey(seed = authoritySeed)
-        return SignedNodeDirectory(
+        return SignedNodeDirectoryDto(
             directory =
-                NodeDirectory(
+                NodeDirectoryDto(
                     generatedAtEpochMilliseconds = NOW - 1_000L,
                     validUntilEpochMilliseconds = directoryValidUntil,
                     nodes =
@@ -608,15 +608,15 @@ class NodeEndpointRepositoryImplTest {
         endpoint: String,
         seed: Int,
         validUntil: Long = NOW + 10L * 60L * 1_000L
-    ): SparrowNodeDescriptor {
+    ): SparrowNodeDescriptorDto {
         val key = encodedPublicKey(seed)
-        return SparrowNodeDescriptor(
+        return SparrowNodeDescriptorDto(
             nodeId = nodeId(key),
             clientEndpoint = endpoint,
             mailboxEndpoint = "https://$name.example/mailbox",
             identityPublicKey = key,
             protocolVersions = setOf(1),
-            capabilities = setOf(NodeCapability.GATEWAY),
+            capabilities = setOf(NodeCapabilityDto.GATEWAY),
             validUntilEpochMilliseconds = validUntil,
             signature = byteArrayOf(seed.toByte())
         )
@@ -638,7 +638,7 @@ class NodeEndpointRepositoryImplTest {
     private class RecordingNodeDirectorySource(
         var result: Result<String>,
         private val failuresByBaseUrl: Set<String> = emptySet()
-    ) : NodeDirectorySource {
+    ) : NodeDirectoryRemoteDataSource {
         var fetchCount: Int = 0
 
         override suspend fun fetch(registryBaseUrl: String): Result<String> {
@@ -729,11 +729,11 @@ class NodeEndpointRepositoryImplTest {
     }
 
     private class RecordingNodeDirectoryCache(
-        var value: CachedNodeDirectory? = null
+        var value: CachedNodeDirectoryDto? = null
     ) : NodeDirectoryCache {
-        override suspend fun read(): CachedNodeDirectory? = value
+        override suspend fun read(): CachedNodeDirectoryDto? = value
 
-        override suspend fun write(directory: CachedNodeDirectory) {
+        override suspend fun write(directory: CachedNodeDirectoryDto) {
             value = directory
         }
     }
