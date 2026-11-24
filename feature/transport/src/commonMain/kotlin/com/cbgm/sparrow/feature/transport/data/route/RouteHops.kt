@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.directory.SparrowNodeDescriptor
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.getAndUpdate
@@ -36,7 +36,7 @@ internal class RelayHop(
 internal class RelaySelector(
     private val cache: NodeDirectoryCache,
     private val json: Json,
-    private val preferences: TransportPreferences?,
+    private val preferences: TransportPreferencesRepository?,
     private val connectedNodeId: () -> String?,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds,
     private val random: Random = Random.Default,

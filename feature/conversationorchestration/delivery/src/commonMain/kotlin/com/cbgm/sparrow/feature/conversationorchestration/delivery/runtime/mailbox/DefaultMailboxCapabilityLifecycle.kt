@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -14,7 +14,7 @@ import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
  */
 class DefaultMailboxCapabilityLifecycle(
     private val repository: MailboxRouteRepository,
-    private val gateway: MailboxGateway
+    private val gateway: MailboxRepository
 ) : MailboxCapabilityLifecycle {
     private val logger = SparrowLog.withTag("DefaultMailboxCapabilityLifecycle")
 

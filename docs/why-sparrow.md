@@ -39,10 +39,10 @@ flowchart LR
 
 The exact Sparrow pieces are implemented by classes such as:
 
-- `HttpControlPlaneDirectorySynchronizer` — loads the external Control Plane directory;
+- `ControlPlaneDirectoryRepositoryImpl` — loads the external Control Plane directory;
 - `SignedDirectoryControlPlaneCandidateVerifier` — verifies Control Plane candidates;
 - `HttpNodeDirectorySource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
-- `DefaultTransportConnectionManager` — selects the home node and fails over between nodes;
+- `HomeNodeConnection` — selects the home node and fails over between nodes;
 - `FailedNodeTracker` — keeps temporarily failed nodes out of immediate reselection;
 - `CircuitRunner` — keeps a circuit through relays, starting at the home node;
 - `NodeRegistrationAgent` — registers/heartbeats a Community Node against reachable Control Planes;
@@ -55,7 +55,7 @@ No individual Community Node is intended to become the permanent home of a user'
 ### 1. No single Community Node is mandatory
 
 If one Community Node is shut down, unreachable, overloaded, or operated badly, clients can select another healthy
-node. `DefaultTransportConnectionManager` and the node directory/failure tracking code are designed around this
+node. `HomeNodeConnection` and the node directory/failure tracking code are designed around this
 assumption.
 
 This reduces the blast radius of a **single routing-node failure or compromise**.

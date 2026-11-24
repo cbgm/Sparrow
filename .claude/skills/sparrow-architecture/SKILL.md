@@ -43,7 +43,6 @@ di                   Koin modules
 
 - Only `domain` is public. Everything in `data`, `device` and `presentation` is `internal` unless another module
   truly needs it.
-- Transport (`:feature:transport`) still uses `domain/gateway`; it is being migrated to `repository` / `port`.
 
 ## Layers
 

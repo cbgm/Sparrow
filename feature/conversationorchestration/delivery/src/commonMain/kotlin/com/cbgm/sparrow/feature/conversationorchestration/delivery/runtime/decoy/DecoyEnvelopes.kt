@@ -4,9 +4,9 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.decoy.DecoyEnvelopes.Companion.BURST_WINDOW_MILLISECONDS
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +31,7 @@ class DecoyEnvelopes(
     private val hasProtectingCircuit: () -> Boolean,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val sealer: DecoySealer,
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val random: Random = Random.Default,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -49,7 +49,7 @@ class DecoyEnvelopes(
                 .allLocal()
                 .getOrThrow()
                 .map { credential -> credential.contactId }
-                .filter { contactId -> contactId != recipientContactId && contactId != InvitationMailbox.CONTACT_ID }
+                .filter { contactId -> contactId != recipientContactId && contactId != InvitationMailboxRepository.CONTACT_ID }
                 .distinct()
                 .shuffled(random)
                 .take(count * CANDIDATES_PER_DECOY)
@@ -62,7 +62,7 @@ class DecoyEnvelopes(
     fun depositAlongside(decoys: List<FederatedEnvelope>) {
         decoys.forEach { decoy ->
             scope.launch {
-                mailboxGateway.deliver(decoy).onFailure { error -> logger.debug { "Decoy not deposited: ${error.message}" } }
+                mailboxRepository.deliver(decoy).onFailure { error -> logger.debug { "Decoy not deposited: ${error.message}" } }
             }
         }
     }

@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.settings.domain.usecase
 
 import com.cbgm.sparrow.feature.settings.domain.model.ControlPlaneSettingsContext
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObserveControlPlaneSettingsContextUseCase(
-    private val configuration: ControlPlaneConfiguration,
-    private val statusStore: ControlPlaneStatusStore
+    private val configuration: ControlPlaneConfigurationRepository,
+    private val statusStore: ControlPlaneStatusRepository
 ) {
     operator fun invoke(): Flow<ControlPlaneSettingsContext> =
         combine(

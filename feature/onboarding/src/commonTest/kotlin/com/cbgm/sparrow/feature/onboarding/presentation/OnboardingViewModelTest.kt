@@ -13,8 +13,8 @@ import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.Dispatchers
@@ -178,7 +178,7 @@ class OnboardingViewModelTest {
         steps.forEach { index -> viewModel.onUiEvent(OnboardingUiEvent.PageShown(OnboardingPage.entries[index])) }
     }
 
-    private class RecordingStore : TransportPreferences {
+    private class RecordingStore : TransportPreferencesRepository {
         val saved = mutableListOf<ConnectionMode>()
 
         override fun observeCircuitCount(): Flow<Int> = error("Not used")

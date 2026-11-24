@@ -3,8 +3,8 @@ package com.cbgm.sparrow.feature.transport.data.connection
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDiscoverySynchronizer
-import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
 import kotlinx.coroutines.CancellationException
@@ -22,10 +22,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * in the background while connecting from the cached directory, and on a timer while connected.
  */
 internal class NodeDirectoryRefresh(
-    private val nodeEndpointResolver: NodeEndpointResolver,
+    private val nodeEndpointResolver: NodeEndpointRepository,
     private val controlPlaneDiscoverySynchronizer: NodeControlPlaneDiscoverySynchronizer,
     private val transportConfig: TransportConfig,
-    private val diagnostics: HomeNodeDiagnostics
+    private val diagnostics: TransportDiagnosticsRepositoryImpl
 ) {
     private val logger = SparrowLog.withTag("NodeDirectoryRefresh")
     private var backgroundJob: Job? = null

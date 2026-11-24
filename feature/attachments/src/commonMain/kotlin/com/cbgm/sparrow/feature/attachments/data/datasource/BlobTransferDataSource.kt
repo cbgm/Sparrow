@@ -6,13 +6,13 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.transport.domain.gateway.BlobGateway
 import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
+import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 internal class BlobTransferDataSource(
-    private val blobGateway: BlobGateway,
+    private val blobRepository: BlobRepository,
     private val blobCipher: BlobCipher,
     private val cryptoHash: CryptoHash,
     private val secureRandomGenerator: SecureRandomGenerator
@@ -45,7 +45,7 @@ internal class BlobTransferDataSource(
         }
         val expiresAt = now + effectiveRetentionMilliseconds
         val stored =
-            blobGateway.upload(
+            blobRepository.upload(
                 BlobUpload(
                     blobId = blobId,
                     ciphertext = encrypted.ciphertext,
@@ -70,7 +70,7 @@ internal class BlobTransferDataSource(
     }
 
     suspend fun download(reference: EncryptedBlobReferenceDto): ByteArray {
-        val ciphertext = blobGateway.download(reference.nodeId, reference.blobId, reference.readCapability, reference.ciphertextByteSize)
+        val ciphertext = blobRepository.download(reference.nodeId, reference.blobId, reference.readCapability, reference.ciphertextByteSize)
         check(cryptoHash.sha256(ciphertext).contentEquals(reference.ciphertextSha256)) {
             "Blob ciphertext hash mismatch"
         }
@@ -87,7 +87,7 @@ internal class BlobTransferDataSource(
         reference: EncryptedBlobReferenceDto,
         deleteCapability: String
     ) {
-        blobGateway.delete(reference.nodeId, reference.blobId, deleteCapability)
+        blobRepository.delete(reference.nodeId, reference.blobId, deleteCapability)
     }
 
     @OptIn(ExperimentalEncodingApi::class)

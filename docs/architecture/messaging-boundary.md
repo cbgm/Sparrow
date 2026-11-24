@@ -15,7 +15,7 @@ Messaging crosses several modules, but the current code has a deliberate split b
 | Invitation lifecycle | `:feature:invite` | `InvitationRepositoryImpl`, `InvitationLifecycleDataSource`, `InvitationResultObserver` (consumer in orchestration) |
 | Identity/trust/recovery | `:feature:identity` | `IdentityExchangeDataSource`, pending identity changes, approved reconnection repositories/use cases |
 | Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityManager`, membership use cases |
-| Wire/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `CircuitRunner`, `MailboxOutgoingWireSender`, mailbox/control-plane clients |
+| Wire/discovery | `:feature:transport` | `HomeNodeConnection`, `CircuitRunner`, `MailboxOutgoingWireSender`, mailbox/control-plane clients |
 
 ## Outgoing boundary
 

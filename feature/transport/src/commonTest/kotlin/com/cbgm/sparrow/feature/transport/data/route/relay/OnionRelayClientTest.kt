@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.data.route.relay
 
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
-import com.cbgm.sparrow.feature.transport.FakeTransportPreferences
+import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.directory.NodeCapability
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectory
@@ -324,7 +324,7 @@ class OnionRelayClientTest {
 
                 override suspend fun write(directory: CachedNodeDirectory) = Unit
             }
-        val store = FakeTransportPreferences(preferredNode = preferred)
+        val store = FakeTransportPreferencesRepository(preferredNode = preferred)
         // Like the app's shared client: failed answers would be thrown unless the request asks otherwise.
         val httpClient =
             HttpClient(

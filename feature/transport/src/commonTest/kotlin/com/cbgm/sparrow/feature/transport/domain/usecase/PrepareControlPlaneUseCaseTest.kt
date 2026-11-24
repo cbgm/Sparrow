@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.transport.domain.usecase
 
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
@@ -65,7 +65,7 @@ class PrepareControlPlaneUseCaseTest {
         private val configuration: FakeConfiguration,
         private val cached: List<String>,
         private val fetched: List<String> = emptyList()
-    ) : ControlPlaneDirectorySynchronizer {
+    ) : ControlPlaneDirectoryRepository {
         var refreshes = 0
 
         override suspend fun restoreCached(): Result<Int> {

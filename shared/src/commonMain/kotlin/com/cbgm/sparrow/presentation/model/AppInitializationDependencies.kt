@@ -20,10 +20,10 @@ import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationCoordinator
 import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneHealthRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
 data class AppInitializationDependencies(
@@ -45,10 +45,10 @@ data class AppInitializationDependencies(
     val recoverInterruptedDirectSends: RecoverInterruptedDirectSendsUseCase,
     val unpublishedGroupStateRunner: UnpublishedGroupStateRunner,
     val workflowRegistry: WorkflowRegistry,
-    val controlPlaneConfiguration: ControlPlaneConfiguration,
-    val controlPlaneStatusStore: ControlPlaneStatusStore,
-    val controlPlaneDirectorySynchronizer: ControlPlaneDirectorySynchronizer,
-    val controlPlaneHealthMonitor: ControlPlaneHealthMonitor,
+    val controlPlaneConfiguration: ControlPlaneConfigurationRepository,
+    val controlPlaneStatusStore: ControlPlaneStatusRepository,
+    val controlPlaneDirectorySynchronizer: ControlPlaneDirectoryRepository,
+    val controlPlaneHealthMonitor: ControlPlaneHealthRepository,
     val observeLocalIdentityReady: ObserveLocalIdentityReadyUseCase,
     val importDeviceContacts: ImportDeviceContactsUseCase,
     val deviceContactsPermissionChecker: DeviceContactsPermissionRepository

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.expenses.data.datasource
 
 import com.cbgm.sparrow.feature.expenses.data.model.ExchangeRateDto
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportDiagnosticsSource
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
 /** The connected node fetches the rates, so the rate provider never sees the user's address. */
 class RemoteExchangeRateDataSource(
     private val httpClient: HttpClient,
-    private val transportDiagnosticsSource: TransportDiagnosticsSource
+    private val transportDiagnosticsSource: TransportDiagnosticsRepository
 ) {
     suspend fun fetchEuroRates(): List<ExchangeRateDto> {
         val nodeBaseUrl =

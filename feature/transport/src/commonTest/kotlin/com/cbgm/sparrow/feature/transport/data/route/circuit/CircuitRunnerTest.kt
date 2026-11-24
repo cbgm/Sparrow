@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
-import com.cbgm.sparrow.feature.transport.FakeTransportPreferences
+import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.directory.NodeCapability
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectory
@@ -137,7 +137,7 @@ class CircuitRunnerTest {
             httpClient = HttpClient(MockEngine { respond("") }),
             cipher = cipher,
             selector = RelaySelector(cache, json, preferences = null, connectedNodeId = { "own" }, now = { 1L }),
-            preferences = FakeTransportPreferences(),
+            preferences = FakeTransportPreferencesRepository(),
             openSession = { _ -> SimulatedRelays(scope, cipher).session }
         )
     }

@@ -11,13 +11,13 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRoute
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteLookup
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteResult
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationLetters
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalBootstrapRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
-import com.cbgm.sparrow.feature.transport.domain.gateway.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
@@ -55,20 +55,20 @@ internal class InvitationTestWorld {
         presence[device.alias] = result
     }
 
-    fun letters(device: Device): InvitationLetters =
-        SignedInvitationLetters(
+    fun letters(device: Device): InvitationLetterRepository =
+        InvitationLetterRepositoryImpl(
             routes = InvitationRouteRemoteSource(presenceClient(), Configuration, MailboxCreationWorkSolver(ZeroHash, bits = 0), json),
-            mailboxGateway = mailboxes,
+            mailboxRepository = mailboxes,
             signingKeyPairSource = SigningKeys(device.key),
             encryptionKeyPairSource = EncryptionKeys(device.key),
             signatureCrypto = ReadableSignatures,
             transportCipher = ReadableTransportCipher,
             payloadCodec = DefaultTransportPayloadCodec(),
             routingIdGenerator = NameRoutingIds,
-            localRoutingIdSource = object : LocalRoutingIdSource {
+            localRoutingIdSource = object : LocalRoutingIdRepository {
                 override suspend fun getLocalRoutingId(): Result<String> = Result.success(device.routingId)
             },
-            localBootstrapRoutingIdSource = object : LocalBootstrapRoutingIdSource {
+            localBootstrapRoutingIdSource = object : LocalBootstrapRoutingIdRepository {
                 override suspend fun getLocalBootstrapRoutingId(): Result<String> = Result.success(device.alias)
             },
             json = json
@@ -107,7 +107,7 @@ internal class InvitationTestWorld {
             )
     }
 
-    class RecordingInvitationGateway : MailboxGateway {
+    class RecordingInvitationGateway : MailboxRepository {
         val deposited = mutableListOf<FederatedEnvelope>()
 
         override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> {

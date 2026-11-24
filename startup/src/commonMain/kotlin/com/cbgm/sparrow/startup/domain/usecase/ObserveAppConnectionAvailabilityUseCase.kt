@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.startup.domain.usecase
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportConnection
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
 import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
 
 class ObserveAppConnectionAvailabilityUseCase(
-    private val transportConnection: TransportConnection
+    private val transportConnection: TransportConnectionPort
 ) {
     operator fun invoke(): Flow<AppConnectionAvailability> =
         transportConnection

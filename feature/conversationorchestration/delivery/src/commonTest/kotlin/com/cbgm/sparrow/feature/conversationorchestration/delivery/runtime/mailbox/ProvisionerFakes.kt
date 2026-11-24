@@ -19,11 +19,11 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
-import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -97,7 +97,7 @@ internal class ProvisionerFakes {
                 GetMailboxContactStatesUseCase(contacts, GetIdentityPeerStateUseCase(identity, NoPendingChanges)),
             localRoutingIdSource = FakeLocalRoutingId,
             nodeEndpointResolver = SingleNodeResolver,
-            mailboxGateway = gateway,
+            mailboxRepository = gateway,
             mailboxRouteRepository = routes,
             mailboxCapabilityLifecycle = NoOpMailboxCapabilityLifecycle,
             contactBlocklistRepository = NoBlockedContacts,
@@ -168,7 +168,7 @@ internal class InMemoryMailboxRoutes : MailboxRouteRepository {
 }
 
 /** Creates mailboxes on node-a; routes in [pendingRoutes] still hold envelopes. */
-internal class RecordingMailboxGateway : MailboxGateway {
+internal class RecordingMailboxGateway : MailboxRepository {
     val created = mutableListOf<String>()
     val revoked = mutableListOf<String>()
     val pendingRoutes = mutableSetOf<String>()
@@ -410,11 +410,11 @@ private object NoPendingChanges : PendingRemoteIdentityChangeRepository {
     ): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeLocalRoutingId : LocalRoutingIdSource {
+private object FakeLocalRoutingId : LocalRoutingIdRepository {
     override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")
 }
 
-private object SingleNodeResolver : NodeEndpointResolver {
+private object SingleNodeResolver : NodeEndpointRepository {
     override suspend fun resolve(localRoutingId: String, forceRefresh: Boolean): Result<List<NodeEndpoint>> =
         Result.success(
             listOf(

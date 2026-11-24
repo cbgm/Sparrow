@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** What the transport itself needs of the Control Plane configuration beyond what the user changes. */
-internal interface ControlPlaneEndpointStore : ControlPlaneConfiguration {
+internal interface ControlPlaneEndpointStore : ControlPlaneConfigurationRepository {
     override val jsonDirectoryUrl: StateFlow<String?>
         get() = MutableStateFlow(null)
     override val jsonDirectoryBaseUrls: StateFlow<Set<String>>

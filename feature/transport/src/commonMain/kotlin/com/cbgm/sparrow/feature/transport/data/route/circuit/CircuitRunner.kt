@@ -5,11 +5,11 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.route.RelayHop
 import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner.Companion.NO_SLOT
-import com.cbgm.sparrow.feature.transport.domain.gateway.Circuits
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitCount
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ProtectedRouteMissingException
+import com.cbgm.sparrow.feature.transport.domain.port.CircuitPort
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.websocket.WebSocketSession
@@ -42,10 +42,10 @@ internal class CircuitRunner internal constructor(
     private val httpClient: HttpClient,
     private val cipher: CircuitCipher,
     private val selector: RelaySelector,
-    private val preferences: TransportPreferences,
+    private val preferences: TransportPreferencesRepository,
     private val pingIntervalMilliseconds: Long = DEFAULT_PING_INTERVAL_MILLISECONDS,
     private val openSession: suspend (String) -> WebSocketSession = { url -> httpClient.webSocketSession(url) }
-) : Circuits {
+) : CircuitPort {
     private val logger = SparrowLog.withTag("CircuitRunner")
     private val mutableStatus = MutableStateFlow<CircuitStatus>(CircuitStatus.Building)
     override val status: StateFlow<CircuitStatus> = mutableStatus.asStateFlow()

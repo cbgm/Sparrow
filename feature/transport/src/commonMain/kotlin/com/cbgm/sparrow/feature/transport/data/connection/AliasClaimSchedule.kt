@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.transport.data.connection
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 internal class AliasClaimSchedule(
     private val aliasClaims: AliasClaimRegistrar,
-    private val localRoutingIdSource: LocalRoutingIdSource
+    private val localRoutingIdSource: LocalRoutingIdRepository
 ) {
     private val logger = SparrowLog.withTag("AliasClaimSchedule")
 

@@ -8,10 +8,11 @@ import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneCandidateVerifier
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneConfigurationRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneDirectoryRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneHealthRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneRequestRouter
-import com.cbgm.sparrow.feature.transport.data.controlplane.HttpControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.data.controlplane.HttpControlPlaneHealthMonitor
 import com.cbgm.sparrow.feature.transport.data.controlplane.HttpNodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.KEY_TRUSTED_DIRECTORY_PUBLIC_KEY
@@ -20,7 +21,6 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDisc
 import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAttestationRemoteSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.SignedControlPlaneDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.controlplane.SignedDirectoryControlPlaneCandidateVerifier
-import com.cbgm.sparrow.feature.transport.data.controlplane.StoredControlPlaneConfiguration
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
@@ -29,12 +29,12 @@ import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPoli
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayClient
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayEngine
 import com.cbgm.sparrow.feature.transport.data.route.relay.createControlPlaneHttpClient
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalBootstrapRoutingIdSource
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneHealthRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import io.ktor.client.HttpClient
@@ -44,20 +44,20 @@ import org.koin.dsl.module
 /** The Control Planes: their addresses, health, directory and the requests that go to them through relays. */
 internal val controlPlaneModule =
     module {
-        single<StoredControlPlaneConfiguration> {
-            StoredControlPlaneConfiguration(dataStore = get(), nodeDirectoryCache = get())
+        single<ControlPlaneConfigurationRepositoryImpl> {
+            ControlPlaneConfigurationRepositoryImpl(dataStore = get(), nodeDirectoryCache = get())
         }
 
         single<ControlPlaneEndpointStore> {
-            get<StoredControlPlaneConfiguration>()
+            get<ControlPlaneConfigurationRepositoryImpl>()
         }
 
-        single<ControlPlaneConfiguration> {
-            get<StoredControlPlaneConfiguration>()
+        single<ControlPlaneConfigurationRepository> {
+            get<ControlPlaneConfigurationRepositoryImpl>()
         }
 
-        single<ControlPlaneStatusStore> {
-            get<StoredControlPlaneConfiguration>()
+        single<ControlPlaneStatusRepository> {
+            get<ControlPlaneConfigurationRepositoryImpl>()
         }
 
         single {
@@ -92,10 +92,10 @@ internal val controlPlaneModule =
                 signingKeyPairSource = get<LocalSigningKeyPairSource>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cipher = get<SealedMessageCipher>(),
-                localBootstrapRoutingIdSource = get<LocalBootstrapRoutingIdSource>(),
+                localBootstrapRoutingIdSource = get<LocalBootstrapRoutingIdRepository>(),
                 localPhoneNumberSource = get<LocalPhoneNumberSource>(),
                 phoneAttestationRemoteSource = get<PhoneAttestationRemoteSource>(),
-                invitationMailbox = get<InvitationMailbox>(),
+                invitationMailbox = get<InvitationMailboxRepository>(),
                 encryptionKeyPairSource = get<LocalEncryptionKeyPairSource>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
@@ -124,15 +124,15 @@ internal val controlPlaneModule =
         single {
             ControlPlaneRequestRouter(
                 configuration = get<ControlPlaneEndpointStore>(),
-                statusStore = get<ControlPlaneStatusStore>()
+                statusStore = get<ControlPlaneStatusRepository>()
             )
         }
 
-        single<ControlPlaneHealthMonitor> {
-            HttpControlPlaneHealthMonitor(
+        single<ControlPlaneHealthRepository> {
+            ControlPlaneHealthRepositoryImpl(
                 httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
                 configuration = get<ControlPlaneEndpointStore>(),
-                statusStore = get<ControlPlaneStatusStore>()
+                statusStore = get<ControlPlaneStatusRepository>()
             )
         }
 
@@ -144,8 +144,8 @@ internal val controlPlaneModule =
             )
         }
 
-        single<ControlPlaneDirectorySynchronizer> {
-            HttpControlPlaneDirectorySynchronizer(
+        single<ControlPlaneDirectoryRepository> {
+            ControlPlaneDirectoryRepositoryImpl(
                 httpClient = get<HttpClient>(),
                 configuration = get<ControlPlaneEndpointStore>(),
                 verifier = get<SignedControlPlaneDirectoryVerifier>(),

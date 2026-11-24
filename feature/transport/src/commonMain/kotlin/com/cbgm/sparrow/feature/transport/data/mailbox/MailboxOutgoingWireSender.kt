@@ -5,29 +5,29 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAliasBinding
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationLetters
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalBootstrapRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
 import kotlinx.coroutines.TimeoutCancellationException
 
 /**
- * Puts every packet into a mailbox of the recipient, through the circuit ([MailboxGateway] uses it), so no node learns
+ * Puts every packet into a mailbox of the recipient, through the circuit ([MailboxRepository] uses it), so no node learns
  * who writes to whom: into the recipient's mailbox for this device when its route is known, otherwise into the
- * recipient's invitation mailbox ([InvitationLetters]). A mailbox that cannot be reached fails the send, and the outbox
+ * recipient's invitation mailbox ([InvitationLetterRepository]). A mailbox that cannot be reached fails the send, and the outbox
  * retries it.
  */
 internal class MailboxOutgoingWireSender(
-    private val localRoutingIdSource: LocalRoutingIdSource,
-    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdSource,
+    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdRepository,
     private val transportConfig: TransportConfig,
     private val mailboxRouteRepository: MailboxRouteRepository,
-    private val mailboxGateway: MailboxGateway,
-    private val invitationLetters: InvitationLetters,
+    private val mailboxRepository: MailboxRepository,
+    private val invitationLetters: InvitationLetterRepository,
     private val aliasBinding: PhoneAliasBinding
 ) : OutgoingWireSender {
     private val logger = SparrowLog.withTag("MailboxOutgoingWireSender")
@@ -78,7 +78,7 @@ internal class MailboxOutgoingWireSender(
                                 createdAtEpochMilliseconds = createdAt,
                                 expiresAtEpochMilliseconds = minOf(createdAt + ENVELOPE_LIFETIME_MILLISECONDS, route.expiresAtEpochMilliseconds)
                             )
-                        mailboxGateway.deliver(envelope.withoutRoutingIds()).getOrThrow()
+                        mailboxRepository.deliver(envelope.withoutRoutingIds()).getOrThrow()
                         logger.debug { "Message put into the contact's mailbox" }
                         envelope.expiresAtEpochMilliseconds
                     }

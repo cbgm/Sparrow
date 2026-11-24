@@ -2,12 +2,12 @@ package com.cbgm.sparrow.feature.transport.data.mailbox
 
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAliasBinding
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalBootstrapRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationRouteMissingException
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -125,21 +125,21 @@ class MailboxOutgoingWireSenderTest {
         localRoutingId: Result<String> = Result.success("local-routing-id")
     ) = MailboxOutgoingWireSender(
         localRoutingIdSource =
-            object : LocalRoutingIdSource {
+            object : LocalRoutingIdRepository {
                 override suspend fun getLocalRoutingId(): Result<String> = localRoutingId
             },
         localBootstrapRoutingIdSource =
-            object : LocalBootstrapRoutingIdSource {
+            object : LocalBootstrapRoutingIdRepository {
                 override suspend fun getLocalBootstrapRoutingId(): Result<String> = Result.success("local-bootstrap-routing-id")
             },
         transportConfig = TransportConfig(acknowledgementTimeoutMilliseconds = 2_500L),
         mailboxRouteRepository = routes,
-        mailboxGateway = mailboxes,
+        mailboxRepository = mailboxes,
         invitationLetters = world.letters(world.device("alice")),
         aliasBinding = binding
     )
 
-    private class RecordingMailboxGateway : MailboxGateway {
+    private class RecordingMailboxGateway : MailboxRepository {
         var fails = false
         val delivered = mutableListOf<FederatedEnvelope>()
 

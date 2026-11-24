@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.CancellationException
@@ -23,10 +23,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * themselves, through their circuits, so this is how messages arrive live.
  */
 class MailboxArrivalListener(
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val pendingSynchronizer: MailboxPendingSynchronizer,
-    private val invitationMailbox: InvitationMailbox,
+    private val invitationMailbox: InvitationMailboxRepository,
     private val pauseMilliseconds: Long = DEFAULT_PAUSE_MILLISECONDS
 ) {
     private val logger = SparrowLog.withTag("MailboxArrivalListener")
@@ -72,7 +72,7 @@ class MailboxArrivalListener(
             coroutineScope {
                 credentials
                     .groupBy(LocalMailboxCredential::accessEndpoint)
-                    .map { (accessEndpoint, atNode) -> async { mailboxGateway.ready(accessEndpoint, atNode) } }
+                    .map { (accessEndpoint, atNode) -> async { mailboxRepository.ready(accessEndpoint, atNode) } }
                     .awaitAll()
             }
         results.firstNotNullOfOrNull { result -> result.exceptionOrNull() }?.takeIf { results.all { it.isFailure } }?.let { throw it }

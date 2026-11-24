@@ -2,13 +2,13 @@ package com.cbgm.sparrow.feature.transport.data.connection
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportConnection
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.PreferredNodeReturnPolicy
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
@@ -46,12 +46,12 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class HomeNodeConnection(
     private val circuits: CircuitRunner,
     private val aliasClaims: AliasClaimSchedule,
-    private val localRoutingIdSource: LocalRoutingIdSource,
-    private val nodeEndpointResolver: NodeEndpointResolver,
+    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val nodeEndpointResolver: NodeEndpointRepository,
     private val directoryRefresh: NodeDirectoryRefresh,
-    private val diagnostics: HomeNodeDiagnostics,
-    private val preferences: TransportPreferences? = null
-) : TransportConnection {
+    private val diagnostics: TransportDiagnosticsRepositoryImpl,
+    private val preferences: TransportPreferencesRepository? = null
+) : TransportConnectionPort {
     private val logger = SparrowLog.withTag("HomeNodeConnection")
 
     // IO, not Default: the many CPU-heavy startup tasks share Default and would delay connecting.

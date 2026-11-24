@@ -1,22 +1,22 @@
 package com.cbgm.sparrow.feature.transport.domain.rule
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.Circuits
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ProtectedRouteMissingException
+import com.cbgm.sparrow.feature.transport.domain.port.CircuitPort
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 
 /**
  * Whether something may leave the device without a circuit through at least [CircuitHopCount.PROTECTING] hops: only
- * when the user allows sending directly ([TransportPreferences.observeSendsDirectly]). A circuit through one hop does not protect: its
+ * when the user allows sending directly ([TransportPreferencesRepository.observeSendsDirectly]). A circuit through one hop does not protect: its
  * single node sees both the device's address and where the request goes.
  */
 class DirectSendingPolicy(
-    private val circuits: Circuits,
-    private val preferences: TransportPreferences
+    private val circuits: CircuitPort,
+    private val preferences: TransportPreferencesRepository
 ) {
     /** True while nothing may go out unprotected and no protecting circuit is up, so messages wait. */
     fun observeWaiting(): Flow<Boolean> =

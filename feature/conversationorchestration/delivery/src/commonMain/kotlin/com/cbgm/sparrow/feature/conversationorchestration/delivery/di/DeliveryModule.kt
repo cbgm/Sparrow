@@ -39,8 +39,8 @@ import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUse
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
-import com.cbgm.sparrow.feature.transport.domain.gateway.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.outbox.OutboxDeliveryStateListener
@@ -119,7 +119,7 @@ private fun Module.registerOutbox() {
             hasProtectingCircuit = get<DirectSendingPolicy>()::hasProtectingCircuit,
             mailboxRouteRepository = get(),
             sealer = get(),
-            mailboxGateway = get()
+            mailboxRepository = get()
         )
     }
     singleOf(::CoverEnvelopeSealer) { bind<DecoySealer>() }
@@ -141,7 +141,7 @@ private fun Module.registerMailbox() {
     singleOf(::MailboxCredentialFactory)
     singleOf(::MailboxPendingSynchronizer)
     single {
-        MailboxArrivalListener(mailboxGateway = get(), mailboxRouteRepository = get(), pendingSynchronizer = get(), invitationMailbox = get())
+        MailboxArrivalListener(mailboxRepository = get(), mailboxRouteRepository = get(), pendingSynchronizer = get(), invitationMailbox = get())
     }
     singleOf(::MailboxRouteProvisioner)
     single<MailboxCoordinator> {

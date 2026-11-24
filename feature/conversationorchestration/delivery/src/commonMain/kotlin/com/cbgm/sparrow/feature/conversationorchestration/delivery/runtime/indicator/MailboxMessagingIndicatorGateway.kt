@@ -10,9 +10,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indic
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingTransportPayloadFactory
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -35,7 +35,7 @@ class MailboxMessagingIndicatorGateway(
     private val packetCodec: PacketCodec,
     private val transportPayloadFactory: OutgoingTransportPayloadFactory,
     private val transportPayloadCodec: TransportPayloadCodec,
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val sendingPolicy: DirectSendingPolicy
 ) : MessagingIndicatorGateway {
     private val logger = SparrowLog.withTag("MailboxMessagingIndicatorGateway")
@@ -76,7 +76,7 @@ class MailboxMessagingIndicatorGateway(
             val packet = IndicatorPacket(packetId = IdGenerator.generate(), indicatorType = indicatorType, groupId = groupId, sentAtEpochMilliseconds = now)
             val payload = transportPayloadFactory.create(packetCodec.encode(packet).getOrThrow(), packet, contact).getOrThrow()
             val delivered =
-                mailboxGateway.deliver(
+                mailboxRepository.deliver(
                     FederatedEnvelope(
                         envelopeId = IdGenerator.generate(),
                         senderRoutingId = FederatedEnvelope.HIDDEN_ROUTING_ID,

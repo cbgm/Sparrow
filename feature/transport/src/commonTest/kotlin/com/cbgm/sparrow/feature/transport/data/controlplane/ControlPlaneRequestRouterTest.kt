@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -242,7 +242,7 @@ class ControlPlaneRequestRouterTest {
 
     private class FakeControlPlaneConfiguration :
         ControlPlaneEndpointStore,
-        ControlPlaneStatusStore {
+        ControlPlaneStatusRepository {
         override val endpoints =
             MutableStateFlow(
                 listOf(

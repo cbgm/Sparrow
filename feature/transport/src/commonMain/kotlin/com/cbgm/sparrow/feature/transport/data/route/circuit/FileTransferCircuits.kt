@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.domain.model.ProtectedRouteMissingException
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.request
@@ -51,12 +51,12 @@ internal interface FileTransfers {
  * Sends and fetches files through a circuit of their own ([CircuitRunner.withOwnCircuit]), one per transfer, so the
  * blob node does not see the device's address and a long transfer does not hold back messages. The switch applies as
  * for messages: without a circuit through at least two hops a transfer goes directly only when the user allows it
- * ([TransportPreferences.observeSendsDirectly]); otherwise it waits up to [waitMilliseconds] for the app's circuits to reach two hops and
+ * ([TransportPreferencesRepository.observeSendsDirectly]); otherwise it waits up to [waitMilliseconds] for the app's circuits to reach two hops and
  * then fails with [ProtectedRouteMissingException].
  */
 internal class FileTransferCircuits(
     private val circuits: CircuitRunner,
-    private val preferences: TransportPreferences,
+    private val preferences: TransportPreferencesRepository,
     private val directClient: HttpClient,
     private val waitMilliseconds: Long = DEFAULT_WAIT_MILLISECONDS
 ) : FileTransfers {

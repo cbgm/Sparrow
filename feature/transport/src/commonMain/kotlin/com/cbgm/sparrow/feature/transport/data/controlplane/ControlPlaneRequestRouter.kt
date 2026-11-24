@@ -1,16 +1,16 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.CancellationException
 
 internal class ControlPlaneRequestRouter(
     private val configuration: ControlPlaneEndpointStore,
-    private val statusStore: ControlPlaneStatusStore
+    private val statusStore: ControlPlaneStatusRepository
 ) {
     private val logger = SparrowLog.withTag("ControlPlaneRequestRouter")
 

@@ -9,9 +9,9 @@ import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalBootstrapRoutingIdSource
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -37,7 +37,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * the relays of the Control Plane HTTP client ([com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayEngine]). For each
  * one it takes the presence directory's key from that Control Plane's own signed node directory, checked against its
  * pinned root, so neither a relay nor the gateway can swap in a key. A Control Plane whose root is not pinned yet is
- * skipped until the app has used it. Every claim names the device's invitation mailbox ([InvitationMailbox])
+ * skipped until the app has used it. Every claim names the device's invitation mailbox ([InvitationMailboxRepository])
  * with the identity's encryption key, so senders without a mailbox route of this device can still reach it.
  */
 internal class AliasClaimRegistrar(
@@ -49,10 +49,10 @@ internal class AliasClaimRegistrar(
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val cipher: SealedMessageCipher,
-    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdSource,
+    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdRepository,
     private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val phoneAttestationRemoteSource: PhoneAttestationRemoteSource,
-    private val invitationMailbox: InvitationMailbox,
+    private val invitationMailbox: InvitationMailboxRepository,
     private val encryptionKeyPairSource: LocalEncryptionKeyPairSource,
     private val json: Json,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds

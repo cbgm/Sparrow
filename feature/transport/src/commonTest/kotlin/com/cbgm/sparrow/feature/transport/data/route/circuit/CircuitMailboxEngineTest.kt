@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
-import com.cbgm.sparrow.feature.transport.FakeTransportPreferences
+import com.cbgm.sparrow.feature.transport.FakeTransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.data.directory.CachedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
@@ -34,7 +34,7 @@ class CircuitMailboxEngineTest {
             httpClient = direct,
             cipher = ReadableCircuitCipher(),
             selector = RelaySelector(EmptyCache, json, preferences = null, connectedNodeId = { null }),
-            preferences = FakeTransportPreferences(circuitCount = 1)
+            preferences = FakeTransportPreferencesRepository(circuitCount = 1)
         )
 
     @Test
@@ -61,9 +61,9 @@ class CircuitMailboxEngineTest {
     fun withoutACircuitAFileTransferGoesOutDirectlyOnlyWhenTheUserAllowsIt() =
         runTest {
             val directly =
-                FileTransferCircuits(runner, FakeTransportPreferences(sendsDirectly = true), direct, waitMilliseconds = 50)
+                FileTransferCircuits(runner, FakeTransportPreferencesRepository(sendsDirectly = true), direct, waitMilliseconds = 50)
                     .transfer { route -> route.request(FileTransferRequest("GET", "https://node.test/v1/blobs/b/chunks/0", "read")) }
-            val held = FileTransferCircuits(runner, FakeTransportPreferences(sendsDirectly = false), direct, waitMilliseconds = 50)
+            val held = FileTransferCircuits(runner, FakeTransportPreferencesRepository(sendsDirectly = false), direct, waitMilliseconds = 50)
 
             assertEquals(200, directly.status)
             assertFailsWith<ProtectedRouteMissingException> { held.transfer { route -> route.request(FileTransferRequest("GET", "https://node.test/x")) } }
@@ -72,7 +72,7 @@ class CircuitMailboxEngineTest {
 
     private fun mailboxClient(sendsDirectly: Boolean): HttpClient =
         createMailboxHttpClient(
-            CircuitMailboxEngine(runner, FakeTransportPreferences(sendsDirectly = sendsDirectly), direct, waitMilliseconds = 50),
+            CircuitMailboxEngine(runner, FakeTransportPreferencesRepository(sendsDirectly = sendsDirectly), direct, waitMilliseconds = 50),
             json
         )
 

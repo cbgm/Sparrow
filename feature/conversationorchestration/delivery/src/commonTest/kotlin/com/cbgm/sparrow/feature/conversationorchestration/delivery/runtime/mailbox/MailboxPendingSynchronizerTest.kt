@@ -6,12 +6,12 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailb
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizerTest.Companion.UNCHECKED_LETTER
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationLetters
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationLetterContent
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -38,7 +38,7 @@ class MailboxPendingSynchronizerTest {
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxGateway = gateway,
+                    mailboxRepository = gateway,
                     mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(UNREACHABLE), credential(REACHABLE))),
                     incomingEnvelopeProcessor = FakeProcessor,
                     resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -60,7 +60,7 @@ class MailboxPendingSynchronizerTest {
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxGateway = gateway,
+                    mailboxRepository = gateway,
                     mailboxRouteRepository =
                         FakeMailboxRouteRepository(
                             credentials = listOf(credential(REACHABLE)),
@@ -114,7 +114,7 @@ class MailboxPendingSynchronizerTest {
                 )
             val synchronizer =
                 MailboxPendingSynchronizer(
-                    mailboxGateway = gateway,
+                    mailboxRepository = gateway,
                     mailboxRouteRepository = FakeMailboxRouteRepository(listOf(credential(REACHABLE))),
                     incomingEnvelopeProcessor = FakeProcessor,
                     resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -130,10 +130,10 @@ class MailboxPendingSynchronizerTest {
     @Test
     fun aProvenLetterFromTheInvitationMailboxIsProcessedAsItsSender() =
         runTest {
-            val gateway = FakeMailboxGateway(pending = mapOf(InvitationMailbox.CONTACT_ID to listOf(envelope(LETTER))))
+            val gateway = FakeMailboxGateway(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(1, synchronizer(gateway, invitations = listOf(credential(InvitationMailbox.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(1, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(listOf("scphone1_alice"), FakeProcessor.senders)
             assertEquals(listOf(LETTER), gateway.acknowledged)
         }
@@ -142,10 +142,10 @@ class MailboxPendingSynchronizerTest {
     fun aLetterThatCanNeverBeAcceptedIsDroppedAndOneThatCannotBeCheckedYetStays() =
         runTest {
             val gateway =
-                FakeMailboxGateway(pending = mapOf(InvitationMailbox.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
+                FakeMailboxGateway(pending = mapOf(InvitationMailboxRepository.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(0, synchronizer(gateway, invitations = listOf(credential(InvitationMailbox.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(0, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRepository.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(emptyList(), FakeProcessor.senders)
             assertEquals(listOf(SPOOFED_LETTER), gateway.acknowledged)
         }
@@ -154,7 +154,7 @@ class MailboxPendingSynchronizerTest {
         gateway: FakeMailboxGateway,
         invitations: List<LocalMailboxCredential>
     ) = MailboxPendingSynchronizer(
-        mailboxGateway = gateway,
+        mailboxRepository = gateway,
         mailboxRouteRepository = FakeMailboxRouteRepository(emptyList()),
         incomingEnvelopeProcessor = FakeProcessor,
         resolveContactRoutingId = ResolveContactTransportRoutingIdUseCase(FakeContactTransport()),
@@ -164,14 +164,14 @@ class MailboxPendingSynchronizerTest {
 
     /** Holds [invitations]; no node is asked. */
     private fun invitationMailbox(invitations: List<LocalMailboxCredential> = emptyList()) =
-        object : InvitationMailbox {
+        object : InvitationMailboxRepository {
             override suspend fun current(): Result<LocalMailboxCredential> = error("Not used")
 
             override suspend fun receiving(): Result<List<LocalMailboxCredential>> = Result.success(invitations)
         }
 
     /** The sender of [LETTER] is proven, [SPOOFED_LETTER] claims a number that is not its own, [UNCHECKED_LETTER] cannot be checked now. */
-    private object FakeLetters : InvitationLetters {
+    private object FakeLetters : InvitationLetterRepository {
         override suspend fun send(
             senderRoutingId: String,
             recipientRoutingId: String,
@@ -206,7 +206,7 @@ class MailboxPendingSynchronizerTest {
     private class FakeMailboxGateway(
         private val pending: Map<String, List<FederatedEnvelope>?>,
         private var readyOnce: Set<String> = emptySet()
-    ) : MailboxGateway {
+    ) : MailboxRepository {
         val acknowledged = mutableListOf<String>()
         val fetched = mutableListOf<String>()
 

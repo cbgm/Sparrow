@@ -3,25 +3,25 @@ package com.cbgm.sparrow.feature.transport.di
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.connection.AliasClaimSchedule
 import com.cbgm.sparrow.feature.transport.data.connection.HomeNodeConnection
-import com.cbgm.sparrow.feature.transport.data.connection.HomeNodeDiagnostics
 import com.cbgm.sparrow.feature.transport.data.connection.NodeDirectoryRefresh
+import com.cbgm.sparrow.feature.transport.data.connection.TransportDiagnosticsRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
 import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportConnection
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportDiagnosticsSource
+import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import org.koin.dsl.module
 
 /** The home node connection and its diagnostics. */
 internal val connectionModule =
     module {
         single {
-            HomeNodeDiagnostics(
-                localRoutingIdSource = get<LocalRoutingIdSource>(),
-                nodeEndpointResolver = get<NodeEndpointResolver>(),
+            TransportDiagnosticsRepositoryImpl(
+                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                nodeEndpointResolver = get<NodeEndpointRepository>(),
                 controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
                 transportConfig = get<TransportConfig>()
             )
@@ -30,26 +30,26 @@ internal val connectionModule =
         single {
             HomeNodeConnection(
                 circuits = get<CircuitRunner>(),
-                aliasClaims = AliasClaimSchedule(aliasClaims = get<AliasClaimRegistrar>(), localRoutingIdSource = get<LocalRoutingIdSource>()),
-                localRoutingIdSource = get<LocalRoutingIdSource>(),
-                nodeEndpointResolver = get<NodeEndpointResolver>(),
+                aliasClaims = AliasClaimSchedule(aliasClaims = get<AliasClaimRegistrar>(), localRoutingIdSource = get<LocalRoutingIdRepository>()),
+                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                nodeEndpointResolver = get<NodeEndpointRepository>(),
                 directoryRefresh =
                     NodeDirectoryRefresh(
-                        nodeEndpointResolver = get<NodeEndpointResolver>(),
+                        nodeEndpointResolver = get<NodeEndpointRepository>(),
                         controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>(),
                         transportConfig = get<TransportConfig>(),
-                        diagnostics = get<HomeNodeDiagnostics>()
+                        diagnostics = get<TransportDiagnosticsRepositoryImpl>()
                     ),
-                diagnostics = get<HomeNodeDiagnostics>(),
+                diagnostics = get<TransportDiagnosticsRepositoryImpl>(),
                 preferences = get()
             )
         }
 
-        single<TransportConnection> {
+        single<TransportConnectionPort> {
             get<HomeNodeConnection>()
         }
 
-        single<TransportDiagnosticsSource> {
-            get<HomeNodeDiagnostics>()
+        single<TransportDiagnosticsRepository> {
+            get<TransportDiagnosticsRepositoryImpl>()
         }
     }

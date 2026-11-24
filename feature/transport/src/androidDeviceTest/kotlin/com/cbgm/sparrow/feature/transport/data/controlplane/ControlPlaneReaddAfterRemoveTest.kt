@@ -19,7 +19,7 @@ class ControlPlaneReaddAfterRemoveTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val file = "control-plane-readd-${System.nanoTime()}.preferences_pb"
         val store = createSparrowDataStore(context.filesDir.resolve(file).absolutePath)
-        val config = StoredControlPlaneConfiguration(store, DataStoreNodeDirectoryCache(store, Json))
+        val config = ControlPlaneConfigurationRepositoryImpl(store, DataStoreNodeDirectoryCache(store, Json))
         val public = "https://control-87-171-165-152.sslip.io"
         val fallback = "https://other.example.test"
 
@@ -32,7 +32,7 @@ class ControlPlaneReaddAfterRemoveTest {
         assertTrue(public in config.manualBaseUrls.value)
         assertEquals(1, config.endpoints.value.count { it.baseUrl == public })
 
-        val reloaded = StoredControlPlaneConfiguration(store, DataStoreNodeDirectoryCache(store, Json))
+        val reloaded = ControlPlaneConfigurationRepositoryImpl(store, DataStoreNodeDirectoryCache(store, Json))
         reloaded.initialize()
         assertTrue(public in reloaded.manualBaseUrls.value)
     }
@@ -42,7 +42,7 @@ class ControlPlaneReaddAfterRemoveTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val file = "control-plane-init-${System.nanoTime()}.preferences_pb"
         val store = createSparrowDataStore(context.filesDir.resolve(file).absolutePath)
-        val config = StoredControlPlaneConfiguration(store, DataStoreNodeDirectoryCache(store, Json))
+        val config = ControlPlaneConfigurationRepositoryImpl(store, DataStoreNodeDirectoryCache(store, Json))
         val public = "https://control-87-171-165-152.sslip.io"
 
         val initialize = async { config.initialize() }
@@ -51,7 +51,7 @@ class ControlPlaneReaddAfterRemoveTest {
         add.await()
         assertTrue(public in config.manualBaseUrls.value)
 
-        val reloaded = StoredControlPlaneConfiguration(store, DataStoreNodeDirectoryCache(store, Json))
+        val reloaded = ControlPlaneConfigurationRepositoryImpl(store, DataStoreNodeDirectoryCache(store, Json))
         reloaded.initialize()
         assertTrue(public in reloaded.manualBaseUrls.value)
     }

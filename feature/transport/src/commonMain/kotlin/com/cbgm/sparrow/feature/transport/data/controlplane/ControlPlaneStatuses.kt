@@ -1,16 +1,16 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /** The configured Control Planes, how each answered last, and the one in use; in memory only. */
-internal class ControlPlaneStatuses : ControlPlaneStatusStore {
+internal class ControlPlaneStatuses : ControlPlaneStatusRepository {
     private val _endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
     private val _activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
     private val _statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())

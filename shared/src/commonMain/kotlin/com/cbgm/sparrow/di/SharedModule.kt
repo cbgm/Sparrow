@@ -3,7 +3,7 @@ package com.cbgm.sparrow.di
 import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.feature.transport.domain.gateway.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.port.HeadlessStartPort
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
@@ -67,9 +67,9 @@ val sharedModule =
         }
 
         // A service started without the app (after a reboot, a check now and then) starts the runtime the same way.
-        single<HeadlessStart> {
+        single<HeadlessStartPort> {
             val startupRunner = get<StartupRunner>()
-            object : HeadlessStart {
+            object : HeadlessStartPort {
                 override suspend fun start() {
                     startupRunner.run()
                 }

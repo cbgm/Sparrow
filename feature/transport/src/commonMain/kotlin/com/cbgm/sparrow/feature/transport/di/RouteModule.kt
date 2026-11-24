@@ -4,12 +4,12 @@ import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
-import com.cbgm.sparrow.feature.transport.data.route.SettledRouteProtection
+import com.cbgm.sparrow.feature.transport.data.route.RouteProtectionRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayClient
-import com.cbgm.sparrow.feature.transport.domain.gateway.Circuits
-import com.cbgm.sparrow.feature.transport.domain.gateway.RouteProtectionSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportConnection
+import com.cbgm.sparrow.feature.transport.domain.port.CircuitPort
+import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
+import com.cbgm.sparrow.feature.transport.domain.repository.RouteProtectionRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import io.ktor.client.HttpClient
 import org.koin.core.qualifier.named
@@ -26,7 +26,7 @@ internal val routeModule =
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 preferences = get(),
                 // Read when a route is built: the connection manager itself uses the relayed client.
-                connectedNodeId = { get<TransportConnection>().connectedNodeId }
+                connectedNodeId = { get<TransportConnectionPort>().connectedNodeId }
             )
         }
 
@@ -37,7 +37,7 @@ internal val routeModule =
                 selector = get<RelaySelector>(),
                 preferences = get()
             )
-        } bind Circuits::class
+        } bind CircuitPort::class
 
         single { DirectSendingPolicy(circuits = get(), preferences = get()) }
 
@@ -50,5 +50,5 @@ internal val routeModule =
             )
         }
 
-        single<RouteProtectionSource> { SettledRouteProtection(circuits = get(), preferences = get()) }
+        single<RouteProtectionRepository> { RouteProtectionRepositoryImpl(circuits = get(), preferences = get()) }
     }

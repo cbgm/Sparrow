@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRouteProvisioner.Companion.RETIRING_GRACE_MILLISECONDS
-import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
-import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
@@ -21,9 +21,9 @@ import kotlinx.coroutines.sync.withLock
 
 class MailboxRouteProvisioner(
     private val getMailboxContactStates: GetMailboxContactStatesUseCase,
-    private val localRoutingIdSource: LocalRoutingIdSource,
-    private val nodeEndpointResolver: NodeEndpointResolver,
-    private val mailboxGateway: MailboxGateway,
+    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val nodeEndpointResolver: NodeEndpointRepository,
+    private val mailboxRepository: MailboxRepository,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle,
     private val contactBlocklistRepository: ContactBlocklistRepository,
@@ -196,7 +196,7 @@ class MailboxRouteProvisioner(
                     return@forEach
                 }
                 if (credential.stillHoldsEnvelopes(now)) return@forEach
-                mailboxGateway.revoke(credential)
+                mailboxRepository.revoke(credential)
                     .onSuccess { mailboxRouteRepository.deleteRetiring(credential.deliveryRoute.routeId).getOrThrow() }
                     .onFailure { failure ->
                         if (failure is CancellationException) throw failure
@@ -214,7 +214,7 @@ class MailboxRouteProvisioner(
     /** Envelopes still wait in the expired mailbox and the grace period is not over: synchronize them first. */
     private suspend fun LocalMailboxCredential.stillHoldsEnvelopes(now: Long): Boolean {
         if (deliveryRoute.expiresAtEpochMilliseconds + RETIRING_GRACE_MILLISECONDS <= now) return false
-        val pending = mailboxGateway.pending(this).getOrElse { failure ->
+        val pending = mailboxRepository.pending(this).getOrElse { failure ->
             if (failure is CancellationException) throw failure
             // An unreachable node may still hold envelopes; anything else is left to the revocation.
             return failure.isRecoverableConnectivityFailure()
@@ -246,7 +246,7 @@ class MailboxRouteProvisioner(
                 mailboxRouteRepository.saveLocal(replacement)
             }
         saved.getOrElse { persistenceError ->
-            mailboxGateway.revoke(replacement)
+            mailboxRepository.revoke(replacement)
                 .onFailure { failure ->
                     SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure)
                 }

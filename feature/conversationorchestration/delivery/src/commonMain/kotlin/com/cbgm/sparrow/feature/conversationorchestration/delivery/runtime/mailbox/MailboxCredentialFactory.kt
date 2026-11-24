@@ -2,12 +2,12 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 
 class MailboxCredentialFactory(
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: MailboxRoutePayloadEncoder
@@ -21,7 +21,7 @@ class MailboxCredentialFactory(
         expiresAtEpochMilliseconds: Long
     ): LocalMailboxCredential {
         val created =
-            mailboxGateway
+            mailboxRepository
                 .create(
                     contactId = contactId,
                     nodeId = nodeId,

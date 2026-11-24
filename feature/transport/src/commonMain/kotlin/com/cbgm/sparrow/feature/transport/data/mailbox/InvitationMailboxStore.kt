@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.transport.data.mailbox
 
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.serialization.Serializable
@@ -44,7 +44,7 @@ internal class DataStoreInvitationMailboxStore(
 
         fun credential(): LocalMailboxCredential =
             LocalMailboxCredential(
-                contactId = InvitationMailbox.CONTACT_ID,
+                contactId = InvitationMailboxRepository.CONTACT_ID,
                 deliveryRoute = deliveryRoute,
                 accessEndpoint = accessEndpoint,
                 retrievalCapability = retrievalCapability

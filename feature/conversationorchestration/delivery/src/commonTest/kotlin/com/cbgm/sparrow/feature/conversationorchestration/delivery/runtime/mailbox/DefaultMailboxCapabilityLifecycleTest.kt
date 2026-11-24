@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -148,7 +148,7 @@ class DefaultMailboxCapabilityLifecycleTest {
     private class FakeMailboxGateway(
         var failRevocation: Boolean,
         private val failure: Exception = IllegalStateException("offline")
-    ) : MailboxGateway {
+    ) : MailboxRepository {
         var revocationAttempts = 0
 
         override suspend fun create(

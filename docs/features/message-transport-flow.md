@@ -110,7 +110,7 @@ Explicit recovery/reconnection is documented separately in [Identity recovery](i
 
 ## Offline mailbox
 
-Every packet goes into a mailbox: `OutgoingPacketSender` hands it to `MailboxOutgoingWireSender`, which uses the recipient's mailbox route when the app has it and the recipient's invitation mailbox otherwise. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `HttpMailboxGateway`.
+Every packet goes into a mailbox: `OutgoingPacketSender` hands it to `MailboxOutgoingWireSender`, which uses the recipient's mailbox route when the app has it and the recipient's invitation mailbox otherwise. Client mailbox lifecycle is implemented around `DefaultMailboxCoordinator`, `DefaultMailboxCapabilityLifecycle`, `MailboxRouteProvisioner`, `MailboxPendingSynchronizer` and `MailboxRepositoryImpl`.
 
 `MailboxRouteProvisioner` decides from the freshly verified, signed node directory, never from a socket failure:
 

@@ -3,11 +3,11 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.deco
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.InMemoryMailboxRoutes
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.RecordingMailboxGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.mailboxCredential
-import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
-import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 class DecoyEnvelopesTest {
     private val routes =
         InMemoryMailboxRoutes().apply {
-            listOf("recipient", "a", "b", "c", InvitationMailbox.CONTACT_ID).forEach { contactId ->
+            listOf("recipient", "a", "b", "c", InvitationMailboxRepository.CONTACT_ID).forEach { contactId ->
                 local[contactId] = mailboxCredential(contactId = contactId, name = contactId, expiresAt = Long.MAX_VALUE)
             }
         }
@@ -100,7 +100,7 @@ class DecoyEnvelopesTest {
         scope: CoroutineScope,
         protecting: Boolean = true,
         unsealable: Set<String> = emptySet(),
-        gateway: MailboxGateway = DepositRecorder()
+        gateway: MailboxRepository = DepositRecorder()
     ) = DecoyEnvelopes(
         observeDecoyCount = ObserveDecoyCountUseCase(DecoyPreferences(count)),
         hasProtectingCircuit = { protecting },
@@ -121,15 +121,15 @@ class DecoyEnvelopesTest {
                     )
                 }
             },
-        mailboxGateway = gateway,
+        mailboxRepository = gateway,
         random = Random(1),
         now = { time },
         scope = scope
     )
 
     private class DepositRecorder(
-        base: MailboxGateway = RecordingMailboxGateway()
-    ) : MailboxGateway by base {
+        base: MailboxRepository = RecordingMailboxGateway()
+    ) : MailboxRepository by base {
         val deposited = mutableListOf<FederatedEnvelope>()
 
         override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> {
@@ -140,7 +140,7 @@ class DecoyEnvelopesTest {
 
     private class DecoyPreferences(
         private val count: MutableStateFlow<Int>
-    ) : TransportPreferences {
+    ) : TransportPreferencesRepository {
         override fun observeCircuitCount(): Flow<Int> = error("Not used")
 
         override suspend fun setCircuitCount(circuitCount: Int) = error("Not used")

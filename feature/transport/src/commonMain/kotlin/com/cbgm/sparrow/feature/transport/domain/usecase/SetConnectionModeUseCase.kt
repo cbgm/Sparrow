@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.transport.domain.usecase
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
 import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.keepsConnectionWhileClosed
 
 /** Chooses how messages reach the device while Sparrow is closed; on iOS only while it is open is possible. */
 class SetConnectionModeUseCase(
-    private val preferences: TransportPreferences
+    private val preferences: TransportPreferencesRepository
 ) {
     suspend operator fun invoke(mode: ConnectionMode): Result<Unit> =
         safeSuspendCall {
