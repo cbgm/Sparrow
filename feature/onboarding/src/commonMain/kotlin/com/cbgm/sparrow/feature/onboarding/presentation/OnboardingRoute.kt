@@ -16,6 +16,8 @@ import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.sparrow.feature.onboarding.device.BatteryExemptionRequester
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
+import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
+import com.cbgm.sparrow.feature.onboarding.presentation.tour.KeyFeatureTour
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -33,7 +35,10 @@ fun OnboardingRoute(
         onPauseOrDispose { }
     }
     LaunchedEffect(identityState) {
-        if (identityState == IdentityCreateUiState.Completed) onComplete()
+        if (identityState == IdentityCreateUiState.Completed) viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+    }
+    LaunchedEffect(state.tourFinished) {
+        if (state.tourFinished) onComplete()
     }
 
     OnboardingPermissionRequester(
@@ -66,6 +71,11 @@ fun OnboardingRoute(
             }
         }
     )
+
+    state.tourStep?.let { step ->
+        KeyFeatureTour(step = step, onUiEvent = viewModel::onUiEvent)
+        return
+    }
 
     OnboardingScreen(
         state = state,

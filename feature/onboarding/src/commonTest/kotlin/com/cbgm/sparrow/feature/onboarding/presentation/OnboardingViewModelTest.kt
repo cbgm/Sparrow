@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.ui.theme.currentAppThemeMode
 import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
+import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
 import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
 import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
 import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
@@ -28,6 +29,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -61,6 +63,27 @@ class OnboardingViewModelTest {
 
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun theTourStartsOnceTheIdentityExistsAndEndsAfterTheLastStep() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+
+        repeat(TourStep.entries.size - 1) { viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked) }
+        assertEquals(TourStep.SWIPE, viewModel.uiState.value.tourStep)
+        assertFalse(viewModel.uiState.value.tourFinished)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked)
+        assertTrue(viewModel.uiState.value.tourFinished)
+    }
+
+    @Test
+    fun skippingEndsTheTourAtOnce() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        viewModel.onUiEvent(OnboardingUiEvent.TourSkipped)
+
+        assertTrue(viewModel.uiState.value.tourFinished)
+    }
 
     @Test
     fun choosingAColorSchemeAppliesAndSavesIt() = runBlocking {

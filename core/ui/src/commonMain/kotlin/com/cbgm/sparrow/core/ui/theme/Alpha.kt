@@ -27,6 +27,10 @@ object Alpha {
         const val playButtonBackground = 0.9f
     }
 
+    object Tour {
+        const val dim = 0.84f
+    }
+
     object MessageBubble {
         const val mine = 0.7f
     }

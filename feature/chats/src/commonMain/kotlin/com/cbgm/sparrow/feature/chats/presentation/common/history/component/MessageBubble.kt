@@ -55,6 +55,7 @@ import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
+import com.cbgm.sparrow.core.ui.component.SparrowDeliveryDots
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -728,44 +729,15 @@ private fun DeliveryIndicator(
         MessageDeliveryStatus.QUEUED -> DeliveryLabel(stringResource(Res.string.feature_chats_queued))
         MessageDeliveryStatus.SENDING -> DeliveryLabel(stringResource(Res.string.feature_chats_sending))
         MessageDeliveryStatus.SENT ->
-            DeliveryDots(reached = 1, description = stringResource(Res.string.feature_chats_sent))
+            SparrowDeliveryDots(reached = 1, description = stringResource(Res.string.feature_chats_sent))
 
         MessageDeliveryStatus.DELIVERED ->
-            DeliveryDots(reached = 2, description = stringResource(Res.string.feature_chats_delivered))
+            SparrowDeliveryDots(reached = 2, description = stringResource(Res.string.feature_chats_delivered))
 
         MessageDeliveryStatus.READ ->
-            DeliveryDots(reached = 3, description = stringResource(Res.string.feature_chats_read))
+            SparrowDeliveryDots(reached = 3, description = stringResource(Res.string.feature_chats_read))
 
         MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
-    }
-}
-
-/** Three stops on a path: sent, delivered, read. The stops reached so far are cyan. */
-@Composable
-private fun DeliveryDots(
-    reached: Int,
-    description: String
-) {
-    val on = MaterialTheme.colorScheme.primary
-    val off = MaterialTheme.colorScheme.outlineVariant
-    val path = MaterialTheme.colorScheme.divider
-    Canvas(
-        modifier = Modifier
-            .size(width = Dimens.MessageBubble.deliveryDotsWidth, height = Dimens.MessageBubble.deliveryDotsHeight)
-            .semantics { contentDescription = description }
-    ) {
-        val radius = Dimens.MessageBubble.deliveryDotRadius.toPx()
-        val stroke = Dimens.MessageBubble.deliveryLineWidth.toPx()
-        val centerY = size.height / 2f
-        val step = (size.width - radius * 2f) / 2f
-        val stops = List(3) { index -> Offset(radius + step * index, centerY) }
-        drawLine(color = path, start = stops.first(), end = stops.last(), strokeWidth = stroke)
-        if (reached > 1) {
-            drawLine(color = on, start = stops.first(), end = stops[reached - 1], strokeWidth = stroke)
-        }
-        stops.forEachIndexed { index, center ->
-            drawCircle(color = if (index < reached) on else off, radius = radius, center = center)
-        }
     }
 }
 

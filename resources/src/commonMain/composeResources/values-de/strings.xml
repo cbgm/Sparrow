@@ -1033,4 +1033,20 @@
     <string name="feature_settings_theme_system_description">Wechselt mit der Einstellung deines Handys</string>
     <string name="feature_settings_theme_light">Hell</string>
     <string name="feature_settings_theme_dark">Dunkel</string>
+    <string name="feature_onboarding_tour_skip">Überspringen</string>
+    <string name="feature_onboarding_tour_next">Weiter</string>
+    <string name="feature_onboarding_tour_done">Fertig</string>
+    <string name="feature_onboarding_tour_ring_title">Der Ring um einen Kontakt</string>
+    <string name="feature_onboarding_tour_ring_text">Gestrichelt: Ihr habt noch nicht beide geprüft, dass wirklich der andere dahintersteckt. Durchgezogen: Ihr habt es beide getan, indem ihr einmal die Sicherheitsnummer verglichen habt.</string>
+    <string name="feature_onboarding_tour_dots_title">Drei Punkte unter deiner Nachricht</string>
+    <string name="feature_onboarding_tour_dots_text">Sie leuchten auf, während deine Nachricht unterwegs ist: einer, wenn sie gesendet ist, zwei, wenn sie auf dem Handy angekommen ist, drei, wenn sie gelesen wurde.</string>
+    <string name="feature_onboarding_tour_hold_title">Nachricht gedrückt halten</string>
+    <string name="feature_onboarding_tour_hold_text">Halte eine Nachricht gedrückt, um zu antworten, zu reagieren, sie weiterzuleiten, zu kopieren, zu bearbeiten oder zu löschen.</string>
+    <string name="feature_onboarding_tour_swipe_title">Nach links wischen</string>
+    <string name="feature_onboarding_tour_swipe_text">Wische einen Chat nach links, um ihn zu löschen. Probier es hier aus. Das geht genauso bei Gruppenmitgliedern, Einladungen, automatischen Antworten und Ausgaben.</string>
+    <string name="feature_onboarding_tour_sample_question">Hey! Ist das die neue App?</string>
+    <string name="feature_onboarding_tour_sample_answer">Ja, gerade installiert.</string>
+    <string name="feature_onboarding_tour_sample_follow_up">Füg mich hinzu, wenn du drin bist.</string>
+    <string name="feature_onboarding_tour_sample_tomorrow">Bis morgen</string>
+    <string name="feature_onboarding_tour_sample_family">Familie</string>
 </resources>

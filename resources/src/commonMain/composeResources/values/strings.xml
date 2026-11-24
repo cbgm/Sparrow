@@ -1028,7 +1028,23 @@
     <string name="feature_onboarding_theme_description">You can change it later in Settings.</string>
     <string name="feature_settings_theme">Color scheme</string>
     <string name="feature_settings_theme_system">Like my phone</string>
-    <string name="feature_settings_theme_system_description">Switches with your phone\'s setting</string>
+    <string name="feature_settings_theme_system_description">Switches with your phone's setting</string>
     <string name="feature_settings_theme_light">Light</string>
     <string name="feature_settings_theme_dark">Dark</string>
+    <string name="feature_onboarding_tour_skip">Skip</string>
+    <string name="feature_onboarding_tour_next">Next</string>
+    <string name="feature_onboarding_tour_done">Done</string>
+    <string name="feature_onboarding_tour_ring_title">The ring around a contact</string>
+    <string name="feature_onboarding_tour_ring_text">Dashed: you haven't both checked yet that it's really the other one. Solid: you both did, by comparing the safety number once.</string>
+    <string name="feature_onboarding_tour_dots_title">Three dots under your message</string>
+    <string name="feature_onboarding_tour_dots_text">They light up as your message travels: one when it is sent, two when it arrived on their phone, three when it was read.</string>
+    <string name="feature_onboarding_tour_hold_title">Hold a message</string>
+    <string name="feature_onboarding_tour_hold_text">Press and hold any message to reply, react, forward, copy, edit or delete it.</string>
+    <string name="feature_onboarding_tour_swipe_title">Swipe to the left</string>
+    <string name="feature_onboarding_tour_swipe_text">Swipe a chat to the left to delete it. Try it here. The same works for group members, invitations, auto replies and expenses.</string>
+    <string name="feature_onboarding_tour_sample_question">Hey! Is this the new app?</string>
+    <string name="feature_onboarding_tour_sample_answer">Yes, just installed it.</string>
+    <string name="feature_onboarding_tour_sample_follow_up">Add me when you are in.</string>
+    <string name="feature_onboarding_tour_sample_tomorrow">See you tomorrow</string>
+    <string name="feature_onboarding_tour_sample_family">Family</string>
 </resources>

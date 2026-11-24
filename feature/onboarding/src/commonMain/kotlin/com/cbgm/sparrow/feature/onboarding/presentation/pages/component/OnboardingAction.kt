@@ -60,7 +60,7 @@ fun OnboardingAction(
 }
 
 @Composable
-private fun OnboardingButton(
+internal fun OnboardingButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

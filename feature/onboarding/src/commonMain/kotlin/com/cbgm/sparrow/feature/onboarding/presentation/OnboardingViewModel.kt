@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
+import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
@@ -41,6 +42,9 @@ class OnboardingViewModel(
             OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
             is OnboardingUiEvent.ConnectionModeChosen -> chooseConnectionMode(event.mode)
             is OnboardingUiEvent.ThemeModeChosen -> chooseThemeMode(event.mode)
+            OnboardingUiEvent.IdentityCreated -> _uiState.update { state -> state.copy(tourStep = state.tourStep ?: TourStep.entries.first()) }
+            OnboardingUiEvent.TourNextClicked -> showNextTourStep()
+            OnboardingUiEvent.TourSkipped -> _uiState.update { state -> state.copy(tourFinished = true) }
         }
     }
 
@@ -100,6 +104,13 @@ class OnboardingViewModel(
         }
         viewModelScope.launch {
             setConnectionMode(mode).onFailure { error -> SparrowLog.error("OnboardingViewModel", "Connection mode could not be saved", error) }
+        }
+    }
+
+    private fun showNextTourStep() {
+        _uiState.update { state ->
+            val next = state.tourStep?.let { step -> TourStep.entries.getOrNull(step.ordinal + 1) }
+            state.copy(tourStep = next ?: state.tourStep, tourFinished = next == null)
         }
     }
 

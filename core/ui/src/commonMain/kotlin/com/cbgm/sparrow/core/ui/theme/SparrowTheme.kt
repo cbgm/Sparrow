@@ -1,6 +1,9 @@
 package com.cbgm.sparrow.core.ui.theme
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -8,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 
 /*
 BACKGROUND
@@ -138,10 +142,58 @@ fun SparrowTheme(content: @Composable () -> Unit) {
         LocalAttachmentColors provides SparrowAttachmentColors
     ) {
         MaterialTheme(
-            colorScheme = if (dark) DarkColorScheme else LightColorScheme,
+            colorScheme = (if (dark) DarkColorScheme else LightColorScheme).animated(),
             typography = Typography,
             shapes = Shapes,
             content = content
         )
     }
 }
+
+/** Every colour fades to the other scheme instead of jumping. */
+@Composable
+private fun ColorScheme.animated(): ColorScheme =
+    copy(
+        primary = primary.animated(),
+        onPrimary = onPrimary.animated(),
+        primaryContainer = primaryContainer.animated(),
+        onPrimaryContainer = onPrimaryContainer.animated(),
+        inversePrimary = inversePrimary.animated(),
+        secondary = secondary.animated(),
+        onSecondary = onSecondary.animated(),
+        secondaryContainer = secondaryContainer.animated(),
+        onSecondaryContainer = onSecondaryContainer.animated(),
+        tertiary = tertiary.animated(),
+        onTertiary = onTertiary.animated(),
+        tertiaryContainer = tertiaryContainer.animated(),
+        onTertiaryContainer = onTertiaryContainer.animated(),
+        background = background.animated(),
+        onBackground = onBackground.animated(),
+        surface = surface.animated(),
+        onSurface = onSurface.animated(),
+        surfaceVariant = surfaceVariant.animated(),
+        onSurfaceVariant = onSurfaceVariant.animated(),
+        surfaceTint = surfaceTint.animated(),
+        inverseSurface = inverseSurface.animated(),
+        inverseOnSurface = inverseOnSurface.animated(),
+        error = error.animated(),
+        onError = onError.animated(),
+        errorContainer = errorContainer.animated(),
+        onErrorContainer = onErrorContainer.animated(),
+        outline = outline.animated(),
+        outlineVariant = outlineVariant.animated(),
+        scrim = scrim.animated(),
+        surfaceBright = surfaceBright.animated(),
+        surfaceContainer = surfaceContainer.animated(),
+        surfaceContainerHigh = surfaceContainerHigh.animated(),
+        surfaceContainerHighest = surfaceContainerHighest.animated(),
+        surfaceContainerLow = surfaceContainerLow.animated(),
+        surfaceContainerLowest = surfaceContainerLowest.animated(),
+        surfaceDim = surfaceDim.animated()
+    )
+
+@Composable
+private fun Color.animated(): Color =
+    animateColorAsState(targetValue = this, animationSpec = tween(SCHEME_FADE_MILLISECONDS), label = "schemeColor").value
+
+private const val SCHEME_FADE_MILLISECONDS = 600

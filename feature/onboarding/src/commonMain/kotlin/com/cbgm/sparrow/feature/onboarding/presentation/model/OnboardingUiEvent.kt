@@ -19,6 +19,12 @@ sealed interface OnboardingUiEvent {
         val mode: ConnectionMode
     ) : OnboardingUiEvent
 
+    data object IdentityCreated : OnboardingUiEvent
+
+    data object TourNextClicked : OnboardingUiEvent
+
+    data object TourSkipped : OnboardingUiEvent
+
     data class ThemeModeChosen(
         val mode: AppThemeMode
     ) : OnboardingUiEvent

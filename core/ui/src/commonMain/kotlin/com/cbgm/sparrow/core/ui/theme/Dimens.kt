@@ -272,6 +272,11 @@ object Dimens {
         val receivingGraphicHeight = 160.dp
         val contactsGraphicHeight = 160.dp
         val themeGraphicHeight = 160.dp
+        val spotlightPadding = 6.dp
+        val spotlightCorner = 16.dp
+        val spotlightLineWidth = 1.5.dp
+        val tourTextTop = 320.dp
+        val sampleBubbleMaxWidth = 280.dp
         val wordSlide = 8.dp
         val rowSlide = 60.dp
         val choiceMarkSize = 6.dp

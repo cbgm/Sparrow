@@ -20,5 +20,11 @@ data class OnboardingUiState(
     val connectsWhileClosed: Boolean = true,
     val batteryExemptionRequestId: Int = 0,
     val batteryExemptionDeclined: Boolean = false,
-    val themeMode: AppThemeMode = AppThemeMode.SYSTEM
+    val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    /** The key-feature tour after the identity is created; null before it starts. */
+    val tourStep: TourStep? = null,
+    val tourFinished: Boolean = false
 )
+
+/** Only what no screen explains by itself. */
+enum class TourStep { RING, DOTS, HOLD, SWIPE }
