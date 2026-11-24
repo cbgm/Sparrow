@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectory
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -49,7 +49,7 @@ internal class AliasClaimRegistrar(
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val cipher: SealedMessageCipher,
-    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val phoneAttestationRemoteSource: PhoneAttestationRemoteSource,
     private val invitationMailbox: InvitationMailboxRepository,
@@ -71,7 +71,7 @@ internal class AliasClaimRegistrar(
 
     /** Returns the aliases at least one Control Plane bound to [routingId]. */
     suspend fun claim(routingId: String): Set<String> {
-        val alias = localBootstrapRoutingIdSource.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
+        val alias = routingIdRepository.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
         val attestation = phoneAttestation(routingId)
         val signingKeyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
         val invitationRoute = invitationRoute()

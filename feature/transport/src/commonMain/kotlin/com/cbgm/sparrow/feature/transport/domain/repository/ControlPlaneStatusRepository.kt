@@ -10,4 +10,6 @@ interface ControlPlaneStatusRepository {
     fun markAvailable(endpoint: ControlPlaneEndpoint)
 
     fun markUnreachable(endpoint: ControlPlaneEndpoint)
+
+    suspend fun refreshHealth()
 }

@@ -8,8 +8,8 @@ import com.cbgm.sparrow.feature.transport.data.directory.FailedNodeTracker
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
  * while), and the diagnostics the developer menu shows. Every change of the connection is reported here.
  */
 internal class TransportDiagnosticsRepositoryImpl(
-    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val nodeEndpointResolver: NodeEndpointRepository,
     private val controlPlaneConfiguration: ControlPlaneEndpointStore,
     transportConfig: TransportConfig
@@ -45,7 +45,7 @@ internal class TransportDiagnosticsRepositoryImpl(
     override val diagnostics: StateFlow<TransportDiagnostics> = state.diagnostics
 
     override suspend fun refreshDiagnostics() {
-        localRoutingIdSource.getLocalRoutingId()
+        routingIdRepository.getLocalRoutingId()
             .onFailure { failure -> logger.error(failure) { "Could not obtain local routing ID for diagnostics" } }
             .getOrNull()?.let { routingId ->
                 nodeEndpointResolver

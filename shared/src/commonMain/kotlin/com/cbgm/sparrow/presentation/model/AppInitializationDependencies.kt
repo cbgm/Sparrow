@@ -22,7 +22,6 @@ import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUse
 import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneHealthRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
@@ -46,9 +45,8 @@ data class AppInitializationDependencies(
     val unpublishedGroupStateRunner: UnpublishedGroupStateRunner,
     val workflowRegistry: WorkflowRegistry,
     val controlPlaneConfiguration: ControlPlaneConfigurationRepository,
-    val controlPlaneStatusStore: ControlPlaneStatusRepository,
+    val controlPlaneStatus: ControlPlaneStatusRepository,
     val controlPlaneDirectorySynchronizer: ControlPlaneDirectoryRepository,
-    val controlPlaneHealthMonitor: ControlPlaneHealthRepository,
     val observeLocalIdentityReady: ObserveLocalIdentityReadyUseCase,
     val importDeviceContacts: ImportDeviceContactsUseCase,
     val deviceContactsPermissionChecker: DeviceContactsPermissionRepository

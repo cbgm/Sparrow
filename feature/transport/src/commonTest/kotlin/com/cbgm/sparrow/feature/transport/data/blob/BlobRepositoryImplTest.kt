@@ -10,8 +10,8 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransfers
 import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isFileTransferFailure
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -97,9 +97,11 @@ class BlobRepositoryImplTest {
                         forceRefresh: Boolean
                     ) = Result.success(listOf(NodeEndpoint("node-a", "wss://node-a.test/v1/gateway")))
                 },
-            localRoutingIdSource =
-                object : LocalRoutingIdRepository {
+            routingIdRepository =
+                object : RoutingIdRepository {
                     override suspend fun getLocalRoutingId() = Result.success("scrouting1_me")
+
+                    override suspend fun getLocalBootstrapRoutingId(): Result<String> = error("not used")
                 },
             randomBytes = { size -> ByteArray(size) { 7 } },
             retryDelayMilliseconds = 0L

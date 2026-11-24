@@ -6,12 +6,10 @@ import com.cbgm.sparrow.feature.transport.data.connection.CountingConnectionKeep
 import com.cbgm.sparrow.feature.transport.data.http.createPlatformHttpClient
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesRepositoryImpl
-import com.cbgm.sparrow.feature.transport.data.routing.LocalBootstrapRoutingIdRepositoryImpl
-import com.cbgm.sparrow.feature.transport.data.routing.LocalRoutingIdRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.routing.Sha256RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.domain.port.ConnectionKeepAlivePort
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeySource
@@ -41,15 +39,9 @@ internal val transportDataModule =
             Sha256RoutingIdGenerator(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
         }
 
-        single<LocalRoutingIdRepository> {
-            LocalRoutingIdRepositoryImpl(
+        single<RoutingIdRepository> {
+            RoutingIdRepositoryImpl(
                 localSigningPublicKeySource = get<LocalSigningPublicKeySource>(),
-                routingIdGenerator = get<RoutingIdGenerator>()
-            )
-        }
-
-        single<LocalBootstrapRoutingIdRepository> {
-            LocalBootstrapRoutingIdRepositoryImpl(
                 localPhoneNumberSource = get(),
                 routingIdGenerator = get<RoutingIdGenerator>()
             )

@@ -5,9 +5,8 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAliasBinding
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationRouteMissingException
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -124,12 +123,10 @@ class MailboxOutgoingWireSenderTest {
         binding: PhoneAliasBinding = PhoneAliasBinding { _, _ -> },
         localRoutingId: Result<String> = Result.success("local-routing-id")
     ) = MailboxOutgoingWireSender(
-        localRoutingIdSource =
-            object : LocalRoutingIdRepository {
+        routingIdRepository =
+            object : RoutingIdRepository {
                 override suspend fun getLocalRoutingId(): Result<String> = localRoutingId
-            },
-        localBootstrapRoutingIdSource =
-            object : LocalBootstrapRoutingIdRepository {
+
                 override suspend fun getLocalBootstrapRoutingId(): Result<String> = Result.success("local-bootstrap-routing-id")
             },
         transportConfig = TransportConfig(acknowledgementTimeoutMilliseconds = 2_500L),

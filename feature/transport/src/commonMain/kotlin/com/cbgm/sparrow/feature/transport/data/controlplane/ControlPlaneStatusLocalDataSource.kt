@@ -3,21 +3,20 @@ package com.cbgm.sparrow.feature.transport.data.controlplane
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /** The configured Control Planes, how each answered last, and the one in use; in memory only. */
-internal class ControlPlaneStatuses : ControlPlaneStatusRepository {
+internal class ControlPlaneStatusLocalDataSource {
     private val _endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
     private val _activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
     private val _statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())
 
     val endpoints: StateFlow<List<ControlPlaneEndpoint>> = _endpoints.asStateFlow()
     val activeEndpoint: StateFlow<ControlPlaneEndpoint?> = _activeEndpoint.asStateFlow()
-    override val statuses: StateFlow<List<ControlPlaneEndpointStatus>> = _statuses.asStateFlow()
+    val statuses: StateFlow<List<ControlPlaneEndpointStatus>> = _statuses.asStateFlow()
 
     /**
      * The endpoints are now [updated]: each keeps how it answered, and the active one stays unless it is [isStale]
@@ -67,11 +66,11 @@ internal class ControlPlaneStatuses : ControlPlaneStatusRepository {
         }
     }
 
-    override fun markAvailable(endpoint: ControlPlaneEndpoint) {
+    fun markAvailable(endpoint: ControlPlaneEndpoint) {
         updateReachability(endpoint, ControlPlaneReachability.AVAILABLE)
     }
 
-    override fun markUnreachable(endpoint: ControlPlaneEndpoint) {
+    fun markUnreachable(endpoint: ControlPlaneEndpoint) {
         updateReachability(endpoint, ControlPlaneReachability.UNREACHABLE)
     }
 

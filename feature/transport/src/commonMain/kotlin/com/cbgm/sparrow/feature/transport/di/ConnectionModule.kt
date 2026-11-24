@@ -10,8 +10,8 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import org.koin.dsl.module
 
@@ -20,7 +20,7 @@ internal val connectionModule =
     module {
         single {
             TransportDiagnosticsRepositoryImpl(
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 nodeEndpointResolver = get<NodeEndpointRepository>(),
                 controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
                 transportConfig = get<TransportConfig>()
@@ -30,8 +30,8 @@ internal val connectionModule =
         single {
             HomeNodeConnection(
                 circuits = get<CircuitRunner>(),
-                aliasClaims = AliasClaimSchedule(aliasClaims = get<AliasClaimRegistrar>(), localRoutingIdSource = get<LocalRoutingIdRepository>()),
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                aliasClaims = AliasClaimSchedule(aliasClaims = get<AliasClaimRegistrar>(), routingIdRepository = get<RoutingIdRepository>()),
+                routingIdRepository = get<RoutingIdRepository>(),
                 nodeEndpointResolver = get<NodeEndpointRepository>(),
                 directoryRefresh =
                     NodeDirectoryRefresh(

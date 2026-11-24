@@ -49,7 +49,7 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 ### Control Plane
 
 - `ControlPlaneDirectoryRepositoryImpl`
-- `ControlPlaneHealthRepositoryImpl`
+- `ControlPlaneStatusRepositoryImpl` (in-memory status, health probe)
 - `ControlPlaneCandidateVerifier`
 - `ControlPlaneRequestRouter`
 - `NodeControlPlaneDirectorySource`
@@ -71,6 +71,7 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 - `MailboxOutgoingWireSender`
 - `AliasClaimRegistrar`
 - `Sha256RoutingIdGenerator`
+- `RoutingIdRepositoryImpl` (device and phone-alias routing IDs)
 
 ### Mailboxes
 

@@ -21,9 +21,9 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseC
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -95,7 +95,7 @@ internal class ProvisionerFakes {
         MailboxRouteProvisioner(
             getMailboxContactStates =
                 GetMailboxContactStatesUseCase(contacts, GetIdentityPeerStateUseCase(identity, NoPendingChanges)),
-            localRoutingIdSource = FakeLocalRoutingId,
+            routingIdRepository = FakeRoutingIds,
             nodeEndpointResolver = SingleNodeResolver,
             mailboxRepository = gateway,
             mailboxRouteRepository = routes,
@@ -410,8 +410,10 @@ private object NoPendingChanges : PendingRemoteIdentityChangeRepository {
     ): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeLocalRoutingId : LocalRoutingIdRepository {
+private object FakeRoutingIds : RoutingIdRepository {
     override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")
+
+    override suspend fun getLocalBootstrapRoutingId(): Result<String> = error(NOT_USED)
 }
 
 private object SingleNodeResolver : NodeEndpointRepository {

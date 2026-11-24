@@ -3,9 +3,9 @@ package com.cbgm.sparrow.feature.transport.data.mailbox
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.coroutines.test.runTest
@@ -27,9 +27,11 @@ class InvitationMailboxRepositoryImplTest {
                         forceRefresh: Boolean
                     ): Result<List<NodeEndpoint>> = nodes
                 },
-            localRoutingIdSource =
-                object : LocalRoutingIdRepository {
+            routingIdRepository =
+                object : RoutingIdRepository {
                     override suspend fun getLocalRoutingId(): Result<String> = Result.success("scrouting1_device")
+
+                    override suspend fun getLocalBootstrapRoutingId(): Result<String> = error("not used")
                 },
             mailboxRepository = gateway,
             store = store,

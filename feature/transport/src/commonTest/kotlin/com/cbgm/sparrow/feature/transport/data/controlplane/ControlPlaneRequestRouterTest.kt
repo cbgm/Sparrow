@@ -289,6 +289,8 @@ class ControlPlaneRequestRouterTest {
             update(endpoint, ControlPlaneReachability.UNREACHABLE)
         }
 
+        override suspend fun refreshHealth() = Unit
+
         fun statusFor(url: String): ControlPlaneEndpointStatus =
             statuses.value.first { it.endpoint.baseUrl == url }
 

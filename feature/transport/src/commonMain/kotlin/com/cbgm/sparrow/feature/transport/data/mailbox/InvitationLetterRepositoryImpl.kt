@@ -11,9 +11,8 @@ import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterEx
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationLetterContent
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationRouteMissingException
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -30,8 +29,7 @@ internal class InvitationLetterRepositoryImpl(
     private val transportCipher: TransportMessageCipher,
     private val payloadCodec: TransportPayloadCodec,
     private val routingIdGenerator: RoutingIdGenerator,
-    private val localRoutingIdSource: LocalRoutingIdRepository,
-    private val localBootstrapRoutingIdSource: LocalBootstrapRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val json: Json
 ) : InvitationLetterRepository {
     override suspend fun send(
@@ -72,8 +70,8 @@ internal class InvitationLetterRepositoryImpl(
                 .getOrElse { throw InvalidInvitationLetterException("Invitation letter signature does not verify") }
             val ownRoutingIds =
                 listOfNotNull(
-                    localRoutingIdSource.getLocalRoutingId().getOrThrow(),
-                    localBootstrapRoutingIdSource.getLocalBootstrapRoutingId().getOrNull()
+                    routingIdRepository.getLocalRoutingId().getOrThrow(),
+                    routingIdRepository.getLocalBootstrapRoutingId().getOrNull()
                 )
             if (letter.recipientRoutingId !in ownRoutingIds) throw InvalidInvitationLetterException("Invitation letter is for another device")
             val device = routingIdGenerator.deriveFromSigningPublicKey(letter.signingPublicKey).getOrThrow()

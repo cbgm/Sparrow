@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.transport.data.controlplane
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,9 +12,8 @@ import kotlinx.coroutines.sync.withLock
 internal class ControlPlaneConfigurationRepositoryImpl(
     private val dataStore: SparrowDataStore,
     private val nodeDirectoryCache: NodeDirectoryCache,
-    private val endpointStatuses: ControlPlaneStatuses = ControlPlaneStatuses()
-) : ControlPlaneEndpointStore,
-    ControlPlaneStatusRepository by endpointStatuses {
+    private val endpointStatuses: ControlPlaneStatusLocalDataSource = ControlPlaneStatusLocalDataSource()
+) : ControlPlaneEndpointStore {
     private val _manualBaseUrls = MutableStateFlow(emptySet<String>())
     private val _directoryBaseUrls = MutableStateFlow(emptySet<String>())
     private val _directoryUrl = MutableStateFlow<String?>(null)

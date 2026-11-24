@@ -6,8 +6,8 @@ import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.PreferredNodeReturnPolicy
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class HomeNodeConnection(
     private val circuits: CircuitRunner,
     private val aliasClaims: AliasClaimSchedule,
-    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val nodeEndpointResolver: NodeEndpointRepository,
     private val directoryRefresh: NodeDirectoryRefresh,
     private val diagnostics: TransportDiagnosticsRepositoryImpl,
@@ -150,7 +150,7 @@ internal class HomeNodeConnection(
             mutableConnectionState.value = TransportConnectionState.Connecting
             diagnostics.connecting()
 
-            val routingId = localRoutingIdSource.getLocalRoutingId().getOrThrow()
+            val routingId = routingIdRepository.getLocalRoutingId().getOrThrow()
             val endpoint = resolveEndpoint(routingId, useCachedDirectory)
             selectedEndpoint = endpoint
 

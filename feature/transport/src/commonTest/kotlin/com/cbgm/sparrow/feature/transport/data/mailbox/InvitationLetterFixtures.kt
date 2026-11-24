@@ -14,9 +14,8 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteResul
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
@@ -65,10 +64,9 @@ internal class InvitationTestWorld {
             transportCipher = ReadableTransportCipher,
             payloadCodec = DefaultTransportPayloadCodec(),
             routingIdGenerator = NameRoutingIds,
-            localRoutingIdSource = object : LocalRoutingIdRepository {
+            routingIdRepository = object : RoutingIdRepository {
                 override suspend fun getLocalRoutingId(): Result<String> = Result.success(device.routingId)
-            },
-            localBootstrapRoutingIdSource = object : LocalBootstrapRoutingIdRepository {
+
                 override suspend fun getLocalBootstrapRoutingId(): Result<String> = Result.success(device.alias)
             },
             json = json

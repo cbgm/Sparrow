@@ -11,8 +11,10 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneCandidat
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneConfigurationRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneDirectoryRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneHealthRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneHealthRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneRequestRouter
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusLocalDataSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.HttpNodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.KEY_TRUSTED_DIRECTORY_PUBLIC_KEY
@@ -31,10 +33,9 @@ import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayEngine
 import com.cbgm.sparrow.feature.transport.data.route.relay.createControlPlaneHttpClient
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneHealthRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import io.ktor.client.HttpClient
@@ -44,8 +45,14 @@ import org.koin.dsl.module
 /** The Control Planes: their addresses, health, directory and the requests that go to them through relays. */
 internal val controlPlaneModule =
     module {
+        single { ControlPlaneStatusLocalDataSource() }
+
         single<ControlPlaneConfigurationRepositoryImpl> {
-            ControlPlaneConfigurationRepositoryImpl(dataStore = get(), nodeDirectoryCache = get())
+            ControlPlaneConfigurationRepositoryImpl(
+                dataStore = get(),
+                nodeDirectoryCache = get(),
+                endpointStatuses = get<ControlPlaneStatusLocalDataSource>()
+            )
         }
 
         single<ControlPlaneEndpointStore> {
@@ -53,10 +60,6 @@ internal val controlPlaneModule =
         }
 
         single<ControlPlaneConfigurationRepository> {
-            get<ControlPlaneConfigurationRepositoryImpl>()
-        }
-
-        single<ControlPlaneStatusRepository> {
             get<ControlPlaneConfigurationRepositoryImpl>()
         }
 
@@ -92,7 +95,7 @@ internal val controlPlaneModule =
                 signingKeyPairSource = get<LocalSigningKeyPairSource>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cipher = get<SealedMessageCipher>(),
-                localBootstrapRoutingIdSource = get<LocalBootstrapRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 localPhoneNumberSource = get<LocalPhoneNumberSource>(),
                 phoneAttestationRemoteSource = get<PhoneAttestationRemoteSource>(),
                 invitationMailbox = get<InvitationMailboxRepository>(),
@@ -128,11 +131,13 @@ internal val controlPlaneModule =
             )
         }
 
-        single<ControlPlaneHealthRepository> {
-            ControlPlaneHealthRepositoryImpl(
-                httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                configuration = get<ControlPlaneEndpointStore>(),
-                statusStore = get<ControlPlaneStatusRepository>()
+        single<ControlPlaneStatusRepository> {
+            ControlPlaneStatusRepositoryImpl(
+                localDataSource = get<ControlPlaneStatusLocalDataSource>(),
+                healthRemoteDataSource =
+                    ControlPlaneHealthRemoteDataSource(
+                        httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))
+                    )
             )
         }
 

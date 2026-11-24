@@ -23,10 +23,9 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.createMailboxHttpCl
 import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalBootstrapRoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -45,7 +44,7 @@ internal val mailboxModule =
         single<InvitationMailboxRepository> {
             InvitationMailboxRepositoryImpl(
                 nodeEndpointResolver = get<NodeEndpointRepository>(),
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 mailboxRepository = get<MailboxRepository>(),
                 store = get<InvitationMailboxStore>()
             )
@@ -61,8 +60,7 @@ internal val mailboxModule =
                 transportCipher = get<TransportMessageCipher>(),
                 payloadCodec = get<TransportPayloadCodec>(),
                 routingIdGenerator = get<RoutingIdGenerator>(),
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
-                localBootstrapRoutingIdSource = get<LocalBootstrapRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
@@ -99,15 +97,14 @@ internal val mailboxModule =
                 creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
                 cryptoHash = get<CryptoHash>(),
                 nodeEndpointResolver = get<NodeEndpointRepository>(),
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 randomBytes = get<SecureRandomGenerator>().let { random -> { size -> random.generateBytes(size).getOrThrow() } }
             )
         }
 
         single<OutgoingWireSender> {
             MailboxOutgoingWireSender(
-                localRoutingIdSource = get<LocalRoutingIdRepository>(),
-                localBootstrapRoutingIdSource = get<LocalBootstrapRoutingIdRepository>(),
+                routingIdRepository = get<RoutingIdRepository>(),
                 transportConfig = get<TransportConfig>(),
                 mailboxRouteRepository = get(),
                 mailboxRepository = get<MailboxRepository>(),

@@ -5,9 +5,9 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxRepositoryImpl.Companion.LIFETIME_MILLISECONDS
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
  */
 internal class InvitationMailboxRepositoryImpl(
     private val nodeEndpointResolver: NodeEndpointRepository,
-    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val mailboxRepository: MailboxRepository,
     private val store: InvitationMailboxStore,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
@@ -79,7 +79,7 @@ internal class InvitationMailboxRepositoryImpl(
     private suspend fun mailboxNodes(): Result<List<NodeEndpoint>> =
         safeSuspendCall(logFailure = false) {
             nodeEndpointResolver
-                .resolve(localRoutingIdSource.getLocalRoutingId().getOrThrow())
+                .resolve(routingIdRepository.getLocalRoutingId().getOrThrow())
                 .getOrThrow()
                 .filter { node -> node.mailboxRouteEndpoint != null && node.mailboxAccessEndpoint != null }
                 .also { nodes -> check(nodes.isNotEmpty()) { "No mailbox-capable node is available" } }

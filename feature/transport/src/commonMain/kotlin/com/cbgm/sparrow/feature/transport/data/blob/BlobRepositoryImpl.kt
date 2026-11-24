@@ -15,8 +15,8 @@ import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
 import com.cbgm.sparrow.feature.transport.domain.model.StoredBlob
 import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -36,7 +36,7 @@ internal class BlobRepositoryImpl(
     private val creationWork: MailboxCreationWorkSolver,
     private val cryptoHash: CryptoHash,
     private val nodeEndpointResolver: NodeEndpointRepository,
-    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val randomBytes: suspend (Int) -> ByteArray,
     private val retryDelayMilliseconds: Long = DEFAULT_RETRY_DELAY_MILLISECONDS
 ) : BlobRepository {
@@ -208,7 +208,7 @@ internal class BlobRepositoryImpl(
     private suspend fun directNode(): Pair<String, String> {
         val endpoint =
             nodeEndpointResolver
-                .resolve(localRoutingIdSource.getLocalRoutingId().getOrThrow(), forceRefresh = false)
+                .resolve(routingIdRepository.getLocalRoutingId().getOrThrow(), forceRefresh = false)
                 .getOrThrow()
                 .firstOrNull()
                 ?: error("No blob node is available")
@@ -216,7 +216,7 @@ internal class BlobRepositoryImpl(
     }
 
     private suspend fun baseUrl(nodeId: String): String {
-        val localRoutingId = localRoutingIdSource.getLocalRoutingId().getOrThrow()
+        val localRoutingId = routingIdRepository.getLocalRoutingId().getOrThrow()
 
         suspend fun find(forceRefresh: Boolean): String? =
             nodeEndpointResolver.resolve(localRoutingId, forceRefresh).getOrThrow().firstOrNull { it.nodeId == nodeId }?.websocketUrl?.toHttpBase()

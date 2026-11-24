@@ -692,6 +692,8 @@ class NodeEndpointRepositoryImplTest {
             updateStatus(endpoint, ControlPlaneReachability.UNREACHABLE)
         }
 
+        override suspend fun refreshHealth() = Unit
+
         override suspend fun replace(baseUrls: List<String>): Result<Unit> =
             runCatching {
                 val updated = baseUrls.map(::ControlPlaneEndpoint)

@@ -6,9 +6,9 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepos
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRouteProvisioner.Companion.RETIRING_GRACE_MILLISECONDS
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.LocalRoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
 
 class MailboxRouteProvisioner(
     private val getMailboxContactStates: GetMailboxContactStatesUseCase,
-    private val localRoutingIdSource: LocalRoutingIdRepository,
+    private val routingIdRepository: RoutingIdRepository,
     private val nodeEndpointResolver: NodeEndpointRepository,
     private val mailboxRepository: MailboxRepository,
     private val mailboxRouteRepository: MailboxRouteRepository,
@@ -150,7 +150,7 @@ class MailboxRouteProvisioner(
 
     private suspend fun resolveMailboxNodes(): List<NodeEndpoint> =
         nodeEndpointResolver
-            .resolve(localRoutingIdSource.getLocalRoutingId().getOrThrow(), forceRefresh = true)
+            .resolve(routingIdRepository.getLocalRoutingId().getOrThrow(), forceRefresh = true)
             .getOrThrow()
             .filter { node ->
                 node.mailboxRouteEndpoint != null && node.mailboxAccessEndpoint != null
