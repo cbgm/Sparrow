@@ -52,6 +52,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
 import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
@@ -204,6 +205,7 @@ fun GroupConversationScreen(
                             onBackClick = { onUiEvent(GroupConversationUiEvent.BackClicked) },
                             onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) },
                             actions = {
+                                RouteProtectionAction()
                                 IconButton(onClick = { onUiEvent(GroupConversationUiEvent.SearchClicked) }) {
                                     Icon(
                                         imageVector = SparrowIcons.Search,

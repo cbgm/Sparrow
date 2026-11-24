@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,13 +29,16 @@ import com.cbgm.sparrow.core.ui.component.SparrowSwitch
 import com.cbgm.sparrow.core.ui.component.SparrowTopBar
 import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
 import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.component.CircuitHopsGraphic
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_receiving_always
 import com.cbgm.sparrow.resources.feature_receiving_always_consequence
@@ -55,6 +59,12 @@ import com.cbgm.sparrow.resources.feature_settings_circuit_hint
 import com.cbgm.sparrow.resources.feature_settings_circuit_hops
 import com.cbgm.sparrow.resources.feature_settings_circuit_hops_unavailable
 import com.cbgm.sparrow.resources.feature_settings_circuit_operators_fewer
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_direct_text
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_direct_title
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_reduced_text
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_reduced_title
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_waiting_text
+import com.cbgm.sparrow.resources.feature_settings_circuit_protection_waiting_title
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_off
 import com.cbgm.sparrow.resources.feature_settings_circuit_send_directly_on
@@ -119,6 +129,11 @@ fun CircuitHopsScreen(
                     uiState = uiState,
                     modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
                 )
+            }
+            if (uiState.protection != RouteProtection.PROTECTED) {
+                item(key = "protection") {
+                    ProtectionNotice(uiState = uiState)
+                }
             }
             item(key = "hint") {
                 Text(
@@ -419,6 +434,37 @@ private fun statusText(status: CircuitUiStatus): String =
                 status.latencyMilliseconds.toInt()
             )
     }
+
+/** Why the shield in the chats is not quiet: fewer hops than chosen, no circuit, or requests going out directly. */
+@Composable
+private fun ProtectionNotice(uiState: CircuitHopsUiState) {
+    val connected = uiState.status as? CircuitUiStatus.Connected
+    val (title, description) =
+        when {
+            uiState.protection == RouteProtection.DIRECT ->
+                stringResource(Res.string.feature_settings_circuit_protection_direct_title) to
+                    stringResource(Res.string.feature_settings_circuit_protection_direct_text)
+            connected != null ->
+                stringResource(Res.string.feature_settings_circuit_protection_reduced_title, connected.hopCount, connected.requestedHopCount) to
+                    stringResource(Res.string.feature_settings_circuit_protection_reduced_text)
+            else ->
+                stringResource(Res.string.feature_settings_circuit_protection_waiting_title) to
+                    stringResource(Res.string.feature_settings_circuit_protection_waiting_text)
+        }
+    val accent = if (uiState.protection == RouteProtection.DIRECT) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.warning
+    Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        Icon(
+            imageVector = SparrowIcons.ShieldAlert,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(Dimens.TopBar.iconSize)
+        )
+        Column {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = accent)
+            Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 @Composable
 private fun StatusLine(

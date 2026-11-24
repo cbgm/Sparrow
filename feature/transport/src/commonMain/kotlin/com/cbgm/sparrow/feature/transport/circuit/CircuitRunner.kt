@@ -170,6 +170,7 @@ class CircuitRunner internal constructor(
         hopCount: Int
     ) {
         var retryDelay = FIRST_RETRY_MILLISECONDS
+        var hopFailuresInARow = 0
         var next: Circuit? = null
         while (currentCoroutineContext().isActive) {
             if (next == null) setStatus(slot, hopCount, CircuitStatus.Building)
@@ -177,6 +178,7 @@ class CircuitRunner internal constructor(
                 val circuit = next ?: build("${slot + 1}", hopCount, slot)
                 next = null
                 retryDelay = FIRST_RETRY_MILLISECONDS
+                hopFailuresInARow = 0
                 sessionOperators[slot].value = circuit.sessionOperator
                 circuits[slot].value = circuit
                 try {
@@ -195,11 +197,17 @@ class CircuitRunner internal constructor(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (failure: Exception) {
-                (failure as? CircuitHopFailedException)?.let { hopFailure -> selector.recordFailure(hopFailure.nodeId) }
-                logger.warn { "Circuit ${slot + 1} failed (${failure.message ?: failure::class.simpleName}); rebuilding in ${retryDelay / 1_000} s" }
+                // A hop that failed is left out next time, so the next few attempts are not slowed down; when hops
+                // keep failing (no network at all) or nobody is to blame, each wait gets longer.
+                val hopFailure = failure as? CircuitHopFailedException
+                hopFailure?.let { selector.recordFailure(it.nodeId) }
+                hopFailuresInARow = if (hopFailure != null) hopFailuresInARow + 1 else 0
+                val quickRetry = hopFailure != null && hopFailuresInARow <= QUICK_HOP_RETRIES
+                val wait = if (quickRetry) FIRST_RETRY_MILLISECONDS else retryDelay
+                logger.warn { "Circuit ${slot + 1} failed (${failure.message ?: failure::class.simpleName}); rebuilding in ${wait / 1_000} s" }
                 setStatus(slot, hopCount, CircuitStatus.Unavailable(hopCount))
-                delay(retryDelay.milliseconds)
-                retryDelay = (retryDelay * 2).coerceAtMost(MAXIMUM_RETRY_MILLISECONDS)
+                delay(wait.milliseconds)
+                if (!quickRetry) retryDelay = (retryDelay * 2).coerceAtMost(MAXIMUM_RETRY_MILLISECONDS)
             }
         }
     }
@@ -340,6 +348,7 @@ class CircuitRunner internal constructor(
         const val DEFAULT_PING_INTERVAL_MILLISECONDS = 30_000L
         const val FIRST_RETRY_MILLISECONDS = 5_000L
         const val MAXIMUM_RETRY_MILLISECONDS = 60_000L
+        const val QUICK_HOP_RETRIES = 3
         const val NO_SLOT = -1
 
         /** A chunk of a file takes about a thousand cells through every hop; on a slow network that takes a while. */

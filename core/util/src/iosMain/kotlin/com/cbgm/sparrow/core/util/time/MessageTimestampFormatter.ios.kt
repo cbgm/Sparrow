@@ -13,3 +13,13 @@ actual fun formatMessageTimestamp(epochMilliseconds: Long): String {
     val date = NSDate.dateWithTimeIntervalSince1970(epochMilliseconds / 1_000.0)
     return formatter.stringFromDate(date)
 }
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun formatMessageTime(epochMilliseconds: Long): String {
+    val formatter =
+        NSDateFormatter().apply {
+            dateFormat = "HH:mm"
+        }
+    val date = NSDate.dateWithTimeIntervalSince1970(epochMilliseconds / 1_000.0)
+    return formatter.stringFromDate(date)
+}

@@ -13,6 +13,8 @@ data class MessageBubbleUi(
     val security: MessageSecurity,
     val contentStatus: MessageContentStatus,
     val deliveryStatus: MessageDeliveryStatus,
+    /** When it was written, as a time of day. */
+    val time: String = "",
     val groupExtension: GroupMessageUi? = null,
     val canEdit: Boolean = false,
     val senderName: String? = null,

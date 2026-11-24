@@ -47,6 +47,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.DirectIdentityController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationActionsController
@@ -169,6 +170,10 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
 
     viewModel {
         ContactsFlowViewModel(orchestrator = get())
+    }
+
+    viewModel {
+        RouteProtectionViewModel(observeRouteProtection = get())
     }
 
     viewModel {

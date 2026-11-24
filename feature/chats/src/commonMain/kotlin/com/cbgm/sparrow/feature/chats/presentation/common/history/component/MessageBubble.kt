@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,12 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -61,7 +57,6 @@ import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
@@ -177,6 +172,8 @@ private fun MessageBubbleContent(
 ) {
     val bubbleState = bubbleState(message)
     val safetyWarning = message.safetyWarning
+    // A plain text bubble carries its time and delivery inside, at its end; other content keeps them underneath.
+    val metadataInside = showMetadata && message.hasRoomForMetadata(bubbleState)
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -209,7 +206,13 @@ private fun MessageBubbleContent(
                     onPollClose = onPollClose,
                     onSafetyDetailsClick = {
                         safetyWarning?.let(onSafetyDetailsClick)
-                    }
+                    },
+                    innerMetadata =
+                        if (metadataInside) {
+                            { Metadata(message = message, onRetryClick = onRetryClick) }
+                        } else {
+                            null
+                        }
                 )
 
                 MessageReactions(
@@ -227,7 +230,7 @@ private fun MessageBubbleContent(
                             .offset(y = MaterialTheme.spacing.small)
                 )
             }
-            if (showMetadata) {
+            if (showMetadata && !metadataInside) {
                 Metadata(
                     message = message,
                     onRetryClick = onRetryClick,
@@ -298,7 +301,8 @@ private fun BubbleBody(
     onLongPress: () -> Unit = {},
     onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
     onPollClose: (String, String) -> Unit = { _, _ -> },
-    onSafetyDetailsClick: () -> Unit = {}
+    onSafetyDetailsClick: () -> Unit = {},
+    innerMetadata: (@Composable () -> Unit)? = null
 ) {
     val showTextBubble =
         message.parts.standalonePartOrNull() == null &&
@@ -326,7 +330,8 @@ private fun BubbleBody(
             onLongPress = onLongPress,
             onPollVoteSubmit = onPollVoteSubmit,
             onPollClose = onPollClose,
-            onSafetyDetailsClick = onSafetyDetailsClick
+            onSafetyDetailsClick = onSafetyDetailsClick,
+            innerMetadata = innerMetadata
         )
     }
 }
@@ -345,7 +350,8 @@ private fun BubbleContent(
     onLongPress: () -> Unit,
     onPollVoteSubmit: (String, String, Set<String>) -> Unit,
     onPollClose: (String, String) -> Unit,
-    onSafetyDetailsClick: () -> Unit
+    onSafetyDetailsClick: () -> Unit,
+    innerMetadata: (@Composable () -> Unit)?
 ) {
     when (val part = message.parts.standalonePartOrNull()) {
         is ExpenseBoardUi -> {
@@ -477,17 +483,20 @@ private fun BubbleContent(
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress
                 ) {
-                    TextMessageBubbleBody(
-                        textPart =
-                            message.parts.textPartOrNull()
-                                ?: TextUi(
-                                    id = message.id,
-                                    text = state.text,
-                                    isContentFailed = state.isContentFailed
-                                ),
-                        safetyWarning = safetyWarning,
-                        onSafetyDetailsClick = onSafetyDetailsClick
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextMessageBubbleBody(
+                            textPart =
+                                message.parts.textPartOrNull()
+                                    ?: TextUi(
+                                        id = message.id,
+                                        text = state.text,
+                                        isContentFailed = state.isContentFailed
+                                    ),
+                            safetyWarning = safetyWarning,
+                            onSafetyDetailsClick = onSafetyDetailsClick
+                        )
+                        innerMetadata?.invoke()
+                    }
                 }
             }
         }
@@ -622,6 +631,13 @@ private fun MessageReactions(
     }
 }
 
+/** Only text and nothing else: no attachment, no poll or voice, no safety warning taking the bubble's width. */
+private fun MessageBubbleUi.hasRoomForMetadata(state: BubbleState): Boolean =
+    parts.standalonePartOrNull() == null &&
+        parts.none { part -> part is ImageVideoUi || part is FileUi } &&
+        safetyWarning == null &&
+        (state.text.isNotBlank() || state.isContentFailed)
+
 @Composable
 private fun Metadata(
     message: MessageBubbleUi,
@@ -634,6 +650,14 @@ private fun Metadata(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
         SecurityIndicator(message = message)
+
+        if (message.time.isNotBlank()) {
+            Text(
+                text = message.time,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         if (message.isMine && message.deliveryStatus != MessageDeliveryStatus.NOT_APPLICABLE) {
             DeliveryIndicator(

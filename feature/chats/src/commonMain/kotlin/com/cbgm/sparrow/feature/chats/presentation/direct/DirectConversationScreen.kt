@@ -49,6 +49,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
 import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
@@ -201,6 +202,7 @@ fun DirectConversationScreen(
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
                         onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
                         actions = {
+                            RouteProtectionAction()
                             IconButton(onClick = { onUiEvent(DirectConversationUiEvent.SearchClicked) }) {
                                 Icon(
                                     imageVector = SparrowIcons.Search,

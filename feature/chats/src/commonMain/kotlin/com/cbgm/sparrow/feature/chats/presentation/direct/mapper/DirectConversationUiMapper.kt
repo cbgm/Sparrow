@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.base.messagepart.domain.model.File
 import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
+import com.cbgm.sparrow.core.util.time.formatMessageTime
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
@@ -45,6 +46,7 @@ internal fun DirectMessage.toMessageBubbleUi(
         security = security,
         contentStatus = contentStatus,
         deliveryStatus = deliveryStatus,
+        time = formatMessageTime(timestamp),
         canEdit = isEditable(),
         safetyWarning =
             if (isMine || contentStatus != MessageContentStatus.READABLE) {

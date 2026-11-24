@@ -1047,4 +1047,13 @@
     <string name="feature_onboarding_tour_sample_follow_up">Add me when you are in.</string>
     <string name="feature_onboarding_tour_sample_tomorrow">See you tomorrow</string>
     <string name="feature_onboarding_tour_sample_family">Family</string>
+    <string name="feature_chats_route_protection_ok">Your route is protected</string>
+    <string name="feature_chats_route_protection_reduced">Reduced protection</string>
+    <string name="feature_chats_route_protection_direct">Sent directly: not protected</string>
+    <string name="feature_settings_circuit_protection_direct_title">Sent directly: not protected</string>
+    <string name="feature_settings_circuit_protection_direct_text">No route is up, so the mailbox nodes see this phone's address. Turn off sending directly below to let messages wait for a route instead.</string>
+    <string name="feature_settings_circuit_protection_reduced_title">Reduced protection: %1$d of %2$d hops</string>
+    <string name="feature_settings_circuit_protection_reduced_text">Not all relaying nodes can be reached right now. Until they are back, the nodes in between see more than with all hops; with one hop, that node sees both your address and your mailboxes.</string>
+    <string name="feature_settings_circuit_protection_waiting_title">No route right now</string>
+    <string name="feature_settings_circuit_protection_waiting_text">Messages wait and go out as soon as a route is up again.</string>
 </resources>

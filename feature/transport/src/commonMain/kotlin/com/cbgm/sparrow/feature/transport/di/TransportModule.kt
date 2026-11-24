@@ -68,6 +68,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUs
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveLocalNetworkNeededUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveRouteProtectionUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveWaitingForRouteUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.PrepareControlPlaneUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
@@ -453,6 +454,7 @@ val transportModule =
         singleOf(::ObserveCircuitFallbackUseCase)
         singleOf(::SetCircuitFallbackUseCase)
         singleOf(::ObserveWaitingForRouteUseCase)
+        singleOf(::ObserveRouteProtectionUseCase)
         singleOf(::ObserveConnectionModeUseCase)
         singleOf(::SetConnectionModeUseCase)
         singleOf(::CanConnectWhileClosedUseCase)

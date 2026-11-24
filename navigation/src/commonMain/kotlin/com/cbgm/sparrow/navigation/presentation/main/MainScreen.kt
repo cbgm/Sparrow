@@ -37,6 +37,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewRoute
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsRoute
@@ -147,6 +148,7 @@ private fun MainTopBar(
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
+                RouteProtectionAction()
                 if (isMessageSearchAvailable) {
                     IconButton(
                         onClick = onOpenSearch,

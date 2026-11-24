@@ -210,6 +210,16 @@ object SparrowIcons {
         )
     }
 
+    val ShieldAlert: ImageVector by lazy {
+        lineIcon(
+            name = "ShieldAlert",
+            autoMirror = false,
+            "M12,3.5 L19,6 V11.5 C19,15.8 16,19.1 12,20.5 C8,19.1 5,15.8 5,11.5 V6 Z",
+            "M12,8.5 V12.5",
+            "M12,15.5 V15.6"
+        )
+    }
+
     val Block: ImageVector by lazy {
         lineIcon(
             name = "Block",

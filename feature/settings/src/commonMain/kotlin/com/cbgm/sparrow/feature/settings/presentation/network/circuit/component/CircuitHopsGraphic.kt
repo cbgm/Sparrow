@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -25,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
 import com.cbgm.sparrow.resources.Res
@@ -78,9 +78,20 @@ fun CircuitHopsGraphic(
     val nodeColor = MaterialTheme.colorScheme.outline
     val solidNodeColor = MaterialTheme.colorScheme.onBackground
     val packetColor = MaterialTheme.colorScheme.primary
-    val directColor = Color(0xFFFFC107)
+    val directColor = MaterialTheme.colorScheme.error
+    val missingColor = MaterialTheme.colorScheme.warning
 
     val isDirectFallback = (status is CircuitUiStatus.Unavailable) && sendsDirectlyWithoutCircuit
+
+    // Hops that are chosen but not reachable right now: drawn in the warning colour, and the route bends past them.
+    // Without any circuit (messages wait) every hop is missing and nothing travels.
+    val isWaiting = status is CircuitUiStatus.Unavailable && !sendsDirectlyWithoutCircuit
+    val missingHopCount =
+        when {
+            isWaiting -> hopCount.coerceIn(1, 5)
+            status is CircuitUiStatus.Connected -> (hopCount.coerceIn(1, 5) - status.hopCount).coerceAtLeast(0)
+            else -> 0
+        }
 
     Canvas(
         modifier = modifier
@@ -181,17 +192,29 @@ fun CircuitHopsGraphic(
                 }
                 points.add(endPoint)
 
-                // Build path for circuit c
-                val circuitPath = Path().apply {
-                    moveTo(points[0].x, points[0].y)
-                    for (i in 1 until points.size) {
-                        lineTo(points[i].x, points[i].y)
+                val usedRelays = points.subList(1, points.size - 1).dropLast(missingHopCount)
+                val missingRelays = points.subList(1, points.size - 1).takeLast(missingHopCount)
+                val routePoints = listOf(startPoint) + usedRelays + listOf(endPoint)
+                // The last stretch arcs over the missing hops to the contact.
+                val bend =
+                    missingRelays.takeIf { it.isNotEmpty() }?.let { missing ->
+                        Offset(
+                            (routePoints[routePoints.size - 2].x + endPoint.x) / 2f,
+                            missing.minOf(Offset::y) - 22.dp.toPx()
+                        )
                     }
+
+                val circuitPath = Path().apply {
+                    moveTo(routePoints[0].x, routePoints[0].y)
+                    for (i in 1 until routePoints.size - 1) {
+                        lineTo(routePoints[i].x, routePoints[i].y)
+                    }
+                    bend?.let { control -> quadraticTo(control.x, control.y, endPoint.x, endPoint.y) } ?: lineTo(endPoint.x, endPoint.y)
                 }
 
                 drawPath(
                     path = circuitPath,
-                    color = pathColor.copy(alpha = 0.7f),
+                    color = if (isWaiting) missingColor else pathColor.copy(alpha = 0.7f),
                     style = Stroke(
                         width = 1.2.dp.toPx(),
                         pathEffect = dashEffect
@@ -199,33 +222,43 @@ fun CircuitHopsGraphic(
                 )
 
                 // Draw relay open circles
-                for (i in 1 until points.size - 1) {
+                usedRelays.forEach { relay ->
                     drawCircle(
                         color = nodeColor,
                         radius = 4.dp.toPx(),
-                        center = points[i],
+                        center = relay,
                         style = Stroke(width = 1.3.dp.toPx())
+                    )
+                }
+                missingRelays.forEach { relay ->
+                    drawCircle(
+                        color = missingColor,
+                        radius = 4.dp.toPx(),
+                        center = relay,
+                        style = Stroke(width = 1.3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 2.dp.toPx())))
                     )
                 }
 
                 // Animate packet along circuit path
-                val totalSegments = points.size - 1
+                val totalSegments = routePoints.size - 1
                 val segmentProgress = (time * totalSegments) % totalSegments
                 val segIndex = segmentProgress.toInt().coerceIn(0, totalSegments - 1)
                 val segT = segmentProgress - segIndex
 
-                val p1 = points[segIndex]
-                val p2 = points[segIndex + 1]
-                val packetPos = Offset(
-                    p1.x + (p2.x - p1.x) * segT,
-                    p1.y + (p2.y - p1.y) * segT
-                )
+                val p1 = routePoints[segIndex]
+                val p2 = routePoints[segIndex + 1]
+                val control = bend?.takeIf { segIndex == totalSegments - 1 }
+                val packetPos =
+                    control?.let { quadraticPoint(p1, it, p2, segT) }
+                        ?: Offset(p1.x + (p2.x - p1.x) * segT, p1.y + (p2.y - p1.y) * segT)
 
-                drawCircle(
-                    color = packetColor,
-                    radius = 3.5.dp.toPx(),
-                    center = packetPos
-                )
+                if (!isWaiting) {
+                    drawCircle(
+                        color = packetColor,
+                        radius = 3.5.dp.toPx(),
+                        center = packetPos
+                    )
+                }
             }
 
             // Draw Decoy Routes if decoyCount > 0
@@ -312,6 +345,33 @@ fun CircuitHopsGraphic(
                 }
             }
         }
+    }
+}
+
+private fun quadraticPoint(
+    start: Offset,
+    control: Offset,
+    end: Offset,
+    t: Float
+): Offset {
+    val rest = 1f - t
+    return Offset(
+        rest * rest * start.x + 2f * rest * t * control.x + t * t * end.x,
+        rest * rest * start.y + 2f * rest * t * control.y + t * t * end.y
+    )
+}
+
+@Preview
+@Composable
+private fun CircuitHopsGraphicReducedPreview() {
+    SparrowTheme {
+        CircuitHopsGraphic(
+            hopCount = 2,
+            circuitCount = 1,
+            decoyCount = 0,
+            sendsDirectlyWithoutCircuit = true,
+            status = CircuitUiStatus.Connected(hopCount = 1, requestedHopCount = 2, latencyMilliseconds = 8)
+        )
     }
 }
 

@@ -236,6 +236,7 @@ val settingsModule =
                 observeCircuitCount = get(),
                 observeConnectionMode = get(),
                 observeDecoyCount = get(),
+                observeRouteProtection = get(),
                 canConnectWhileClosed = get(),
                 setCircuitHopCount = get(),
                 setCircuitFallback = get(),

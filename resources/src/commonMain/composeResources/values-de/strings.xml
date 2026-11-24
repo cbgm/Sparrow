@@ -1049,4 +1049,13 @@
     <string name="feature_onboarding_tour_sample_follow_up">Füg mich hinzu, wenn du drin bist.</string>
     <string name="feature_onboarding_tour_sample_tomorrow">Bis morgen</string>
     <string name="feature_onboarding_tour_sample_family">Familie</string>
+    <string name="feature_chats_route_protection_ok">Dein Weg ist geschützt</string>
+    <string name="feature_chats_route_protection_reduced">Eingeschränkter Schutz</string>
+    <string name="feature_chats_route_protection_direct">Direkt gesendet: nicht geschützt</string>
+    <string name="feature_settings_circuit_protection_direct_title">Direkt gesendet: nicht geschützt</string>
+    <string name="feature_settings_circuit_protection_direct_text">Gerade steht keine Route, deshalb sehen die Postfach-Knoten die Adresse dieses Handys. Schalte unten das direkte Senden aus, damit Nachrichten stattdessen auf eine Route warten.</string>
+    <string name="feature_settings_circuit_protection_reduced_title">Eingeschränkter Schutz: %1$d von %2$d Hops</string>
+    <string name="feature_settings_circuit_protection_reduced_text">Gerade sind nicht alle weiterleitenden Knoten erreichbar. Bis sie zurück sind, sehen die Knoten dazwischen mehr als mit allen Hops; bei einem Hop sieht dieser Knoten deine Adresse und deine Postfächer.</string>
+    <string name="feature_settings_circuit_protection_waiting_title">Gerade keine Route</string>
+    <string name="feature_settings_circuit_protection_waiting_text">Nachrichten warten und gehen raus, sobald wieder eine Route steht.</string>
 </resources>
