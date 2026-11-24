@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
 import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
 import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
@@ -43,6 +44,16 @@ class SettingsRepositoryLanguageTest {
 
         assertEquals(AppLanguage.ENGLISH, repository.getLanguage().getOrThrow())
         assertEquals("en", storage.getLanguageTag())
+    }
+
+    @Test
+    fun colorSchemeFollowsThePhoneUntilOneIsChosen() = runBlocking {
+        val storage = InMemorySettingsStorage()
+        val repository = repository(storage, "en-US")
+
+        assertEquals(AppThemeMode.SYSTEM, repository.getThemeMode().getOrThrow())
+        repository.setThemeMode(AppThemeMode.LIGHT).getOrThrow()
+        assertEquals(AppThemeMode.LIGHT, repository(storage, "en-US").getThemeMode().getOrThrow())
     }
 
     @Test

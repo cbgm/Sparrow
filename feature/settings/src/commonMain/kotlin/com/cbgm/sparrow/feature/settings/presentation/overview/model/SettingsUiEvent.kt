@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 
@@ -11,6 +12,14 @@ sealed interface SettingsUiEvent {
 
     data class LanguageSelected(
         val language: AppLanguage
+    ) : SettingsUiEvent
+
+    data object ThemeModePickerOpened : SettingsUiEvent
+
+    data object ThemeModePickerDismissed : SettingsUiEvent
+
+    data class ThemeModeSelected(
+        val mode: AppThemeMode
     ) : SettingsUiEvent
 
     data class DirectIdentitySetupModeChanged(

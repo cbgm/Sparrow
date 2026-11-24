@@ -1,8 +1,17 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.core.ui.theme.currentAppThemeMode
 import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
+import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
+import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
+import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 import com.cbgm.sparrow.feature.transport.background.ConnectionModeStore
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
@@ -11,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -25,13 +35,41 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
     private val store = RecordingStore()
-    private val viewModel by lazy { OnboardingViewModel(SetConnectionModeUseCase(store), CanConnectWhileClosedUseCase()) }
+    private val settingsRepository =
+        SettingsRepositoryImpl(
+            buildInfoProvider =
+                object : BuildInfoProvider {
+                    override val build = BuildInfo("test", 1, "test", null)
+                },
+            settingsStorage = InMemorySettingsStorage(),
+            systemLanguageProvider =
+                object : SystemLanguageProvider {
+                    override fun getLanguageTag(): String = "en"
+                }
+        )
+    private val viewModel by lazy {
+        OnboardingViewModel(
+            setConnectionMode = SetConnectionModeUseCase(store),
+            canConnectWhileClosed = CanConnectWhileClosedUseCase(),
+            getAppThemeMode = GetAppThemeModeUseCase(settingsRepository),
+            setAppThemeMode = SetAppThemeModeUseCase(settingsRepository)
+        )
+    }
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun choosingAColorSchemeAppliesAndSavesIt() = runBlocking {
+        viewModel.onUiEvent(OnboardingUiEvent.ThemeModeChosen(AppThemeMode.DARK))
+
+        assertEquals(AppThemeMode.DARK, viewModel.uiState.value.themeMode)
+        assertEquals(AppThemeMode.DARK, currentAppThemeMode.value)
+        assertEquals(AppThemeMode.DARK, settingsRepository.getThemeMode().getOrThrow())
+    }
 
     @Test
     fun swipingPastThePermissionsAsksForThemOnce() {

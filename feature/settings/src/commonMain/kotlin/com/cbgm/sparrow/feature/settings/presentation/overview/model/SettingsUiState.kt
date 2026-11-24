@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
@@ -10,6 +11,7 @@ import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 
 data class SettingsUiState(
     val currentLanguage: AppLanguage = AppLanguage.ENGLISH,
+    val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val activeAutoReplyName: String? = null,
     val directIdentitySetupMode: DirectIdentitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
     val blockUnknownContactInvites: Boolean = false,
@@ -25,6 +27,7 @@ data class SettingsUiState(
     val isDeveloperModeEnabled: Boolean = false,
     val developerModeTapCount: Int = 0,
     val showLanguagePicker: Boolean = false,
+    val showThemeModePicker: Boolean = false,
     val isClearingLocalData: Boolean = false
 )
 

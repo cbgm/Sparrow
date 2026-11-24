@@ -1,9 +1,10 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.model
 
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 
 /** [RECEIVING] comes after [PERMISSIONS]: the notification the connection service needs is allowed there. */
-enum class OnboardingPage { WELCOME, ONION, PERMISSIONS, RECEIVING, PHONE }
+enum class OnboardingPage { WELCOME, ONION, PERMISSIONS, RECEIVING, THEME, PHONE }
 
 data class OnboardingUiState(
     val page: OnboardingPage = OnboardingPage.WELCOME,
@@ -18,5 +19,6 @@ data class OnboardingUiState(
     /** False on iOS: only "while the app is open" exists there, and the page shows a note instead. */
     val connectsWhileClosed: Boolean = true,
     val batteryExemptionRequestId: Int = 0,
-    val batteryExemptionDeclined: Boolean = false
+    val batteryExemptionDeclined: Boolean = false,
+    val themeMode: AppThemeMode = AppThemeMode.SYSTEM
 )

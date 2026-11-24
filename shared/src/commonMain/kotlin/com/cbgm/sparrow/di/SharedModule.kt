@@ -90,6 +90,7 @@ val sharedModule =
                 startupTasks =
                     createApplicationStartupTasks(
                         initAppLanguageUseCase = get(),
+                        initAppThemeModeUseCase = get(),
                         initialization = initialization
                     ),
                 backgroundScope = get<ApplicationCoroutineScope>(),

@@ -271,6 +271,7 @@ object Dimens {
         val dotsGraphicHeight = 160.dp
         val receivingGraphicHeight = 160.dp
         val contactsGraphicHeight = 160.dp
+        val themeGraphicHeight = 160.dp
         val wordSlide = 8.dp
         val rowSlide = 60.dp
         val choiceMarkSize = 6.dp

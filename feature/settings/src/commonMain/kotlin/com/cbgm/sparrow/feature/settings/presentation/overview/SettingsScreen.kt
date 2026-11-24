@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Fingerprint
@@ -42,6 +43,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.SparrowSwitchRow
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.SparrowLog
@@ -57,6 +59,8 @@ import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.SettingsSection
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.AppLockTimeoutDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
+import com.cbgm.sparrow.feature.settings.presentation.overview.components.ThemeModePickerDialog
+import com.cbgm.sparrow.feature.settings.presentation.overview.components.themeModeTitle
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
 import com.cbgm.sparrow.resources.Res
@@ -121,6 +125,7 @@ import com.cbgm.sparrow.resources.feature_settings_semantic_search_failed
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_ready
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_subtitle
 import com.cbgm.sparrow.resources.feature_settings_storage
+import com.cbgm.sparrow.resources.feature_settings_theme
 import com.cbgm.sparrow.resources.feature_settings_voice_transcription
 import com.cbgm.sparrow.resources.feature_settings_voice_transcription_subtitle
 import org.jetbrains.compose.resources.stringResource
@@ -152,6 +157,8 @@ fun SettingsScreen(
     val buildInfo = remember(uiState) { derivedStateOf { uiState.value.buildInfo } }
     val developerEnabled = remember(uiState) { derivedStateOf { uiState.value.isDeveloperModeEnabled } }
     val pickerVisible = remember(uiState) { derivedStateOf { uiState.value.showLanguagePicker } }
+    val themeMode = remember(uiState) { derivedStateOf { uiState.value.themeMode } }
+    val themePickerVisible = remember(uiState) { derivedStateOf { uiState.value.showThemeModePicker } }
 
     Column(
         modifier =
@@ -168,6 +175,8 @@ fun SettingsScreen(
     ) {
         SettingsSection(title = stringResource(Res.string.feature_settings_general)) {
             LanguageSettingsRow(language, onUiEvent)
+
+            ThemeModeSettingsRow(themeMode, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_messaging)) {
@@ -259,6 +268,7 @@ fun SettingsScreen(
     }
 
     SettingsLanguagePicker(pickerVisible, language, onUiEvent)
+    SettingsThemeModePicker(themePickerVisible, themeMode, onUiEvent)
     AppLockTimeoutPicker(timeoutPickerVisible, appLockTimeout, onUiEvent)
 }
 
@@ -269,6 +279,17 @@ private fun LanguageSettingsRow(language: State<AppLanguage>, onUiEvent: (Settin
         title = stringResource(Res.string.base_language),
         subtitle = language.value.nativeName,
         onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
+        showChevron = false
+    )
+}
+
+@Composable
+private fun ThemeModeSettingsRow(mode: State<AppThemeMode>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    SparrowDetailRow(
+        icon = Icons.Default.Contrast,
+        title = stringResource(Res.string.feature_settings_theme),
+        subtitle = themeModeTitle(mode.value),
+        onClick = { onUiEvent(SettingsUiEvent.ThemeModePickerOpened) },
         showChevron = false
     )
 }
@@ -537,6 +558,21 @@ private fun SettingsLanguagePicker(
             currentLanguage = language.value,
             onLanguageSelected = { onUiEvent(SettingsUiEvent.LanguageSelected(it)) },
             onDismiss = { onUiEvent(SettingsUiEvent.LanguagePickerDismissed) }
+        )
+    }
+}
+
+@Composable
+private fun SettingsThemeModePicker(
+    visible: State<Boolean>,
+    mode: State<AppThemeMode>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    if (visible.value) {
+        ThemeModePickerDialog(
+            currentMode = mode.value,
+            onModeSelected = { onUiEvent(SettingsUiEvent.ThemeModeSelected(it)) },
+            onDismiss = { onUiEvent(SettingsUiEvent.ThemeModePickerDismissed) }
         )
     }
 }

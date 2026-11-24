@@ -5,6 +5,10 @@ interface SettingsStorage {
 
     suspend fun setLanguageTag(languageTag: String)
 
+    suspend fun getThemeMode(): String?
+
+    suspend fun setThemeMode(mode: String)
+
     suspend fun getDeveloperModeEnabled(): Boolean
 
     suspend fun setDeveloperModeEnabled(enabled: Boolean)

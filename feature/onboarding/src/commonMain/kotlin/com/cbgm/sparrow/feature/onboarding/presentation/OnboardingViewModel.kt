@@ -2,11 +2,14 @@ package com.cbgm.sparrow.feature.onboarding.presentation
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
@@ -17,10 +20,18 @@ import kotlinx.coroutines.launch
 
 class OnboardingViewModel(
     private val setConnectionMode: SetConnectionModeUseCase,
-    canConnectWhileClosed: CanConnectWhileClosedUseCase
+    canConnectWhileClosed: CanConnectWhileClosedUseCase,
+    private val getAppThemeMode: GetAppThemeModeUseCase,
+    private val setAppThemeMode: SetAppThemeModeUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(OnboardingUiState(connectsWhileClosed = canConnectWhileClosed()))
     val uiState = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            getAppThemeMode().onSuccess { mode -> _uiState.update { state -> state.copy(themeMode = mode) } }
+        }
+    }
 
     fun onUiEvent(event: OnboardingUiEvent) {
         when (event) {
@@ -29,6 +40,7 @@ class OnboardingViewModel(
             OnboardingUiEvent.RetryAutomaticNumberClicked -> retryAutomaticPhoneNumber()
             OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
             is OnboardingUiEvent.ConnectionModeChosen -> chooseConnectionMode(event.mode)
+            is OnboardingUiEvent.ThemeModeChosen -> chooseThemeMode(event.mode)
         }
     }
 
@@ -40,7 +52,7 @@ class OnboardingViewModel(
         when (left) {
             OnboardingPage.PERMISSIONS -> requestPermissionsOnce()
             OnboardingPage.RECEIVING -> saveConnectionModeOnce()
-            OnboardingPage.WELCOME, OnboardingPage.ONION, OnboardingPage.PHONE -> Unit
+            OnboardingPage.WELCOME, OnboardingPage.ONION, OnboardingPage.THEME, OnboardingPage.PHONE -> Unit
         }
     }
 
@@ -88,6 +100,13 @@ class OnboardingViewModel(
         }
         viewModelScope.launch {
             setConnectionMode(mode).onFailure { error -> SparrowLog.error("OnboardingViewModel", "Connection mode could not be saved", error) }
+        }
+    }
+
+    private fun chooseThemeMode(mode: AppThemeMode) {
+        _uiState.update { state -> state.copy(themeMode = mode) }
+        viewModelScope.launch {
+            setAppThemeMode(mode).onFailure { error -> SparrowLog.error("OnboardingViewModel", "Theme mode could not be saved", error) }
         }
     }
 

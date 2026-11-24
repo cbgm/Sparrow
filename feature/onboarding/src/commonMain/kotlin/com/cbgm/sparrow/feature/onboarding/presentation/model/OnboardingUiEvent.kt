@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.model
 
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.transport.background.ConnectionMode
 
 sealed interface OnboardingUiEvent {
@@ -16,5 +17,9 @@ sealed interface OnboardingUiEvent {
 
     data class ConnectionModeChosen(
         val mode: ConnectionMode
+    ) : OnboardingUiEvent
+
+    data class ThemeModeChosen(
+        val mode: AppThemeMode
     ) : OnboardingUiEvent
 }

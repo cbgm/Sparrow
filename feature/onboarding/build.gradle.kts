@@ -16,6 +16,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.core.util)
             implementation(projects.feature.identity)
+            implementation(projects.feature.settings)
             implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)

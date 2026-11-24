@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
@@ -38,6 +39,14 @@ class SettingsRepositoryImpl(
                 languageTag = language.languageTag
             )
         }
+
+    override suspend fun getThemeMode(): Result<AppThemeMode> =
+        safeSuspendCall {
+            AppThemeMode.entries.firstOrNull { mode -> mode.name == settingsStorage.getThemeMode() } ?: AppThemeMode.SYSTEM
+        }
+
+    override suspend fun setThemeMode(mode: AppThemeMode): Result<Unit> =
+        safeSuspendCall { settingsStorage.setThemeMode(mode.name) }
 
     override suspend fun isDeveloperModeEnabled(): Result<Boolean> =
         safeSuspendCall { settingsStorage.getDeveloperModeEnabled() }

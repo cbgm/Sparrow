@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.settings.data.datasource
 class InMemorySettingsStorage : SettingsStorage {
     private var languageTag: String? = null
 
+    private var themeMode: String? = null
+
     private var developerModeEnabled: Boolean = false
 
     private var directIdentitySetupMode: String? = null
@@ -17,6 +19,12 @@ class InMemorySettingsStorage : SettingsStorage {
         languageTag: String
     ) {
         this.languageTag = languageTag
+    }
+
+    override suspend fun getThemeMode(): String? = themeMode
+
+    override suspend fun setThemeMode(mode: String) {
+        themeMode = mode
     }
 
     override suspend fun getDeveloperModeEnabled(): Boolean = developerModeEnabled

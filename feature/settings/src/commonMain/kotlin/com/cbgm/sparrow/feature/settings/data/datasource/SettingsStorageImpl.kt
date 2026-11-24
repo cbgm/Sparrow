@@ -11,6 +11,12 @@ class SettingsStorageImpl(
         dataStore.edit { putString(KEY_LANGUAGE_TAG, languageTag) }
     }
 
+    override suspend fun getThemeMode(): String? = dataStore.getString(KEY_THEME_MODE)
+
+    override suspend fun setThemeMode(mode: String) {
+        dataStore.edit { putString(KEY_THEME_MODE, mode) }
+    }
+
     override suspend fun getDeveloperModeEnabled(): Boolean =
         dataStore.getBoolean(KEY_DEVELOPER_MODE_ENABLED)
 
@@ -41,6 +47,7 @@ class SettingsStorageImpl(
     override suspend fun clear() {
         dataStore.edit {
             removeString(KEY_LANGUAGE_TAG)
+            removeString(KEY_THEME_MODE)
             removeBoolean(KEY_DEVELOPER_MODE_ENABLED)
             removeString(KEY_DIRECT_IDENTITY_SETUP_MODE)
             removeBoolean(KEY_BLOCK_UNKNOWN_CONTACT_INVITES)
@@ -51,6 +58,7 @@ class SettingsStorageImpl(
     private companion object {
         const val PREFIX = "settings."
         const val KEY_LANGUAGE_TAG = "${PREFIX}language_tag"
+        const val KEY_THEME_MODE = "${PREFIX}theme_mode"
         const val KEY_DEVELOPER_MODE_ENABLED = "${PREFIX}developer_mode_enabled"
         const val KEY_DIRECT_IDENTITY_SETUP_MODE = "${PREFIX}direct_identity_setup_mode"
         const val KEY_BLOCK_UNKNOWN_CONTACT_INVITES = "${PREFIX}block_unknown_contact_invites"

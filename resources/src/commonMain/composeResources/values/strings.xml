@@ -1024,4 +1024,11 @@
     <string name="core_background_help_open">Open phone settings</string>
     <string name="feature_receiving_battery_declined">Without the battery exception, Android may drop the connection in deep sleep.</string>
     <string name="feature_receiving_ios_note">On iPhone, Sparrow cannot keep the connection open in the background because of iOS restrictions. Messages arrive when you open the app.</string>
+    <string name="feature_onboarding_theme_title">Light or dark?</string>
+    <string name="feature_onboarding_theme_description">You can change it later in Settings.</string>
+    <string name="feature_settings_theme">Color scheme</string>
+    <string name="feature_settings_theme_system">Like my phone</string>
+    <string name="feature_settings_theme_system_description">Switches with your phone\'s setting</string>
+    <string name="feature_settings_theme_light">Light</string>
+    <string name="feature_settings_theme_dark">Dark</string>
 </resources>

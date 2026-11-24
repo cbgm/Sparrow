@@ -17,10 +17,12 @@ import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockedContactIdsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
@@ -28,6 +30,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUs
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDirectIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveSettingsDomainContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
@@ -98,6 +101,18 @@ val settingsModule =
         }
 
         factory {
+            GetAppThemeModeUseCase(settingsRepository = get())
+        }
+
+        factory {
+            SetAppThemeModeUseCase(settingsRepository = get())
+        }
+
+        factory {
+            InitAppThemeModeUseCase(settingsRepository = get())
+        }
+
+        factory {
             SetDeveloperEnabledUseCase(settingsRepository = get())
         }
 
@@ -161,6 +176,8 @@ val settingsModule =
             SettingsViewModel(
                 setAppLanguageUseCase = get(),
                 getAppLanguageUseCase = get(),
+                setAppThemeModeUseCase = get(),
+                getAppThemeModeUseCase = get(),
                 getDeveloperEnabledUseCase = get(),
                 getBuildInfoUseCase = get(),
                 setDeveloperModeEnabledUseCase = get(),

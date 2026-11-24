@@ -364,7 +364,7 @@ private fun SparrowCodeFieldPreview() {
 
 @Preview
 @Composable
-fun SearchFieldPreview() {
+fun SparrowSearchFieldPreview() {
     SparrowTheme {
         Column(
             Modifier.fillMaxWidth()

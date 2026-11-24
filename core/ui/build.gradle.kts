@@ -21,6 +21,10 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
         }
 
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
+        }
+
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

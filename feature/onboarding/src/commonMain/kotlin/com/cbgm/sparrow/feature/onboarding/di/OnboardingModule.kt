@@ -6,6 +6,13 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val onboardingModule = module {
-    viewModel { OnboardingViewModel(setConnectionMode = get(), canConnectWhileClosed = get()) }
+    viewModel {
+        OnboardingViewModel(
+            setConnectionMode = get(),
+            canConnectWhileClosed = get(),
+            getAppThemeMode = get(),
+            setAppThemeMode = get()
+        )
+    }
     viewModel { LocalNetworkAccessViewModel(observeLocalNetworkNeeded = get()) }
 }

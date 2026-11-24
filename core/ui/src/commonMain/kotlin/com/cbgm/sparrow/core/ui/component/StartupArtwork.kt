@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.luminance
 
 private const val SparrowViewportWidth = 1254f
 private const val SparrowViewportHeight = 1254f
@@ -48,6 +50,15 @@ private const val EyeCoverWidth = 92f
 private const val EyeCoverHeight = 66f
 private val SparrowHeadBlinkColor = Color(0xFF02E6FA)
 private val SparrowClosedEyeColor = Color(0xFF030D22)
+
+// The artwork was traced on a dark background. On a light one its dark parts would show as a heavy block,
+// so the shield's dark parts take the background colour, the dark outline behind the bird is left out, the face
+// turns deep teal and every cyan is darkened to sit near the light scheme's primary. ic_sparrow_splash does the same.
+private const val LightBackgroundLuminance = 0.5f
+private const val DarkPartLuminance = 0.1f
+private const val HighlightLuminance = 0.8f
+private const val LightSchemeCyanFactor = 0.68f
+private val LightSchemeFaceColor = Color(0xFF003A46)
 
 /**
  * Compose Canvas conversion of sparrow_mark_dark_1024.svg.
@@ -151,6 +162,9 @@ fun SparrowAnimation(
         label = "sparrowBlink"
     )
 
+    val background = MaterialTheme.colorScheme.background
+    val lightBackground = background.takeIf { it.luminance() > LightBackgroundLuminance }
+
     Canvas(modifier = modifier.aspectRatio(1f)) {
         val boundsScale = minOf(
             size.width / ArtworkWidth,
@@ -177,7 +191,8 @@ fun SparrowAnimation(
                             shieldProgress = if (animated) shieldProgress else 1f,
                             birdProgress = if (animated) birdProgress else 1f,
                             birdIdleOffsetY = if (animated) idleBob else 0f,
-                            eyeOpenness = if (animated) eyeOpenness else 1f
+                            eyeOpenness = if (animated) eyeOpenness else 1f,
+                            lightBackground = lightBackground
                         )
                     }
                 }
@@ -191,7 +206,8 @@ private fun DrawScope.drawAnimatedSparrow(
     shieldProgress: Float,
     birdProgress: Float,
     birdIdleOffsetY: Float,
-    eyeOpenness: Float
+    eyeOpenness: Float,
+    lightBackground: Color?
 ) {
     // Bird is drawn first and clipped at the shield edge, so it genuinely rises from behind it.
     clipRect(
@@ -205,12 +221,16 @@ private fun DrawScope.drawAnimatedSparrow(
 
         translate(top = birdOffsetY) {
             drawSparrowPaths(
-                paths = paths,
-                alpha = birdProgress
+                // The first path is the dark outline behind the whole mark.
+                paths = paths.drop(if (lightBackground == null) 0 else 1),
+                alpha = birdProgress,
+                lightBackground = lightBackground,
+                inShield = false
             )
             drawBlinkingEyes(
                 eyeOpenness = if (birdProgress > 0.98f) eyeOpenness else 1f,
-                alpha = birdProgress
+                alpha = birdProgress,
+                lightBackground = lightBackground
             )
         }
     }
@@ -230,7 +250,9 @@ private fun DrawScope.drawAnimatedSparrow(
         ) {
             drawSparrowPaths(
                 paths = paths,
-                alpha = shieldProgress
+                alpha = shieldProgress,
+                lightBackground = lightBackground,
+                inShield = true
             )
         }
     }
@@ -238,7 +260,8 @@ private fun DrawScope.drawAnimatedSparrow(
 
 private fun DrawScope.drawBlinkingEyes(
     eyeOpenness: Float,
-    alpha: Float
+    alpha: Float,
+    lightBackground: Color?
 ) {
     val closedAmount = (1f - eyeOpenness).coerceIn(0f, 1f)
     if (closedAmount <= 0.001f) return
@@ -249,7 +272,7 @@ private fun DrawScope.drawBlinkingEyes(
 
     listOf(LeftEyeCenterX, RightEyeCenterX).forEach { eyeCenterX ->
         drawRoundRect(
-            color = SparrowHeadBlinkColor.copy(alpha = alpha),
+            color = SparrowHeadBlinkColor.forScheme(lightBackground, inShield = false).copy(alpha = alpha),
             topLeft = Offset(
                 x = eyeCenterX - EyeCoverWidth / 2f,
                 y = coverTop
@@ -260,7 +283,7 @@ private fun DrawScope.drawBlinkingEyes(
 
         if (closedAmount > 0.72f) {
             drawLine(
-                color = SparrowClosedEyeColor.copy(alpha = alpha),
+                color = SparrowClosedEyeColor.forScheme(lightBackground, inShield = false).copy(alpha = alpha),
                 start = Offset(eyeCenterX - 25f, EyeCenterY),
                 end = Offset(eyeCenterX + 25f, EyeCenterY),
                 strokeWidth = 5f
@@ -271,15 +294,30 @@ private fun DrawScope.drawBlinkingEyes(
 
 private fun DrawScope.drawSparrowPaths(
     paths: List<ParsedSparrowPath>,
-    alpha: Float
+    alpha: Float,
+    lightBackground: Color?,
+    inShield: Boolean
 ) {
     paths.forEach { item ->
+        val color = item.color.forScheme(lightBackground, inShield)
         drawPath(
             path = item.path,
-            color = item.color.copy(alpha = item.color.alpha * alpha)
+            color = color.copy(alpha = color.alpha * alpha)
         )
     }
 }
+
+private fun Color.forScheme(
+    lightBackground: Color?,
+    inShield: Boolean
+): Color =
+    when {
+        lightBackground == null -> this
+        inShield && luminance() < DarkPartLuminance -> lightBackground
+        luminance() < DarkPartLuminance -> LightSchemeFaceColor
+        luminance() > HighlightLuminance -> this
+        else -> Color(red * LightSchemeCyanFactor, green * LightSchemeCyanFactor, blue * LightSchemeCyanFactor, alpha)
+    }
 
 private data class ParsedSparrowPath(
     val path: Path,

@@ -1026,4 +1026,11 @@
     <string name="core_background_help_open">Handy-Einstellungen öffnen</string>
     <string name="feature_receiving_battery_declined">Ohne die Akku-Ausnahme kann Android die Verbindung im Tiefschlaf trennen.</string>
     <string name="feature_receiving_ios_note">Auf dem iPhone kann Sparrow die Verbindung wegen der Einschränkungen von iOS nicht im Hintergrund offen halten. Nachrichten kommen an, wenn du die App öffnest.</string>
+    <string name="feature_onboarding_theme_title">Hell oder dunkel?</string>
+    <string name="feature_onboarding_theme_description">Du kannst das später in den Einstellungen ändern.</string>
+    <string name="feature_settings_theme">Farbschema</string>
+    <string name="feature_settings_theme_system">Wie mein Handy</string>
+    <string name="feature_settings_theme_system_description">Wechselt mit der Einstellung deines Handys</string>
+    <string name="feature_settings_theme_light">Hell</string>
+    <string name="feature_settings_theme_dark">Dunkel</string>
 </resources>
