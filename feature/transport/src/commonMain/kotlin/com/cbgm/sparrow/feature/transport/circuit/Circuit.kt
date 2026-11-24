@@ -8,6 +8,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.close
 import io.ktor.websocket.readBytes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
@@ -108,7 +109,8 @@ internal class Circuit(
 
     /**
      * Reads the built circuit's answers and hands each to its stream, until the circuit fails or is cancelled; then
-     * every request still waiting fails too.
+     * every request still waiting fails too. When reading is cancelled (a fuller circuit took over) they fail as with a
+     * closed circuit, not with the cancellation: that would cancel the callers' own work, such as waiting for mailboxes.
      */
     suspend fun readAnswers() {
         var failure: Exception = IllegalStateException("The circuit is closed")
@@ -118,7 +120,7 @@ internal class Circuit(
                 streams.withLock { openStreams[answer.stream] }?.send(answer)
             }
         } catch (readFailure: Exception) {
-            failure = readFailure
+            if (readFailure !is CancellationException) failure = readFailure
             throw readFailure
         } finally {
             isClosed = true

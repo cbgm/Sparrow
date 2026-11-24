@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGa
 import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.packet.IndicatorPacket
@@ -23,8 +24,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Indicators go into the contact's mailbox through the circuit, encrypted and padded like messages and without
- * routing IDs, so no node learns who is typing to whom. They are never queued: without a route to the contact, or
- * while sending directly is switched off and no circuit protects, the indicator is dropped. The envelope lives
+ * routing IDs, so no node learns who is typing to whom. They are never queued: without a route to the contact, while
+ * sending directly is switched off and no circuit protects, or while the contact's mailbox node is down, the indicator
+ * is dropped. The envelope lives
  * [LIFETIME_MILLISECONDS], and the mailbox does not wake the recipient for it.
  */
 class MailboxMessagingIndicatorGateway(
@@ -73,8 +75,8 @@ class MailboxMessagingIndicatorGateway(
                 }
             val packet = IndicatorPacket(packetId = IdGenerator.generate(), indicatorType = indicatorType, groupId = groupId, sentAtEpochMilliseconds = now)
             val payload = transportPayloadFactory.create(packetCodec.encode(packet).getOrThrow(), packet, contact).getOrThrow()
-            mailboxGateway
-                .deliver(
+            val delivered =
+                mailboxGateway.deliver(
                     FederatedEnvelope(
                         envelopeId = IdGenerator.generate(),
                         senderRoutingId = FederatedEnvelope.HIDDEN_ROUTING_ID,
@@ -84,7 +86,12 @@ class MailboxMessagingIndicatorGateway(
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = now + LIFETIME_MILLISECONDS
                     )
-                ).getOrThrow()
+                )
+            if (delivered.exceptionOrNull() is MailboxNodeUnavailableException) {
+                logger.info { "Indicator $indicatorType not sent to $recipientContactId: their mailbox node is unavailable" }
+                return@safeSuspendCall
+            }
+            delivered.getOrThrow()
             logger.debug { "Indicator $indicatorType put into the mailbox of $recipientContactId" }
         }.onFailure { error -> logger.warn(error) { "Indicator $indicatorType to $recipientContactId failed" } }
 

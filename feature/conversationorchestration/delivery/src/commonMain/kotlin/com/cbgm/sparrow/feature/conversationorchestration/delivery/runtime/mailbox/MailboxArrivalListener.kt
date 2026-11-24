@@ -6,11 +6,13 @@ import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -31,7 +33,7 @@ class MailboxArrivalListener(
 
     suspend fun listen() {
         while (currentCoroutineContext().isActive) {
-            safeSuspendCall(logFailure = false) { receiveOnce() }
+            receiveOnceKeepingOn()
                 .onSuccess { processed -> if (processed > 0) logger.debug { "Mailbox envelopes processed as they arrived: $processed" } }
                 .onFailure { error ->
                     logger.info { "Waiting for mailbox envelopes failed (${error.message}); again in ${pauseMilliseconds / 1_000} s" }
@@ -39,6 +41,15 @@ class MailboxArrivalListener(
                 }
         }
     }
+
+    /** A cancellation that is not the listener's own (a closed circuit) fails this wait only; listening goes on. */
+    private suspend fun receiveOnceKeepingOn(): Result<Int> =
+        try {
+            safeSuspendCall(logFailure = false) { receiveOnce() }
+        } catch (cancellation: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            Result.failure(cancellation)
+        }
 
     /** Waits once at every node; how many envelopes arrived and were processed. */
     private suspend fun receiveOnce(): Int {

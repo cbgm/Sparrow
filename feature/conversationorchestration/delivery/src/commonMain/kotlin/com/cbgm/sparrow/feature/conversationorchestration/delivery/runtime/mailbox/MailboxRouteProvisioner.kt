@@ -229,17 +229,13 @@ class MailboxRouteProvisioner(
         retired: Boolean
     ) {
         if (current != null && retired) {
-            // The old server is absent from the freshly verified directory. Its
-            // mailbox and capability were removed by the server reinstall, so a
-            // revocation against its old LAN address can never succeed. Save the
-            // newly created mailbox first: a DB failure leaves the old local row
-            // intact instead of destroying it before replacement is ready.
-            mailboxRouteRepository.saveLocal(replacement).getOrThrow()
-            SparrowLog.withTag("MailboxRouteProvisioner").warn {
-                "Replaced mailbox on retired node ${current.deliveryRoute.nodeId} " +
-                    "with mailbox on ${replacement.deliveryRoute.nodeId}; old server-side envelopes cannot be recovered"
+            // A node also leaves the directory for a short restart. Its mailbox stays readable as a retiring one, so
+            // the envelopes put there before the contact learned the new route still arrive once the node is back; a
+            // node installed anew answers that the mailbox is gone, and the synchronizer drops it then.
+            log.info {
+                "Mailbox of contact $contactId moves from node ${current.deliveryRoute.nodeId.take(8)}, which left the directory, " +
+                    "to ${replacement.deliveryRoute.nodeId.take(8)}; the old one stays readable"
             }
-            return
         }
         // The old mailbox may still hold envelopes, and the contact keeps sending to it until the queued route
         // packet arrived. It stays readable as a retiring mailbox and is revoked only after its expiry.

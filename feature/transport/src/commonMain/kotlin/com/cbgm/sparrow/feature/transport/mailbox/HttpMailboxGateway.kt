@@ -67,9 +67,7 @@ class HttpMailboxGateway internal constructor(
                 contentType(ContentType.Application.Json)
                 setBody(request(work))
             }
-        check(response.status == HttpStatusCode.Created) {
-            "Mailbox creation failed with ${response.status}"
-        }
+        response.checkMailboxStatus("Mailbox creation", accepted = response.status == HttpStatusCode.Created)
         val created = response.body<CreateMailboxResponse>()
         return LocalMailboxCredential(
             contactId = contactId,
@@ -89,7 +87,7 @@ class HttpMailboxGateway internal constructor(
                     attributes.put(CircuitKey, credential.contactId)
                     bearerAuth(credential.retrievalCapability)
                 }
-            check(response.status.isSuccess()) { "Mailbox retrieval failed with ${response.status}" }
+            response.checkMailboxStatus("Mailbox retrieval", accepted = response.status.isSuccess())
             val envelopes = response.body<JsonObject>()["envelopes"] as? JsonArray ?: JsonArray(emptyList())
             val decoded = json.decodeEnvelopes<FederatedEnvelope>(envelopes)
             decoded.unreadableEnvelopeIds.forEach { envelopeId ->
@@ -112,9 +110,7 @@ class HttpMailboxGateway internal constructor(
                     attributes.put(CircuitKey, credential.contactId)
                     bearerAuth(credential.retrievalCapability)
                 }
-            check(response.status == HttpStatusCode.NoContent) {
-                "Mailbox acknowledgement failed with ${response.status}"
-            }
+            response.checkMailboxStatus("Mailbox acknowledgement", accepted = response.status == HttpStatusCode.NoContent)
         }.markingNodeUnavailable()
 
     override suspend fun revoke(credential: LocalMailboxCredential): Result<Unit> =
@@ -132,10 +128,11 @@ class HttpMailboxGateway internal constructor(
             }
         }
 
-    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> = runCatching { put(MailboxEnvelopeRequest(envelope)) }
+    override suspend fun deliver(envelope: FederatedEnvelope): Result<Unit> =
+        runCatching { put(MailboxEnvelopeRequest(envelope)) }.markingNodeUnavailable()
 
     override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> =
-        runCatching { put(MailboxEnvelopeRequest(envelope, depositWork = creationWork.solve())) }
+        runCatching { put(MailboxEnvelopeRequest(envelope, depositWork = creationWork.solve())) }.markingNodeUnavailable()
 
     private suspend fun put(request: MailboxEnvelopeRequest) {
         val route = requireNotNull(request.envelope.mailboxRoute) { "The envelope names no mailbox" }
@@ -146,7 +143,7 @@ class HttpMailboxGateway internal constructor(
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
-        check(response.status == HttpStatusCode.Accepted) { "Mailbox delivery failed with ${response.status}" }
+        response.checkMailboxStatus("Mailbox delivery", accepted = response.status == HttpStatusCode.Accepted)
     }
 
     /** One wait per circuit, each naming only that circuit's mailboxes, so no session node sees them all. */
@@ -180,12 +177,7 @@ class HttpMailboxGateway internal constructor(
                     )
                 )
             }
-        check(response.status.isSuccess()) { "Waiting for mailbox envelopes failed with ${response.status}" }
+        response.checkMailboxStatus("Waiting for mailbox envelopes", accepted = response.status.isSuccess())
         return response.body<MailboxWaitResponse>().ready
-    }
-
-    private companion object {
-        /** The mailbox no longer exists for this capability; revoking it again can never succeed. */
-        val MAILBOX_GONE = setOf(HttpStatusCode.NotFound, HttpStatusCode.Gone, HttpStatusCode.Unauthorized)
     }
 }

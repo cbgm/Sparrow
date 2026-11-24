@@ -26,6 +26,8 @@ import io.ktor.util.date.GMTDate
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.InternalAPI
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.Json
 
 /**
@@ -90,11 +92,11 @@ internal class CircuitMailboxEngine(
             circuit.request(request).also {
                 logger.debug { "Mailbox ${request.method} through circuit (${circuit.nodeIds.size} hop(s))" }
             }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
         } catch (refused: CircuitRequestRefusedException) {
             throw refused
         } catch (failure: Exception) {
+            // Only a cancellation of this request itself goes on; one from the circuit is a failed circuit.
+            if (failure is CancellationException) currentCoroutineContext().ensureActive()
             // The runner notices the closed circuit and builds a new one.
             circuit.close()
             if (!sendsDirectly) throw failure

@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.transport.mailbox.InvalidInvitationLetterExcepti
 import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
 import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.mailbox.MailboxGoneException
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -54,7 +55,7 @@ class MailboxPendingSynchronizer(
     private suspend fun synchronize(credential: LocalMailboxCredential): Int {
         val envelopes =
             mailboxGateway.pending(credential).getOrElse { error ->
-                logUnreadable(credential, error)
+                if (error is MailboxGoneException) dropGone(credential) else logUnreadable(credential, error)
                 return 0
             }
         if (envelopes.isEmpty()) return 0
@@ -131,6 +132,19 @@ class MailboxPendingSynchronizer(
             logStillPending(envelopeId, error)
             false
         }
+
+    /** Only a retiring mailbox is dropped: a replaced one whose node was installed anew. */
+    private suspend fun dropGone(credential: LocalMailboxCredential) {
+        val routeId = credential.deliveryRoute.routeId
+        val retiring = mailboxRouteRepository.allRetiring().getOrDefault(emptyList()).any { mailbox -> mailbox.deliveryRoute.routeId == routeId }
+        if (!retiring) {
+            logger.warn { "Mailbox of contact ${credential.contactId} is gone at its node" }
+            return
+        }
+        mailboxRouteRepository
+            .deleteRetiring(routeId)
+            .onSuccess { logger.info { "Replaced mailbox of contact ${credential.contactId} is gone at its node; no longer read" } }
+    }
 
     // A node that is down is expected (it may come back or be replaced), and so is waiting for a protecting circuit
     // the user chose; only other failures are errors.

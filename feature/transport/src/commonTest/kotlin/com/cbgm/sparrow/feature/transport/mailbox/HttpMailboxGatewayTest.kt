@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.transport.mailbox
 
 import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
+import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import io.ktor.client.HttpClient
@@ -26,6 +27,41 @@ class HttpMailboxGatewayTest {
             val result = gateway(HttpStatusCode.BadGateway).pending(credential)
 
             assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
+        }
+
+    @Test
+    fun aDownNodeAnsweredByItsProxyIsReportedAsUnavailable() =
+        runTest {
+            val result = appGateway(HttpStatusCode.BadGateway).pending(credential)
+
+            assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
+        }
+
+    @Test
+    fun deliveringToADownNodeIsReportedAsUnavailable() =
+        runTest {
+            val envelope =
+                FederatedEnvelope(
+                    envelopeId = "envelope",
+                    senderRoutingId = FederatedEnvelope.HIDDEN_ROUTING_ID,
+                    recipientDeviceRoutingId = FederatedEnvelope.HIDDEN_ROUTING_ID,
+                    mailboxRoute = credential.deliveryRoute,
+                    encryptedPayload = "x",
+                    createdAtEpochMilliseconds = 1L,
+                    expiresAtEpochMilliseconds = 2L
+                )
+
+            val result = appGateway(HttpStatusCode.BadGateway).deliver(envelope)
+
+            assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
+        }
+
+    @Test
+    fun aMailboxTheNodeNoLongerKnowsIsGone() =
+        runTest {
+            val result = appGateway(HttpStatusCode.NotFound).pending(credential)
+
+            assertIs<MailboxGoneException>(result.exceptionOrNull())
         }
 
     @Test
@@ -103,6 +139,14 @@ class HttpMailboxGatewayTest {
 
     private fun credentialFor(mailboxId: String) =
         credential.copy(contactId = "contact-$mailboxId", deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
+
+    /** Like the app's mailbox client: status codes are checked by the gateway, not thrown by the client. */
+    private fun appGateway(status: HttpStatusCode) =
+        HttpMailboxGateway(
+            HttpClient(MockEngine { respond(content = "", status = status) }),
+            createGatewayJson(),
+            MailboxCreationWorkSolver(DefaultCryptoHash())
+        )
 
     private fun gateway(status: HttpStatusCode) =
         HttpMailboxGateway(
