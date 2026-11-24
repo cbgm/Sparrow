@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_search_title">Nachrichten durchsuchen</string>
+    <string name="feature_search_open">Nachrichten durchsuchen</string>
+    <string name="feature_search_placeholder">Nachrichten durchsuchen</string>
+    <string name="feature_search_clear">Suche löschen</string>
+    <string name="feature_search_start_hint">Durchsuche deinen Nachrichtenverlauf.</string>
+    <string name="feature_search_no_results">Keine passenden Nachrichten</string>
+    <string name="feature_search_failed">Suche fehlgeschlagen. Versuche es erneut.</string>
+    <string name="feature_search_exact_only_hint">Nur exakte Textsuche. Aktiviere die semantische Nachrichtensuche in den Einstellungen, um nach Bedeutung zu suchen.</string>
+    <string name="feature_search_preparing_hint">Die semantische Suche wird vorbereitet. Die exakte Textsuche ist bereits verfügbar.</string>
+    <string name="feature_search_semantic_unavailable_hint">Die semantische Suche ist nicht verfügbar. Die exakte Textsuche funktioniert weiterhin.</string>
+</resources>
