@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.core.util.time
 
+const val MILLISECONDS_PER_DAY = 86_400_000L
+
 /** The local calendar day of an instant, counted in days since 1 January 1970. */
 expect fun localEpochDay(epochMilliseconds: Long): Long
 

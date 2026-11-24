@@ -1057,16 +1057,28 @@
     <string name="feature_settings_circuit_protection_waiting_title">No route right now</string>
     <string name="feature_settings_circuit_protection_waiting_text">Messages wait and go out as soon as a route is up again.</string>
     <string name="feature_chats_failed_tap_to_retry">Failed, tap to send again</string>
-    <string name="feature_chats_day_today">Today</string>
-    <string name="feature_chats_day_yesterday">Yesterday</string>
-    <plurals name="feature_chats_day_message_count">
+    <string name="core_day_today">Today</string>
+    <string name="core_day_yesterday">Yesterday</string>
+    <plurals name="core_day_message_count">
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
     </plurals>
-    <string name="feature_onboarding_tour_shield_title">The shield in the top bar</string>
-    <string name="feature_onboarding_tour_shield_text">It shows how well your route hides you right now. Grey with a check: as you chose. Yellow: fewer hops for a while. Red: sent directly, without protection. Tap it to see why.</string>
+    <string name="feature_onboarding_tour_shield_title">Shield</string>
+    <string name="feature_onboarding_tour_shield_text">how well your route hides you right now. Grey with a check: as you chose. Yellow: fewer hops for a while. Red: sent directly. Tap it to see why.</string>
     <string name="feature_onboarding_tour_search_title">Search</string>
-    <string name="feature_onboarding_tour_search_text">It appears here once you switch on semantic message search in Settings › Local intelligence and its model is on the phone. It finds messages by what they mean, not only by exact words, and all of it stays on this device. Inside a chat it searches only that chat.</string>
+    <string name="feature_onboarding_tour_search_text">finds messages by what they mean, only on this phone. Shows up once you switch it on in Settings › Local intelligence.</string>
     <string name="feature_onboarding_tour_mailbox_title">Mailbox</string>
-    <string name="feature_onboarding_tour_mailbox_text">Invitations wait here: people who want to write to you and invitations into groups, and the ones you sent that are still open. The number shows how many are waiting for you; you decide what you accept.</string>
+    <string name="feature_onboarding_tour_mailbox_text">invitations to chats and groups, and the ones you sent that are still open. The number counts the ones waiting for you.</string>
+    <string name="feature_onboarding_tour_top_bar_title">The top bar</string>
+    <string name="feature_onboarding_tour_days_title">Dates between messages</string>
+    <string name="feature_onboarding_tour_days_text">Each day starts with its date. Hold a date and slide up or down: a list of every day of the chat opens, let go to jump to that day.</string>
+    <string name="feature_onboarding_tour_intro_title">A quick look around?</string>
+    <string name="feature_onboarding_tour_intro_text">Six short steps on a sample chat, about a minute. Try everything yourself before it gets real.</string>
+    <string name="feature_onboarding_tour_start">Start tour</string>
+    <string name="feature_onboarding_tour_hint_top_bar">Tap an icon</string>
+    <string name="feature_onboarding_tour_hint_dots">Send it</string>
+    <string name="feature_onboarding_tour_hint_hold">Hold it</string>
+    <string name="feature_onboarding_tour_hint_days">Hold the date</string>
+    <string name="feature_onboarding_tour_hint_swipe">Swipe the chat</string>
+    <string name="feature_onboarding_tour_sample_draft">See you at 7</string>
 </resources>

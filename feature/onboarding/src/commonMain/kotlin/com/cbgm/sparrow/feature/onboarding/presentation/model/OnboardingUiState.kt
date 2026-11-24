@@ -23,8 +23,10 @@ data class OnboardingUiState(
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     /** The key-feature tour after the identity is created; null before it starts. */
     val tourStep: TourStep? = null,
+    /** The page that offers the tour, shown once the identity exists. */
+    val showsTourIntro: Boolean = false,
     val tourFinished: Boolean = false
 )
 
 /** Only what no screen explains by itself. */
-enum class TourStep { RING, SHIELD, SEARCH, MAILBOX, DOTS, HOLD, SWIPE }
+enum class TourStep { RING, TOP_BAR, DOTS, HOLD, DAYS, SWIPE }

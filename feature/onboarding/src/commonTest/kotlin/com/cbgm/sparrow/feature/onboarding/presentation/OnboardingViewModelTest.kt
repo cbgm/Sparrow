@@ -65,8 +65,13 @@ class OnboardingViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun theTourStartsOnceTheIdentityExistsAndEndsAfterTheLastStep() {
+    fun theTourIsOfferedOnceTheIdentityExistsAndEndsAfterTheLastStep() {
         viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        assertTrue(viewModel.uiState.value.showsTourIntro)
+        assertEquals(null, viewModel.uiState.value.tourStep)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourStarted)
+        assertFalse(viewModel.uiState.value.showsTourIntro)
         assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
 
         repeat(TourStep.entries.size - 1) { viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked) }
@@ -80,6 +85,7 @@ class OnboardingViewModelTest {
     @Test
     fun swipingBackGoesToThePreviousStepButNotBeforeTheFirst() {
         viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        viewModel.onUiEvent(OnboardingUiEvent.TourStarted)
         viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked)
         viewModel.onUiEvent(OnboardingUiEvent.TourBackSwiped)
         assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)

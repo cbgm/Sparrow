@@ -18,6 +18,7 @@ import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.tour.KeyFeatureTour
+import com.cbgm.sparrow.feature.onboarding.presentation.tour.TourIntro
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -71,6 +72,11 @@ fun OnboardingRoute(
             }
         }
     )
+
+    if (state.showsTourIntro) {
+        TourIntro(onUiEvent = viewModel::onUiEvent)
+        return
+    }
 
     state.tourStep?.let { step ->
         KeyFeatureTour(step = step, onUiEvent = viewModel::onUiEvent)

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.common.history.component
+package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -23,17 +23,18 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.time.MILLISECONDS_PER_DAY
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.core.util.time.formatMessageDay
 import com.cbgm.sparrow.core.util.time.localEpochDay
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_chats_day_today
-import com.cbgm.sparrow.resources.feature_chats_day_yesterday
+import com.cbgm.sparrow.resources.core_day_today
+import com.cbgm.sparrow.resources.core_day_yesterday
 import org.jetbrains.compose.resources.stringResource
 
 /** The date above the first message of a day. Holding it opens the day rail; sliding picks a day. */
 @Composable
-internal fun DaySeparator(
+fun SparrowDaySeparator(
     writtenAt: Long,
     today: Long,
     railState: DayRailState,
@@ -84,15 +85,15 @@ private fun Hairline(modifier: Modifier = Modifier) {
 
 /** Today and yesterday by name, any other day as [format] writes it. */
 @Composable
-internal fun dayLabel(
+fun dayLabel(
     epochDay: Long,
     writtenAt: Long,
     today: Long,
     format: (Long) -> String
 ): String =
     when (epochDay) {
-        today -> stringResource(Res.string.feature_chats_day_today)
-        today - 1 -> stringResource(Res.string.feature_chats_day_yesterday)
+        today -> stringResource(Res.string.core_day_today)
+        today - 1 -> stringResource(Res.string.core_day_yesterday)
         else -> format(writtenAt)
     }
 
@@ -101,7 +102,7 @@ internal fun dayLabel(
 private fun DaySeparatorPreview() {
     SparrowTheme {
         val now = SystemClock.nowEpochMilliseconds()
-        DaySeparator(
+        SparrowDaySeparator(
             writtenAt = now - 9 * MILLISECONDS_PER_DAY,
             today = localEpochDay(now),
             railState = rememberDayRailState(),

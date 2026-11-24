@@ -1059,16 +1059,28 @@
     <string name="feature_settings_circuit_protection_waiting_title">Gerade keine Route</string>
     <string name="feature_settings_circuit_protection_waiting_text">Nachrichten warten und gehen raus, sobald wieder eine Route steht.</string>
     <string name="feature_chats_failed_tap_to_retry">Fehlgeschlagen, tippen zum erneuten Senden</string>
-    <string name="feature_chats_day_today">Heute</string>
-    <string name="feature_chats_day_yesterday">Gestern</string>
-    <plurals name="feature_chats_day_message_count">
+    <string name="core_day_today">Heute</string>
+    <string name="core_day_yesterday">Gestern</string>
+    <plurals name="core_day_message_count">
         <item quantity="one">%1$d Nachricht</item>
         <item quantity="other">%1$d Nachrichten</item>
     </plurals>
-    <string name="feature_onboarding_tour_shield_title">Das Schild oben in der Leiste</string>
-    <string name="feature_onboarding_tour_shield_text">Es zeigt, wie gut dein Weg dich gerade verbirgt. Grau mit Haken: wie gewählt. Gelb: vorübergehend weniger Hops. Rot: direkt gesendet, ohne Schutz. Tippe darauf, um zu sehen, warum.</string>
+    <string name="feature_onboarding_tour_shield_title">Schild</string>
+    <string name="feature_onboarding_tour_shield_text">wie gut dein Weg dich gerade verbirgt. Grau mit Haken: wie gewählt. Gelb: vorübergehend weniger Hops. Rot: direkt gesendet. Tippe darauf, um zu sehen, warum.</string>
     <string name="feature_onboarding_tour_search_title">Suche</string>
-    <string name="feature_onboarding_tour_search_text">Sie erscheint hier, sobald du in Einstellungen › Lokale Intelligenz die semantische Nachrichtensuche einschaltest und ihr Modell auf dem Handy ist. Sie findet Nachrichten nach ihrer Bedeutung, nicht nur nach genauen Wörtern, und alles bleibt auf diesem Gerät. In einem Chat durchsucht sie nur diesen Chat.</string>
+    <string name="feature_onboarding_tour_search_text">findet Nachrichten nach ihrer Bedeutung, nur auf diesem Handy. Erscheint, sobald du sie in Einstellungen › Lokale Intelligenz einschaltest.</string>
     <string name="feature_onboarding_tour_mailbox_title">Posteingang</string>
-    <string name="feature_onboarding_tour_mailbox_text">Hier warten Einladungen: Menschen, die dir schreiben möchten, Einladungen in Gruppen und deine eigenen, die noch offen sind. Die Zahl zeigt, wie viele auf dich warten; du entscheidest, was du annimmst.</string>
+    <string name="feature_onboarding_tour_mailbox_text">Einladungen in Chats und Gruppen und deine eigenen, die noch offen sind. Die Zahl zählt die, die auf dich warten.</string>
+    <string name="feature_onboarding_tour_top_bar_title">Die obere Leiste</string>
+    <string name="feature_onboarding_tour_days_title">Das Datum über jedem Tag</string>
+    <string name="feature_onboarding_tour_days_text">Jeder Tag beginnt mit seinem Datum. Halte ein Datum gedrückt und schiebe nach oben oder unten: Eine Liste aller Tage des Chats öffnet sich, lass los, um zu diesem Tag zu springen.</string>
+    <string name="feature_onboarding_tour_intro_title">Kurz umsehen?</string>
+    <string name="feature_onboarding_tour_intro_text">Sechs kurze Schritte an einem Beispielchat, etwa eine Minute. Probier alles selbst aus, bevor es richtig losgeht.</string>
+    <string name="feature_onboarding_tour_start">Tour starten</string>
+    <string name="feature_onboarding_tour_hint_top_bar">Tippe ein Symbol an</string>
+    <string name="feature_onboarding_tour_hint_dots">Sende sie ab</string>
+    <string name="feature_onboarding_tour_hint_hold">Halte sie gedrückt</string>
+    <string name="feature_onboarding_tour_hint_days">Halte das Datum</string>
+    <string name="feature_onboarding_tour_hint_swipe">Wische den Chat</string>
+    <string name="feature_onboarding_tour_sample_draft">Bis um 7</string>
 </resources>

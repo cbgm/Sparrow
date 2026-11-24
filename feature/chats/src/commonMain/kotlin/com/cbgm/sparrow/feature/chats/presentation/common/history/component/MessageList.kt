@@ -26,10 +26,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
 import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
+import com.cbgm.sparrow.core.ui.component.SparrowDayRail
+import com.cbgm.sparrow.core.ui.component.SparrowDaySeparator
+import com.cbgm.sparrow.core.ui.component.rememberDayRailState
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.time.MILLISECONDS_PER_DAY
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.core.util.time.formatMessageTime
 import com.cbgm.sparrow.core.util.time.localEpochDay
@@ -37,6 +41,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.expenseActivityPartOrNull
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toDayRailDay
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageDayUi
@@ -100,6 +105,7 @@ internal fun MessageList(
             alignToTop = true
         )
     val dayRailState = rememberDayRailState()
+    val railDays = remember(historyState.days) { historyState.days.map(MessageDayUi::toDayRailDay) }
     val today = remember(messages) { localEpochDay(SystemClock.nowEpochMilliseconds()) }
     val firstOfDayIds =
         remember(messages) {
@@ -142,7 +148,7 @@ internal fun MessageList(
             items(items = messages, key = MessageBubbleUi::id) { message ->
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
                     if (message.id in firstOfDayIds) {
-                        DaySeparator(
+                        SparrowDaySeparator(
                             writtenAt = message.writtenAt,
                             today = today,
                             railState = dayRailState,
@@ -250,9 +256,9 @@ internal fun MessageList(
                     bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.base
                 )
         )
-        DayRail(
+        SparrowDayRail(
             state = dayRailState,
-            days = historyState.days,
+            days = railDays,
             today = today,
             contentPadding = contentPadding,
             onDayPicked = pickDay
@@ -502,6 +508,8 @@ private fun previewMessagesOverDays(now: Long): List<MessageBubbleUi> =
     }
 
 private const val MILLISECONDS_PER_HOUR = 3_600_000L
+
+private val PREVIEW_DAYS_AGO = listOf(0, 1, 2, 4, 7, 12, 20, 33, 47, 61, 90, 400)
 
 private val PREVIEW_TEXTS =
     listOf(

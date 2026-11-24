@@ -21,6 +21,8 @@ sealed interface OnboardingUiEvent {
 
     data object IdentityCreated : OnboardingUiEvent
 
+    data object TourStarted : OnboardingUiEvent
+
     data object TourNextClicked : OnboardingUiEvent
 
     data object TourBackSwiped : OnboardingUiEvent

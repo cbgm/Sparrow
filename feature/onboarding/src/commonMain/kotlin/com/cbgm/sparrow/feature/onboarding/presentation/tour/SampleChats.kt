@@ -16,6 +16,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -48,12 +49,13 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun SampleChats(
     spotOf: (TourStep) -> Modifier,
+    onIconTapped: (TopBarIcon) -> Unit,
     onDelete: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         SparrowTopBar(
             title = { Text(stringResource(Res.string.main_title_and_nav_chats)) },
-            actions = { SampleTopBarIcons(spotOf = spotOf) },
+            actions = { SampleTopBarIcons(onIconTapped = onIconTapped, modifier = spotOf(TourStep.TOP_BAR)) },
             windowInsets = WindowInsets(0)
         )
         SparrowSwipeRevealItem(
@@ -99,28 +101,29 @@ internal fun SampleChats(
 /** The chat list's top bar: the shield while the route protects as chosen, search, and the mailbox with an invitation. */
 @Composable
 private fun SampleTopBarIcons(
-    spotOf: (TourStep) -> Modifier,
+    onIconTapped: (TopBarIcon) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.padding(end = MaterialTheme.spacing.small),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = SparrowIcons.ShieldCheck,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = spotOf(TourStep.SHIELD).size(Dimens.TopBar.iconSize)
-        )
-        Icon(imageVector = SparrowIcons.Search, contentDescription = null, modifier = spotOf(TourStep.SEARCH).size(Dimens.TopBar.iconSize))
-        BadgedBox(
-            modifier = spotOf(TourStep.MAILBOX),
-            badge = {
-                Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) { Text("1") }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { onIconTapped(TopBarIcon.SHIELD) }) {
+            Icon(
+                imageVector = SparrowIcons.ShieldCheck,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(Dimens.TopBar.iconSize)
+            )
+        }
+        IconButton(onClick = { onIconTapped(TopBarIcon.SEARCH) }) {
+            Icon(imageVector = SparrowIcons.Search, contentDescription = null, modifier = Modifier.size(Dimens.TopBar.iconSize))
+        }
+        IconButton(onClick = { onIconTapped(TopBarIcon.MAILBOX) }) {
+            BadgedBox(
+                badge = {
+                    Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) { Text("1") }
+                }
+            ) {
+                Icon(imageVector = SparrowIcons.Mail, contentDescription = null, modifier = Modifier.size(Dimens.TopBar.iconSize))
             }
-        ) {
-            Icon(imageVector = SparrowIcons.Mail, contentDescription = null, modifier = Modifier.size(Dimens.TopBar.iconSize))
         }
     }
 }

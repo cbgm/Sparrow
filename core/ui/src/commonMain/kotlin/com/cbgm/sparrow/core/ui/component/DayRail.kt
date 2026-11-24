@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.common.history.component
+package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -47,23 +47,21 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.time.MILLISECONDS_PER_DAY
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.core.util.time.formatMessageDay
 import com.cbgm.sparrow.core.util.time.formatMessageDayOfMonth
 import com.cbgm.sparrow.core.util.time.formatMessageMonth
 import com.cbgm.sparrow.core.util.time.localEpochDay
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageDayUi
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_chats_day_message_count
+import com.cbgm.sparrow.resources.core_day_message_count
 import org.jetbrains.compose.resources.pluralStringResource
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-internal const val MILLISECONDS_PER_DAY = 86_400_000L
-
 /** Where a press on a day separator stands: which day the rail points at and where the finger is. */
 @Stable
-internal class DayRailState {
+class DayRailState {
     var isOpen by mutableStateOf(false)
         private set
     var selectedEpochDay by mutableStateOf<Long?>(null)
@@ -111,7 +109,15 @@ internal class DayRailState {
 }
 
 @Composable
-internal fun rememberDayRailState(): DayRailState = remember { DayRailState() }
+fun rememberDayRailState(): DayRailState = remember { DayRailState() }
+
+/** A day that has messages, as the rail lists it. */
+data class DayRailDay(
+    val epochDay: Long,
+    /** When the first message of the day was written, in epoch milliseconds. */
+    val firstMessageAt: Long,
+    val messageCount: Int
+)
 
 private sealed interface DayRailEntry {
     data class Month(
@@ -119,15 +125,15 @@ private sealed interface DayRailEntry {
     ) : DayRailEntry
 
     data class Day(
-        val day: MessageDayUi
+        val day: DayRailDay
     ) : DayRailEntry
 }
 
-/** Every day of the chat, oldest at the top like the chat itself, centred over the dimmed messages; it grows both ways until it fills the height, then scrolls. */
+/** Every day of a chat, oldest at the top like the chat itself, centred over the dimmed messages; it grows both ways until it fills the height, then scrolls. */
 @Composable
-internal fun DayRail(
+fun SparrowDayRail(
     state: DayRailState,
-    days: List<MessageDayUi>,
+    days: List<DayRailDay>,
     today: Long,
     contentPadding: PaddingValues,
     onDayPicked: (Long) -> Unit,
@@ -267,7 +273,7 @@ private fun RailMonth(label: String) {
 
 @Composable
 private fun RailDay(
-    day: MessageDayUi,
+    day: DayRailDay,
     today: Long,
     isSelected: Boolean,
     state: DayRailState,
@@ -296,7 +302,7 @@ private fun RailDay(
 
 @Composable
 private fun SelectedDayLabel(
-    day: MessageDayUi,
+    day: DayRailDay,
     today: Long,
     modifier: Modifier = Modifier
 ) {
@@ -311,7 +317,7 @@ private fun SelectedDayLabel(
             color = MaterialTheme.colorScheme.onPrimary
         )
         Text(
-            text = pluralStringResource(Res.plurals.feature_chats_day_message_count, day.messageCount, day.messageCount),
+            text = pluralStringResource(Res.plurals.core_day_message_count, day.messageCount, day.messageCount),
             modifier = Modifier.padding(top = MaterialTheme.spacing.micro, end = MaterialTheme.spacing.base),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -320,7 +326,7 @@ private fun SelectedDayLabel(
 }
 
 /** Newest first, each month's name after its oldest day, so it sits above its days in the reversed rail. */
-private fun List<MessageDayUi>.toRailEntries(): List<DayRailEntry> =
+private fun List<DayRailDay>.toRailEntries(): List<DayRailEntry> =
     flatMapIndexed { index, day ->
         val month = formatMessageMonth(day.firstMessageAt)
         val nextMonth = getOrNull(index + 1)?.let { formatMessageMonth(it.firstMessageAt) }
@@ -334,18 +340,9 @@ private const val RAIL_LEAD = 4
 private fun DayRailPreview() {
     SparrowTheme {
         val now = SystemClock.nowEpochMilliseconds()
-        val days =
-            PREVIEW_DAYS_AGO.mapIndexed { index, daysAgo ->
-                val writtenAt = now - daysAgo * MILLISECONDS_PER_DAY
-                MessageDayUi(
-                    epochDay = localEpochDay(writtenAt),
-                    firstMessageId = "day-$index",
-                    firstMessageAt = writtenAt,
-                    messageCount = 3 + index % 5
-                )
-            }
+        val days = sampleDayRailDays(now)
         val state = rememberDayRailState().apply { open(days[6].epochDay, 0f, 0f) }
-        DayRail(
+        SparrowDayRail(
             state = state,
             days = days,
             today = localEpochDay(now),
@@ -355,5 +352,9 @@ private fun DayRailPreview() {
     }
 }
 
-/** Days with messages for previews: this week, the last months and one in an earlier year. */
-internal val PREVIEW_DAYS_AGO = listOf(0, 1, 2, 4, 7, 12, 20, 33, 47, 61, 90, 400)
+/** Days of a made-up chat, newest first: this week, the last months and one in an earlier year. */
+fun sampleDayRailDays(now: Long): List<DayRailDay> =
+    listOf(0, 1, 2, 4, 7, 12, 20, 33, 47, 61, 90, 400).mapIndexed { index, daysAgo ->
+        val writtenAt = now - daysAgo * MILLISECONDS_PER_DAY
+        DayRailDay(epochDay = localEpochDay(writtenAt), firstMessageAt = writtenAt, messageCount = 3 + index % 5)
+    }

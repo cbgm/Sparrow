@@ -280,6 +280,13 @@ object Dimens {
         val spotlightLineWidth = 1.5.dp
         val tourTextTop = 320.dp
         val tourSwipeDistance = 48.dp
+        val tourIntroGraphicWidth = 200.dp
+        val tourIntroGraphicHeight = 170.dp
+        val tourIntroAvatarSize = 26.dp
+        val tourIntroIconSize = 14.dp
+        val tourIntroNameWidth = 60.dp
+        val tourIntroPreviewWidth = 90.dp
+        val tourIntroLineHeight = 6.dp
         val sampleBubbleMaxWidth = 280.dp
         val wordSlide = 8.dp
         val rowSlide = 60.dp

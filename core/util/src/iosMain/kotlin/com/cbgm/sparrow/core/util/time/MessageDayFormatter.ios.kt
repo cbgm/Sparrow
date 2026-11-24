@@ -8,8 +8,6 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSTimeZone
 import platform.Foundation.localTimeZone
 
-private const val MILLISECONDS_PER_DAY = 86_400_000L
-
 @OptIn(ExperimentalForeignApi::class)
 actual fun localEpochDay(epochMilliseconds: Long): Long {
     val offsetMilliseconds = NSTimeZone.localTimeZone.secondsFromGMTForDate(date(epochMilliseconds)) * 1_000L

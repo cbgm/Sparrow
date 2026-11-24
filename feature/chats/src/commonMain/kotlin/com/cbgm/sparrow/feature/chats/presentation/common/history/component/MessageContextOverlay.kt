@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntRect
+import com.cbgm.sparrow.core.ui.component.SparrowMessageActionMenu
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -179,7 +180,7 @@ private fun MessageContextOverlay(
                     preview()
                 }
 
-                MessageContextActionMenu(
+                SparrowMessageActionMenu(
                     color = menuColor,
                     onReplyClick = onReplyClick,
                     onForwardClick = onForwardClick,

@@ -42,7 +42,8 @@ class OnboardingViewModel(
             OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
             is OnboardingUiEvent.ConnectionModeChosen -> chooseConnectionMode(event.mode)
             is OnboardingUiEvent.ThemeModeChosen -> chooseThemeMode(event.mode)
-            OnboardingUiEvent.IdentityCreated -> _uiState.update { state -> state.copy(tourStep = state.tourStep ?: TourStep.entries.first()) }
+            OnboardingUiEvent.IdentityCreated -> _uiState.update { state -> state.copy(showsTourIntro = state.tourStep == null) }
+            OnboardingUiEvent.TourStarted -> _uiState.update { state -> state.copy(showsTourIntro = false, tourStep = TourStep.entries.first()) }
             OnboardingUiEvent.TourNextClicked -> showNextTourStep()
             OnboardingUiEvent.TourBackSwiped -> showPreviousTourStep()
             OnboardingUiEvent.TourSkipped -> _uiState.update { state -> state.copy(tourFinished = true) }

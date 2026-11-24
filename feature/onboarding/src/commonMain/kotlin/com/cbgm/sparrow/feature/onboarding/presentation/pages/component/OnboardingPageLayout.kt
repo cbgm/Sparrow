@@ -37,6 +37,7 @@ fun OnboardingPageLayout(
     isContentCentered: Boolean = false,
     action: @Composable () -> Unit = {},
     hint: @Composable () -> Unit = {},
+    leading: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize().onboardingBars()) {
@@ -67,6 +68,9 @@ fun OnboardingPageLayout(
         }
         Box(modifier = Modifier.align(Alignment.BottomCenter).bottomBar(), contentAlignment = Alignment.Center) {
             hint()
+        }
+        Box(modifier = Modifier.align(Alignment.BottomStart).bottomBar(), contentAlignment = Alignment.CenterStart) {
+            leading()
         }
         Box(modifier = Modifier.align(Alignment.BottomEnd).bottomBar(), contentAlignment = Alignment.CenterEnd) {
             action()

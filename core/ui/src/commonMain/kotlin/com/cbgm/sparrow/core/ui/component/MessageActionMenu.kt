@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.common.history.component
+package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -44,8 +44,9 @@ import com.cbgm.sparrow.resources.feature_chats_reply
 import com.cbgm.sparrow.resources.feature_chats_unpin_message
 import org.jetbrains.compose.resources.stringResource
 
+/** The reactions and actions shown for a held message. */
 @Composable
-internal fun MessageContextActionMenu(
+fun SparrowMessageActionMenu(
     color: Color,
     onReplyClick: () -> Unit,
     onForwardClick: () -> Unit,
@@ -189,7 +190,7 @@ private fun MessageActionItem(
 @Composable
 private fun MessagePopUpMenuPreview() {
     SparrowTheme {
-        MessageContextActionMenu(
+        SparrowMessageActionMenu(
             color = MaterialTheme.colorScheme.surface,
             onReplyClick = {},
             onForwardClick = {},
