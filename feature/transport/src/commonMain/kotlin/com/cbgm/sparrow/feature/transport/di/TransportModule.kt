@@ -454,7 +454,7 @@ val transportModule =
         singleOf(::ObserveCircuitFallbackUseCase)
         singleOf(::SetCircuitFallbackUseCase)
         singleOf(::ObserveWaitingForRouteUseCase)
-        singleOf(::ObserveRouteProtectionUseCase)
+        single { ObserveRouteProtectionUseCase(circuitRunner = get(), fallbackStore = get()) }
         singleOf(::ObserveConnectionModeUseCase)
         singleOf(::SetConnectionModeUseCase)
         singleOf(::CanConnectWhileClosedUseCase)

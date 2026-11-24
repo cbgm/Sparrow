@@ -1038,8 +1038,8 @@
     <string name="feature_onboarding_tour_done">Fertig</string>
     <string name="feature_onboarding_tour_ring_title">Der Ring um einen Kontakt</string>
     <string name="feature_onboarding_tour_ring_text">Gestrichelt: Ihr habt noch nicht beide geprüft, dass wirklich der andere dahintersteckt. Durchgezogen: Ihr habt es beide getan, indem ihr einmal die Sicherheitsnummer verglichen habt.</string>
-    <string name="feature_onboarding_tour_dots_title">Drei Punkte unter deiner Nachricht</string>
-    <string name="feature_onboarding_tour_dots_text">Sie leuchten auf, während deine Nachricht unterwegs ist: einer, wenn sie gesendet ist, zwei, wenn sie auf dem Handy angekommen ist, drei, wenn sie gelesen wurde.</string>
+    <string name="feature_onboarding_tour_dots_title">Punkte neben der Uhrzeit</string>
+    <string name="feature_onboarding_tour_dots_text">Sie folgen deiner Nachricht: einer, wenn sie gesendet ist, zwei, wenn sie auf dem Handy angekommen ist, drei, wenn sie gelesen wurde. Hohl: sie wartet auf eine Route. Rot: fehlgeschlagen, tippe auf die Punkte, um sie erneut zu senden. Ein offenes Schloss vor der Uhrzeit: ohne Verschlüsselung gesendet.</string>
     <string name="feature_onboarding_tour_hold_title">Nachricht gedrückt halten</string>
     <string name="feature_onboarding_tour_hold_text">Halte eine Nachricht gedrückt, um zu antworten, zu reagieren, sie weiterzuleiten, zu kopieren, zu bearbeiten oder zu löschen.</string>
     <string name="feature_onboarding_tour_swipe_title">Nach links wischen</string>
@@ -1058,4 +1058,11 @@
     <string name="feature_settings_circuit_protection_reduced_text">Gerade sind nicht alle weiterleitenden Knoten erreichbar. Bis sie zurück sind, sehen die Knoten dazwischen mehr als mit allen Hops; bei einem Hop sieht dieser Knoten deine Adresse und deine Postfächer.</string>
     <string name="feature_settings_circuit_protection_waiting_title">Gerade keine Route</string>
     <string name="feature_settings_circuit_protection_waiting_text">Nachrichten warten und gehen raus, sobald wieder eine Route steht.</string>
+    <string name="feature_chats_failed_tap_to_retry">Fehlgeschlagen, tippen zum erneuten Senden</string>
+    <string name="feature_onboarding_tour_shield_title">Das Schild oben in der Leiste</string>
+    <string name="feature_onboarding_tour_shield_text">Es zeigt, wie gut dein Weg dich gerade verbirgt. Grau mit Haken: wie gewählt. Gelb: vorübergehend weniger Hops. Rot: direkt gesendet, ohne Schutz. Tippe darauf, um zu sehen, warum.</string>
+    <string name="feature_onboarding_tour_search_title">Suche</string>
+    <string name="feature_onboarding_tour_search_text">Sie erscheint hier, sobald du in Einstellungen › Lokale Intelligenz die semantische Nachrichtensuche einschaltest und ihr Modell auf dem Handy ist. Sie findet Nachrichten nach ihrer Bedeutung, nicht nur nach genauen Wörtern, und alles bleibt auf diesem Gerät. In einem Chat durchsucht sie nur diesen Chat.</string>
+    <string name="feature_onboarding_tour_mailbox_title">Posteingang</string>
+    <string name="feature_onboarding_tour_mailbox_text">Hier warten Einladungen: Menschen, die dir schreiben möchten, Einladungen in Gruppen und deine eigenen, die noch offen sind. Die Zahl zeigt, wie viele auf dich warten; du entscheidest, was du annimmst.</string>
 </resources>

@@ -23,6 +23,8 @@ sealed interface OnboardingUiEvent {
 
     data object TourNextClicked : OnboardingUiEvent
 
+    data object TourBackSwiped : OnboardingUiEvent
+
     data object TourSkipped : OnboardingUiEvent
 
     data class ThemeModeChosen(

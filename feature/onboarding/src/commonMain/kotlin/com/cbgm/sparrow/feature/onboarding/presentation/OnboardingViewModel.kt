@@ -44,6 +44,7 @@ class OnboardingViewModel(
             is OnboardingUiEvent.ThemeModeChosen -> chooseThemeMode(event.mode)
             OnboardingUiEvent.IdentityCreated -> _uiState.update { state -> state.copy(tourStep = state.tourStep ?: TourStep.entries.first()) }
             OnboardingUiEvent.TourNextClicked -> showNextTourStep()
+            OnboardingUiEvent.TourBackSwiped -> showPreviousTourStep()
             OnboardingUiEvent.TourSkipped -> _uiState.update { state -> state.copy(tourFinished = true) }
         }
     }
@@ -111,6 +112,12 @@ class OnboardingViewModel(
         _uiState.update { state ->
             val next = state.tourStep?.let { step -> TourStep.entries.getOrNull(step.ordinal + 1) }
             state.copy(tourStep = next ?: state.tourStep, tourFinished = next == null)
+        }
+    }
+
+    private fun showPreviousTourStep() {
+        _uiState.update { state ->
+            state.copy(tourStep = state.tourStep?.let { step -> TourStep.entries.getOrNull(step.ordinal - 1) ?: step })
         }
     }
 

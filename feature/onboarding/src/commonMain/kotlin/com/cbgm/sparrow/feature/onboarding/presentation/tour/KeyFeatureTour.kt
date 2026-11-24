@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.onboarding.presentation.tour
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +33,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,9 +57,15 @@ import com.cbgm.sparrow.resources.feature_onboarding_tour_dots_text
 import com.cbgm.sparrow.resources.feature_onboarding_tour_dots_title
 import com.cbgm.sparrow.resources.feature_onboarding_tour_hold_text
 import com.cbgm.sparrow.resources.feature_onboarding_tour_hold_title
+import com.cbgm.sparrow.resources.feature_onboarding_tour_mailbox_text
+import com.cbgm.sparrow.resources.feature_onboarding_tour_mailbox_title
 import com.cbgm.sparrow.resources.feature_onboarding_tour_next
 import com.cbgm.sparrow.resources.feature_onboarding_tour_ring_text
 import com.cbgm.sparrow.resources.feature_onboarding_tour_ring_title
+import com.cbgm.sparrow.resources.feature_onboarding_tour_search_text
+import com.cbgm.sparrow.resources.feature_onboarding_tour_search_title
+import com.cbgm.sparrow.resources.feature_onboarding_tour_shield_text
+import com.cbgm.sparrow.resources.feature_onboarding_tour_shield_title
 import com.cbgm.sparrow.resources.feature_onboarding_tour_skip
 import com.cbgm.sparrow.resources.feature_onboarding_tour_swipe_text
 import com.cbgm.sparrow.resources.feature_onboarding_tour_swipe_title
@@ -77,31 +86,51 @@ fun KeyFeatureTour(
     val spotOf: (TourStep) -> Modifier = { target ->
         Modifier.onGloballyPositioned { coordinates -> spots[target] = coordinates.boundsInRoot() }
     }
+    val swipeDistance = with(LocalDensity.current) { Dimens.OnboardingScreen.tourSwipeDistance.toPx() }
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .onGloballyPositioned { coordinates -> origin = coordinates.positionInRoot() }
+                .tourSwipes(step = step, distance = swipeDistance, onUiEvent = onUiEvent)
     ) {
         when (step) {
-            TourStep.RING, TourStep.SWIPE ->
+            TourStep.RING, TourStep.SHIELD, TourStep.SEARCH, TourStep.MAILBOX, TourStep.SWIPE ->
                 SampleChats(
-                    ringModifier = spotOf(TourStep.RING),
-                    rowModifier = spotOf(TourStep.SWIPE),
+                    spotOf = spotOf,
                     onDelete = { onUiEvent(OnboardingUiEvent.TourNextClicked) }
                 )
 
             TourStep.DOTS, TourStep.HOLD ->
-                SampleChat(
-                    dotsModifier = spotOf(TourStep.DOTS),
-                    messageModifier = spotOf(TourStep.HOLD)
-                )
+                SampleChat(spotOf = spotOf)
         }
         spots[step]?.translate(-origin)?.let { spot -> Spotlight(spot = spot) }
         TourText(step = step, onUiEvent = onUiEvent)
     }
 }
+
+/**
+ * Swiping left goes on (on the last step it ends the tour), swiping right goes back, like the onboarding pages. A swipe
+ * the sample row takes for itself (on the swipe step) does not turn the page.
+ */
+private fun Modifier.tourSwipes(
+    step: TourStep,
+    distance: Float,
+    onUiEvent: (OnboardingUiEvent) -> Unit
+): Modifier =
+    pointerInput(step) {
+        var dragged = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { dragged = 0f },
+            onDragEnd = {
+                when {
+                    dragged < -distance -> onUiEvent(OnboardingUiEvent.TourNextClicked)
+                    dragged > distance -> onUiEvent(OnboardingUiEvent.TourBackSwiped)
+                }
+            }
+        ) { _, amount -> dragged += amount }
+    }
 
 /** Dims everything but [spot]; it lets touches through, so the lit row can really be swiped. */
 @Composable
@@ -172,6 +201,9 @@ private val TourStep.title: StringResource
     get() =
         when (this) {
             TourStep.RING -> Res.string.feature_onboarding_tour_ring_title
+            TourStep.SHIELD -> Res.string.feature_onboarding_tour_shield_title
+            TourStep.SEARCH -> Res.string.feature_onboarding_tour_search_title
+            TourStep.MAILBOX -> Res.string.feature_onboarding_tour_mailbox_title
             TourStep.DOTS -> Res.string.feature_onboarding_tour_dots_title
             TourStep.HOLD -> Res.string.feature_onboarding_tour_hold_title
             TourStep.SWIPE -> Res.string.feature_onboarding_tour_swipe_title
@@ -181,6 +213,9 @@ private val TourStep.text: StringResource
     get() =
         when (this) {
             TourStep.RING -> Res.string.feature_onboarding_tour_ring_text
+            TourStep.SHIELD -> Res.string.feature_onboarding_tour_shield_text
+            TourStep.SEARCH -> Res.string.feature_onboarding_tour_search_text
+            TourStep.MAILBOX -> Res.string.feature_onboarding_tour_mailbox_text
             TourStep.DOTS -> Res.string.feature_onboarding_tour_dots_text
             TourStep.HOLD -> Res.string.feature_onboarding_tour_hold_text
             TourStep.SWIPE -> Res.string.feature_onboarding_tour_swipe_text

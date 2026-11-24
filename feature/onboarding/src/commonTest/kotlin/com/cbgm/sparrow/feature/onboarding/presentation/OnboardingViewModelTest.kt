@@ -78,6 +78,18 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun swipingBackGoesToThePreviousStepButNotBeforeTheFirst() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked)
+        viewModel.onUiEvent(OnboardingUiEvent.TourBackSwiped)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourBackSwiped)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+        assertFalse(viewModel.uiState.value.tourFinished)
+    }
+
+    @Test
     fun skippingEndsTheTourAtOnce() {
         viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
         viewModel.onUiEvent(OnboardingUiEvent.TourSkipped)

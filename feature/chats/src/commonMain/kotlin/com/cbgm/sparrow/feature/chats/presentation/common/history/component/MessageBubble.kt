@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -16,15 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
@@ -51,14 +52,17 @@ import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VideoUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.VoiceUi
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
+import com.cbgm.sparrow.core.ui.component.DeliveryDotsState
 import com.cbgm.sparrow.core.ui.component.SparrowDeliveryDots
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.standalonePartOrNull
@@ -69,15 +73,15 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageC
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.expenses.presentation.message.ExpenseBoardMessageContent
+import com.cbgm.sparrow.feature.linkpreview.presentation.model.TextContentPart
+import com.cbgm.sparrow.feature.linkpreview.presentation.model.toTextContentParts
 import com.cbgm.sparrow.feature.polls.presentation.message.PollMessageContent
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_delivered
-import com.cbgm.sparrow.resources.feature_chats_failed
+import com.cbgm.sparrow.resources.feature_chats_failed_tap_to_retry
 import com.cbgm.sparrow.resources.feature_chats_invalid_message_packet
-import com.cbgm.sparrow.resources.feature_chats_invalid_packet
-import com.cbgm.sparrow.resources.feature_chats_invalid_plaintext
 import com.cbgm.sparrow.resources.feature_chats_not_encrypted
 import com.cbgm.sparrow.resources.feature_chats_queued
 import com.cbgm.sparrow.resources.feature_chats_read
@@ -172,8 +176,6 @@ private fun MessageBubbleContent(
 ) {
     val bubbleState = bubbleState(message)
     val safetyWarning = message.safetyWarning
-    // A plain text bubble carries its time and delivery inside, at its end; other content keeps them underneath.
-    val metadataInside = showMetadata && message.hasRoomForMetadata(bubbleState)
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -208,8 +210,8 @@ private fun MessageBubbleContent(
                         safetyWarning?.let(onSafetyDetailsClick)
                     },
                     innerMetadata =
-                        if (metadataInside) {
-                            { Metadata(message = message, onRetryClick = onRetryClick) }
+                        if (showMetadata) {
+                            { onPicture -> Metadata(message = message, onRetryClick = onRetryClick, onPicture = onPicture) }
                         } else {
                             null
                         }
@@ -228,18 +230,6 @@ private fun MessageBubbleContent(
                                 }
                             )
                             .offset(y = MaterialTheme.spacing.small)
-                )
-            }
-            if (showMetadata && !metadataInside) {
-                Metadata(
-                    message = message,
-                    onRetryClick = onRetryClick,
-                    modifier =
-                        Modifier.padding(
-                            top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
-                            start = MaterialTheme.spacing.micro,
-                            end = MaterialTheme.spacing.micro
-                        )
                 )
             }
         }
@@ -302,7 +292,7 @@ private fun BubbleBody(
     onPollVoteSubmit: (String, String, Set<String>) -> Unit = { _, _, _ -> },
     onPollClose: (String, String) -> Unit = { _, _ -> },
     onSafetyDetailsClick: () -> Unit = {},
-    innerMetadata: (@Composable () -> Unit)? = null
+    innerMetadata: BubbleMetadata? = null
 ) {
     val showTextBubble =
         message.parts.standalonePartOrNull() == null &&
@@ -351,7 +341,7 @@ private fun BubbleContent(
     onPollVoteSubmit: (String, String, Set<String>) -> Unit,
     onPollClose: (String, String) -> Unit,
     onSafetyDetailsClick: () -> Unit,
-    innerMetadata: (@Composable () -> Unit)?
+    innerMetadata: BubbleMetadata?
 ) {
     when (val part = message.parts.standalonePartOrNull()) {
         is ExpenseBoardUi -> {
@@ -360,6 +350,7 @@ private fun BubbleContent(
                 state = state,
                 isSearchHighlighted = isSearchHighlighted,
                 reply = replyFor(PrimaryContent.EXPENSE_BOARD),
+                metadata = innerMetadata,
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
@@ -374,6 +365,7 @@ private fun BubbleContent(
                 state = state,
                 isSearchHighlighted = isSearchHighlighted,
                 reply = replyFor(PrimaryContent.POLL),
+                metadata = innerMetadata,
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
@@ -398,6 +390,7 @@ private fun BubbleContent(
                 state = state,
                 isSearchHighlighted = isSearchHighlighted,
                 reply = replyFor(PrimaryContent.VOICE),
+                metadata = innerMetadata,
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
@@ -412,6 +405,7 @@ private fun BubbleContent(
                 hasInnerPadding = false,
                 isSearchHighlighted = isSearchHighlighted,
                 reply = replyFor(PrimaryContent.CONTACT),
+                metadata = innerMetadata,
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
@@ -429,6 +423,7 @@ private fun BubbleContent(
                 hasInnerPadding = false,
                 isSearchHighlighted = isSearchHighlighted,
                 reply = replyFor(PrimaryContent.LOCATION),
+                metadata = innerMetadata,
                 onReplyPreviewClick = onReplyPreviewClick,
                 onLongPress = onLongPress
             ) {
@@ -442,12 +437,28 @@ private fun BubbleContent(
         null -> {
             val imageVideoParts = message.parts.filterIsInstance<ImageVideoUi>()
             val fileParts = message.parts.filterIsInstance<FileUi>()
+            val textPart =
+                message.parts.textPartOrNull()
+                    ?: TextUi(
+                        id = message.id,
+                        text = state.text,
+                        isContentFailed = state.isContentFailed
+                    )
+            // Several bubbles for one message: the last one carries the time and delivery.
+            val last =
+                when {
+                    showTextBubble -> PrimaryContent.TEXT
+                    fileParts.isNotEmpty() -> PrimaryContent.FILE
+                    else -> PrimaryContent.IMAGE_VIDEO
+                }
             if (imageVideoParts.isNotEmpty()) {
                 MessageBubbleSurface(
                     message = message,
                     state = state,
                     isSearchHighlighted = isSearchHighlighted,
                     reply = replyFor(PrimaryContent.IMAGE_VIDEO),
+                    metadata = innerMetadata?.takeIf { last == PrimaryContent.IMAGE_VIDEO },
+                    metadataPlacement = MetadataPlacement.ON_PICTURE,
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress
                 ) {
@@ -464,6 +475,7 @@ private fun BubbleContent(
                     state = state,
                     isSearchHighlighted = isSearchHighlighted,
                     reply = replyFor(PrimaryContent.FILE),
+                    metadata = innerMetadata?.takeIf { last == PrimaryContent.FILE },
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress
                 ) {
@@ -480,23 +492,16 @@ private fun BubbleContent(
                     hasInnerPadding = safetyWarning == null,
                     isSearchHighlighted = isSearchHighlighted,
                     reply = replyFor(PrimaryContent.TEXT),
+                    metadata = innerMetadata,
+                    metadataPlacement = textPart.metadataPlacement(safetyWarning),
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress
                 ) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        TextMessageBubbleBody(
-                            textPart =
-                                message.parts.textPartOrNull()
-                                    ?: TextUi(
-                                        id = message.id,
-                                        text = state.text,
-                                        isContentFailed = state.isContentFailed
-                                    ),
-                            safetyWarning = safetyWarning,
-                            onSafetyDetailsClick = onSafetyDetailsClick
-                        )
-                        innerMetadata?.invoke()
-                    }
+                    TextMessageBubbleBody(
+                        textPart = textPart,
+                        safetyWarning = safetyWarning,
+                        onSafetyDetailsClick = onSafetyDetailsClick
+                    )
                 }
             }
         }
@@ -515,6 +520,8 @@ private fun MessageBubbleSurface(
     reply: MessageReplyUi? = null,
     onReplyPreviewClick: (String) -> Unit = {},
     onLongPress: () -> Unit = {},
+    metadata: BubbleMetadata? = null,
+    metadataPlacement: MetadataPlacement = MetadataPlacement.BELOW,
     content: @Composable () -> Unit
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
@@ -560,9 +567,97 @@ private fun MessageBubbleSurface(
                         vertical = verticalPadding
                     )
             ) {
-                content()
+                when {
+                    metadata == null -> content()
+                    metadataPlacement == MetadataPlacement.END_OF_TEXT -> TextWithTrailingMetadata(metadata = { metadata(false) }, content = content)
+                    metadataPlacement == MetadataPlacement.ON_PICTURE ->
+                        Box {
+                            content()
+                            MetadataPill(modifier = Modifier.align(Alignment.BottomEnd)) { metadata(true) }
+                        }
+                    hasInnerPadding ->
+                        Column {
+                            content()
+                            Box(modifier = Modifier.align(Alignment.End).padding(top = MaterialTheme.spacing.micro)) { metadata(false) }
+                        }
+                    else -> content()
+                }
+            }
+            // Content that fills the bubble to its edges gets the row inset below it, still inside the bubble.
+            metadata?.takeIf { !hasInnerPadding && metadataPlacement == MetadataPlacement.BELOW }?.let { row ->
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.End)
+                            .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.micro)
+                ) { row(false) }
             }
         }
+    }
+}
+
+/** The time and delivery of a message, drawn light on a dark pill when it sits on a picture. */
+internal typealias BubbleMetadata = @Composable (onPicture: Boolean) -> Unit
+
+/** Where a bubble shows its time and delivery; every place is inside the bubble, which grows when they do not fit. */
+internal enum class MetadataPlacement {
+    /** At the end of the last line of text, or on a line of its own when that line is full. */
+    END_OF_TEXT,
+
+    /** In the corner of a photo or video. */
+    ON_PICTURE,
+
+    /** At the end, under the content. */
+    BELOW
+}
+
+/**
+ * The text keeps room for the time and delivery at the end of its last line ([LocalTrailingMetadataSize]); the text
+ * wraps the room to a new line when the last one is full, and the time sits in the bottom corner either way.
+ */
+@Composable
+private fun TextWithTrailingMetadata(
+    metadata: @Composable () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val density = LocalDensity.current
+    // Matches the text's own padding in TextMessageBubbleBody, so the time lines up with the last line.
+    val insetSize = MaterialTheme.spacing.micro
+    SubcomposeLayout { constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val row = subcompose(TrailingSlot.METADATA, metadata).map { measurable -> measurable.measure(loose) }
+        val rowWidth = row.maxOfOrNull { it.width } ?: 0
+        val rowHeight = row.maxOfOrNull { it.height } ?: 0
+        val inset = insetSize.roundToPx()
+        val room = with(density) { DpSize((rowWidth + inset).toDp(), rowHeight.toDp()) }
+        val body =
+            subcompose(TrailingSlot.CONTENT) {
+                CompositionLocalProvider(LocalTrailingMetadataSize provides room) { content() }
+            }.map { measurable -> measurable.measure(loose) }
+        val width = maxOf(body.maxOfOrNull { it.width } ?: 0, rowWidth + inset * 2)
+        val height = maxOf(body.maxOfOrNull { it.height } ?: 0, rowHeight + inset * 2)
+        layout(width, height) {
+            body.forEach { placeable -> placeable.place(0, 0) }
+            row.forEach { placeable -> placeable.place(width - placeable.width - inset, height - placeable.height - inset) }
+        }
+    }
+}
+
+private enum class TrailingSlot { METADATA, CONTENT }
+
+@Composable
+private fun MetadataPill(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier =
+            modifier
+                .padding(MaterialTheme.spacing.micro)
+                .background(Color.Black.copy(alpha = Alpha.MessageBubble.metadataPill), MaterialTheme.shapes.circle)
+                .padding(horizontal = MaterialTheme.spacing.base, vertical = MaterialTheme.spacing.micro / 2)
+    ) {
+        content()
     }
 }
 
@@ -631,170 +726,101 @@ private fun MessageReactions(
     }
 }
 
-/** Only text and nothing else: no attachment, no poll or voice, no safety warning taking the bubble's width. */
-private fun MessageBubbleUi.hasRoomForMetadata(state: BubbleState): Boolean =
-    parts.standalonePartOrNull() == null &&
-        parts.none { part -> part is ImageVideoUi || part is FileUi } &&
-        safetyWarning == null &&
-        (state.text.isNotBlank() || state.isContentFailed)
-
+/**
+ * The time, with an open lock before it when the message was not end-to-end encrypted, and for own messages the
+ * delivery dots. A message that failed shows them in red, and tapping them sends it again.
+ */
 @Composable
 private fun Metadata(
     message: MessageBubbleUi,
     onRetryClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPicture: Boolean = false
 ) {
+    val showsDelivery = message.isMine && message.deliveryStatus != MessageDeliveryStatus.NOT_APPLICABLE
+    val failed = showsDelivery && message.deliveryStatus == MessageDeliveryStatus.FAILED
+    val retryLabel = stringResource(Res.string.feature_chats_failed_tap_to_retry)
+    val timeColor =
+        when {
+            failed -> MaterialTheme.colorScheme.error
+            onPicture -> Color.White
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
     Row(
-        modifier = modifier,
+        modifier =
+            modifier
+                .clickable(enabled = failed, onClickLabel = retryLabel, role = Role.Button, onClick = onRetryClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
-        SecurityIndicator(message = message)
+        if (message.isReadableWithoutEncryption()) {
+            Icon(
+                imageVector = Icons.Default.LockOpen,
+                contentDescription = stringResource(Res.string.feature_chats_not_encrypted),
+                modifier = Modifier.size(Dimens.MessageBubble.iconSize),
+                tint = MaterialTheme.colorScheme.warning
+            )
+        }
 
         if (message.time.isNotBlank()) {
             Text(
                 text = message.time,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = timeColor
             )
         }
 
-        if (message.isMine && message.deliveryStatus != MessageDeliveryStatus.NOT_APPLICABLE) {
-            DeliveryIndicator(
-                deliveryStatus = message.deliveryStatus,
-                onRetryClick = onRetryClick
-            )
+        if (showsDelivery) {
+            SparrowDeliveryDots(state = message.deliveryStatus.toDotsState(), description = deliveryDescription(message.deliveryStatus))
             DeliveryProgress(message = message)
         }
     }
 }
+
+/** Unreadable messages say so in the bubble itself; only a readable one sent without encryption gets the lock. */
+private fun MessageBubbleUi.isReadableWithoutEncryption(): Boolean =
+    contentStatus == MessageContentStatus.READABLE && security != MessageSecurity.END_TO_END_ENCRYPTED
+
+/** Waiting for the contact's approval looks like waiting for a route: nothing went out yet. */
+private fun MessageDeliveryStatus.toDotsState(): DeliveryDotsState =
+    when (this) {
+        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION, MessageDeliveryStatus.QUEUED, MessageDeliveryStatus.NOT_APPLICABLE -> DeliveryDotsState.QUEUED
+        MessageDeliveryStatus.SENDING -> DeliveryDotsState.SENDING
+        MessageDeliveryStatus.SENT -> DeliveryDotsState.SENT
+        MessageDeliveryStatus.DELIVERED -> DeliveryDotsState.DELIVERED
+        MessageDeliveryStatus.READ -> DeliveryDotsState.READ
+        MessageDeliveryStatus.FAILED -> DeliveryDotsState.FAILED
+    }
+
+@Composable
+private fun deliveryDescription(status: MessageDeliveryStatus): String =
+    when (status) {
+        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION -> stringResource(Res.string.feature_chats_waiting_for_authorization)
+        MessageDeliveryStatus.QUEUED, MessageDeliveryStatus.NOT_APPLICABLE -> stringResource(Res.string.feature_chats_queued)
+        MessageDeliveryStatus.SENDING -> stringResource(Res.string.feature_chats_sending)
+        MessageDeliveryStatus.SENT -> stringResource(Res.string.feature_chats_sent)
+        MessageDeliveryStatus.DELIVERED -> stringResource(Res.string.feature_chats_delivered)
+        MessageDeliveryStatus.READ -> stringResource(Res.string.feature_chats_read)
+        MessageDeliveryStatus.FAILED -> stringResource(Res.string.feature_chats_failed_tap_to_retry)
+    }
 
 @Composable
 private fun DeliveryProgress(message: MessageBubbleUi) {
     val progress = message.deliveryProgress
     if (progress.recipientCount <= 1) return
 
+    // Before anyone received it the dots say enough.
     val text =
         when {
             progress.readCount > 0 -> "${progress.readCount}/${progress.recipientCount}"
             progress.deliveredCount > 0 -> "${progress.deliveredCount}/${progress.recipientCount}"
-            else -> "Sending…"
+            else -> return
         }
 
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-    )
-}
-
-@Composable
-private fun MetadataIcon(
-    imageVector: ImageVector,
-    modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
-) {
-    Icon(
-        imageVector = imageVector,
-        contentDescription = null,
-        modifier = modifier.size(Dimens.MessageBubble.iconSize),
-        tint = tint
-    )
-}
-
-/** Shown only when a message is not end-to-end encrypted or could not be read; encrypted is the norm. */
-@Composable
-private fun SecurityIndicator(message: MessageBubbleUi) {
-    val isNormal =
-        message.contentStatus == MessageContentStatus.READABLE &&
-            message.security == MessageSecurity.END_TO_END_ENCRYPTED
-    if (isNormal) return
-
-    val text =
-        when (message.contentStatus) {
-            MessageContentStatus.INVALID_PACKET -> stringResource(Res.string.feature_chats_invalid_packet)
-            MessageContentStatus.INVALID_PLAINTEXT_PACKET -> stringResource(Res.string.feature_chats_invalid_plaintext)
-            MessageContentStatus.TRANSPORT_DECRYPTION_FAILED ->
-                stringResource(Res.string.feature_chats_unable_decrypt_secure_message)
-
-            MessageContentStatus.READABLE -> stringResource(Res.string.feature_chats_not_encrypted)
-        }
-
-    val icon =
-        when (message.contentStatus) {
-            MessageContentStatus.READABLE -> Icons.Default.LockOpen
-            MessageContentStatus.INVALID_PACKET,
-            MessageContentStatus.INVALID_PLAINTEXT_PACKET,
-            MessageContentStatus.TRANSPORT_DECRYPTION_FAILED -> Icons.Default.ErrorOutline
-        }
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        MetadataIcon(icon)
-        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun DeliveryIndicator(
-    deliveryStatus: MessageDeliveryStatus,
-    onRetryClick: () -> Unit
-) {
-    when (deliveryStatus) {
-        MessageDeliveryStatus.NOT_APPLICABLE -> Unit
-
-        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION ->
-            DeliveryLabel(stringResource(Res.string.feature_chats_waiting_for_authorization))
-
-        MessageDeliveryStatus.QUEUED -> DeliveryLabel(stringResource(Res.string.feature_chats_queued))
-        MessageDeliveryStatus.SENDING -> DeliveryLabel(stringResource(Res.string.feature_chats_sending))
-        MessageDeliveryStatus.SENT ->
-            SparrowDeliveryDots(reached = 1, description = stringResource(Res.string.feature_chats_sent))
-
-        MessageDeliveryStatus.DELIVERED ->
-            SparrowDeliveryDots(reached = 2, description = stringResource(Res.string.feature_chats_delivered))
-
-        MessageDeliveryStatus.READ ->
-            SparrowDeliveryDots(reached = 3, description = stringResource(Res.string.feature_chats_read))
-
-        MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
-    }
-}
-
-@Composable
-private fun FailedDelivery(onRetryClick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        MetadataIcon(Icons.Default.ErrorOutline, tint = MaterialTheme.colorScheme.error)
-        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
-        Text(
-            text = stringResource(Res.string.feature_chats_failed),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error
-        )
-        IconButton(
-            onClick = onRetryClick,
-            modifier = Modifier.size(Dimens.MessageBubble.retrySize)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.MessageBubble.retryIconSize),
-                tint = MaterialTheme.colorScheme.error
-            )
-        }
-    }
-}
-
-@Composable
-private fun DeliveryLabel(text: String) {
-    Text(
-        text = text.lowercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.outline
     )
 }
 
@@ -920,3 +946,11 @@ private fun MessageBubbleWithAttachmentsPreview() {
         )
     }
 }
+
+/** At the end of the last line only when the text ends in plain words: not after a link preview, a warning or an error. */
+private fun TextUi.metadataPlacement(safetyWarning: MessageSafetyWarningUi?): MetadataPlacement =
+    when {
+        safetyWarning != null || isContentFailed -> MetadataPlacement.BELOW
+        text.toTextContentParts().lastOrNull() is TextContentPart.Text -> MetadataPlacement.END_OF_TEXT
+        else -> MetadataPlacement.BELOW
+    }

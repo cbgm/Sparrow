@@ -27,4 +27,4 @@ data class OnboardingUiState(
 )
 
 /** Only what no screen explains by itself. */
-enum class TourStep { RING, DOTS, HOLD, SWIPE }
+enum class TourStep { RING, SHIELD, SEARCH, MAILBOX, DOTS, HOLD, SWIPE }

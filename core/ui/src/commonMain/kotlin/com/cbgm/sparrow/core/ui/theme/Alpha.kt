@@ -32,6 +32,7 @@ object Alpha {
     }
 
     object MessageBubble {
+        const val metadataPill = 0.45f
         const val mine = 0.7f
     }
 

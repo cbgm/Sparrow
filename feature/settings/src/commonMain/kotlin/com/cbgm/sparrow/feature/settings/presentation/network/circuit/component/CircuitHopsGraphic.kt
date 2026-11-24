@@ -27,6 +27,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
+import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import com.cbgm.sparrow.resources.feature_chats_you
@@ -41,8 +42,8 @@ fun CircuitHopsGraphic(
         hopCount = uiState.selectedHopCount,
         circuitCount = uiState.selectedCircuitCount,
         decoyCount = uiState.selectedDecoyCount,
-        sendsDirectlyWithoutCircuit = uiState.sendsDirectlyWithoutCircuit,
         status = uiState.status,
+        protection = uiState.protection,
         modifier = modifier
     )
 }
@@ -52,9 +53,9 @@ fun CircuitHopsGraphic(
     hopCount: Int,
     circuitCount: Int,
     decoyCount: Int,
-    sendsDirectlyWithoutCircuit: Boolean,
     status: CircuitUiStatus,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    protection: RouteProtection = RouteProtection.PROTECTED
 ) {
     val youLabel = stringResource(Res.string.feature_chats_you)
     val contactLabel = stringResource(Res.string.base_contact)
@@ -81,15 +82,17 @@ fun CircuitHopsGraphic(
     val directColor = MaterialTheme.colorScheme.error
     val missingColor = MaterialTheme.colorScheme.warning
 
-    val isDirectFallback = (status is CircuitUiStatus.Unavailable) && sendsDirectlyWithoutCircuit
+    // The same state as the shield in the chats ([RouteProtection]), so both always tell the same.
+    val isDirectFallback = protection == RouteProtection.DIRECT
 
     // Hops that are chosen but not reachable right now: drawn in the warning colour, and the route bends past them.
     // Without any circuit (messages wait) every hop is missing and nothing travels.
-    val isWaiting = status is CircuitUiStatus.Unavailable && !sendsDirectlyWithoutCircuit
+    val reducedHops = (status as? CircuitUiStatus.Connected)?.hopCount?.takeIf { protection == RouteProtection.REDUCED }
+    val isWaiting = protection == RouteProtection.REDUCED && reducedHops == null
     val missingHopCount =
         when {
             isWaiting -> hopCount.coerceIn(1, 5)
-            status is CircuitUiStatus.Connected -> (hopCount.coerceIn(1, 5) - status.hopCount).coerceAtLeast(0)
+            reducedHops != null -> (hopCount.coerceIn(1, 5) - reducedHops).coerceAtLeast(0)
             else -> 0
         }
 
@@ -369,8 +372,8 @@ private fun CircuitHopsGraphicReducedPreview() {
             hopCount = 2,
             circuitCount = 1,
             decoyCount = 0,
-            sendsDirectlyWithoutCircuit = true,
-            status = CircuitUiStatus.Connected(hopCount = 1, requestedHopCount = 2, latencyMilliseconds = 8)
+            status = CircuitUiStatus.Connected(hopCount = 1, requestedHopCount = 2, latencyMilliseconds = 8),
+            protection = RouteProtection.REDUCED
         )
     }
 }
@@ -383,7 +386,6 @@ private fun CircuitHopsGraphic1RelayPreview() {
             hopCount = 1,
             circuitCount = 1,
             decoyCount = 0,
-            sendsDirectlyWithoutCircuit = false,
             status = CircuitUiStatus.Building
         )
     }
@@ -397,7 +399,6 @@ private fun CircuitHopsGraphic3RelaysPreview() {
             hopCount = 3,
             circuitCount = 1,
             decoyCount = 0,
-            sendsDirectlyWithoutCircuit = false,
             status = CircuitUiStatus.Building
         )
     }
@@ -411,7 +412,6 @@ private fun CircuitHopsGraphic2CircuitsPreview() {
             hopCount = 3,
             circuitCount = 2,
             decoyCount = 0,
-            sendsDirectlyWithoutCircuit = false,
             status = CircuitUiStatus.Building
         )
     }
@@ -425,7 +425,6 @@ private fun CircuitHopsGraphic3Circuits2DecoysPreview() {
             hopCount = 3,
             circuitCount = 3,
             decoyCount = 2,
-            sendsDirectlyWithoutCircuit = false,
             status = CircuitUiStatus.Building
         )
     }
@@ -439,8 +438,8 @@ private fun CircuitHopsGraphicDirectSendPreview() {
             hopCount = 3,
             circuitCount = 1,
             decoyCount = 0,
-            sendsDirectlyWithoutCircuit = true,
-            status = CircuitUiStatus.Unavailable
+            status = CircuitUiStatus.Unavailable,
+            protection = RouteProtection.DIRECT
         )
     }
 }

@@ -4,12 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -31,6 +35,7 @@ import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.avatar.presentation.model.AvatarRing
+import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
 import com.cbgm.sparrow.resources.feature_onboarding_tour_sample_family
@@ -42,17 +47,17 @@ import org.jetbrains.compose.resources.stringResource
 /** A chat list like the real one, with a contact still to verify, a verified one and a group. */
 @Composable
 internal fun SampleChats(
-    ringModifier: Modifier,
-    rowModifier: Modifier,
+    spotOf: (TourStep) -> Modifier,
     onDelete: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         SparrowTopBar(
             title = { Text(stringResource(Res.string.main_title_and_nav_chats)) },
+            actions = { SampleTopBarIcons(spotOf = spotOf) },
             windowInsets = WindowInsets(0)
         )
         SparrowSwipeRevealItem(
-            modifier = rowModifier.fillMaxWidth(),
+            modifier = spotOf(TourStep.SWIPE).fillMaxWidth(),
             actions =
                 listOf(
                     SwipeRevealAction(tone = SwipeActionTone.DESTRUCTIVE, onClick = onDelete) {
@@ -66,7 +71,8 @@ internal fun SampleChats(
                 time = "09:16",
                 unreadCount = 2,
                 ring = AvatarRing.PENDING,
-                avatarModifier = ringModifier
+                spotOf = spotOf,
+                avatarStep = TourStep.RING
             )
         }
         SampleDivider()
@@ -75,7 +81,8 @@ internal fun SampleChats(
             preview = stringResource(Res.string.feature_onboarding_tour_sample_tomorrow),
             time = "08:41",
             unreadCount = 0,
-            ring = AvatarRing.VERIFIED
+            ring = AvatarRing.VERIFIED,
+            spotOf = spotOf
         )
         SampleDivider()
         SampleRow(
@@ -83,8 +90,38 @@ internal fun SampleChats(
             preview = stringResource(Res.string.feature_attachments_media),
             time = "07:55",
             unreadCount = 0,
-            ring = AvatarRing.NONE
+            ring = AvatarRing.NONE,
+            spotOf = spotOf
         )
+    }
+}
+
+/** The chat list's top bar: the shield while the route protects as chosen, search, and the mailbox with an invitation. */
+@Composable
+private fun SampleTopBarIcons(
+    spotOf: (TourStep) -> Modifier,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.padding(end = MaterialTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = SparrowIcons.ShieldCheck,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = spotOf(TourStep.SHIELD).size(Dimens.TopBar.iconSize)
+        )
+        Icon(imageVector = SparrowIcons.Search, contentDescription = null, modifier = spotOf(TourStep.SEARCH).size(Dimens.TopBar.iconSize))
+        BadgedBox(
+            modifier = spotOf(TourStep.MAILBOX),
+            badge = {
+                Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) { Text("1") }
+            }
+        ) {
+            Icon(imageVector = SparrowIcons.Mail, contentDescription = null, modifier = Modifier.size(Dimens.TopBar.iconSize))
+        }
     }
 }
 
@@ -95,12 +132,13 @@ private fun SampleRow(
     time: String,
     unreadCount: Int,
     ring: AvatarRing,
-    avatarModifier: Modifier = Modifier
+    spotOf: (TourStep) -> Modifier,
+    avatarStep: TourStep? = null
 ) {
     val hasUnread = unreadCount > 0
     ListItem(
         modifier = Modifier.fillMaxWidth(),
-        leadingContent = { SparrowAvatar(name = name, target = null, ring = ring, modifier = avatarModifier) },
+        leadingContent = { SparrowAvatar(name = name, target = null, ring = ring, modifier = avatarStep?.let(spotOf) ?: Modifier) },
         headlineContent = {
             Text(text = name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
         },
