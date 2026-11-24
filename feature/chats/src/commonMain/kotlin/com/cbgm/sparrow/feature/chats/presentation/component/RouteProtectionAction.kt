@@ -17,8 +17,8 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.warning
+import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveRouteProtectionUseCase
-import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_route_protection_direct
 import com.cbgm.sparrow.resources.feature_chats_route_protection_ok

@@ -20,10 +20,10 @@ import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationCoordinator
 import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneConfiguration
+import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneHealthMonitor
+import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneStatusStore
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
 data class AppInitializationDependencies(

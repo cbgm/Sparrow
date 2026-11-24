@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
@@ -8,13 +8,13 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
 internal class GroupMemberPromotionDataSource(
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val groupEpochSecurity: GroupEpochSecurityDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
@@ -96,9 +96,9 @@ internal class GroupMemberPromotionDataSource(
             epochDataSource
                 .loadCurrentParticipantContacts(groupId)
                 .sortedBy(GroupMembershipPeerDto::id)
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+        val localPhoneNumber = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
         groupEpochSecurity
             .rotateOwnedGroup(
                 groupId = groupId,

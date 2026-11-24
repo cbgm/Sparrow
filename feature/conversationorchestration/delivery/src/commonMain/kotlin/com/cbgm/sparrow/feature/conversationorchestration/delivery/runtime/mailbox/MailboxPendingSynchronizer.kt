@@ -5,14 +5,14 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.InvalidInvitationLetterException
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGoneException
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationLetters
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxGoneException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.sync.Mutex
@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Processes the envelopes waiting in every local mailbox, including retiring ones a renewal replaced: they keep
  * receiving until the contact learned the new route, and are revoked only after they expired. The device's invitation
- * mailboxes ([InvitationMailboxRenewal]) hold letters of senders without a mailbox route of this device; a letter whose
+ * mailboxes ([InvitationMailbox]) hold letters of senders without a mailbox route of this device; a letter whose
  * sender its key does not prove is acknowledged and dropped ([InvitationLetters.open]).
  *
  * An envelope that fails stays in its mailbox and is retried on the next sync; it never stops the envelopes
@@ -32,7 +32,7 @@ class MailboxPendingSynchronizer(
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
     private val resolveContactRoutingId: ResolveContactTransportRoutingIdUseCase,
-    private val invitationMailbox: InvitationMailboxRenewal,
+    private val invitationMailbox: InvitationMailbox,
     private val invitationLetters: InvitationLetters
 ) {
     private val logger = SparrowLog.withTag("MailboxPendingSynchronizer")
@@ -59,7 +59,7 @@ class MailboxPendingSynchronizer(
                 return 0
             }
         if (envelopes.isEmpty()) return 0
-        if (credential.contactId == InvitationMailboxRenewal.CONTACT_ID) return envelopes.count { envelope -> processLetter(credential, envelope) }
+        if (credential.contactId == InvitationMailbox.CONTACT_ID) return envelopes.count { envelope -> processLetter(credential, envelope) }
         // The mailbox belongs to one contact, and only that contact holds its send capability: the sender is that
         // contact, whatever routing ID the envelope names (envelopes put in by the app itself name none).
         val sender =

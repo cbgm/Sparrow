@@ -27,8 +27,8 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_node_available
 import com.cbgm.sparrow.resources.feature_settings_node_cooldown

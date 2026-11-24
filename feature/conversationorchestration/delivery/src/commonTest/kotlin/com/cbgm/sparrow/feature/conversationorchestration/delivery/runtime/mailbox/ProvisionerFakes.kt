@@ -19,14 +19,14 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -95,7 +95,7 @@ internal class ProvisionerFakes {
         MailboxRouteProvisioner(
             getMailboxContactStates =
                 GetMailboxContactStatesUseCase(contacts, GetIdentityPeerStateUseCase(identity, NoPendingChanges)),
-            localRoutingIdProvider = FakeLocalRoutingId,
+            localRoutingIdSource = FakeLocalRoutingId,
             nodeEndpointResolver = SingleNodeResolver,
             mailboxGateway = gateway,
             mailboxRouteRepository = routes,
@@ -410,7 +410,7 @@ private object NoPendingChanges : PendingRemoteIdentityChangeRepository {
     ): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeLocalRoutingId : LocalRoutingIdProvider {
+private object FakeLocalRoutingId : LocalRoutingIdSource {
     override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")
 }
 
@@ -446,7 +446,7 @@ private object NoBlockedContacts : ContactBlocklistRepository {
     override suspend fun unblock(contactId: String): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeSigningKeys : LocalSigningKeyPairProvider {
+private object FakeSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
         Result.success(LocalSigningKeyPair(publicKey = ByteArray(32), privateKey = ByteArray(64)))
 }

@@ -12,7 +12,8 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCa
 import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDeveloperMenuUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveTransportDiagnosticsUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RefreshTransportDiagnosticsUseCase
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_simulate_key_loss_done
 import kotlinx.coroutines.currentCoroutineContext
@@ -34,9 +35,11 @@ class DeveloperMenuViewModel(
     getBuildInfoUseCase: GetBuildInfoUseCase,
     observeDeveloperErrorsUseCase: ObserveDeveloperErrorsUseCase,
     private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
-    private val transportDiagnosticsProvider: TransportDiagnosticsProvider,
+    observeTransportDiagnostics: ObserveTransportDiagnosticsUseCase,
+    private val refreshTransportDiagnostics: RefreshTransportDiagnosticsUseCase,
     private val discardIdentityKeyStoreKey: DiscardIdentityKeyStoreKeyUseCase
 ) : BaseViewModel() {
+    private val transportDiagnostics = observeTransportDiagnostics()
     private val isClearingLocalData = MutableStateFlow(false)
     private val buildInfo = getBuildInfoUseCase().getOrThrow()
     private val savedErrorCount =
@@ -46,7 +49,7 @@ class DeveloperMenuViewModel(
 
     val uiState: StateFlow<DeveloperMenuUiState> =
         combine(
-            transportDiagnosticsProvider.diagnostics,
+            transportDiagnostics,
             savedErrorCount,
             isClearingLocalData
         ) { diagnostics, errorCount, isClearing ->
@@ -61,7 +64,7 @@ class DeveloperMenuViewModel(
             initialValue =
                 DeveloperMenuUiState(
                     buildInfo = buildInfo,
-                    transportDiagnostics = transportDiagnosticsProvider.diagnostics.value
+                    transportDiagnostics = transportDiagnostics.value
                 )
         )
 
@@ -111,7 +114,7 @@ class DeveloperMenuViewModel(
 
     suspend fun refreshTransportDiagnosticsWhileVisible() {
         while (currentCoroutineContext().isActive) {
-            transportDiagnosticsProvider.refreshDiagnostics()
+            refreshTransportDiagnostics()
             delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
         }
     }

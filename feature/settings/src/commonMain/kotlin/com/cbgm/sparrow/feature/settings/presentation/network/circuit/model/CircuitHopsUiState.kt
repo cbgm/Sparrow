@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.circuit.model
 
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 
 data class CircuitHopsUiState(
     val selectedHopCount: Int = 2,

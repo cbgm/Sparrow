@@ -3,7 +3,7 @@ package com.cbgm.sparrow.di
 import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.feature.transport.background.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.gateway.HeadlessStart
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
@@ -55,8 +55,8 @@ val sharedModule =
         single {
             ForegroundRuntimeDependencies(
                 appVisibilityState = get(),
-                transportConnectionManager = get(),
-                circuitRunner = get(),
+                transportConnection = get(),
+                runCircuits = get(),
                 outboxRunner = get(),
                 mailboxCoordinator = get(),
                 observeIdentityKeysUsable = get(),

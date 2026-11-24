@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class LocalIdentityProfileDataSource(
     private val dataStore: SparrowDataStore,
     private val phoneNumberNormalizer: PhoneNumberNormalizer
-) : LocalPhoneNumberProvider {
+) : LocalPhoneNumberSource {
     fun observePhoneNumber(): Flow<String?> = dataStore.observeString(LOCAL_PHONE_NUMBER)
 
     suspend fun loadPhoneName(): Pair<String, String>? {

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
@@ -8,8 +8,8 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
 /** Persists owner epoch and queues signed welcomes after a verified join request. */
 internal class GroupOwnerWelcomeDataSource(
@@ -20,9 +20,9 @@ internal class GroupOwnerWelcomeDataSource(
     private val epochSecurity: GroupEpochSecurityDataSource,
     private val broadcaster: GroupPacketBroadcaster,
     private val lock: GroupMembershipLock,
-    private val localIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider
+    private val localIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPhoneNumberSource: LocalPhoneNumberSource
 ) {
     suspend fun sendWelcome(
         sourceId: String,
@@ -70,9 +70,9 @@ internal class GroupOwnerWelcomeDataSource(
         val current = epoch.loadCurrentParticipantContacts(handshake.groupId)
             .filterNot { it.id == peer.id }
         val participants = (current + peer).sortedBy { it.id }
-        val identity = localIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val localSigning = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        val phone = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+        val identity = localIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val localSigning = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+        val phone = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
         val payloads = epoch.createMemberPayloads(handshake.groupId, identity, phone, participants)
         val recipients = epoch.createRecipients(handshake.groupId, participants)
         if (currentState == null) {

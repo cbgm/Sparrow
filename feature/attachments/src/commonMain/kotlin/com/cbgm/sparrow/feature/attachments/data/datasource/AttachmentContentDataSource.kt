@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
-import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentSource
 
 internal class AttachmentContentDataSource(
     private val messageAttachmentDataSource: MessageAttachmentDataSource,
-    private val groupPinnedAttachmentProvider: GroupPinnedAttachmentProvider
+    private val groupPinnedAttachmentSource: GroupPinnedAttachmentSource
 ) {
     suspend fun loadLocalFile(partId: String, groupId: String?): String {
         require(partId.isNotBlank()) { "Message part ID must not be blank" }
@@ -15,7 +15,7 @@ internal class AttachmentContentDataSource(
         if (groupId == null) {
             messageAttachmentDataSource.loadBytes(partId)
         } else {
-            groupPinnedAttachmentProvider.load(groupId, partId)
+            groupPinnedAttachmentSource.load(groupId, partId)
         }
 
         return requireNotNull(messageAttachmentDataSource.resolveLocalFilePath(partId)) {
@@ -28,7 +28,7 @@ internal class AttachmentContentDataSource(
         return if (groupId == null) {
             messageAttachmentDataSource.loadBytes(partId)
         } else {
-            groupPinnedAttachmentProvider.load(groupId, partId)
+            groupPinnedAttachmentSource.load(groupId, partId)
         }
     }
 }

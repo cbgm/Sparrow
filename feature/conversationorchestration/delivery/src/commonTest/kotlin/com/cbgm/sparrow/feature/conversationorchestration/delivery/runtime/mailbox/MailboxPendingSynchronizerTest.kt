@@ -6,16 +6,12 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailb
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxPendingSynchronizerTest.Companion.UNCHECKED_LETTER
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.InvalidInvitationLetterException
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetterContent
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxStore
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationLetters
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
+import com.cbgm.sparrow.feature.transport.domain.model.InvitationLetterContent
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -134,10 +130,10 @@ class MailboxPendingSynchronizerTest {
     @Test
     fun aProvenLetterFromTheInvitationMailboxIsProcessedAsItsSender() =
         runTest {
-            val gateway = FakeMailboxGateway(pending = mapOf(InvitationMailboxRenewal.CONTACT_ID to listOf(envelope(LETTER))))
+            val gateway = FakeMailboxGateway(pending = mapOf(InvitationMailbox.CONTACT_ID to listOf(envelope(LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(1, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRenewal.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(1, synchronizer(gateway, invitations = listOf(credential(InvitationMailbox.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(listOf("scphone1_alice"), FakeProcessor.senders)
             assertEquals(listOf(LETTER), gateway.acknowledged)
         }
@@ -146,10 +142,10 @@ class MailboxPendingSynchronizerTest {
     fun aLetterThatCanNeverBeAcceptedIsDroppedAndOneThatCannotBeCheckedYetStays() =
         runTest {
             val gateway =
-                FakeMailboxGateway(pending = mapOf(InvitationMailboxRenewal.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
+                FakeMailboxGateway(pending = mapOf(InvitationMailbox.CONTACT_ID to listOf(envelope(SPOOFED_LETTER), envelope(UNCHECKED_LETTER))))
             FakeProcessor.senders.clear()
 
-            assertEquals(0, synchronizer(gateway, invitations = listOf(credential(InvitationMailboxRenewal.CONTACT_ID))).synchronize().getOrThrow())
+            assertEquals(0, synchronizer(gateway, invitations = listOf(credential(InvitationMailbox.CONTACT_ID))).synchronize().getOrThrow())
             assertEquals(emptyList(), FakeProcessor.senders)
             assertEquals(listOf(SPOOFED_LETTER), gateway.acknowledged)
         }
@@ -166,24 +162,13 @@ class MailboxPendingSynchronizerTest {
         invitationLetters = FakeLetters
     )
 
-    /** Only reads its store here: no node is asked. */
+    /** Holds [invitations]; no node is asked. */
     private fun invitationMailbox(invitations: List<LocalMailboxCredential> = emptyList()) =
-        InvitationMailboxRenewal(
-            nodeEndpointResolver = object : NodeEndpointResolver {
-                override suspend fun resolve(localRoutingId: String, forceRefresh: Boolean): Result<List<NodeEndpoint>> = error("Not used")
-            },
-            localRoutingIdProvider = object : LocalRoutingIdProvider {
-                override suspend fun getLocalRoutingId(): Result<String> = error("Not used")
-            },
-            mailboxGateway = FakeMailboxGateway(emptyMap()),
-            store =
-                object : InvitationMailboxStore {
-                    override suspend fun all(): List<LocalMailboxCredential> = invitations
+        object : InvitationMailbox {
+            override suspend fun current(): Result<LocalMailboxCredential> = error("Not used")
 
-                    override suspend fun replace(mailboxes: List<LocalMailboxCredential>) = error("Not used")
-                },
-            now = { 0L }
-        )
+            override suspend fun receiving(): Result<List<LocalMailboxCredential>> = Result.success(invitations)
+        }
 
     /** The sender of [LETTER] is proven, [SPOOFED_LETTER] claims a number that is not its own, [UNCHECKED_LETTER] cannot be checked now. */
     private object FakeLetters : InvitationLetters {

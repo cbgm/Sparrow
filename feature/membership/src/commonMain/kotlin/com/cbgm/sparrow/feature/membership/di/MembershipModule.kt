@@ -92,7 +92,7 @@ val membershipModule =
             GroupMembershipPacketProtocol(
                 groupCrypto = get(),
                 payloadEncoder = get(),
-                localProfilePictureMetadataProvider = get()
+                localProfilePictureMetadataSource = get()
             )
         }
         singleOf(::GroupMembershipStoreDataSource)
@@ -117,9 +117,9 @@ val membershipModule =
         singleOf(::GroupMembershipDeletionDataSource)
         single {
             GroupMembershipLifecycleDataSource(
-                activationProvider = { get() },
-                administrationProvider = { get() },
-                deletionProvider = { get() }
+                activationSource = { get() },
+                administrationSource = { get() },
+                deletionSource = { get() }
             )
         }
 

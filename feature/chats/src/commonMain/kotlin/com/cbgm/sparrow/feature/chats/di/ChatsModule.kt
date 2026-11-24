@@ -66,8 +66,8 @@ import com.cbgm.sparrow.feature.chats.presentation.group.GroupPollController
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentSource
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSource
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.annotation.KoinViewModelScopeApi
 import org.koin.core.module.dsl.bind
@@ -106,14 +106,14 @@ private fun org.koin.core.module.Module.registerRepositories() {
     }
     singleOf(::GroupAvatarReadRepositoryImpl) {
         bind<GroupAvatarReadRepository>()
-        bind<GroupAvatarProvider>()
+        bind<GroupAvatarSource>()
     }
     singleOf(::GroupDescriptionReadRepositoryImpl) {
         bind<GroupDescriptionReadRepository>()
     }
     singleOf(::GroupPinReadRepositoryImpl) {
         bind<GroupPinReadRepository>()
-        bind<GroupPinnedAttachmentProvider>()
+        bind<GroupPinnedAttachmentSource>()
     }
     singleOf(::GroupVerificationReadRepositoryImpl) {
         bind<GroupVerificationReadRepository>()

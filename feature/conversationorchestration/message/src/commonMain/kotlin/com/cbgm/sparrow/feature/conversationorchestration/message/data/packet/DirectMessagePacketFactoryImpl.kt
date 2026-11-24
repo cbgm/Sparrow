@@ -4,17 +4,17 @@ import com.cbgm.sparrow.core.base.messagepart.data.mapper.toDto
 import com.cbgm.sparrow.core.base.messagepart.data.model.TextDto
 import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.DirectMessagePacketFactory
 import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 internal class DirectMessagePacketFactoryImpl(
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider
+    private val localPhoneNumberSource: LocalPhoneNumberSource,
+    private val localProfilePictureMetadataSource: LocalProfilePictureMetadataSource
 ) : DirectMessagePacketFactory {
     override suspend fun create(
         messageId: String,
@@ -34,8 +34,8 @@ internal class DirectMessagePacketFactoryImpl(
                         addAll(parts.map { it.toDto() })
                     },
                 replyToMessageId = replyToMessageId,
-                senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
-                profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+                senderPhoneNumber = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow(),
+                profilePicture = localProfilePictureMetadataSource.forMessage().getOrElse { ProfilePictureMetadata() }
             )
         }
 }

@@ -27,10 +27,10 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NodeDiagnosticRow
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.feature.transport.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_network_no_nodes
 import com.cbgm.sparrow.resources.feature_settings_network_nodes

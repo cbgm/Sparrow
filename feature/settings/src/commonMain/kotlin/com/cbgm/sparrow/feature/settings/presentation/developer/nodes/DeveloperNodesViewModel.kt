@@ -2,20 +2,22 @@ package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveTransportDiagnosticsUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RefreshTransportDiagnosticsUseCase
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperNodesViewModel(
-    private val transportDiagnosticsProvider: TransportDiagnosticsProvider
+    observeTransportDiagnostics: ObserveTransportDiagnosticsUseCase,
+    private val refreshTransportDiagnostics: RefreshTransportDiagnosticsUseCase
 ) : BaseViewModel() {
-    val diagnostics = transportDiagnosticsProvider.diagnostics
+    val diagnostics = observeTransportDiagnostics()
 
     suspend fun refreshTransportDiagnosticsWhileVisible() {
         while (currentCoroutineContext().isActive) {
-            transportDiagnosticsProvider.refreshDiagnostics()
+            refreshTransportDiagnostics()
             delay(1_000L.milliseconds)
         }
     }

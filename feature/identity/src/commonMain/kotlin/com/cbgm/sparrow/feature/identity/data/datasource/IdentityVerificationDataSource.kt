@@ -9,9 +9,9 @@ import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.version.ProtocolVersion
@@ -20,8 +20,8 @@ import kotlinx.coroutines.sync.withLock
 
 internal class IdentityVerificationDataSource(
     private val remoteIdentityDao: RemoteIdentityDao,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val detachedSignatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: IdentityVerificationReceiptEncoder,
     private val protocolOutbox: ProtocolOutbox
@@ -95,7 +95,7 @@ internal class IdentityVerificationDataSource(
                 "Verification receipt sender signing key does not match the contact"
             }
 
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
             check(localIdentity.encryptionPublicKey.contentEquals(packet.verifiedEncryptionPublicKey)) {
                 "Verification receipt refers to a different local encryption key"
             }
@@ -145,8 +145,8 @@ internal class IdentityVerificationDataSource(
             return
         }
 
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
 
         val receiptId = IdGenerator.generate()

@@ -3,11 +3,14 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.deco
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.InMemoryMailboxRoutes
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.RecordingMailboxGateway
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.mailboxCredential
-import com.cbgm.sparrow.feature.transport.circuit.DecoyCountStore
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -17,10 +20,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DecoyEnvelopesTest {
     private val routes =
         InMemoryMailboxRoutes().apply {
-            listOf("recipient", "a", "b", "c", InvitationMailboxRenewal.CONTACT_ID).forEach { contactId ->
+            listOf("recipient", "a", "b", "c", InvitationMailbox.CONTACT_ID).forEach { contactId ->
                 local[contactId] = mailboxCredential(contactId = contactId, name = contactId, expiresAt = Long.MAX_VALUE)
             }
         }
@@ -98,18 +102,11 @@ class DecoyEnvelopesTest {
         unsealable: Set<String> = emptySet(),
         gateway: MailboxGateway = DepositRecorder()
     ) = DecoyEnvelopes(
-        decoyCountStore =
-            object : DecoyCountStore {
-                override fun observe(): Flow<Int> = count
-
-                override suspend fun set(decoyCount: Int) {
-                    count.value = decoyCount
-                }
-            },
+        observeDecoyCount = ObserveDecoyCountUseCase(DecoyPreferences(count)),
         hasProtectingCircuit = { protecting },
         mailboxRouteRepository = routes,
         sealer =
-            DecoySealer { contactId, createdAt ->
+            { contactId, createdAt ->
                 sealed += contactId
                 if (contactId in unsealable) {
                     null
@@ -139,5 +136,35 @@ class DecoyEnvelopesTest {
             deposited += envelope
             return Result.success(Unit)
         }
+    }
+
+    private class DecoyPreferences(
+        private val count: MutableStateFlow<Int>
+    ) : TransportPreferences {
+        override fun observeCircuitCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setCircuitCount(circuitCount: Int) = error("Not used")
+
+        override fun observeHopCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setHopCount(hopCount: Int) = error("Not used")
+
+        override fun observeDecoyCount(): Flow<Int> = count
+
+        override suspend fun setDecoyCount(decoyCount: Int) {
+            count.value = decoyCount
+        }
+
+        override fun observeSendsDirectly(): Flow<Boolean> = error("Not used")
+
+        override suspend fun setSendsDirectly(sendsDirectly: Boolean) = error("Not used")
+
+        override fun observePreferredNode(): Flow<String?> = error("Not used")
+
+        override suspend fun setPreferredNode(nodeId: String?) = error("Not used")
+
+        override fun observeConnectionMode(): Flow<ConnectionMode> = error("Not used")
+
+        override suspend fun setConnectionMode(mode: ConnectionMode) = error("Not used")
     }
 }

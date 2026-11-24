@@ -27,7 +27,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
-import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
+import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import com.cbgm.sparrow.resources.feature_chats_you

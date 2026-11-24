@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.settings.domain.model.ControlPlaneSettingsContext
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneUiModels
@@ -12,10 +13,17 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.usecase.AddManualControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ClearControlPlaneListCacheUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ClearControlPlaneListUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ForgetControlPlaneDirectoryTrustUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ImportControlPlaneListUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RefreshControlPlaneDirectoryUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RefreshControlPlaneHealthUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RemoveManualControlPlaneUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetControlPlaneDirectoryUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SynchronizeControlPlaneDirectoryUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -33,10 +41,17 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class ControlPlaneSettingsViewModel(
     private val savedStateHandle: SavedStateHandle,
-    private val configuration: ControlPlaneConfiguration,
     observeControlPlaneSettingsContext: ObserveControlPlaneSettingsContextUseCase,
-    private val healthMonitor: ControlPlaneHealthMonitor,
-    private val directorySynchronizer: ControlPlaneDirectorySynchronizer
+    private val refreshControlPlaneHealth: RefreshControlPlaneHealthUseCase,
+    private val addManualControlPlane: AddManualControlPlaneUseCase,
+    private val removeManualControlPlane: RemoveManualControlPlaneUseCase,
+    private val setControlPlaneDirectory: SetControlPlaneDirectoryUseCase,
+    private val clearControlPlaneList: ClearControlPlaneListUseCase,
+    private val clearControlPlaneListCache: ClearControlPlaneListCacheUseCase,
+    private val refreshControlPlaneDirectory: RefreshControlPlaneDirectoryUseCase,
+    private val synchronizeControlPlaneDirectory: SynchronizeControlPlaneDirectoryUseCase,
+    private val importControlPlaneList: ImportControlPlaneListUseCase,
+    private val forgetControlPlaneDirectoryTrust: ForgetControlPlaneDirectoryTrustUseCase
 ) : BaseViewModel() {
     private val showAddDialog =
         savedStateHandle.getMutableStateFlow(SHOW_ADD_DIALOG_KEY, false)
@@ -63,27 +78,26 @@ class ControlPlaneSettingsViewModel(
             )
         }
 
-    private val configurationContext = observeControlPlaneSettingsContext()
+    private val configuration =
+        observeControlPlaneSettingsContext().stateIn(viewModelScope, SharingStarted.Eagerly, ControlPlaneSettingsContext.EMPTY)
 
     val uiState: StateFlow<ControlPlaneSettingsUiState> =
         combine(
-            configurationContext,
+            configuration,
             formState,
-            actionState,
-            this.configuration.jsonDirectoryUrl,
-            this.configuration.jsonDirectoryBaseUrls
-        ) { configuration, form, action, jsonDirectoryUrl, jsonDirectoryBaseUrls ->
+            actionState
+        ) { configuration, form, action ->
             configuration.statuses
-                .toControlPlaneUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls, jsonDirectoryBaseUrls)
+                .toControlPlaneUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls, configuration.jsonDirectoryBaseUrls)
                 .toControlPlaneSettingsUiState(
                     showAddDialog = form.showAddDialog,
                     isEditingDirectory = action.editingDirectory,
                     newUrl = form.newUrl,
                     addSource = form.addSource,
-                    jsonDirectoryUrl = jsonDirectoryUrl.orEmpty(),
+                    jsonDirectoryUrl = configuration.jsonDirectoryUrl.orEmpty(),
                     addError = action.addError,
-                    directoryUrl = configuration.directoryUrl,
-                    directoryDraft = form.directoryDraft ?: configuration.directoryUrl,
+                    directoryUrl = configuration.directoryUrl.orEmpty(),
+                    directoryDraft = form.directoryDraft ?: configuration.directoryUrl.orEmpty(),
                     directoryError = action.directoryError,
                     directoryFailureDetail = action.directoryFailureDetail,
                     isRefreshing = action.isRefreshing,
@@ -130,13 +144,13 @@ class ControlPlaneSettingsViewModel(
     private fun openDirectoryEditor() {
         // There is one editable directory source (signed OR legacy JSON).
         // Individual manually-added Control Planes stay independent.
-        val signed = configuration.directoryUrl.value
-        addSource.value = if (signed != null || configuration.jsonDirectoryUrl.value == null) {
+        val signed = configuration.value.directoryUrl
+        addSource.value = if (signed != null || configuration.value.jsonDirectoryUrl == null) {
             ControlPlaneAddSource.SIGNED_DIRECTORY
         } else {
             ControlPlaneAddSource.JSON_LIST
         }
-        newUrl.value = signed ?: configuration.jsonDirectoryUrl.value.orEmpty()
+        newUrl.value = signed ?: configuration.value.jsonDirectoryUrl.orEmpty()
         showAddDialog.value = true
         actionState.update { it.copy(addError = null, editingDirectory = true) }
     }
@@ -181,24 +195,24 @@ class ControlPlaneSettingsViewModel(
                     }
                     if (type == ControlPlaneAddSource.PLANE &&
                         (
-                            candidate == configuration.directoryUrl.value ||
-                                candidate == configuration.jsonDirectoryUrl.value
+                            candidate == configuration.value.directoryUrl ||
+                                candidate == configuration.value.jsonDirectoryUrl
                         )
                     ) {
                         actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
                         return@withLock
                     }
-                    if (type == ControlPlaneAddSource.PLANE && candidate in configuration.manualBaseUrls.value) {
+                    if (type == ControlPlaneAddSource.PLANE && candidate in configuration.value.manualBaseUrls) {
                         actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
                         return@withLock
                     }
                     when (type) {
                         ControlPlaneAddSource.PLANE -> {
-                            configuration.addManual(candidate).fold(
+                            addManualControlPlane(candidate).fold(
                                 onSuccess = {
                                     clearAddDialogForm()
                                     actionState.update { it.copy(addError = null) }
-                                    healthMonitor.refresh()
+                                    refreshControlPlaneHealth()
                                 },
                                 onFailure = { error ->
                                     SparrowLog.withTag("ControlPlaneSettingsViewModel").warn {
@@ -213,17 +227,17 @@ class ControlPlaneSettingsViewModel(
                             // Persist it so offline/unreachable directories can be edited or removed.
                             // A replacement URL may not change an existing trusted signer unless
                             // its signed snapshot has actually been verified first.
-                            val previouslyConfigured = configuration.directoryUrl.value
+                            val previouslyConfigured = configuration.value.directoryUrl
                             val syncResult = if (previouslyConfigured != null &&
                                 previouslyConfigured != candidate
                             ) {
-                                directorySynchronizer.synchronizeFrom(candidate)
+                                synchronizeControlPlaneDirectory(candidate)
                             } else {
-                                configuration.setDirectoryUrl(candidate).map { 0 }
+                                setControlPlaneDirectory(candidate).map { 0 }
                             }
                             syncResult.fold(
                                 onSuccess = {
-                                    configuration.clearJsonDirectory().fold(
+                                    clearControlPlaneList().fold(
                                         onSuccess = {
                                             clearAddDialogForm()
                                             actionState.update { it.copy(addError = null, editingDirectory = false) }
@@ -238,11 +252,11 @@ class ControlPlaneSettingsViewModel(
                         ControlPlaneAddSource.JSON_LIST -> {
                             // A JSON URL is a one-time bulk manual import, not the
                             // signed directory setting and not a recurring feed.
-                            directorySynchronizer.importJsonDirectory(candidate).fold(
+                            importControlPlaneList(candidate).fold(
                                 onSuccess = {
                                     clearAddDialogForm()
                                     actionState.update { it.copy(addError = null, editingDirectory = false) }
-                                    healthMonitor.refresh()
+                                    refreshControlPlaneHealth()
                                 },
                                 onFailure = { error -> showDirectorySaveError(error) }
                             )
@@ -265,7 +279,7 @@ class ControlPlaneSettingsViewModel(
     private fun clearJsonDirectory() {
         viewModelScope.launch {
             configurationActionMutex.withLock {
-                configuration.clearJsonDirectory().onSuccess { healthMonitor.refresh() }
+                clearControlPlaneList().onSuccess { refreshControlPlaneHealth() }
             }
         }
     }
@@ -273,13 +287,13 @@ class ControlPlaneSettingsViewModel(
     private fun removeControlPlane(url: String) {
         viewModelScope.launch {
             configurationActionMutex.withLock {
-                configuration.removeManual(url).fold(
+                removeManualControlPlane(url).fold(
                     onSuccess = {
                         actionState.update { it.copy(manualRemovalError = null) }
                         // Update reachability before accepting an immediate re-add.
                         // Do not refresh the external directory here: it can re-import
                         // the entry while the user is removing the manual one.
-                        healthMonitor.refresh()
+                        refreshControlPlaneHealth()
                     },
                     onFailure = { error ->
                         SparrowLog.error("ControlPlaneSettingsViewModel", "Could not remove control plane", error)
@@ -311,7 +325,7 @@ class ControlPlaneSettingsViewModel(
             it.copy(isDirectorySyncing = true, directoryError = null, directoryFailureDetail = null)
         }
         // The directory remains configured even when the endpoint is currently offline.
-        val refreshResult = directorySynchronizer.refresh()
+        val refreshResult = refreshControlPlaneDirectory()
         actionState.update {
             it.copy(
                 isDirectorySyncing = false,
@@ -325,7 +339,7 @@ class ControlPlaneSettingsViewModel(
                 "Configured directory unavailable (cached planes retained): ${error.message}"
             }
         }
-        healthMonitor.refresh()
+        refreshControlPlaneHealth()
     }
 
     private fun removeDirectory() {
@@ -333,13 +347,13 @@ class ControlPlaneSettingsViewModel(
             configurationActionMutex.withLock {
                 // Only an explicit removal discards discovery caches and signing
                 // trust. Editing the URL/source must never invoke this path.
-                configuration.clearJsonDirectory().fold(
+                clearControlPlaneList().fold(
                     onSuccess = {
-                        configuration.clearJsonDirectoryCache().fold(
+                        clearControlPlaneListCache().fold(
                             onSuccess = {
-                                configuration.setDirectoryUrl(null).fold(
+                                setControlPlaneDirectory(null).fold(
                                     onSuccess = {
-                                        directorySynchronizer.forgetDirectoryTrustOnUserRemoval().fold(
+                                        forgetControlPlaneDirectoryTrust().fold(
                                             onSuccess = {
                                                 clearDirectoryDraft()
                                                 actionState.update {
@@ -350,7 +364,7 @@ class ControlPlaneSettingsViewModel(
                                                         lastDirectoryCount = 0
                                                     )
                                                 }
-                                                healthMonitor.refresh()
+                                                refreshControlPlaneHealth()
                                             },
                                             onFailure = ::showDirectorySaveError
                                         )
@@ -382,7 +396,7 @@ class ControlPlaneSettingsViewModel(
     private fun startHealthRefresh() {
         viewModelScope.launch {
             while (isActive) {
-                healthMonitor.refresh()
+                refreshControlPlaneHealth()
                 delay(HEALTH_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
             }
         }
@@ -404,11 +418,11 @@ class ControlPlaneSettingsViewModel(
         }
 
         val directoryResult =
-            if (configuration.directoryUrl.value == null && configuration.jsonDirectoryUrl.value == null) {
+            if (configuration.value.directoryUrl == null && configuration.value.jsonDirectoryUrl == null) {
                 Result.success(0)
             } else {
                 actionState.update { it.copy(isDirectorySyncing = true) }
-                directorySynchronizer.refresh()
+                refreshControlPlaneDirectory()
             }
 
         directoryResult.exceptionOrNull()?.let { error ->
@@ -419,7 +433,7 @@ class ControlPlaneSettingsViewModel(
                 "Directory synchronization unavailable/rejected: ${error.message}"
             }
         }
-        healthMonitor.refresh()
+        refreshControlPlaneHealth()
         actionState.update { current ->
             current.copy(
                 isRefreshing = false,

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
@@ -128,15 +128,15 @@ import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreVie
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeySource
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSource
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -233,7 +233,7 @@ val identityModule =
             )
         }
 
-        single<LocalPhoneNumberProvider> {
+        single<LocalPhoneNumberSource> {
             get<LocalIdentityProfileDataSource>()
         }
 
@@ -285,10 +285,10 @@ val identityModule =
             RemoteProfilePictureRepositoryImpl(dataSource = get())
         }
 
-        single<LocalProfilePictureMetadataProvider> { get<LocalProfilePictureDataSource>() }
-        single<LocalProfilePictureProvider> { get<LocalProfilePictureDataSource>() }
+        single<LocalProfilePictureMetadataSource> { get<LocalProfilePictureDataSource>() }
+        single<LocalProfilePictureSource> { get<LocalProfilePictureDataSource>() }
         single<RemoteProfilePictureMetadataProcessor> { get<RemoteProfilePictureDataSource>() }
-        single<RemoteProfilePictureProvider> { get<RemoteProfilePictureDataSource>() }
+        single<RemoteProfilePictureSource> { get<RemoteProfilePictureDataSource>() }
 
         single {
             IdentityRepositoryImpl(
@@ -301,10 +301,10 @@ val identityModule =
         }
 
         single<IdentityRepository> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningKeyPairProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalPublicIdentityProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalEncryptionKeyPairProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningPublicKeyProvider> { get<IdentityRepositoryImpl>() }
+        single<LocalSigningKeyPairSource> { get<IdentityRepositoryImpl>() }
+        single<LocalPublicIdentitySource> { get<IdentityRepositoryImpl>() }
+        single<LocalEncryptionKeyPairSource> { get<IdentityRepositoryImpl>() }
+        single<LocalSigningPublicKeySource> { get<IdentityRepositoryImpl>() }
 
         single {
             CreateIdentityUseCase(repository = get<IdentityRepository>())

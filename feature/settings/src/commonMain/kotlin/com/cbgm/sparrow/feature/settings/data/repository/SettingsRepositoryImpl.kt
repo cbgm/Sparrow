@@ -5,15 +5,15 @@ import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.device.BuildInfoSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 
 class SettingsRepositoryImpl(
-    private val buildInfoProvider: BuildInfoProvider,
+    private val buildInfoSource: BuildInfoSource,
     private val settingsStorage: SettingsStorage,
-    private val systemLanguageProvider: SystemLanguageProvider
+    private val systemLanguageSource: SystemLanguageSource
 ) : SettingsRepository {
     override suspend fun getLanguage(): Result<AppLanguage> =
         safeSuspendCall {
@@ -22,7 +22,7 @@ class SettingsRepositoryImpl(
                 return@safeSuspendCall AppLanguage.fromLanguageTag(savedLanguageTag)
             }
 
-            val systemLanguageTag = systemLanguageProvider.getLanguageTag()
+            val systemLanguageTag = systemLanguageSource.getLanguageTag()
             val initialLanguage =
                 AppLanguage.fromLanguageTag(
                     systemLanguageTag.substringBefore('-').substringBefore('_').lowercase()
@@ -66,5 +66,5 @@ class SettingsRepositoryImpl(
         }
 
     override fun getBuildInfo(): Result<BuildInfo> =
-        safeCall { buildInfoProvider.build }
+        safeCall { buildInfoSource.build }
 }

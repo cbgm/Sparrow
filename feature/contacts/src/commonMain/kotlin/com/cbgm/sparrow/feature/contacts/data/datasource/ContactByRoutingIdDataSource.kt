@@ -8,7 +8,7 @@ import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
+import com.cbgm.sparrow.feature.transport.domain.gateway.RoutingIdGenerator
 import kotlinx.coroutines.flow.first
 
 class ContactByRoutingIdDataSource(

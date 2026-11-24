@@ -4,14 +4,14 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyConfirmation
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 
 /** Only Membership loads the installed epoch key and signs the membership-ready packet. */
 internal class GroupReadyAcknowledgementDataSource(
     private val groupKeyStore: GroupKeyStore,
     private val cryptoHash: CryptoHash,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val protocolOutbox: ProtocolOutbox
 ) {
@@ -28,7 +28,7 @@ internal class GroupReadyAcknowledgementDataSource(
             epoch = epoch,
             welcomePacketId = welcomePacketId,
             keyConfirmation = GroupKeyConfirmation.create(cryptoHash, groupId, epoch, groupKey),
-            memberSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            memberSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         ).getOrThrow()
         protocolOutbox.enqueue(recipientContactId, acknowledgement).getOrThrow()
     }

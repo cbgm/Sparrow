@@ -62,9 +62,9 @@ val settingsModule =
 
         single<SettingsRepository> {
             SettingsRepositoryImpl(
-                buildInfoProvider = get(),
+                buildInfoSource = get(),
                 settingsStorage = get(),
-                systemLanguageProvider = get()
+                systemLanguageSource = get()
             )
         }
 
@@ -198,10 +198,17 @@ val settingsModule =
         viewModel {
             ControlPlaneSettingsViewModel(
                 savedStateHandle = get(),
-                configuration = get(),
                 observeControlPlaneSettingsContext = get(),
-                healthMonitor = get(),
-                directorySynchronizer = get()
+                refreshControlPlaneHealth = get(),
+                addManualControlPlane = get(),
+                removeManualControlPlane = get(),
+                setControlPlaneDirectory = get(),
+                clearControlPlaneList = get(),
+                clearControlPlaneListCache = get(),
+                refreshControlPlaneDirectory = get(),
+                synchronizeControlPlaneDirectory = get(),
+                importControlPlaneList = get(),
+                forgetControlPlaneDirectoryTrust = get()
             )
         }
 
@@ -211,13 +218,14 @@ val settingsModule =
                 getBuildInfoUseCase = get(),
                 observeDeveloperErrorsUseCase = get(),
                 setDeveloperEnabledUseCase = get(),
-                transportDiagnosticsProvider = get(),
+                observeTransportDiagnostics = get(),
+                refreshTransportDiagnostics = get(),
                 discardIdentityKeyStoreKey = get()
             )
         }
 
         viewModel {
-            DeveloperNodesViewModel(transportDiagnosticsProvider = get())
+            DeveloperNodesViewModel(observeTransportDiagnostics = get(), refreshTransportDiagnostics = get())
         }
 
         viewModel {

@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.background.ConnectionKeepAlive
-import com.cbgm.sparrow.feature.transport.background.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.gateway.ConnectionKeepAlive
+import com.cbgm.sparrow.feature.transport.domain.gateway.HeadlessStart
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 

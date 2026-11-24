@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.model
 
 import com.cbgm.sparrow.core.ui.theme.AppThemeMode
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 
 sealed interface OnboardingUiEvent {
     /** The pager settled on [page], by swiping or after the app moved it. */

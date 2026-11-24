@@ -36,10 +36,10 @@ import com.cbgm.sparrow.feature.settings.presentation.developer.components.Netwo
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.SettingsSection
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.feature.transport.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_build_type
 import com.cbgm.sparrow.resources.base_clear_local_data

@@ -2,18 +2,18 @@ package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.use
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationSigner
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
 class LoadGroupVerificationSignerUseCase(
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource
 ) {
     suspend operator fun invoke(): Result<GroupVerificationSigner> =
         safeSuspendCall(logFailure = false) {
             GroupVerificationSigner(
-                identity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow(),
-                signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                identity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow(),
+                signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             )
         }
 }

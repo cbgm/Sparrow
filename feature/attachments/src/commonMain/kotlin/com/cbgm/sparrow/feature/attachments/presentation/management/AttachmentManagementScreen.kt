@@ -217,7 +217,7 @@ private fun AttachmentManagementViewer(
         media = media,
         initialIndex = selectedIndex,
         onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
-        localFilePathProvider = MediaItemUi::localFilePath,
+        localFilePathOf = MediaItemUi::localFilePath,
         title = { currentIndex, total -> "$mediaLabel ${currentIndex + 1}/$total" }
     )
 }

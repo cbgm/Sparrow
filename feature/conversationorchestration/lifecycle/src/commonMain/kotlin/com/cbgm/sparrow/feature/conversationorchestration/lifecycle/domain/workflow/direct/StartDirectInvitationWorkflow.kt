@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -32,7 +32,7 @@ class StartDirectInvitationWorkflow internal constructor(
     private val conversationRepository: DirectConversationRepository,
     private val resolveContactInvitationRoutingId: ResolveContactInvitationRoutingIdUseCase,
     private val getIdentityPeerDisplayName: GetIdentityPeerDisplayNameUseCase,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val startIdentityExchange: StartIdentityExchangeUseCase,
     private val recordOutgoingDirectInvitation: RecordOutgoingDirectInvitationUseCase
 ) : WorkflowStateMachine<
@@ -71,7 +71,7 @@ class StartDirectInvitationWorkflow internal constructor(
                 Outcome.LabelsLoaded(
                     peerDisplayName =
                         getIdentityPeerDisplayName(step.command.contactId).getOrThrow(),
-                    senderLabel = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+                    senderLabel = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
                 )
             is Step.StartExchange -> {
                 val exchange =

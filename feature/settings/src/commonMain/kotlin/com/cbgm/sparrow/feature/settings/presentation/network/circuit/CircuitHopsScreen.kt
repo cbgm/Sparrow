@@ -37,8 +37,8 @@ import com.cbgm.sparrow.feature.settings.presentation.network.circuit.component.
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.domain.usecase.RouteProtection
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_receiving_always
 import com.cbgm.sparrow.resources.feature_receiving_always_consequence

@@ -3,16 +3,16 @@ package com.cbgm.sparrow.feature.settings.data.repository
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.device.BuildInfoSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SettingsRepositoryLanguageTest {
-    private val buildInfoProvider =
-        object : BuildInfoProvider {
+    private val buildInfoSource =
+        object : BuildInfoSource {
             override val build = BuildInfo("test", 1, "test", null)
         }
 
@@ -33,10 +33,10 @@ class SettingsRepositoryLanguageTest {
         storage.setLanguageTag("en")
         val repository =
             SettingsRepositoryImpl(
-                buildInfoProvider = buildInfoProvider,
+                buildInfoSource = buildInfoSource,
                 settingsStorage = storage,
-                systemLanguageProvider =
-                    object : SystemLanguageProvider {
+                systemLanguageSource =
+                    object : SystemLanguageSource {
                         override fun getLanguageTag(): String =
                             error("Phone locale should not be read when language is saved")
                     }
@@ -69,10 +69,10 @@ class SettingsRepositoryLanguageTest {
         phoneLanguageTag: String
     ): SettingsRepositoryImpl =
         SettingsRepositoryImpl(
-            buildInfoProvider = buildInfoProvider,
+            buildInfoSource = buildInfoSource,
             settingsStorage = storage,
-            systemLanguageProvider =
-                object : SystemLanguageProvider {
+            systemLanguageSource =
+                object : SystemLanguageSource {
                     override fun getLanguageTag(): String = phoneLanguageTag
                 }
         )

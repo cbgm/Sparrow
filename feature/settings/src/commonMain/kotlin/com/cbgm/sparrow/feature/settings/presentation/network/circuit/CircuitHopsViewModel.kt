@@ -6,11 +6,11 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.circuit.CircuitCount
-import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCount
-import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
-import com.cbgm.sparrow.feature.transport.circuit.DecoyCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitHopCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.DecoyCount
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase

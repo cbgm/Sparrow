@@ -118,7 +118,7 @@ private fun MessageMediaViewer(
 
     MediaViewer(
         media = attachments.map { attachment -> attachment.toMediaItemUi() },
-        localFilePathProvider = { media -> localFilePaths[media.id] },
+        localFilePathOf = { media -> localFilePaths[media.id] },
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         title = { currentIndex, total ->

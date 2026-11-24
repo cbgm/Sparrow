@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseGroup
 import com.cbgm.sparrow.feature.expenses.domain.model.ExpenseMember
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalIdentityNameUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -28,7 +28,7 @@ class ObserveGroupExpensesUseCase(
     private val pins: GroupPinReadRepository,
     private val membership: GroupMembershipRepository,
     private val contacts: ContactRepository,
-    private val localIdentity: LocalPublicIdentityProvider,
+    private val localIdentity: LocalPublicIdentitySource,
     private val getLocalIdentityName: GetLocalIdentityNameUseCase,
     private val attachments: MessageAttachmentOperationsRepository
 ) {

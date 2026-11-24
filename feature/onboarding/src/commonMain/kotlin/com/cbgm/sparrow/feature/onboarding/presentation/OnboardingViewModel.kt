@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.flow.MutableStateFlow

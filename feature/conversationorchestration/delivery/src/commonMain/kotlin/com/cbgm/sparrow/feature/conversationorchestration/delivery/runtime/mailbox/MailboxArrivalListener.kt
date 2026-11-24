@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.InvitationMailbox
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.CancellationException
@@ -26,7 +26,7 @@ class MailboxArrivalListener(
     private val mailboxGateway: MailboxGateway,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val pendingSynchronizer: MailboxPendingSynchronizer,
-    private val invitationMailbox: InvitationMailboxRenewal,
+    private val invitationMailbox: InvitationMailbox,
     private val pauseMilliseconds: Long = DEFAULT_PAUSE_MILLISECONDS
 ) {
     private val logger = SparrowLog.withTag("MailboxArrivalListener")

@@ -36,7 +36,7 @@ import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.onboardi
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.rememberPageClock
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.graphic.ReceivingGraphic
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_onboarding_onion_relay
 import com.cbgm.sparrow.resources.feature_onboarding_onion_you

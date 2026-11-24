@@ -42,7 +42,7 @@ import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepo
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
@@ -56,7 +56,7 @@ import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPack
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import kotlinx.coroutines.flow.Flow
 
@@ -278,11 +278,11 @@ internal object UnusedGroupSecurity : GroupSecurityRepository {
         error(NOT_USED)
 }
 
-internal object UnusedSigningKeys : LocalSigningKeyPairProvider {
+internal object UnusedSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = error(NOT_USED)
 }
 
-internal object UnusedProfilePictures : LocalProfilePictureMetadataProvider {
+internal object UnusedProfilePictures : LocalProfilePictureMetadataSource {
     override suspend fun forInvite(): Result<ProfilePictureMetadata> = error(NOT_USED)
 
     override suspend fun forMessage(): Result<ProfilePictureMetadata> = error(NOT_USED)

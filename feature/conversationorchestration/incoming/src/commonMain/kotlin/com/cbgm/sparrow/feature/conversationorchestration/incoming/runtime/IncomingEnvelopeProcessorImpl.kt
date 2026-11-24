@@ -14,7 +14,7 @@ import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProce
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 
 /**
  * Processes envelopes of every transport (live, push store, mailboxes). An envelope whose packet arrived too
@@ -28,7 +28,7 @@ internal class IncomingEnvelopeProcessorImpl(
     private val resolveContactIdByRoutingId: ResolveContactIdByRoutingIdUseCase,
     private val groupRoutingResolver: GroupRoutingResolver,
     private val reconcileContactTransportRouting: ReconcileContactTransportRoutingUseCase,
-    private val localEncryptionKeyPairProvider: LocalEncryptionKeyPairProvider,
+    private val localEncryptionKeyPairSource: LocalEncryptionKeyPairSource,
     private val incomingMessageHandler: IncomingMessageHandler,
     private val parkedEnvelopes: ParkedEnvelopeRepository,
     private val replayParkedEnvelopes: ReplayParkedEnvelopesUseCase
@@ -67,7 +67,7 @@ internal class IncomingEnvelopeProcessorImpl(
                 }
 
         val keyPair =
-            localEncryptionKeyPairProvider
+            localEncryptionKeyPairSource
                 .getEncryptionKeyPair()
                 .getOrThrow()
 

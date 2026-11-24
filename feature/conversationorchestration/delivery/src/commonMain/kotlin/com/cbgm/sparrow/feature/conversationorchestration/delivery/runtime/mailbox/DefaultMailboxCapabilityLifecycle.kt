@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.circuit.model
 
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 
 sealed interface CircuitHopsUiEvent {
     data object BackClicked : CircuitHopsUiEvent

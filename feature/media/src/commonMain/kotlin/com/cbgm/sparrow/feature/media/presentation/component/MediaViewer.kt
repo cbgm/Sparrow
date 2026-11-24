@@ -49,7 +49,7 @@ fun MediaViewer(
     initialIndex: Int = 0,
     onDismiss: () -> Unit,
     onEnsureMediaLoaded: (String) -> Unit = {},
-    localFilePathProvider: (MediaItemUi) -> String? = MediaItemUi::localFilePath,
+    localFilePathOf: (MediaItemUi) -> String? = MediaItemUi::localFilePath,
     title: (currentIndex: Int, total: Int) -> String = { currentIndex, total ->
         "${currentIndex + 1}/$total"
     },
@@ -100,7 +100,7 @@ fun MediaViewer(
                     media = media[page],
                     isActive = page == pagerState.currentPage,
                     onEnsureMediaLoaded = onEnsureMediaLoaded,
-                    localFilePath = localFilePathProvider(media[page]),
+                    localFilePath = localFilePathOf(media[page]),
                     modifier = Modifier.fillMaxSize()
                 )
             }

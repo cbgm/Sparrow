@@ -5,11 +5,11 @@ import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox.MailboxRouteProvisioner.Companion.RETIRING_GRACE_MILLISECONDS
-import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.sparrow.feature.transport.domain.gateway.LocalRoutingIdSource
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.gateway.NodeEndpointResolver
+import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
+import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
 
 class MailboxRouteProvisioner(
     private val getMailboxContactStates: GetMailboxContactStatesUseCase,
-    private val localRoutingIdProvider: LocalRoutingIdProvider,
+    private val localRoutingIdSource: LocalRoutingIdSource,
     private val nodeEndpointResolver: NodeEndpointResolver,
     private val mailboxGateway: MailboxGateway,
     private val mailboxRouteRepository: MailboxRouteRepository,
@@ -150,7 +150,7 @@ class MailboxRouteProvisioner(
 
     private suspend fun resolveMailboxNodes(): List<NodeEndpoint> =
         nodeEndpointResolver
-            .resolve(localRoutingIdProvider.getLocalRoutingId().getOrThrow(), forceRefresh = true)
+            .resolve(localRoutingIdSource.getLocalRoutingId().getOrThrow(), forceRefresh = true)
             .getOrThrow()
             .filter { node ->
                 node.mailboxRouteEndpoint != null && node.mailboxAccessEndpoint != null

@@ -10,10 +10,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.indic
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingTransportPayloadFactory
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
-import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.packet.IndicatorPacket

@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.settings.di
 
-import com.cbgm.sparrow.feature.settings.device.AndroidBuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.AndroidSystemLanguageProvider
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.device.AndroidBuildInfoSource
+import com.cbgm.sparrow.feature.settings.device.AndroidSystemLanguageSource
+import com.cbgm.sparrow.feature.settings.device.BuildInfoSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val androidSettingsModule =
     module {
-        single<SystemLanguageProvider> { AndroidSystemLanguageProvider() }
+        single<SystemLanguageSource> { AndroidSystemLanguageSource() }
 
-        single<BuildInfoProvider> {
-            AndroidBuildInfoProvider(
+        single<BuildInfoSource> {
+            AndroidBuildInfoSource(
                 context = androidContext()
             )
         }

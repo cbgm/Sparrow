@@ -6,8 +6,8 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.transport.blob.BlobGateway
-import com.cbgm.sparrow.feature.transport.blob.BlobUpload
+import com.cbgm.sparrow.feature.transport.domain.gateway.BlobGateway
+import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 

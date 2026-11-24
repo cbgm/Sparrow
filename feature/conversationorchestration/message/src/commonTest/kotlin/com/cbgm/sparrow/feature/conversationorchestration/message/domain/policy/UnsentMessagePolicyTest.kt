@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy
 
-import com.cbgm.sparrow.feature.transport.blob.FileTransferFailedException
-import com.cbgm.sparrow.feature.transport.circuit.ProtectedRouteMissingException
+import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
+import com.cbgm.sparrow.feature.transport.domain.model.ProtectedRouteMissingException
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

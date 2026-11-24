@@ -12,13 +12,13 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalIdentityUnavailableException
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeySource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,10 +32,10 @@ class IdentityRepositoryImpl(
     private val privateKeyStorage: PrivateKeyStorage,
     private val publicIdentityDataSource: PublicIdentityDataSource
 ) : IdentityRepository,
-    LocalPublicIdentityProvider,
-    LocalSigningKeyPairProvider,
-    LocalEncryptionKeyPairProvider,
-    LocalSigningPublicKeyProvider {
+    LocalPublicIdentitySource,
+    LocalSigningKeyPairSource,
+    LocalEncryptionKeyPairSource,
+    LocalSigningPublicKeySource {
     private val identityUpdates =
         MutableSharedFlow<PublicIdentity?>(
             replay = 1,

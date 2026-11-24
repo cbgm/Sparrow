@@ -8,13 +8,13 @@ import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
 import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
 import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.device.BuildInfoSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.background.ConnectionModeStore
+import com.cbgm.sparrow.feature.transport.domain.gateway.TransportPreferences
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.Dispatchers
@@ -39,13 +39,13 @@ class OnboardingViewModelTest {
     private val store = RecordingStore()
     private val settingsRepository =
         SettingsRepositoryImpl(
-            buildInfoProvider =
-                object : BuildInfoProvider {
+            buildInfoSource =
+                object : BuildInfoSource {
                     override val build = BuildInfo("test", 1, "test", null)
                 },
             settingsStorage = InMemorySettingsStorage(),
-            systemLanguageProvider =
-                object : SystemLanguageProvider {
+            systemLanguageSource =
+                object : SystemLanguageSource {
                     override fun getLanguageTag(): String = "en"
                 }
         )
@@ -178,12 +178,32 @@ class OnboardingViewModelTest {
         steps.forEach { index -> viewModel.onUiEvent(OnboardingUiEvent.PageShown(OnboardingPage.entries[index])) }
     }
 
-    private class RecordingStore : ConnectionModeStore {
+    private class RecordingStore : TransportPreferences {
         val saved = mutableListOf<ConnectionMode>()
 
-        override fun observe(): Flow<ConnectionMode> = emptyFlow()
+        override fun observeCircuitCount(): Flow<Int> = error("Not used")
 
-        override suspend fun set(mode: ConnectionMode) {
+        override suspend fun setCircuitCount(circuitCount: Int) = error("Not used")
+
+        override fun observeHopCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setHopCount(hopCount: Int) = error("Not used")
+
+        override fun observeDecoyCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setDecoyCount(decoyCount: Int) = error("Not used")
+
+        override fun observeSendsDirectly(): Flow<Boolean> = error("Not used")
+
+        override suspend fun setSendsDirectly(sendsDirectly: Boolean) = error("Not used")
+
+        override fun observePreferredNode(): Flow<String?> = error("Not used")
+
+        override suspend fun setPreferredNode(nodeId: String?) = error("Not used")
+
+        override fun observeConnectionMode(): Flow<ConnectionMode> = emptyFlow()
+
+        override suspend fun setConnectionMode(mode: ConnectionMode) {
             saved += mode
         }
     }

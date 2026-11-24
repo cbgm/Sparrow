@@ -7,7 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import java.util.concurrent.TimeUnit
 
 /** Turns the chosen [ConnectionMode] into what Android runs: the connection service, a periodic check, or nothing. */

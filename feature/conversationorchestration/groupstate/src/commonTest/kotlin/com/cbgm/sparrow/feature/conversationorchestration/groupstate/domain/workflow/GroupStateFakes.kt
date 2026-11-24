@@ -39,7 +39,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
@@ -115,7 +115,7 @@ internal class FakeOutbox : ProtocolOutbox {
     override suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?> = error(NOT_USED)
 }
 
-internal object FakeSigningKeys : LocalSigningKeyPairProvider {
+internal object FakeSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = Result.success(ADMIN_KEYS)
 }
 

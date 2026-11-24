@@ -6,8 +6,8 @@ import com.cbgm.sparrow.data.database.entity.ContactProfilePictureEntity
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSnapshot
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -18,7 +18,7 @@ class RemoteProfilePictureDataSource(
     private val profilePictureDao: ContactProfilePictureDao,
     private val fileDataSource: ProfilePictureFileDataSource,
     private val cryptoHash: CryptoHash
-) : RemoteProfilePictureProvider,
+) : RemoteProfilePictureSource,
     RemoteProfilePictureMetadataProcessor {
     private val metadataMutex = Mutex()
 

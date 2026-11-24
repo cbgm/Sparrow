@@ -42,7 +42,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationSecurityState
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
@@ -65,7 +65,7 @@ internal class GroupMembershipRepositoryImpl(
     private val operations: GroupMembershipLifecycleDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
     private val groupSecurityManager: GroupSecurityManager,
-    private val signingKeyPairProvider: LocalSigningKeyPairProvider,
+    private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val membershipLock: GroupMembershipLock
 ) : GroupMembershipRepository {
     override suspend fun getVerificationMembershipContext(groupId: String): Result<GroupVerificationMembershipContext> =
@@ -381,7 +381,7 @@ internal class GroupMembershipRepositoryImpl(
                         )
                 }
             ) { "Cannot reconstruct a group epoch after membership activation" }
-            val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
             check(signingKeyPair.publicKey.contentEquals(localSigningPublicKey)) {
                 "Local group signing identity does not match"
             }

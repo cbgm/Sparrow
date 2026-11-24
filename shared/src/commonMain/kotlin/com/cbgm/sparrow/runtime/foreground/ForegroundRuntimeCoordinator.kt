@@ -82,17 +82,17 @@ class ForegroundRuntimeCoordinator(
 
     private suspend fun runForegroundSession() {
         StartupTrace.measure("transport connection manager start") {
-            foreground.transportConnectionManager.start()
+            foreground.transportConnection.start()
         }
 
         coroutineScope {
             val connectionObserver =
                 launch {
-                    foreground.transportConnectionManager.connectionState
+                    foreground.transportConnection.connectionState
                         .collect(connectionHandler::handle)
                 }
             // Mailbox requests and messages to contacts with a mailbox go through the circuit.
-            val circuit = launch { foreground.circuitRunner.run() }
+            val circuit = launch { foreground.runCircuits() }
             val mailboxArrivals = launch { foreground.mailboxCoordinator.listen() }
             val routeReturns = launch { sendWaitingMessagesWhenRouteReturns() }
 
@@ -104,7 +104,7 @@ class ForegroundRuntimeCoordinator(
                 mailboxArrivals.cancelAndJoin()
                 circuit.cancelAndJoin()
                 foreground.outboxRunner.stop()
-                foreground.transportConnectionManager.stop()
+                foreground.transportConnection.stop()
             }
         }
     }

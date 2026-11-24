@@ -63,7 +63,7 @@ class GroupAdministrationFixesTest {
                 engine = engine,
                 conversationRepository = UnusedConversations,
                 groupSecurityRepository = UnusedGroupSecurity,
-                localSigningKeyPairProvider = UnusedSigningKeys,
+                localSigningKeyPairSource = UnusedSigningKeys,
                 refreshOwnedGroupVerification = RefreshOwnedGroupVerificationUseCase(UnusedVerificationRows, inputs)
             )
         val command = GroupAdministrationCommand.CreateGroup("Trip", linkedSetOf("alice", FAILING_CONTACT, "carol"))

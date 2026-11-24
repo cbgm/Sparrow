@@ -6,8 +6,8 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.background.ConnectionKeepAlive
-import com.cbgm.sparrow.feature.transport.background.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.gateway.ConnectionKeepAlive
+import com.cbgm.sparrow.feature.transport.domain.gateway.HeadlessStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

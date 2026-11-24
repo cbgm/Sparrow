@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.domain.usecase
 
-import com.cbgm.sparrow.feature.transport.circuit.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import kotlinx.coroutines.flow.Flow
 
 /** True while messages wait: sending directly is switched off and no circuit through enough hops is up. */

@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiState
-import com.cbgm.sparrow.feature.transport.discovery.GatewayNode
+import com.cbgm.sparrow.feature.transport.domain.model.GatewayNode
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase

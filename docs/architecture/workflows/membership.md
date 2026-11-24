@@ -54,7 +54,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `GroupAdministrationCommand.CreateGroup`
 - **Source:** `feature/conversationorchestration/membership/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/membership/domain/workflow/administration/CreateGroupWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupConversationRepository`, `GroupSecurityRepository`, `LocalSigningKeyPairProvider`, `RefreshOwnedGroupVerificationUseCase`
+- **Uses:** `WorkflowEngine`, `GroupConversationRepository`, `GroupSecurityRepository`, `LocalSigningKeyPairSource`, `RefreshOwnedGroupVerificationUseCase`
 
 ```text
 CreateConversation -> InitializeSecurity -> InitializeVerification -> InviteMember for every contact.

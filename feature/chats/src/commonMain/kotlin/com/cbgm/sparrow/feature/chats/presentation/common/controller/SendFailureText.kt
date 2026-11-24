@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
-import com.cbgm.sparrow.feature.transport.blob.isFileTransferFailure
-import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
+import com.cbgm.sparrow.feature.transport.domain.rule.isFileTransferFailure
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 
 /** What the user reads when a message could not be sent: what happened, never the technical failure. */
 internal fun Throwable.sendFailureText(fallback: String): String =

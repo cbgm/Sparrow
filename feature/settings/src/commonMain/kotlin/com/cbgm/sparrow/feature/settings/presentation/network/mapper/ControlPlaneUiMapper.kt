@@ -7,8 +7,8 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
-import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 
 /**
  * A Control Plane may be independently configured by the user AND discovered

@@ -101,7 +101,7 @@ class MailboxRouteProvisionerTest {
         }
 
     @Test
-    fun mailboxOnRetiredNodeIsReplacedWithoutRevocationOrRetiringCopy() =
+    fun mailboxOnRetiredNodeIsReplacedAndStaysReadableWithoutRevocation() =
         runTest {
             val old = mailboxCredential(CONTACT_ID, "old", expiresAt = Long.MAX_VALUE, nodeId = "node-gone")
             fakes.routes.local[CONTACT_ID] = old
@@ -110,7 +110,8 @@ class MailboxRouteProvisionerTest {
             assertEquals(1, fakes.provisioner().provision().getOrThrow())
 
             assertNotEquals(old, fakes.routes.local.getValue(CONTACT_ID))
-            assertTrue(fakes.routes.retiring.isEmpty())
+            // The node may only restart: what was put there before the contact learned the new route still arrives.
+            assertEquals(old, fakes.routes.retiring[old.deliveryRoute.routeId])
             assertTrue(fakes.gateway.revoked.isEmpty())
         }
 

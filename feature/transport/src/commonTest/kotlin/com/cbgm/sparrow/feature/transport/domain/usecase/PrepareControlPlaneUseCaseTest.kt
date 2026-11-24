@@ -1,10 +1,11 @@
 package com.cbgm.sparrow.feature.transport.domain.usecase
 
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.domain.gateway.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -84,12 +85,13 @@ class PrepareControlPlaneUseCaseTest {
     /** Saved manual control planes appear only after initialize(), like the persisted configuration. */
     private class FakeConfiguration(
         private val saved: List<String> = emptyList()
-    ) : ControlPlaneConfiguration {
+    ) : ControlPlaneEndpointStore {
         var initialized = false
         var manual = emptyList<String>()
         var directory = emptyList<String>()
 
-        override val endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
+        override val endpoints: StateFlow<List<ControlPlaneEndpoint>>
+            get() = MutableStateFlow(orderedEndpoints())
         override val activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
         override val manualBaseUrls = MutableStateFlow(emptySet<String>())
         override val directoryBaseUrls = MutableStateFlow(emptySet<String>())

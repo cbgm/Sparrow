@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.outbox.OutgoingTransportPayloadFactory
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.packet.CoverPacket

@@ -29,7 +29,7 @@ val protocolModule =
         single {
             DirectChatAuthorizationRevocationSender(
                 protocol = get(),
-                signingKeyPairProvider = get(),
+                signingKeyPairSource = get(),
                 protocolOutbox = get()
             )
         }

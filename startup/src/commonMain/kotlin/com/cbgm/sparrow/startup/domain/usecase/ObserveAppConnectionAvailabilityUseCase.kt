@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.startup.domain.usecase
 
-import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
-import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.domain.gateway.TransportConnection
+import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
 import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
 
 class ObserveAppConnectionAvailabilityUseCase(
-    private val transportConnectionManager: TransportConnectionManager
+    private val transportConnection: TransportConnection
 ) {
     operator fun invoke(): Flow<AppConnectionAvailability> =
-        transportConnectionManager
+        transportConnection
             .connectionState
             // Only a failed attempt counts as unavailable. Connecting and Disconnected (e.g. while
             // the app is in the background) keep the last value, so no offline hint shows early.

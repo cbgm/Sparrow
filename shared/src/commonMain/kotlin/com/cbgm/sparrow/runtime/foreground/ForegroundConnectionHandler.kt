@@ -2,9 +2,9 @@ package com.cbgm.sparrow.runtime.foreground
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
-import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
-import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
-import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay

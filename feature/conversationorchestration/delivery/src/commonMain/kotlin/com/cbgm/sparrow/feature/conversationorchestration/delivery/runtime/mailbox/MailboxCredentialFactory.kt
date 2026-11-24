@@ -2,13 +2,13 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mail
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.feature.transport.domain.gateway.MailboxGateway
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 
 class MailboxCredentialFactory(
     private val mailboxGateway: MailboxGateway,
-    private val signingKeyPairProvider: LocalSigningKeyPairProvider,
+    private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: MailboxRoutePayloadEncoder
 ) {
@@ -30,7 +30,7 @@ class MailboxCredentialFactory(
                     sequence = sequence,
                     expiresAtEpochMilliseconds = expiresAtEpochMilliseconds
                 ).getOrThrow()
-        val keyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val keyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
         val unsignedRoute = created.deliveryRoute.copy(identitySignature = byteArrayOf())
         val signature =
             signatureCrypto

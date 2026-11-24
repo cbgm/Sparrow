@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.model
 
 import com.cbgm.sparrow.core.ui.theme.AppThemeMode
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 
 /** [RECEIVING] comes after [PERMISSIONS]: the notification the connection service needs is allowed there. */
 enum class OnboardingPage { WELCOME, ONION, PERMISSIONS, RECEIVING, THEME, PHONE }
