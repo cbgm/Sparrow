@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.datasource
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.model.MessageCursorDto
+import kotlinx.coroutines.flow.Flow
 
 /** Chats-owned message history access; the repository maps database cursors into domain cursors. */
 internal class MessageHistoryDataSource(
@@ -9,6 +10,9 @@ internal class MessageHistoryDataSource(
 ) {
     suspend fun findRecentCursors(conversationId: String, limit: Int): List<MessageCursorDto> =
         chatDao.findRecentMessageCursors(conversationId, limit)
+
+    fun observeCursors(conversationId: String): Flow<List<MessageCursorDto>> =
+        chatDao.observeMessageCursors(conversationId)
 
     suspend fun findCursorsBefore(
         conversationId: String,

@@ -1057,6 +1057,12 @@
     <string name="feature_settings_circuit_protection_waiting_title">No route right now</string>
     <string name="feature_settings_circuit_protection_waiting_text">Messages wait and go out as soon as a route is up again.</string>
     <string name="feature_chats_failed_tap_to_retry">Failed, tap to send again</string>
+    <string name="feature_chats_day_today">Today</string>
+    <string name="feature_chats_day_yesterday">Yesterday</string>
+    <plurals name="feature_chats_day_message_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
     <string name="feature_onboarding_tour_shield_title">The shield in the top bar</string>
     <string name="feature_onboarding_tour_shield_text">It shows how well your route hides you right now. Grey with a check: as you chose. Yellow: fewer hops for a while. Red: sent directly, without protection. Tap it to see why.</string>
     <string name="feature_onboarding_tour_search_title">Search</string>

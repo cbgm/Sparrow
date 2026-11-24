@@ -132,6 +132,7 @@ internal fun GroupMessage.toMessageBubbleUi(
         contentStatus = contentStatus,
         deliveryStatus = deliveryStatus,
         time = formatMessageTime(timestamp),
+        writtenAt = timestamp,
         canEdit = isEditable(),
         senderName = senderName,
         senderIsInContacts = senderIsInContacts,

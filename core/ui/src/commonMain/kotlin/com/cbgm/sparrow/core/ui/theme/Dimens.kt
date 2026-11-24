@@ -57,6 +57,9 @@ object Dimens {
     object MessageList {
         val loadingStroke = 2.dp
         val loadingSize = 20.dp
+        val dayRailWidth = 96.dp
+        val dayRailEdgeZone = 48.dp
+        val dayRailScrollStep = 10.dp
     }
 
     object Avatar {

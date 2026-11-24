@@ -47,6 +47,7 @@ internal fun DirectMessage.toMessageBubbleUi(
         contentStatus = contentStatus,
         deliveryStatus = deliveryStatus,
         time = formatMessageTime(timestamp),
+        writtenAt = timestamp,
         canEdit = isEditable(),
         safetyWarning =
             if (isMine || contentStatus != MessageContentStatus.READABLE) {

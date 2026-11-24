@@ -15,6 +15,8 @@ data class MessageBubbleUi(
     val deliveryStatus: MessageDeliveryStatus,
     /** When it was written, as a time of day. */
     val time: String = "",
+    /** When it was written, in epoch milliseconds. */
+    val writtenAt: Long = 0L,
     val groupExtension: GroupMessageUi? = null,
     val canEdit: Boolean = false,
     val senderName: String? = null,

@@ -26,6 +26,7 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationR
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ObserveMessageDaysUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.ReconnectContactUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveConversationQueueAvailabilityUseCase
@@ -130,6 +131,7 @@ private fun org.koin.core.module.Module.registerRepositories() {
 private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::LoadOlderMessagesUseCase)
     singleOf(::FindMessageHistoryCursorUseCase)
+    singleOf(::ObserveMessageDaysUseCase)
     singleOf(::EncodeContactForSharingUseCase)
     singleOf(::ReconnectContactUseCase)
     singleOf(::ObserveDirectConversationUseCase)

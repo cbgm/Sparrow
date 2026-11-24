@@ -193,6 +193,16 @@ interface ChatDao {
         SELECT id, createdAtEpochMilliseconds
         FROM messages
         WHERE conversationId = :conversationId
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        """
+    )
+    fun observeMessageCursors(conversationId: String): Flow<List<MessageCursorDto>>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
           AND (
               createdAtEpochMilliseconds < :beforeTimestamp
               OR (

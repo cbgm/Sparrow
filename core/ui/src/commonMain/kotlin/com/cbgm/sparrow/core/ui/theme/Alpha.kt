@@ -31,6 +31,10 @@ object Alpha {
         const val dim = 0.84f
     }
 
+    object MessageList {
+        const val dayRailScrim = 0.72f
+    }
+
     object MessageBubble {
         const val metadataPill = 0.45f
         const val mine = 0.7f

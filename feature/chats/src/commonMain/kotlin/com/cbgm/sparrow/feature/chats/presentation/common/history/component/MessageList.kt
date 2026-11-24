@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,12 +30,16 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.util.time.SystemClock
+import com.cbgm.sparrow.core.util.time.formatMessageTime
+import com.cbgm.sparrow.core.util.time.localEpochDay
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.expenseActivityPartOrNull
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageDayUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
@@ -87,6 +92,26 @@ internal fun MessageList(
             listState = listState,
             onTargetMissing = onMessageHistoryTargetRequested
         )
+    val dayJumpState =
+        rememberMessageJumpState(
+            messageIds = messageIds,
+            listState = listState,
+            onTargetMissing = onMessageHistoryTargetRequested,
+            alignToTop = true
+        )
+    val dayRailState = rememberDayRailState()
+    val today = remember(messages) { localEpochDay(SystemClock.nowEpochMilliseconds()) }
+    val firstOfDayIds =
+        remember(messages) {
+            messages
+                .filterIndexed { index, message ->
+                    val older = messages.getOrNull(index + 1)
+                    older == null || localEpochDay(older.writtenAt) != localEpochDay(message.writtenAt)
+                }.mapTo(mutableSetOf(), MessageBubbleUi::id)
+        }
+    val pickDay: (Long) -> Unit = { epochDay ->
+        historyState.days.firstOrNull { it.epochDay == epochDay }?.let { day -> dayJumpState.jumpTo(day.firstMessageId) }
+    }
     AutoScrollToNewestOwnMessage(
         messages = messages,
         searchTargetHandled = searchTargetState.isHandled,
@@ -108,78 +133,89 @@ internal fun MessageList(
             contentPadding =
                 PaddingValues(
                     start = MaterialTheme.spacing.messageList.horizontalPadding,
-                    top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
+                    top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.screenPadding,
                     end = MaterialTheme.spacing.messageList.horizontalPadding,
-                    bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
+                    bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding
                 ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             items(items = messages, key = MessageBubbleUi::id) { message ->
-                MessageDissolve(
-                    messageId = message.id,
-                    state = dissolvingListState
-                ) {
-                    val systemType = message.groupExtension?.type
-                    val expensePart = message.expenseActivityPartOrNull()
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+                    if (message.id in firstOfDayIds) {
+                        DaySeparator(
+                            writtenAt = message.writtenAt,
+                            today = today,
+                            railState = dayRailState,
+                            onDayPicked = pickDay
+                        )
+                    }
+                    MessageDissolve(
+                        messageId = message.id,
+                        state = dissolvingListState
+                    ) {
+                        val systemType = message.groupExtension?.type
+                        val expensePart = message.expenseActivityPartOrNull()
 
-                    when {
-                        systemType != null && systemType != ChatMessageType.USER -> {
-                            MembershipSystemMessage(
-                                type = systemType,
-                                memberName = message.senderName
-                            )
-                        }
+                        when {
+                            systemType != null && systemType != ChatMessageType.USER -> {
+                                MembershipSystemMessage(
+                                    type = systemType,
+                                    memberName = message.senderName
+                                )
+                            }
 
-                        expensePart != null -> {
-                            ExpenseActivityMessage(
-                                part = expensePart,
-                                senderName = message.senderName,
-                                isMine = message.isMine,
-                                isFailed = message.deliveryStatus == MessageDeliveryStatus.FAILED,
-                                onRetry = { onRetryMessage(message.id) }
-                            )
-                        }
+                            expensePart != null -> {
+                                ExpenseActivityMessage(
+                                    part = expensePart,
+                                    senderName = message.senderName,
+                                    isMine = message.isMine,
+                                    isFailed = message.deliveryStatus == MessageDeliveryStatus.FAILED,
+                                    onRetry = { onRetryMessage(message.id) }
+                                )
+                            }
 
-                        else -> {
-                            MessageBubble(
-                                message = message,
-                                onRetryClick = { onRetryMessage(message.id) },
-                                onSafetyDetailsClick = { warning ->
-                                    onSafetyWarningClick(
-                                        message.id,
-                                        message.groupExtension?.senderContactId,
-                                        warning
-                                    )
-                                },
-                                onAttachmentClick = { attachmentId ->
-                                    onAttachmentClick(
-                                        message.id,
-                                        attachmentId
-                                    )
-                                },
-                                onContactClick = onContactClick,
-                                onReplyPreviewClick = replyJumpState.jumpTo,
-                                onContextMessageRequested = onContextMessageRequested,
-                                onReactionsClick = { anchor ->
-                                    onReactionBurstRequested(
-                                        MessageReactionBurst(
-                                            reactions = message.reactions,
-                                            anchor = anchor
+                            else -> {
+                                MessageBubble(
+                                    message = message,
+                                    onRetryClick = { onRetryMessage(message.id) },
+                                    onSafetyDetailsClick = { warning ->
+                                        onSafetyWarningClick(
+                                            message.id,
+                                            message.groupExtension?.senderContactId,
+                                            warning
                                         )
-                                    )
-                                },
-                                onPollVoteSubmit = onPollVoteSubmit,
-                                onPollClose = onPollClose,
-                                isContextSelected = selectedContextMessageId == message.id,
-                                isSearchHighlighted =
-                                    message.id == searchTargetState.highlightedMessageId ||
-                                        message.id == replyJumpState.highlightedMessageId,
-                                leadingContent = {
-                                    if (!message.isMine) {
-                                        itemLeadingContent?.invoke(message)
+                                    },
+                                    onAttachmentClick = { attachmentId ->
+                                        onAttachmentClick(
+                                            message.id,
+                                            attachmentId
+                                        )
+                                    },
+                                    onContactClick = onContactClick,
+                                    onReplyPreviewClick = replyJumpState.jumpTo,
+                                    onContextMessageRequested = onContextMessageRequested,
+                                    onReactionsClick = { anchor ->
+                                        onReactionBurstRequested(
+                                            MessageReactionBurst(
+                                                reactions = message.reactions,
+                                                anchor = anchor
+                                            )
+                                        )
+                                    },
+                                    onPollVoteSubmit = onPollVoteSubmit,
+                                    onPollClose = onPollClose,
+                                    isContextSelected = selectedContextMessageId == message.id,
+                                    isSearchHighlighted =
+                                        message.id == searchTargetState.highlightedMessageId ||
+                                            message.id == replyJumpState.highlightedMessageId ||
+                                            message.id == dayJumpState.highlightedMessageId,
+                                    leadingContent = {
+                                        if (!message.isMine) {
+                                            itemLeadingContent?.invoke(message)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -213,6 +249,13 @@ internal fun MessageList(
                     end = MaterialTheme.spacing.base,
                     bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.base
                 )
+        )
+        DayRail(
+            state = dayRailState,
+            days = historyState.days,
+            today = today,
+            contentPadding = contentPadding,
+            onDayPicked = pickDay
         )
     }
 }
@@ -285,6 +328,7 @@ private fun MessageListPreview() {
             remember {
                 listOf(
                     MessageBubbleUi(
+                        writtenAt = SystemClock.nowEpochMilliseconds(),
                         id = "4",
                         isMine = true,
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
@@ -299,6 +343,7 @@ private fun MessageListPreview() {
                         )
                     ),
                     MessageBubbleUi(
+                        writtenAt = SystemClock.nowEpochMilliseconds(),
                         id = "3",
                         isMine = false,
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
@@ -314,6 +359,7 @@ private fun MessageListPreview() {
                         )
                     ),
                     MessageBubbleUi(
+                        writtenAt = SystemClock.nowEpochMilliseconds(),
                         id = "2",
                         isMine = true,
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
@@ -328,6 +374,7 @@ private fun MessageListPreview() {
                         )
                     ),
                     MessageBubbleUi(
+                        writtenAt = SystemClock.nowEpochMilliseconds(),
                         id = "1",
                         isMine = false,
                         security = MessageSecurity.END_TO_END_ENCRYPTED,
@@ -382,3 +429,87 @@ private fun MessageListPreview() {
         )
     }
 }
+
+@Preview(heightDp = 700)
+@Composable
+private fun MessageListDaysPreview() {
+    SparrowTheme {
+        val now = remember { SystemClock.nowEpochMilliseconds() }
+        val messages = remember { previewMessagesOverDays(now) }
+        val days =
+            remember {
+                messages
+                    .groupBy { localEpochDay(it.writtenAt) }
+                    .map { (epochDay, dayMessages) ->
+                        MessageDayUi(
+                            epochDay = epochDay,
+                            firstMessageId = dayMessages.last().id,
+                            firstMessageAt = dayMessages.last().writtenAt,
+                            messageCount = dayMessages.size
+                        )
+                    }
+            }
+        val dissolvingListState =
+            rememberDissolvingMessageListState(
+                messages = messages,
+                idOf = MessageBubbleUi::id,
+                shouldDissolve = { false }
+            )
+
+        MessageList(
+            dissolvingListState = dissolvingListState,
+            listState = rememberLazyListState(),
+            targetMessageId = null,
+            selectedContextMessageId = null,
+            onContextMessageRequested = {},
+            onReactionBurstRequested = {},
+            onRetryMessage = {},
+            onSafetyWarningClick = { _, _, _ -> },
+            onAttachmentClick = { _, _ -> },
+            onContactClick = {},
+            contentPadding = PaddingValues(),
+            historyState = MessageHistoryUiState(hasMore = false, days = days),
+            onLoadOlderMessages = {},
+            onMessageHistoryTargetRequested = {}
+        )
+    }
+}
+
+/** A few messages on each of [PREVIEW_DAYS_AGO], newest first like the chat delivers them. */
+private fun previewMessagesOverDays(now: Long): List<MessageBubbleUi> =
+    PREVIEW_DAYS_AGO.flatMapIndexed { dayIndex, daysAgo ->
+        val dayStart = now - daysAgo * MILLISECONDS_PER_DAY - (now % MILLISECONDS_PER_DAY)
+        List(3 + dayIndex % 3) { messageIndex ->
+            val writtenAt = dayStart + (9 + messageIndex * 3) * MILLISECONDS_PER_HOUR
+            MessageBubbleUi(
+                id = "preview-$dayIndex-$messageIndex",
+                isMine = messageIndex % 2 == 1,
+                security = MessageSecurity.END_TO_END_ENCRYPTED,
+                contentStatus = MessageContentStatus.READABLE,
+                deliveryStatus = MessageDeliveryStatus.READ,
+                time = formatMessageTime(writtenAt),
+                writtenAt = writtenAt,
+                parts =
+                    listOf(
+                        TextUi(
+                            id = "preview-text-$dayIndex-$messageIndex",
+                            text = PREVIEW_TEXTS[(dayIndex + messageIndex) % PREVIEW_TEXTS.size],
+                            isContentFailed = false
+                        )
+                    )
+            )
+        }.reversed()
+    }
+
+private const val MILLISECONDS_PER_HOUR = 3_600_000L
+
+private val PREVIEW_TEXTS =
+    listOf(
+        "Are we still on for Friday?",
+        "Sure, 7 pm at the usual place",
+        "Running 10 min late",
+        "No problem, I'll order",
+        "Did you get home ok?",
+        "Yes, all fine",
+        "Can you send me the photos from last weekend?"
+    )

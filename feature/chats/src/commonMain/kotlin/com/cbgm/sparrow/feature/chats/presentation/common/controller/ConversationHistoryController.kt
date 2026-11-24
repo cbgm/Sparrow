@@ -1,8 +1,11 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.controller
 
+import com.cbgm.sparrow.feature.chats.domain.model.MessageDay
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ObserveMessageDaysUseCase
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageDayUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -13,12 +16,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ConversationHistoryController(
     private val loadOlderMessages: LoadOlderMessagesUseCase,
-    private val findMessageCursor: FindMessageHistoryCursorUseCase
+    private val findMessageCursor: FindMessageHistoryCursorUseCase,
+    private val observeMessageDays: ObserveMessageDaysUseCase
 ) {
     private val _cursor = MutableStateFlow<MessageHistoryCursor?>(null)
     private val observedCursor = MutableStateFlow<MessageHistoryCursor?>(null)
@@ -40,8 +45,13 @@ class ConversationHistoryController(
         this.scope = scope
         this.conversationId = conversationId
         historyState =
-            combine(isLoading, hasMore, observedCursor) { loading, more, observed ->
-                MessageHistoryUiState(loading, more, observed?.messageId)
+            combine(
+                isLoading,
+                hasMore,
+                observedCursor,
+                observeMessageDays(conversationId).map { days -> days.map(MessageDay::toMessageDayUi) }
+            ) { loading, more, observed, days ->
+                MessageHistoryUiState(loading, more, observed?.messageId, days)
             }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), MessageHistoryUiState())
     }
 

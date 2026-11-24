@@ -1059,6 +1059,12 @@
     <string name="feature_settings_circuit_protection_waiting_title">Gerade keine Route</string>
     <string name="feature_settings_circuit_protection_waiting_text">Nachrichten warten und gehen raus, sobald wieder eine Route steht.</string>
     <string name="feature_chats_failed_tap_to_retry">Fehlgeschlagen, tippen zum erneuten Senden</string>
+    <string name="feature_chats_day_today">Heute</string>
+    <string name="feature_chats_day_yesterday">Gestern</string>
+    <plurals name="feature_chats_day_message_count">
+        <item quantity="one">%1$d Nachricht</item>
+        <item quantity="other">%1$d Nachrichten</item>
+    </plurals>
     <string name="feature_onboarding_tour_shield_title">Das Schild oben in der Leiste</string>
     <string name="feature_onboarding_tour_shield_text">Es zeigt, wie gut dein Weg dich gerade verbirgt. Grau mit Haken: wie gewählt. Gelb: vorübergehend weniger Hops. Rot: direkt gesendet, ohne Schutz. Tippe darauf, um zu sehen, warum.</string>
     <string name="feature_onboarding_tour_search_title">Suche</string>
