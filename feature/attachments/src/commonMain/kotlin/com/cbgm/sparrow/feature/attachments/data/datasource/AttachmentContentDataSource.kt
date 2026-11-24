@@ -12,11 +12,7 @@ internal class AttachmentContentDataSource(
             return localFilePath
         }
 
-        if (groupId == null) {
-            messageAttachmentDataSource.loadBytes(partId)
-        } else {
-            groupPinnedAttachmentSource.load(groupId, partId)
-        }
+        loadBytes(partId, groupId)
 
         return requireNotNull(messageAttachmentDataSource.resolveLocalFilePath(partId)) {
             "Message part was loaded but no local cache file exists"
@@ -25,10 +21,8 @@ internal class AttachmentContentDataSource(
 
     suspend fun loadBytes(partId: String, groupId: String?): ByteArray {
         require(partId.isNotBlank()) { "Message part ID must not be blank" }
-        return if (groupId == null) {
-            messageAttachmentDataSource.loadBytes(partId)
-        } else {
-            groupPinnedAttachmentSource.load(groupId, partId)
-        }
+        if (groupId == null) return messageAttachmentDataSource.loadBytes(partId)
+        check(groupPinnedAttachmentSource.isPinned(groupId, partId)) { "Pinned message attachment was not found" }
+        return messageAttachmentDataSource.loadDetachedBytes(partId)
     }
 }

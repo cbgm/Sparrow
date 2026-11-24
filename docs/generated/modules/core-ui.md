@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/ui` |
 | Build file | `core/ui/build.gradle.kts` |
-| Kotlin files | 51 |
-| Production Kotlin files | 50 |
-| Test Kotlin files | 1 |
+| Kotlin files | 70 |
+| Production Kotlin files | 68 |
+| Test Kotlin files | 2 |
 | Resource files | 0 |
-| Direct dependencies | 1 |
+| Direct dependencies | 2 |
 | Direct dependents | 22 |
 
 ## Source sets
@@ -26,6 +26,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependencies
 
+- [`:core:util`](../modules/core-util.md)
 - [`:resources`](../modules/resources.md)
 
 ## Dependents

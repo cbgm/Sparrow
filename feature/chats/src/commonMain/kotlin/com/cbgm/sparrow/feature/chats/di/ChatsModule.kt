@@ -92,9 +92,9 @@ private fun org.koin.core.module.Module.registerDirectData() {
 
 private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupConversationHistoryDataSource)
-    singleOf(::GroupAvatarDataSource)
+    singleOf(::GroupAvatarDataSource) { bind<GroupAvatarSource>() }
     singleOf(::GroupDescriptionDataSource)
-    singleOf(::GroupPinDataSource)
+    singleOf(::GroupPinDataSource) { bind<GroupPinnedAttachmentSource>() }
 }
 
 private fun org.koin.core.module.Module.registerRepositories() {
@@ -106,14 +106,12 @@ private fun org.koin.core.module.Module.registerRepositories() {
     }
     singleOf(::GroupAvatarReadRepositoryImpl) {
         bind<GroupAvatarReadRepository>()
-        bind<GroupAvatarSource>()
     }
     singleOf(::GroupDescriptionReadRepositoryImpl) {
         bind<GroupDescriptionReadRepository>()
     }
     singleOf(::GroupPinReadRepositoryImpl) {
         bind<GroupPinReadRepository>()
-        bind<GroupPinnedAttachmentSource>()
     }
     singleOf(::GroupVerificationReadRepositoryImpl) {
         bind<GroupVerificationReadRepository>()

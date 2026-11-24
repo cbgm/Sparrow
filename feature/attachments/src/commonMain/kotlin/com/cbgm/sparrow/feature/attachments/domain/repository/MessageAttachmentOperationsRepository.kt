@@ -40,9 +40,6 @@ interface MessageAttachmentOperationsRepository {
 
     suspend fun deleteForMessages(messageIds: List<String>): Result<Unit>
 
-    /** Chats owns paging and supplies the visible message IDs. */
-    fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>>
-
     /** Observes a group's expenses in creation order; Chats decides which board they belong to. */
     fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
         kotlinx.coroutines.flow.combine(observeExpenses(conversationId), observePaymentTransfers(conversationId)) { expenses, transfers ->

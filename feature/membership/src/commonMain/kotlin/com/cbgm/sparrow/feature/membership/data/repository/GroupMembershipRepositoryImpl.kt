@@ -22,12 +22,10 @@ import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalReason
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
@@ -454,24 +452,6 @@ internal class GroupMembershipRepositoryImpl(
                         leaveRequirement is GroupLeaveRequirementDto.PromoteAdminFirst,
                     activeMemberCount = currentMembers.size + 1
                 )
-            )
-        }
-
-    override fun observeConversationMembership(groupId: String): Flow<GroupConversationMembershipSnapshot> =
-        combine(
-            securityStore.observeCurrentMemberKeys(groupId),
-            membershipStore.observeByGroupId(groupId)
-        ) { currentMemberKeys, memberships ->
-            GroupConversationMembershipSnapshot(
-                participantContactIds = currentMemberKeys.map { it.contactId },
-                memberships = memberships.map { membership ->
-                    GroupMemberLifecycleSnapshot(
-                        contactId = membership.contactId,
-                        sourceInvitationId = membership.sourceInvitationId,
-                        status = membership.status,
-                        createdAtEpochMilliseconds = membership.createdAtEpochMilliseconds
-                    )
-                }
             )
         }
 

@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
@@ -258,10 +257,6 @@ internal object UnusedGroupMembership : GroupMembershipRepository {
     ): Result<Boolean> = error(NOT_USED)
 
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> = error(NOT_USED)
-
-    override fun observeConversationMembership(
-        groupId: String
-    ): Flow<GroupConversationMembershipSnapshot> = error(NOT_USED)
 
     override fun observeVerificationSnapshot(
         groupId: String

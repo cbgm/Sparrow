@@ -7,17 +7,13 @@ import com.cbgm.sparrow.feature.linkpreview.domain.repository.LinkPreviewReposit
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.GetLinkPreviewUseCase
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.PrefetchLinkPreviewsUseCase
 import com.cbgm.sparrow.feature.linkpreview.presentation.LinkPreviewViewModel
-import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val linkPreviewModule =
     module {
         single {
-            RemoteLinkPreviewDataSource(
-                httpClient = get(),
-                transportDiagnosticsSource = get<TransportDiagnosticsRepository>()
-            )
+            RemoteLinkPreviewDataSource(httpClient = get())
         }
 
         single {
@@ -35,13 +31,11 @@ val linkPreviewModule =
         }
 
         factory {
-            GetLinkPreviewUseCase(repository = get())
+            GetLinkPreviewUseCase(repository = get(), getCurrentNodeBaseUrl = get())
         }
 
         factory {
-            PrefetchLinkPreviewsUseCase(
-                repository = get()
-            )
+            PrefetchLinkPreviewsUseCase(repository = get(), getCurrentNodeBaseUrl = get())
         }
 
         viewModel { parameters ->

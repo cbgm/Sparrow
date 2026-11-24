@@ -7,6 +7,7 @@
 Key types include:
 
 - `IdentityRepository` / `IdentityRepositoryImpl`
+- `LocalIdentityKeyDataSource`: the device's keys for every other module (`LocalPublicIdentitySource`, `LocalSigningKeyPairSource`, `LocalEncryptionKeyPairSource`, `LocalSigningPublicKeySource`)
 - `PublicIdentity`
 - `CreateIdentityUseCase`
 - `IdentityLocalEncryptionKeyPairProvider`

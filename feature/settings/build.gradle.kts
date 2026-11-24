@@ -28,6 +28,7 @@ kotlin {
             implementation(projects.feature.search)
             implementation(projects.feature.safety)
             implementation(projects.feature.transport)
+            implementation(projects.protocol)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

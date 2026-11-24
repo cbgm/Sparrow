@@ -1,10 +1,7 @@
-package com.cbgm.sparrow.feature.transport.domain.repository
-
-import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
-import com.cbgm.sparrow.feature.transport.domain.model.StoredBlob
+package com.cbgm.sparrow.protocol.attachment
 
 /** Sends, fetches and deletes encrypted blobs at their nodes, in chunks, each transfer through a circuit of its own. */
-interface BlobRepository {
+interface BlobTransferSource {
     suspend fun upload(blob: BlobUpload): StoredBlob
 
     /** The [ciphertextByteSize] bytes of blob [blobId] at [nodeId]. */

@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
+import com.cbgm.sparrow.feature.settings.data.mapper.toDirectIdentitySetupMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -33,12 +34,5 @@ class DirectIdentitySetupModeRepositoryImpl(
             this.mode.value = mode
         }
 
-    private suspend fun loadMode(): DirectIdentitySetupMode =
-        settingsDataSource
-            .getDirectIdentitySetupMode()
-            ?.let { storedValue ->
-                DirectIdentitySetupMode.entries.firstOrNull { candidate ->
-                    candidate.name == storedValue
-                }
-            } ?: DirectIdentitySetupMode.AUTOMATIC_INVITATION
+    private suspend fun loadMode(): DirectIdentitySetupMode = settingsDataSource.getDirectIdentitySetupMode().toDirectIdentitySetupMode()
 }

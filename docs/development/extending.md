@@ -24,7 +24,7 @@ flowchart LR
     DS --> IO[Room / Ktor / platform]
 ```
 
-Use cases must not call other use cases. If a workflow spans repository boundaries, use the correct higher-level coordinator/caller rather than creating repository-to-repository or use-case-to-use-case dependencies.
+Use cases may call other use cases. Repositories never call other repositories, and datasources never call repositories: when data of another module is needed, its datasource implements a `…Source` contract in `:protocol`, or a use case fetches the value and hands it to the repository.
 
 ## Add a data/domain/presentation model
 

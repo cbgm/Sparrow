@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.transport.data.blob
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.CHUNK_BYTES
-import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.MAXIMUM_ATTEMPTS
+import com.cbgm.sparrow.feature.transport.data.blob.HttpBlobRemoteDataSource.Companion.CHUNK_BYTES
+import com.cbgm.sparrow.feature.transport.data.blob.HttpBlobRemoteDataSource.Companion.MAXIMUM_ATTEMPTS
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkDto
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
@@ -13,11 +13,11 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRespons
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRoute
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransfers
 import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
-import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
-import com.cbgm.sparrow.feature.transport.domain.model.StoredBlob
-import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
+import com.cbgm.sparrow.protocol.attachment.BlobTransferSource
+import com.cbgm.sparrow.protocol.attachment.BlobUpload
+import com.cbgm.sparrow.protocol.attachment.StoredBlob
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -30,7 +30,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * A transfer that breaks off goes on with the chunks still missing, through a new circuit, up to [MAXIMUM_ATTEMPTS]
  * times. The last chunk is padded with random bytes to a size class, so a node sees only roughly how large a file is.
  */
-internal class BlobRepositoryImpl(
+internal class HttpBlobRemoteDataSource(
     private val transfers: FileTransfers,
     private val json: Json,
     private val creationWork: MailboxCreationWorkSolver,
@@ -39,8 +39,8 @@ internal class BlobRepositoryImpl(
     private val routingIdDataSource: RoutingIdLocalDataSource,
     private val randomBytes: suspend (Int) -> ByteArray,
     private val retryDelayMilliseconds: Long = DEFAULT_RETRY_DELAY_MILLISECONDS
-) : BlobRepository {
-    private val logger = SparrowLog.withTag("BlobRepositoryImpl")
+) : BlobTransferSource {
+    private val logger = SparrowLog.withTag("HttpBlobRemoteDataSource")
 
     override suspend fun upload(blob: BlobUpload): StoredBlob {
         val padded = blob.ciphertext + randomBytes(paddedSize(blob.ciphertext.size.toLong()).toInt() - blob.ciphertext.size)

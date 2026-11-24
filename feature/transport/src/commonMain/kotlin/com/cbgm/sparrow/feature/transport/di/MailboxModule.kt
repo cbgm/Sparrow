@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.blob.HttpBlobRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
@@ -24,11 +24,11 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferCircuits
 import com.cbgm.sparrow.feature.transport.data.route.circuit.createMailboxHttpClient
 import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
-import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
+import com.cbgm.sparrow.protocol.attachment.BlobTransferSource
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
@@ -88,9 +88,9 @@ internal val mailboxModule =
 
         single<MailboxRepository> { MailboxRepositoryImpl(remoteDataSource = get<MailboxRemoteDataSource>()) }
 
-        single<BlobRepository> {
+        single<BlobTransferSource> {
             // Every file transfer gets a circuit of its own, so the blob node does not see the device's address.
-            BlobRepositoryImpl(
+            HttpBlobRemoteDataSource(
                 transfers =
                     FileTransferCircuits(
                         circuits = get<CircuitRunner>(),

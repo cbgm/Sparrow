@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.transport.domain.model
+package com.cbgm.sparrow.protocol.attachment
 
 /**
  * An encrypted blob to send: the app chooses its ID and capabilities, the node keeps only their hashes.

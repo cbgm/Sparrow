@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDat
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityVerificationDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityKeyDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentitySharingDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
@@ -290,21 +291,22 @@ val identityModule =
         single<RemoteProfilePictureMetadataProcessor> { get<RemoteProfilePictureDataSource>() }
         single<RemoteProfilePictureSource> { get<RemoteProfilePictureDataSource>() }
 
-        single {
+        single { LocalIdentityKeyDataSource(privateKeyStorage = get(), publicIdentityDataSource = get()) }
+
+        single<IdentityRepository> {
             IdentityRepositoryImpl(
                 identityKeyGenerator = get(),
                 signatureCrypto = get(),
                 transportCipher = get(),
                 privateKeyStorage = get(),
-                publicIdentityDataSource = get()
+                publicIdentityDataSource = get(),
+                keyDataSource = get<LocalIdentityKeyDataSource>()
             )
         }
-
-        single<IdentityRepository> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningKeyPairSource> { get<IdentityRepositoryImpl>() }
-        single<LocalPublicIdentitySource> { get<IdentityRepositoryImpl>() }
-        single<LocalEncryptionKeyPairSource> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningPublicKeySource> { get<IdentityRepositoryImpl>() }
+        single<LocalSigningKeyPairSource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalPublicIdentitySource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalEncryptionKeyPairSource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalSigningPublicKeySource> { get<LocalIdentityKeyDataSource>() }
 
         single {
             CreateIdentityUseCase(repository = get<IdentityRepository>())

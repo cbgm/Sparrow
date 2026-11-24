@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/transport` |
 | Build file | `feature/transport/build.gradle.kts` |
-| Kotlin files | 121 |
-| Production Kotlin files | 94 |
-| Test Kotlin files | 27 |
+| Kotlin files | 183 |
+| Production Kotlin files | 152 |
+| Test Kotlin files | 31 |
 | Resource files | 1 |
 | Direct dependencies | 4 |
 | Direct dependents | 12 |

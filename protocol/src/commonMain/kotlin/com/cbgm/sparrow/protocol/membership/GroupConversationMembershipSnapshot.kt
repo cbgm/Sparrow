@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.membership.domain.model
+package com.cbgm.sparrow.protocol.membership
 
 /** Read-only Membership state for conversation rendering, never database entities. */
 data class GroupConversationMembershipSnapshot(

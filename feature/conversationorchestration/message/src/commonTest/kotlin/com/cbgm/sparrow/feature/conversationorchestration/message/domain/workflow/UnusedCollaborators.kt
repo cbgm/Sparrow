@@ -21,7 +21,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
@@ -172,8 +171,6 @@ internal object UnusedAttachments : MessageAttachmentOperationsRepository {
     override suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray> = error(NOT_USED)
 
     override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> = error(NOT_USED)
-
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> = error(NOT_USED)
 
     override fun observeExpenses(conversationId: String): Flow<List<Expense>> = error(NOT_USED)
 
@@ -469,10 +466,6 @@ internal object UnusedGroupMembership : GroupMembershipRepository {
     ): Result<Boolean> = error(NOT_USED)
 
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> = error(NOT_USED)
-
-    override fun observeConversationMembership(
-        groupId: String
-    ): Flow<GroupConversationMembershipSnapshot> = error(NOT_USED)
 
     override fun observeVerificationSnapshot(
         groupId: String

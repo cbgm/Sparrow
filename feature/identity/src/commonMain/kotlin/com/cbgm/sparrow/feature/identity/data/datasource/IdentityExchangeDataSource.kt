@@ -11,7 +11,6 @@ import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
 import com.cbgm.sparrow.feature.identity.domain.error.InvitationExpiredException
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosure
@@ -24,8 +23,8 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.protocol.identity.DirectIdentitySetupModeSource
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
@@ -58,7 +57,7 @@ internal class IdentityExchangeDataSource(
     private val invitationDeclineProtocol: ContactInvitationDeclineProtocol,
     private val protocolOutbox: ProtocolOutbox,
     private val localProfilePictureMetadataSource: LocalProfilePictureMetadataSource,
-    private val identitySetupModeRepository: DirectIdentitySetupModeRepository
+    private val identitySetupModeSource: DirectIdentitySetupModeSource
 ) {
     private val logger = SparrowLog.withTag("IdentityExchangeDataSource")
 
@@ -67,9 +66,7 @@ internal class IdentityExchangeDataSource(
     // Invitation challenge/response authenticates chat acceptance in both modes.
     // It is not a manual identity import or acknowledgement: only the explicit
     // IdentityPacket/IdentityAcknowledgementPacket flow may establish manual keys.
-    private suspend fun sharesIdentityAutomatically(): Boolean =
-        identitySetupModeRepository.getMode().getOrThrow() ==
-            DirectIdentitySetupMode.AUTOMATIC_INVITATION
+    private suspend fun sharesIdentityAutomatically(): Boolean = identitySetupModeSource.sharesIdentityAutomatically()
 
     suspend fun start(contactId: String, invitationSenderLabel: String): Result<IdentityExchange?> =
         safeSuspendCall {

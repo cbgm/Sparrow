@@ -48,9 +48,10 @@ Do not create generic interfaces/handlers simply to make the code look architect
 ## Dependency direction
 
 - ViewModels call use cases.
-- Use cases call repository contracts, never other use cases.
-- Repository implementations do not call other repositories or use cases.
+- Use cases call repository contracts and may call other use cases.
+- Repository implementations do not call other repositories or use cases, not even of their own feature.
 - Datasources do not call repositories.
+- Data another module needs goes through a datasource contract in `:protocol` (`…Source`), implemented by a datasource of the owning module, never by a repository.
 - Platform code stays in platform source sets.
 
 ## Direct vs Group

@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipProjector
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 
 enum class GroupMembershipEvent {
     JOIN_REQUESTED,

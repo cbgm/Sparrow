@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.di
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.SodiumGroupCrypto
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupConversationMembershipDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupIncomingActivationDataSource
@@ -79,6 +80,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUs
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.VerifyGroupKeyConfirmationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
+import com.cbgm.sparrow.protocol.membership.GroupConversationMembershipSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -96,6 +98,7 @@ val membershipModule =
             )
         }
         singleOf(::GroupMembershipStoreDataSource)
+        singleOf(::GroupConversationMembershipDataSource) { bind<GroupConversationMembershipSource>() }
         singleOf(::GroupIncomingWelcomeDataSource)
         singleOf(::GroupReadyAcknowledgementDataSource)
         singleOf(::GroupIncomingDeletionDataSource)

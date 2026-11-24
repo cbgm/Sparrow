@@ -9,10 +9,10 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRespons
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRoute
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransfers
 import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
-import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.rule.isFileTransferFailure
+import com.cbgm.sparrow.protocol.attachment.BlobUpload
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -25,10 +25,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class BlobRepositoryImplTest {
+class HttpBlobRemoteDataSourceTest {
     private val hash = Sha256CryptoHash()
     private val node = FakeBlobNode()
-    private val ciphertext = Random(7).nextBytes(BlobRepositoryImpl.CHUNK_BYTES * 2 + 5_000)
+    private val ciphertext = Random(7).nextBytes(HttpBlobRemoteDataSource.CHUNK_BYTES * 2 + 5_000)
 
     @Test
     fun aBlobGoesInChunksToTheSessionNodeAndComesBackWhole() =
@@ -48,7 +48,7 @@ class BlobRepositoryImplTest {
         runTest {
             gateway().upload(upload())
 
-            assertEquals(2L * BlobRepositoryImpl.CHUNK_BYTES + 16L * 1_024L, node.openedByteSize)
+            assertEquals(2L * HttpBlobRemoteDataSource.CHUNK_BYTES + 16L * 1_024L, node.openedByteSize)
             assertEquals(16 * 1_024, node.chunks.getValue(2).size)
         }
 
@@ -78,14 +78,14 @@ class BlobRepositoryImplTest {
 
     @Test
     fun paddingStaysWithinAChunk() {
-        assertEquals(1_024L, BlobRepositoryImpl.paddedSize(10))
-        assertEquals(BlobRepositoryImpl.CHUNK_BYTES.toLong(), BlobRepositoryImpl.paddedSize(BlobRepositoryImpl.CHUNK_BYTES.toLong()))
-        assertEquals(BlobRepositoryImpl.CHUNK_BYTES + 1_024L, BlobRepositoryImpl.paddedSize(BlobRepositoryImpl.CHUNK_BYTES + 1L))
-        assertTrue(BlobRepositoryImpl.paddedSize(300_000) % (64 * 1_024) == 0L)
+        assertEquals(1_024L, HttpBlobRemoteDataSource.paddedSize(10))
+        assertEquals(HttpBlobRemoteDataSource.CHUNK_BYTES.toLong(), HttpBlobRemoteDataSource.paddedSize(HttpBlobRemoteDataSource.CHUNK_BYTES.toLong()))
+        assertEquals(HttpBlobRemoteDataSource.CHUNK_BYTES + 1_024L, HttpBlobRemoteDataSource.paddedSize(HttpBlobRemoteDataSource.CHUNK_BYTES + 1L))
+        assertTrue(HttpBlobRemoteDataSource.paddedSize(300_000) % (64 * 1_024) == 0L)
     }
 
     private fun gateway(transfers: FileTransfers = CountingTransfers(node)) =
-        BlobRepositoryImpl(
+        HttpBlobRemoteDataSource(
             transfers = transfers,
             json = Json,
             creationWork = MailboxCreationWorkSolver(hash, bits = 0),
@@ -146,7 +146,7 @@ class BlobRepositoryImplTest {
             return when {
                 request.method == "POST" && path == "/v1/blobs" -> {
                     openedByteSize = Json.parseToJsonElement(request.body.decodeToString()).jsonObject.getValue("byteSize").jsonPrimitive.long
-                    respond("""{"nodeId":"node-a","chunkBytes":${BlobRepositoryImpl.CHUNK_BYTES},"expiresAtEpochMilliseconds":1000000}""")
+                    respond("""{"nodeId":"node-a","chunkBytes":${HttpBlobRemoteDataSource.CHUNK_BYTES},"expiresAtEpochMilliseconds":1000000}""")
                 }
                 request.method == "GET" && path.endsWith("/chunks") -> respond("""{"stored":[${chunks.keys.sorted().joinToString(",")}]}""")
                 request.method == "PUT" && chunkIndex != null -> put(chunkIndex, request.body)

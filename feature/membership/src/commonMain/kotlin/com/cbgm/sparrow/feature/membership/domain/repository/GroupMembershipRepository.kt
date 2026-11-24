@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.membership.domain.repository
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
@@ -170,9 +169,6 @@ interface GroupMembershipRepository {
     ): Result<Boolean>
 
     fun observeAdministration(groupId: String): Flow<GroupAdministrationState>
-
-    /** Membership-owned persistence snapshot; Chats may observe without reading foreign DAOs. */
-    fun observeConversationMembership(groupId: String): Flow<GroupConversationMembershipSnapshot>
 
     fun observeVerificationSnapshot(groupId: String): Flow<MembershipVerificationSnapshot>
 

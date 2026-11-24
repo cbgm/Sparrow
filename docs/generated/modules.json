@@ -8,7 +8,7 @@
     "kotlinSourceFileCount": 2,
     "productionKotlinFileCount": 2,
     "testKotlinFileCount": 0,
-    "resourceFileCount": 11,
+    "resourceFileCount": 12,
     "sourceSets": [
       "main"
     ],
@@ -110,9 +110,9 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 51,
-    "productionKotlinFileCount": 50,
-    "testKotlinFileCount": 1,
+    "kotlinSourceFileCount": 70,
+    "productionKotlinFileCount": 68,
+    "testKotlinFileCount": 2,
     "resourceFileCount": 0,
     "sourceSets": [
       "androidMain",
@@ -121,6 +121,7 @@
       "iosMain"
     ],
     "dependencies": [
+      ":core:util",
       ":resources"
     ],
     "dependents": [
@@ -154,8 +155,8 @@
     "group": "core",
     "directory": "core/util",
     "buildFile": "core/util/build.gradle.kts",
-    "kotlinSourceFileCount": 31,
-    "productionKotlinFileCount": 29,
+    "kotlinSourceFileCount": 34,
+    "productionKotlinFileCount": 32,
     "testKotlinFileCount": 2,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -167,6 +168,7 @@
     "dependencies": [
     ],
     "dependents": [
+      ":core:ui",
       ":data:database",
       ":feature:applock",
       ":feature:attachments",
@@ -236,7 +238,8 @@
     "sourceSets": [
       "androidDeviceTest",
       "androidMain",
-      "commonMain"
+      "commonMain",
+      "commonTest"
     ],
     "dependencies": [
       ":core:util",
@@ -411,8 +414,8 @@
     "group": "feature",
     "directory": "feature/avatar",
     "buildFile": "feature/avatar/build.gradle.kts",
-    "kotlinSourceFileCount": 36,
-    "productionKotlinFileCount": 36,
+    "kotlinSourceFileCount": 37,
+    "productionKotlinFileCount": 37,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -432,6 +435,7 @@
       ":feature:expenses",
       ":feature:identity",
       ":feature:invite",
+      ":feature:onboarding",
       ":feature:polls",
       ":feature:settings",
       ":shared"
@@ -443,8 +447,8 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 228,
-    "productionKotlinFileCount": 216,
+    "kotlinSourceFileCount": 229,
+    "productionKotlinFileCount": 217,
     "testKotlinFileCount": 12,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -519,8 +523,8 @@
     "group": "feature",
     "directory": "feature/contacts",
     "buildFile": "feature/contacts/build.gradle.kts",
-    "kotlinSourceFileCount": 125,
-    "productionKotlinFileCount": 122,
+    "kotlinSourceFileCount": 121,
+    "productionKotlinFileCount": 118,
     "testKotlinFileCount": 3,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -599,9 +603,9 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/delivery",
     "buildFile": "feature/conversationorchestration/delivery/build.gradle.kts",
-    "kotlinSourceFileCount": 50,
-    "productionKotlinFileCount": 41,
-    "testKotlinFileCount": 9,
+    "kotlinSourceFileCount": 54,
+    "productionKotlinFileCount": 44,
+    "testKotlinFileCount": 10,
     "resourceFileCount": 0,
     "sourceSets": [
       "commonMain",
@@ -631,8 +635,8 @@
     "group": "feature",
     "directory": "feature/conversationorchestration/engine",
     "buildFile": "feature/conversationorchestration/engine/build.gradle.kts",
-    "kotlinSourceFileCount": 16,
-    "productionKotlinFileCount": 14,
+    "kotlinSourceFileCount": 15,
+    "productionKotlinFileCount": 13,
     "testKotlinFileCount": 2,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -827,7 +831,8 @@
     "sourceSets": [
       "androidHostTest",
       "androidMain",
-      "commonMain"
+      "commonMain",
+      "commonTest"
     ],
     "dependencies": [
       ":core:util",
@@ -852,8 +857,10 @@
     "testKotlinFileCount": 13,
     "resourceFileCount": 0,
     "sourceSets": [
+      "androidMain",
       "commonMain",
-      "commonTest"
+      "commonTest",
+      "iosMain"
     ],
     "dependencies": [
       ":core:base",
@@ -877,8 +884,8 @@
     "group": "feature",
     "directory": "feature/identity",
     "buildFile": "feature/identity/build.gradle.kts",
-    "kotlinSourceFileCount": 233,
-    "productionKotlinFileCount": 219,
+    "kotlinSourceFileCount": 235,
+    "productionKotlinFileCount": 221,
     "testKotlinFileCount": 14,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -926,7 +933,8 @@
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
-      "commonMain"
+      "commonMain",
+      "commonTest"
     ],
     "dependencies": [
       ":core:ui",
@@ -978,8 +986,8 @@
     "group": "feature",
     "directory": "feature/media",
     "buildFile": "feature/media/build.gradle.kts",
-    "kotlinSourceFileCount": 104,
-    "productionKotlinFileCount": 99,
+    "kotlinSourceFileCount": 105,
+    "productionKotlinFileCount": 100,
     "testKotlinFileCount": 5,
     "resourceFileCount": 2,
     "sourceSets": [
@@ -1128,19 +1136,23 @@
     "group": "feature",
     "directory": "feature/onboarding",
     "buildFile": "feature/onboarding/build.gradle.kts",
-    "kotlinSourceFileCount": 18,
-    "productionKotlinFileCount": 18,
-    "testKotlinFileCount": 0,
+    "kotlinSourceFileCount": 39,
+    "productionKotlinFileCount": 38,
+    "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
+      "androidHostTest",
       "androidMain",
       "commonMain",
+      "commonTest",
       "iosMain"
     ],
     "dependencies": [
       ":core:ui",
       ":core:util",
+      ":feature:avatar",
       ":feature:identity",
+      ":feature:settings",
       ":feature:transport"
     ],
     "dependents": [
@@ -1161,6 +1173,7 @@
     "resourceFileCount": 2,
     "sourceSets": [
       "androidDeviceTest",
+      "androidHostTest",
       "androidMain",
       "commonMain",
       "commonTest",
@@ -1189,7 +1202,8 @@
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [
-      "commonMain"
+      "commonMain",
+      "commonTest"
     ],
     "dependencies": [
       ":core:ui",
@@ -1268,8 +1282,8 @@
     "group": "feature",
     "directory": "feature/settings",
     "buildFile": "feature/settings/build.gradle.kts",
-    "kotlinSourceFileCount": 102,
-    "productionKotlinFileCount": 101,
+    "kotlinSourceFileCount": 110,
+    "productionKotlinFileCount": 109,
     "testKotlinFileCount": 1,
     "resourceFileCount": 2,
     "sourceSets": [
@@ -1290,9 +1304,11 @@
       ":feature:safety",
       ":feature:search",
       ":feature:transport",
-      ":feature:voice"
+      ":feature:voice",
+      ":protocol"
     ],
     "dependents": [
+      ":feature:onboarding",
       ":navigation",
       ":shared"
     ]
@@ -1303,9 +1319,9 @@
     "group": "feature",
     "directory": "feature/transport",
     "buildFile": "feature/transport/build.gradle.kts",
-    "kotlinSourceFileCount": 121,
-    "productionKotlinFileCount": 94,
-    "testKotlinFileCount": 27,
+    "kotlinSourceFileCount": 183,
+    "productionKotlinFileCount": 152,
+    "testKotlinFileCount": 31,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
@@ -1412,8 +1428,8 @@
     "group": "protocol",
     "directory": "protocol",
     "buildFile": "protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 99,
-    "productionKotlinFileCount": 78,
+    "kotlinSourceFileCount": 106,
+    "productionKotlinFileCount": 85,
     "testKotlinFileCount": 21,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -1443,6 +1459,7 @@
       ":feature:messaging",
       ":feature:notification",
       ":feature:polls",
+      ":feature:settings",
       ":feature:transport",
       ":feature:voice",
       ":shared"
@@ -1492,7 +1509,7 @@
     "kotlinSourceFileCount": 0,
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
-    "resourceFileCount": 22,
+    "resourceFileCount": 56,
     "sourceSets": [
       "androidMain",
       "commonMain"
@@ -1761,9 +1778,9 @@
     "group": "server",
     "directory": "server/security",
     "buildFile": "server/security/build.gradle.kts",
-    "kotlinSourceFileCount": 20,
+    "kotlinSourceFileCount": 21,
     "productionKotlinFileCount": 16,
-    "testKotlinFileCount": 4,
+    "testKotlinFileCount": 5,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -1787,8 +1804,8 @@
     "group": "shared",
     "directory": "shared",
     "buildFile": "shared/build.gradle.kts",
-    "kotlinSourceFileCount": 41,
-    "productionKotlinFileCount": 41,
+    "kotlinSourceFileCount": 42,
+    "productionKotlinFileCount": 42,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
     "sourceSets": [

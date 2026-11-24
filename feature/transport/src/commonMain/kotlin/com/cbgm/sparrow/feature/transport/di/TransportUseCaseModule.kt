@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUs
 import com.cbgm.sparrow.feature.transport.domain.usecase.ClearControlPlaneListCacheUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ClearControlPlaneListUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ForgetControlPlaneDirectoryTrustUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.GetCurrentNodeBaseUrlUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ImportControlPlaneListUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
@@ -79,6 +80,7 @@ internal val transportUseCaseModule =
         singleOf(::RunCircuitsUseCase)
         singleOf(::ObserveTransportDiagnosticsUseCase)
         singleOf(::RefreshTransportDiagnosticsUseCase)
+        singleOf(::GetCurrentNodeBaseUrlUseCase)
         singleOf(::RefreshControlPlaneHealthUseCase)
         singleOf(::AddManualControlPlaneUseCase)
         singleOf(::RemoveManualControlPlaneUseCase)

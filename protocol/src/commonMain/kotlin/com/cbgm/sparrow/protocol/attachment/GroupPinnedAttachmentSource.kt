@@ -1,8 +1,9 @@
 package com.cbgm.sparrow.protocol.attachment
 
 interface GroupPinnedAttachmentSource {
-    suspend fun load(
+    /** Whether [attachmentId] belongs to the message pinned in group [groupId], so its bytes may be loaded for it. */
+    suspend fun isPinned(
         groupId: String,
         attachmentId: String
-    ): ByteArray
+    ): Boolean
 }

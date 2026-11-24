@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 
 internal data class GroupLocalMembershipTimelineDto(
     val visibleMessages: List<MessageEntity>,

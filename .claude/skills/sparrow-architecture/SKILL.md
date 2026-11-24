@@ -48,11 +48,13 @@ di                   Koin modules
 
 - **Domain** imports no Compose, Room, Ktor, serialization annotations or platform APIs. Wire formats are `…Dto` in
   `data`, mapped to domain models.
-- **Use cases** do one thing (`operator fun invoke`), never call other use cases, and return `Result` through
+- **Use cases** do one thing (`operator fun invoke`), may call other use cases, and return `Result` through
   `safeSuspendCall` / `safeCall`; only observing use cases return a `Flow`. Use cases hold no state of their own.
 - **Repositories** return `Result` (or `Flow`), own their datasources and mappers, and never call other repositories
-  or use cases.
+  (not even of their own feature) or use cases. Two repositories that need the same data share a datasource.
 - **Datasources** only talk to storage, network or the platform; they never call repositories.
+- **Data of another module** comes through a datasource contract in `:protocol` (`…Source`), implemented by a datasource
+  of the owning module, never by a repository. Or a use case fetches the value and hands it to the repository.
 - **ViewModels** only use use cases: no repository, datasource, DAO or port directly.
 - Cross-feature sequences belong in a workflow, not in a repository or datasource.
 

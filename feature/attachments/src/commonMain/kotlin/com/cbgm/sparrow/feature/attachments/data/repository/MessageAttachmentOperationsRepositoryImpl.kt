@@ -165,14 +165,6 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> =
         safeSuspendCall { dataSource.deleteForMessages(messageIds) }
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-        dataSource.observeByMessageIds(messageIds)
-            .map { partsByMessageId ->
-                partsByMessageId.mapValues { (_, parts) ->
-                    parts.map { part -> part.toMessagePart() }
-                }
-            }
-
     override fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
         dataSource.observeExpenseState(conversationId).map { parts -> parts.map { it.toMessagePart() } }
 

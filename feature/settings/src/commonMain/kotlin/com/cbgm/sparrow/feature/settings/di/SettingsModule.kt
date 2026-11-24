@@ -43,6 +43,7 @@ import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettin
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.CircuitHopsViewModel
 import com.cbgm.sparrow.feature.settings.presentation.network.node.PreferredNodeViewModel
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsViewModel
+import com.cbgm.sparrow.protocol.identity.DirectIdentitySetupModeSource
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -51,6 +52,8 @@ val settingsModule =
         single<SettingsLocalDataSource> {
             DataStoreSettingsLocalDataSource(dataStore = get())
         }
+
+        single<DirectIdentitySetupModeSource> { get<SettingsLocalDataSource>() }
 
         single(createdAtStart = true) {
             DeveloperErrorLogStorageDataSource(dataStore = get()).also(SparrowLog::installErrorSink)

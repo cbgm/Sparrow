@@ -22,13 +22,14 @@ internal class ExchangeRateRepositoryImpl(
     override fun observeRates(): Flow<ExchangeRates?> =
         localDataSource.observe().map { cached -> cached?.toExchangeRates() }
 
-    override suspend fun refreshIfStale(): Result<Unit> =
+    override suspend fun refreshIfStale(nodeBaseUrl: String?): Result<Unit> =
         safeSuspendCall {
             refreshMutex.withLock {
                 val now = SystemClock.nowEpochMilliseconds()
                 val cachedAt = localDataSource.get()?.fetchedAtEpochMilliseconds
                 if (cachedAt != null && now - cachedAt < MAX_AGE_MILLISECONDS) return@withLock
-                localDataSource.save(remoteDataSource.fetchEuroRates().toExchangeRatesCacheDto(now))
+                val rates = remoteDataSource.fetchEuroRates(checkNotNull(nodeBaseUrl) { "No connected node is available" })
+                localDataSource.save(rates.toExchangeRatesCacheDto(now))
             }
         }
 

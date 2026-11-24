@@ -8,10 +8,10 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 63 |
 | Module groups | 11 |
-| Project dependencies | 327 |
-| Kotlin files | 2690 |
-| Test Kotlin files | 225 |
-| Resource files | 59 |
+| Project dependencies | 331 |
+| Kotlin files | 2816 |
+| Test Kotlin files | 233 |
+| Resource files | 94 |
 
 ## Module groups
 
@@ -213,6 +213,7 @@ graph TD
     end
 
     module_androidApp --> module_shared
+    module_core_ui --> module_core_util
     module_core_ui --> module_resources
     module_data_database --> module_core_util
     module_data_database --> module_protocol
@@ -394,7 +395,9 @@ graph TD
     module_feature_ocr --> module_core_util
     module_feature_onboarding --> module_core_ui
     module_feature_onboarding --> module_core_util
+    module_feature_onboarding --> module_feature_avatar
     module_feature_onboarding --> module_feature_identity
+    module_feature_onboarding --> module_feature_settings
     module_feature_onboarding --> module_feature_transport
     module_feature_payment --> module_core_base
     module_feature_payment --> module_core_ui
@@ -428,6 +431,7 @@ graph TD
     module_feature_settings --> module_feature_search
     module_feature_settings --> module_feature_transport
     module_feature_settings --> module_feature_voice
+    module_feature_settings --> module_protocol
     module_feature_transport --> module_core_crypto
     module_feature_transport --> module_core_util
     module_feature_transport --> module_data_datastore
