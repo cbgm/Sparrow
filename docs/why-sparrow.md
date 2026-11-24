@@ -39,7 +39,7 @@ flowchart LR
 
 The exact Sparrow pieces are implemented by classes such as:
 
-- `ControlPlaneDirectoryRepositoryImpl` — loads the external Control Plane directory;
+- `ControlPlaneDirectorySynchronizer` — loads the external Control Plane directory;
 - `SignedDirectoryControlPlaneCandidateVerifier` — verifies Control Plane candidates;
 - `HttpNodeDirectoryRemoteDataSource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
 - `HomeNodeConnection` — selects the home node and fails over between nodes;

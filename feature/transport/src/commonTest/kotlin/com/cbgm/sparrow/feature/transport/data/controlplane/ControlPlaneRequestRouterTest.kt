@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatu
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -18,7 +17,7 @@ class ControlPlaneRequestRouterTest {
     fun failedPrimaryFallsBackAndUpdatesHealth() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
 
             val result =
                 router.execute { endpoint ->
@@ -45,7 +44,7 @@ class ControlPlaneRequestRouterTest {
     fun executeAllVisitsEveryEndpointAndSucceedsWhenOneIsAvailable() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
 
             val result =
@@ -76,7 +75,7 @@ class ControlPlaneRequestRouterTest {
     fun executeAllFailsWhenNoEndpointCanCompleteTheRequest() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
 
             val result = router.executeAll { endpoint ->
@@ -101,7 +100,7 @@ class ControlPlaneRequestRouterTest {
         runTest {
             val configuration = FakeControlPlaneConfiguration()
             configuration.markUnreachable(ControlPlaneEndpoint("https://primary"))
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
 
             val result =
@@ -118,7 +117,7 @@ class ControlPlaneRequestRouterTest {
         runTest {
             val configuration = FakeControlPlaneConfiguration()
             configuration.endpoints.value.forEach(configuration::markUnreachable)
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
 
             val result = router.executeAll { error("Must not attempt an unreachable endpoint") }
 
@@ -129,7 +128,7 @@ class ControlPlaneRequestRouterTest {
     fun executeAllPreservesServerRejectionInsteadOfCallingItOffline() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
 
             val result = router.executeAll {
                 throw ControlPlaneRequestRejectedException("Push registration rejected")
@@ -148,7 +147,7 @@ class ControlPlaneRequestRouterTest {
     fun firstAvailableStopsAfterFirstSuccessfulRegistration() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
 
             val result = router.executeFirstAvailable { endpoint ->
@@ -166,7 +165,7 @@ class ControlPlaneRequestRouterTest {
         runTest {
             val configuration = FakeControlPlaneConfiguration()
             configuration.markUnreachable(ControlPlaneEndpoint("https://secondary"))
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
 
             val result = router.executeFirstAvailable { endpoint ->
@@ -188,7 +187,7 @@ class ControlPlaneRequestRouterTest {
     fun firstAvailableMarksServerRejectionAvailableAndAttemptsFallback() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
 
             val result = router.executeFirstAvailable { endpoint ->
                 if (endpoint.baseUrl == "https://primary") {
@@ -209,7 +208,7 @@ class ControlPlaneRequestRouterTest {
     fun firstAvailableReturnsRetryableFailureWhenAllEndpointsAreOffline() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
             val visited = mutableListOf<String>()
             val result = router.executeFirstAvailable { endpoint ->
                 visited += endpoint.baseUrl
@@ -224,7 +223,7 @@ class ControlPlaneRequestRouterTest {
     fun firstAvailableDoesNotTurnAnExplicitRejectionIntoOffline() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
-            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val router = ControlPlaneRequestRouter(configuration)
 
             val result = router.executeFirstAvailable { endpoint ->
                 if (endpoint.baseUrl == "https://primary") {
@@ -240,9 +239,7 @@ class ControlPlaneRequestRouterTest {
             )
         }
 
-    private class FakeControlPlaneConfiguration :
-        ControlPlaneEndpointStore,
-        ControlPlaneStatusRepository {
+    private class FakeControlPlaneConfiguration : ControlPlaneLocalDataSource {
         override val endpoints =
             MutableStateFlow(
                 listOf(
@@ -288,8 +285,6 @@ class ControlPlaneRequestRouterTest {
         override fun markUnreachable(endpoint: ControlPlaneEndpoint) {
             update(endpoint, ControlPlaneReachability.UNREACHABLE)
         }
-
-        override suspend fun refreshHealth() = Unit
 
         fun statusFor(url: String): ControlPlaneEndpointStatus =
             statuses.value.first { it.endpoint.baseUrl == url }

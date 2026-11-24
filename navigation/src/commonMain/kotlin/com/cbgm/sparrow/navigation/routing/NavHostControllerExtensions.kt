@@ -18,39 +18,28 @@ fun NavHostController.bind(navigator: AppNavigator) {
     LaunchedEffect(navigator.navigationEvents, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             navigator.navigationEvents.collect { event ->
-                when (event) {
-                    is AppNavigationEvent.NavigateTo -> {
-                        val currentEntry = currentBackStackEntry
+                // Ignore navigation requests while the current entry is transitioning.
+                if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) handle(event)
+            }
+        }
+    }
+}
 
-                        // Ignore navigation requests while the current entry is transitioning.
-                        if (currentEntry?.lifecycle?.currentState != Lifecycle.State.RESUMED) {
-                            return@collect
-                        }
+private fun NavHostController.handle(event: AppNavigationEvent) {
+    when (event) {
+        is AppNavigationEvent.NavigateTo ->
+            navigate(event.route) {
+                launchSingleTop = true
 
-                        navigate(event.route) {
-                            launchSingleTop = true
-
-                            event.popUpTo?.let { route ->
-                                popUpTo(route) {
-                                    inclusive = event.inclusive
-                                }
-                            }
-                        }
-                    }
-
-                    AppNavigationEvent.PopBackStack -> {
-                        if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                            popBackStack()
-                        }
-                    }
-
-                    is AppNavigationEvent.PopBackStackTo -> {
-                        if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                            popBackStack(event.route, event.inclusive)
-                        }
+                event.popUpTo?.let { route ->
+                    popUpTo(route) {
+                        inclusive = event.inclusive
                     }
                 }
             }
-        }
+
+        AppNavigationEvent.PopBackStack -> popBackStack()
+
+        is AppNavigationEvent.PopBackStackTo -> popBackStack(event.route, event.inclusive)
     }
 }

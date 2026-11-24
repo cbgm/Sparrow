@@ -39,7 +39,7 @@ import com.cbgm.sparrow.feature.messaging.domain.port.MailboxPort
 import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.PersistentOutboxProcessor
-import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
+import com.cbgm.sparrow.feature.transport.domain.port.DirectSendingPort
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.protocol.mailbox.MailboxCapabilityLifecycle
@@ -116,7 +116,7 @@ private fun Module.registerOutbox() {
     single {
         DecoyEnvelopes(
             observeDecoyCount = get(),
-            hasProtectingCircuit = get<DirectSendingPolicy>()::hasProtectingCircuit,
+            hasProtectingCircuit = get<DirectSendingPort>()::hasProtectingCircuit,
             mailboxRouteRepository = get(),
             sealer = get(),
             mailboxRepository = get()

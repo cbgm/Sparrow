@@ -6,13 +6,12 @@ import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationLetterContent
 import com.cbgm.sparrow.feature.transport.domain.model.InvitationRouteMissingException
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -22,14 +21,14 @@ import kotlinx.serialization.json.Json
 /** [InvitationLetterRepository] signed with the device key and sealed with the transport cipher. */
 internal class InvitationLetterRepositoryImpl(
     private val routes: InvitationRouteRemoteDataSource,
-    private val mailboxRepository: MailboxRepository,
+    private val mailboxDataSource: MailboxRemoteDataSource,
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val encryptionKeyPairSource: LocalEncryptionKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val transportCipher: TransportMessageCipher,
     private val payloadCodec: TransportPayloadCodec,
     private val routingIdGenerator: RoutingIdGenerator,
-    private val routingIdRepository: RoutingIdRepository,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
     private val json: Json
 ) : InvitationLetterRepository {
     override suspend fun send(
@@ -47,7 +46,7 @@ internal class InvitationLetterRepositoryImpl(
             val letter = json.encodeToString(unsigned.signed(signature)).encodeToByteArray()
             val sealed = transportCipher.encryptForRecipient(letter, invitation.encryptionPublicKey).getOrThrow()
             val expiresAt = minOf(createdAtEpochMilliseconds + ENVELOPE_LIFETIME_MILLISECONDS, invitation.route.expiresAtEpochMilliseconds)
-            mailboxRepository
+            mailboxDataSource
                 .depositInvitation(
                     FederatedEnvelope(
                         envelopeId = envelopeId,
@@ -70,8 +69,8 @@ internal class InvitationLetterRepositoryImpl(
                 .getOrElse { throw InvalidInvitationLetterException("Invitation letter signature does not verify") }
             val ownRoutingIds =
                 listOfNotNull(
-                    routingIdRepository.getLocalRoutingId().getOrThrow(),
-                    routingIdRepository.getLocalBootstrapRoutingId().getOrNull()
+                    routingIdDataSource.getLocalRoutingId().getOrThrow(),
+                    routingIdDataSource.getLocalBootstrapRoutingId().getOrNull()
                 )
             if (letter.recipientRoutingId !in ownRoutingIds) throw InvalidInvitationLetterException("Invitation letter is for another device")
             val device = routingIdGenerator.deriveFromSigningPublicKey(letter.signingPublicKey).getOrThrow()

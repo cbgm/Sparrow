@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.transport.data.connection
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -16,14 +16,14 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 internal class AliasClaimSchedule(
     private val aliasClaims: AliasClaimRegistrar,
-    private val routingIdRepository: RoutingIdRepository
+    private val routingIdDataSource: RoutingIdLocalDataSource
 ) {
     private val logger = SparrowLog.withTag("AliasClaimSchedule")
 
     suspend fun run() {
         while (currentCoroutineContext().isActive) {
             val bound =
-                runCatching { aliasClaims.claim(routingIdRepository.getLocalRoutingId().getOrThrow()) }
+                runCatching { aliasClaims.claim(routingIdDataSource.getLocalRoutingId().getOrThrow()) }
                     .onFailure { failure ->
                         if (failure is CancellationException) throw failure
                         logger.warn { "Phone alias claim failed: ${failure::class.simpleName}" }

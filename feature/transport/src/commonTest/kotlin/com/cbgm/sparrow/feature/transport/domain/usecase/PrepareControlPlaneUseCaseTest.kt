@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.transport.domain.usecase
 
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +23,7 @@ class PrepareControlPlaneUseCaseTest {
             PrepareControlPlaneUseCase(configuration, directory)().getOrThrow()
 
             assertTrue(configuration.initialized)
-            assertEquals(listOf(DIRECTORY_PLANE), configuration.orderedEndpoints().map { it.baseUrl })
+            assertEquals(listOf(DIRECTORY_PLANE), configuration.endpoints.value.map { it.baseUrl })
             assertEquals(0, directory.refreshes)
         }
 
@@ -36,7 +36,7 @@ class PrepareControlPlaneUseCaseTest {
             PrepareControlPlaneUseCase(configuration, directory)().getOrThrow()
 
             assertEquals(1, directory.refreshes)
-            assertEquals(listOf(DIRECTORY_PLANE), configuration.orderedEndpoints().map { it.baseUrl })
+            assertEquals(listOf(DIRECTORY_PLANE), configuration.endpoints.value.map { it.baseUrl })
         }
 
     @Test
@@ -85,29 +85,24 @@ class PrepareControlPlaneUseCaseTest {
     /** Saved manual control planes appear only after initialize(), like the persisted configuration. */
     private class FakeConfiguration(
         private val saved: List<String> = emptyList()
-    ) : ControlPlaneEndpointStore {
+    ) : ControlPlaneConfigurationRepository {
         var initialized = false
         var manual = emptyList<String>()
         var directory = emptyList<String>()
 
         override val endpoints: StateFlow<List<ControlPlaneEndpoint>>
-            get() = MutableStateFlow(orderedEndpoints())
+            get() = MutableStateFlow((manual + directory).distinct().map(::ControlPlaneEndpoint))
         override val activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
         override val manualBaseUrls = MutableStateFlow(emptySet<String>())
         override val directoryBaseUrls = MutableStateFlow(emptySet<String>())
         override val directoryUrl = MutableStateFlow<String?>(null)
+        override val jsonDirectoryUrl = MutableStateFlow<String?>(null)
+        override val jsonDirectoryBaseUrls = MutableStateFlow(emptySet<String>())
 
         override suspend fun initialize() {
             initialized = true
             manual = saved
         }
-
-        override fun orderedEndpoints(): List<ControlPlaneEndpoint> =
-            (manual + directory).distinct().map(::ControlPlaneEndpoint)
-
-        override fun markActive(endpoint: ControlPlaneEndpoint) = Unit
-
-        override suspend fun replace(baseUrls: List<String>): Result<Unit> = error("Not used")
 
         override suspend fun addManual(baseUrl: String): Result<Unit> = error("Not used")
 
@@ -115,7 +110,11 @@ class PrepareControlPlaneUseCaseTest {
 
         override suspend fun setDirectoryUrl(url: String?): Result<Unit> = error("Not used")
 
-        override suspend fun replaceDirectory(baseUrls: List<String>): Result<Unit> = error("Not used")
+        override suspend fun useDefaultDirectoryUrlIfUnconfigured(url: String): Result<Unit> = error("Not used")
+
+        override suspend fun clearJsonDirectory(): Result<Unit> = error("Not used")
+
+        override suspend fun clearJsonDirectoryCache(): Result<Unit> = error("Not used")
     }
 
     private companion object {

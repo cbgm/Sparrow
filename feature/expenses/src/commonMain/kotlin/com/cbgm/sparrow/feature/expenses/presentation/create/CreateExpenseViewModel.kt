@@ -155,12 +155,16 @@ class CreateExpenseViewModel(
             CreateExpenseUiEvent.SplitDoneClicked -> _uiState.update { it.copy(isSplitOpen = false) }
             CreateExpenseUiEvent.AddAnotherClicked -> queueDraft()
             CreateExpenseUiEvent.SendClicked -> sendAll()
-            CreateExpenseUiEvent.BackClicked ->
-                if (state.isSplitOpen) {
-                    _uiState.update { it.copy(isSplitOpen = false) }
-                } else {
-                    navigator.popBackStack()
-                }
+            CreateExpenseUiEvent.BackClicked -> navigateBack(state)
+        }
+    }
+
+    /** Back closes the split first, then the screen. */
+    private fun navigateBack(state: CreateExpenseUiState) {
+        if (state.isSplitOpen) {
+            _uiState.update { it.copy(isSplitOpen = false) }
+        } else {
+            navigator.popBackStack()
         }
     }
 

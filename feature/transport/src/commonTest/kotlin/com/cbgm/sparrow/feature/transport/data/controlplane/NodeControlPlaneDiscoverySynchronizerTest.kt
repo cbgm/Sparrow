@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -96,7 +97,7 @@ class NodeControlPlaneDiscoverySynchronizerTest {
 
     private class FakeControlPlaneConfiguration(
         directoryUrls: Set<String> = emptySet()
-    ) : ControlPlaneEndpointStore {
+    ) : ControlPlaneLocalDataSource {
         override val endpoints = MutableStateFlow<List<ControlPlaneEndpoint>>(emptyList())
         override val activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
         override val manualBaseUrls = MutableStateFlow(emptySet<String>())
@@ -105,7 +106,13 @@ class NodeControlPlaneDiscoverySynchronizerTest {
 
         override fun orderedEndpoints(): List<ControlPlaneEndpoint> = endpoints.value
 
+        override val statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())
+
         override fun markActive(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markAvailable(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markUnreachable(endpoint: ControlPlaneEndpoint) = Unit
 
         override suspend fun replace(baseUrls: List<String>): Result<Unit> = Result.success(Unit)
 

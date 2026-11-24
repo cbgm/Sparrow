@@ -3,8 +3,8 @@ package com.cbgm.sparrow.feature.transport.data.connection
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.NodeControlPlaneDiscoverySynchronizer
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
 import kotlinx.coroutines.CancellationException
@@ -22,7 +22,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * in the background while connecting from the cached directory, and on a timer while connected.
  */
 internal class NodeDirectoryRefresh(
-    private val nodeEndpointResolver: NodeEndpointRepository,
+    private val nodeEndpointDataSource: NodeEndpointRemoteDataSource,
     private val controlPlaneDiscoverySynchronizer: NodeControlPlaneDiscoverySynchronizer,
     private val transportConfig: TransportConfig,
     private val diagnostics: TransportDiagnosticsRepositoryImpl
@@ -41,7 +41,7 @@ internal class NodeDirectoryRefresh(
         if (backgroundJob?.isActive == true) return
         backgroundJob =
             scope.launch {
-                nodeEndpointResolver.resolve(routingId).fold(
+                nodeEndpointDataSource.resolve(routingId).fold(
                     onSuccess = diagnostics::resolved,
                     onFailure = { error ->
                         if (error is CancellationException) throw error
@@ -81,7 +81,7 @@ internal class NodeDirectoryRefresh(
             launch {
                 while (isActive) {
                     delay(transportConfig.directoryRefreshIntervalMilliseconds.milliseconds)
-                    nodeEndpointResolver.resolve(routingId).fold(
+                    nodeEndpointDataSource.resolve(routingId).fold(
                         onSuccess = { endpoints ->
                             diagnostics.resolved(endpoints)
                             onDirectory(endpoints)

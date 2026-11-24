@@ -81,9 +81,7 @@ private fun TextContent(
         parts.forEachIndexed { index, part ->
             when (part) {
                 is TextContentPart.Text ->
-                    if (part.text.isNotEmpty()) {
-                        TextWithRoom(text = part.text, room = trailingRoom.takeIf { index == parts.lastIndex })
-                    }
+                    NonEmptyTextWithRoom(text = part.text, room = trailingRoom.takeIf { index == parts.lastIndex })
 
                 is TextContentPart.LinkPreview ->
                     LinkPreview(url = part.url)
@@ -93,6 +91,14 @@ private fun TextContent(
 }
 
 /** The text, with an invisible [room] after its last word that wraps to a new line like a word when it does not fit. */
+@Composable
+private fun NonEmptyTextWithRoom(
+    text: String,
+    room: DpSize?
+) {
+    if (text.isNotEmpty()) TextWithRoom(text = text, room = room)
+}
+
 @Composable
 private fun TextWithRoom(
     text: String,

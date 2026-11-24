@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.transport.data.route
 
+import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 import com.cbgm.sparrow.feature.transport.domain.port.CircuitPort
 import com.cbgm.sparrow.feature.transport.domain.repository.RouteProtectionRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class RouteProtectionRepositoryImpl(
     circuits: CircuitPort,
-    preferences: TransportPreferencesRepository,
+    preferences: TransportPreferencesLocalDataSource,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) : RouteProtectionRepository {
     override val protection: StateFlow<RouteProtection> =

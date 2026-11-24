@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.transport.data.route.circuit
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitHopCount
 import com.cbgm.sparrow.feature.transport.domain.model.ProtectedRouteMissingException
-import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.HttpClientEngineConfig
@@ -38,13 +38,13 @@ import kotlinx.serialization.json.Json
  * Ktor engine for the app's mailbox requests: each is made by the session node at the end of the circuit for its
  * [CircuitKey], so the mailbox node does not see the device's address. While that circuit is rebuilt the request
  * waits up to [ownCircuitWaitMilliseconds] for it rather than crossing to a circuit of another operator. Without a
- * circuit the request goes out directly when the user allows it ([TransportPreferencesRepository.observeSendsDirectly], the default) and waits for
+ * circuit the request goes out directly when the user allows it ([TransportPreferencesLocalDataSource.observeSendsDirectly], the default) and waits for
  * a circuit otherwise. A circuit through one hop only counts when sending directly is allowed: its single node sees
  * both the device's address and the mailbox.
  */
 internal class CircuitMailboxEngine(
     private val circuits: CircuitRunner,
-    private val preferences: TransportPreferencesRepository,
+    private val preferences: TransportPreferencesLocalDataSource,
     private val directClient: HttpClient,
     private val waitMilliseconds: Long = DEFAULT_WAIT_MILLISECONDS,
     private val ownCircuitWaitMilliseconds: Long = DEFAULT_OWN_CIRCUIT_WAIT_MILLISECONDS

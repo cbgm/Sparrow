@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.transport.data.route.relay
 
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import io.ktor.http.Url
 
 /** Which of the app's Control Plane requests must, may or must not go through the relays ([OnionRelayEngine]). */
 internal class ControlPlaneRelayPolicy(
     private val transportConfig: TransportConfig,
-    private val controlPlaneConfiguration: ControlPlaneEndpointStore,
+    private val controlPlaneConfiguration: ControlPlaneLocalDataSource,
     private val cache: NodeDirectoryCache
 ) {
     suspend fun requirement(url: Url): RelayRequirement {

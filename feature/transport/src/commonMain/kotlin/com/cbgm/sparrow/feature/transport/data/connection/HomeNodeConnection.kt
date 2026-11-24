@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.feature.transport.data.connection
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.domain.port.TransportConnectionPort
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.PreferredNodeReturnPolicy
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
@@ -46,11 +46,11 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class HomeNodeConnection(
     private val circuits: CircuitRunner,
     private val aliasClaims: AliasClaimSchedule,
-    private val routingIdRepository: RoutingIdRepository,
-    private val nodeEndpointResolver: NodeEndpointRepository,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
+    private val nodeEndpointDataSource: NodeEndpointRemoteDataSource,
     private val directoryRefresh: NodeDirectoryRefresh,
     private val diagnostics: TransportDiagnosticsRepositoryImpl,
-    private val preferences: TransportPreferencesRepository? = null
+    private val preferences: TransportPreferencesLocalDataSource? = null
 ) : TransportConnectionPort {
     private val logger = SparrowLog.withTag("HomeNodeConnection")
 
@@ -150,7 +150,7 @@ internal class HomeNodeConnection(
             mutableConnectionState.value = TransportConnectionState.Connecting
             diagnostics.connecting()
 
-            val routingId = routingIdRepository.getLocalRoutingId().getOrThrow()
+            val routingId = routingIdDataSource.getLocalRoutingId().getOrThrow()
             val endpoint = resolveEndpoint(routingId, useCachedDirectory)
             selectedEndpoint = endpoint
 
@@ -201,14 +201,14 @@ internal class HomeNodeConnection(
         useCachedDirectory: Boolean
     ): NodeEndpoint {
         val cachedEndpoints =
-            if (useCachedDirectory) nodeEndpointResolver.resolveCached(routingId).getOrNull() else null
+            if (useCachedDirectory) nodeEndpointDataSource.resolveCached(routingId).getOrNull() else null
         val endpoints =
             if (cachedEndpoints != null) {
                 directoryRefresh.refreshInBackground(connectionScope, routingId)
                 cachedEndpoints
             } else {
                 // resolveCached already rejected the cache, so skip checking it again and fetch.
-                nodeEndpointResolver.resolve(routingId, forceRefresh = useCachedDirectory).getOrThrow()
+                nodeEndpointDataSource.resolve(routingId, forceRefresh = useCachedDirectory).getOrThrow()
             }
         val availableEndpoints = diagnostics.available(endpoints)
 

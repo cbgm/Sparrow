@@ -1,24 +1,48 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** What the transport itself needs of the Control Plane configuration beyond what the user changes. */
-internal interface ControlPlaneEndpointStore : ControlPlaneConfigurationRepository {
-    override val jsonDirectoryUrl: StateFlow<String?>
+/**
+ * The configured Control Planes, kept on the device, and how each answered last (in memory only). Everything in the
+ * transport that talks to Control Planes reads them here.
+ */
+internal interface ControlPlaneLocalDataSource {
+    val endpoints: StateFlow<List<ControlPlaneEndpoint>>
+    val activeEndpoint: StateFlow<ControlPlaneEndpoint?>
+    val manualBaseUrls: StateFlow<Set<String>>
+    val directoryBaseUrls: StateFlow<Set<String>>
+    val directoryUrl: StateFlow<String?>
+    val statuses: StateFlow<List<ControlPlaneEndpointStatus>>
+
+    /** Explicitly user-subscribed legacy JSON list, never a signed-directory trust source. */
+    val jsonDirectoryUrl: StateFlow<String?>
         get() = MutableStateFlow(null)
-    override val jsonDirectoryBaseUrls: StateFlow<Set<String>>
+    val jsonDirectoryBaseUrls: StateFlow<Set<String>>
         get() = MutableStateFlow(emptySet())
 
-    override suspend fun initialize() = Unit
+    /** Loads the saved configuration; until then everything is empty. */
+    suspend fun initialize() = Unit
 
-    override suspend fun useDefaultDirectoryUrlIfUnconfigured(url: String): Result<Unit> = Result.success(Unit)
+    suspend fun addManual(baseUrl: String): Result<Unit>
 
-    override suspend fun clearJsonDirectory(): Result<Unit> = Result.failure(UnsupportedOperationException("JSON directory is unavailable"))
+    suspend fun removeManual(baseUrl: String): Result<Unit>
 
-    override suspend fun clearJsonDirectoryCache(): Result<Unit> = Result.success(Unit)
+    suspend fun setDirectoryUrl(url: String?): Result<Unit>
+
+    /** Optional development bootstrap, ignored once the user has chosen/removed a directory. */
+    suspend fun useDefaultDirectoryUrlIfUnconfigured(url: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun clearJsonDirectory(): Result<Unit> = Result.failure(UnsupportedOperationException("JSON directory is unavailable"))
+
+    /** Explicit user removal, not a source URL edit: discard old JSON hints. */
+    suspend fun clearJsonDirectoryCache(): Result<Unit> = Result.success(Unit)
+
+    fun markAvailable(endpoint: ControlPlaneEndpoint)
+
+    fun markUnreachable(endpoint: ControlPlaneEndpoint)
 
     fun orderedEndpoints(): List<ControlPlaneEndpoint>
 

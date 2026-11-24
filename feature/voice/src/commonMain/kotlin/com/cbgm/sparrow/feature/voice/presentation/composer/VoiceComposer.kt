@@ -98,7 +98,7 @@ private fun SwitchButton(
         when (state.phase) {
             VoiceComposerPhase.READY -> VoiceAction.Record
             VoiceComposerPhase.RECORDING -> VoiceAction.Stop
-            VoiceComposerPhase.RECORDED -> if (state.isPlaying) VoiceAction.Pause else VoiceAction.Play
+            VoiceComposerPhase.RECORDED -> playbackAction(state.isPlaying)
         }
 
     Box(
@@ -142,6 +142,8 @@ private enum class VoiceAction {
     Play,
     Pause
 }
+
+private fun playbackAction(isPlaying: Boolean): VoiceAction = if (isPlaying) VoiceAction.Pause else VoiceAction.Play
 
 @Preview
 @Composable

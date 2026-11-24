@@ -26,7 +26,7 @@ import kotlin.io.encoding.Base64
  */
 internal class PhoneAttestationRemoteDataSource(
     private val controlPlaneHttpClient: HttpClient,
-    private val controlPlaneConfiguration: ControlPlaneEndpointStore,
+    private val controlPlaneConfiguration: ControlPlaneLocalDataSource,
     /** The pinned Directory key, base64url X.509 DER Ed25519. */
     private val pinnedDirectoryKey: suspend () -> String?,
     private val signatureCrypto: DetachedSignatureCrypto,

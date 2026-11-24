@@ -283,11 +283,7 @@ private fun ContactsList(
                         )
                     }
 
-                    is ContactsScreenMode.AttachmentSelection -> {
-                        if (contact.preferredPhoneNumber != null) {
-                            onContactSelected(contact)
-                        }
-                    }
+                    is ContactsScreenMode.AttachmentSelection -> selectSharableContact(contact, onContactSelected)
 
                     is ContactsScreenMode.GroupSelection,
                     is ContactsScreenMode.MemberSelection -> {
@@ -344,4 +340,11 @@ fun ContactsScreenPreview() {
             onUiEvent = {}
         )
     }
+}
+
+private fun selectSharableContact(
+    contact: ContactUi,
+    onContactSelected: (ContactUi) -> Unit
+) {
+    if (contact.preferredPhoneNumber != null) onContactSelected(contact)
 }

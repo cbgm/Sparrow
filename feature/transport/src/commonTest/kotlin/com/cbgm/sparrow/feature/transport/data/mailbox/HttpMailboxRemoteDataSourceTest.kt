@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 
-class MailboxRepositoryImplTest {
+class HttpMailboxRemoteDataSourceTest {
     @Test
     fun aDownNodeIsReportedAsUnavailable() =
         runTest {
@@ -33,7 +33,7 @@ class MailboxRepositoryImplTest {
     @Test
     fun aDownNodeAnsweredByItsProxyIsReportedAsUnavailable() =
         runTest {
-            val result = mailboxRepository(HttpStatusCode.BadGateway).pending(credential)
+            val result = remoteDataSource(HttpStatusCode.BadGateway).pending(credential)
 
             assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
         }
@@ -52,7 +52,7 @@ class MailboxRepositoryImplTest {
                     expiresAtEpochMilliseconds = 2L
                 )
 
-            val result = mailboxRepository(HttpStatusCode.BadGateway).deliver(envelope)
+            val result = remoteDataSource(HttpStatusCode.BadGateway).deliver(envelope)
 
             assertIs<MailboxNodeUnavailableException>(result.exceptionOrNull())
         }
@@ -60,7 +60,7 @@ class MailboxRepositoryImplTest {
     @Test
     fun aMailboxTheNodeNoLongerKnowsIsGone() =
         runTest {
-            val result = mailboxRepository(HttpStatusCode.NotFound).pending(credential)
+            val result = remoteDataSource(HttpStatusCode.NotFound).pending(credential)
 
             assertIs<MailboxGoneException>(result.exceptionOrNull())
         }
@@ -94,7 +94,7 @@ class MailboxRepositoryImplTest {
                     }
                 }
             val gateway =
-                MailboxRepositoryImpl(
+                HttpMailboxRemoteDataSource(
                     HttpClient(engine) {
                         expectSuccess = true
                         install(ContentNegotiation) { json(createGatewayJson()) }
@@ -124,7 +124,7 @@ class MailboxRepositoryImplTest {
                     )
                 }
             val gateway =
-                MailboxRepositoryImpl(
+                HttpMailboxRemoteDataSource(
                     HttpClient(engine) { install(ContentNegotiation) { json(createGatewayJson()) } },
                     createGatewayJson(),
                     MailboxCreationWorkSolver(Sha256CryptoHash()),
@@ -142,8 +142,8 @@ class MailboxRepositoryImplTest {
         credential.copy(contactId = "contact-$mailboxId", deliveryRoute = credential.deliveryRoute.copy(mailboxId = mailboxId))
 
     /** Like the app's mailbox client: status codes are checked by the gateway, not thrown by the client. */
-    private fun mailboxRepository(status: HttpStatusCode) =
-        MailboxRepositoryImpl(
+    private fun remoteDataSource(status: HttpStatusCode) =
+        HttpMailboxRemoteDataSource(
             HttpClient(MockEngine { respond(content = "", status = status) }) {
                 install(ContentNegotiation) { json(createGatewayJson()) }
             },
@@ -152,7 +152,7 @@ class MailboxRepositoryImplTest {
         )
 
     private fun gateway(status: HttpStatusCode) =
-        MailboxRepositoryImpl(
+        HttpMailboxRemoteDataSource(
             HttpClient(MockEngine { respond(content = "", status = status) }) { expectSuccess = true },
             createGatewayJson(),
             MailboxCreationWorkSolver(Sha256CryptoHash())

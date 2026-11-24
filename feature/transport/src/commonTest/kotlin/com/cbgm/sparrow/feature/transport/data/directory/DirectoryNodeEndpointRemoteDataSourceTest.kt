@@ -3,13 +3,12 @@ package com.cbgm.sparrow.feature.transport.data.directory
 import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
@@ -18,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class NodeEndpointRepositoryImplTest {
+class DirectoryNodeEndpointRemoteDataSourceTest {
     private val json = createGatewayJson()
     private val cryptoHash = Sha256CryptoHash()
 
@@ -299,7 +298,7 @@ class NodeEndpointRepositoryImplTest {
                 )
             val trustedDirectory = signedDirectory()
             val resolver =
-                NodeEndpointRepositoryImpl(
+                DirectoryNodeEndpointRemoteDataSource(
                     source = source,
                     json = json,
                     cache = RecordingNodeDirectoryCache(),
@@ -314,7 +313,6 @@ class NodeEndpointRepositoryImplTest {
                             trustedRegistryRootNodeId = trustedDirectory.authorityNodeId
                         ),
                     controlPlaneConfiguration = configuration,
-                    controlPlaneStatusStore = configuration,
                     endpointSelector = NodeEndpointSelector(config = TransportConfig()),
                     now = { NOW }
                 )
@@ -509,8 +507,8 @@ class NodeEndpointRepositoryImplTest {
         cache: NodeDirectoryCache,
         configuration: FakeControlPlaneConfiguration,
         now: () -> Long = { NOW }
-    ): NodeEndpointRepositoryImpl =
-        NodeEndpointRepositoryImpl(
+    ): DirectoryNodeEndpointRemoteDataSource =
+        DirectoryNodeEndpointRemoteDataSource(
             source = source,
             json = json,
             cache = cache,
@@ -522,7 +520,6 @@ class NodeEndpointRepositoryImplTest {
                 ),
             config = TransportConfig(trustedRegistryRootNodeId = null),
             controlPlaneConfiguration = configuration,
-            controlPlaneStatusStore = configuration,
             endpointSelector = NodeEndpointSelector(config = TransportConfig()),
             now = now
         )
@@ -542,10 +539,10 @@ class NodeEndpointRepositoryImplTest {
         source: NodeDirectoryRemoteDataSource,
         cache: NodeDirectoryCache,
         now: () -> Long
-    ): NodeEndpointRepositoryImpl {
+    ): DirectoryNodeEndpointRemoteDataSource {
         val trustedDirectory = signedDirectory()
         val controlPlanes = FakeControlPlaneConfiguration()
-        return NodeEndpointRepositoryImpl(
+        return DirectoryNodeEndpointRemoteDataSource(
             source = source,
             json = json,
             cache = cache,
@@ -562,7 +559,6 @@ class NodeEndpointRepositoryImplTest {
                     cachedDirectoryGraceMilliseconds = CACHE_GRACE_MILLISECONDS
                 ),
             controlPlaneConfiguration = controlPlanes,
-            controlPlaneStatusStore = controlPlanes,
             endpointSelector = NodeEndpointSelector(config = TransportConfig()),
             now = now
         )
@@ -652,8 +648,7 @@ class NodeEndpointRepositoryImplTest {
 
     private class FakeControlPlaneConfiguration(
         baseUrls: List<String> = listOf("https://registry.example")
-    ) : ControlPlaneEndpointStore,
-        ControlPlaneStatusRepository {
+    ) : ControlPlaneLocalDataSource {
         private val configured = baseUrls.map(::ControlPlaneEndpoint)
         private val _endpoints = MutableStateFlow(configured)
         private val _activeEndpoint = MutableStateFlow(configured.firstOrNull())
@@ -691,8 +686,6 @@ class NodeEndpointRepositoryImplTest {
         override fun markUnreachable(endpoint: ControlPlaneEndpoint) {
             updateStatus(endpoint, ControlPlaneReachability.UNREACHABLE)
         }
-
-        override suspend fun refreshHealth() = Unit
 
         override suspend fun replace(baseUrls: List<String>): Result<Unit> =
             runCatching {

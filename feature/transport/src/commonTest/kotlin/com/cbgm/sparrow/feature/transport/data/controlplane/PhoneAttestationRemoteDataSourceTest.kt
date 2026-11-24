@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.transport.data.controlplane
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -23,7 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class PhoneAttestationRemoteSourceTest {
+class PhoneAttestationRemoteDataSourceTest {
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
     private val directoryKey = ByteArray(32) { 9 }
     private val requestKey = ByteArray(32) { 5 }
@@ -112,9 +113,9 @@ class PhoneAttestationRemoteSourceTest {
         return """{"payload":"${base64.encode(keys.encodeToByteArray())}","signature":"${base64.encode(ByteArray(64))}"}"""
     }
 
-    private fun configuration(): ControlPlaneEndpointStore = DirectoryConfiguration()
+    private fun configuration(): ControlPlaneLocalDataSource = DirectoryConfiguration()
 
-    private class DirectoryConfiguration : ControlPlaneEndpointStore {
+    private class DirectoryConfiguration : ControlPlaneLocalDataSource {
         override val endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
         override val activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
         override val manualBaseUrls = MutableStateFlow(emptySet<String>())
@@ -123,7 +124,13 @@ class PhoneAttestationRemoteSourceTest {
 
         override fun orderedEndpoints(): List<ControlPlaneEndpoint> = emptyList()
 
+        override val statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())
+
         override fun markActive(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markAvailable(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markUnreachable(endpoint: ControlPlaneEndpoint) = Unit
 
         override suspend fun replace(baseUrls: List<String>): Result<Unit> = error("Not used")
 

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /** The configured Control Planes, how each answered last, and the one in use; in memory only. */
-internal class ControlPlaneStatusLocalDataSource {
+internal class ControlPlaneStatuses {
     private val _endpoints = MutableStateFlow(emptyList<ControlPlaneEndpoint>())
     private val _activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
     private val _statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())

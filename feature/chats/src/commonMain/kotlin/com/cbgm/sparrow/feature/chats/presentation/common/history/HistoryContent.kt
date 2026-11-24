@@ -57,19 +57,15 @@ internal fun HistoryContent(
     )
 
     when {
-        model.isLoading -> {
-            if (showLoading) HistoryLoadingContent(modifier = fillModifier)
-        }
+        model.isLoading -> DelayedHistoryLoadingContent(isVisible = showLoading, modifier = fillModifier)
 
-        dissolvingListState.messages.isEmpty() -> {
-            if (showEmpty) {
-                HistoryEmptyContent(
-                    title = model.emptyTitle,
-                    description = model.emptyDescription,
-                    modifier = fillModifier
-                )
-            }
-        }
+        dissolvingListState.messages.isEmpty() ->
+            DelayedHistoryEmptyContent(
+                isVisible = showEmpty,
+                title = model.emptyTitle,
+                description = model.emptyDescription,
+                modifier = fillModifier
+            )
 
         else -> MessageList(
             dissolvingListState = dissolvingListState,
@@ -96,6 +92,24 @@ internal fun HistoryContent(
                 }
         )
     }
+}
+
+@Composable
+private fun DelayedHistoryLoadingContent(
+    isVisible: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (isVisible) HistoryLoadingContent(modifier = modifier)
+}
+
+@Composable
+private fun DelayedHistoryEmptyContent(
+    isVisible: Boolean,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    if (isVisible) HistoryEmptyContent(title = title, description = description, modifier = modifier)
 }
 
 @Preview

@@ -6,7 +6,7 @@ import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 internal class NodeControlPlaneDiscoverySynchronizer(
     private val source: NodeControlPlaneDirectoryRemoteDataSource,
     private val candidateVerifier: ControlPlaneCandidateVerifier,
-    private val configuration: ControlPlaneEndpointStore
+    private val configuration: ControlPlaneLocalDataSource
 ) {
     private val logger = SparrowLog.withTag("ControlPlaneDiscovery")
 

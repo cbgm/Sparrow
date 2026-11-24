@@ -27,6 +27,9 @@ private enum class ContactDetailsContent {
     VerifyIdentity
 }
 
+private fun ContactDetailsContent.afterVerifyClicked(canVerify: Boolean): ContactDetailsContent =
+    if (canVerify) ContactDetailsContent.VerifyIdentity else this
+
 @Composable
 fun ContactDetailsRoute(
     contactId: String,
@@ -106,11 +109,8 @@ fun ContactDetailsRoute(
                                 contentState?.contact?.let(onShareContact)
                             }
                             ContactDetailsUiEvent.ReconnectConfirmed -> onReconnect()
-                            ContactDetailsUiEvent.VerifyIdentityClicked -> {
-                                if (contentState?.canVerify == true) {
-                                    content = ContactDetailsContent.VerifyIdentity
-                                }
-                            }
+                            ContactDetailsUiEvent.VerifyIdentityClicked ->
+                                content = content.afterVerifyClicked(canVerify = contentState?.canVerify == true)
                             else -> viewModel.onUiEvent(event)
                         }
                     }

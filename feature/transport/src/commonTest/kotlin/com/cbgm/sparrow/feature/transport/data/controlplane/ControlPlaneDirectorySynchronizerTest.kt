@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /** Exercises the current JSON-directory fetcher, not the removed parseControlPlaneDirectory API. */
-class ControlPlaneDirectoryRepositoryImplTest {
+class ControlPlaneDirectorySynchronizerTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test

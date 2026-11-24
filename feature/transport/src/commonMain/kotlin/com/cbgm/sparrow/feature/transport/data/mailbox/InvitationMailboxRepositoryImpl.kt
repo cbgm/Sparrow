@@ -2,12 +2,11 @@ package com.cbgm.sparrow.feature.transport.data.mailbox
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxRepositoryImpl.Companion.LIFETIME_MILLISECONDS
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -20,9 +19,9 @@ import kotlinx.coroutines.sync.withLock
  * deletes it then.
  */
 internal class InvitationMailboxRepositoryImpl(
-    private val nodeEndpointResolver: NodeEndpointRepository,
-    private val routingIdRepository: RoutingIdRepository,
-    private val mailboxRepository: MailboxRepository,
+    private val nodeEndpointDataSource: NodeEndpointRemoteDataSource,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
+    private val mailboxDataSource: MailboxRemoteDataSource,
     private val store: InvitationMailboxStore,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) : InvitationMailboxRepository {
@@ -43,7 +42,7 @@ internal class InvitationMailboxRepositoryImpl(
                 }
                 val node = nodes.getOrThrow().first()
                 val opened =
-                    mailboxRepository
+                    mailboxDataSource
                         .createInvitation(
                             nodeId = node.nodeId,
                             routeEndpoint = checkNotNull(node.mailboxRouteEndpoint),
@@ -78,8 +77,8 @@ internal class InvitationMailboxRepositoryImpl(
 
     private suspend fun mailboxNodes(): Result<List<NodeEndpoint>> =
         safeSuspendCall(logFailure = false) {
-            nodeEndpointResolver
-                .resolve(routingIdRepository.getLocalRoutingId().getOrThrow())
+            nodeEndpointDataSource
+                .resolve(routingIdDataSource.getLocalRoutingId().getOrThrow())
                 .getOrThrow()
                 .filter { node -> node.mailboxRouteEndpoint != null && node.mailboxAccessEndpoint != null }
                 .also { nodes -> check(nodes.isNotEmpty()) { "No mailbox-capable node is available" } }

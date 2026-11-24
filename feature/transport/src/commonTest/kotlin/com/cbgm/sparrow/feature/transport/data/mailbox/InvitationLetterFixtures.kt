@@ -6,16 +6,17 @@ import com.cbgm.sparrow.core.crypto.transport.Base64TransportPayloadCodec
 import com.cbgm.sparrow.core.crypto.transport.EncryptedTransportPayload
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteDto
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteLookupDto
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteResultDto
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
@@ -57,14 +58,14 @@ internal class InvitationTestWorld {
     fun letters(device: Device): InvitationLetterRepository =
         InvitationLetterRepositoryImpl(
             routes = InvitationRouteRemoteDataSource(presenceClient(), Configuration, MailboxCreationWorkSolver(ZeroHash, bits = 0), json),
-            mailboxRepository = mailboxes,
+            mailboxDataSource = mailboxes,
             signingKeyPairSource = SigningKeys(device.key),
             encryptionKeyPairSource = EncryptionKeys(device.key),
             signatureCrypto = ReadableSignatures,
             transportCipher = ReadableTransportCipher,
             payloadCodec = Base64TransportPayloadCodec(),
             routingIdGenerator = NameRoutingIds,
-            routingIdRepository = object : RoutingIdRepository {
+            routingIdDataSource = object : RoutingIdLocalDataSource {
                 override suspend fun getLocalRoutingId(): Result<String> = Result.success(device.routingId)
 
                 override suspend fun getLocalBootstrapRoutingId(): Result<String> = Result.success(device.alias)
@@ -105,7 +106,9 @@ internal class InvitationTestWorld {
             )
     }
 
-    class RecordingInvitationMailboxRepository : MailboxRepository {
+    class RecordingInvitationMailboxRepository :
+        MailboxRemoteDataSource,
+        MailboxRepository {
         val deposited = mutableListOf<FederatedEnvelope>()
 
         override suspend fun depositInvitation(envelope: FederatedEnvelope): Result<Unit> {
@@ -146,7 +149,7 @@ internal class InvitationTestWorld {
         ): Result<Set<String>> = error("Not used")
     }
 
-    private object Configuration : ControlPlaneEndpointStore {
+    private object Configuration : ControlPlaneLocalDataSource {
         override val endpoints = MutableStateFlow(listOf(ControlPlaneEndpoint("https://control.test")))
         override val activeEndpoint = MutableStateFlow<ControlPlaneEndpoint?>(null)
         override val manualBaseUrls = MutableStateFlow(emptySet<String>())
@@ -155,7 +158,13 @@ internal class InvitationTestWorld {
 
         override fun orderedEndpoints(): List<ControlPlaneEndpoint> = endpoints.value
 
+        override val statuses = MutableStateFlow(emptyList<ControlPlaneEndpointStatus>())
+
         override fun markActive(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markAvailable(endpoint: ControlPlaneEndpoint) = Unit
+
+        override fun markUnreachable(endpoint: ControlPlaneEndpoint) = Unit
 
         override suspend fun replace(baseUrls: List<String>): Result<Unit> = error("Not used")
 

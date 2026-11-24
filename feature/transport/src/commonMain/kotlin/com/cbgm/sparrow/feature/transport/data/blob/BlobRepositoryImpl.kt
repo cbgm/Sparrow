@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.CHUNK_BYTES
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl.Companion.MAXIMUM_ATTEMPTS
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkDto
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRequestRefusedException
@@ -11,12 +12,11 @@ import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRequest
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferResponse
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRoute
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransfers
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
 import com.cbgm.sparrow.feature.transport.domain.model.StoredBlob
 import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -35,8 +35,8 @@ internal class BlobRepositoryImpl(
     private val json: Json,
     private val creationWork: MailboxCreationWorkSolver,
     private val cryptoHash: CryptoHash,
-    private val nodeEndpointResolver: NodeEndpointRepository,
-    private val routingIdRepository: RoutingIdRepository,
+    private val nodeEndpointDataSource: NodeEndpointRemoteDataSource,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
     private val randomBytes: suspend (Int) -> ByteArray,
     private val retryDelayMilliseconds: Long = DEFAULT_RETRY_DELAY_MILLISECONDS
 ) : BlobRepository {
@@ -207,8 +207,8 @@ internal class BlobRepositoryImpl(
 
     private suspend fun directNode(): Pair<String, String> {
         val endpoint =
-            nodeEndpointResolver
-                .resolve(routingIdRepository.getLocalRoutingId().getOrThrow(), forceRefresh = false)
+            nodeEndpointDataSource
+                .resolve(routingIdDataSource.getLocalRoutingId().getOrThrow(), forceRefresh = false)
                 .getOrThrow()
                 .firstOrNull()
                 ?: error("No blob node is available")
@@ -216,10 +216,10 @@ internal class BlobRepositoryImpl(
     }
 
     private suspend fun baseUrl(nodeId: String): String {
-        val localRoutingId = routingIdRepository.getLocalRoutingId().getOrThrow()
+        val localRoutingId = routingIdDataSource.getLocalRoutingId().getOrThrow()
 
         suspend fun find(forceRefresh: Boolean): String? =
-            nodeEndpointResolver.resolve(localRoutingId, forceRefresh).getOrThrow().firstOrNull { it.nodeId == nodeId }?.websocketUrl?.toHttpBase()
+            nodeEndpointDataSource.resolve(localRoutingId, forceRefresh).getOrThrow().firstOrNull { it.nodeId == nodeId }?.websocketUrl?.toHttpBase()
         return find(forceRefresh = false) ?: find(forceRefresh = true) ?: error("Blob node $nodeId is not available")
     }
 

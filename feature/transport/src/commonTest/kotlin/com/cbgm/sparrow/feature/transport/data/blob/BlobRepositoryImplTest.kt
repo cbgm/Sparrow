@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.feature.transport.data.blob
 
 import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRequestRefusedException
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRequest
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferResponse
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferRoute
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransfers
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.BlobUpload
 import com.cbgm.sparrow.feature.transport.domain.model.FileTransferFailedException
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isFileTransferFailure
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -90,15 +90,15 @@ class BlobRepositoryImplTest {
             json = Json,
             creationWork = MailboxCreationWorkSolver(hash, bits = 0),
             cryptoHash = hash,
-            nodeEndpointResolver =
-                object : NodeEndpointRepository {
+            nodeEndpointDataSource =
+                object : NodeEndpointRemoteDataSource {
                     override suspend fun resolve(
                         localRoutingId: String,
                         forceRefresh: Boolean
                     ) = Result.success(listOf(NodeEndpoint("node-a", "wss://node-a.test/v1/gateway")))
                 },
-            routingIdRepository =
-                object : RoutingIdRepository {
+            routingIdDataSource =
+                object : RoutingIdLocalDataSource {
                     override suspend fun getLocalRoutingId() = Result.success("scrouting1_me")
 
                     override suspend fun getLocalBootstrapRoutingId(): Result<String> = error("not used")

@@ -12,8 +12,8 @@ import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
 import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.port.DirectSendingPort
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.rule.DirectSendingPolicy
 import com.cbgm.sparrow.protocol.codec.PacketCodec
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.packet.IndicatorPacket
@@ -36,7 +36,7 @@ class MailboxMessagingIndicators(
     private val transportPayloadFactory: OutgoingTransportPayloadFactory,
     private val transportPayloadCodec: TransportPayloadCodec,
     private val mailboxRepository: MailboxRepository,
-    private val sendingPolicy: DirectSendingPolicy
+    private val sendingPolicy: DirectSendingPort
 ) : MessagingIndicatorPort {
     private val logger = SparrowLog.withTag("MailboxMessagingIndicators")
     private val received = MutableSharedFlow<MessagingIndicator>(extraBufferCapacity = BUFFERED_INDICATORS, onBufferOverflow = BufferOverflow.DROP_OLDEST)

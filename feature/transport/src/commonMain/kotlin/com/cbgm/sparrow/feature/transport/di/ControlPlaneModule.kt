@@ -10,11 +10,12 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneCandidateVerifier
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneConfigurationRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneDirectoryRepositoryImpl
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneHealthRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneRequestRouter
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneStatusRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.controlplane.DataStoreControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.HttpNodeControlPlaneDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.controlplane.KEY_TRUSTED_DIRECTORY_PUBLIC_KEY
@@ -31,11 +32,11 @@ import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPoli
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayClient
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayEngine
 import com.cbgm.sparrow.feature.transport.data.route.relay.createControlPlaneHttpClient
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import io.ktor.client.HttpClient
@@ -45,28 +46,18 @@ import org.koin.dsl.module
 /** The Control Planes: their addresses, health, directory and the requests that go to them through relays. */
 internal val controlPlaneModule =
     module {
-        single { ControlPlaneStatusLocalDataSource() }
-
-        single<ControlPlaneConfigurationRepositoryImpl> {
-            ControlPlaneConfigurationRepositoryImpl(
-                dataStore = get(),
-                nodeDirectoryCache = get(),
-                endpointStatuses = get<ControlPlaneStatusLocalDataSource>()
-            )
-        }
-
-        single<ControlPlaneEndpointStore> {
-            get<ControlPlaneConfigurationRepositoryImpl>()
+        single<ControlPlaneLocalDataSource> {
+            DataStoreControlPlaneLocalDataSource(dataStore = get(), nodeDirectoryCache = get())
         }
 
         single<ControlPlaneConfigurationRepository> {
-            get<ControlPlaneConfigurationRepositoryImpl>()
+            ControlPlaneConfigurationRepositoryImpl(localDataSource = get<ControlPlaneLocalDataSource>())
         }
 
         single {
             ControlPlaneRelayPolicy(
                 transportConfig = get<TransportConfig>(),
-                controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
+                controlPlaneConfiguration = get<ControlPlaneLocalDataSource>(),
                 cache = get<NodeDirectoryCache>()
             )
         }
@@ -88,14 +79,14 @@ internal val controlPlaneModule =
         single {
             AliasClaimRegistrar(
                 controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
+                controlPlaneConfiguration = get<ControlPlaneLocalDataSource>(),
                 relayPolicy = get<ControlPlaneRelayPolicy>(),
                 directoryVerifier = get<NodeDirectoryVerifier>(),
                 transportConfig = get<TransportConfig>(),
                 signingKeyPairSource = get<LocalSigningKeyPairSource>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cipher = get<SealedMessageCipher>(),
-                routingIdRepository = get<RoutingIdRepository>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
                 localPhoneNumberSource = get<LocalPhoneNumberSource>(),
                 phoneAttestationRemoteDataSource = get<PhoneAttestationRemoteDataSource>(),
                 invitationMailbox = get<InvitationMailboxRepository>(),
@@ -107,7 +98,7 @@ internal val controlPlaneModule =
         single {
             InvitationRouteRemoteDataSource(
                 controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
+                controlPlaneConfiguration = get<ControlPlaneLocalDataSource>(),
                 work = MailboxCreationWorkSolver(get<CryptoHash>()),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
@@ -116,7 +107,7 @@ internal val controlPlaneModule =
         single {
             PhoneAttestationRemoteDataSource(
                 controlPlaneHttpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER)),
-                controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
+                controlPlaneConfiguration = get<ControlPlaneLocalDataSource>(),
                 pinnedDirectoryKey = { get<SparrowDataStore>().getString(KEY_TRUSTED_DIRECTORY_PUBLIC_KEY) },
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cipher = get<SealedMessageCipher>(),
@@ -126,14 +117,13 @@ internal val controlPlaneModule =
 
         single {
             ControlPlaneRequestRouter(
-                configuration = get<ControlPlaneEndpointStore>(),
-                statusStore = get<ControlPlaneStatusRepository>()
+                configuration = get<ControlPlaneLocalDataSource>()
             )
         }
 
         single<ControlPlaneStatusRepository> {
             ControlPlaneStatusRepositoryImpl(
-                localDataSource = get<ControlPlaneStatusLocalDataSource>(),
+                localDataSource = get<ControlPlaneLocalDataSource>(),
                 healthRemoteDataSource =
                     ControlPlaneHealthRemoteDataSource(
                         httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))
@@ -149,14 +139,18 @@ internal val controlPlaneModule =
             )
         }
 
-        single<ControlPlaneDirectoryRepository> {
-            ControlPlaneDirectoryRepositoryImpl(
+        single {
+            ControlPlaneDirectorySynchronizer(
                 httpClient = get<HttpClient>(),
-                configuration = get<ControlPlaneEndpointStore>(),
+                configuration = get<ControlPlaneLocalDataSource>(),
                 verifier = get<SignedControlPlaneDirectoryVerifier>(),
                 dataStore = get(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
+        }
+
+        single<ControlPlaneDirectoryRepository> {
+            ControlPlaneDirectoryRepositoryImpl(synchronizer = get<ControlPlaneDirectorySynchronizer>())
         }
 
         single<NodeControlPlaneDirectoryRemoteDataSource> {
@@ -178,7 +172,7 @@ internal val controlPlaneModule =
             NodeControlPlaneDiscoverySynchronizer(
                 source = get<NodeControlPlaneDirectoryRemoteDataSource>(),
                 candidateVerifier = get<ControlPlaneCandidateVerifier>(),
-                configuration = get<ControlPlaneEndpointStore>()
+                configuration = get<ControlPlaneLocalDataSource>()
             )
         }
     }

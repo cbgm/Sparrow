@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.controlplane.PhoneAliasBinding
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
@@ -21,7 +21,7 @@ import kotlinx.coroutines.TimeoutCancellationException
  * retries it.
  */
 internal class MailboxOutgoingWireSender(
-    private val routingIdRepository: RoutingIdRepository,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
     private val transportConfig: TransportConfig,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val mailboxRepository: MailboxRepository,
@@ -87,8 +87,8 @@ internal class MailboxOutgoingWireSender(
 
     /** A first invitation to a phone alias names the own phone alias, once a Control Plane bound it to this device. */
     private suspend fun senderRoutingId(recipientAddress: String): String {
-        if (!recipientAddress.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) return routingIdRepository.getLocalRoutingId().getOrThrow()
-        val alias = routingIdRepository.getLocalBootstrapRoutingId().getOrThrow()
+        if (!recipientAddress.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) return routingIdDataSource.getLocalRoutingId().getOrThrow()
+        val alias = routingIdDataSource.getLocalBootstrapRoutingId().getOrThrow()
         try {
             aliasBinding.awaitBound(alias, transportConfig.acknowledgementTimeoutMilliseconds)
         } catch (timeout: TimeoutCancellationException) {

@@ -119,15 +119,18 @@ private fun TransportNodeDiagnosticState.displayText(
         TransportNodeDiagnosticState.AVAILABLE ->
             stringResource(Res.string.feature_settings_node_available)
 
-        TransportNodeDiagnosticState.COOLDOWN ->
-            if (cooldownRemainingSeconds > 0L) {
-                stringResource(
-                    Res.string.feature_settings_node_cooldown_remaining,
-                    cooldownRemainingSeconds
-                )
-            } else {
-                stringResource(Res.string.feature_settings_node_cooldown)
-            }
+        TransportNodeDiagnosticState.COOLDOWN -> cooldownText(cooldownRemainingSeconds)
+    }
+
+@Composable
+private fun cooldownText(cooldownRemainingSeconds: Long): String =
+    if (cooldownRemainingSeconds > 0L) {
+        stringResource(
+            Res.string.feature_settings_node_cooldown_remaining,
+            cooldownRemainingSeconds
+        )
+    } else {
+        stringResource(Res.string.feature_settings_node_cooldown)
     }
 
 @Composable

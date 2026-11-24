@@ -1,11 +1,10 @@
 package com.cbgm.sparrow.feature.transport.data.mailbox
 
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import kotlinx.coroutines.test.runTest
@@ -17,23 +16,23 @@ class InvitationMailboxRepositoryImplTest {
     private var now = 0L
     private var nodes: Result<List<NodeEndpoint>> = Result.success(listOf(NODE_A))
     private val store = MemoryStore()
-    private val gateway = OpeningMailboxRepository()
+    private val mailboxes = OpeningMailboxDataSource()
     private val renewal =
         InvitationMailboxRepositoryImpl(
-            nodeEndpointResolver =
-                object : NodeEndpointRepository {
+            nodeEndpointDataSource =
+                object : NodeEndpointRemoteDataSource {
                     override suspend fun resolve(
                         localRoutingId: String,
                         forceRefresh: Boolean
                     ): Result<List<NodeEndpoint>> = nodes
                 },
-            routingIdRepository =
-                object : RoutingIdRepository {
+            routingIdDataSource =
+                object : RoutingIdLocalDataSource {
                     override suspend fun getLocalRoutingId(): Result<String> = Result.success("scrouting1_device")
 
                     override suspend fun getLocalBootstrapRoutingId(): Result<String> = error("not used")
                 },
-            mailboxRepository = gateway,
+            mailboxDataSource = mailboxes,
             store = store,
             now = { now }
         )
@@ -47,7 +46,7 @@ class InvitationMailboxRepositoryImplTest {
             assertEquals(30L * DAY, opened.deliveryRoute.expiresAtEpochMilliseconds)
             assertEquals(listOf(opened), store.mailboxes)
             assertEquals(opened, renewal.current().getOrThrow())
-            assertEquals(1, gateway.opened)
+            assertEquals(1, mailboxes.opened)
         }
 
     @Test
@@ -98,7 +97,7 @@ class InvitationMailboxRepositoryImplTest {
         }
     }
 
-    private class OpeningMailboxRepository : MailboxRepository {
+    private class OpeningMailboxDataSource : MailboxRemoteDataSource {
         var opened = 0
 
         override suspend fun createInvitation(

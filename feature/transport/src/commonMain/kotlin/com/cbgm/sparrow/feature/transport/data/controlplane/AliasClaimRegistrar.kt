@@ -9,9 +9,9 @@ import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.data.directory.SignedNodeDirectoryDto
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -42,14 +42,14 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 internal class AliasClaimRegistrar(
     private val controlPlaneHttpClient: HttpClient,
-    private val controlPlaneConfiguration: ControlPlaneEndpointStore,
+    private val controlPlaneConfiguration: ControlPlaneLocalDataSource,
     private val relayPolicy: ControlPlaneRelayPolicy,
     private val directoryVerifier: NodeDirectoryVerifier,
     private val transportConfig: TransportConfig,
     private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val cipher: SealedMessageCipher,
-    private val routingIdRepository: RoutingIdRepository,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
     private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val phoneAttestationRemoteDataSource: PhoneAttestationRemoteDataSource,
     private val invitationMailbox: InvitationMailboxRepository,
@@ -71,7 +71,7 @@ internal class AliasClaimRegistrar(
 
     /** Returns the aliases at least one Control Plane bound to [routingId]. */
     suspend fun claim(routingId: String): Set<String> {
-        val alias = routingIdRepository.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
+        val alias = routingIdDataSource.getLocalBootstrapRoutingId().getOrNull() ?: return emptySet()
         val attestation = phoneAttestation(routingId)
         val signingKeyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
         val invitationRoute = invitationRoute()

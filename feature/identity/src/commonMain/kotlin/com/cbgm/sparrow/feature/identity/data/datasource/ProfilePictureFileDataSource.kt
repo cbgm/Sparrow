@@ -51,7 +51,7 @@ class ProfilePictureFileDataSource(
         target: Path,
         bytes: ByteArray
     ) {
-        val temporary = target.parent!! / "${target.name}.tmp"
+        val temporary = checkNotNull(target.parent) { "Profile picture path has no folder" } / "${target.name}.tmp"
         fileSystem.write(temporary) { write(bytes) }
         fileSystem.delete(target, mustExist = false)
         fileSystem.atomicMove(temporary, target)

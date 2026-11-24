@@ -21,7 +21,7 @@ import kotlinx.serialization.json.Json
  */
 internal class InvitationRouteRemoteDataSource(
     private val controlPlaneHttpClient: HttpClient,
-    private val controlPlaneConfiguration: ControlPlaneEndpointStore,
+    private val controlPlaneConfiguration: ControlPlaneLocalDataSource,
     private val work: MailboxCreationWorkSolver,
     private val json: Json
 ) {

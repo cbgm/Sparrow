@@ -66,6 +66,7 @@ class RemoteProfilePictureDataSource(
                     return@withLock
                 }
 
+                val payload = metadata.payload
                 when {
                     !metadata.hasPicture ->
                         remove(
@@ -73,10 +74,10 @@ class RemoteProfilePictureDataSource(
                             changedAtEpochMilliseconds = metadata.changedAtEpochMilliseconds
                         )
 
-                    metadata.payload != null ->
+                    payload != null ->
                         save(
                             contactId = contactId,
-                            bytes = metadata.payload!!.bytes,
+                            bytes = payload.bytes,
                             changedAtEpochMilliseconds = metadata.changedAtEpochMilliseconds
                         )
 

@@ -82,7 +82,7 @@ class ConversationHistoryController(
         scope.launch {
             findMessageCursor(conversationId, messageId)
                 .onSuccess { target ->
-                    if (target != null && (cursor.value == null || target.isOlderThan(cursor.value!!))) {
+                    if (target != null && cursor.value.let { current -> current == null || target.isOlderThan(current) }) {
                         _cursor.value = target
                     }
                 }.onFailure(onError)

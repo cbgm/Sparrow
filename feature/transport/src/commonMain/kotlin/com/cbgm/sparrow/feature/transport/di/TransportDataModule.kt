@@ -5,7 +5,11 @@ import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.connection.CountingConnectionKeepAlive
 import com.cbgm.sparrow.feature.transport.data.http.createPlatformHttpClient
 import com.cbgm.sparrow.feature.transport.data.mailbox.createGatewayJson
+import com.cbgm.sparrow.feature.transport.data.preferences.DataStoreTransportPreferencesLocalDataSource
+import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.routing.KeyRoutingIdLocalDataSource
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.routing.Sha256RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.domain.port.ConnectionKeepAlivePort
@@ -39,15 +43,21 @@ internal val transportDataModule =
             Sha256RoutingIdGenerator(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
         }
 
-        single<RoutingIdRepository> {
-            RoutingIdRepositoryImpl(
+        single<RoutingIdLocalDataSource> {
+            KeyRoutingIdLocalDataSource(
                 localSigningPublicKeySource = get<LocalSigningPublicKeySource>(),
                 localPhoneNumberSource = get(),
                 routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
 
-        single<TransportPreferencesRepository> { TransportPreferencesRepositoryImpl(dataStore = get()) }
+        single<RoutingIdRepository> { RoutingIdRepositoryImpl(localDataSource = get<RoutingIdLocalDataSource>()) }
+
+        single<TransportPreferencesLocalDataSource> { DataStoreTransportPreferencesLocalDataSource(dataStore = get()) }
+
+        single<TransportPreferencesRepository> {
+            TransportPreferencesRepositoryImpl(localDataSource = get<TransportPreferencesLocalDataSource>())
+        }
 
         single<ConnectionKeepAlivePort> { CountingConnectionKeepAlive() }
     }

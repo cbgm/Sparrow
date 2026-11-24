@@ -9,7 +9,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 internal class ControlPlaneStatusRepositoryImpl(
-    private val localDataSource: ControlPlaneStatusLocalDataSource,
+    private val localDataSource: ControlPlaneLocalDataSource,
     private val healthRemoteDataSource: ControlPlaneHealthRemoteDataSource
 ) : ControlPlaneStatusRepository {
     override val statuses: StateFlow<List<ControlPlaneEndpointStatus>> = localDataSource.statuses

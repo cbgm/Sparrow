@@ -2,16 +2,17 @@ package com.cbgm.sparrow.feature.transport.di
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneDirectorySynchronizer
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.DataStoreNodeDirectoryCache
+import com.cbgm.sparrow.feature.transport.data.directory.DirectoryNodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.HttpNodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointSelector
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
 import io.ktor.client.HttpClient
 import org.koin.core.qualifier.named
@@ -39,20 +40,21 @@ internal val directoryModule =
             NodeEndpointSelector(config = get<TransportConfig>())
         }
 
-        single<NodeEndpointRepository> {
-            NodeEndpointRepositoryImpl(
+        single<NodeEndpointRemoteDataSource> {
+            DirectoryNodeEndpointRemoteDataSource(
                 source = HttpNodeDirectoryRemoteDataSource(httpClient = get(qualifier = named(CONTROL_PLANE_HTTP_CLIENT_QUALIFIER))),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 cache = get(),
                 verifier = get(),
                 config = get<TransportConfig>(),
-                controlPlaneConfiguration = get<ControlPlaneEndpointStore>(),
-                controlPlaneStatusStore = get<ControlPlaneStatusRepository>(),
+                controlPlaneConfiguration = get<ControlPlaneLocalDataSource>(),
                 endpointSelector = get<NodeEndpointSelector>(),
-                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectoryRepository>(),
+                controlPlaneDirectorySynchronizer = get<ControlPlaneDirectorySynchronizer>(),
                 preferences = get()
             )
         }
+
+        single<NodeEndpointRepository> { NodeEndpointRepositoryImpl(remoteDataSource = get<NodeEndpointRemoteDataSource>()) }
 
         single<NodeDirectoryRemoteDataSource> {
             HttpNodeDirectoryRemoteDataSource(httpClient = get<HttpClient>())

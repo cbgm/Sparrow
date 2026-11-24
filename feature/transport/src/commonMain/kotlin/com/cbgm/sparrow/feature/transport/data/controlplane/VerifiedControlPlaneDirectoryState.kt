@@ -11,7 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /** Owns the pinned directory identity, anti-rollback state and authenticated offline snapshot. */
 internal class VerifiedControlPlaneDirectoryState(
-    private val configuration: ControlPlaneEndpointStore,
+    private val configuration: ControlPlaneLocalDataSource,
     private val verifier: SignedControlPlaneDirectoryVerifier,
     private val dataStore: SparrowDataStore,
     private val json: Json,
@@ -34,9 +34,10 @@ internal class VerifiedControlPlaneDirectoryState(
         // Never replace an existing pin merely because its cached envelope is corrupt.
         trustedPublicKey = storedKey?.takeIf(String::isNotBlank)
         stalePlanesByBaseUrl = decodeStalePlanes(storedStalePlanes)
-        if (trustedPublicKey == null || storedEnvelope == null) return
+        val restoredKey = trustedPublicKey
+        if (restoredKey == null || storedEnvelope == null) return
         try {
-            val payload = verifier.verify(storedEnvelope, trustedPublicKey!!, allowExpired = true)
+            val payload = verifier.verify(storedEnvelope, restoredKey, allowExpired = true)
             applyRestored(payload)
         } catch (error: Throwable) {
             if (error is CancellationException) throw error

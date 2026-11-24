@@ -3,13 +3,13 @@ package com.cbgm.sparrow.feature.transport.data.connection
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.transport.data.TransportConfig
-import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneEndpointStore
+import com.cbgm.sparrow.feature.transport.data.controlplane.ControlPlaneLocalDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.FailedNodeTracker
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportDiagnosticsRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.domain.rule.isUnavailableNodeDirectory
@@ -21,9 +21,9 @@ import kotlinx.coroutines.flow.StateFlow
  * while), and the diagnostics the developer menu shows. Every change of the connection is reported here.
  */
 internal class TransportDiagnosticsRepositoryImpl(
-    private val routingIdRepository: RoutingIdRepository,
-    private val nodeEndpointResolver: NodeEndpointRepository,
-    private val controlPlaneConfiguration: ControlPlaneEndpointStore,
+    private val routingIdDataSource: RoutingIdLocalDataSource,
+    private val nodeEndpointDataSource: NodeEndpointRemoteDataSource,
+    private val controlPlaneConfiguration: ControlPlaneLocalDataSource,
     transportConfig: TransportConfig
 ) : TransportDiagnosticsRepository {
     private val logger = SparrowLog.withTag("TransportDiagnosticsRepositoryImpl")
@@ -45,10 +45,10 @@ internal class TransportDiagnosticsRepositoryImpl(
     override val diagnostics: StateFlow<TransportDiagnostics> = state.diagnostics
 
     override suspend fun refreshDiagnostics() {
-        routingIdRepository.getLocalRoutingId()
+        routingIdDataSource.getLocalRoutingId()
             .onFailure { failure -> logger.error(failure) { "Could not obtain local routing ID for diagnostics" } }
             .getOrNull()?.let { routingId ->
-                nodeEndpointResolver
+                nodeEndpointDataSource
                     .resolve(
                         localRoutingId = routingId,
                         forceRefresh = true

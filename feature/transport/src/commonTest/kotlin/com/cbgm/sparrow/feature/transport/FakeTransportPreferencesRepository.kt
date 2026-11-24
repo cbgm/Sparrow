@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport
 
+import com.cbgm.sparrow.feature.transport.data.preferences.TransportPreferencesLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +14,8 @@ internal class FakeTransportPreferencesRepository(
     sendsDirectly: Boolean = true,
     preferredNode: String? = null,
     connectionMode: ConnectionMode = ConnectionMode.WHILE_OPEN
-) : TransportPreferencesRepository {
+) : TransportPreferencesLocalDataSource,
+    TransportPreferencesRepository {
     private val circuitCount = MutableStateFlow(circuitCount)
     private val hopCount = MutableStateFlow(hopCount)
     private val decoyCount = MutableStateFlow(decoyCount)

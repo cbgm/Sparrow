@@ -7,10 +7,10 @@
 ```mermaid
 flowchart LR
     BK[BuildKonfig.CONTROL_PLANE_DIRECTORY_URL]
-    DS[ControlPlaneDirectoryRepositoryImpl]
+    DS[ControlPlaneDirectorySynchronizer]
     CP[verified Control Planes]
     ND[NodeDirectoryRemoteDataSource / verifier]
-    ER[NodeEndpointRepositoryImpl]
+    ER[DirectoryNodeEndpointRemoteDataSource]
     CM[HomeNodeConnection]
     CR[CircuitRunner]
 
@@ -46,10 +46,16 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 
 ## Important transport classes
 
+Repositories in transport never call each other: they share datasources. Every repository whose data other transport
+classes need sits on a datasource of its own (`ControlPlaneLocalDataSource`, `NodeEndpointRemoteDataSource`,
+`MailboxRemoteDataSource`, `RoutingIdLocalDataSource`, `TransportPreferencesLocalDataSource`), and those classes use
+the datasource, not the repository.
+
 ### Control Plane
 
-- `ControlPlaneDirectoryRepositoryImpl`
-- `ControlPlaneStatusRepositoryImpl` (in-memory status, health probe)
+- `DataStoreControlPlaneLocalDataSource` (configured Control Planes and their status), `ControlPlaneConfigurationRepositoryImpl`
+- `ControlPlaneDirectorySynchronizer` (signed directory), `ControlPlaneDirectoryRepositoryImpl`
+- `ControlPlaneStatusRepositoryImpl` (status, health probe through `ControlPlaneHealthRemoteDataSource`)
 - `ControlPlaneCandidateVerifier`
 - `ControlPlaneRequestRouter`
 - `NodeControlPlaneDirectoryRemoteDataSource`
@@ -60,7 +66,7 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 - `NodeDirectoryRemoteDataSource`
 - `NodeDirectoryVerifier`
 - `NodeDirectoryCache`
-- `NodeEndpointRepositoryImpl`
+- `DirectoryNodeEndpointRemoteDataSource`, `NodeEndpointRepositoryImpl`
 - `FailedNodeTracker`
 - `TransportDiagnosticsState`
 
@@ -71,11 +77,12 @@ The Settings Add dialog accepts a single Control Plane URL, a signed directory o
 - `MailboxOutgoingWireSender`
 - `AliasClaimRegistrar`
 - `Sha256RoutingIdGenerator`
-- `RoutingIdRepositoryImpl` (device and phone-alias routing IDs)
+- `KeyRoutingIdLocalDataSource` (device and phone-alias routing IDs), `RoutingIdRepositoryImpl`
+- `DirectSendingPolicy` (`DirectSendingPort`: whether something may leave without a protecting circuit)
 
 ### Mailboxes
 
-- `MailboxRepositoryImpl`
+- `HttpMailboxRemoteDataSource`, `MailboxRepositoryImpl`
 - `InvitationMailboxRepositoryImpl`, `InvitationLetterRepositoryImpl`, `InvitationRouteRemoteDataSource`
 
 There is no push service; see [Receiving messages](../push-notifications.md).

@@ -9,23 +9,25 @@ import com.cbgm.sparrow.feature.transport.data.TransportConfig
 import com.cbgm.sparrow.feature.transport.data.blob.BlobRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
 import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.DataStoreInvitationMailboxStore
+import com.cbgm.sparrow.feature.transport.data.mailbox.HttpMailboxRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationLetterRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxStore
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxOutgoingWireSender
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxRepositoryImpl
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitMailboxEngine
 import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
 import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferCircuits
 import com.cbgm.sparrow.feature.transport.data.route.circuit.createMailboxHttpClient
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
 import com.cbgm.sparrow.feature.transport.domain.repository.BlobRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
 import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
-import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
@@ -43,9 +45,9 @@ internal val mailboxModule =
 
         single<InvitationMailboxRepository> {
             InvitationMailboxRepositoryImpl(
-                nodeEndpointResolver = get<NodeEndpointRepository>(),
-                routingIdRepository = get<RoutingIdRepository>(),
-                mailboxRepository = get<MailboxRepository>(),
+                nodeEndpointDataSource = get<NodeEndpointRemoteDataSource>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
+                mailboxDataSource = get<MailboxRemoteDataSource>(),
                 store = get<InvitationMailboxStore>()
             )
         }
@@ -53,21 +55,21 @@ internal val mailboxModule =
         single<InvitationLetterRepository> {
             InvitationLetterRepositoryImpl(
                 routes = get<InvitationRouteRemoteDataSource>(),
-                mailboxRepository = get<MailboxRepository>(),
+                mailboxDataSource = get<MailboxRemoteDataSource>(),
                 signingKeyPairSource = get<LocalSigningKeyPairSource>(),
                 encryptionKeyPairSource = get<LocalEncryptionKeyPairSource>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 transportCipher = get<TransportMessageCipher>(),
                 payloadCodec = get<TransportPayloadCodec>(),
                 routingIdGenerator = get<RoutingIdGenerator>(),
-                routingIdRepository = get<RoutingIdRepository>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
-        single<MailboxRepository> {
+        single<MailboxRemoteDataSource> {
             // Mailbox requests go through the circuit, so the mailbox node does not see the device's address.
-            MailboxRepositoryImpl(
+            HttpMailboxRemoteDataSource(
                 httpClient =
                     createMailboxHttpClient(
                         engine =
@@ -84,6 +86,8 @@ internal val mailboxModule =
             )
         }
 
+        single<MailboxRepository> { MailboxRepositoryImpl(remoteDataSource = get<MailboxRemoteDataSource>()) }
+
         single<BlobRepository> {
             // Every file transfer gets a circuit of its own, so the blob node does not see the device's address.
             BlobRepositoryImpl(
@@ -96,15 +100,15 @@ internal val mailboxModule =
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
                 cryptoHash = get<CryptoHash>(),
-                nodeEndpointResolver = get<NodeEndpointRepository>(),
-                routingIdRepository = get<RoutingIdRepository>(),
+                nodeEndpointDataSource = get<NodeEndpointRemoteDataSource>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
                 randomBytes = get<SecureRandomGenerator>().let { random -> { size -> random.generateBytes(size).getOrThrow() } }
             )
         }
 
         single<OutgoingWireSender> {
             MailboxOutgoingWireSender(
-                routingIdRepository = get<RoutingIdRepository>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
                 transportConfig = get<TransportConfig>(),
                 mailboxRouteRepository = get(),
                 mailboxRepository = get<MailboxRepository>(),
