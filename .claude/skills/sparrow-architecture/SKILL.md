@@ -98,7 +98,7 @@ di                   Koin modules
 - Every screen has 16dp padding before the content starts.
 - Show a mockup before any design change. A redesign changes only the design, never the behaviour.
 - Strings live in `resources/src/commonMain/composeResources/values*/strings_<feature>.xml`, named after the key
-  prefix (`feature_chats_…` → `strings_chats.xml`, shared ones in `strings.xml`). Always English and German
+  prefix (`feature_chats_…` → `strings_chats.xml`, shared ones in `strings_base.xml`). Always English and German
   together.
 
 ## Privacy and security
