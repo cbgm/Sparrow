@@ -91,11 +91,12 @@ internal class AliasClaimRegistrar(
         return bound.flatMap(ClaimOutcome.Bound::aliases).toSet().also { aliases -> boundAliases.value = aliases }
     }
 
-    /** The verifier's attestation while the sign-up token is still in memory; null without one or when it failed. */
+    /** The verifier's attestation while the sign-up token and slot are still in memory; null without them or when it failed. */
     private suspend fun phoneAttestation(routingId: String): String? {
         val token = localPhoneNumberSource.getPhoneVerificationToken().getOrNull() ?: return null
+        val slot = localPhoneNumberSource.getPhoneVerificationSlot().getOrNull() ?: return null
         return phoneAttestationRemoteDataSource
-            .attest(token, routingId)
+            .attest(token, slot, routingId)
             .onFailure { failure -> logger.warn { "Phone attestation failed: ${failure::class.simpleName}" } }
             .onFailure { failure -> failure.reportLimit() }
             .getOrNull()

@@ -63,6 +63,7 @@
     <string name="feature_identity_phone_verification_skip">Skip (debug)</string>
     <string name="feature_identity_phone_verification_send_failed">The code could not be sent. Check the number and try again.</string>
     <string name="feature_identity_phone_verification_wrong_code">The code is not correct.</string>
+    <string name="feature_identity_phone_verification_day_full">Today's sign-ups are full, so no SMS was sent. Please try again after %1$s.</string>
     <string name="feature_identity_setup_load_failed">Identity setup could not be loaded. Please restart Sparrow.</string>
     <string name="feature_identity_restore_failed">The identity could not be restored. Check the backup and password, then try again.</string>
     <string name="feature_identity_repair_title">Your identity can no longer be used on this device</string>

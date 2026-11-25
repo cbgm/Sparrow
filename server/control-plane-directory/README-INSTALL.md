@@ -72,18 +72,49 @@ sees the Directory signing key.
   file (signature, project, expiry, and that the sign-in was not revoked) and answers with a signed
   attestation "this phone alias belongs to this device", sealed so only the app reads it. Nothing is
   stored or logged: no token, number or alias.
-- **Verifications per day** (`install --phone-verifications-per-day N`, 0 = no limit) caps the
-  attestations per UTC day for all Control Planes together. Only successful verifications count. The
-  verifier keeps just the day and its count (`daily-count.json` in its volume, so a restart does not reset
-  it), nothing about users, so there is no limit per number or device. Beyond the maximum it answers
-  `429 PHONE_VERIFICATION_LIMIT`; the app keeps its token for a later try and shows "Daily limit of phone
-  verifications reached" under the phone number in the identity overview. **Status** and the window show
-  today's count. This does not cap the SMS Firebase sends; set SMS regions and limits in the Firebase console.
+- **Sign-up slots.** Before the app has Firebase send the SMS, it reserves a slot at
+  `POST /v1/phone-attestations/slots` (sealed, through the relays, with a small proof of work). The
+  answer is a random slot token valid for one hour; the attestation needs it and uses it up. A slot that is
+  not used within the hour is free again.
+- **Verifications per day** (`install --phone-verifications-per-day N`, 0 = no limit) caps the sign-ups per
+  UTC day for all Control Planes together: a day counts its attestations plus the open slots. When it is
+  full, the slot request is answered with `429 PHONE_VERIFICATION_LIMIT` and the start of the next UTC day;
+  the app then shows "Today's sign-ups are full … try again after …" and **sends no SMS**. The verifier keeps
+  just the day, its count and the hashes of the open slots (`daily-count.json` in its volume, so a restart
+  neither resets the day nor loses a slot), nothing about users. **Status** and the window show today's count.
+- **Resends** (`install --phone-verification-resends N`, default 1) is how often the app may send the SMS
+  code again for one sign-up; the app reads it from the slot.
+- For the beta, 8 a day with 1 resend stays within Firebase's 10 free SMS a day. For production set the
+  daily maximum to 0 (no limit) or higher and allow 2–3 resends; the app needs no update.
+- The slots limit sign-ups, but not SMS that someone requests from Firebase directly with the app's Firebase
+  details. Against that, set a budget with automatic billing stop, block expensive SMS regions and restrict
+  the SMS regions in the Firebase console (see *Firebase costs* below).
 - Every Control Plane's presence directory checks the attestation with the Directory key it already
   pins (`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`) and refuses phone numbers without one; only the
   operator's test numbers need none.
-- The Caddy route gets `/v1/phone-attestations` and `/v1/phone-attestations/keys` for the verifier.
+- The Caddy route gets `/v1/phone-attestations`, `/v1/phone-attestations/keys` and
+  `/v1/phone-attestations/slots` for the verifier (an existing installation gets the new path with the next
+  Install / Start).
   Untick the box (or `install --no-phone-verification`) to stop it and remove the paths again.
+
+## Firebase costs
+
+The SMS are sent by Firebase, not by the Directory, so their cost is set in the Google consoles:
+
+1. **Budget with an automatic stop.** In the Google Cloud console of the app's Firebase project, create a budget
+   (Billing → Budgets & alerts), e.g. a few euros a month, with a Pub/Sub topic, and connect Google's function that
+   turns billing off when the budget is reached ("Disable billing usage with notifications" in the Cloud Billing
+   documentation). Once it is reached, Firebase sends no more SMS until billing is turned on again; the project
+   is used only for phone sign-in, so nothing else stops.
+2. **SMS regions.** In the Firebase console under Authentication → Settings → *SMS region policy*, allow the
+   regions your testers are in, or deny the expensive ones. New projects allow no region until one is set.
+3. **API key.** While the app is not installed from the Play Store, Play Integrity cannot vouch for it and
+   Firebase falls back to a reCAPTCHA check before each SMS; that check needs the API key usable for
+   `PROJECT_ID.firebaseapp.com`. Do not restrict the key to the Android app until the app comes from the Play
+   Store; then turn on App Check with Play Integrity as well.
+
+The first ten SMS a day are not billed; beyond that the price depends on the country (Google Cloud Identity
+Platform pricing).
 
 ## Updating
 

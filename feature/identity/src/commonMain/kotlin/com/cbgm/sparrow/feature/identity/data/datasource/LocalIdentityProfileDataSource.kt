@@ -41,9 +41,11 @@ class LocalIdentityProfileDataSource(
         }
     }
 
-    // The verification token lives in memory only; it is never stored.
+    // The verification token and the verifier's slot live in memory only; they are never stored.
     private var verificationToken: String? = null
     private var verificationTokenReceivedAt = 0L
+    private var verificationSlot: String? = null
+    private var verificationSlotExpiresAt = 0L
     private val phoneVerificationLimitReached = MutableStateFlow(false)
 
     fun keepPhoneVerificationToken(token: String) {
@@ -51,6 +53,21 @@ class LocalIdentityProfileDataSource(
         verificationTokenReceivedAt = SystemClock.nowEpochMilliseconds()
         phoneVerificationLimitReached.value = false
     }
+
+    /** Kept with the token: the attestation uses it up at the phone verifier. */
+    fun keepPhoneVerificationSlot(
+        slot: String,
+        expiresAtEpochMilliseconds: Long
+    ) {
+        verificationSlot = slot
+        verificationSlotExpiresAt = expiresAtEpochMilliseconds
+    }
+
+    override suspend fun getPhoneVerificationSlot(): Result<String?> =
+        safeSuspendCall {
+            if (SystemClock.nowEpochMilliseconds() >= verificationSlotExpiresAt) verificationSlot = null
+            verificationSlot
+        }
 
     /** In memory only, like the token: a new verification or a restart starts over. */
     fun observePhoneVerificationLimitReached(): StateFlow<Boolean> = phoneVerificationLimitReached.asStateFlow()
@@ -69,6 +86,7 @@ class LocalIdentityProfileDataSource(
     override suspend fun clearPhoneVerificationToken(): Result<Unit> =
         safeSuspendCall {
             verificationToken = null
+            verificationSlot = null
             phoneVerificationLimitReached.value = false
         }
 

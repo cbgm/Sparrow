@@ -3,6 +3,10 @@ package com.cbgm.sparrow.feature.transport.data.controlplane
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
+import com.cbgm.sparrow.feature.transport.data.route.relay.RelayDirectoryLoader
+import com.cbgm.sparrow.protocol.phone.PhoneVerificationSlot
+import com.cbgm.sparrow.protocol.phone.PhoneVerificationSlotSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -23,6 +27,10 @@ import kotlin.io.encoding.Base64
  * key, whose certificate is checked against the pinned Directory key, through the relays of the Control Plane client.
  * Neither relay reads the token or the answer, and the verifier does not see the app's address. The attestation is
  * kept in memory only and goes into the alias claims; every presence directory checks it.
+ *
+ * Before the SMS is sent, [reserve] buys a sign-up slot there with a small proof of work, the same way and as sealed;
+ * the attestation then uses it up. During onboarding no node directory may be known yet: it is loaded first, so the slot
+ * request goes through the relays too instead of showing the verifier the app's address.
  */
 internal class PhoneAttestationRemoteDataSource(
     private val controlPlaneHttpClient: HttpClient,
@@ -31,22 +39,63 @@ internal class PhoneAttestationRemoteDataSource(
     private val pinnedDirectoryKey: suspend () -> String?,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val cipher: SealedMessageCipher,
-    private val json: Json
-) {
-    /** The attestation that the number of [token] belongs to [routingId], as the verifier signed it. */
+    private val json: Json,
+    private val work: MailboxCreationWorkSolver,
+    private val relays: RelayDirectoryLoader
+) : PhoneVerificationSlotSource {
+    /** The attestation that the number of [token] belongs to [routingId], as the verifier signed it; uses up [slot]. */
     suspend fun attest(
         token: String,
+        slot: String,
         routingId: String
     ): Result<String> =
         safeSuspendCall {
             val directoryUrl = checkNotNull(controlPlaneConfiguration.directoryUrl.value) { "No Control Plane Directory" }.trimEnd('/')
             val replyKey = cipher.newReplyKey()
-            val request = json.encodeToString(PhoneAttestationRequestDto(token, routingId, BASE64.encode(replyKey)))
+            val request = json.encodeToString(PhoneAttestationRequestDto(token, routingId, BASE64.encode(replyKey), slot))
             val sealed = cipher.seal(request.encodeToByteArray(), requestKey(directoryUrl), REQUEST_CONTEXT).getOrThrow()
             val response = postSealed(directoryUrl, sealed)
             val attestation = cipher.openReply(BASE64.decode(response.sealedAttestation), replyKey)
             checkNotNull(attestation) { "Phone attestation does not open" }.decodeToString()
         }
+
+    override suspend fun reserve(): PhoneVerificationSlot {
+        val directoryUrl = controlPlaneConfiguration.directoryUrl.value?.trimEnd('/') ?: return PhoneVerificationSlot.NotOffered
+        relays.ensureRelays()
+        val proof = work.solve()
+        val replyKey = cipher.newReplyKey()
+        val request =
+            PhoneSlotRequestDto(
+                stamp = proof.stamp,
+                createdAtEpochMilliseconds = proof.createdAtEpochMilliseconds,
+                nonce = proof.nonce,
+                replyKey = BASE64.encode(replyKey)
+            )
+        val key =
+            try {
+                requestKey(directoryUrl)
+            } catch (refusal: ClientRequestException) {
+                // No phone verifier behind this Directory.
+                if (refusal.response.status == HttpStatusCode.NotFound) return PhoneVerificationSlot.NotOffered
+                throw refusal
+            }
+        val sealed = cipher.seal(json.encodeToString(request).encodeToByteArray(), key, SLOT_CONTEXT).getOrThrow()
+        return try {
+            val response =
+                controlPlaneHttpClient
+                    .post("$directoryUrl$SLOTS_PATH") {
+                        contentType(ContentType.Application.Json)
+                        setBody(json.encodeToString(SealedPhoneAttestationRequestDto(BASE64.encode(sealed))))
+                    }.body<SealedPhoneSlotDto>()
+            val reply = checkNotNull(cipher.openReply(BASE64.decode(response.sealedSlot), replyKey)) { "Phone slot does not open" }
+            json.decodeFromString<PhoneSlotDto>(reply.decodeToString()).let { slot ->
+                PhoneVerificationSlot.Reserved(slot.slot, slot.expiresAtEpochMilliseconds, slot.resends)
+            }
+        } catch (refusal: ClientRequestException) {
+            if (refusal.response.status != HttpStatusCode.TooManyRequests) throw refusal
+            PhoneVerificationSlot.DayFull(json.decodeFromString<PhoneLimitDto>(refusal.response.bodyAsText()).retryAtEpochMilliseconds)
+        }
+    }
 
     private suspend fun postSealed(
         directoryUrl: String,
@@ -88,7 +137,9 @@ internal class PhoneAttestationRemoteDataSource(
     private companion object {
         const val ATTESTATIONS_PATH = "/v1/phone-attestations"
         const val KEYS_PATH = "/v1/phone-attestations/keys"
+        const val SLOTS_PATH = "/v1/phone-attestations/slots"
         const val REQUEST_CONTEXT = "sparrow-phone-attestation-request-v1"
+        const val SLOT_CONTEXT = "sparrow-phone-slot-request-v1"
         const val PHONE_KEYS_PROTOCOL = "sparrow-phone-keys-v1"
         const val PHONE_KEYS_DOMAIN = "sparrow-phone-keys-v1\n"
         const val RAW_KEY_BYTES = 32
@@ -107,10 +158,41 @@ internal class PhoneVerificationLimitReachedException : IllegalStateException("D
 internal class PhoneAttestationRequestDto(
     val token: String,
     val routingId: String,
-    val replyKey: String
+    val replyKey: String,
+    val slot: String
 ) {
     override fun toString(): String = "PhoneAttestationRequestDto(redacted)"
 }
+
+/** Sealed for the verifier's request key, under its slot context (`phone_verifier.py`). */
+@Serializable
+internal class PhoneSlotRequestDto(
+    val stamp: String,
+    val createdAtEpochMilliseconds: Long,
+    val nonce: Long,
+    val replyKey: String
+)
+
+@Serializable
+internal class SealedPhoneSlotDto(
+    val sealedSlot: String
+)
+
+@Serializable
+internal class PhoneSlotDto(
+    val slot: String,
+    val expiresAtEpochMilliseconds: Long,
+    val resends: Int
+) {
+    override fun toString(): String = "PhoneSlotDto(redacted)"
+}
+
+/** The answer when today is full: when the next day starts. */
+@Serializable
+internal class PhoneLimitDto(
+    val error: String,
+    val retryAtEpochMilliseconds: Long
+)
 
 @Serializable
 internal class SealedPhoneAttestationRequestDto(

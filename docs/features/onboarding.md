@@ -61,12 +61,17 @@ number (`PhoneNumberHintLauncher`) or type it. The page offers two actions:
 Verification happens once, at sign-up (create and restore). `PhoneVerificationDialog` /
 `PhoneVerificationViewModel` (in `:feature:identity`):
 
-1. opens with "We will send a code by SMS to …"; tapping *Verify* sends the SMS;
-2. shows six code fields (`SparrowCodeField` in `:core:ui`); entering the sixth digit, or an SMS
-   read automatically by the platform, confirms the code;
-3. *Send again* becomes available after a 60-second countdown;
-4. if the SMS cannot be sent, the dialog returns to the first step with an error; a wrong code
-   clears the fields.
+1. opens with "We will send a code by SMS to …"; tapping *Verify* first reserves a sign-up slot at the
+   phone verifier (`ReservePhoneVerificationSlotUseCase`) and only then sends the SMS;
+2. when today's sign-ups are used up, it shows "Today's sign-ups are full, so no SMS was sent. Please try
+   again after …" with the start of the next UTC day in local time, and only *Close*; no SMS is sent and
+   nothing is created;
+3. otherwise it shows six code fields (`SparrowCodeField` in `:core:ui`); entering the sixth digit, or an
+   SMS read automatically by the platform, confirms the code;
+4. *Send again* becomes available after a 60-second countdown, as often as the verifier allows for the
+   slot (one resend by default); then the link disappears;
+5. if the SMS cannot be sent, the dialog returns to the first step with an error and keeps its slot; a
+   wrong code clears the fields.
 
 Cancelling the dialog creates or restores nothing. Debug builds show an additional
 *Skip (debug)* button. Details, including how the result reaches the server, are in

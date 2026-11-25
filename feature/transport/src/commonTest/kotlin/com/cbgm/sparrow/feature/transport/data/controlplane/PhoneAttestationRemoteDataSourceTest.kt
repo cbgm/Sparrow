@@ -1,9 +1,13 @@
 package com.cbgm.sparrow.feature.transport.data.controlplane
 
+import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
+import com.cbgm.sparrow.feature.transport.data.route.relay.RelayDirectoryLoader
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
 import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.protocol.phone.PhoneVerificationSlot
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -32,12 +36,15 @@ class PhoneAttestationRemoteDataSourceTest {
     private val signatures = RecordingSignatures()
     private val requests = mutableListOf<String>()
     private var sentRequest: PhoneAttestationRequestDto? = null
+    private var sentSlotRequest: PhoneSlotRequestDto? = null
     private var limitReached = false
+    private var noVerifier = false
+    private var relaysLoaded = 0
 
     @Test
     fun theTokenGoesSealedForTheCertifiedRequestKeyAndTheAttestationComesBackOpened() =
         runTest {
-            val attestation = source().attest("firebase-token", "scrouting1_device").getOrThrow()
+            val attestation = source().attest("firebase-token", SLOT, "scrouting1_device").getOrThrow()
 
             assertEquals(ATTESTATION, attestation)
             assertEquals(listOf("GET /v1/phone-attestations/keys", "POST /v1/phone-attestations"), requests)
@@ -47,6 +54,35 @@ class PhoneAttestationRemoteDataSourceTest {
             assertEquals("sparrow-phone-attestation-request-v1", cipher.sealedContext)
             assertEquals("firebase-token", sentRequest?.token)
             assertEquals("scrouting1_device", sentRequest?.routingId)
+            assertEquals(SLOT, sentRequest?.slot)
+        }
+
+    @Test
+    fun aSlotIsReservedSealedWithProofOfWorkAfterTheRelaysAreKnown() =
+        runTest {
+            val slot = source().reserve()
+
+            assertEquals(PhoneVerificationSlot.Reserved(SLOT, 99L, 1), slot)
+            assertEquals(1, relaysLoaded)
+            assertEquals(listOf("GET /v1/phone-attestations/keys", "POST /v1/phone-attestations/slots"), requests)
+            assertEquals("sparrow-phone-slot-request-v1", cipher.sealedContext)
+            assertEquals(36, sentSlotRequest?.stamp?.length)
+        }
+
+    @Test
+    fun aFullDayIsReportedWithTheTimeOfTheNextDay() =
+        runTest {
+            limitReached = true
+
+            assertEquals(PhoneVerificationSlot.DayFull(NEXT_DAY), source().reserve())
+        }
+
+    @Test
+    fun aDirectoryWithoutPhoneVerificationOffersNoSlot() =
+        runTest {
+            noVerifier = true
+
+            assertEquals(PhoneVerificationSlot.NotOffered, source().reserve())
         }
 
     @Test
@@ -54,7 +90,7 @@ class PhoneAttestationRemoteDataSourceTest {
         runTest {
             signatures.valid = false
 
-            assertTrue(source().attest("firebase-token", "scrouting1_device").isFailure)
+            assertTrue(source().attest("firebase-token", SLOT, "scrouting1_device").isFailure)
             assertEquals(listOf("GET /v1/phone-attestations/keys"), requests)
         }
 
@@ -63,7 +99,7 @@ class PhoneAttestationRemoteDataSourceTest {
         runTest {
             limitReached = true
 
-            val failure = source().attest("firebase-token", "scrouting1_device").exceptionOrNull()
+            val failure = source().attest("firebase-token", SLOT, "scrouting1_device").exceptionOrNull()
 
             assertIs<PhoneVerificationLimitReachedException>(failure)
         }
@@ -71,7 +107,7 @@ class PhoneAttestationRemoteDataSourceTest {
     @Test
     fun withoutAPinnedDirectoryKeyNothingIsSent() =
         runTest {
-            assertTrue(source(pinned = null).attest("firebase-token", "scrouting1_device").isFailure)
+            assertTrue(source(pinned = null).attest("firebase-token", SLOT, "scrouting1_device").isFailure)
             assertEquals(emptyList(), requests)
         }
 
@@ -82,7 +118,14 @@ class PhoneAttestationRemoteDataSourceTest {
             pinnedDirectoryKey = { pinned },
             signatureCrypto = signatures,
             cipher = cipher,
-            json = Json
+            json = Json,
+            work = MailboxCreationWorkSolver(Sha256(), bits = 0),
+            relays =
+                object : RelayDirectoryLoader {
+                    override suspend fun ensureRelays() {
+                        relaysLoaded++
+                    }
+                }
         )
 
     private fun client(): HttpClient =
@@ -91,8 +134,23 @@ class PhoneAttestationRemoteDataSourceTest {
                 requests += "${request.method.value} ${request.url.encodedPath}"
                 val json = headersOf(HttpHeaders.ContentType, "application/json")
                 when {
+                    noVerifier -> respond("""{"error":"Not found"}""", HttpStatusCode.NotFound, json)
                     request.method == HttpMethod.Get -> respond(certificate(), headers = json)
-                    limitReached -> respond("""{"error":"PHONE_VERIFICATION_LIMIT"}""", HttpStatusCode.TooManyRequests, json)
+                    limitReached ->
+                        respond(
+                            """{"error":"PHONE_VERIFICATION_LIMIT","retryAtEpochMilliseconds":$NEXT_DAY}""",
+                            HttpStatusCode.TooManyRequests,
+                            json
+                        )
+                    request.url.encodedPath.endsWith("/slots") -> {
+                        val sealed = Json.decodeFromString<SealedPhoneAttestationRequestDto>((request.body as TextContent).text)
+                        val plaintext = base64.decode(sealed.sealedRequest).drop(1).toByteArray()
+                        val sent = Json.decodeFromString<PhoneSlotRequestDto>(plaintext.decodeToString())
+                        sentSlotRequest = sent
+                        val slot = """{"expiresAtEpochMilliseconds":99,"resends":1,"slot":"$SLOT"}"""
+                        val reply = byteArrayOf(base64.decode(sent.replyKey).first()) + slot.encodeToByteArray()
+                        respond("""{"sealedSlot":"${base64.encode(reply)}"}""", headers = json)
+                    }
                     else -> {
                         val sealed = Json.decodeFromString<SealedPhoneAttestationRequestDto>((request.body as TextContent).text)
                         val plaintext = base64.decode(sealed.sealedRequest).drop(1).toByteArray()
@@ -187,7 +245,14 @@ class PhoneAttestationRemoteDataSourceTest {
         override suspend fun newReplyKey(): ByteArray = ByteArray(32) { 7 }
     }
 
+    /** Stands in for SHA-256: zero bits are needed, so any digest does. */
+    private class Sha256 : CryptoHash {
+        override fun sha256(input: ByteArray): ByteArray = ByteArray(32)
+    }
+
     private companion object {
+        const val SLOT = "slot-token"
+        const val NEXT_DAY = 1_800_086_400_000L
         const val ATTESTATION = """{"keys":{},"payload":"p","signature":"s"}"""
         val DER_PREFIX = byteArrayOf(0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00)
     }

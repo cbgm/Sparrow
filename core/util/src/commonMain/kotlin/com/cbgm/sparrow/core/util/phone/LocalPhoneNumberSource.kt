@@ -9,6 +9,9 @@ interface LocalPhoneNumberSource {
      */
     suspend fun getPhoneVerificationToken(): Result<String?>
 
+    /** The phone verifier's sign-up slot reserved before the SMS; the attestation for the token uses it up. */
+    suspend fun getPhoneVerificationSlot(): Result<String?>
+
     suspend fun clearPhoneVerificationToken(): Result<Unit>
 
     /** The phone verifier reached its daily maximum: the number stays unverified for now. */

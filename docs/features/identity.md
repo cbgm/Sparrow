@@ -28,6 +28,9 @@ re-verification and no lasting login.
 Key types:
 
 - `PhoneVerificationViewModel`, `PhoneVerificationDialog`, `PhoneVerificationHost`
+- `ReservePhoneVerificationSlotUseCase`, `PhoneVerificationSlotRepository` /
+  `PhoneVerificationSlotRepositoryImpl` and `PhoneVerificationSlotStatus` (`Reserved(resends)`,
+  `DayFull(retryAt)`), over `PhoneVerificationSlotSource` in `:protocol`
 - `SendPhoneVerificationCodeUseCase`, `ConfirmPhoneVerificationCodeUseCase`
 - `PhoneVerificationRepository` and `PhoneVerificationStep` (`CodeSent`, `CodeReceived`,
   `Verified(token)`)
@@ -38,6 +41,16 @@ Key types:
 Android implementation wraps Firebase phone authentication in a `callbackFlow`. After the code is
 confirmed (or the platform verified the number by itself), the app signs in with the phone
 credential only to obtain a one-time Firebase ID token and signs out again immediately.
+
+Before the first SMS the dialog reserves a sign-up slot at the phone verifier
+(`PhoneVerificationSlotSource`, implemented by `PhoneAttestationRemoteDataSource` in `:feature:transport`).
+The request carries only a small proof of work (`MailboxCreationWorkSolver`, 18 bits) and a reply key, sealed
+for the verifier's request key and sent through the relays like the attestation; during onboarding the signed
+node directory is loaded first (`NodeDirectoryRelayLoader`), so the verifier never sees the app's address. The
+answer is a random slot token (valid for an hour) and how often the code may be sent again, or `429` with the
+start of the next UTC day: then no SMS is sent. A Directory without phone verification offers no slot
+(`NotOffered`): the SMS is sent and the number stays unverified. The slot is kept in memory with the token
+(`LocalIdentityProfileDataSource.keepPhoneVerificationSlot`) and the attestation uses it up.
 
 The dialog only verifies. `IdentityCreateViewModel` creates the keys, and
 `IdentityRestoreViewModel` saves the restored backup, only after the result is `Verified`.
@@ -52,7 +65,7 @@ once a Control Plane answered. Every presence directory checks the attestation; 
 or the number. The verification is part of sign-up, not of every connection.
 
 Debug builds: `DEBUG_SMS_CODE` in `local.properties` switches Firebase to test mode for the
-number, and the dialog offers *Skip (debug)*, which continues without a token. See
+number, and the dialog offers *Skip (debug)*, which continues without a token or slot. See
 [Local development](../development/local-development.md).
 
 iOS has no `PhoneVerificationRepository` implementation yet.

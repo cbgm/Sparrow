@@ -2,8 +2,8 @@
 
 Source-derived declaration inventory of the source tree on **2026-11-25**.
 
-- Kotlin files scanned: **2814**
-- Declarations detected: **5144**
+- Kotlin files scanned: **2821**
+- Declarations detected: **5163**
 - Included Gradle modules: **57**
 
 ## Declarations by module
@@ -143,6 +143,7 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `LocalIdentitySharingRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/LocalIdentitySharingRepositoryImpl.kt` |
 | `LocalProfilePictureRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/LocalProfilePictureRepositoryImpl.kt` |
 | `PendingRemoteIdentityChangeRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/PendingRemoteIdentityChangeRepositoryImpl.kt` |
+| `PhoneVerificationSlotRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/PhoneVerificationSlotRepositoryImpl.kt` |
 | `RemoteIdentityImportRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/RemoteIdentityImportRepositoryImpl.kt` |
 | `RemoteIdentityReadRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/RemoteIdentityReadRepositoryImpl.kt` |
 | `RemoteProfilePictureRepositoryImpl` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/data/repository/RemoteProfilePictureRepositoryImpl.kt` |
@@ -180,6 +181,9 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `KeyExchangeStatus` | enum class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/KeyExchangeStatus.kt` |
 | `LocalProfilePicture` | data class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/LocalProfilePicture.kt` |
 | `PendingRemoteIdentityChange` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PendingRemoteIdentityChange.kt` |
+| `DayFull` | data class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationSlotStatus.kt` |
+| `PhoneVerificationSlotStatus` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationSlotStatus.kt` |
+| `Reserved` | data class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationSlotStatus.kt` |
 | `CodeReceived` | data class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationStep.kt` |
 | `CodeSent` | data class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationStep.kt` |
 | `PhoneVerificationStep` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/model/PhoneVerificationStep.kt` |
@@ -203,6 +207,7 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `LocalProfilePictureRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/LocalProfilePictureRepository.kt` |
 | `PendingRemoteIdentityChangeRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/PendingRemoteIdentityChangeRepository.kt` |
 | `PhoneVerificationRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/PhoneVerificationRepository.kt` |
+| `PhoneVerificationSlotRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/PhoneVerificationSlotRepository.kt` |
 | `RemoteIdentityImportRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/RemoteIdentityImportRepository.kt` |
 | `RemoteIdentityReadRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/RemoteIdentityReadRepository.kt` |
 | `RemoteProfilePictureRepository` | interface | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/repository/RemoteProfilePictureRepository.kt` |
@@ -261,6 +266,7 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `RecoverIncompleteIdentityUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/RecoverIncompleteIdentityUseCase.kt` |
 | `RecoverManualIdentityExchangeUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/RecoverManualIdentityExchangeUseCase.kt` |
 | `RemoveLocalProfilePictureUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/RemoveLocalProfilePictureUseCase.kt` |
+| `ReservePhoneVerificationSlotUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/ReservePhoneVerificationSlotUseCase.kt` |
 | `ResolveIdentityStatusUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/ResolveIdentityStatusUseCase.kt` |
 | `SaveLocalPhoneNameUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/SaveLocalPhoneNameUseCase.kt` |
 | `SendIdentityVerificationReceiptUseCase` | class | `commonMain` | `feature/identity/src/commonMain/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/SendIdentityVerificationReceiptUseCase.kt` |
@@ -366,6 +372,7 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `FakeChangeHandler` | class | `commonTest` | `feature/identity/src/commonTest/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/ResolveIdentityStatusUseCaseTest.kt` |
 | `FakeIdentityRepository` | class | `commonTest` | `feature/identity/src/commonTest/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/ResolveIdentityStatusUseCaseTest.kt` |
 | `ResolveIdentityStatusUseCaseTest` | class | `commonTest` | `feature/identity/src/commonTest/kotlin/com/cbgm/sparrow/feature/identity/domain/usecase/ResolveIdentityStatusUseCaseTest.kt` |
+| `PhoneVerificationUiStateTest` | class | `commonTest` | `feature/identity/src/commonTest/kotlin/com/cbgm/sparrow/feature/identity/presentation/verification/PhoneVerificationUiStateTest.kt` |
 | `SodiumIdentityKeyGeneratorTest` | class | `androidDeviceTest` | `feature/identity/src/androidDeviceTest/kotlin/com/cbgm/sparrow/feature/identity/crypto/SodiumKeyGeneratorTest.kt` |
 | `IdentityRepositoryImplTest` | class | `androidDeviceTest` | `feature/identity/src/androidDeviceTest/kotlin/com/cbgm/sparrow/feature/identity/data/repository/IdentityRepositoryImplTest.kt` |
 | `IdentityShareRepositoryImplTest` | class | `androidDeviceTest` | `feature/identity/src/androidDeviceTest/kotlin/com/cbgm/sparrow/feature/identity/data/repository/IdentityShareRepositoryImplTest.kt` |
@@ -4241,6 +4248,11 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `OperationMessagePacket` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/packet/OperationMessagePacket.kt` |
 | `ReadReceiptPacket` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/packet/ReadReceiptPacket.kt` |
 | `SparrowPacket` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/packet/SparrowPacket.kt` |
+| `DayFull` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/phone/PhoneVerificationSlotSource.kt` |
+| `NotOffered` | object | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/phone/PhoneVerificationSlotSource.kt` |
+| `PhoneVerificationSlot` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/phone/PhoneVerificationSlotSource.kt` |
+| `PhoneVerificationSlotSource` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/phone/PhoneVerificationSlotSource.kt` |
+| `Reserved` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/phone/PhoneVerificationSlotSource.kt` |
 | `LocalProfilePictureMetadataSource` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/profile/LocalProfilePictureMetadataSource.kt` |
 | `LocalProfilePictureSnapshot` | data class | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/profile/LocalProfilePictureSource.kt` |
 | `LocalProfilePictureSource` | interface | `commonMain` | `protocol/src/commonMain/kotlin/com/cbgm/sparrow/protocol/profile/LocalProfilePictureSource.kt` |
@@ -4374,9 +4386,13 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `PhoneAttestationRemoteDataSource` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `PhoneAttestationRequestDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `PhoneKeysDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
+| `PhoneLimitDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
+| `PhoneSlotDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
+| `PhoneSlotRequestDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `PhoneVerificationLimitReachedException` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `SealedPhoneAttestationDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `SealedPhoneAttestationRequestDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
+| `SealedPhoneSlotDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `SignedPhoneKeysDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSource.kt` |
 | `DirectoryEnvelopeDto` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/SignedControlPlaneDirectory.kt` |
 | `DirectoryPayloadDto` | data class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/SignedControlPlaneDirectory.kt` |
@@ -4455,6 +4471,8 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `OnionRelayClient` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/OnionRelayClient.kt` |
 | `OnionRelayEngine` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/OnionRelayEngine.kt` |
 | `RelayRequirement` | enum class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/OnionRelayEngine.kt` |
+| `NodeDirectoryRelayLoader` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/RelayDirectoryLoader.kt` |
+| `RelayDirectoryLoader` | interface | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/RelayDirectoryLoader.kt` |
 | `RelayExitDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/RelayModels.kt` |
 | `RelayExitResponseDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/RelayModels.kt` |
 | `RelayForwardDto` | class | `commonMain` | `feature/transport/src/commonMain/kotlin/com/cbgm/sparrow/feature/transport/data/route/relay/RelayModels.kt` |
@@ -4567,6 +4585,7 @@ Source-derived declaration inventory of the source tree on **2026-11-25**.
 | `PhoneAttestationRemoteDataSourceTest` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSourceTest.kt` |
 | `ReadableTestCipher` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSourceTest.kt` |
 | `RecordingSignatures` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSourceTest.kt` |
+| `Sha256` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/controlplane/PhoneAttestationRemoteDataSourceTest.kt` |
 | `AcceptingSignatureCrypto` | object | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/directory/DirectoryNodeEndpointRemoteDataSourceTest.kt` |
 | `DirectoryNodeEndpointRemoteDataSourceTest` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/directory/DirectoryNodeEndpointRemoteDataSourceTest.kt` |
 | `FakeControlPlaneConfiguration` | class | `commonTest` | `feature/transport/src/commonTest/kotlin/com/cbgm/sparrow/feature/transport/data/directory/DirectoryNodeEndpointRemoteDataSourceTest.kt` |

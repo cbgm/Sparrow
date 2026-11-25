@@ -71,6 +71,13 @@ Depending on deployment, infrastructure can observe some metadata such as:
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase
 processes the phone number and sends the SMS. Only the operator's test numbers are bound without it.
 
+Before the SMS, the app reserves a sign-up slot at the phone verifier (sealed, through the relays, for a small proof
+of work); the verifier keeps only the day, its count and hashes of open slots, and the slot links nothing to an
+address. The slots cap sign-ups per day and stop SMS on a full day for the real app. They do not stop someone who
+uses the app's Firebase details directly to request SMS: that is bounded by Firebase's own app check (Play
+Integrity, or reCAPTCHA for an app not from the Play Store), the project's SMS region policy and a billing budget.
+Someone can also take today's open slots with cheap proofs of work and block sign-ups for the day; it costs no SMS.
+
 Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
 provider (Frankfurter by default) sees the node's address once a day, never a user's.
 
