@@ -7,6 +7,7 @@
 [![Documentation](https://github.com/cbgm/Sparrow/actions/workflows/docs.yml/badge.svg?branch=master&event=push)](https://cbgm.github.io/Sparrow/)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&logoColor=white)
 ![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4)
+![Release](https://img.shields.io/badge/Release-1.0.0--beta.1-orange)
 ![Android](https://img.shields.io/badge/Android-API%2029+-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-Not%20usable%20yet-lightgrey?logo=apple)
 ![Server](https://img.shields.io/badge/Server-Ktor%20%2B%20Docker-blue)
@@ -17,28 +18,20 @@
 
 ## Project status
 
-Sparrow is under active development. **Android is the usable client target.** The repository contains
-iOS/Kotlin Multiplatform source sets and an Xcode host, but iOS is **not a supported or usable app target yet**:
-important platform/runtime integrations are still missing, so feature parity with Android must not be assumed.
+**Sparrow 1.0 beta is the first public release.** Android is the supported client.
 
-A complete release workflow now exists, but **there is currently no official tagged GitHub release with the
-full downloadable package yet**. Until the first `v*` tag is published, build from source or use CI artifacts.
+- **Android:** `1.0.0-beta.1`, available on the [Releases page](https://github.com/cbgm/Sparrow/releases). It is a
+  beta: expect bugs and changes before 1.0, and keep an identity backup so you can restore your keys.
+- **iOS:** the repository contains iOS/Kotlin Multiplatform source sets and an Xcode host, but iOS is **not a
+  supported or usable app target yet**; important platform/runtime integrations are still missing.
+- **Servers:** the beta network starts with one Control Plane Directory, one Control Plane and one Community Node.
+  Until more people run Community Nodes, onion circuits have fewer hops than chosen and the app says so in
+  Settings → Network → Onion routing. You can run your own node with the [server bundle](docs/server/runtime-build-deployment.md).
+- **Feedback:** please report bugs and questions as [GitHub issues](https://github.com/cbgm/Sparrow/issues).
 
-## Demo Video
+## Product video
 
-https://github.com/user-attachments/assets/cb4918f3-c53d-4353-aae0-15d689c7b85f
-
-## New design update
-
-https://github.com/user-attachments/assets/73a1d095-f11c-44ed-91a1-d02b783e4cd4
-
-## Polls and App-lock
-
-https://github.com/user-attachments/assets/daae9719-3445-472b-9257-8d2403dd3f4d
-
-## Verify and Expenses
-
-https://github.com/user-attachments/assets/29ad0a51-1a75-4e56-a11e-a8c339c9aa80
+https://github.com/user-attachments/assets/564da25f-26e5-43cc-a8aa-f21ba2b25a31
 
 ## What makes Sparrow different?
 
@@ -46,9 +39,12 @@ Sparrow combines client-side end-to-end encryption with a **federated, independe
 network**. Multiple Control Planes can advertise authorized Community Nodes, and clients can fail over between
 nodes instead of depending permanently on one mandatory messaging server.
 
-That is somewhat similar to Tor's community-relay philosophy, but Sparrow is **not an onion-routing anonymity
-network**: a client uses one Community Node at a time and encrypted messages may federate to another recipient
-node. The goal is infrastructure independence/resilience, not Tor-style source anonymity.
+Messages travel through **onion circuits of community relays**: the app wraps every mailbox request in layers and
+sends it through 1 to 5 relays of different operators (default 2), optionally together with decoy envelopes. The
+mailbox node does not see the app's network address, and the first relay does not see where the request goes. That
+borrows Tor's layered-relay idea, but Sparrow is **not a hardened anonymity network** like Tor: the relay set is
+small, operators declare themselves, circuits get fewer hops when few operators run relaying nodes, and
+infrastructure can still observe timing and sizes.
 
 This also does **not** justify a blanket claim that Sparrow is cryptographically safer than Signal. Signal is a
 much more mature and heavily scrutinized secure messenger. Sparrow's potential advantage is narrower: it can
@@ -85,7 +81,10 @@ The current source tree includes:
 - exact/optional on-device semantic message search and local message-safety analysis;
 - device-owner app locking in `:feature:applock`;
 - task-based application startup through `ApplicationStartupRunner` / `StartupTask`, with post-navigation runtime observers separated from the startup gate;
-- signed Control Plane discovery, multiple Control Planes, node failover, circuits through community relays and mailbox delivery for every packet;
+- signed Control Plane discovery, multiple Control Planes, node failover and an optional preferred node;
+- onion circuits through 1–5 community relays of different operators, 1–3 parallel circuits with contacts spread over them, optional decoy envelopes, and an optional mode that never sends without a protecting route;
+- mailbox delivery for every packet without any push service: always connected, only while the app is open, or periodic checks;
+- guided onboarding with an interactive six-step tour on a sample chat;
 - unified server management for Control Plane + one or more Community Nodes, with a separately operated signed Control Plane Directory;
 - Docker/Ktor server services, persistent registry/mailbox state, observability and deployment tooling.
 

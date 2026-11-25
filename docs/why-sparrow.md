@@ -139,10 +139,12 @@ The similarity is the infrastructure philosophy:
 
 Tor goes much further. Tor is an anonymity network: traffic is deliberately sent through a multi-hop circuit of
 relays with layered onion encryption. The Tor Project describes the normal Tor Browser path as three relays.
-Sparrow's app builds a circuit through relays starting at its home node and puts every packet into the recipient's
-mailbox, which the recipient reads the same way. Its requests to Control Planes (node discovery, phone alias claims,
-invitation route lookups) go through two relays with layered encryption, so Control Planes do not see the app's
-address. Sparrow does not add cover traffic or the other protections Tor relies on.
+Sparrow's app keeps 1 to 3 circuits open through 1 to 5 community relays each (Settings > Network > Onion routing,
+default 2 hops), never two hops of the same declared operator, and sends every mailbox request through them, so the
+mailbox node does not see the app's address. Its requests to Control Planes (node discovery, phone alias claims,
+invitation route lookups) go through two relays with layered encryption. Optional decoy envelopes blur which
+mailboxes a send was for. Sparrow does not add constant cover traffic, has no guard relays, and lacks the scale of
+independent relays Tor relies on; with few operators, circuits get fewer hops than chosen.
 
 ```mermaid
 flowchart LR
@@ -154,10 +156,12 @@ flowchart LR
     end
 
     subgraph SC[Sparrow message routing]
-        SClient[Client] --> Home[Home node relay]
-        Home --> NodeB[Recipient's mailbox node]
-        Recipient[Recipient] --> RHome[Recipient's home node relay]
-        RHome --> NodeB
+        SClient[Client] --> Home[Home node, relay 1]
+        Home --> Relay2[Relay 2, other operator]
+        Relay2 --> NodeB[Recipient's mailbox node]
+        Recipient[Recipient] --> RHome[Recipient's home node, relay 1]
+        RHome --> RRelay2[Relay 2, other operator]
+        RRelay2 --> NodeB
     end
 ```
 
@@ -173,8 +177,8 @@ still observe protocol metadata such as connection IPs/timing, routing activity,
 | Infrastructure model | Multiple Control Planes + independently hostable Community Nodes | Signal-operated service with strong metadata-minimization design | Meta-operated client/server service | Thousands of independently operated relays |
 | Automatic relay/node failover | Yes, between authorized Community Nodes | Service implementation detail, not a user-operated federation model | Service implementation detail, not a user-operated federation model | Yes, circuits use multiple relays |
 | Community can run transport nodes | Yes | Not as one shared federated Signal network | No | Yes |
-| Multi-hop onion routing | Only for Control Plane requests (two relays) | No | No | Yes |
-| Designed for sender/network anonymity | No | Metadata minimization, but not Tor-style anonymity | No | Yes |
+| Multi-hop onion routing | Yes, 1–5 community relays (default 2), fewer when few operators run relays | No | No | Yes |
+| Designed for sender/network anonymity | Partly: hides the app's address from mailbox nodes and Control Planes, but not a hardened anonymity network | Metadata minimization, but not Tor-style anonymity | No | Yes |
 | Cryptographic/protocol maturity | Experimental; no completed independent audit | Very high/mature | Very high; Signal Protocol is a foundation of WhatsApp E2EE | Very high for its anonymity-network threat model |
 | Current Sparrow limitation | Android usable; iOS incomplete | Mature multi-platform product | Mature multi-platform product | Different product category |
 
@@ -210,7 +214,7 @@ A fair description today is:
 
 Do not infer guarantees that the current architecture does not provide:
 
-- it is not an anonymity network;
+- it is not a hardened anonymity network like Tor;
 - a global observer may still correlate timing/traffic;
 - infrastructure can observe some connection and routing metadata;
 - a compromised client device defeats client-side confidentiality;

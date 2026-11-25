@@ -4298,7 +4298,6 @@ Source-derived declaration inventory of the source tree on **2026-10-21**.
 | `BuildInfo` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/model/BuildInfo.kt` |
 | `ControlPlaneSettingsContext` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/model/ControlPlaneSettingsContext.kt` |
 | `DeveloperError` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/model/DeveloperError.kt` |
-| `DisclaimerContent` | object | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/model/DisclaimerContent.kt` |
 | `SettingsDomainContext` | data class | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/model/SettingsDomainContext.kt` |
 | `DeveloperErrorLogRepository` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/repository/DeveloperErrorLogRepository.kt` |
 | `LicensesRepository` | interface | `commonMain` | `feature/settings/src/commonMain/kotlin/com/cbgm/sparrow/feature/settings/domain/repository/LicensesRepository.kt` |
