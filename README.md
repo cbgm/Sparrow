@@ -297,7 +297,7 @@ Do not manually edit `docs/generated/`.
 
 ## Releases
 
-The documented Git branch flow is `develop -> master -> release/x.y -> tag`. The current source archive used for this documentation audit does not include `.github/workflows`, so exact current CI change-classification rules are not asserted here without those workflow files.
+The Git branch flow is `develop -> master -> release/x.y -> tag`. The workflows in `.github/workflows` build pull requests, the server bundle and the documentation site; a `v*` tag (for the beta: `v1.0.0-beta.1`) triggers the complete release build.
 
 The current **verifiable server packaging path** is `server/installer/build.py`, which creates the single public `dist/sparrow-server.zip`. The private `server/control-plane-directory` installer/state must not be included in that public asset.
 

@@ -6,14 +6,14 @@ This page describes the implemented behavior in the current source tree. Roadmap
 
 | Area | Status |
 |---|---|
-| Android client | Current usable target |
+| Android client | First public beta (`1.0.0-beta.1`) |
 | iOS client | KMP/Xcode/source-set structure exists, but important runtime/platform functionality is incomplete |
 | Control Plane | Implemented as Docker/Ktor services + operator tooling |
 | Community Node | Implemented as Docker/Ktor services + operator tooling |
 
 ## Identity, onboarding and trust
 
-- onboarding, permission flow, phone entry/hint and identity creation;
+- onboarding pages (welcome, how relays hide who you talk to, permissions, receiving while closed, theme, phone) and identity creation, followed by an optional six-step tour on a sample chat;
 - one-time SMS phone verification at sign-up (create and restore), Firebase-based on Android;
 - local signing/encryption identity and encrypted backup/restore;
 - public identity exchange, acknowledgement and manual/QR import;
@@ -125,12 +125,16 @@ See [Startup architecture](../architecture/startup.md).
 - app-lock toggle with device authentication;
 - semantic search and message-safety settings;
 - attachment storage/management;
+- privacy policy and data disclaimer (Privacy & data), in English and German;
+- theme (like the phone, light or dark), language, auto reply, block unknown invites and automatic secure setup;
+- onion routing (hops, circuits, decoy envelopes, send directly without a route) and a preferred node;
 - network/developer diagnostics and persisted error log;
 - Control Plane/node state and connection diagnostics.
 
 ## Offline/background transport
 
-- circuits through the relays of a home node;
+- circuits through 1–5 relays of different operators (1–3 circuits, contacts spread over them) starting at a home node;
+- optional decoy envelopes and an optional mode that never sends without a protecting route;
 - durable protocol outbox;
 - recipient mailbox delivery;
 - receiving while closed (always connected, while open, or checking every 15 minutes);
@@ -161,7 +165,7 @@ See [Startup architecture](../architecture/startup.md).
 - Android debug/release builds and signing configuration are present in the source tree.
 - Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/installer`.
 - `server/control-plane-directory` is private operator infrastructure and is deliberately excluded from that public bundle.
-- This source snapshot does not include `.github/workflows`; exact current CI trigger/change-classification behavior therefore must be verified from the release checkout rather than inferred here.
+- The CI and release workflows are checked in under `.github/workflows` (see [Release process](../development/release-process.md#release-automation-present-in-this-source-snapshot)); a `v*` tag builds the release.
 
 ## Not currently advertised as working
 

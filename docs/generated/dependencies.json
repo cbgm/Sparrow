@@ -218,7 +218,6 @@
   {"source": ":feature:settings", "target": ":feature:search"},
   {"source": ":feature:settings", "target": ":feature:transport"},
   {"source": ":feature:settings", "target": ":feature:voice"},
-  {"source": ":feature:settings", "target": ":protocol"},
   {"source": ":feature:transport", "target": ":core:crypto"},
   {"source": ":feature:transport", "target": ":core:util"},
   {"source": ":feature:transport", "target": ":data:datastore"},

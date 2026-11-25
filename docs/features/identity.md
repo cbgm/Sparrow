@@ -11,8 +11,6 @@ Key types include:
 - `LocalIdentityKeyDataSource`: the device's keys for every other module (`LocalPublicIdentitySource`, `LocalSigningKeyPairSource`, `LocalEncryptionKeyPairSource`, `LocalSigningPublicKeySource`)
 - `PublicIdentity`
 - `CreateIdentityUseCase`
-- `IdentityLocalEncryptionKeyPairProvider`
-- `IdentityLocalSigningKeyPairProvider`
 - `SodiumIdentityKeyGenerator` in `:core:crypto`
 - `PrivateKeyStorage` / Android private-key storage
 - `LocalIdentityProfileDataSource`

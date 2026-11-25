@@ -4,7 +4,7 @@ This is the current user flow for the Android client.
 
 ## 1. Complete onboarding
 
-On first launch, follow the welcome/privacy/phone/permission pages and create the local Sparrow identity. The private identity material stays on the device; Android protects the stored private-key bytes through `AndroidPrivateKeyStorage`.
+On first launch, swipe through the pages (welcome, how relays hide who you talk to, permissions, how messages arrive while Sparrow is closed, light or dark), enter your name and phone number, confirm the SMS code and create the local Sparrow identity (or restore it from a backup). Afterwards an optional six-step tour shows the contact ring, the top bar, delivery dots, holding a message, the date rail and swiping on a sample chat. The private identity material stays on the device; Android protects the stored private-key bytes through `AndroidPrivateKeyStorage`. See [Onboarding](../features/onboarding.md).
 
 ## 2. Add a contact
 
@@ -20,7 +20,7 @@ Open contact details and compare the safety number, or use the QR verification p
 
 ## 5. Direct chat
 
-Open the contact conversation and send text or attachments. The UI exposes outgoing delivery state and supports retry when a send fails. Typing/read state is carried separately from the durable message body.
+Start a chat with the pen button on the Chats screen, or open the contact conversation, and send text or attachments. The UI exposes outgoing delivery state and supports retry when a send fails. Typing/read state is carried separately from the durable message body.
 
 The attachment bar supports:
 
@@ -50,8 +50,12 @@ Settings includes attachment storage/management. Incoming image/video/file copie
 
 ## 10. Network settings and diagnostics
 
-Settings contains Control Plane configuration. The Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
+Settings → Network contains the Control Planes, the preferred node and onion routing (hops, circuits, decoy envelopes and whether to send directly while no route is available; see [Transport](../features/transport.md#onion-circuits)). The Control Plane screen's Add field accepts either a single Control Plane URL or a URL returning the JSON `controlPlanes` directory document. Developer/network diagnostics show plane/node reachability, current node and cooldown state. Developer Settings also contains a persisted timestamped error log that can be cleared.
 
 ## 11. Background delivery
 
 How messages arrive while Sparrow is closed depends on the connection mode chosen under *Receiving messages*: always connected, while open (they wait in the mailboxes until the next start), or checking every 15 minutes. See [Receiving messages](../push-notifications.md). Android Force stop disables normal background execution until the app is opened again.
+
+## 12. Privacy and data
+
+Settings → Privacy & data shows the privacy policy and the data disclaimer: what stays on the phone, what the servers keep and for how long, and what they can still see. To delete everything on the phone, clear Sparrow's storage in Android's app settings or uninstall it; that cannot be undone.

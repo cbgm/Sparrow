@@ -884,8 +884,8 @@
     "group": "feature",
     "directory": "feature/identity",
     "buildFile": "feature/identity/build.gradle.kts",
-    "kotlinSourceFileCount": 235,
-    "productionKotlinFileCount": 221,
+    "kotlinSourceFileCount": 237,
+    "productionKotlinFileCount": 223,
     "testKotlinFileCount": 14,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -1282,8 +1282,8 @@
     "group": "feature",
     "directory": "feature/settings",
     "buildFile": "feature/settings/build.gradle.kts",
-    "kotlinSourceFileCount": 110,
-    "productionKotlinFileCount": 109,
+    "kotlinSourceFileCount": 107,
+    "productionKotlinFileCount": 106,
     "testKotlinFileCount": 1,
     "resourceFileCount": 2,
     "sourceSets": [
@@ -1304,8 +1304,7 @@
       ":feature:safety",
       ":feature:search",
       ":feature:transport",
-      ":feature:voice",
-      ":protocol"
+      ":feature:voice"
     ],
     "dependents": [
       ":feature:onboarding",
@@ -1428,8 +1427,8 @@
     "group": "protocol",
     "directory": "protocol",
     "buildFile": "protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 106,
-    "productionKotlinFileCount": 85,
+    "kotlinSourceFileCount": 105,
+    "productionKotlinFileCount": 84,
     "testKotlinFileCount": 21,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -1459,7 +1458,6 @@
       ":feature:messaging",
       ":feature:notification",
       ":feature:polls",
-      ":feature:settings",
       ":feature:transport",
       ":feature:voice",
       ":shared"

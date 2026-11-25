@@ -34,7 +34,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:conversationorchestration:message`](modules/feature-conversationorchestration-message.md) | `feature` | 124 | 9 | 0 | 12 | 2 |
 | [`:feature:embedding`](modules/feature-embedding.md) | `feature` | 21 | 1 | 0 | 2 | 5 |
 | [`:feature:expenses`](modules/feature-expenses.md) | `feature` | 79 | 13 | 0 | 8 | 3 |
-| [`:feature:identity`](modules/feature-identity.md) | `feature` | 235 | 14 | 1 | 8 | 14 |
+| [`:feature:identity`](modules/feature-identity.md) | `feature` | 237 | 14 | 1 | 8 | 14 |
 | [`:feature:invite`](modules/feature-invite.md) | `feature` | 35 | 0 | 0 | 4 | 9 |
 | [`:feature:linkpreview`](modules/feature-linkpreview.md) | `feature` | 18 | 1 | 0 | 4 | 3 |
 | [`:feature:media`](modules/feature-media.md) | `feature` | 105 | 5 | 2 | 2 | 11 |
@@ -47,11 +47,11 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:polls`](modules/feature-polls.md) | `feature` | 27 | 0 | 0 | 6 | 3 |
 | [`:feature:safety`](modules/feature-safety.md) | `feature` | 38 | 6 | 1 | 5 | 5 |
 | [`:feature:search`](modules/feature-search.md) | `feature` | 30 | 2 | 0 | 4 | 4 |
-| [`:feature:settings`](modules/feature-settings.md) | `feature` | 110 | 1 | 2 | 14 | 3 |
+| [`:feature:settings`](modules/feature-settings.md) | `feature` | 107 | 1 | 2 | 13 | 3 |
 | [`:feature:transport`](modules/feature-transport.md) | `feature` | 183 | 31 | 1 | 4 | 12 |
 | [`:feature:voice`](modules/feature-voice.md) | `feature` | 50 | 1 | 2 | 7 | 3 |
 | [`:navigation`](modules/navigation.md) | `navigation` | 18 | 0 | 0 | 21 | 1 |
-| [`:protocol`](modules/protocol.md) | `protocol` | 106 | 21 | 1 | 3 | 20 |
+| [`:protocol`](modules/protocol.md) | `protocol` | 105 | 21 | 1 | 3 | 19 |
 | [`:quality`](modules/quality.md) | `quality` | 0 | 0 | 0 | 0 | 0 |
 | [`:quality:detekt-rules`](modules/quality-detekt-rules.md) | `quality` | 11 | 0 | 0 | 0 | 0 |
 | [`:resources`](modules/resources.md) | `resources` | 0 | 0 | 56 | 0 | 2 |

@@ -29,6 +29,9 @@ The design aims to protect against:
 - a Community Node learning its users' phone numbers: the app claims its alias at each of its Control Planes,
   sealed for the presence directory's key from that Control Plane's signed node directory, and invitation letters
   are sealed for the recipient;
+- mailbox nodes learning the app's network address: mailbox requests go through circuits of 1 to 5 relays
+  (default 2), never two of the same declared operator, and with "Send directly without a route" switched off
+  nothing goes out without a circuit through at least two hops (by default it goes out directly while no circuit is up);
 - Control Planes learning the app's network address: the app's requests to them go through two relays (onion
   layers sealed for each relay's key from the signed directory). The first relay sees the address but not the
   destination, the second the destination but not the address; neither reads the content. Two relays run by the

@@ -8,8 +8,8 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 63 |
 | Module groups | 11 |
-| Project dependencies | 331 |
-| Kotlin files | 2816 |
+| Project dependencies | 330 |
+| Kotlin files | 2814 |
 | Test Kotlin files | 233 |
 | Resource files | 94 |
 
@@ -431,7 +431,6 @@ graph TD
     module_feature_settings --> module_feature_search
     module_feature_settings --> module_feature_transport
     module_feature_settings --> module_feature_voice
-    module_feature_settings --> module_protocol
     module_feature_transport --> module_core_crypto
     module_feature_transport --> module_core_util
     module_feature_transport --> module_data_datastore
