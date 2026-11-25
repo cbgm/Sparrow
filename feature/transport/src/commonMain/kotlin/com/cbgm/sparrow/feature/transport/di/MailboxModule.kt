@@ -1,0 +1,119 @@
+package com.cbgm.sparrow.feature.transport.di
+
+import com.cbgm.sparrow.core.crypto.hash.CryptoHash
+import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
+import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
+import com.cbgm.sparrow.core.crypto.transport.TransportPayloadCodec
+import com.cbgm.sparrow.feature.transport.data.TransportConfig
+import com.cbgm.sparrow.feature.transport.data.blob.HttpBlobRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.controlplane.AliasClaimRegistrar
+import com.cbgm.sparrow.feature.transport.data.controlplane.InvitationRouteRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.mailbox.DataStoreInvitationMailboxStore
+import com.cbgm.sparrow.feature.transport.data.mailbox.HttpMailboxRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationLetterRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.mailbox.InvitationMailboxStore
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxOutgoingWireSender
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxRemoteDataSource
+import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxRepositoryImpl
+import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitMailboxEngine
+import com.cbgm.sparrow.feature.transport.data.route.circuit.CircuitRunner
+import com.cbgm.sparrow.feature.transport.data.route.circuit.FileTransferCircuits
+import com.cbgm.sparrow.feature.transport.data.route.circuit.createMailboxHttpClient
+import com.cbgm.sparrow.feature.transport.data.routing.RoutingIdLocalDataSource
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
+import com.cbgm.sparrow.protocol.attachment.BlobTransferSource
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
+import com.cbgm.sparrow.protocol.transport.OutgoingWireSender
+import io.ktor.client.HttpClient
+import org.koin.core.qualifier.named
+import org.koin.dsl.module
+
+/** Mailboxes, invitation letters and file transfers, all through the circuits. */
+internal val mailboxModule =
+    module {
+        single<InvitationMailboxStore> {
+            DataStoreInvitationMailboxStore(dataStore = get(), json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)))
+        }
+
+        single<InvitationMailboxRepository> {
+            InvitationMailboxRepositoryImpl(
+                nodeEndpointDataSource = get<NodeEndpointRemoteDataSource>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
+                mailboxDataSource = get<MailboxRemoteDataSource>(),
+                store = get<InvitationMailboxStore>()
+            )
+        }
+
+        single<InvitationLetterRepository> {
+            InvitationLetterRepositoryImpl(
+                routes = get<InvitationRouteRemoteDataSource>(),
+                mailboxDataSource = get<MailboxRemoteDataSource>(),
+                signingKeyPairSource = get<LocalSigningKeyPairSource>(),
+                encryptionKeyPairSource = get<LocalEncryptionKeyPairSource>(),
+                signatureCrypto = get<DetachedSignatureCrypto>(),
+                transportCipher = get<TransportMessageCipher>(),
+                payloadCodec = get<TransportPayloadCodec>(),
+                routingIdGenerator = get<RoutingIdGenerator>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single<MailboxRemoteDataSource> {
+            // Mailbox requests go through the circuit, so the mailbox node does not see the device's address.
+            HttpMailboxRemoteDataSource(
+                httpClient =
+                    createMailboxHttpClient(
+                        engine =
+                            CircuitMailboxEngine(
+                                circuits = get<CircuitRunner>(),
+                                preferences = get(),
+                                directClient = get<HttpClient>()
+                            ),
+                        json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                    ),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
+                circuitSlot = get<CircuitRunner>()::slotOf
+            )
+        }
+
+        single<MailboxRepository> { MailboxRepositoryImpl(remoteDataSource = get<MailboxRemoteDataSource>()) }
+
+        single<BlobTransferSource> {
+            // Every file transfer gets a circuit of its own, so the blob node does not see the device's address.
+            HttpBlobRemoteDataSource(
+                transfers =
+                    FileTransferCircuits(
+                        circuits = get<CircuitRunner>(),
+                        preferences = get(),
+                        directClient = get<HttpClient>()
+                    ),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                creationWork = MailboxCreationWorkSolver(get<CryptoHash>()),
+                cryptoHash = get<CryptoHash>(),
+                nodeEndpointDataSource = get<NodeEndpointRemoteDataSource>(),
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
+                randomBytes = get<SecureRandomGenerator>().let { random -> { size -> random.generateBytes(size).getOrThrow() } }
+            )
+        }
+
+        single<OutgoingWireSender> {
+            MailboxOutgoingWireSender(
+                routingIdDataSource = get<RoutingIdLocalDataSource>(),
+                transportConfig = get<TransportConfig>(),
+                mailboxRouteRepository = get(),
+                mailboxRepository = get<MailboxRepository>(),
+                invitationLetters = get<InvitationLetterRepository>(),
+                aliasBinding = get<AliasClaimRegistrar>()
+            )
+        }
+    }

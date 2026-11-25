@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.DigitPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
@@ -51,7 +51,7 @@ class ContactRepositoryImplIntegrationTest {
                 .build()
 
         val contactDao = database.contactDao()
-        val phoneNumberNormalizer = DefaultPhoneNumberNormalizer()
+        val phoneNumberNormalizer = DigitPhoneNumberNormalizer()
 
         remoteIdentities = RemoteIdentityImportRepositoryImpl(database.remoteIdentityDao())
 

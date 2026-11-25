@@ -7,15 +7,15 @@ Messaging crosses several modules, but the current code has a deliberate split b
 | Packet contracts/codecs | `:protocol` | `SparrowPacket`, `KotlinxPacketCodec`, packet data classes |
 | Persistent outbox contracts/state | `:protocol` | `ProtocolOutbox`, outbox state/event types |
 | Persistent outbox storage | `:data:database` | `ProtocolOutboxEntity`, `ProtocolOutboxDao`, `ProtocolOutboxFailureEventEntity` |
-| Generic outbox execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor` |
+| Generic outbox execution | `:feature:messaging` | `RetryingOutboxRunner`, `PersistentOutboxProcessor` |
 | Send policy, delivery state, mailbox receiving | `:feature:conversationorchestration:delivery` | `MailboxPendingSynchronizer`, `MailboxArrivalListener`, `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `OutboxDeliveryStateRouter`, `ApplyDeliveryEventWorkflow` |
 | Conversation write semantics | `:feature:conversationorchestration:message` / `membership` / `lifecycle` | `SendDirectMessageWorkflow`, `DeliverDirectMessageWorkflow`, `SendGroupMessageWorkflow`, group administration and invitation workflows |
-| Incoming packet handling | `:feature:conversationorchestration:incoming` | `IncomingEnvelopeProcessorImpl`, `IncomingTransportMessageHandler`, `RouteIncomingPacketWorkflow`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `Receive*Workflow` |
+| Incoming packet handling | `:feature:conversationorchestration:incoming` | `ParkingIncomingEnvelopeProcessor`, `IncomingTransportMessageHandler`, `RouteIncomingPacketWorkflow`, `GroupPacketDispatcher`, `ControlPacketDispatcher`, `Receive*Workflow` |
 | Conversation presentation/read side | `:feature:chats` | ViewModels/controllers, read repositories, observe use cases; writes via `ConversationOrchestrator` |
 | Invitation lifecycle | `:feature:invite` | `InvitationRepositoryImpl`, `InvitationLifecycleDataSource`, `InvitationResultObserver` (consumer in orchestration) |
 | Identity/trust/recovery | `:feature:identity` | `IdentityExchangeDataSource`, pending identity changes, approved reconnection repositories/use cases |
-| Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityManager`, membership use cases |
-| Wire/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `CircuitRunner`, `MailboxOutgoingWireSender`, mailbox/control-plane clients |
+| Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityRepositoryImpl`, membership use cases |
+| Wire/discovery | `:feature:transport` | `HomeNodeConnection`, `CircuitRunner`, `MailboxOutgoingWireSender`, mailbox/control-plane clients |
 
 ## Outgoing boundary
 
@@ -23,8 +23,8 @@ Messaging crosses several modules, but the current code has a deliberate split b
 sequenceDiagram
     participant CHAT as Send*Workflow (message)
     participant OB as ProtocolOutbox
-    participant RUN as DefaultOutboxRunner
-    participant PROC as DefaultOutboxProcessor
+    participant RUN as RetryingOutboxRunner
+    participant PROC as PersistentOutboxProcessor
     participant SEND as OutgoingPacketSender
     participant POLICY as identity/routing/payload policy
     participant WIRE as SendEncodedTransportUseCase
@@ -47,11 +47,11 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant RUN as MailboxPendingSynchronizer
-    participant PROC as IncomingEnvelopeProcessorImpl
+    participant PROC as ParkingIncomingEnvelopeProcessor
     participant H as IncomingTransportMessageHandler
     participant ROUTE as RouteIncomingPacketWorkflow
     participant WF as Receive*Workflow / dispatchers
-    participant PH as DefaultProtocolPacketHandler
+    participant PH as DispatchingProtocolPacketHandler
 
     RUN->>PROC: encrypted transport envelope from a mailbox
     PROC->>H: resolve sender, local keys

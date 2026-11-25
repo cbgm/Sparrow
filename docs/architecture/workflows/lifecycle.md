@@ -157,7 +157,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.StartDirectInvitation`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/direct/StartDirectInvitationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `RequireContactInvitableUseCase`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberProvider`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
+- **Uses:** `WorkflowEngine`, `RequireContactInvitableUseCase`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberSource`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
 
 ```text
 CheckNotBlocked -> LoadAuthorization -> LoadLabels -> StartExchange -> RecordInvitation

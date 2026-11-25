@@ -57,8 +57,9 @@ val searchModule =
                 semanticSearchRepository = get()
             )
         }
-        viewModel {
+        viewModel { parameters ->
             MessageSearchViewModel(
+                savedStateHandle = parameters.getOrNull(),
                 observeSemanticSearchState = get(),
                 searchMessages = get()
             )

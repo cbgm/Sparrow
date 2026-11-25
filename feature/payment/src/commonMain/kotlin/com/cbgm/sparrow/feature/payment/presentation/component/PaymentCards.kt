@@ -5,16 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.CheckCircleOutline
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,10 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowSwitch
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.payment.presentation.model.PaymentStatusUi
 import com.cbgm.sparrow.feature.payment.presentation.model.PaymentUiEvent
@@ -46,127 +43,114 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PaymentSummaryCard(state: PaymentUiState) {
-    SparrowCardNoAnimation {
-        Column(
-            Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Text(
-                stringResource(Res.string.feature_payment_participants, state.payerLabel, state.recipientLabel),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                state.amountLabel,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            SparrowStatusBadge(
-                text = stringResource(
-                    when (state.status) {
-                        PaymentStatusUi.UNPAID -> Res.string.feature_payment_unpaid
-                        PaymentStatusUi.SENT -> Res.string.feature_payment_sent
-                        PaymentStatusUi.RECEIVED -> Res.string.feature_payment_received
-                    }
-                ),
-                icon = when (state.status) {
-                    PaymentStatusUi.UNPAID -> Icons.Default.AccountBalance
-                    PaymentStatusUi.SENT -> Icons.Default.Schedule
-                    PaymentStatusUi.RECEIVED -> Icons.Default.CheckCircleOutline
-                },
-                color = if (state.status == PaymentStatusUi.RECEIVED) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+    ) {
+        Text(
+            stringResource(Res.string.feature_payment_participants, state.payerLabel, state.recipientLabel),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            state.amountLabel,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Light
+        )
+        Text(
+            text = stringResource(
+                when (state.status) {
+                    PaymentStatusUi.UNPAID -> Res.string.feature_payment_unpaid
+                    PaymentStatusUi.SENT -> Res.string.feature_payment_sent
+                    PaymentStatusUi.RECEIVED -> Res.string.feature_payment_received
                 }
-            )
-        }
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (state.status == PaymentStatusUi.RECEIVED) {
+                MaterialTheme.colorScheme.tertiary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
     }
 }
 
 @Composable
 internal fun PaymentBankDetailsCard(state: PaymentUiState, onEvent: (PaymentUiEvent) -> Unit) {
-    SparrowCardNoAnimation {
-        Column(
-            Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+    ) {
+        SparrowSectionLabel(text = stringResource(Res.string.feature_payment_bank_details))
+        SparrowInputField(
+            value = state.accountHolder,
+            onValueChange = { onEvent(PaymentUiEvent.HolderChanged(it)) },
+            label = stringResource(Res.string.feature_payment_holder),
+            isSingleLine = true,
+            isEnabled = !state.isBusy
+        )
+        SparrowInputField(
+            value = state.iban,
+            onValueChange = { onEvent(PaymentUiEvent.IbanChanged(it)) },
+            label = stringResource(Res.string.feature_payment_iban),
+            isSingleLine = true,
+            isEnabled = !state.isBusy
+        )
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text(
-                stringResource(Res.string.feature_payment_bank_details),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                stringResource(Res.string.feature_payment_remember),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium
             )
-            SparrowInputField(
-                value = state.accountHolder,
-                onValueChange = { onEvent(PaymentUiEvent.HolderChanged(it)) },
-                label = stringResource(Res.string.feature_payment_holder),
-                isSingleLine = true,
-                isEnabled = !state.isBusy
+            SparrowSwitch(
+                checked = state.rememberDetails,
+                onCheckedChange = { onEvent(PaymentUiEvent.RememberChanged(it)) },
+                enabled = !state.isBusy
             )
-            SparrowInputField(
-                value = state.iban,
-                onValueChange = { onEvent(PaymentUiEvent.IbanChanged(it)) },
-                label = stringResource(Res.string.feature_payment_iban),
-                isSingleLine = true,
-                isEnabled = !state.isBusy
-            )
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-            ) {
-                Text(
-                    stringResource(Res.string.feature_payment_remember),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Switch(
-                    checked = state.rememberDetails,
-                    onCheckedChange = { onEvent(PaymentUiEvent.RememberChanged(it)) },
-                    enabled = !state.isBusy
-                )
-            }
         }
     }
 }
 
 @Composable
 internal fun PaymentReviewCard(state: PaymentUiState) {
-    SparrowCardNoAnimation {
-        Column {
-            PaymentField(stringResource(Res.string.feature_payment_holder), state.accountHolder)
-            PaymentField(stringResource(Res.string.feature_payment_iban), state.iban)
-            PaymentField(stringResource(Res.string.feature_payment_amount), state.amount)
-            PaymentField(stringResource(Res.string.feature_payment_reference_label), state.reference, showDivider = false)
-        }
+    Column {
+        SparrowSectionLabel(text = stringResource(Res.string.feature_payment_bank_details))
+        PaymentField(stringResource(Res.string.feature_payment_holder), state.accountHolder)
+        PaymentField(stringResource(Res.string.feature_payment_iban), state.iban)
+        PaymentField(stringResource(Res.string.feature_payment_amount), state.amount)
+        PaymentField(stringResource(Res.string.feature_payment_reference_label), state.reference)
     }
 }
 
 @Suppress("DEPRECATION")
 @Composable
-private fun PaymentField(label: String, value: String, showDivider: Boolean = true) {
+private fun PaymentField(label: String, value: String) {
     val clipboard = LocalClipboardManager.current
     Column {
-        Row(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
-                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.base),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.bodyMedium)
             }
             IconButton(onClick = { clipboard.setText(AnnotatedString(value)) }) {
                 Icon(
-                    Icons.Default.ContentCopy,
+                    SparrowIcons.Copy,
                     stringResource(Res.string.feature_payment_copy),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                    tint = MaterialTheme.colorScheme.outline
                 )
             }
         }
-        if (showDivider) {
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = Dimens.Base.dividerThickness
-            )
-        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.divider,
+            thickness = Dimens.Base.dividerThickness
+        )
     }
 }

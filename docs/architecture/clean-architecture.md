@@ -38,7 +38,8 @@ flowchart TD
 - presentation does not use DTOs or Room entities;
 - common domain code has no Android/iOS/Compose/Room/Ktor implementation types;
 - datasources do not call repositories;
-- repository implementations do not call other repositories;
+- repository implementations do not call other repositories, not even of their own feature;
+- data of another module comes through a `…Source` contract in `:protocol`, implemented by a datasource;
 - repository implementations do not call use cases;
 - cross-feature workflows belong in an explicit orchestration/runtime boundary;
 - use cases should stay focused; do not hide broad orchestration in chains of unrelated use cases.

@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.Workflow
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RefreshOwnedGroupVerificationUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import kotlin.reflect.KClass
 
 /**
@@ -25,7 +25,7 @@ class CreateGroupWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val conversationRepository: GroupConversationRepository,
     private val groupSecurityRepository: GroupSecurityRepository,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val refreshOwnedGroupVerification: RefreshOwnedGroupVerificationUseCase
 ) : ConversationWorkflow<
         GroupAdministrationCommand.CreateGroup,
@@ -51,7 +51,7 @@ class CreateGroupWorkflow internal constructor(
                     groupId = step.groupId,
                     createdAtEpochMilliseconds =
                         conversationRepository.getMembershipContext(step.groupId).getOrThrow().createdAtEpochMilliseconds,
-                    localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                    localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                 ).getOrThrow()
                 Outcome.SecurityInitialized(step.groupId)
             }

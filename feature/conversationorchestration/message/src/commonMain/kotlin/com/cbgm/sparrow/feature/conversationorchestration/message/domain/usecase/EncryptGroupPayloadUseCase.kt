@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecas
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 /**
@@ -13,8 +13,8 @@ import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
  */
 class EncryptGroupPayloadUseCase(
     private val groupSecurityRepository: GroupSecurityRepository,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localProfilePictureMetadataSource: LocalProfilePictureMetadataSource
 ) {
     suspend operator fun invoke(
         groupId: String,
@@ -25,8 +25,8 @@ class EncryptGroupPayloadUseCase(
         packetIdFor: (contactId: String) -> String
     ): Result<Map<String, GroupChatMessagePacket>> =
         safeSuspendCall(logFailure = false) {
-            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+            val profilePicture = localProfilePictureMetadataSource.forMessage().getOrElse { ProfilePictureMetadata() }
             val secured =
                 groupSecurityRepository.encryptMessage(
                     groupId = groupId,

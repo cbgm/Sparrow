@@ -6,13 +6,13 @@ import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.util.id.IdGenerator
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.transport.blob.BlobGateway
-import com.cbgm.sparrow.feature.transport.blob.BlobUpload
+import com.cbgm.sparrow.protocol.attachment.BlobTransferSource
+import com.cbgm.sparrow.protocol.attachment.BlobUpload
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 internal class BlobTransferDataSource(
-    private val blobGateway: BlobGateway,
+    private val blobTransferSource: BlobTransferSource,
     private val blobCipher: BlobCipher,
     private val cryptoHash: CryptoHash,
     private val secureRandomGenerator: SecureRandomGenerator
@@ -45,7 +45,7 @@ internal class BlobTransferDataSource(
         }
         val expiresAt = now + effectiveRetentionMilliseconds
         val stored =
-            blobGateway.upload(
+            blobTransferSource.upload(
                 BlobUpload(
                     blobId = blobId,
                     ciphertext = encrypted.ciphertext,
@@ -70,7 +70,7 @@ internal class BlobTransferDataSource(
     }
 
     suspend fun download(reference: EncryptedBlobReferenceDto): ByteArray {
-        val ciphertext = blobGateway.download(reference.nodeId, reference.blobId, reference.readCapability, reference.ciphertextByteSize)
+        val ciphertext = blobTransferSource.download(reference.nodeId, reference.blobId, reference.readCapability, reference.ciphertextByteSize)
         check(cryptoHash.sha256(ciphertext).contentEquals(reference.ciphertextSha256)) {
             "Blob ciphertext hash mismatch"
         }
@@ -87,7 +87,7 @@ internal class BlobTransferDataSource(
         reference: EncryptedBlobReferenceDto,
         deleteCapability: String
     ) {
-        blobGateway.delete(reference.nodeId, reference.blobId, deleteCapability)
+        blobTransferSource.delete(reference.nodeId, reference.blobId, deleteCapability)
     }
 
     @OptIn(ExperimentalEncodingApi::class)

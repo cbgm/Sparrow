@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Hist
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistorySenderAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageList
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.rememberDissolvingMessageListState
-import com.cbgm.sparrow.feature.chats.presentation.common.history.model.HistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.HistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
@@ -24,7 +24,7 @@ import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyW
 
 @Composable
 internal fun HistoryContent(
-    model: HistoryUiModel,
+    model: HistoryUi,
     listState: LazyListState,
     innerPadding: PaddingValues,
     targetMessageId: String?,
@@ -57,19 +57,15 @@ internal fun HistoryContent(
     )
 
     when {
-        model.isLoading -> {
-            if (showLoading) HistoryLoadingContent(modifier = fillModifier)
-        }
+        model.isLoading -> DelayedHistoryLoadingContent(isVisible = showLoading, modifier = fillModifier)
 
-        dissolvingListState.messages.isEmpty() -> {
-            if (showEmpty) {
-                HistoryEmptyContent(
-                    title = model.emptyTitle,
-                    description = model.emptyDescription,
-                    modifier = fillModifier
-                )
-            }
-        }
+        dissolvingListState.messages.isEmpty() ->
+            DelayedHistoryEmptyContent(
+                isVisible = showEmpty,
+                title = model.emptyTitle,
+                description = model.emptyDescription,
+                modifier = fillModifier
+            )
 
         else -> MessageList(
             dissolvingListState = dissolvingListState,
@@ -98,12 +94,30 @@ internal fun HistoryContent(
     }
 }
 
+@Composable
+private fun DelayedHistoryLoadingContent(
+    isVisible: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (isVisible) HistoryLoadingContent(modifier = modifier)
+}
+
+@Composable
+private fun DelayedHistoryEmptyContent(
+    isVisible: Boolean,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    if (isVisible) HistoryEmptyContent(title = title, description = description, modifier = modifier)
+}
+
 @Preview
 @Composable
 private fun HistoryContentPreview() {
     SparrowTheme {
         HistoryContent(
-            model = HistoryUiModel(
+            model = HistoryUi(
                 messages = emptyList(),
                 isLoading = false,
                 emptyTitle = "dfsf",

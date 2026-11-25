@@ -5,16 +5,16 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.data.model.StoredKeyExchangeStatusDto
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.IdentityAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.IdentityPacket
 
 internal class ManualIdentityExchangeDataSource(
     private val remoteIdentityDataSource: RemoteIdentityDataSource,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
     private val identityAcknowledgementCrypto: IdentityAcknowledgementCrypto,
     private val protocolOutbox: ProtocolOutbox
 ) {
@@ -40,7 +40,7 @@ internal class ManualIdentityExchangeDataSource(
                     signingPublicKey = packet.signingPublicKey
                 )
 
-            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val signature =
                 identityAcknowledgementCrypto
                     .sign(
@@ -78,7 +78,7 @@ internal class ManualIdentityExchangeDataSource(
                 "Acknowledgement sender signing key does not match the imported remote identity"
             }
 
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
             check(packet.acknowledgedEncryptionPublicKey.contentEquals(localIdentity.encryptionPublicKey)) {
                 "Acknowledgement refers to a different local encryption key"
             }

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
-import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
+import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -13,16 +13,16 @@ import kotlin.test.assertTrue
 class MessagingIndicatorUseCasesTest {
     @Test
     fun genericIndicatorPreservesSenderTypeAndDestination() = runTest {
-        val gateway = FakeGateway()
-        val incoming = ObserveMessagingIndicatorsUseCase(gateway)().first()
+        val indicatorPort = FakeIndicatorPort()
+        val incoming = ObserveMessagingIndicatorsUseCase(indicatorPort)().first()
         assertEquals("peer", incoming.senderContactId)
         assertEquals("TYPING", incoming.indicatorType)
-        val sent = SendMessagingIndicatorUseCase(gateway)("recipient", "group-1", "RECORDING")
+        val sent = SendMessagingIndicatorUseCase(indicatorPort)("recipient", "group-1", "RECORDING")
         assertTrue(sent.isSuccess)
-        assertEquals(Triple("recipient", "group-1", "RECORDING"), gateway.lastSent)
+        assertEquals(Triple("recipient", "group-1", "RECORDING"), indicatorPort.lastSent)
     }
 
-    private class FakeGateway : MessagingIndicatorGateway {
+    private class FakeIndicatorPort : MessagingIndicatorPort {
         override val incoming: Flow<MessagingIndicator> = flowOf(MessagingIndicator("peer", null, "TYPING"))
         var lastSent: Triple<String, String?, String>? = null
 

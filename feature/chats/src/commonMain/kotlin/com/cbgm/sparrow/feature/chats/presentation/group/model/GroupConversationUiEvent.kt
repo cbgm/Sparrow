@@ -102,6 +102,8 @@ sealed interface GroupConversationUiEvent {
 
     data object HeaderClicked : GroupConversationUiEvent
 
+    data object SearchClicked : GroupConversationUiEvent
+
     data object CreatePollClicked : GroupConversationUiEvent
 
     data object ExpenseOverviewClicked : GroupConversationUiEvent

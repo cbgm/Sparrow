@@ -1,14 +1,14 @@
 package com.cbgm.sparrow.di
 
 import com.cbgm.sparrow.core.util.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.DigitPhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.feature.transport.background.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.port.HeadlessStartPort
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
-import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
+import com.cbgm.sparrow.runtime.foreground.ForegroundRuntime
 import com.cbgm.sparrow.runtime.startup.ApplicationStartupRunner
 import com.cbgm.sparrow.runtime.startup.createApplicationStartupTasks
 import com.cbgm.sparrow.startup.domain.runner.StartupRunner
@@ -17,7 +17,7 @@ import org.koin.dsl.module
 
 val sharedModule =
     module {
-        single<PhoneNumberNormalizer> { DefaultPhoneNumberNormalizer() }
+        single<PhoneNumberNormalizer> { DigitPhoneNumberNormalizer() }
         single {
             AttachmentConversationNameObserver(conversationRepository = get(), contacts = get(), attachments = get())
         }
@@ -30,7 +30,7 @@ val sharedModule =
                 initializeSemanticSearch = get(),
                 initializeMessageSafety = get(),
                 platformNotificationRuntime = get(),
-                conversationNotificationCoordinator = get(),
+                conversationNotificationDispatcher = get(),
                 attachmentConversationNameObserver = get(),
                 invitationResultObserver = get(),
                 membershipResultObserver = get(),
@@ -43,9 +43,8 @@ val sharedModule =
                 unpublishedGroupStateRunner = get(),
                 workflowRegistry = get(),
                 controlPlaneConfiguration = get(),
-                controlPlaneStatusStore = get(),
+                controlPlaneStatus = get(),
                 controlPlaneDirectorySynchronizer = get(),
-                controlPlaneHealthMonitor = get(),
                 observeLocalIdentityReady = get(),
                 importDeviceContacts = get(),
                 deviceContactsPermissionChecker = get()
@@ -55,10 +54,10 @@ val sharedModule =
         single {
             ForegroundRuntimeDependencies(
                 appVisibilityState = get(),
-                transportConnectionManager = get(),
-                circuitRunner = get(),
+                transportConnection = get(),
+                runCircuits = get(),
                 outboxRunner = get(),
-                mailboxCoordinator = get(),
+                mailboxPort = get(),
                 observeIdentityKeysUsable = get(),
                 observeWaitingForRoute = get(),
                 sendUnsentMessages = get(),
@@ -67,9 +66,9 @@ val sharedModule =
         }
 
         // A service started without the app (after a reboot, a check now and then) starts the runtime the same way.
-        single<HeadlessStart> {
+        single<HeadlessStartPort> {
             val startupRunner = get<StartupRunner>()
-            object : HeadlessStart {
+            object : HeadlessStartPort {
                 override suspend fun start() {
                     startupRunner.run()
                 }
@@ -77,7 +76,7 @@ val sharedModule =
         }
 
         single {
-            ForegroundRuntimeCoordinator(
+            ForegroundRuntime(
                 foreground = get(),
                 applicationScope = get<ApplicationCoroutineScope>()
             )
@@ -90,6 +89,7 @@ val sharedModule =
                 startupTasks =
                     createApplicationStartupTasks(
                         initAppLanguageUseCase = get(),
+                        initAppThemeModeUseCase = get(),
                         initialization = initialization
                     ),
                 backgroundScope = get<ApplicationCoroutineScope>(),

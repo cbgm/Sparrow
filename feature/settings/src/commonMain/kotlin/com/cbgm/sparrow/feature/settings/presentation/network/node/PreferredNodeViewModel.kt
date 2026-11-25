@@ -3,10 +3,10 @@ package com.cbgm.sparrow.feature.settings.presentation.network.node
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUi
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiState
-import com.cbgm.sparrow.feature.transport.discovery.GatewayNode
+import com.cbgm.sparrow.feature.transport.domain.model.GatewayNode
 import com.cbgm.sparrow.feature.transport.domain.usecase.GetGatewayNodesUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObservePreferredNodeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetPreferredNodeUseCase
@@ -36,7 +36,7 @@ class PreferredNodeViewModel(
                     load.nodes
                         .filter { node -> node.matches(currentQuery) }
                         .sortedByDescending { node -> node.nodeId == preferredNodeId }
-                        .map { node -> node.toUiModel(preferredNodeId) },
+                        .map { node -> node.toGatewayNodeUi(preferredNodeId) },
                 isLoading = load.isLoading,
                 loadFailed = load.failed,
                 preferredUnlisted =
@@ -91,8 +91,8 @@ class PreferredNodeViewModel(
     }
 }
 
-private fun GatewayNode.toUiModel(preferredNodeId: String?): GatewayNodeUiModel =
-    GatewayNodeUiModel(
+private fun GatewayNode.toGatewayNodeUi(preferredNodeId: String?): GatewayNodeUi =
+    GatewayNodeUi(
         nodeId = nodeId,
         shortNodeId = nodeId.take(SHORT_NODE_ID_LENGTH),
         address = address,

@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `shared` |
 | Directory | `shared` |
 | Build file | `shared/build.gradle.kts` |
-| Kotlin files | 41 |
-| Production Kotlin files | 41 |
+| Kotlin files | 42 |
+| Production Kotlin files | 42 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
 | Direct dependencies | 41 |

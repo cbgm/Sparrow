@@ -43,7 +43,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContex
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
-import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheQueue
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
@@ -55,7 +55,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     private val dataSource: MessageAttachmentDataSource,
     private val blobTransferDataSource: BlobTransferDataSource,
     private val fileDataSource: MessageAttachmentFileDataSource,
-    private val cacheCoordinator: MessageAttachmentCacheCoordinator
+    private val cacheQueue: MessageAttachmentCacheQueue
 ) : MessageAttachmentOperationsRepository {
     private val logger = SparrowLog.withTag("MessageAttachmentOperationsRepository")
 
@@ -165,14 +165,6 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> =
         safeSuspendCall { dataSource.deleteForMessages(messageIds) }
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-        dataSource.observeByMessageIds(messageIds)
-            .map { partsByMessageId ->
-                partsByMessageId.mapValues { (_, parts) ->
-                    parts.map { part -> part.toMessagePart() }
-                }
-            }
-
     override fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
         dataSource.observeExpenseState(conversationId).map { parts -> parts.map { it.toMessagePart() } }
 
@@ -206,7 +198,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         }
 
     override fun cacheIncoming(messageId: String): Result<Unit> =
-        safeCall { cacheCoordinator.cache(messageId) }
+        safeCall { cacheQueue.cache(messageId) }
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
         when (part) {

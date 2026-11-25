@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingTranspo
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendMessagingIndicatorUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxRunner
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.RetryingOutboxRunner
 import com.cbgm.sparrow.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.protocol.outbox.OutboxRunner
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
@@ -21,12 +21,12 @@ val messagingModule =
         single { ObserveMessagingFailureEventsUseCase(outbox = get<ProtocolOutbox>()) }
         single { AcknowledgeMessagingFailureUseCase(outbox = get<ProtocolOutbox>()) }
         single<OutboxRunner> {
-            DefaultOutboxRunner(
+            RetryingOutboxRunner(
                 protocolOutbox = get<ProtocolOutbox>(),
                 outboxProcessor = get<OutboxProcessor>()
             )
         }
         single { MailboxRoutePayloadEncoder() }
-        single { SendMessagingIndicatorUseCase(gateway = get()) }
-        single { ObserveMessagingIndicatorsUseCase(gateway = get()) }
+        single { SendMessagingIndicatorUseCase(indicatorPort = get()) }
+        single { ObserveMessagingIndicatorsUseCase(indicatorPort = get()) }
     }

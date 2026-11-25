@@ -6,14 +6,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowBanner
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.BackupStateUi
 import com.cbgm.sparrow.feature.identity.presentation.backup.model.IdentityBackupUiState
@@ -21,25 +26,35 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_backup_export_action
 import com.cbgm.sparrow.resources.feature_identity_backup_exported
 import com.cbgm.sparrow.resources.feature_identity_backup_imported
+import com.cbgm.sparrow.resources.feature_identity_backup_status_exported
+import com.cbgm.sparrow.resources.feature_identity_backup_status_imported
+import com.cbgm.sparrow.resources.feature_identity_backup_status_missing
 import com.cbgm.sparrow.resources.feature_identity_backup_warning
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
-    val description = when (state.status) {
-        BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
-        BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_exported
-        BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_imported
-    }
+    val isBackedUp = state.status != BackupStateUi.NOT_BACKED_UP
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        SparrowBanner(
+            icon = if (isBackedUp) SparrowIcons.ShieldCheck else Icons.Default.WarningAmber,
+            accent = if (isBackedUp) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+            title = stringResource(
+                when (state.status) {
+                    BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_status_missing
+                    BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_status_exported
+                    BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_status_imported
+                }
+            ),
+            description = stringResource(
+                when (state.status) {
+                    BackupStateUi.NOT_BACKED_UP -> Res.string.feature_identity_backup_warning
+                    BackupStateUi.EXPORTED -> Res.string.feature_identity_backup_exported
+                    BackupStateUi.IMPORTED -> Res.string.feature_identity_backup_imported
+                }
+            )
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(Modifier.height(MaterialTheme.spacing.large))
         SparrowApprovalButton(
             onClick = onExport,
             enabled = !state.busy,
@@ -50,12 +65,12 @@ fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
                             .padding(end = MaterialTheme.spacing.small)
                             .size(Dimens.Button.loadingIndicatorSize),
                         strokeWidth = Dimens.Button.loadingIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Text(
                     text = stringResource(Res.string.feature_identity_backup_export_action),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         )
@@ -67,5 +82,21 @@ fun IdentityBackupSection(state: IdentityBackupUiState, onExport: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun IdentityBackupSectionPreview() {
+    SparrowTheme {
+        IdentityBackupSection(
+            state = IdentityBackupUiState(
+                status = BackupStateUi.EXPORTED,
+                busy = true,
+                message = null,
+                error = false
+            ),
+            onExport = {}
+        )
     }
 }

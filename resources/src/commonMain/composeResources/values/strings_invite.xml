@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_invite_accept_invitation">Accept</string>
+    <string name="feature_invite_decline_invitation">Decline</string>
+    <string name="feature_invite_invitations_title">Mailbox</string>
+    <string name="feature_invite_invitations_incoming">Incoming</string>
+    <string name="feature_invite_invitations_outgoing">Outgoing</string>
+    <string name="feature_invite_invitations_incoming_empty">No incoming invitations</string>
+    <string name="feature_invite_invitations_outgoing_empty">No outgoing invitations</string>
+    <string name="feature_invite_invitation_status_pending">Waiting for response</string>
+    <string name="feature_invite_invitation_status_declined">Declined</string>
+    <string name="feature_invite_invitation_status_expired">Expired</string>
+    <string name="feature_invite_invitation_status_failed">Could not be sent</string>
+    <string name="feature_invite_delete_outgoing_invitation">Delete</string>
+    <string name="feature_invite_block_invitation">Decline and block</string>
+    <string name="feature_invite_group_identity_review_required">Review the inviting contact’s changed identity above before accepting this group invitation.</string>
+    <string name="feature_invite_peer_unverified">Name and number not verified</string>
+    <string name="feature_invite_peer_matches_phone_contact">Matches your contact %1$s · number not verified</string>
+</resources>

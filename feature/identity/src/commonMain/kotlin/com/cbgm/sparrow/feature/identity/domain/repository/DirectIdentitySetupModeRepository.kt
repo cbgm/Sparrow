@@ -9,4 +9,7 @@ interface DirectIdentitySetupModeRepository {
     suspend fun getMode(): Result<DirectIdentitySetupMode>
 
     suspend fun setMode(mode: DirectIdentitySetupMode): Result<Unit>
+
+    /** Back to the default, automatic invitation, as when the app was installed. */
+    suspend fun resetMode(): Result<Unit>
 }

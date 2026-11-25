@@ -2,8 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,15 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -37,20 +35,21 @@ import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.Message
 import com.cbgm.sparrow.feature.chats.presentation.common.header.HeaderContent
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.SecurityBanner
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.securityDescription
-import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.HistoryContent
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddSharedContactDialog
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
 import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
@@ -65,6 +64,7 @@ import com.cbgm.sparrow.resources.feature_chats_reconnect_confirm
 import com.cbgm.sparrow.resources.feature_chats_reconnect_contact
 import com.cbgm.sparrow.resources.feature_chats_reconnect_warning
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
+import com.cbgm.sparrow.resources.feature_search_title
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,18 +112,20 @@ fun DirectConversationScreen(
         title = stringResource(Res.string.feature_chats_reconnect_contact),
         text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDialogAction(
                 onClick = {
                     showReconnectConfirmation = false
                     onReconnectRequested()
                 },
-                text = stringResource(Res.string.feature_chats_reconnect_confirm)
+                text = stringResource(Res.string.feature_chats_reconnect_confirm),
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = { showReconnectConfirmation = false },
-                text = stringResource(Res.string.feature_chats_reconnect_cancel)
+                text = stringResource(Res.string.feature_chats_reconnect_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         isVisible = showReconnectConfirmation
@@ -192,27 +194,20 @@ fun DirectConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                background = {
-                    PatternBackground(
-                        modifier = Modifier.fillMaxSize(),
-                        backgroundColor = MaterialTheme.colorScheme.background,
-                        alpha = Alpha.PatternBackground.conversation
-                    )
-                },
+                containerColor = MaterialTheme.colorScheme.background,
                 topBar = { containerColor ->
                     HeaderContent(
-                        model = uiState.toHeaderUiModel(),
+                        model = uiState.toHeaderUi(),
                         containerColor = containerColor,
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
                         onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
                         actions = {
-                            IconButton(
-                                onClick = { showReconnectConfirmation = true },
-                                enabled = !reconnectBusy && !uiState.isLoading
-                            ) {
+                            RouteProtectionAction()
+                            IconButton(onClick = { onUiEvent(DirectConversationUiEvent.SearchClicked) }) {
                                 Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = stringResource(Res.string.feature_chats_reconnect_contact)
+                                    imageVector = SparrowIcons.Search,
+                                    contentDescription = stringResource(Res.string.feature_search_title),
+                                    modifier = Modifier.size(Dimens.TopBar.iconSize)
                                 )
                             }
                         }
@@ -223,7 +218,8 @@ fun DirectConversationScreen(
                                 identitySetupMode = uiState.identitySetupMode,
                                 isChatAuthorized = uiState.isChatAuthorized,
                                 onVerifyIdentity = { onUiEvent(DirectConversationUiEvent.VerifyIdentityClicked) },
-                                onManualIdentitySetup = { showIdentitySetupDialog = true }
+                                onManualIdentitySetup = { showIdentitySetupDialog = true },
+                                onReconnect = { showReconnectConfirmation = !reconnectBusy }
                             )
                         }
                         if (waitingForRoute) {
@@ -242,7 +238,7 @@ fun DirectConversationScreen(
                 }
             ) { innerPadding, listState ->
                 HistoryContent(
-                    model = uiState.toHistoryUiModel(
+                    model = uiState.toHistoryUi(
                         emptyTitle = stringResource(
                             Res.string.feature_chats_start_conversation_with,
                             uiState.contactName

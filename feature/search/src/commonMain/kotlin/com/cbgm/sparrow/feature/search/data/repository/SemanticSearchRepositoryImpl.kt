@@ -60,6 +60,7 @@ class SemanticSearchRepositoryImpl(
 
     override suspend fun search(
         query: String,
+        conversationId: String?,
         limit: Int
     ): Result<List<MessageSearchResult>> =
         safeSuspendCall {
@@ -69,7 +70,10 @@ class SemanticSearchRepositoryImpl(
 
             indexDataSource.indexMissing()
             val queryEmbedding = embeddingDataSource.embedQuery(query)
-            val indexedMessages = localDataSource.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
+            val indexedMessages = localDataSource.getIndexedMessages(
+                modelVersion = SemanticSearchIndexConfig.VERSION,
+                conversationId = conversationId
+            )
 
             withContext(Dispatchers.Default) {
                 indexedMessages

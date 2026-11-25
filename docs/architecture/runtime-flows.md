@@ -10,7 +10,7 @@ See [Startup architecture](startup.md) for the exact task list and class flow.
 
 ## Foreground runtime
 
-`ForegroundRuntimeCoordinator` starts after navigation rather than being hidden inside the startup screen. Transport/observer lifetimes therefore belong to application runtime, not Composable lifetime.
+`ForegroundRuntime` starts after navigation rather than being hidden inside the startup screen. Transport/observer lifetimes therefore belong to application runtime, not Composable lifetime.
 
 ## Durable outgoing messaging
 
@@ -18,7 +18,7 @@ See [Startup architecture](startup.md) for the exact task list and class flow.
 flowchart LR
     FEATURE[Feature operation] --> PACKET[Protocol packet]
     PACKET --> OUTBOX[ProtocolOutbox]
-    OUTBOX --> RUNNER[DefaultOutboxRunner / processor]
+    OUTBOX --> RUNNER[RetryingOutboxRunner / processor]
     RUNNER --> ROUTE[transport routing]
     ROUTE --> NODE[Community Node]
 ```
@@ -43,4 +43,4 @@ Approved reconnection retry is started by `StartApprovedIdentityReconnectionObse
 
 ## Attachment caching
 
-Incoming messages can be persisted before their binary blobs finish downloading. `MessageAttachmentCacheCoordinator` / `MessageAttachmentDataSource` cache blob data and persist local paths. Room observations that render media must observe the relevant blob rows so the UI can move from loading to the real local file without reopening the app.
+Incoming messages can be persisted before their binary blobs finish downloading. `MessageAttachmentCacheQueue` / `MessageAttachmentDataSource` cache blob data and persist local paths. Room observations that render media must observe the relevant blob rows so the UI can move from loading to the real local file without reopening the app.

@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.notification.di
 
 import androidx.work.WorkerParameters
+import com.cbgm.sparrow.feature.notification.device.AndroidConversationNotificationPresenter
 import com.cbgm.sparrow.feature.notification.device.AndroidNotificationRuntime
 import com.cbgm.sparrow.feature.notification.device.ConnectionCheckWorker
 import com.cbgm.sparrow.feature.notification.device.ConnectionModeApplier
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.feature.notification.device.SparrowNotificationIntentHandler
-import com.cbgm.sparrow.feature.notification.device.SparrowNotificationManager
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationPresenter
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
@@ -15,13 +15,13 @@ import org.koin.dsl.module
 val notificationAndroidModule =
     module {
         single {
-            SparrowNotificationManager(
+            AndroidConversationNotificationPresenter(
                 context = androidContext()
             )
         }
 
         single<ConversationNotificationPresenter> {
-            get<SparrowNotificationManager>()
+            get<AndroidConversationNotificationPresenter>()
         }
 
         single {
@@ -38,7 +38,7 @@ val notificationAndroidModule =
 
         single<PlatformNotificationRuntime> {
             AndroidNotificationRuntime(
-                notificationManager = get(),
+                notificationPresenter = get(),
                 observeConnectionMode = get(),
                 connectionModeApplier = get(),
                 applicationScope = get()

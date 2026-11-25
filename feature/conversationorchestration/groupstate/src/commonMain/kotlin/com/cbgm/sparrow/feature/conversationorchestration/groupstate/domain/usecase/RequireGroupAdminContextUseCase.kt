@@ -3,17 +3,17 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.use
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
 /** Fails unless the local member is a group admin; the context signs and addresses group metadata. */
 class RequireGroupAdminContextUseCase(
     private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource
 ) {
     suspend operator fun invoke(groupId: String, action: String): Result<GroupAdminContext> =
         safeSuspendCall(logFailure = false) {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val authorized = authorizeGroupMetadata.send(
                 groupId = groupId,
                 localSigningPublicKey = signingKeyPair.publicKey,

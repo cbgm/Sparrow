@@ -7,12 +7,12 @@ import com.cbgm.sparrow.core.util.logging.StartupTrace
 import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.RecordAppHiddenUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.RecordAppVisibleUseCase
-import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
+import com.cbgm.sparrow.runtime.foreground.ForegroundRuntime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class AppViewModel(
-    private val foregroundRuntime: ForegroundRuntimeCoordinator,
+    private val foregroundRuntime: ForegroundRuntime,
     private val recordAppHidden: RecordAppHiddenUseCase,
     private val recordAppVisible: RecordAppVisibleUseCase,
     observeAppLockEnabled: ObserveAppLockEnabledUseCase

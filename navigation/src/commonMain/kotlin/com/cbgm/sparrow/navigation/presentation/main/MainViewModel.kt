@@ -38,7 +38,7 @@ class MainViewModel(
 
     fun openMessageSearch() {
         if (isMessageSearchAvailable.value) {
-            navigator.navigateTo(AppRoute.MessageSearch)
+            navigator.navigateTo(AppRoute.MessageSearch())
         }
     }
 

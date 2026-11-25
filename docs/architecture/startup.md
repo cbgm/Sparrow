@@ -34,7 +34,7 @@ Only tasks with `waitForCompletion == true` block startup navigation. `Applicati
 - `ResolveIdentityStatusStartupTask`
 - `RestoreControlPlaneDirectoryStartupTask`
 - `InitializeNotificationRuntimeStartupTask`
-- `StartConversationNotificationCoordinatorStartupTask`
+- `StartConversationNotificationDispatcherStartupTask`
 - `StartAttachmentConversationNameObserverStartupTask`
 - `StartInvitationResultObserverStartupTask`
 - `StartMembershipResultObserverStartupTask`
@@ -63,7 +63,7 @@ flowchart TD
     RESULT -->|Error| ERROR[StartupUiState.Error]
     READY --> MAIN[AppRoute.Main]
     MAIN --> POST[startPostNavigationRuntime]
-    POST --> BG[non-waiting tasks + ForegroundRuntimeCoordinator]
+    POST --> BG[non-waiting tasks + ForegroundRuntime]
 ```
 
 There is no reason for the startup UI to own runtime orchestration. `StartupViewModel` only exposes `StartupUiState`, handles retry/identity-created events and performs the final navigation.

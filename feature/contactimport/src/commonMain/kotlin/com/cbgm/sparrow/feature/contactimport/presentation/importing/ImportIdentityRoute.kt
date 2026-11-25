@@ -5,7 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.contactimport.presentation.component.ScannedIdentityConfirmationDialog
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
+import com.cbgm.sparrow.feature.media.presentation.scan.QrScanTile
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_contactimport_scan_qr_code
 import com.cbgm.sparrow.resources.feature_contactimport_trust_and_import
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -18,7 +20,17 @@ fun ImportIdentityRoute(
 
     ImportIdentityScreen(
         uiState = uiState,
-        onUiEvent = viewModel::onUiEvent
+        onUiEvent = viewModel::onUiEvent,
+        scanner = { enabled ->
+            QrScanTile(
+                label = stringResource(Res.string.feature_contactimport_scan_qr_code),
+                enabled = enabled && !uiState.isImporting,
+                retryCount = uiState.scanAttempt,
+                onScanned = { qrValue ->
+                    viewModel.onUiEvent(ImportIdentityUiEvent.QrCodeScanned(qrValue))
+                }
+            )
+        }
     )
 
     ScannedIdentityConfirmationDialog(

@@ -52,8 +52,8 @@ the Control Plane directory, a Control Plane or a node from the node directory h
 sslip.io/nip.io names carrying a private IPv4). A refusal shows a short note that local servers cannot be reached.
 Public servers are not affected.
 
-While the process runs without a screen (service or worker), `HeadlessStart` starts only what receiving
-needs, and `ConnectionKeepAlive` holds the connection open.
+While the process runs without a screen (service or worker), `HeadlessStartPort` starts only what receiving
+needs, and `ConnectionKeepAlivePort` holds the connection open.
 
 ## Offline delivery
 

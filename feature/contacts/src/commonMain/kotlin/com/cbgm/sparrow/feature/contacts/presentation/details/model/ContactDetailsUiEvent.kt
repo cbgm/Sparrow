@@ -13,7 +13,7 @@ sealed interface ContactDetailsUiEvent {
 
     data object ConfirmVerificationClicked : ContactDetailsUiEvent
 
-    data object ScanQrCodeClicked : ContactDetailsUiEvent
-
     data object VerificationBackClicked : ContactDetailsUiEvent
+
+    data object ReconnectConfirmed : ContactDetailsUiEvent
 }

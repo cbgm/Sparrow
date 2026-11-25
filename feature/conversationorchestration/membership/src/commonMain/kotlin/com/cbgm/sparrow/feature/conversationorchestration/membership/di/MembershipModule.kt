@@ -5,8 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.data.dataso
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupLocalCleanupDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupVerificationDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.GroupVerificationPacketCodecImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.GroupVerificationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.SignedGroupVerificationPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupIncomingConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupVerificationRepositoryImpl
@@ -74,7 +74,7 @@ private fun Module.registerData() {
     singleOf(::GroupVerificationDataSource)
     singleOf(::GroupConversationRepositoryImpl) { bind<GroupConversationRepository>() }
     singleOf(::GroupIncomingConversationRepositoryImpl) { bind<GroupIncomingConversationRepository>() }
-    singleOf(::GroupVerificationPacketCodecImpl) { bind<GroupVerificationPacketCodec>() }
+    singleOf(::SignedGroupVerificationPacketCodec) { bind<GroupVerificationPacketCodec>() }
     singleOf(::GroupVerificationRepositoryImpl) { bind<GroupVerificationRepository>() }
 }
 

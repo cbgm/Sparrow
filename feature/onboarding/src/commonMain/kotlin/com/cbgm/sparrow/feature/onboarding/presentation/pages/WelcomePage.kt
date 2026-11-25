@@ -38,7 +38,8 @@ import org.jetbrains.compose.resources.stringResource
 fun WelcomePage(active: Boolean) {
     val clock = rememberPageClock(active)
     OnboardingPageLayout(
-        graphicHeight = Dimens.OnboardingScreen.markGraphicHeight,
+        graphicHeight = Dimens.OnboardingScreen.markSize,
+        isContentCentered = true,
         graphic = { SparrowAnimation(modifier = Modifier.size(Dimens.OnboardingScreen.markSize), animated = true) },
         hint = { SwipeHint() }
     ) {

@@ -173,10 +173,6 @@ class GroupVerificationViewModel(
             is GroupDetailsUiEvent.PromoteMemberClicked -> requestMemberPromotion(event.contactId)
             is GroupDetailsUiEvent.PromoteMemberAndLeaveClicked -> promoteMemberAndLeave(event.contactId)
             GroupDetailsUiEvent.VerifySelectedMemberClicked -> verifySelectedMember()
-            is GroupDetailsUiEvent.ScanMemberQrClicked -> {
-                dismissVerification()
-                scanMemberQr(event.contactId)
-            }
             GroupDetailsUiEvent.VerificationBackClicked -> dismissVerification()
             GroupDetailsUiEvent.MemberRemovalConfirmed -> confirmMemberRemoval()
             GroupDetailsUiEvent.MemberRemovalDismissed -> dismissMemberRemoval()
@@ -278,15 +274,6 @@ class GroupVerificationViewModel(
                         )
                 }
         }
-    }
-
-    private fun scanMemberQr(contactId: String) {
-        navigator.navigateTo(
-            AppRoute.VerifyIdentityQr(
-                contactId = contactId,
-                groupId = conversationId
-            )
-        )
     }
 
     private fun persistMemberSelection() {

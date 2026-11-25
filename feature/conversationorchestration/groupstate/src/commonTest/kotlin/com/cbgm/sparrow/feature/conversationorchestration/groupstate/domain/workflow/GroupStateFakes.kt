@@ -23,7 +23,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repo
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupTitleRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
@@ -39,7 +38,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
@@ -115,7 +114,7 @@ internal class FakeOutbox : ProtocolOutbox {
     override suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?> = error(NOT_USED)
 }
 
-internal object FakeSigningKeys : LocalSigningKeyPairProvider {
+internal object FakeSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = Result.success(ADMIN_KEYS)
 }
 
@@ -288,9 +287,6 @@ internal class FakeAttachmentOperations : MessageAttachmentOperationsRepository 
 
     override suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray> = error(NOT_USED)
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-        error(NOT_USED)
-
     override suspend fun findExpenseMessageIds(conversationId: String, boardId: String): Result<List<String>> =
         error(NOT_USED)
 
@@ -462,10 +458,6 @@ internal class FakeGroupMembershipRepository(
     ): Result<Boolean> = error(NOT_USED)
 
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> = error(NOT_USED)
-
-    override fun observeConversationMembership(
-        groupId: String
-    ): Flow<GroupConversationMembershipSnapshot> = error(NOT_USED)
 
     override fun observeVerificationSnapshot(
         groupId: String

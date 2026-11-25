@@ -248,12 +248,22 @@ class DirectConversationViewModel(
                 )
             )
 
-            DirectConversationUiEvent.BackClicked ->
-                if (targetMessageId != null) {
-                    navigator.popBackStack()
-                } else {
-                    navigator.popBackStackTo(AppRoute.Main)
-                }
+            DirectConversationUiEvent.SearchClicked -> navigator.navigateTo(
+                AppRoute.MessageSearch(
+                    conversationId = conversationId
+                )
+            )
+
+            DirectConversationUiEvent.BackClicked -> navigateBack()
+        }
+    }
+
+    /** Opened at a message (from search or a link): back to where that came from, otherwise to the chat list. */
+    private fun navigateBack() {
+        if (targetMessageId != null) {
+            navigator.popBackStack()
+        } else {
+            navigator.popBackStackTo(AppRoute.Main)
         }
     }
 

@@ -22,9 +22,9 @@ val avatarModule =
     module {
         single {
             AvatarDataSource(
-                localProfilePictureProvider = get(),
-                remoteProfilePictureProvider = get(),
-                groupAvatarProvider = get()
+                localProfilePictureSource = get(),
+                remoteProfilePictureSource = get(),
+                groupAvatarSource = get()
             )
         }
 

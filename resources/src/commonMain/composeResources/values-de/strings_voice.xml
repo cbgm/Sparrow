@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_voice_tap_to_record">Zum Aufnehmen tippen</string>
+    <string name="feature_voice_transcribe">Transkribieren</string>
+    <string name="feature_voice_transcribing">Wird transkribiert…</string>
+    <string name="feature_voice_transcription_downloading">Sprachnachricht wird heruntergeladen…</string>
+    <string name="feature_voice_transcription_preparing">Transkription wird vorbereitet…</string>
+</resources>

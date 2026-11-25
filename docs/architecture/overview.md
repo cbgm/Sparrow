@@ -66,7 +66,7 @@ Chats submits every write as a `ConversationCommand` to `ConversationOrchestrato
 
 ## Startup/runtime split
 
-Application startup no longer lives as one large `AppViewModel` procedure. `ApplicationStartupRunner` consumes a list of `StartupTask`s. Waiting tasks complete before main navigation; background tasks and `ForegroundRuntimeCoordinator` start after `StartupViewModel.completeStartup()` navigates to `AppRoute.Main`.
+Application startup no longer lives as one large `AppViewModel` procedure. `ApplicationStartupRunner` consumes a list of `StartupTask`s. Waiting tasks complete before main navigation; background tasks and `ForegroundRuntime` start after `StartupViewModel.completeStartup()` navigates to `AppRoute.Main`.
 
 See [Startup architecture](startup.md).
 

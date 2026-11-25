@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_invite_accept_invitation">Annehmen</string>
+    <string name="feature_invite_decline_invitation">Ablehnen</string>
+    <string name="feature_invite_invitations_title">Posteingang</string>
+    <string name="feature_invite_invitations_incoming">Eingehend</string>
+    <string name="feature_invite_invitations_outgoing">Ausgehend</string>
+    <string name="feature_invite_invitations_incoming_empty">Keine eingehenden Einladungen</string>
+    <string name="feature_invite_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
+    <string name="feature_invite_invitation_status_pending">Wartet auf Antwort</string>
+    <string name="feature_invite_invitation_status_declined">Abgelehnt</string>
+    <string name="feature_invite_invitation_status_expired">Abgelaufen</string>
+    <string name="feature_invite_invitation_status_failed">Konnte nicht gesendet werden</string>
+    <string name="feature_invite_delete_outgoing_invitation">Löschen</string>
+    <string name="feature_invite_block_invitation">Ablehnen und blockieren</string>
+    <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
+    <string name="feature_invite_peer_unverified">Name und Nummer nicht bestätigt</string>
+    <string name="feature_invite_peer_matches_phone_contact">Passt zu deinem Kontakt %1$s · Nummer nicht bestätigt</string>
+</resources>

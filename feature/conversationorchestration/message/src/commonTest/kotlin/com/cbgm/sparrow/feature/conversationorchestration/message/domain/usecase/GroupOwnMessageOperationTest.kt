@@ -206,9 +206,6 @@ class GroupOwnMessageOperationTest {
 
         override suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray> = error(NOT_USED)
 
-        override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-            error(NOT_USED)
-
         override fun observeExpenses(conversationId: String): Flow<List<Expense>> = error(NOT_USED)
 
         override fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>> =

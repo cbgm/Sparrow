@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.circuit.model
 
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.RouteProtection
 
 data class CircuitHopsUiState(
     val selectedHopCount: Int = 2,
@@ -21,7 +22,9 @@ data class CircuitHopsUiState(
     /** How messages reach the device while Sparrow is closed. */
     val connectionMode: ConnectionMode = ConnectionMode.WHILE_OPEN,
     /** False on iOS: there only a note is shown. */
-    val connectsWhileClosed: Boolean = true
+    val connectsWhileClosed: Boolean = true,
+    /** Less than protected only once it lasted a while, as the shield in the chats shows it. */
+    val protection: RouteProtection = RouteProtection.PROTECTED
 )
 
 sealed interface CircuitUiStatus {

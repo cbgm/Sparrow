@@ -29,10 +29,6 @@ sealed interface GroupDetailsUiEvent {
 
     data object VerifySelectedMemberClicked : GroupDetailsUiEvent
 
-    data class ScanMemberQrClicked(
-        val contactId: String
-    ) : GroupDetailsUiEvent
-
     data object VerificationBackClicked : GroupDetailsUiEvent
 
     data object MemberRemovalConfirmed : GroupDetailsUiEvent

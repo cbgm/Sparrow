@@ -7,17 +7,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,7 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.errors.components.ClearDeveloperErrorsDialog
 import com.cbgm.sparrow.feature.settings.presentation.errors.components.DeveloperErrorItem
@@ -119,11 +120,21 @@ private fun Content(
                 }
             }
         } else {
-            items(
+            itemsIndexed(
                 items = uiState.errors,
-                key = { error -> error.id }
-            ) { error ->
+                key = { _, error -> error.id }
+            ) { index, error ->
                 DeveloperErrorItem(error = error)
+
+                if (index < uiState.errors.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = MaterialTheme.spacing.listDividerStart),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
+                    )
+                }
             }
         }
     }
@@ -134,24 +145,17 @@ private fun TopBar(
     containerColor: Color,
     onUiEvent: (DeveloperErrorLogUiEvent) -> Unit
 ) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_error_log),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_settings_error_log)
             )
         },
         navigationIcon = {
             IconButton(onClick = { onUiEvent(DeveloperErrorLogUiEvent.BackClicked) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = null
                 )
             }
@@ -171,7 +175,7 @@ private fun DeveloperErrorLogScreenPreview() {
                             DeveloperErrorUi(
                                 id = "1",
                                 timestamp = "25.08.2026 03:35:42.123",
-                                tag = "DefaultOutboxRunner",
+                                tag = "RetryingOutboxRunner",
                                 message = "Outgoing message failed",
                                 exceptionType = "IllegalStateException",
                                 stackTrace = "java.lang.IllegalStateException: Invalid outbox transition"

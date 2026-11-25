@@ -1,32 +1,33 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.util.result.safeCall
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.BuildInfoLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageLocalDataSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 
 class SettingsRepositoryImpl(
-    private val buildInfoProvider: BuildInfoProvider,
-    private val settingsStorage: SettingsStorage,
-    private val systemLanguageProvider: SystemLanguageProvider
+    private val buildInfoDataSource: BuildInfoLocalDataSource,
+    private val settingsDataSource: SettingsLocalDataSource,
+    private val systemLanguageDataSource: SystemLanguageLocalDataSource
 ) : SettingsRepository {
     override suspend fun getLanguage(): Result<AppLanguage> =
         safeSuspendCall {
-            val savedLanguageTag = settingsStorage.getLanguageTag()
+            val savedLanguageTag = settingsDataSource.getLanguageTag()
             if (savedLanguageTag != null) {
                 return@safeSuspendCall AppLanguage.fromLanguageTag(savedLanguageTag)
             }
 
-            val systemLanguageTag = systemLanguageProvider.getLanguageTag()
+            val systemLanguageTag = systemLanguageDataSource.getLanguageTag()
             val initialLanguage =
                 AppLanguage.fromLanguageTag(
                     systemLanguageTag.substringBefore('-').substringBefore('_').lowercase()
                 )
-            settingsStorage.setLanguageTag(initialLanguage.languageTag)
+            settingsDataSource.setLanguageTag(initialLanguage.languageTag)
             initialLanguage
         }
 
@@ -34,28 +35,36 @@ class SettingsRepositoryImpl(
         language: AppLanguage
     ): Result<Unit> =
         safeSuspendCall {
-            settingsStorage.setLanguageTag(
+            settingsDataSource.setLanguageTag(
                 languageTag = language.languageTag
             )
         }
 
+    override suspend fun getThemeMode(): Result<AppThemeMode> =
+        safeSuspendCall {
+            AppThemeMode.entries.firstOrNull { mode -> mode.name == settingsDataSource.getThemeMode() } ?: AppThemeMode.SYSTEM
+        }
+
+    override suspend fun setThemeMode(mode: AppThemeMode): Result<Unit> =
+        safeSuspendCall { settingsDataSource.setThemeMode(mode.name) }
+
     override suspend fun isDeveloperModeEnabled(): Result<Boolean> =
-        safeSuspendCall { settingsStorage.getDeveloperModeEnabled() }
+        safeSuspendCall { settingsDataSource.getDeveloperModeEnabled() }
 
     override suspend fun setDeveloperModeEnabled(
         enabled: Boolean
     ): Result<Unit> =
         safeSuspendCall {
-            settingsStorage.setDeveloperModeEnabled(
+            settingsDataSource.setDeveloperModeEnabled(
                 enabled = enabled
             )
         }
 
     override suspend fun clearLocalData(): Result<Unit> =
         safeSuspendCall {
-            settingsStorage.clear()
+            settingsDataSource.clear()
         }
 
     override fun getBuildInfo(): Result<BuildInfo> =
-        safeCall { buildInfoProvider.build }
+        safeCall { buildInfoDataSource.build }
 }

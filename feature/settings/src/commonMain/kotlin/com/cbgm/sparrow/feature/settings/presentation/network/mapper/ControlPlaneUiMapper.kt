@@ -4,11 +4,11 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUi
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
-import com.cbgm.sparrow.feature.transport.ControlPlaneEndpointStatus
-import com.cbgm.sparrow.feature.transport.ControlPlaneReachability
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpointStatus
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneReachability
 
 /**
  * A Control Plane may be independently configured by the user AND discovered
@@ -21,11 +21,11 @@ internal fun List<ControlPlaneEndpointStatus>.toControlPlaneUiModels(
     manual: Set<String>,
     directory: Set<String>,
     jsonList: Set<String>
-): List<ControlPlaneUiModel> {
+): List<ControlPlaneUi> {
     val statusByUrl = associateBy { it.endpoint.baseUrl }
 
-    fun entry(url: String, source: ControlPlaneUiSource): ControlPlaneUiModel =
-        ControlPlaneUiModel(
+    fun entry(url: String, source: ControlPlaneUiSource): ControlPlaneUi =
+        ControlPlaneUi(
             url = url,
             status = statusByUrl[url]?.toControlPlaneUiStatus() ?: ControlPlaneUiStatus.CHECKING,
             source = source,
@@ -35,12 +35,12 @@ internal fun List<ControlPlaneEndpointStatus>.toControlPlaneUiModels(
         (jsonList - directory).map { entry(it, ControlPlaneUiSource.JSON_LIST) }
     val manuallyAdded = manual.map { entry(it, ControlPlaneUiSource.MANUAL) }
     return (discovered + manuallyAdded).sortedWith(
-        compareBy<ControlPlaneUiModel> { it.status.sortOrder() }
-            .thenBy(ControlPlaneUiModel::url)
+        compareBy<ControlPlaneUi> { it.status.sortOrder() }
+            .thenBy(ControlPlaneUi::url)
     )
 }
 
-internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
+internal fun List<ControlPlaneUi>.toControlPlaneSettingsUiState(
     showAddDialog: Boolean,
     isEditingDirectory: Boolean,
     newUrl: String,

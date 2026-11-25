@@ -176,22 +176,27 @@ internal fun ExpenseDraftUi.nextDraft(): ExpenseDraftUi =
 internal fun ExpenseDraftUi.withSplitMode(mode: ExpenseSplitModeUi): ExpenseDraftUi {
     if (mode == splitMode) return this
     if (mode == ExpenseSplitModeUi.EQUAL) return copy(splitMode = mode, customAmounts = emptyMap())
-    val equalShares = copy(splitMode = ExpenseSplitModeUi.EQUAL).allocationsMinor().orEmpty()
-    return copy(
-        splitMode = mode,
-        customAmounts = equalShares.mapValues { (_, amountMinor) ->
-            ExpenseMoney.toInput(amountMinor, currencyCode, if (',' in amount) ',' else '.')
-        }
-    )
+    return copy(splitMode = mode, customAmounts = equalCustomAmounts())
 }
+
+/** A new total invalidates custom shares, so they restart from the equal split of the new amount. */
+internal fun ExpenseDraftUi.withAmount(text: String): ExpenseDraftUi {
+    val updated = copy(amount = text)
+    if (splitMode == ExpenseSplitModeUi.EQUAL || text == amount) return updated
+    return updated.copy(customAmounts = updated.equalCustomAmounts())
+}
+
+private fun ExpenseDraftUi.equalCustomAmounts(): Map<String, String> =
+    copy(splitMode = ExpenseSplitModeUi.EQUAL).allocationsMinor().orEmpty().mapValues { (_, amountMinor) ->
+        ExpenseMoney.toInput(amountMinor, currencyCode, if (',' in amount) ',' else '.')
+    }
 
 internal fun ExpenseDraftUi.withReceiptScan(scan: ReceiptScan): ExpenseDraftUi {
     val newAmount = scan.totalMinor?.toScannedAmountInput(currencyCode).orEmpty()
     val newDescription = scan.merchant.orEmpty()
     val replaceAmount = amount.isBlank() || amount == scannedAmount
     val replaceDescription = description.isBlank() || description == scannedDescription
-    return copy(
-        amount = if (replaceAmount) newAmount else amount,
+    return withAmount(if (replaceAmount) newAmount else amount).copy(
         description = if (replaceDescription) newDescription else description,
         scannedAmount = newAmount,
         scannedDescription = newDescription

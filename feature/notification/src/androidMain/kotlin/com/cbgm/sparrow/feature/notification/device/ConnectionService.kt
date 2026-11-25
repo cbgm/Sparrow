@@ -6,8 +6,8 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.transport.background.ConnectionKeepAlive
-import com.cbgm.sparrow.feature.transport.background.HeadlessStart
+import com.cbgm.sparrow.feature.transport.domain.port.ConnectionKeepAlivePort
+import com.cbgm.sparrow.feature.transport.domain.port.HeadlessStartPort
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,14 +17,14 @@ import org.koin.android.ext.android.inject
 
 /**
  * Keeps Sparrow connected while the app is closed ("Always connected"): as long as it runs, the circuits, the mailbox
- * waits and the outbox keep running ([ConnectionKeepAlive]), so messages arrive at once without any push service.
+ * waits and the outbox keep running ([ConnectionKeepAlivePort]), so messages arrive at once without any push service.
  * Android only allows that with a visible notification. Started again by Android after it was stopped (sticky).
  */
 class ConnectionService : Service() {
     private val logger = SparrowLog.withTag("ConnectionService")
-    private val keepAlive by inject<ConnectionKeepAlive>()
-    private val headlessStart by inject<HeadlessStart>()
-    private val notificationManager by inject<SparrowNotificationManager>()
+    private val keepAlive by inject<ConnectionKeepAlivePort>()
+    private val headlessStart by inject<HeadlessStartPort>()
+    private val notificationPresenter by inject<AndroidConversationNotificationPresenter>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -57,11 +57,11 @@ class ConnectionService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startInForeground() {
-        val notification = notificationManager.createConnectionNotification()
+        val notification = notificationPresenter.createConnectionNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(SparrowNotificationManager.CONNECTION_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(AndroidConversationNotificationPresenter.CONNECTION_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
-            startForeground(SparrowNotificationManager.CONNECTION_NOTIFICATION_ID, notification)
+            startForeground(AndroidConversationNotificationPresenter.CONNECTION_NOTIFICATION_ID, notification)
         }
     }
 }

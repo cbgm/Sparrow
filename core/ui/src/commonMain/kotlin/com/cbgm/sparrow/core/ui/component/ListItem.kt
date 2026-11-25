@@ -25,8 +25,8 @@ fun SparrowDialogListItem(
             .fillMaxWidth()
             .padding(vertical = MaterialTheme.spacing.micro)
             .clickable(enabled = isEnabled, onClick = onClick),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        shape = MaterialTheme.shapes.medium,
+        color = Color.Transparent
     ) {
         ListItem(
             modifier = Modifier.fillMaxWidth(),

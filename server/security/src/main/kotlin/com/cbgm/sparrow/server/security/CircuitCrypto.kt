@@ -1,5 +1,8 @@
 package com.cbgm.sparrow.server.security
 
+import com.cbgm.sparrow.server.security.CircuitLayer.open
+import com.cbgm.sparrow.server.security.CircuitLayer.seal
+import com.cbgm.sparrow.server.security.CircuitLayer.stream
 import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
 import java.security.KeyFactory

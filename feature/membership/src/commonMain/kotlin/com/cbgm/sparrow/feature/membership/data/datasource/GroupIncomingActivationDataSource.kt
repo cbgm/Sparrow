@@ -7,8 +7,8 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
 
@@ -17,8 +17,8 @@ internal class GroupIncomingActivationDataSource(
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
     private val membershipProtocol: GroupMembershipPacketProtocol,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val protocolOutbox: ProtocolOutbox,
     private val lock: GroupMembershipLock
 ) {
@@ -43,7 +43,7 @@ internal class GroupIncomingActivationDataSource(
             "Group admin signing identity changed"
         }
         membershipProtocol.verifyMemberActivated(packet, ownerSigningPublicKey).getOrThrow()
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
         return packet.member.encryptionPublicKey.contentEquals(localIdentity.encryptionPublicKey) &&
             packet.member.signingPublicKey.contentEquals(localIdentity.signingPublicKey)
     }
@@ -109,7 +109,7 @@ internal class GroupIncomingActivationDataSource(
             val acknowledgement = membershipProtocol.createMemberActivationAcknowledgement(
                 activationPacket = packet,
                 acknowledgedAtEpochMilliseconds = receivedAtEpochMilliseconds,
-                memberSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                memberSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             ).getOrThrow()
             protocolOutbox.enqueue(ownerContactId, acknowledgement).getOrThrow()
         }

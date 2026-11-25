@@ -7,6 +7,8 @@
 Key types include:
 
 - `IdentityRepository` / `IdentityRepositoryImpl`
+- `DirectIdentitySetupModeRepository` / `DirectIdentitySetupModeRepositoryImpl` with `DirectIdentitySetupModeLocalDataSource`: whether a new direct contact gets the identity with the invitation or by hand; Settings only shows and changes it
+- `LocalIdentityKeyDataSource`: the device's keys for every other module (`LocalPublicIdentitySource`, `LocalSigningKeyPairSource`, `LocalEncryptionKeyPairSource`, `LocalSigningPublicKeySource`)
 - `PublicIdentity`
 - `CreateIdentityUseCase`
 - `IdentityLocalEncryptionKeyPairProvider`
@@ -45,7 +47,7 @@ The dialog only verifies. `IdentityCreateViewModel` creates the keys, and
 The token is kept **in memory only** (`LocalIdentityProfileDataSource.keepPhoneVerificationToken`,
 lifetime 50 minutes) and is never persisted. `AliasClaimRegistrar` in `:feature:transport` sends it
 once, sealed and through two relays, to the phone verifier next to the Control Plane Directory
-(`PhoneAttestationRemoteSource`), which checks it with Firebase and answers with an attestation
+(`PhoneAttestationRemoteDataSource`), which checks it with Firebase and answers with an attestation
 signed under the pinned Directory key: this phone alias belongs to this device. The attestation goes
 into the alias claims (`AliasClaim.phoneAttestation`), stays in memory only, and the token is cleared
 once a Control Plane answered. Every presence directory checks the attestation; none sees the token

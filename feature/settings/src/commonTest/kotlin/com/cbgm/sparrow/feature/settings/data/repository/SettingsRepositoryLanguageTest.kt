@@ -1,23 +1,24 @@
 package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
-import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsStorage
-import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
-import com.cbgm.sparrow.feature.settings.device.SystemLanguageProvider
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.BuildInfoLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageLocalDataSource
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SettingsRepositoryLanguageTest {
-    private val buildInfoProvider =
-        object : BuildInfoProvider {
+    private val buildInfoDataSource =
+        object : BuildInfoLocalDataSource {
             override val build = BuildInfo("test", 1, "test", null)
         }
 
     @Test
     fun firstStartUsesPhoneLanguageAndPersistsIt() = runBlocking {
-        val storage = InMemorySettingsStorage()
+        val storage = InMemorySettingsLocalDataSource()
         val repository = repository(storage, "de-DE")
 
         assertEquals(AppLanguage.GERMAN, repository.getLanguage().getOrThrow())
@@ -28,14 +29,14 @@ class SettingsRepositoryLanguageTest {
 
     @Test
     fun savedLanguageWinsWithoutReadingPhoneSettings() = runBlocking {
-        val storage = InMemorySettingsStorage()
+        val storage = InMemorySettingsLocalDataSource()
         storage.setLanguageTag("en")
         val repository =
             SettingsRepositoryImpl(
-                buildInfoProvider = buildInfoProvider,
-                settingsStorage = storage,
-                systemLanguageProvider =
-                    object : SystemLanguageProvider {
+                buildInfoDataSource = buildInfoDataSource,
+                settingsDataSource = storage,
+                systemLanguageDataSource =
+                    object : SystemLanguageLocalDataSource {
                         override fun getLanguageTag(): String =
                             error("Phone locale should not be read when language is saved")
                     }
@@ -46,22 +47,32 @@ class SettingsRepositoryLanguageTest {
     }
 
     @Test
+    fun colorSchemeFollowsThePhoneUntilOneIsChosen() = runBlocking {
+        val storage = InMemorySettingsLocalDataSource()
+        val repository = repository(storage, "en-US")
+
+        assertEquals(AppThemeMode.SYSTEM, repository.getThemeMode().getOrThrow())
+        repository.setThemeMode(AppThemeMode.LIGHT).getOrThrow()
+        assertEquals(AppThemeMode.LIGHT, repository(storage, "en-US").getThemeMode().getOrThrow())
+    }
+
+    @Test
     fun unsupportedPhoneLanguageFallsBackToEnglishAndPersistsIt() = runBlocking {
-        val storage = InMemorySettingsStorage()
+        val storage = InMemorySettingsLocalDataSource()
 
         assertEquals(AppLanguage.ENGLISH, repository(storage, "fr-FR").getLanguage().getOrThrow())
         assertEquals("en", storage.getLanguageTag())
     }
 
     private fun repository(
-        storage: InMemorySettingsStorage,
+        storage: InMemorySettingsLocalDataSource,
         phoneLanguageTag: String
     ): SettingsRepositoryImpl =
         SettingsRepositoryImpl(
-            buildInfoProvider = buildInfoProvider,
-            settingsStorage = storage,
-            systemLanguageProvider =
-                object : SystemLanguageProvider {
+            buildInfoDataSource = buildInfoDataSource,
+            settingsDataSource = storage,
+            systemLanguageDataSource =
+                object : SystemLanguageLocalDataSource {
                     override fun getLanguageTag(): String = phoneLanguageTag
                 }
         )

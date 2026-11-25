@@ -68,21 +68,26 @@ private fun LinkPreviewContent(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
 
-            is LinkPreviewUiState.Success -> {
-                if (uiState.preview.imageBytes != null) {
-                    LinkPreviewCard(
-                        preview = uiState.preview,
-                        onClick = { uriHandler.openUri(url) }
-                    )
-                } else {
-                    // No image is a normal outcome, not an error or snackbar event.
-                    LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
-                }
-            }
+            is LinkPreviewUiState.Success ->
+                LinkPreviewSuccess(preview = uiState.preview, url = url, onClick = { uriHandler.openUri(url) })
 
             is LinkPreviewUiState.Error ->
                 LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
         }
+    }
+}
+
+@Composable
+private fun LinkPreviewSuccess(
+    preview: LinkPreviewUi,
+    url: String,
+    onClick: () -> Unit
+) {
+    if (preview.imageBytes != null) {
+        LinkPreviewCard(preview = preview, onClick = onClick)
+    } else {
+        // No image is a normal outcome, not an error or snackbar event.
+        LinkPreviewFallback(url = url, onClick = onClick)
     }
 }
 

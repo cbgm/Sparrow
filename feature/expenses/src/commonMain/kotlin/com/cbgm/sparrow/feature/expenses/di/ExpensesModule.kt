@@ -29,7 +29,7 @@ val expensesModule =
         single<ExpenseComposerRepository> { ExpenseComposerRepositoryImpl() }
         single { LocalExchangeRateDataSource(dataStore = get()) }
         single {
-            RemoteExchangeRateDataSource(httpClient = get(), transportDiagnosticsProvider = get())
+            RemoteExchangeRateDataSource(httpClient = get())
         }
         single<ExchangeRateRepository> {
             ExchangeRateRepositoryImpl(localDataSource = get(), remoteDataSource = get())
@@ -42,7 +42,7 @@ val expensesModule =
         factory { ObserveExpenseRequestsUseCase(repository = get()) }
         factory { SubmitExpenseRequestUseCase(repository = get()) }
         factory { ObserveExchangeRatesUseCase(repository = get()) }
-        factory { RefreshExchangeRatesUseCase(repository = get()) }
+        factory { RefreshExchangeRatesUseCase(repository = get(), getCurrentNodeBaseUrl = get()) }
         factory { GetExpenseCreationContextUseCase(repository = get()) }
         factory {
             ObserveExpenseSummaryUseCase(repository = get(), calculateBalances = get())

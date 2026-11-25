@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
@@ -14,8 +14,8 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
@@ -23,9 +23,9 @@ import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
 @Suppress("LongParameterList")
 internal class GroupLeaveDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupEpochSecurity: GroupEpochSecurityDataSource,
@@ -128,9 +128,9 @@ internal class GroupLeaveDataSource(
             epochDataSource
                 .loadCurrentParticipantContacts(groupId)
                 .sortedBy(GroupMembershipPeerDto::id)
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+        val localPhoneNumber = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
         val now = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
         val roleOverrides =
             promotedParticipant
@@ -193,7 +193,7 @@ internal class GroupLeaveDataSource(
             securityStore.findCurrentEpoch(groupId)
                 ?: error("Active group security state was not found")
         val now = SystemClock.nowEpochMilliseconds()
-        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val leaveRequest =
             membershipPacketProtocol
                 .createLeaveRequest(

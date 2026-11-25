@@ -6,11 +6,11 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitHopsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.circuit.model.CircuitUiStatus
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.circuit.CircuitCount
-import com.cbgm.sparrow.feature.transport.circuit.CircuitHopCount
-import com.cbgm.sparrow.feature.transport.circuit.CircuitStatus
-import com.cbgm.sparrow.feature.transport.circuit.DecoyCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitHopCount
+import com.cbgm.sparrow.feature.transport.domain.model.CircuitStatus
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.DecoyCount
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitFallbackUseCase
@@ -18,6 +18,7 @@ import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitHopCountU
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveCircuitStatusUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveConnectionModeUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveDecoyCountUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveRouteProtectionUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitCountUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitFallbackUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetCircuitHopCountUseCase
@@ -37,6 +38,7 @@ class CircuitHopsViewModel(
     observeCircuitCount: ObserveCircuitCountUseCase,
     observeConnectionMode: ObserveConnectionModeUseCase,
     observeDecoyCount: ObserveDecoyCountUseCase,
+    observeRouteProtection: ObserveRouteProtectionUseCase,
     canConnectWhileClosed: CanConnectWhileClosedUseCase,
     private val setCircuitHopCount: SetCircuitHopCountUseCase,
     private val setCircuitFallback: SetCircuitFallbackUseCase,
@@ -76,6 +78,7 @@ class CircuitHopsViewModel(
             .combine(observeDecoyCount()) { state, decoyCount ->
                 state.copy(selectedDecoyCount = decoyCount, minimumDecoyCount = DecoyCount.MINIMUM, maximumDecoyCount = DecoyCount.MAXIMUM)
             }
+            .combine(observeRouteProtection()) { state, protection -> state.copy(protection = protection) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLISECONDS), CircuitHopsUiState())
 
     fun onUiEvent(event: CircuitHopsUiEvent) {

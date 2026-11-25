@@ -1,16 +1,27 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.core.ui.theme.currentAppThemeMode
 import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
-import com.cbgm.sparrow.feature.transport.background.ConnectionModeStore
+import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
+import com.cbgm.sparrow.feature.settings.data.datasource.InMemorySettingsLocalDataSource
+import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
+import com.cbgm.sparrow.feature.settings.device.BuildInfoLocalDataSource
+import com.cbgm.sparrow.feature.settings.device.SystemLanguageLocalDataSource
+import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.repository.TransportPreferencesRepository
 import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
 import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -18,6 +29,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -25,13 +37,80 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
     private val store = RecordingStore()
-    private val viewModel by lazy { OnboardingViewModel(SetConnectionModeUseCase(store), CanConnectWhileClosedUseCase()) }
+    private val settingsRepository =
+        SettingsRepositoryImpl(
+            buildInfoDataSource =
+                object : BuildInfoLocalDataSource {
+                    override val build = BuildInfo("test", 1, "test", null)
+                },
+            settingsDataSource = InMemorySettingsLocalDataSource(),
+            systemLanguageDataSource =
+                object : SystemLanguageLocalDataSource {
+                    override fun getLanguageTag(): String = "en"
+                }
+        )
+    private val viewModel by lazy {
+        OnboardingViewModel(
+            setConnectionMode = SetConnectionModeUseCase(store),
+            canConnectWhileClosed = CanConnectWhileClosedUseCase(),
+            getAppThemeMode = GetAppThemeModeUseCase(settingsRepository),
+            setAppThemeMode = SetAppThemeModeUseCase(settingsRepository)
+        )
+    }
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun theTourIsOfferedOnceTheIdentityExistsAndEndsAfterTheLastStep() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        assertTrue(viewModel.uiState.value.showsTourIntro)
+        assertEquals(null, viewModel.uiState.value.tourStep)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourStarted)
+        assertFalse(viewModel.uiState.value.showsTourIntro)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+
+        repeat(TourStep.entries.size - 1) { viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked) }
+        assertEquals(TourStep.SWIPE, viewModel.uiState.value.tourStep)
+        assertFalse(viewModel.uiState.value.tourFinished)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked)
+        assertTrue(viewModel.uiState.value.tourFinished)
+    }
+
+    @Test
+    fun swipingBackGoesToThePreviousStepButNotBeforeTheFirst() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        viewModel.onUiEvent(OnboardingUiEvent.TourStarted)
+        viewModel.onUiEvent(OnboardingUiEvent.TourNextClicked)
+        viewModel.onUiEvent(OnboardingUiEvent.TourBackSwiped)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+
+        viewModel.onUiEvent(OnboardingUiEvent.TourBackSwiped)
+        assertEquals(TourStep.RING, viewModel.uiState.value.tourStep)
+        assertFalse(viewModel.uiState.value.tourFinished)
+    }
+
+    @Test
+    fun skippingEndsTheTourAtOnce() {
+        viewModel.onUiEvent(OnboardingUiEvent.IdentityCreated)
+        viewModel.onUiEvent(OnboardingUiEvent.TourSkipped)
+
+        assertTrue(viewModel.uiState.value.tourFinished)
+    }
+
+    @Test
+    fun choosingAColorSchemeAppliesAndSavesIt() = runBlocking {
+        viewModel.onUiEvent(OnboardingUiEvent.ThemeModeChosen(AppThemeMode.DARK))
+
+        assertEquals(AppThemeMode.DARK, viewModel.uiState.value.themeMode)
+        assertEquals(AppThemeMode.DARK, currentAppThemeMode.value)
+        assertEquals(AppThemeMode.DARK, settingsRepository.getThemeMode().getOrThrow())
+    }
 
     @Test
     fun swipingPastThePermissionsAsksForThemOnce() {
@@ -99,12 +178,32 @@ class OnboardingViewModelTest {
         steps.forEach { index -> viewModel.onUiEvent(OnboardingUiEvent.PageShown(OnboardingPage.entries[index])) }
     }
 
-    private class RecordingStore : ConnectionModeStore {
+    private class RecordingStore : TransportPreferencesRepository {
         val saved = mutableListOf<ConnectionMode>()
 
-        override fun observe(): Flow<ConnectionMode> = emptyFlow()
+        override fun observeCircuitCount(): Flow<Int> = error("Not used")
 
-        override suspend fun set(mode: ConnectionMode) {
+        override suspend fun setCircuitCount(circuitCount: Int) = error("Not used")
+
+        override fun observeHopCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setHopCount(hopCount: Int) = error("Not used")
+
+        override fun observeDecoyCount(): Flow<Int> = error("Not used")
+
+        override suspend fun setDecoyCount(decoyCount: Int) = error("Not used")
+
+        override fun observeSendsDirectly(): Flow<Boolean> = error("Not used")
+
+        override suspend fun setSendsDirectly(sendsDirectly: Boolean) = error("Not used")
+
+        override fun observePreferredNode(): Flow<String?> = error("Not used")
+
+        override suspend fun setPreferredNode(nodeId: String?) = error("Not used")
+
+        override fun observeConnectionMode(): Flow<ConnectionMode> = emptyFlow()
+
+        override suspend fun setConnectionMode(mode: ConnectionMode) {
             saved += mode
         }
     }

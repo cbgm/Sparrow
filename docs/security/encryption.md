@@ -34,12 +34,12 @@ Do not move this decision into the transport layer. The transport layer should r
 - sealed boxes to wrap group keys to members;
 - detached signatures to authenticate signed group payloads.
 
-`GroupSecurityManager` and the epoch/key persistence code decide which group key/epoch applies to a message.
+`GroupSecurityRepositoryImpl` and the epoch/key persistence code decide which group key/epoch applies to a message.
 
 ```mermaid
 sequenceDiagram
     participant G as SendGroupMessageWorkflow
-    participant SM as GroupSecurityManager
+    participant SM as GroupSecurityRepositoryImpl
     participant C as SodiumGroupCrypto
     participant O as ProtocolOutbox
 

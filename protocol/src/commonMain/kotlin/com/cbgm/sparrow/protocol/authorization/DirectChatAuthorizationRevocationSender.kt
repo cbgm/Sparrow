@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.protocol.authorization
 
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 
 /**
@@ -10,7 +10,7 @@ import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
  */
 class DirectChatAuthorizationRevocationSender(
     private val protocol: DirectChatAuthorizationRevocationProtocol,
-    private val signingKeyPairProvider: LocalSigningKeyPairProvider,
+    private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val protocolOutbox: ProtocolOutbox
 ) {
     suspend fun enqueueOrResend(
@@ -21,7 +21,7 @@ class DirectChatAuthorizationRevocationSender(
         runCatching {
             require(peerId.isNotBlank()) { "Peer ID must not be blank" }
             require(exchangeId.isNotBlank()) { "Exchange ID must not be blank" }
-            val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet = protocol.createPacket(
                 invitationId = exchangeId,
                 inviteChallenge = inviteChallenge,

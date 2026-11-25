@@ -5,9 +5,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,12 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -40,6 +35,8 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiE
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeavePrompt
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
+import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberVerificationFlow
+import com.cbgm.sparrow.feature.identity.presentation.verification.IdentityVerificationScreen
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_chats_group_leave
@@ -62,6 +59,7 @@ private enum class DetailsContent {
 
 @Composable
 fun GroupDetailsFlow(
+    conversationId: String,
     modifier: Modifier = Modifier,
     requestLeave: Boolean = false
 ) {
@@ -157,10 +155,16 @@ fun GroupDetailsFlow(
                         onConfirm = {
                             verificationViewModel.onUiEvent(GroupDetailsUiEvent.VerifySelectedMemberClicked)
                         },
-                        onScanQrCode = {
+                        scanner = { enabled ->
                             member.contactId?.let { contactId ->
-                                verificationViewModel.onUiEvent(
-                                    GroupDetailsUiEvent.ScanMemberQrClicked(contactId)
+                                GroupMemberVerificationFlow(
+                                    groupId = conversationId,
+                                    contactId = contactId,
+                                    enabled = enabled,
+                                    onVerified = {
+                                        verificationViewModel.onUiEvent(GroupDetailsUiEvent.VerificationBackClicked)
+                                        content = DetailsContent.Overview
+                                    }
                                 )
                             }
                         },
@@ -254,7 +258,7 @@ private fun handleOverviewUiEvent(
 
 @Composable
 private fun DestructiveGroupActionDescription(description: String) {
-    Text(text = description, style = MaterialTheme.typography.bodyMedium)
+    Text(text = description)
 }
 
 @Composable
@@ -284,16 +288,14 @@ private fun LeaveDialog(
             }
         },
         confirmButton = {
-            SparrowDestructiveButton(
+            SparrowDialogAction(
                 onClick = onApprove,
-                fillMaxWidth = false,
+                color = MaterialTheme.colorScheme.error,
                 content = {
                     if (isRemoving) {
                         CircularProgressIndicator(
-                            modifier =
-                                Modifier
-                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
-                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
+                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                            color = MaterialTheme.colorScheme.error,
                             strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
@@ -303,10 +305,10 @@ private fun LeaveDialog(
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = onDismiss,
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )
@@ -367,10 +369,10 @@ private fun PromoteBeforeLeaveDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 onClick = onDismiss,
                 text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )
@@ -422,29 +424,27 @@ private fun PromoteDialog(
             }
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                SparrowApprovalButton(
-                    onClick = onApprove,
-                    modifier = Modifier.weight(1f),
-                    content = {
-                        if (isUpdating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
-                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
-                            )
-                        } else {
-                            Text(stringResource(Res.string.feature_chats_group_promote_admin_button))
-                        }
+            SparrowDialogAction(
+                onClick = onApprove,
+                content = {
+                    if (isUpdating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                        )
+                    } else {
+                        Text(stringResource(Res.string.feature_chats_group_promote_admin_button))
                     }
-                )
-                SparrowOutlinedButton(
-                    onClick = onDismiss,
-                    text = stringResource(Res.string.base_cancel),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                }
+            )
         },
-        dismissButton = {}
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     )
 }
 
@@ -493,16 +493,14 @@ private fun RemoveDialog(
                 }
             },
             confirmButton = {
-                SparrowDestructiveButton(
+                SparrowDialogAction(
                     onClick = onApprove,
-                    fillMaxWidth = false,
+                    color = MaterialTheme.colorScheme.error,
                     content = {
                         if (isRemoving) {
                             CircularProgressIndicator(
-                                modifier =
-                                    Modifier
-                                        .size(Dimens.GroupDetailsScreen.verificationProgressSize)
-                                        .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
+                                modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                                color = MaterialTheme.colorScheme.error,
                                 strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                             )
                         } else {
@@ -512,10 +510,10 @@ private fun RemoveDialog(
                 )
             },
             dismissButton = {
-                SparrowOutlinedButton(
+                SparrowDialogAction(
                     onClick = onDismiss,
                     text = stringResource(Res.string.base_cancel),
-                    fillMaxWidth = false
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         )

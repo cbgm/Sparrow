@@ -19,17 +19,8 @@ val Shapes =
 
 @Immutable
 class MessageBubbleShapes internal constructor(
-    val cornerRadius: Dp,
-    val tailWidth: Dp,
-    val tailHeight: Dp,
-    val tailReturnOffset: Dp
-)
-
-@Immutable
-class MessageInputShapes internal constructor(
-    val field: Shape,
-    val buttonNotchRadius: Dp,
-    val buttonRightCornerRadius: Dp
+    val mine: Shape,
+    val theirs: Shape
 )
 
 @Immutable
@@ -49,6 +40,8 @@ class ScanIdentityScreenShapes internal constructor(
 
 private val badgeShape = RoundedCornerShape(6.dp)
 
+private val dialogShape = RoundedCornerShape(22.dp)
+
 private val modalShape =
     RoundedCornerShape(
         topStart = 24.dp,
@@ -59,17 +52,8 @@ private val modalShape =
 
 private val messageBubbleShapeValues =
     MessageBubbleShapes(
-        cornerRadius = 18.dp,
-        tailWidth = 10.dp,
-        tailHeight = 14.dp,
-        tailReturnOffset = 1.dp
-    )
-
-private val messageInputShapeValues =
-    MessageInputShapes(
-        field = RoundedCornerShape(20.dp),
-        buttonNotchRadius = 5.dp,
-        buttonRightCornerRadius = 12.dp
+        mine = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 4.dp, bottomStart = 16.dp),
+        theirs = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp)
     )
 
 private val contactsScreenShapeValues =
@@ -99,11 +83,11 @@ val Shapes.badge: Shape
 val Shapes.modal: Shape
     get() = modalShape
 
+val Shapes.dialog: Shape
+    get() = dialogShape
+
 val Shapes.messageBubble: MessageBubbleShapes
     get() = messageBubbleShapeValues
-
-val Shapes.messageInput: MessageInputShapes
-    get() = messageInputShapeValues
 
 val Shapes.contactsScreen: ContactsScreenShapes
     get() = contactsScreenShapeValues

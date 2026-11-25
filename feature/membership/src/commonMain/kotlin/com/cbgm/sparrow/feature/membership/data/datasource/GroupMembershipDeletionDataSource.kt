@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
 
@@ -17,7 +17,7 @@ import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
 internal class GroupMembershipDeletionDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
@@ -65,7 +65,7 @@ internal class GroupMembershipDeletionDataSource(
             val epoch =
                 securityStore.findOwnedGroupEpoch(groupId)
                     ?: GroupConversationDeletedPacket.PENDING_GROUP_EPOCH
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
 
             val packetsByContactId =
                 memberships
@@ -117,7 +117,7 @@ internal class GroupMembershipDeletionDataSource(
                                 groupId = groupId,
                                 challenge = membership.challenge,
                                 memberSigningKeyPair =
-                                    localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                                    localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                             ).getOrThrow()
                     protocolOutbox.enqueue(membership.contactId, decline).getOrThrow()
                 }

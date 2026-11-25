@@ -21,7 +21,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.reposit
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
@@ -42,7 +41,7 @@ import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepo
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.message.OperationMessage
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
@@ -56,7 +55,7 @@ import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPack
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import kotlinx.coroutines.flow.Flow
 
@@ -173,8 +172,6 @@ internal object UnusedAttachments : MessageAttachmentOperationsRepository {
 
     override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> = error(NOT_USED)
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> = error(NOT_USED)
-
     override fun observeExpenses(conversationId: String): Flow<List<Expense>> = error(NOT_USED)
 
     override fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>> = error(NOT_USED)
@@ -278,11 +275,11 @@ internal object UnusedGroupSecurity : GroupSecurityRepository {
         error(NOT_USED)
 }
 
-internal object UnusedSigningKeys : LocalSigningKeyPairProvider {
+internal object UnusedSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = error(NOT_USED)
 }
 
-internal object UnusedProfilePictures : LocalProfilePictureMetadataProvider {
+internal object UnusedProfilePictures : LocalProfilePictureMetadataSource {
     override suspend fun forInvite(): Result<ProfilePictureMetadata> = error(NOT_USED)
 
     override suspend fun forMessage(): Result<ProfilePictureMetadata> = error(NOT_USED)
@@ -469,10 +466,6 @@ internal object UnusedGroupMembership : GroupMembershipRepository {
     ): Result<Boolean> = error(NOT_USED)
 
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> = error(NOT_USED)
-
-    override fun observeConversationMembership(
-        groupId: String
-    ): Flow<GroupConversationMembershipSnapshot> = error(NOT_USED)
 
     override fun observeVerificationSnapshot(
         groupId: String

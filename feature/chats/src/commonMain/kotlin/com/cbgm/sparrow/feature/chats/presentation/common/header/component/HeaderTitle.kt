@@ -11,17 +11,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderAvatarKind
-import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUi
 
 @Composable
-internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
+internal fun HeaderTitle(model: HeaderUi, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
@@ -41,7 +41,8 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
         SparrowAvatar(
             name = model.title,
             target = avatarTarget,
-            size = avatarSize
+            size = avatarSize,
+            ring = model.ring
         )
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
         if (model.subtitle != null) {
@@ -49,13 +50,14 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
                 Text(
                     text = model.title,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Light,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = model.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -65,6 +67,7 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
                 text = model.title,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Light,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

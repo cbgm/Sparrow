@@ -5,23 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,12 +26,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUi
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiState
 import com.cbgm.sparrow.resources.Res
@@ -87,14 +88,12 @@ fun PreferredNodeScreen(
             }
 
             item(key = "automatic") {
-                SparrowCardNoAnimation {
-                    NodeChoiceRow(
-                        title = stringResource(Res.string.feature_settings_preferred_node_automatic),
-                        subtitle = stringResource(Res.string.feature_settings_preferred_node_automatic_description),
-                        selected = uiState.preferredNodeId == null,
-                        onClick = { onUiEvent(PreferredNodeUiEvent.AutomaticSelected) }
-                    )
-                }
+                NodeChoiceRow(
+                    title = stringResource(Res.string.feature_settings_preferred_node_automatic),
+                    subtitle = stringResource(Res.string.feature_settings_preferred_node_automatic_description),
+                    selected = uiState.preferredNodeId == null,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.AutomaticSelected) }
+                )
             }
 
             item(key = "search") {
@@ -113,14 +112,21 @@ fun PreferredNodeScreen(
             status?.let { text ->
                 item(key = "status") { StatusText(text) }
             }
-
-            items(items = uiState.nodes, key = GatewayNodeUiModel::nodeId) { node ->
-                SparrowCardNoAnimation {
-                    NodeChoiceRow(
-                        title = node.address,
-                        subtitle = node.shortNodeId,
-                        selected = node.isPreferred,
-                        onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
+            itemsIndexed(
+                items = uiState.nodes,
+                key = { _, node -> node.nodeId }
+            ) { index, node ->
+                NodeChoiceRow(
+                    title = node.address,
+                    subtitle = node.shortNodeId,
+                    selected = node.isPreferred,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
+                )
+                if (index < uiState.nodes.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
                     )
                 }
             }
@@ -162,13 +168,11 @@ private fun NodeChoiceRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.base
-                ),
+                .padding(vertical = MaterialTheme.spacing.base),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        SparrowRadio(selected = selected, onClick = null)
+        Spacer(Modifier.size(MaterialTheme.spacing.small))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -197,33 +201,26 @@ private fun PreferredNodeTopBar(
     onRefresh: () -> Unit
 ) {
     Column {
-        CenterAlignedTopAppBar(
+        SparrowTopBar(
             title = {
                 Text(
-                    text = stringResource(Res.string.feature_settings_preferred_node),
-                    style = MaterialTheme.typography.titleSmall
+                    text = stringResource(Res.string.feature_settings_preferred_node)
                 )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
                 }
             },
             actions = {
                 IconButton(onClick = onRefresh) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = SparrowIcons.Refresh,
                         contentDescription = stringResource(Res.string.feature_settings_control_planes_refresh)
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            )
+            containerColor = containerColor
         )
     }
 }
@@ -237,8 +234,8 @@ private fun PreferredNodeScreenPreview() {
                 preferredNodeId = "node-b",
                 isLoading = false,
                 nodes = listOf(
-                    GatewayNodeUiModel("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
-                    GatewayNodeUiModel("node-a", "node-a", "node.example.org", false)
+                    GatewayNodeUi("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
+                    GatewayNodeUi("node-a", "node-a", "node.example.org", false)
                 )
             ),
             onUiEvent = {}

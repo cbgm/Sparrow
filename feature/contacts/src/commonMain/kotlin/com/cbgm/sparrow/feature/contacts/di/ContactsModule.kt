@@ -117,7 +117,7 @@ val contactsModule =
 
         factory {
             GetContactSafetyNumberUseCase(
-                localPublicIdentityProvider = get(),
+                localPublicIdentitySource = get(),
                 contactRepository = get(),
                 getRemoteIdentity = get(),
                 safetyNumberGenerator = get()

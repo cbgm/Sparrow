@@ -9,13 +9,21 @@ class MessageSearchLocalDataSource(
 ) {
     suspend fun searchExactMessages(
         query: String,
+        conversationId: String? = null,
         limit: Int
     ): List<StoredMessageSearchMatchDto> =
         dao.searchExactMessages(
             query = query,
+            conversationId = conversationId,
             limit = limit
         )
 
-    suspend fun getIndexedMessages(modelVersion: Int): List<StoredMessageEmbeddingDto> =
-        dao.getIndexedMessages(modelVersion)
+    suspend fun getIndexedMessages(
+        modelVersion: Int,
+        conversationId: String? = null
+    ): List<StoredMessageEmbeddingDto> =
+        dao.getIndexedMessages(
+            modelVersion = modelVersion,
+            conversationId = conversationId
+        )
 }

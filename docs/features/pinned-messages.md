@@ -41,7 +41,7 @@ sequenceDiagram
 
 ## Attachments
 
-Pinned attachment loading uses the same message-part/blob infrastructure. Chats' `GroupPinReadRepositoryImpl.loadAttachment(...)` searches top-level snapshot parts and nested `PollDto.images`, then `loadDetachedBytes(...)` resolves the encrypted blob.
+Pinned attachment loading uses the same message-part/blob infrastructure. `LoadGroupPinnedAttachmentUseCase` asks Attachments (`MessageAttachmentRepository.loadBytes` with the group ID); `AttachmentContentDataSource` checks through `GroupPinnedAttachmentSource.isPinned` (implemented by Chats' `GroupPinDataSource`, which searches top-level snapshot parts and nested `PollDto.images`) that the attachment belongs to the pin, then resolves the encrypted blob.
 
 The filesystem cache does **not** need separate `writePinned`/`readPinned` APIs; “pinned” is a source context, not a different kind of attachment file.
 

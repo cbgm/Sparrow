@@ -203,9 +203,6 @@ class ReleaseWaitingDirectMessageUseCaseTest {
 
         override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> = error(NOT_USED)
 
-        override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-            error(NOT_USED)
-
         override fun observeExpenses(conversationId: String): Flow<List<Expense>> = error(NOT_USED)
 
         override fun observeExpenseBoardClosures(conversationId: String): Flow<List<ExpenseBoardClosed>> =

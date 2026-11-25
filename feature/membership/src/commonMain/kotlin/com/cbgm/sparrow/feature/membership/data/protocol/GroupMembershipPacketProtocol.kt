@@ -15,13 +15,13 @@ import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPack
 import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 
 internal class GroupMembershipPacketProtocol(
     private val groupCrypto: GroupCrypto,
     private val payloadEncoder: GroupMembershipPayloadEncoder,
-    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
+    private val localProfilePictureMetadataSource: LocalProfilePictureMetadataSource? = null
 ) {
     fun welcomePacketId(groupId: String, invitationId: String, epoch: Int): String =
         GroupWelcomePacketIds.of(groupId, invitationId, epoch)
@@ -80,7 +80,7 @@ internal class GroupMembershipPacketProtocol(
             }
 
             val profilePicture =
-                localProfilePictureMetadataProvider
+                localProfilePictureMetadataSource
                     ?.forInvite()
                     ?.getOrElse { ProfilePictureMetadata() }
                     ?: ProfilePictureMetadata()
@@ -161,7 +161,7 @@ internal class GroupMembershipPacketProtocol(
             }
 
             val profilePicture =
-                localProfilePictureMetadataProvider
+                localProfilePictureMetadataSource
                     ?.forInvite()
                     ?.getOrElse { ProfilePictureMetadata() }
                     ?: ProfilePictureMetadata()

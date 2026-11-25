@@ -17,13 +17,12 @@ import com.cbgm.sparrow.feature.embedding.domain.usecase.InitializeLocalEmbeddin
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ResolveIdentityStatusUseCase
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
-import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationCoordinator
+import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationDispatcher
 import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.feature.transport.ControlPlaneStatusStore
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRepository
 import com.cbgm.sparrow.runtime.AttachmentConversationNameObserver
 
 data class AppInitializationDependencies(
@@ -33,7 +32,7 @@ data class AppInitializationDependencies(
     val initializeSemanticSearch: InitializeSemanticSearchUseCase,
     val initializeMessageSafety: InitializeMessageSafetyUseCase,
     val platformNotificationRuntime: PlatformNotificationRuntime,
-    val conversationNotificationCoordinator: ConversationNotificationCoordinator,
+    val conversationNotificationDispatcher: ConversationNotificationDispatcher,
     val attachmentConversationNameObserver: AttachmentConversationNameObserver,
     val invitationResultObserver: InvitationResultObserver,
     val membershipResultObserver: MembershipResultObserver,
@@ -45,10 +44,9 @@ data class AppInitializationDependencies(
     val recoverInterruptedDirectSends: RecoverInterruptedDirectSendsUseCase,
     val unpublishedGroupStateRunner: UnpublishedGroupStateRunner,
     val workflowRegistry: WorkflowRegistry,
-    val controlPlaneConfiguration: ControlPlaneConfiguration,
-    val controlPlaneStatusStore: ControlPlaneStatusStore,
-    val controlPlaneDirectorySynchronizer: ControlPlaneDirectorySynchronizer,
-    val controlPlaneHealthMonitor: ControlPlaneHealthMonitor,
+    val controlPlaneConfiguration: ControlPlaneConfigurationRepository,
+    val controlPlaneStatus: ControlPlaneStatusRepository,
+    val controlPlaneDirectorySynchronizer: ControlPlaneDirectoryRepository,
     val observeLocalIdentityReady: ObserveLocalIdentityReadyUseCase,
     val importDeviceContacts: ImportDeviceContactsUseCase,
     val deviceContactsPermissionChecker: DeviceContactsPermissionRepository

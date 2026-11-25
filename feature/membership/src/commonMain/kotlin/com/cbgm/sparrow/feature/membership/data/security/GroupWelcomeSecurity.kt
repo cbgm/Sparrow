@@ -208,11 +208,13 @@ internal class GroupWelcomeSecurity(
             }
 
             // The previous epoch's key stays for messages that were sent just before the change.
-            groupKeyDataSource
-                .deleteBefore(
-                    groupId = packet.groupId,
-                    epoch = packet.epoch - 1
-                )
+            if (packet.epoch > INITIAL_EPOCH) {
+                groupKeyDataSource
+                    .deleteBefore(
+                        groupId = packet.groupId,
+                        epoch = packet.epoch - 1
+                    )
+            }
         }
 
     private companion object {

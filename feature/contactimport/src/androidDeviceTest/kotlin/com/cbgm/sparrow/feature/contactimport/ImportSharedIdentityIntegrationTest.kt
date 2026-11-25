@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.util.phone.DefaultPhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.phone.DigitPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
@@ -73,7 +73,7 @@ class ImportSharedIdentityIntegrationTest {
                 .build()
 
         val contactDao = database.contactDao()
-        val phoneNumberNormalizer = DefaultPhoneNumberNormalizer()
+        val phoneNumberNormalizer = DigitPhoneNumberNormalizer()
 
         contactRepository =
             ContactRepositoryImpl(

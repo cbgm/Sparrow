@@ -9,20 +9,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,15 +29,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.FeedbackBubble
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.presentation.component.IconBadge
-import com.cbgm.sparrow.feature.identity.presentation.details.component.KeyHexGrid
-import com.cbgm.sparrow.feature.identity.presentation.details.component.PublicKeySection
+import com.cbgm.sparrow.feature.identity.presentation.component.SparrowKeyBlock
 import com.cbgm.sparrow.feature.identity.presentation.details.mapper.toUi
 import com.cbgm.sparrow.feature.identity.presentation.details.model.IdentityDetailsUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.details.model.IdentityDetailsUiState
@@ -78,23 +71,17 @@ fun IdentityDetailsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+            SparrowTopBar(
+                containerColor = containerColor,
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_identity_own_fingerprint_title),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_identity_own_fingerprint_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(IdentityDetailsUiEvent.BackClicked) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = SparrowIcons.ArrowBack,
                             contentDescription = stringResource(Res.string.base_back)
                         )
                     }
@@ -200,46 +187,32 @@ private fun ReadyDetailsContent(
     onShareIdentity: () -> Unit,
     onCopied: () -> Unit
 ) {
-    SparrowCardNoAnimation {
-        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-            Text(
-                stringResource(Res.string.feature_identity_own_fingerprint_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
-            Text(
-                stringResource(Res.string.feature_identity_own_fingerprint_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
-            KeyHexGrid(key = publicIdentity.signingPublicKey, onCopied = onCopied)
-            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.large))
-            PublicKeySection(
-                icon = Icons.Default.Lock,
-                title = stringResource(Res.string.feature_identity_encryption_public_key),
-                description = stringResource(Res.string.feature_identity_encryption_public_key_description),
-                key = publicIdentity.encryptionPublicKey,
-                onCopied = onCopied
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
-            PublicKeySection(
-                icon = Icons.Default.Key,
-                title = stringResource(Res.string.feature_identity_signing_public_key),
-                description = stringResource(Res.string.feature_identity_signing_public_key_description),
-                key = publicIdentity.signingPublicKey,
-                onCopied = onCopied
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.medium))
-            SparrowDetailRow(
-                icon = Icons.Default.Share,
-                title = stringResource(Res.string.feature_identity_share_my_identity),
-                onClick = onShareIdentity
-            )
-        }
-    }
-    Spacer(Modifier.height(MaterialTheme.spacing.medium))
+    Text(
+        text = stringResource(Res.string.feature_identity_own_fingerprint_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.large))
+    SparrowKeyBlock(
+        label = stringResource(Res.string.feature_identity_signing_public_key),
+        description = stringResource(Res.string.feature_identity_signing_public_key_description),
+        key = publicIdentity.signingPublicKey,
+        onCopied = onCopied
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.large))
+    SparrowKeyBlock(
+        label = stringResource(Res.string.feature_identity_encryption_public_key),
+        description = stringResource(Res.string.feature_identity_encryption_public_key_description),
+        key = publicIdentity.encryptionPublicKey,
+        onCopied = onCopied
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.large))
+    SparrowDetailRow(
+        icon = SparrowIcons.Share,
+        title = stringResource(Res.string.feature_identity_share_my_identity),
+        showDivider = false,
+        onClick = onShareIdentity
+    )
 }
 
 @Preview

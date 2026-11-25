@@ -97,6 +97,7 @@ graph TD
     end
 
     module_androidApp --> module_shared
+    module_core_ui --> module_core_util
     module_core_ui --> module_resources
     module_data_database --> module_core_util
     module_data_database --> module_protocol
@@ -278,7 +279,9 @@ graph TD
     module_feature_ocr --> module_core_util
     module_feature_onboarding --> module_core_ui
     module_feature_onboarding --> module_core_util
+    module_feature_onboarding --> module_feature_avatar
     module_feature_onboarding --> module_feature_identity
+    module_feature_onboarding --> module_feature_settings
     module_feature_onboarding --> module_feature_transport
     module_feature_payment --> module_core_base
     module_feature_payment --> module_core_ui
@@ -312,6 +315,7 @@ graph TD
     module_feature_settings --> module_feature_search
     module_feature_settings --> module_feature_transport
     module_feature_settings --> module_feature_voice
+    module_feature_settings --> module_protocol
     module_feature_transport --> module_core_crypto
     module_feature_transport --> module_core_util
     module_feature_transport --> module_data_datastore

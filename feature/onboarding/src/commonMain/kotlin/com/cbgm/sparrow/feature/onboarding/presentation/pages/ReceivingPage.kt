@@ -1,20 +1,12 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.pages
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,12 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLink
-import com.cbgm.sparrow.core.ui.component.bleedHorizontally
-import com.cbgm.sparrow.core.ui.component.sparrowRipple
 import com.cbgm.sparrow.core.ui.device.background.BackgroundRestrictionHelp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -41,13 +29,14 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.FadingText
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.OnboardingChoiceRow
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.OnboardingPageLayout
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.onboardingBodyStyle
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.onboardingTitleStyle
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.progress
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.rememberPageClock
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.graphic.ReceivingGraphic
-import com.cbgm.sparrow.feature.transport.background.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_onboarding_onion_relay
 import com.cbgm.sparrow.resources.feature_onboarding_onion_you
@@ -115,14 +104,14 @@ private fun Choices(
     onChoose: (ConnectionMode) -> Unit
 ) {
     Column(modifier = Modifier.graphicsLayer { alpha = clock.progress(CHOICES_START_MILLISECONDS, CHOICES_MILLISECONDS) }) {
-        ChoiceRow(
+        OnboardingChoiceRow(
             title = stringResource(Res.string.feature_receiving_always),
             consequence = stringResource(Res.string.feature_receiving_always_consequence),
             selected = state.connectionMode == ConnectionMode.ALWAYS_CONNECTED,
             onClick = { onChoose(ConnectionMode.ALWAYS_CONNECTED) }
         )
         HorizontalDivider(thickness = Dimens.OnboardingScreen.lineWidth, color = MaterialTheme.colorScheme.divider)
-        ChoiceRow(
+        OnboardingChoiceRow(
             title = stringResource(Res.string.feature_receiving_while_open),
             consequence = stringResource(Res.string.feature_receiving_while_open_consequence),
             selected = state.connectionMode == ConnectionMode.WHILE_OPEN,
@@ -140,47 +129,6 @@ private fun Choices(
                 Note(text = stringResource(Res.string.feature_receiving_battery_declined), color = MaterialTheme.colorScheme.error)
             }
             WhyIsThat()
-        }
-    }
-}
-
-@Composable
-private fun ChoiceRow(
-    title: String,
-    consequence: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val titleColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline, label = "choiceTitle")
-    val markColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, label = "choiceMark")
-    // The ripple spans the screen from edge to edge; the text stays in line with the page.
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .bleedHorizontally(Dimens.OnboardingScreen.horizontalPadding)
-                .selectable(selected = selected, interactionSource = null, indication = sparrowRipple(), role = Role.RadioButton, onClick = onClick)
-                .padding(horizontal = Dimens.OnboardingScreen.horizontalPadding)
-    ) {
-        Row(
-            modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .padding(top = MaterialTheme.spacing.base)
-                        .size(Dimens.OnboardingScreen.choiceMarkSize)
-                        .background(markColor, CircleShape)
-            )
-            Column {
-                Text(text = title, style = onboardingBodyStyle().copy(fontWeight = FontWeight.Normal), color = titleColor)
-                Text(
-                    text = consequence,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (selected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
-                )
-            }
         }
     }
 }

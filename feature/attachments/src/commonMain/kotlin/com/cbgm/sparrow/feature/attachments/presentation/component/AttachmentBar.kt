@@ -1,13 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircle
@@ -19,10 +17,9 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -70,31 +67,31 @@ fun AttachmentBar(
                 modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.micro),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                FilledButton(
+                AttachmentButton(
                     onClick = onClickGallery,
                     imageVector = Icons.Filled.PhotoAlbum,
                     tint = MaterialTheme.attachmentColors.gallery,
                     enabled = isGalleryEnabled
                 )
 
-                FilledButton(
+                AttachmentButton(
                     onClick = onClickCamera,
                     imageVector = Icons.Filled.Camera,
                     tint = MaterialTheme.attachmentColors.camera,
                     enabled = isCameraEnabled
                 )
-                FilledButton(
+                AttachmentButton(
                     onClick = onClickFile,
                     imageVector = Icons.Filled.FilePresent,
                     tint = MaterialTheme.attachmentColors.file,
                     enabled = isFileEnabled
                 )
-                FilledButton(
+                AttachmentButton(
                     onClick = onClickContact,
                     imageVector = Icons.Filled.Person,
                     tint = MaterialTheme.attachmentColors.contact
                 )
-                FilledButton(
+                AttachmentButton(
                     onClick = onClickLocation,
                     imageVector = Icons.Filled.MyLocation,
                     tint = MaterialTheme.attachmentColors.location,
@@ -120,7 +117,7 @@ fun AttachmentBar(
                     )
                 ) {
                     onClickPoll?.let { onClick ->
-                        FilledButton(
+                        AttachmentButton(
                             imageVector = Icons.Filled.BarChart,
                             onClick = onClick,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -128,7 +125,7 @@ fun AttachmentBar(
                     }
                     val onClickToggleExpenses = if (isExpensesActive) onClickCloseExpenses else onClickActivateExpenses
                     onClickToggleExpenses?.let { onClick ->
-                        FilledButton(
+                        AttachmentButton(
                             imageVector = if (isExpensesActive) Icons.Filled.Close else Icons.Filled.AccountBalanceWallet,
                             onClick = onClick,
                             tint = if (isExpensesActive) {
@@ -140,7 +137,7 @@ fun AttachmentBar(
                     }
 
                     if (isExpensesActive && onClickAddExpense != null) {
-                        FilledButton(
+                        AttachmentButton(
                             imageVector = Icons.Filled.AddCircle,
                             onClick = onClickAddExpense
                         )
@@ -152,28 +149,17 @@ fun AttachmentBar(
 }
 
 @Composable
-private fun FilledButton(
+private fun AttachmentButton(
     imageVector: ImageVector,
     onClick: () -> Unit,
     tint: Color = MaterialTheme.colorScheme.secondary,
     enabled: Boolean = true,
     isLoading: Boolean = false
 ) {
-    FilledIconButton(
+    IconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
-            .size(Dimens.AttachmentBar.buttonSize)
-            .border(
-                width = Dimens.Base.borderStrokeWidth,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                shape = CircleShape
-            ),
-        shape = CircleShape,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        modifier = Modifier.size(Dimens.AttachmentBar.buttonSize)
     ) {
         if (isLoading) {
             CircularProgressIndicator(

@@ -13,20 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,14 +31,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
-import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.expenses.presentation.common.component.ExpenseMemberAvatar
 import com.cbgm.sparrow.feature.expenses.presentation.common.component.label
@@ -183,17 +177,17 @@ private fun DeleteExpenseDialog(
         isVisible = expense != null,
         onDismissRequest = onDismiss,
         confirmButton = {
-            SparrowDestructiveButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.feature_expenses_delete_confirm),
                 onClick = { expense?.let(onConfirm) },
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.error
             )
         },
         dismissButton = {
-            SparrowOutlinedButton(
+            SparrowDialogAction(
                 text = stringResource(Res.string.base_cancel),
                 onClick = onDismiss,
-                fillMaxWidth = false
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         title = stringResource(Res.string.feature_expenses_delete_title),
@@ -214,12 +208,12 @@ private fun OverviewTopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+    SparrowTopBar(
+        containerColor = containerColor,
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
@@ -227,8 +221,7 @@ private fun OverviewTopBar(
         title = {
             Column {
                 Text(
-                    text = stringResource(Res.string.feature_expenses_board),
-                    style = MaterialTheme.typography.titleSmall
+                    text = stringResource(Res.string.feature_expenses_board)
                 )
                 if (uiState.currencyCode.isNotBlank()) {
                     Text(
@@ -237,7 +230,7 @@ private fun OverviewTopBar(
                             uiState.currencyCode,
                             uiState.activatedAtLabel
                         ),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -248,58 +241,59 @@ private fun OverviewTopBar(
 
 @Composable
 private fun YourBalanceSection(balance: ExpenseYourBalanceUi) {
-    ExpenseOverviewSection(title = stringResource(Res.string.feature_expenses_overview_your_balance)) {
-        SparrowCardNoAnimation {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-            ) {
-                Text(
-                    text = balance.balance.signedLabel(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = balance.balance.color()
-                )
-                Text(
-                    text = when (balance.balance) {
-                        is ExpenseAmountUi.Owes -> pluralStringResource(
-                            Res.plurals.feature_expenses_overview_you_owe_people,
-                            balance.counterpartCount,
-                            balance.counterpartCount
-                        )
+    ExpenseOverviewSection(
+        title = stringResource(Res.string.feature_expenses_overview_your_balance),
+        collapsible = false
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
+            Text(
+                text = balance.balance.signedLabel(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Light,
+                color = balance.balance.color()
+            )
+            Text(
+                text = when (balance.balance) {
+                    is ExpenseAmountUi.Owes -> pluralStringResource(
+                        Res.plurals.feature_expenses_overview_you_owe_people,
+                        balance.counterpartCount,
+                        balance.counterpartCount
+                    )
 
-                        is ExpenseAmountUi.Owed -> pluralStringResource(
-                            Res.plurals.feature_expenses_overview_people_owe_you,
-                            balance.counterpartCount,
-                            balance.counterpartCount
-                        )
+                    is ExpenseAmountUi.Owed -> pluralStringResource(
+                        Res.plurals.feature_expenses_overview_people_owe_you,
+                        balance.counterpartCount,
+                        balance.counterpartCount
+                    )
 
-                        is ExpenseAmountUi.Settled -> stringResource(Res.string.feature_expenses_overview_settled)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    is ExpenseAmountUi.Settled -> stringResource(Res.string.feature_expenses_overview_settled)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.divider,
+                thickness = Dimens.Base.dividerThickness
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+                BalanceStat(
+                    stringResource(Res.string.feature_expenses_overview_group_total),
+                    balance.totalLabel,
+                    Modifier.weight(1f)
                 )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = Dimens.Base.dividerThickness
+                BalanceStat(
+                    stringResource(Res.string.feature_expenses_overview_your_share),
+                    balance.yourShareLabel,
+                    Modifier.weight(1f)
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-                    BalanceStat(
-                        stringResource(Res.string.feature_expenses_overview_group_total),
-                        balance.totalLabel,
-                        Modifier.weight(1f)
-                    )
-                    BalanceStat(
-                        stringResource(Res.string.feature_expenses_overview_your_share),
-                        balance.yourShareLabel,
-                        Modifier.weight(1f)
-                    )
-                    BalanceStat(
-                        stringResource(Res.string.feature_expenses_overview_you_paid),
-                        balance.youPaidLabel,
-                        Modifier.weight(1f)
-                    )
-                }
+                BalanceStat(
+                    stringResource(Res.string.feature_expenses_overview_you_paid),
+                    balance.youPaidLabel,
+                    Modifier.weight(1f)
+                )
             }
         }
     }
@@ -319,8 +313,7 @@ private fun BalanceStat(
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }
@@ -336,14 +329,13 @@ private fun SettleUpSection(settlements: List<ExpenseSettlementUi>, onUiEvent: (
         if (settlements.isEmpty()) {
             EmptyHint(stringResource(Res.string.feature_expenses_overview_all_settled))
         } else {
-            SparrowCardNoAnimation {
-                Column {
-                    settlements.forEachIndexed { index, settlement ->
-                        if (index > 0) RowDivider()
-                        SettlementRow(settlement, onUiEvent)
-                    }
+            Column {
+                settlements.forEachIndexed { index, settlement ->
+                    if (index > 0) RowDivider()
+                    SettlementRow(settlement, onUiEvent)
                 }
             }
+
             Text(
                 text = stringResource(Res.string.feature_expenses_overview_settle_hint),
                 style = MaterialTheme.typography.labelSmall,
@@ -356,28 +348,20 @@ private fun SettleUpSection(settlements: List<ExpenseSettlementUi>, onUiEvent: (
 @Composable
 private fun SettlementRow(settlement: ExpenseSettlementUi, onUiEvent: (ExpenseOverviewUiEvent) -> Unit) {
     val involvesYou = settlement.from.isLocal || settlement.to.isLocal
+    val isClickable = settlement.canPay || (involvesYou && settlement.transferId != null)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = settlement.canPay || (involvesYou && settlement.transferId != null)) {
+            .clickable(enabled = isClickable) {
                 onUiEvent(ExpenseOverviewUiEvent.PaymentClicked(settlement.from.id, settlement.to.id, settlement.amountMinor, settlement.transferId))
             }
-            .background(if (involvesYou) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
             .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.base
+                vertical = MaterialTheme.spacing.small
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        ExpenseMemberAvatar(settlement.from)
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-        )
-        ExpenseMemberAvatar(settlement.to)
+        ExpenseMemberAvatar(if (settlement.from.isLocal) settlement.to else settlement.from)
         Text(
             text = when {
                 settlement.from.isLocal -> stringResource(
@@ -397,8 +381,7 @@ private fun SettlementRow(settlement: ExpenseSettlementUi, onUiEvent: (ExpenseOv
                 )
             },
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (involvesYou) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (involvesYou) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -406,36 +389,36 @@ private fun SettlementRow(settlement: ExpenseSettlementUi, onUiEvent: (ExpenseOv
         Text(
             text = settlement.amountLabel,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = if (involvesYou) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (isClickable) {
+            Icon(
+                imageVector = SparrowIcons.Chevron,
+                contentDescription = null,
+                modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                tint = MaterialTheme.colorScheme.outline
+            )
+        }
     }
 }
 
 @Composable
 private fun PaymentsSection(payments: List<ExpensePaymentUi>, onUiEvent: (ExpenseOverviewUiEvent) -> Unit) {
     ExpenseOverviewSection(title = stringResource(Res.string.feature_payment_history)) {
-        SparrowCardNoAnimation {
-            Column {
-                payments.forEachIndexed { index, payment ->
-                    if (index > 0) RowDivider()
-                    Column(
-                        Modifier.fillMaxWidth().clickable(enabled = payment.canOpen) {
-                            onUiEvent(ExpenseOverviewUiEvent.PaymentClicked(payment.from.id, payment.to.id, payment.amountMinor, payment.transferId))
-                        }.padding(MaterialTheme.spacing.base)
-                    ) {
-                        Text("${payment.from.label()} → ${payment.to.label()} · ${payment.amountLabel}", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            stringResource(if (payment.isReceived) Res.string.feature_payment_history_received else Res.string.feature_payment_history_sent),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+        Column {
+            payments.forEachIndexed { index, payment ->
+                if (index > 0) RowDivider()
+                Column(
+                    Modifier.fillMaxWidth().clickable(enabled = payment.canOpen) {
+                        onUiEvent(ExpenseOverviewUiEvent.PaymentClicked(payment.from.id, payment.to.id, payment.amountMinor, payment.transferId))
+                    }.padding(vertical = MaterialTheme.spacing.base)
+                ) {
+                    Text("${payment.from.label()} → ${payment.to.label()} · ${payment.amountLabel}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(if (payment.isReceived) Res.string.feature_payment_history_received else Res.string.feature_payment_history_sent),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -445,12 +428,10 @@ private fun PaymentsSection(payments: List<ExpensePaymentUi>, onUiEvent: (Expens
 @Composable
 private fun BalancesSection(balances: List<ExpenseMemberBalanceUi>) {
     ExpenseOverviewSection(title = stringResource(Res.string.feature_expenses_overview_balances)) {
-        SparrowCardNoAnimation {
-            Column {
-                balances.forEachIndexed { index, balance ->
-                    if (index > 0) RowDivider()
-                    MemberBalanceRow(balance)
-                }
+        Column {
+            balances.forEachIndexed { index, balance ->
+                if (index > 0) RowDivider()
+                MemberBalanceRow(balance)
             }
         }
     }
@@ -462,8 +443,7 @@ private fun MemberBalanceRow(balance: ExpenseMemberBalanceUi) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.base
+                vertical = MaterialTheme.spacing.small
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
@@ -480,7 +460,6 @@ private fun MemberBalanceRow(balance: ExpenseMemberBalanceUi) {
         Text(
             text = balance.balance.signedLabel(),
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
             color = balance.balance.color()
         )
     }
@@ -551,22 +530,20 @@ private fun ExpensesSection(
                         } else {
                             listOf(
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    tone = SwipeActionTone.PRIMARY,
                                     onClick = { onEdit(expense) }
                                 ) {
                                     Icon(
-                                        Icons.Default.Edit,
+                                        SparrowIcons.Edit,
                                         contentDescription = stringResource(Res.string.feature_expenses_edit)
                                     )
                                 },
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError,
+                                    tone = SwipeActionTone.DESTRUCTIVE,
                                     onClick = { onDelete(expense) }
                                 ) {
                                     Icon(
-                                        Icons.Default.DeleteOutline,
+                                        SparrowIcons.Delete,
                                         contentDescription = stringResource(Res.string.feature_expenses_delete)
                                     )
                                 }
@@ -594,32 +571,21 @@ private fun ExpenseRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.base
+                vertical = MaterialTheme.spacing.small
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
-        Box(
-            modifier = Modifier
-                .size(Dimens.Expense.pinIconTileSize)
-                .background(
-                    MaterialTheme.colorScheme.surfaceContainerHighest,
-                    MaterialTheme.shapes.small
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                expense.category.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+        Icon(
+            expense.category.icon,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+            tint = MaterialTheme.colorScheme.outline
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = expense.description,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -645,8 +611,7 @@ private fun ExpenseRow(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = expense.amountLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodyMedium
             )
             when (val part = expense.yourPart) {
                 is ExpenseYourPartUi.Lent -> Text(
@@ -676,7 +641,7 @@ private fun ExpenseRow(
 @Composable
 private fun RowDivider() {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant,
+        color = MaterialTheme.colorScheme.divider,
         thickness = Dimens.Base.dividerThickness
     )
 }

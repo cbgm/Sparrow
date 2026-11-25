@@ -5,13 +5,14 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.transport.circuit.isWaitingForRoute
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.InvalidInvitationLetterException
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationLetters
-import com.cbgm.sparrow.feature.transport.mailbox.InvitationMailboxRenewal
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxGoneException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
 import kotlinx.coroutines.sync.Mutex
@@ -20,19 +21,19 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Processes the envelopes waiting in every local mailbox, including retiring ones a renewal replaced: they keep
  * receiving until the contact learned the new route, and are revoked only after they expired. The device's invitation
- * mailboxes ([InvitationMailboxRenewal]) hold letters of senders without a mailbox route of this device; a letter whose
- * sender its key does not prove is acknowledged and dropped ([InvitationLetters.open]).
+ * mailboxes ([InvitationMailboxRepository]) hold letters of senders without a mailbox route of this device; a letter whose
+ * sender its key does not prove is acknowledged and dropped ([InvitationLetterRepository.open]).
  *
  * An envelope that fails stays in its mailbox and is retried on the next sync; it never stops the envelopes
  * behind it or the other mailboxes. One sync runs at a time, so an envelope is never processed twice at once.
  */
 class MailboxPendingSynchronizer(
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val mailboxRouteRepository: MailboxRouteRepository,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
     private val resolveContactRoutingId: ResolveContactTransportRoutingIdUseCase,
-    private val invitationMailbox: InvitationMailboxRenewal,
-    private val invitationLetters: InvitationLetters
+    private val invitationMailbox: InvitationMailboxRepository,
+    private val invitationLetters: InvitationLetterRepository
 ) {
     private val logger = SparrowLog.withTag("MailboxPendingSynchronizer")
     private val synchronizing = Mutex()
@@ -53,12 +54,12 @@ class MailboxPendingSynchronizer(
 
     private suspend fun synchronize(credential: LocalMailboxCredential): Int {
         val envelopes =
-            mailboxGateway.pending(credential).getOrElse { error ->
-                logUnreadable(credential, error)
+            mailboxRepository.pending(credential).getOrElse { error ->
+                if (error is MailboxGoneException) dropGone(credential) else logUnreadable(credential, error)
                 return 0
             }
         if (envelopes.isEmpty()) return 0
-        if (credential.contactId == InvitationMailboxRenewal.CONTACT_ID) return envelopes.count { envelope -> processLetter(credential, envelope) }
+        if (credential.contactId == InvitationMailboxRepository.CONTACT_ID) return envelopes.count { envelope -> processLetter(credential, envelope) }
         // The mailbox belongs to one contact, and only that contact holds its send capability: the sender is that
         // contact, whatever routing ID the envelope names (envelopes put in by the app itself name none).
         val sender =
@@ -90,7 +91,7 @@ class MailboxPendingSynchronizer(
         envelope: FederatedEnvelope,
         reason: InvalidInvitationLetterException
     ) {
-        mailboxGateway
+        mailboxRepository
             .acknowledge(credential, envelope.envelopeId)
             .onSuccess { logger.warn { "Invitation letter ${envelope.envelopeId} dropped: ${reason.message}" } }
             .onFailure { failure -> logStillPending(envelope, failure) }
@@ -113,12 +114,12 @@ class MailboxPendingSynchronizer(
                     ).getOrThrow()
             ) {
                 IncomingEnvelopeProcessingResult.Processed -> {
-                    mailboxGateway.acknowledge(credential, envelopeId).getOrThrow()
+                    mailboxRepository.acknowledge(credential, envelopeId).getOrThrow()
                     true
                 }
 
                 IncomingEnvelopeProcessingResult.Rejected -> {
-                    mailboxGateway.acknowledge(credential, envelopeId).getOrThrow()
+                    mailboxRepository.acknowledge(credential, envelopeId).getOrThrow()
                     logger.warn {
                         "Rejected mailbox envelope acknowledged and discarded: envelopeId=$envelopeId"
                     }
@@ -131,6 +132,19 @@ class MailboxPendingSynchronizer(
             logStillPending(envelopeId, error)
             false
         }
+
+    /** Only a retiring mailbox is dropped: a replaced one whose node was installed anew. */
+    private suspend fun dropGone(credential: LocalMailboxCredential) {
+        val routeId = credential.deliveryRoute.routeId
+        val retiring = mailboxRouteRepository.allRetiring().getOrDefault(emptyList()).any { mailbox -> mailbox.deliveryRoute.routeId == routeId }
+        if (!retiring) {
+            logger.warn { "Mailbox of contact ${credential.contactId} is gone at its node" }
+            return
+        }
+        mailboxRouteRepository
+            .deleteRetiring(routeId)
+            .onSuccess { logger.info { "Replaced mailbox of contact ${credential.contactId} is gone at its node; no longer read" } }
+    }
 
     // A node that is down is expected (it may come back or be replaced), and so is waiting for a protecting circuit
     // the user chose; only other failures are errors.

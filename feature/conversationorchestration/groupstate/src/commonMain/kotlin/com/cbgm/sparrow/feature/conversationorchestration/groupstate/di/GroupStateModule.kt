@@ -5,10 +5,10 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.dataso
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.datasource.GroupDescriptionDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.datasource.GroupTitleDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.GroupAvatarPacketCodecImpl
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.GroupDescriptionPacketCodecImpl
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.GroupPinPacketCodecImpl
-import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.GroupTitlePacketCodecImpl
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.EncryptedGroupAvatarPacketCodec
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.EncryptedGroupDescriptionPacketCodec
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.EncryptedGroupPinPacketCodec
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.packet.EncryptedGroupTitlePacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.repository.GroupAvatarRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.repository.GroupDescriptionRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.data.repository.GroupPinRepositoryImpl
@@ -91,13 +91,13 @@ private fun Module.registerData() {
     singleOf(::GroupDescriptionDataSource)
     singleOf(::GroupPinDataSource)
     singleOf(::GroupTitleDataSource)
-    singleOf(::GroupAvatarPacketCodecImpl) { bind<GroupAvatarPacketCodec>() }
+    singleOf(::EncryptedGroupAvatarPacketCodec) { bind<GroupAvatarPacketCodec>() }
     singleOf(::GroupAvatarRepositoryImpl) { bind<GroupAvatarRepository>() }
-    singleOf(::GroupDescriptionPacketCodecImpl) { bind<GroupDescriptionPacketCodec>() }
+    singleOf(::EncryptedGroupDescriptionPacketCodec) { bind<GroupDescriptionPacketCodec>() }
     singleOf(::GroupDescriptionRepositoryImpl) { bind<GroupDescriptionRepository>() }
-    singleOf(::GroupPinPacketCodecImpl) { bind<GroupPinPacketCodec>() }
+    singleOf(::EncryptedGroupPinPacketCodec) { bind<GroupPinPacketCodec>() }
     singleOf(::GroupPinRepositoryImpl) { bind<GroupPinRepository>() }
-    singleOf(::GroupTitlePacketCodecImpl) { bind<GroupTitlePacketCodec>() }
+    singleOf(::EncryptedGroupTitlePacketCodec) { bind<GroupTitlePacketCodec>() }
     singleOf(::GroupTitleRepositoryImpl) { bind<GroupTitleRepository>() }
 }
 

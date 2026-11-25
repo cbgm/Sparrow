@@ -1,28 +1,21 @@
 package com.cbgm.sparrow.navigation.presentation.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,22 +24,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScrollStates
+import com.cbgm.sparrow.core.ui.component.SparrowTabs
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewRoute
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsRoute
 import com.cbgm.sparrow.navigation.presentation.main.model.MainTab
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Suppress("UnusedContentLambdaTargetStateParameter")
@@ -90,9 +86,16 @@ fun MainScreen(
                     invitationCount = invitationCount,
                     isMessageSearchAvailable = isMessageSearchAvailable,
                     onOpenSearch = onOpenSearch,
-                    onOpenInvitations = onOpenInvitations,
-                    onAddChat = { showContactsOverlay = true }
+                    onOpenInvitations = onOpenInvitations
                 )
+            },
+            floatingActionButton = {
+                if (selectedTab == MainTab.Chats) {
+                    SparrowFloatingButton(
+                        icon = SparrowIcons.Edit,
+                        onClick = { showContactsOverlay = true }
+                    )
+                }
             },
             bottomBar = { containerColor ->
                 MainBottomBar(
@@ -135,27 +138,26 @@ private fun MainTopBar(
     invitationCount: Int,
     isMessageSearchAvailable: Boolean,
     onOpenSearch: () -> Unit,
-    onOpenInvitations: () -> Unit,
-    onAddChat: () -> Unit
+    onOpenInvitations: () -> Unit
 ) {
-    TopAppBar(
+    SparrowTopBar(
         title = {
             Text(
-                text = stringResource(selectedTab.label),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                text = stringResource(selectedTab.label)
             )
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
+                RouteProtectionAction()
                 if (isMessageSearchAvailable) {
                     IconButton(
                         onClick = onOpenSearch,
                         modifier = Modifier
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null
+                            imageVector = SparrowIcons.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.TopBar.iconSize)
                         )
                     }
                 }
@@ -167,81 +169,44 @@ private fun MainTopBar(
                     BadgedBox(
                         badge = {
                             if (invitationCount > 0) {
-                                Badge {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ) {
                                     Text(invitationCount.toString())
                                 }
                             }
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MarkEmailUnread,
-                            contentDescription = null
+                            imageVector = SparrowIcons.Mail,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.TopBar.iconSize)
                         )
                     }
                 }
-                IconButton(
-                    onClick = onAddChat,
-                    modifier = Modifier
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = ""
-                    )
-                }
             }
         },
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            )
+        containerColor = containerColor
     )
 }
 
+/** Text tabs: the open one is bright with a short cyan line under it. No icons, no line above. */
 @Composable
 private fun MainBottomBar(
     selectedTab: MainTab,
     containerColor: Color,
     onTabSelected: (MainTab) -> Unit
 ) {
-    NavigationBar(
-        containerColor = containerColor,
-        contentColor = MaterialTheme.colorScheme.onBackground
-    ) {
-        MainTab.entries.forEach { tab ->
-            val isSelected = selectedTab == tab
-
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onTabSelected(tab) },
-                icon = {
-                    Icon(
-                        painter = painterResource(if (isSelected) tab.res else tab.resOutlined),
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.MainScreen.navigationIconSize)
-                    )
-                },
-                label = {
-                    Text(
-                        text = stringResource(tab.label),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                colors =
-                    NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-            )
-        }
-    }
+    SparrowTabs(
+        labels = MainTab.entries.map { tab -> stringResource(tab.label) },
+        selectedIndex = MainTab.entries.indexOf(selectedTab),
+        onSelect = { index -> onTabSelected(MainTab.entries[index]) },
+        height = Dimens.MainScreen.bottomBarHeight,
+        modifier = Modifier
+            .background(containerColor)
+            .navigationBarsPadding()
+    )
 }
 
 @Composable

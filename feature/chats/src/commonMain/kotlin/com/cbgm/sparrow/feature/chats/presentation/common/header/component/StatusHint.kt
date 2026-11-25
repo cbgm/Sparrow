@@ -1,27 +1,22 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.header.component
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.cbgm.sparrow.core.ui.component.SparrowBanner
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.ui.theme.warning
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_deleted_status
-import com.cbgm.sparrow.resources.feature_chats_group_member_accepted
-import com.cbgm.sparrow.resources.feature_chats_group_member_active
 import com.cbgm.sparrow.resources.feature_chats_group_member_count
-import com.cbgm.sparrow.resources.feature_chats_group_member_failed
-import com.cbgm.sparrow.resources.feature_chats_group_member_invited
-import com.cbgm.sparrow.resources.feature_chats_group_member_key_sent
 import com.cbgm.sparrow.resources.feature_chats_group_message_queued
+import com.cbgm.sparrow.resources.feature_chats_group_messages_queued_title
 import com.cbgm.sparrow.resources.feature_chats_group_status_distributing
 import com.cbgm.sparrow.resources.feature_chats_group_status_failed
 import com.cbgm.sparrow.resources.feature_chats_group_status_joining
@@ -42,42 +37,19 @@ internal fun StatusHint(
         uiState.state == GroupConversationState.REMOVED -> MembershipRemovedHint()
         uiState.state == GroupConversationState.LEAVING -> MembershipLeavingHint()
         uiState.state != GroupConversationState.READY && uiState.composerState.isInputEnabled ->
-            PendingMessageHint(membershipState = membershipState)
+            PendingMessageHint()
     }
 }
 
 @Composable
-private fun PendingMessageHint(membershipState: GroupMembershipUiState) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.micro),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = MaterialTheme.spacing.medium,
-                        vertical = MaterialTheme.spacing.small
-                    )
-        ) {
-            Text(
-                text = stringResource(Res.string.feature_chats_group_message_queued),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            membershipState.memberProgress.forEach { member ->
-                Text(
-                    text = "${member.displayName} · ${memberStatus(member.status)}",
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
-    }
+private fun PendingMessageHint() {
+    SparrowBanner(
+        icon = Icons.Default.Schedule,
+        accent = MaterialTheme.colorScheme.warning,
+        title = stringResource(Res.string.feature_chats_group_messages_queued_title),
+        description = stringResource(Res.string.feature_chats_group_message_queued),
+        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.micro)
+    )
 }
 
 @Composable
@@ -124,14 +96,4 @@ private fun pendingSubtitle(
         )
     } else {
         stringResource(waitingResource, pendingCount)
-    }
-
-@Composable
-private fun memberStatus(status: GroupMemberProgressStatus): String =
-    when (status) {
-        GroupMemberProgressStatus.PENDING -> stringResource(Res.string.feature_chats_group_member_invited)
-        GroupMemberProgressStatus.JOINING -> stringResource(Res.string.feature_chats_group_member_accepted)
-        GroupMemberProgressStatus.KEY_EXCHANGE -> stringResource(Res.string.feature_chats_group_member_key_sent)
-        GroupMemberProgressStatus.ACTIVE -> stringResource(Res.string.feature_chats_group_member_active)
-        GroupMemberProgressStatus.FAILED -> stringResource(Res.string.feature_chats_group_member_failed)
     }

@@ -8,7 +8,7 @@ import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
-import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
+import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItemUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
@@ -62,7 +62,7 @@ class OverviewViewModel(
         }
     }
 
-    private fun openChat(chat: ConversationListItem) {
+    private fun openChat(chat: ConversationListItemUi) {
         val route =
             if (chat.isGroup) {
                 AppRoute.GroupConversation(chat.conversationId)
@@ -88,7 +88,7 @@ class OverviewViewModel(
         }
     }
 
-    private suspend fun deleteGroup(chat: ConversationListItem) {
+    private suspend fun deleteGroup(chat: ConversationListItemUi) {
         val requirement = getGroupLeaveRequirement(chat.conversationId)
             .getOrElse { failure ->
                 logger.error(failure) { "Group leave requirement could not be resolved" }
@@ -106,6 +106,6 @@ class OverviewViewModel(
             }
     }
 
-    private fun currentConversation(conversationId: String): ConversationListItem? =
+    private fun currentConversation(conversationId: String): ConversationListItemUi? =
         uiState.value.conversations.firstOrNull { it.conversationId == conversationId }
 }

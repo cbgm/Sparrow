@@ -1,0 +1,68 @@
+package com.cbgm.sparrow.feature.transport.data.controlplane
+
+import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneEndpoint
+
+internal class NodeControlPlaneDiscoverySynchronizer(
+    private val source: NodeControlPlaneDirectoryRemoteDataSource,
+    private val candidateVerifier: ControlPlaneCandidateVerifier,
+    private val configuration: ControlPlaneLocalDataSource
+) {
+    private val logger = SparrowLog.withTag("ControlPlaneDiscovery")
+
+    suspend fun refreshFromNode(websocketUrl: String): Result<Int> =
+        runCatching {
+            if (configuration.directoryUrl.value != null) {
+                // Signed-directory publication is the sole authority for dynamic
+                // endpoint enrollment/revocation. Node hints cannot bypass it.
+                return@runCatching 0
+            }
+            val candidates = source.fetch(websocketUrl).getOrThrow().normalizedCandidates()
+            val verified = verifyCandidates(candidates)
+            check(verified.isNotEmpty()) {
+                "Node did not advertise a trusted control plane"
+            }
+            configuration.mergeDirectory(verified).getOrThrow()
+            verified.size
+        }
+
+    private suspend fun verifyCandidates(candidates: List<String>): List<String> {
+        val verified = mutableListOf<String>()
+        candidates.forEach { candidate ->
+            candidateVerifier.verify(candidate).fold(
+                onSuccess = { verified += candidate },
+                onFailure = { error -> logRejectedCandidate(candidate, error) }
+            )
+        }
+        return verified
+    }
+
+    private fun logRejectedCandidate(
+        candidate: String,
+        error: Throwable
+    ) {
+        logger.warn { "Ignoring untrusted control plane $candidate: ${error.message ?: error::class.simpleName}" }
+    }
+
+    private fun List<String>.normalizedCandidates(): List<String> =
+        asSequence()
+            .mapNotNull(::normalizeCandidate)
+            .distinct()
+            .take(MAXIMUM_CONTROL_PLANES)
+            .toList()
+
+    private fun normalizeCandidate(value: String): String? =
+        runCatching {
+            val normalized = value.trim().trimEnd('/')
+            require(
+                normalized.startsWith("http://") || normalized.startsWith("https://")
+            ) {
+                "Control-plane URL must use http:// or https://"
+            }
+            ControlPlaneEndpoint(normalized).baseUrl
+        }.getOrNull()
+
+    private companion object {
+        const val MAXIMUM_CONTROL_PLANES = 16
+    }
+}

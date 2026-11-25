@@ -26,8 +26,8 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipSourceIds
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
@@ -41,8 +41,8 @@ internal class MembershipRepositoryImpl(
     private val membershipStore: GroupMembershipStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val protocolOutbox: ProtocolOutbox,
     private val groupOwnerWelcome: GroupOwnerWelcomeDataSource,
     private val securityStore: GroupSecurityStoreDataSource
@@ -68,8 +68,8 @@ internal class MembershipRepositoryImpl(
 
             val sourceId = IdGenerator.generate(prefix = MembershipSourceIds.PREFIX)
             val expiresAt = now + MembershipHandshake.VALIDITY_MILLISECONDS
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createInvite(
@@ -174,8 +174,8 @@ internal class MembershipRepositoryImpl(
                 "Membership cannot be accepted from status ${membership.status}"
             }
 
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createJoinRequest(
@@ -210,7 +210,7 @@ internal class MembershipRepositoryImpl(
                 "Membership cannot be declined from status ${membership.status}"
             }
 
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createDecline(
@@ -488,7 +488,7 @@ internal class MembershipRepositoryImpl(
         packet: GroupInvitePacket,
         receivedAtEpochMilliseconds: Long
     ) {
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val acknowledgement =
             membershipPacketProtocol
                 .createInviteReceived(

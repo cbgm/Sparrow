@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,9 +25,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,10 +35,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -97,28 +94,21 @@ fun InvitationsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            TopAppBar(
+            SparrowTopBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_invite_invitations_title),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_invite_invitations_title)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(InvitationUiEvent.CloseClicked) }) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = SparrowIcons.Close,
                             contentDescription = null
                         )
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = containerColor,
-                        scrolledContainerColor = containerColor,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                containerColor = containerColor
             )
         }
     ) { innerPadding, listState ->
@@ -152,7 +142,7 @@ fun InvitationsScreen(
                     state = listState,
                     contentPadding = PaddingValues(
                         top = MaterialTheme.spacing.medium,
-                        bottom = innerPadding.calculateBottomPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
                         start = MaterialTheme.spacing.screenPadding,
                         end = MaterialTheme.spacing.screenPadding
                     )
@@ -163,44 +153,38 @@ fun InvitationsScreen(
                                 Text(
                                     text = recoveryError,
                                     color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(MaterialTheme.spacing.medium)
+                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
                                 )
                             }
                         }
                         recoveryRequests.forEach { request ->
                             item(key = "identity-change:${request.peerId}:${request.invitationId}") {
-                                SparrowCardNoAnimation(
-                                    modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
-                                ) {
-                                    IdentityChangeInvitationItem(
-                                        request = request,
-                                        isProcessing = processingRecoveryId == request.invitationId,
-                                        actionsEnabled = processingRecoveryId == null && uiState.processingInvitationId == null,
-                                        onAccept = { onApproveRecovery(request) },
-                                        onDecline = { onDeclineRecovery(request) },
-                                        onBlock = { onBlockRecovery(request) }
-                                    )
-                                }
+                                IdentityChangeInvitationItem(
+                                    request = request,
+                                    isProcessing = processingRecoveryId == request.invitationId,
+                                    actionsEnabled = processingRecoveryId == null && uiState.processingInvitationId == null,
+                                    onAccept = { onApproveRecovery(request) },
+                                    onDecline = { onDeclineRecovery(request) },
+                                    onBlock = { onBlockRecovery(request) }
+                                )
                             }
                         }
                     }
                     if (uiState.selectedInvitations.isNotEmpty()) {
                         item(key = "invitations-settings-group") {
-                            SparrowCardNoAnimation {
-                                Column {
-                                    uiState.selectedInvitations.forEachIndexed { index, invitation ->
-                                        androidx.compose.runtime.key(invitation.invitationId) {
-                                            if (index > 0) InvitationDivider()
-                                            InvitationItem(
-                                                invitation = invitation,
-                                                isProcessing = uiState.processingInvitationId == invitation.invitationId,
-                                                actionsEnabled = uiState.processingInvitationId == null && processingRecoveryId == null,
-                                                identityApprovalPending = invitation.payloadType == InvitationUiPayloadType.GROUP &&
-                                                    invitation.direction == InvitationUiDirection.INCOMING &&
-                                                    recoveryRequests.any { it.peerId == invitation.peerId },
-                                                onUiEvent = onUiEvent
-                                            )
-                                        }
+                            Column {
+                                uiState.selectedInvitations.forEachIndexed { index, invitation ->
+                                    key(invitation.invitationId) {
+                                        if (index > 0) InvitationDivider()
+                                        InvitationItem(
+                                            invitation = invitation,
+                                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
+                                            actionsEnabled = uiState.processingInvitationId == null && processingRecoveryId == null,
+                                            identityApprovalPending = invitation.payloadType == InvitationUiPayloadType.GROUP &&
+                                                invitation.direction == InvitationUiDirection.INCOMING &&
+                                                recoveryRequests.any { it.peerId == invitation.peerId },
+                                            onUiEvent = onUiEvent
+                                        )
                                     }
                                 }
                             }
@@ -229,35 +213,38 @@ private fun IdentityChangeInvitationItem(
         enabled = actionsEnabled,
         actions = listOf(
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                tone = SwipeActionTone.PRIMARY,
                 onClick = onAccept
             ) {
-                InvitationSwipeActionContent(Icons.Default.Check, stringResource(Res.string.feature_invite_accept_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Check,
+                    stringResource(Res.string.feature_invite_accept_invitation)
+                )
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                tone = SwipeActionTone.NEUTRAL,
                 // Deleting an incoming identity proposal is a DECLINE: remove
                 // the pending row and send its signed decline when available.
                 onClick = onDecline
             ) {
-                InvitationSwipeActionContent(Icons.Default.DeleteOutline, stringResource(Res.string.feature_invite_decline_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Delete,
+                    stringResource(Res.string.feature_invite_decline_invitation)
+                )
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
+                tone = SwipeActionTone.DESTRUCTIVE,
                 onClick = onBlock
             ) {
-                InvitationSwipeActionContent(Icons.Default.Block, stringResource(Res.string.feature_invite_block_invitation))
+                InvitationSwipeActionContent(
+                    SparrowIcons.Block,
+                    stringResource(Res.string.feature_invite_block_invitation)
+                )
             }
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.small
-            ),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SparrowAvatar(
@@ -401,28 +388,26 @@ private fun IncomingInvitationItem(
             buildList {
                 add(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        tone = SwipeActionTone.PRIMARY,
                         onClick = {
                             onUiEvent(InvitationUiEvent.AcceptClicked(invitation.invitationId))
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.Check,
+                            icon = SparrowIcons.Check,
                             label = stringResource(Res.string.feature_invite_accept_invitation)
                         )
                     }
                 )
                 add(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tone = SwipeActionTone.NEUTRAL,
                         onClick = {
                             onUiEvent(InvitationUiEvent.DeclineClicked(invitation.invitationId))
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.Close,
+                            icon = SparrowIcons.Close,
                             label = stringResource(Res.string.feature_invite_decline_invitation)
                         )
                     }
@@ -430,14 +415,13 @@ private fun IncomingInvitationItem(
                 if (invitation.payloadType == InvitationUiPayloadType.DIRECT) {
                     add(
                         SwipeRevealAction(
-                            backgroundColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
+                            tone = SwipeActionTone.DESTRUCTIVE,
                             onClick = {
                                 onUiEvent(InvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
                             }
                         ) {
                             InvitationSwipeActionContent(
-                                icon = Icons.Default.Block,
+                                icon = SparrowIcons.Block,
                                 label = stringResource(Res.string.feature_invite_block_invitation)
                             )
                         }
@@ -467,8 +451,7 @@ private fun OutgoingInvitationItem(
             actions =
                 listOf(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
+                        tone = SwipeActionTone.DESTRUCTIVE,
                         onClick = {
                             onUiEvent(
                                 InvitationUiEvent.DeleteDeclinedOutgoingClicked(
@@ -478,7 +461,7 @@ private fun OutgoingInvitationItem(
                         }
                     ) {
                         InvitationSwipeActionContent(
-                            icon = Icons.Default.DeleteOutline,
+                            icon = SparrowIcons.Delete,
                             label = stringResource(Res.string.feature_invite_delete_outgoing_invitation)
                         )
                     }
@@ -502,7 +485,7 @@ private fun InvitationDivider() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(start = MaterialTheme.spacing.listDividerStart),
+                .padding(start = Dimens.Avatar.defaultSize + MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
     )
 }
@@ -551,10 +534,7 @@ private fun InvitationRow(
             ?: stringResource(Res.string.base_unknown)
 
     Row(
-        modifier = modifier.fillMaxWidth().padding(
-            horizontal = MaterialTheme.spacing.small,
-            vertical = MaterialTheme.spacing.small
-        ),
+        modifier = modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SparrowAvatar(
@@ -623,7 +603,11 @@ private fun unverifiedClaimText(invitation: InvitationUi): String? {
     return when {
         !incomingDirect || !invitation.peerUnverified -> null
         invitation.phoneContactName != null ->
-            stringResource(Res.string.feature_invite_peer_matches_phone_contact, invitation.phoneContactName)
+            stringResource(
+                Res.string.feature_invite_peer_matches_phone_contact,
+                invitation.phoneContactName
+            )
+
         else -> stringResource(Res.string.feature_invite_peer_unverified)
     }
 }
@@ -691,22 +675,25 @@ private fun InvitationsScreenPreview() {
         InvitationsScreen(
             uiState =
                 InvitationUiState(
-                    selectedTab = InvitationTab.OUTGOING,
-                    outgoingInvitations =
+                    selectedTab = InvitationTab.INCOMING,
+                    incomingInvitations =
                         listOf(
                             InvitationUi(
                                 invitationId = "pending",
                                 peerId = "alice",
                                 peerDisplayName = "Alice",
                                 peerSecondaryText = "+49 123 456",
-                                direction = InvitationUiDirection.OUTGOING,
+                                direction = InvitationUiDirection.INCOMING,
                                 status = InvitationUiStatus.PENDING,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 1,
                                 hasUnreadUpdate = false,
                                 payloadId = "12",
                                 payloadType = InvitationUiPayloadType.DIRECT
-                            ),
+                            )
+                        ),
+                    outgoingInvitations =
+                        listOf(
                             InvitationUi(
                                 invitationId = "declined",
                                 peerId = "bob",
@@ -721,6 +708,16 @@ private fun InvitationsScreenPreview() {
                                 payloadType = InvitationUiPayloadType.DIRECT
                             )
                         )
+                ),
+            recoveryRequests =
+                listOf(
+                    MailboxReviewRequestUi(
+                        invitationId = "recovery-1",
+                        peerId = "charlie",
+                        peerDisplayName = "Charlie",
+                        proposedSigningFingerprint = "A1B2 C3D4 E5F6 7890 1234 5678 9ABC DEF0",
+                        proposedEncryptionFingerprint = "A1B2 C3D4 E5F6 7890 1234 5678 9ABC DEF0"
+                    )
                 ),
             onUiEvent = {}
         )

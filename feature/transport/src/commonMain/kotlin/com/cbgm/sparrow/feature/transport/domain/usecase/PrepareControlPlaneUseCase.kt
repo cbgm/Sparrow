@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.transport.domain.usecase
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
-import com.cbgm.sparrow.feature.transport.ControlPlaneDirectorySynchronizer
-import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.model.ControlPlaneUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneConfigurationRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneDirectoryRepository
 
 /**
  * Makes the control planes usable in a process the app's startup never ran in, e.g. one Android started
@@ -13,8 +13,8 @@ import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneUnavailableEx
  * when the cache gives none.
  */
 class PrepareControlPlaneUseCase(
-    private val configuration: ControlPlaneConfiguration,
-    private val directorySynchronizer: ControlPlaneDirectorySynchronizer
+    private val configuration: ControlPlaneConfigurationRepository,
+    private val directorySynchronizer: ControlPlaneDirectoryRepository
 ) {
     private val logger = SparrowLog.withTag("PrepareControlPlaneUseCase")
 
@@ -24,12 +24,12 @@ class PrepareControlPlaneUseCase(
             directorySynchronizer.restoreCached().onFailure { error ->
                 logger.warn { "Verified control-plane directory could not be restored: ${error.message}" }
             }
-            if (configuration.orderedEndpoints().isEmpty()) {
+            if (configuration.endpoints.value.isEmpty()) {
                 directorySynchronizer.refresh().getOrElse { error ->
                     throw ControlPlaneUnavailableException("Control-plane directory could not be loaded", error)
                 }
             }
-            if (configuration.orderedEndpoints().isEmpty()) {
+            if (configuration.endpoints.value.isEmpty()) {
                 throw ControlPlaneUnavailableException("No control plane is configured")
             }
         }

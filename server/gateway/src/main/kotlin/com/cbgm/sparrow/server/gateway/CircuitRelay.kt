@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.server.gateway
 
+import com.cbgm.sparrow.server.gateway.CircuitCell.Companion.SIZE
 import com.cbgm.sparrow.server.security.CircuitHandshake
 import com.cbgm.sparrow.server.security.CircuitHopKeys
 import com.cbgm.sparrow.server.security.CircuitLayer

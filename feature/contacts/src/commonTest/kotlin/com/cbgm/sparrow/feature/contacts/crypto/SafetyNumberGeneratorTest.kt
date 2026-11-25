@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.crypto
 
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,7 +10,7 @@ class SafetyNumberGeneratorTest {
     private val generator =
         SafetyNumberGenerator(
             cryptoHash =
-                DefaultCryptoHash()
+                Sha256CryptoHash()
         )
 
     @Test

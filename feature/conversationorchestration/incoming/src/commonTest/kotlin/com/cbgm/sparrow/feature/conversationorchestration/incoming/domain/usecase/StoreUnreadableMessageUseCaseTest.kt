@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase
 
 import com.cbgm.sparrow.core.base.message.domain.model.MessageContentStatus
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.FakeDirectMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.MessageStore
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
@@ -31,7 +31,7 @@ class StoreUnreadableMessageUseCaseTest {
                 ),
             conversationRepository = conversations,
             messageRepository = FakeDirectMessageRepository(store),
-            cryptoHash = DefaultCryptoHash()
+            cryptoHash = Sha256CryptoHash()
         )
 
     @Test

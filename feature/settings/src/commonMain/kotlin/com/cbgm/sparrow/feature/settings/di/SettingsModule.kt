@@ -2,13 +2,11 @@ package com.cbgm.sparrow.feature.settings.di
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.settings.data.datasource.DataStoreSettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorageImpl
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
 import com.cbgm.sparrow.feature.settings.data.repository.ContactBlocklistRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.DeveloperErrorLogRepositoryImpl
-import com.cbgm.sparrow.feature.settings.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.LicencesRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.SettingsRepositoryImpl
 import com.cbgm.sparrow.feature.settings.domain.repository.DeveloperErrorLogRepository
@@ -17,10 +15,12 @@ import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockedContactIdsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
@@ -28,6 +28,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUs
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDirectIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveSettingsDomainContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
@@ -45,8 +46,8 @@ import org.koin.dsl.module
 
 val settingsModule =
     module {
-        single<SettingsStorage> {
-            SettingsStorageImpl(dataStore = get())
+        single<SettingsLocalDataSource> {
+            DataStoreSettingsLocalDataSource(dataStore = get())
         }
 
         single(createdAtStart = true) {
@@ -59,18 +60,14 @@ val settingsModule =
 
         single<SettingsRepository> {
             SettingsRepositoryImpl(
-                buildInfoProvider = get(),
-                settingsStorage = get(),
-                systemLanguageProvider = get()
+                buildInfoDataSource = get(),
+                settingsDataSource = get(),
+                systemLanguageDataSource = get()
             )
         }
 
-        single<DirectIdentitySetupModeRepository> {
-            DirectIdentitySetupModeRepositoryImpl(settingsStorage = get())
-        }
-
         single<ContactBlocklistRepository> {
-            ContactBlocklistRepositoryImpl(settingsStorage = get())
+            ContactBlocklistRepositoryImpl(settingsDataSource = get())
         }
 
         single<LicensesRepository> {
@@ -95,6 +92,18 @@ val settingsModule =
 
         factory {
             InitAppLanguageUseCase(settingsRepository = get())
+        }
+
+        factory {
+            GetAppThemeModeUseCase(settingsRepository = get())
+        }
+
+        factory {
+            SetAppThemeModeUseCase(settingsRepository = get())
+        }
+
+        factory {
+            InitAppThemeModeUseCase(settingsRepository = get())
         }
 
         factory {
@@ -140,7 +149,7 @@ val settingsModule =
         }
 
         factory {
-            ClearLocalDataUseCase(settingsRepository = get())
+            ClearLocalDataUseCase(settingsRepository = get(), directIdentitySetupModeRepository = get())
         }
 
         factory {
@@ -161,6 +170,8 @@ val settingsModule =
             SettingsViewModel(
                 setAppLanguageUseCase = get(),
                 getAppLanguageUseCase = get(),
+                setAppThemeModeUseCase = get(),
+                getAppThemeModeUseCase = get(),
                 getDeveloperEnabledUseCase = get(),
                 getBuildInfoUseCase = get(),
                 setDeveloperModeEnabledUseCase = get(),
@@ -181,10 +192,17 @@ val settingsModule =
         viewModel {
             ControlPlaneSettingsViewModel(
                 savedStateHandle = get(),
-                configuration = get(),
                 observeControlPlaneSettingsContext = get(),
-                healthMonitor = get(),
-                directorySynchronizer = get()
+                refreshControlPlaneHealth = get(),
+                addManualControlPlane = get(),
+                removeManualControlPlane = get(),
+                setControlPlaneDirectory = get(),
+                clearControlPlaneList = get(),
+                clearControlPlaneListCache = get(),
+                refreshControlPlaneDirectory = get(),
+                synchronizeControlPlaneDirectory = get(),
+                importControlPlaneList = get(),
+                forgetControlPlaneDirectoryTrust = get()
             )
         }
 
@@ -194,13 +212,14 @@ val settingsModule =
                 getBuildInfoUseCase = get(),
                 observeDeveloperErrorsUseCase = get(),
                 setDeveloperEnabledUseCase = get(),
-                transportDiagnosticsProvider = get(),
+                observeTransportDiagnostics = get(),
+                refreshTransportDiagnostics = get(),
                 discardIdentityKeyStoreKey = get()
             )
         }
 
         viewModel {
-            DeveloperNodesViewModel(transportDiagnosticsProvider = get())
+            DeveloperNodesViewModel(observeTransportDiagnostics = get(), refreshTransportDiagnostics = get())
         }
 
         viewModel {
@@ -219,6 +238,7 @@ val settingsModule =
                 observeCircuitCount = get(),
                 observeConnectionMode = get(),
                 observeDecoyCount = get(),
+                observeRouteProtection = get(),
                 canConnectWhileClosed = get(),
                 setCircuitHopCount = get(),
                 setCircuitFallback = get(),

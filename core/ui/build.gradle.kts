@@ -12,6 +12,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.resources)
+            implementation(projects.core.util)
             implementation(libs.bundles.compose)
             implementation(libs.coil.compose)
             implementation(libs.bundles.coroutines)
@@ -19,6 +20,10 @@ kotlin {
             implementation(libs.bundles.serialization)
 
             implementation(libs.androidx.lifecycle.runtimeCompose)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
         }
 
         commonTest.dependencies {

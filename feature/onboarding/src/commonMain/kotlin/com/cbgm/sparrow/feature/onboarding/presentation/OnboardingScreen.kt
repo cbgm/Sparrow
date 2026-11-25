@@ -23,6 +23,7 @@ import com.cbgm.sparrow.feature.onboarding.presentation.pages.OnionPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PermissionsPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PhonePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.ReceivingPage
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.ThemePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.WelcomePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.PageNumber
 
@@ -62,6 +63,13 @@ fun OnboardingScreen(
                         state = state,
                         active = active,
                         onChoose = { mode -> onUiEvent(OnboardingUiEvent.ConnectionModeChosen(mode)) }
+                    )
+
+                OnboardingPage.THEME ->
+                    ThemePage(
+                        mode = state.themeMode,
+                        active = active,
+                        onChoose = { mode -> onUiEvent(OnboardingUiEvent.ThemeModeChosen(mode)) }
                     )
 
                 OnboardingPage.PHONE ->

@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
-import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
+import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 
 class SendMessagingIndicatorUseCase(
-    private val gateway: MessagingIndicatorGateway
+    private val indicatorPort: MessagingIndicatorPort
 ) {
     suspend operator fun invoke(
         recipientContactId: String,
         groupId: String?,
         indicatorType: String
-    ): Result<Unit> = gateway.send(recipientContactId, groupId, indicatorType)
+    ): Result<Unit> = indicatorPort.send(recipientContactId, groupId, indicatorType)
 }

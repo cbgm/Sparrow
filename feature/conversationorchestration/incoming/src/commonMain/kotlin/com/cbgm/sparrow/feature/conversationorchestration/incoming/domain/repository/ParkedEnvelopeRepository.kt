@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repos
 
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.DeferredPacketWait
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.ParkedEnvelope
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedEnvelopeRepository.Companion.RETENTION_MILLISECONDS
 
 /**
  * Envelopes that arrived too early ([DeferredPacketWait]). They were acknowledged, so this is their only copy.

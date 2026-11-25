@@ -1,25 +1,21 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Fingerprint
@@ -32,12 +28,7 @@ import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -47,16 +38,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
+import com.cbgm.sparrow.core.ui.component.SparrowSwitchRow
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.core.util.logging.SparrowLog
@@ -69,8 +56,11 @@ import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.presentation.developer.components.SettingsSection
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.AppLockTimeoutDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
+import com.cbgm.sparrow.feature.settings.presentation.overview.components.ThemeModePickerDialog
+import com.cbgm.sparrow.feature.settings.presentation.overview.components.themeModeTitle
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
 import com.cbgm.sparrow.resources.Res
@@ -135,6 +125,7 @@ import com.cbgm.sparrow.resources.feature_settings_semantic_search_failed
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_ready
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_subtitle
 import com.cbgm.sparrow.resources.feature_settings_storage
+import com.cbgm.sparrow.resources.feature_settings_theme
 import com.cbgm.sparrow.resources.feature_settings_voice_transcription
 import com.cbgm.sparrow.resources.feature_settings_voice_transcription_subtitle
 import org.jetbrains.compose.resources.stringResource
@@ -166,6 +157,8 @@ fun SettingsScreen(
     val buildInfo = remember(uiState) { derivedStateOf { uiState.value.buildInfo } }
     val developerEnabled = remember(uiState) { derivedStateOf { uiState.value.isDeveloperModeEnabled } }
     val pickerVisible = remember(uiState) { derivedStateOf { uiState.value.showLanguagePicker } }
+    val themeMode = remember(uiState) { derivedStateOf { uiState.value.themeMode } }
+    val themePickerVisible = remember(uiState) { derivedStateOf { uiState.value.showThemeModePicker } }
 
     Column(
         modifier =
@@ -182,6 +175,8 @@ fun SettingsScreen(
     ) {
         SettingsSection(title = stringResource(Res.string.feature_settings_general)) {
             LanguageSettingsRow(language, onUiEvent)
+
+            ThemeModeSettingsRow(themeMode, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_messaging)) {
@@ -189,25 +184,21 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_network)) {
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Cloud,
                 title = stringResource(Res.string.feature_settings_control_planes),
                 subtitle = stringResource(Res.string.feature_settings_control_planes_settings_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.ControlPlanesClicked) }
             )
 
-            SettingsDivider()
-
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Dns,
                 title = stringResource(Res.string.feature_settings_preferred_node),
                 subtitle = stringResource(Res.string.feature_settings_preferred_node_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.PreferredNodeClicked) }
             )
 
-            SettingsDivider()
-
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Security,
                 title = stringResource(Res.string.feature_settings_circuit),
                 subtitle = stringResource(Res.string.feature_settings_circuit_subtitle),
@@ -220,15 +211,9 @@ fun SettingsScreen(
 
             AppLockTimeoutRow(appLockEnabled, appLockTimeout, onUiEvent)
 
-            SettingsDivider()
-
             AutomaticSecureSetupRow(identityMode, onUiEvent)
 
-            SettingsDivider()
-
             BlockUnknownInvitesRow(blockUnknownInvites, onUiEvent)
-
-            SettingsDivider()
 
             BlockedContactsRow(blockedCount, onUiEvent)
         }
@@ -236,17 +221,13 @@ fun SettingsScreen(
         SettingsSection(title = stringResource(Res.string.feature_settings_local_intelligence)) {
             SemanticSearchRow(semanticEnabled, semanticState, modelDownloadPercent, onUiEvent)
 
-            SettingsDivider()
-
             MessageSafetyRow(safetyEmbedding, safetyState, modelDownloadPercent, onUiEvent)
-
-            SettingsDivider()
 
             VoiceTranscriptionRow(voiceEnabled, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_storage)) {
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Folder,
                 title = stringResource(Res.string.feature_attachments_storage),
                 subtitle = stringResource(Res.string.feature_attachments_storage_subtitle),
@@ -255,16 +236,14 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_privacy_and_data)) {
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.PrivacyTip,
                 title = stringResource(Res.string.feature_settings_privacy_policy),
                 subtitle = stringResource(Res.string.feature_settings_privacy_policy_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.PrivacyPolicyClicked) }
             )
 
-            SettingsDivider()
-
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Lock,
                 title = stringResource(Res.string.feature_settings_data_disclaimer),
                 subtitle = stringResource(Res.string.feature_settings_data_disclaimer_subtitle),
@@ -273,14 +252,12 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_about)) {
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.Code,
                 title = stringResource(Res.string.feature_settings_open_source_licenses),
                 subtitle = stringResource(Res.string.feature_settings_licenses_subtitle),
                 onClick = { onUiEvent(SettingsUiEvent.LicensesClicked) }
             )
-
-            SettingsDivider()
 
             VersionSettingsRow(buildInfo, onUiEvent)
         }
@@ -291,12 +268,13 @@ fun SettingsScreen(
     }
 
     SettingsLanguagePicker(pickerVisible, language, onUiEvent)
+    SettingsThemeModePicker(themePickerVisible, themeMode, onUiEvent)
     AppLockTimeoutPicker(timeoutPickerVisible, appLockTimeout, onUiEvent)
 }
 
 @Composable
 private fun LanguageSettingsRow(language: State<AppLanguage>, onUiEvent: (SettingsUiEvent) -> Unit) {
-    SettingsRow(
+    SparrowDetailRow(
         icon = Icons.Default.Language,
         title = stringResource(Res.string.base_language),
         subtitle = language.value.nativeName,
@@ -306,8 +284,19 @@ private fun LanguageSettingsRow(language: State<AppLanguage>, onUiEvent: (Settin
 }
 
 @Composable
+private fun ThemeModeSettingsRow(mode: State<AppThemeMode>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    SparrowDetailRow(
+        icon = Icons.Default.Contrast,
+        title = stringResource(Res.string.feature_settings_theme),
+        subtitle = themeModeTitle(mode.value),
+        onClick = { onUiEvent(SettingsUiEvent.ThemeModePickerOpened) },
+        showChevron = false
+    )
+}
+
+@Composable
 private fun AutoReplySettingsRow(name: State<String?>, onUiEvent: (SettingsUiEvent) -> Unit) {
-    SettingsRow(
+    SparrowDetailRow(
         icon = Icons.AutoMirrored.Filled.Reply,
         title = stringResource(Res.string.feature_auto_reply),
         subtitle = name.value ?: stringResource(Res.string.feature_auto_reply_off),
@@ -360,7 +349,7 @@ private fun AppLockSettingsRow(
         }
     )
 
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.Fingerprint,
         title = stringResource(Res.string.feature_applock_title),
         subtitle = stringResource(Res.string.feature_applock_subtitle),
@@ -378,7 +367,7 @@ private fun AutomaticSecureSetupRow(
     onUiEvent: (SettingsUiEvent) -> Unit
 ) {
     val automatic = mode.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.Lock,
         title = stringResource(Res.string.feature_settings_automatic_secure_setup),
         subtitle = if (automatic) {
@@ -406,7 +395,7 @@ private fun BlockUnknownInvitesRow(
     blocked: State<Boolean>,
     onUiEvent: (SettingsUiEvent) -> Unit
 ) {
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.PersonOff,
         title = stringResource(Res.string.feature_settings_block_unknown_invites),
         subtitle = stringResource(Res.string.feature_settings_block_unknown_invites_subtitle),
@@ -420,7 +409,7 @@ private fun BlockedContactsRow(
     count: State<Int>,
     onUiEvent: (SettingsUiEvent) -> Unit
 ) {
-    SettingsRow(
+    SparrowDetailRow(
         icon = Icons.Default.Block,
         title = stringResource(Res.string.feature_settings_blocked_contacts),
         subtitle = stringResource(Res.string.feature_settings_blocked_contacts_count, count.value),
@@ -441,7 +430,7 @@ private fun SemanticSearchRow(
     } else {
         null
     }
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.Search,
         title = stringResource(Res.string.feature_settings_semantic_search),
         subtitle = semanticSearchSubtitle(semanticState, percent),
@@ -465,7 +454,7 @@ private fun MessageSafetyRow(
     } else {
         null
     }
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.Security,
         title = stringResource(Res.string.feature_settings_message_safety),
         subtitle = messageSafetySubtitle(embeddingState, state.value, percent),
@@ -476,7 +465,7 @@ private fun MessageSafetyRow(
 
 @Composable
 private fun VoiceTranscriptionRow(enabled: State<Boolean>, onUiEvent: (SettingsUiEvent) -> Unit) {
-    SettingsSwitchRow(
+    SparrowSwitchRow(
         icon = Icons.Default.Mic,
         title = stringResource(Res.string.feature_settings_voice_transcription),
         subtitle = stringResource(Res.string.feature_settings_voice_transcription_subtitle),
@@ -488,7 +477,7 @@ private fun VoiceTranscriptionRow(enabled: State<Boolean>, onUiEvent: (SettingsU
 @Composable
 private fun VersionSettingsRow(info: State<BuildInfo>, onUiEvent: (SettingsUiEvent) -> Unit) {
     val buildInfo = info.value
-    SettingsRow(
+    SparrowDetailRow(
         icon = Icons.Default.Description,
         title = stringResource(Res.string.base_version),
         subtitle = "${buildInfo.versionName} (${buildInfo.versionCode})",
@@ -504,12 +493,11 @@ private fun DeveloperSettingsSection(
 ) {
     if (enabled.value) {
         SettingsSection(title = stringResource(Res.string.base_developer)) {
-            SettingsRow(
+            SparrowDetailRow(
                 icon = Icons.Default.BugReport,
                 title = stringResource(Res.string.feature_settings_developer_menu),
                 subtitle = stringResource(Res.string.feature_settings_developer_menu_subtitle),
-                onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) },
-                iconTint = MaterialTheme.colorScheme.primary
+                onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) }
             )
         }
     }
@@ -522,9 +510,7 @@ private fun AppLockTimeoutRow(
     onUiEvent: (SettingsUiEvent) -> Unit
 ) {
     if (enabled.value) {
-        SettingsDivider()
-
-        SettingsRow(
+        SparrowDetailRow(
             icon = Icons.Default.Timer,
             title = stringResource(Res.string.feature_applock_timeout),
             subtitle = appLockTimeoutLabel(timeout.value),
@@ -572,6 +558,21 @@ private fun SettingsLanguagePicker(
             currentLanguage = language.value,
             onLanguageSelected = { onUiEvent(SettingsUiEvent.LanguageSelected(it)) },
             onDismiss = { onUiEvent(SettingsUiEvent.LanguagePickerDismissed) }
+        )
+    }
+}
+
+@Composable
+private fun SettingsThemeModePicker(
+    visible: State<Boolean>,
+    mode: State<AppThemeMode>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    if (visible.value) {
+        ThemeModePickerDialog(
+            currentMode = mode.value,
+            onModeSelected = { onUiEvent(SettingsUiEvent.ThemeModeSelected(it)) },
+            onDismiss = { onUiEvent(SettingsUiEvent.ThemeModePickerDismissed) }
         )
     }
 }
@@ -635,147 +636,6 @@ private fun messageSafetySubtitle(
                 is MessageSafetyState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
             }
     }
-}
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-            fontWeight = FontWeight.SemiBold,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.base.div(2),
-                    bottom = MaterialTheme.spacing.base
-                )
-        )
-
-        SparrowCardNoAnimation {
-            Column(content = content)
-        }
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    showChevron: Boolean = true,
-    iconTint: Color = MaterialTheme.colorScheme.primary
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.small
-                ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
-        )
-
-        Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (showChevron) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon),
-                modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsSwitchRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable {
-                    onCheckedChange(!checked)
-                }.padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.small
-                ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
-        )
-
-        Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            colors =
-                SwitchDefaults.colors(
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary
-                )
-        )
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
-    )
 }
 
 @Preview

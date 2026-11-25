@@ -16,7 +16,7 @@ class MaintainControlPlaneHealthStartupTask(
 
     override suspend fun run(): StartupTaskResult {
         while (currentCoroutineContext().isActive) {
-            initialization.controlPlaneHealthMonitor.refresh()
+            initialization.controlPlaneStatus.refreshHealth()
             delay(CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS.milliseconds)
         }
 

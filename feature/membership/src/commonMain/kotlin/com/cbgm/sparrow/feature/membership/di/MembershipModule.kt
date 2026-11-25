@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.di
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.SodiumGroupCrypto
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupConversationMembershipDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupIncomingActivationDataSource
@@ -25,7 +26,7 @@ import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketPr
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPayloadEncoder
 import com.cbgm.sparrow.feature.membership.data.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.membership.data.repository.MembershipRepositoryImpl
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.feature.membership.data.security.GroupWelcomeSecurity
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
@@ -79,6 +80,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUs
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.VerifyGroupKeyConfirmationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
+import com.cbgm.sparrow.protocol.membership.GroupConversationMembershipSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -92,10 +94,11 @@ val membershipModule =
             GroupMembershipPacketProtocol(
                 groupCrypto = get(),
                 payloadEncoder = get(),
-                localProfilePictureMetadataProvider = get()
+                localProfilePictureMetadataSource = get()
             )
         }
         singleOf(::GroupMembershipStoreDataSource)
+        singleOf(::GroupConversationMembershipDataSource) { bind<GroupConversationMembershipSource>() }
         singleOf(::GroupIncomingWelcomeDataSource)
         singleOf(::GroupReadyAcknowledgementDataSource)
         singleOf(::GroupIncomingDeletionDataSource)
@@ -105,7 +108,7 @@ val membershipModule =
         singleOf(::GroupEpochDataSource)
         singleOf(::GroupEpochSecurityDataSource)
         singleOf(::GroupWelcomeSecurity)
-        singleOf(::GroupSecurityManager) { bind<GroupSecurityRepository>() }
+        singleOf(::GroupSecurityRepositoryImpl) { bind<GroupSecurityRepository>() }
         singleOf(::VerifyGroupKeyConfirmationUseCase)
         singleOf(::GroupOwnerWelcomeDataSource)
         singleOf(::GroupMembershipActivationDataSource)
@@ -117,9 +120,9 @@ val membershipModule =
         singleOf(::GroupMembershipDeletionDataSource)
         single {
             GroupMembershipLifecycleDataSource(
-                activationProvider = { get() },
-                administrationProvider = { get() },
-                deletionProvider = { get() }
+                activationSource = { get() },
+                administrationSource = { get() },
+                deletionSource = { get() }
             )
         }
 

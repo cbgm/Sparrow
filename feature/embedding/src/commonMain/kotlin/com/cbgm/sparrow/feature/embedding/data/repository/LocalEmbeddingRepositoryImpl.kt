@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
 import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.feature.embedding.data.platform.LocalEmbeddingModelManager
+import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingModelLocalDataSource
 import com.cbgm.sparrow.feature.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.embedding.data.storage.LocalEmbeddingSettingsStorage
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingFeature
@@ -23,8 +23,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class LocalEmbeddingRepositoryImpl(
-    private val settingsStorage: LocalEmbeddingSettingsStorage,
-    private val modelManager: LocalEmbeddingModelManager,
+    private val settingsDataSource: LocalEmbeddingSettingsStorage,
+    private val modelDataSource: EmbeddingModelLocalDataSource,
     private val embedder: LocalTextEmbedder,
     private val applicationScope: ApplicationCoroutineScope
 ) : LocalEmbeddingRepository {
@@ -39,8 +39,8 @@ class LocalEmbeddingRepositoryImpl(
                 val restored =
                     try {
                         LocalEmbeddingState(
-                            semanticSearchEnabled = settingsStorage.isSemanticSearchEnabled(),
-                            messageSafetyEnabled = settingsStorage.isMessageSafetyEnabled()
+                            semanticSearchEnabled = settingsDataSource.isSemanticSearchEnabled(),
+                            messageSafetyEnabled = settingsDataSource.isMessageSafetyEnabled()
                         )
                     } catch (cancellation: CancellationException) {
                         throw cancellation
@@ -61,7 +61,7 @@ class LocalEmbeddingRepositoryImpl(
                     preparationJob?.cancelAndJoin()
                     preparationJob = null
                     embedder.close()
-                    modelManager.deleteModel()
+                    modelDataSource.deleteModel()
                     mutableState.value = restored.copy(modelState = LocalEmbeddingModelState.NotNeeded)
                     return@withLock
                 }
@@ -76,8 +76,8 @@ class LocalEmbeddingRepositoryImpl(
         safeSuspendCall {
             lifecycleMutex.withLock {
                 when (feature) {
-                    LocalEmbeddingFeature.MESSAGE_SEARCH -> settingsStorage.setSemanticSearchEnabled(enabled)
-                    LocalEmbeddingFeature.MESSAGE_SAFETY -> settingsStorage.setMessageSafetyEnabled(enabled)
+                    LocalEmbeddingFeature.MESSAGE_SEARCH -> settingsDataSource.setSemanticSearchEnabled(enabled)
+                    LocalEmbeddingFeature.MESSAGE_SAFETY -> settingsDataSource.setMessageSafetyEnabled(enabled)
                 }
 
                 val current = mutableState.value
@@ -92,7 +92,7 @@ class LocalEmbeddingRepositoryImpl(
                     preparationJob?.cancelAndJoin()
                     preparationJob = null
                     embedder.close()
-                    modelManager.deleteModel()
+                    modelDataSource.deleteModel()
                     mutableState.value = updated.copy(modelState = LocalEmbeddingModelState.NotNeeded)
                     return@withLock
                 }
@@ -112,8 +112,8 @@ class LocalEmbeddingRepositoryImpl(
     private suspend fun prepareModel() {
         try {
             updateModelState(LocalEmbeddingModelState.Preparing)
-            if (!modelManager.isModelReady()) {
-                modelManager.downloadAndVerify { progress ->
+            if (!modelDataSource.isModelReady()) {
+                modelDataSource.downloadAndVerify { progress ->
                     updateModelState(LocalEmbeddingModelState.Downloading(progress))
                 }
             }

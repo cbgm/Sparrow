@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberPayload
@@ -18,7 +18,7 @@ import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
 @Suppress("LongParameterList")
 internal class GroupMembershipActivationDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val membershipLock: GroupMembershipLock,
     private val securityStore: GroupSecurityStoreDataSource,
@@ -122,7 +122,7 @@ internal class GroupMembershipActivationDataSource(
         val activatedMember =
             memberKeys.singleOrNull { memberKey -> memberKey.contactId == memberContactId }
                 ?: error("Activated group member is not part of the current group epoch")
-        val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val adminSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val packetsByContactId = linkedMapOf<String, GroupMemberActivatedPacket>()
         val previousEpochKeys = if (packet.epoch > 1) {
             securityStore.findMemberKeys(packet.groupId, packet.epoch - 1)
@@ -260,7 +260,7 @@ internal class GroupMembershipActivationDataSource(
         acknowledgingMember: GroupMemberKeyEntity,
         activatedMember: GroupMemberKeyEntity
     ) {
-        val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val adminSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val acknowledgedAt = packet.acknowledgedAtEpochMilliseconds
 
         when (packet.activationRound) {

@@ -286,6 +286,12 @@ class GroupConversationViewModel(
                 )
             )
 
+            GroupConversationUiEvent.SearchClicked -> navigator.navigateTo(
+                AppRoute.MessageSearch(
+                    conversationId = groupId
+                )
+            )
+
             GroupConversationUiEvent.CreatePollClicked -> navigator.navigateTo(AppRoute.CreatePoll)
             is GroupConversationUiEvent.ActivateExpensesClicked ->
                 expenseController.activateBoard(event.currencyCode)
@@ -306,12 +312,16 @@ class GroupConversationViewModel(
                     )
                 )
 
-            GroupConversationUiEvent.BackClicked ->
-                if (targetMessageId != null) {
-                    navigator.popBackStack()
-                } else {
-                    navigator.popBackStackTo(AppRoute.Main)
-                }
+            GroupConversationUiEvent.BackClicked -> navigateBack()
+        }
+    }
+
+    /** Opened at a message (from search or a link): back to where that came from, otherwise to the chat list. */
+    private fun navigateBack() {
+        if (targetMessageId != null) {
+            navigator.popBackStack()
+        } else {
+            navigator.popBackStackTo(AppRoute.Main)
         }
     }
 

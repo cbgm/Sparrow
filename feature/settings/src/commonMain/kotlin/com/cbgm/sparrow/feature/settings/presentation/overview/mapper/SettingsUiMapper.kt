@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.applock.domain.model.AppLockSettings
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
@@ -11,6 +12,7 @@ import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiS
 
 internal fun BuildInfo.toSettingsUiState(
     currentLanguage: AppLanguage,
+    themeMode: AppThemeMode,
     activeAutoReplyName: String?,
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,
@@ -23,10 +25,12 @@ internal fun BuildInfo.toSettingsUiState(
     isDeveloperModeEnabled: Boolean,
     developerModeTapCount: Int,
     showLanguagePicker: Boolean,
+    showThemeModePicker: Boolean,
     showAppLockTimeoutPicker: Boolean
 ): SettingsUiState =
     SettingsUiState(
         currentLanguage = currentLanguage,
+        themeMode = themeMode,
         activeAutoReplyName = activeAutoReplyName,
         directIdentitySetupMode = identitySetupMode,
         blockUnknownContactInvites = blockUnknownContactInvites,
@@ -41,5 +45,6 @@ internal fun BuildInfo.toSettingsUiState(
         buildInfo = this,
         isDeveloperModeEnabled = isDeveloperModeEnabled,
         developerModeTapCount = developerModeTapCount,
-        showLanguagePicker = showLanguagePicker
+        showLanguagePicker = showLanguagePicker,
+        showThemeModePicker = showThemeModePicker
     )

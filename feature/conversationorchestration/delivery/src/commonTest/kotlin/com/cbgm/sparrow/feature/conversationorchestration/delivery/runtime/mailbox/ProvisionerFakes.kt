@@ -19,14 +19,14 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
-import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.NodeEndpoint
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.NodeEndpointRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.RoutingIdRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
@@ -86,7 +86,7 @@ internal fun facts(
 /** Everything [MailboxRouteProvisioner] talks to, kept in memory. */
 internal class ProvisionerFakes {
     val routes = InMemoryMailboxRoutes()
-    val gateway = RecordingMailboxGateway()
+    val mailboxRepository = RecordingMailboxRepository()
     val contacts = FakeContactTransport()
     val identity = FakeIdentityExchanges()
     val outbox = RecordingOutbox()
@@ -95,15 +95,15 @@ internal class ProvisionerFakes {
         MailboxRouteProvisioner(
             getMailboxContactStates =
                 GetMailboxContactStatesUseCase(contacts, GetIdentityPeerStateUseCase(identity, NoPendingChanges)),
-            localRoutingIdProvider = FakeLocalRoutingId,
+            routingIdRepository = FakeRoutingIds,
             nodeEndpointResolver = SingleNodeResolver,
-            mailboxGateway = gateway,
+            mailboxRepository = mailboxRepository,
             mailboxRouteRepository = routes,
             mailboxCapabilityLifecycle = NoOpMailboxCapabilityLifecycle,
             contactBlocklistRepository = NoBlockedContacts,
             credentialFactory =
                 MailboxCredentialFactory(
-                    gateway,
+                    mailboxRepository,
                     FakeSigningKeys,
                     FakeSignatures,
                     MailboxRoutePayloadEncoder()
@@ -168,7 +168,7 @@ internal class InMemoryMailboxRoutes : MailboxRouteRepository {
 }
 
 /** Creates mailboxes on node-a; routes in [pendingRoutes] still hold envelopes. */
-internal class RecordingMailboxGateway : MailboxGateway {
+internal class RecordingMailboxRepository : MailboxRepository {
     val created = mutableListOf<String>()
     val revoked = mutableListOf<String>()
     val pendingRoutes = mutableSetOf<String>()
@@ -410,11 +410,13 @@ private object NoPendingChanges : PendingRemoteIdentityChangeRepository {
     ): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeLocalRoutingId : LocalRoutingIdProvider {
+private object FakeRoutingIds : RoutingIdRepository {
     override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")
+
+    override suspend fun getLocalBootstrapRoutingId(): Result<String> = error(NOT_USED)
 }
 
-private object SingleNodeResolver : NodeEndpointResolver {
+private object SingleNodeResolver : NodeEndpointRepository {
     override suspend fun resolve(localRoutingId: String, forceRefresh: Boolean): Result<List<NodeEndpoint>> =
         Result.success(
             listOf(
@@ -446,7 +448,7 @@ private object NoBlockedContacts : ContactBlocklistRepository {
     override suspend fun unblock(contactId: String): Result<Unit> = error(NOT_USED)
 }
 
-private object FakeSigningKeys : LocalSigningKeyPairProvider {
+private object FakeSigningKeys : LocalSigningKeyPairSource {
     override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
         Result.success(LocalSigningKeyPair(publicKey = ByteArray(32), privateKey = ByteArray(64)))
 }

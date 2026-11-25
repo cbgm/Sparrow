@@ -19,15 +19,13 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalReason
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
@@ -42,7 +40,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembers
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationSecurityState
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.protocol.packet.GroupMemberActivatedPacket
@@ -64,8 +62,8 @@ internal class GroupMembershipRepositoryImpl(
     private val incomingRemoval: GroupIncomingRemovalDataSource,
     private val operations: GroupMembershipLifecycleDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val groupSecurityManager: GroupSecurityManager,
-    private val signingKeyPairProvider: LocalSigningKeyPairProvider,
+    private val groupSecurityRepository: GroupSecurityRepositoryImpl,
+    private val signingKeyPairSource: LocalSigningKeyPairSource,
     private val membershipLock: GroupMembershipLock
 ) : GroupMembershipRepository {
     override suspend fun getVerificationMembershipContext(groupId: String): Result<GroupVerificationMembershipContext> =
@@ -381,11 +379,11 @@ internal class GroupMembershipRepositoryImpl(
                         )
                 }
             ) { "Cannot reconstruct a group epoch after membership activation" }
-            val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = signingKeyPairSource.getSigningKeyPair().getOrThrow()
             check(signingKeyPair.publicKey.contentEquals(localSigningPublicKey)) {
                 "Local group signing identity does not match"
             }
-            groupSecurityManager.initializeOwnedGroup(
+            groupSecurityRepository.initializeOwnedGroup(
                 groupId = groupId,
                 createdAtEpochMilliseconds = rows.minOf { it.createdAtEpochMilliseconds },
                 localSigningKeyPair = signingKeyPair
@@ -454,24 +452,6 @@ internal class GroupMembershipRepositoryImpl(
                         leaveRequirement is GroupLeaveRequirementDto.PromoteAdminFirst,
                     activeMemberCount = currentMembers.size + 1
                 )
-            )
-        }
-
-    override fun observeConversationMembership(groupId: String): Flow<GroupConversationMembershipSnapshot> =
-        combine(
-            securityStore.observeCurrentMemberKeys(groupId),
-            membershipStore.observeByGroupId(groupId)
-        ) { currentMemberKeys, memberships ->
-            GroupConversationMembershipSnapshot(
-                participantContactIds = currentMemberKeys.map { it.contactId },
-                memberships = memberships.map { membership ->
-                    GroupMemberLifecycleSnapshot(
-                        contactId = membership.contactId,
-                        sourceInvitationId = membership.sourceInvitationId,
-                        status = membership.status,
-                        createdAtEpochMilliseconds = membership.createdAtEpochMilliseconds
-                    )
-                }
             )
         }
 
