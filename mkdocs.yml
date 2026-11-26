@@ -1,8 +1,6 @@
 site_name: Sparrow Documentation
 site_description: Engineering documentation for Sparrow
 site_author: Sparrow
-site_url: https://github.io
-repo_url: https://github.com/cbgm/Sparrow
 docs_dir: docs
 site_dir: site
 
