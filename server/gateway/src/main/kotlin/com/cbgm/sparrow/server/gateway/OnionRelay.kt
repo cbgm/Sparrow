@@ -224,7 +224,8 @@ internal class RelayDestinationPolicy(
                 "POST" to Regex("/v1/invitation-routes"),
                 // The phone verifier next to the Control Plane Directory: its certified keys and sealed attestations.
                 "GET" to Regex("/v1/phone-attestations/keys"),
-                "POST" to Regex("/v1/phone-attestations")
+                "POST" to Regex("/v1/phone-attestations"),
+                "POST" to Regex("/v1/phone-attestations/slots")
             )
     }
 }

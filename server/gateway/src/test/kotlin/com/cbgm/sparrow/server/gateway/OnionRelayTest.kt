@@ -119,6 +119,7 @@ class OnionRelayTest {
         assertNotNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/invitation-routes")))
         assertNotNull(policy.controlPlane(RelayExit("GET", "https://directory.test/v1/phone-attestations/keys")))
         assertNotNull(policy.controlPlane(RelayExit("POST", "https://directory.test/v1/phone-attestations")))
+        assertNotNull(policy.controlPlane(RelayExit("POST", "https://directory.test/v1/phone-attestations/slots")))
         assertNull(policy.controlPlane(RelayExit("GET", "https://directory.test/v1/phone-attestations")))
         assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/push/devices")))
         assertNull(policy.controlPlane(RelayExit("POST", "https://control.test/v1/nodes")))
