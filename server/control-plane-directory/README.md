@@ -1,6 +1,6 @@
 # Sparrow Independent Control Plane Directory
 
-This operator-managed service is separate from the public combined Control Plane + Community Node bundle, but its **source** belongs under `server/control-plane-directory/`. Never include its image, private volumes, admin token or installer in the public release ZIP.
+This operator-managed service is separate from the unified Control Plane + Community Node runtime bundle. Its source is public in this repository; its generated image, private volumes, admin token and installer are not part of the public server release ZIP.
 
 Start the installer window with `Start-SparrowDirectory.cmd` (Windows), `.command` (macOS) or `.sh` (Linux). It shares the HTTPS proxy of the running Sparrow Server on the same IP, or runs its own Caddy when ports 80/443 are free. Started from this source folder, the window first creates your own Directory folder (`Build-SparrowDirectoryInstaller.py --install`) and takes over a Directory that is already running. Sharing ingress makes external Directory availability depend on that proxy; it does not make Directory storage, signing or registration depend on any Control Plane. See `README-INSTALL.md`.
 

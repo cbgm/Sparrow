@@ -5,8 +5,8 @@ Double-click `Start-SparrowDirectory.cmd` (Windows), `Start-SparrowDirectory.com
 Sparrow Server installer (`directory_window.py`, engine `directory_installer.py`); it needs Python
 3.9+ (on Linux also `python3-tk`). **No Control Plane or Community Node needs to be installed or
 running.** The source lives under
-`server/control-plane-directory`; this folder, its image and its secrets are **never** shipped in
-the public server bundle.
+`server/control-plane-directory`; the separate Directory service, its generated image and its
+secrets are **never** shipped in the unified public server bundle.
 
 ## Starting from the source code
 

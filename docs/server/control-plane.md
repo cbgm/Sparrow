@@ -43,7 +43,7 @@ Do not confuse a Control Plane with `server/control-plane-directory`.
 - The **Independent Control Plane Directory** publishes a signed list of Control Plane origins and verifies ownership during Control Plane registration.
 - The independent directory is operator infrastructure and is deliberately excluded from the public Sparrow server bundle.
 
-See [Server runtime, build and deployment](runtime-build-deployment.md#independent-control-plane-directory-operator-only).
+See [Server runtime, build and deployment](runtime-build-deployment.md#independent-control-plane-directory-separate-operator-deployment).
 
 ## Server installer
 

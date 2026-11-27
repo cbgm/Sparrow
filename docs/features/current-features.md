@@ -164,7 +164,7 @@ See [Startup architecture](../architecture/startup.md).
 
 - Android debug/release builds and signing configuration are present in the source tree.
 - Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/installer`.
-- `server/control-plane-directory` is private operator infrastructure and is deliberately excluded from that public bundle.
+- `server/control-plane-directory` is the public source for a separate operator-managed service and is deliberately excluded from the unified runtime bundle.
 - The CI and release workflows are checked in under `.github/workflows` (see [Release process](../development/release-process.md#release-automation-present-in-this-source-snapshot)); a `v*` tag builds the release.
 
 ## Not currently advertised as working

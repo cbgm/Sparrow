@@ -157,7 +157,7 @@ The Control Plane handles discovery and presence (alias bindings, invitation rou
 
 ## 6. Independent Control Plane Directory
 
-`server/control-plane-directory` is a **separate operator-only service**, not something every developer/node must install and not part of the public `sparrow-server.zip`.
+`server/control-plane-directory` contains source for a **separate operator-managed service**. It is public in this repository, but not something every developer/node must install and not part of the public `sparrow-server.zip`.
 
 Use it only when testing the signed multi-Control-Plane discovery/registration layer itself. Its source includes private installer/admin tooling and persistent signing state. Its own installer window (`Start-SparrowDirectory.cmd` / `.command` / `.sh`) creates a separate Directory folder via `Build-SparrowDirectoryInstaller.py --install`; it uses the Sparrow Server's proxy when one runs on the machine, otherwise its own proxy on ports 80/443. A public client should consume only its public signed endpoints, never its admin listener/token.
 

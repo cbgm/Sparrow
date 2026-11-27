@@ -27,7 +27,7 @@
 - **Servers:** the beta network starts with one Control Plane Directory, one Control Plane and one Community Node.
   Until more people run Community Nodes, onion circuits have fewer hops than chosen and the app says so in
   Settings → Network → Onion routing. You can run your own node with the [server bundle](docs/server/runtime-build-deployment.md).
-- **Feedback:** please report bugs and questions as [GitHub issues](https://github.com/cbgm/Sparrow/issues).
+- **Feedback:** please report bugs and questions as [GitHub issues](https://github.com/cbgm/Sparrow/issues). See [Contributing](CONTRIBUTING.md) for pull requests and [Security](SECURITY.md) for private vulnerability reports.
 
 ## Product video
 
@@ -188,7 +188,7 @@ This produces `dist/sparrow-server.zip`; published releases contain the same bun
 
 On macOS/Linux use the bundled `Start-SparrowServer.sh` / `Start-SparrowServer.command`, or run `server/control-plane/docker-compose.yml` and `server/community-node/docker-compose.yml` directly for source-level development.
 
-`server/control-plane-directory` is a separate operator-only signed directory service and is deliberately **not** included in `sparrow-server.zip`.
+`server/control-plane-directory` contains the source for the separate, operator-managed signed directory service. It is included in this repository, but its service and installer are deliberately **not** included in the unified `sparrow-server.zip` runtime bundle.
 
 See [Local development](docs/development/local-development.md) and [Server runtime, build and deployment](docs/server/runtime-build-deployment.md).
 
@@ -244,7 +244,7 @@ feature/search/                   exact + local semantic search
 feature/safety/                   local message-safety analysis/UI
 feature/notification/             Android notifications/background integration
 server/                           Ktor server modules + Compose/operator tooling
-server/control-plane-directory/   separate private operator directory service
+server/control-plane-directory/   separate operator-managed signed directory service
 quality/detekt-rules/             project-specific Detekt rules
 docs/                             MkDocs engineering documentation
 ```
@@ -299,7 +299,7 @@ Do not manually edit `docs/generated/`.
 
 The Git branch flow is `develop -> master -> release/x.y -> tag`. The workflows in `.github/workflows` build pull requests, the server bundle and the documentation site; a `v*` tag (for the beta: `v1.0.0-beta.1`) triggers the complete release build.
 
-The current **verifiable server packaging path** is `server/installer/build.py`, which creates the single public `dist/sparrow-server.zip`. The private `server/control-plane-directory` installer/state must not be included in that public asset.
+The current **verifiable server packaging path** is `server/installer/build.py`, which creates the single public `dist/sparrow-server.zip`. The independent Control Plane Directory service is maintained in this repository but is not part of that runtime bundle; generated deployment state and credentials must never be included in release assets.
 
 See [Release process](docs/development/release-process.md) for the source-verified packaging rules and release checklist.
 
@@ -312,6 +312,9 @@ Start here:
 - [First build](docs/getting-started/first-build.md)
 - [Using the Android app](docs/getting-started/using-app.md)
 - [Local development: Windows + macOS](docs/development/local-development.md)
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security vulnerability reporting](SECURITY.md)
 - [Architecture](docs/architecture/overview.md)
 - [How to extend the project](docs/development/extending.md)
 - [Detailed messaging flow + UML](docs/features/message-transport-flow.md)
@@ -325,9 +328,8 @@ Start here:
 - [Release process](docs/development/release-process.md)
 - [FAQ](docs/faq.md)
 
-Copyright © 2026 Christian Bergmann. All Rights Reserved.
+## License
 
-This software and its source code are proprietary and confidential.
-Unauthorized copying, modification, distribution, sublicensing, or use
-of this software, in whole or in part, is prohibited without prior
-written permission from the copyright holder.
+Unless otherwise noted, Sparrow's original source code and documentation are licensed under the [Apache License 2.0](LICENSE). Third-party dependencies and materials retain their own licenses and notices.
+
+Copyright © 2026 Christian Bergmann.
