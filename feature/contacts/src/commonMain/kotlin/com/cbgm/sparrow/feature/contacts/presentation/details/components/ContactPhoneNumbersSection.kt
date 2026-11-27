@@ -6,14 +6,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberUi
@@ -29,10 +28,7 @@ internal fun ContactPhoneNumbersSection(
     showTitle: Boolean = true
 ) {
     if (showTitle) {
-        SectionTitle(
-            icon = Icons.Default.Phone,
-            title = stringResource(Res.string.base_phone_numbers)
-        )
+        SparrowSectionLabel(text = stringResource(Res.string.base_phone_numbers))
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
     }
 

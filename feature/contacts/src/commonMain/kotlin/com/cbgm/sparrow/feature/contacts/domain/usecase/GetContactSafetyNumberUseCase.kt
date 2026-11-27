@@ -6,10 +6,10 @@ import com.cbgm.sparrow.feature.contacts.crypto.SafetyNumberGenerator
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 
 class GetContactSafetyNumberUseCase(
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
     private val contactRepository: ContactRepository,
     private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val safetyNumberGenerator: SafetyNumberGenerator
@@ -20,7 +20,7 @@ class GetContactSafetyNumberUseCase(
                 "Contact ID must not be blank"
             }
 
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
 
             val contact =
                 contactRepository.getContact(contactId = contactId).getOrThrow()

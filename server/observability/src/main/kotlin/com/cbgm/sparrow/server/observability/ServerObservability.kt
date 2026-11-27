@@ -9,6 +9,8 @@ import io.ktor.server.metrics.micrometer.MicrometerMetrics
 import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.request.httpMethod
+import io.ktor.server.request.path
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
@@ -19,6 +21,15 @@ import java.util.UUID
 const val REQUEST_ID_MDC_KEY: String = "request_id"
 
 private val REQUEST_ID_PATTERN = Regex("[A-Za-z0-9._-]{1,128}")
+
+/** Fixed path words such as `routes`, `inbox` or the API version `v1`; any other segment is an ID. */
+private val PATH_WORD_PATTERN = Regex("[a-z][a-z-]{0,23}|v[0-9]")
+
+/** The request path with every ID replaced by `{id}`; the query string is never logged. */
+internal fun loggedPath(path: String): String =
+    path.split('/').joinToString("/") { segment ->
+        if (segment.isEmpty() || PATH_WORD_PATTERN.matches(segment)) segment else "{id}"
+    }
 
 fun Application.installServerObservability(
     serviceName: String,
@@ -38,6 +49,10 @@ fun Application.installServerObservability(
     }
     install(CallLogging) {
         callIdMdc(REQUEST_ID_MDC_KEY)
+        // Paths carry routing IDs, wake-up IDs, mailbox and blob IDs: logging them would keep who contacts whom.
+        format { call ->
+            "${call.response.status()?.value ?: "-"} ${call.request.httpMethod.value} ${loggedPath(call.request.path())}"
+        }
     }
     install(MicrometerMetrics) {
         registry = prometheusRegistry

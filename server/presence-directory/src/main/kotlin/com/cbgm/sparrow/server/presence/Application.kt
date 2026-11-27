@@ -22,22 +22,18 @@ fun Application.presenceDirectoryModule(
     val runtime = createPresenceRuntime(store)
 
     configurePresenceLifecycle(runtime)
-    installPresencePlugins(runtime)
+    installPresencePlugins()
     installPresenceRoutes(runtime)
 }
 
 data class PresenceConfig(
     val redisUrl: String?,
     val redisPassword: String?,
-    val redisKeyPrefix: String,
-    val maximumTtlMilliseconds: Long
+    val redisKeyPrefix: String
 ) {
     init {
         require(redisKeyPrefix.isNotBlank()) {
             "Presence Redis key prefix must not be blank"
-        }
-        require(maximumTtlMilliseconds > 0L) {
-            "Maximum route TTL must be positive"
         }
     }
 
@@ -48,26 +44,21 @@ data class PresenceConfig(
                 redisPassword = ServiceEnvironment.secret("PRESENCE_REDIS_PASSWORD"),
                 redisKeyPrefix =
                     System.getenv("PRESENCE_REDIS_KEY_PREFIX")?.takeIf(String::isNotBlank)
-                        ?: DEFAULT_REDIS_KEY_PREFIX,
-                maximumTtlMilliseconds =
-                    System.getenv("PRESENCE_MAXIMUM_TTL_MILLISECONDS")?.toLongOrNull()
-                        ?: DEFAULT_MAXIMUM_TTL_MILLISECONDS
+                        ?: DEFAULT_REDIS_KEY_PREFIX
             )
 
         private const val DEFAULT_REDIS_KEY_PREFIX = "sparrow:presence"
-        private const val DEFAULT_MAXIMUM_TTL_MILLISECONDS = 120_000L
     }
 }
 
 internal fun createPresenceStorage(config: PresenceConfig): PresenceStorage {
     val redisUrl = config.redisUrl
     return if (redisUrl == null) {
-        PresenceStore(maximumTtlMilliseconds = config.maximumTtlMilliseconds)
+        PresenceStore()
     } else {
         RedisPresenceStore(
             redisUrl = redisUrl,
             redisPassword = config.redisPassword,
-            maximumTtlMilliseconds = config.maximumTtlMilliseconds,
             keyPrefix = config.redisKeyPrefix
         )
     }

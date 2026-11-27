@@ -57,7 +57,7 @@ fun DirectorySourceCard(
     ) {
         val directoryAddress = directoryUrl.ifBlank { jsonDirectoryUrl }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -66,7 +66,7 @@ fun DirectorySourceCard(
                 modifier = Modifier
                     .size(Dimens.SettingsScreen.primaryIconSize)
                     .infiniteFlashing(enabled = isSyncing),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.outline
             )
             Spacer(Modifier.size(MaterialTheme.spacing.small))
             Column(modifier = Modifier.weight(1f)) {

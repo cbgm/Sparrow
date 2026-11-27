@@ -13,5 +13,7 @@ data class ConversationSummaryDto(
     val unreadCount: Int,
     val lastMessageTimestamp: Long?,
     val updatedAtEpochMilliseconds: Long,
-    val lastMessageAttachmentType: MessageAttachmentType? = null
+    val lastMessageAttachmentType: MessageAttachmentType? = null,
+    /** Both sides verified each other's identity keys; always false for groups. */
+    val isMutuallyVerified: Boolean = false
 )

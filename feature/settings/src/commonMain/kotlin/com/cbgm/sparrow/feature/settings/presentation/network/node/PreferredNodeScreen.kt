@@ -1,0 +1,244 @@
+package com.cbgm.sparrow.feature.settings.presentation.network.node
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
+import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
+import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.GatewayNodeUi
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiEvent
+import com.cbgm.sparrow.feature.settings.presentation.network.node.model.PreferredNodeUiState
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_settings_control_planes_refresh
+import com.cbgm.sparrow.resources.feature_settings_preferred_node
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_automatic
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_automatic_description
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_hint
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_load_failed
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_none_found
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_search
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_unlisted
+import org.jetbrains.compose.resources.stringResource
+
+@Composable
+fun PreferredNodeScreen(
+    uiState: PreferredNodeUiState,
+    onUiEvent: (PreferredNodeUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SparrowLazyScaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = { containerColor ->
+            PreferredNodeTopBar(
+                containerColor = containerColor,
+                onBack = { onUiEvent(PreferredNodeUiEvent.BackClicked) },
+                onRefresh = { onUiEvent(PreferredNodeUiEvent.Refresh) }
+            )
+        }
+    ) { innerPadding, listState ->
+        val status = nodeListStatus(uiState)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(
+                start = MaterialTheme.spacing.screenPadding,
+                end = MaterialTheme.spacing.screenPadding,
+                top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.small,
+                bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.medium
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+        ) {
+            item(key = "hint") {
+                Text(
+                    text = stringResource(Res.string.feature_settings_preferred_node_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            item(key = "automatic") {
+                NodeChoiceRow(
+                    title = stringResource(Res.string.feature_settings_preferred_node_automatic),
+                    subtitle = stringResource(Res.string.feature_settings_preferred_node_automatic_description),
+                    selected = uiState.preferredNodeId == null,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.AutomaticSelected) }
+                )
+            }
+
+            item(key = "search") {
+                SparrowSearchField(
+                    searchQuery = uiState.query,
+                    onSearchQueryChanged = { onUiEvent(PreferredNodeUiEvent.QueryChanged(it)) },
+                    onClear = { onUiEvent(PreferredNodeUiEvent.QueryCleared) },
+                    placeholder = stringResource(Res.string.feature_settings_preferred_node_search)
+                )
+            }
+
+            if (uiState.isLoading) {
+                item(key = "loading") { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+            }
+
+            status?.let { text ->
+                item(key = "status") { StatusText(text) }
+            }
+            itemsIndexed(
+                items = uiState.nodes,
+                key = { _, node -> node.nodeId }
+            ) { index, node ->
+                NodeChoiceRow(
+                    title = node.address,
+                    subtitle = node.shortNodeId,
+                    selected = node.isPreferred,
+                    onClick = { onUiEvent(PreferredNodeUiEvent.NodeSelected(node.nodeId)) }
+                )
+                if (index < uiState.nodes.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = Dimens.Base.dividerThickness,
+                        color = MaterialTheme.colorScheme.divider
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun nodeListStatus(uiState: PreferredNodeUiState): String? =
+    when {
+        uiState.isLoading -> null
+        uiState.loadFailed -> stringResource(Res.string.feature_settings_preferred_node_load_failed)
+        uiState.preferredUnlisted -> stringResource(Res.string.feature_settings_preferred_node_unlisted)
+        uiState.nodes.isEmpty() -> stringResource(Res.string.feature_settings_preferred_node_none_found)
+        else -> null
+    }
+
+@Composable
+private fun StatusText(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaterialTheme.spacing.small),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun NodeChoiceRow(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = MaterialTheme.spacing.base),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SparrowRadio(selected = selected, onClick = null)
+        Spacer(Modifier.size(MaterialTheme.spacing.small))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PreferredNodeTopBar(
+    containerColor: Color,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    Column {
+        SparrowTopBar(
+            title = {
+                Text(
+                    text = stringResource(Res.string.feature_settings_preferred_node)
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
+                }
+            },
+            actions = {
+                IconButton(onClick = onRefresh) {
+                    Icon(
+                        imageVector = SparrowIcons.Refresh,
+                        contentDescription = stringResource(Res.string.feature_settings_control_planes_refresh)
+                    )
+                }
+            },
+            containerColor = containerColor
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreferredNodeScreenPreview() {
+    SparrowTheme {
+        PreferredNodeScreen(
+            uiState = PreferredNodeUiState(
+                preferredNodeId = "node-b",
+                isLoading = false,
+                nodes = listOf(
+                    GatewayNodeUi("node-b", "node-b", "gateway-80-131-151-133.sslip.io", true),
+                    GatewayNodeUi("node-a", "node-a", "node.example.org", false)
+                )
+            ),
+            onUiEvent = {}
+        )
+    }
+}

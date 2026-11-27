@@ -6,5 +6,6 @@ import kotlinx.coroutines.flow.Flow
 interface ExchangeRateRepository {
     fun observeRates(): Flow<ExchangeRates?>
 
-    suspend fun refreshIfStale(): Result<Unit>
+    /** [nodeBaseUrl]: the connected node, which fetches the rates; null while none is connected. */
+    suspend fun refreshIfStale(nodeBaseUrl: String?): Result<Unit>
 }

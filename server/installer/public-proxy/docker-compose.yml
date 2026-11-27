@@ -1,6 +1,14 @@
 name: sparrow-public-proxy
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
@@ -18,6 +26,7 @@ services:
     networks:
       - public-edge
   directory-register:
+    logging: *default-logging
     # One-shot registration is started only by Install/Start and is never a
     # dependency of Caddy, the local Control Plane, or message routing.
     profiles: [registration]
@@ -36,6 +45,7 @@ services:
       - ../control-plane/secrets/registry-root.identity:/run/control-plane/registry-root.identity:ro
       - ../control-plane/directory-registration-proofs:/proofs
   directory-sync:
+    logging: *default-logging
     # Optional discovery background worker: installer starts this separately.
     # A failed image build must not prevent the public proxy from starting.
     profiles: [directory]

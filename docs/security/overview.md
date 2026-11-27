@@ -55,7 +55,7 @@ Membership/security epochs are managed client-side by the Group security/members
 Server nodes use their own long-lived node identity and signed requests. `server:security` contains:
 
 - `NodeIdentity` / `NodeIdentityStore`;
-- `NodeRequestAuthentication` / `NodeRequestAuthorizer`;
+- `NodeRequestAuthentication` / `NodeRequestSigner`;
 - `ProtocolSignatures`;
 - `ReplayProtection`;
 - `BoundedRateLimiter` and the `enforceRateLimit()` helper;

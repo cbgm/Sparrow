@@ -19,9 +19,18 @@ interface IdentityPeerRepository {
 
     suspend fun applyMerge(merge: IdentityPeerMerge): Result<Unit>
 
+    suspend fun isLinkablePhoneContact(peerId: String): Result<Boolean>
+
+    suspend fun linkPhoneContact(
+        peerId: String,
+        phoneContactPeerId: String,
+        updatedAtEpochMilliseconds: Long
+    ): Result<Unit>
+
     suspend fun updateIncomingMetadata(
         peerId: String,
         phoneNumber: String,
+        storePhoneNumber: Boolean,
         updatedAtEpochMilliseconds: Long
     ): Result<Unit>
 }

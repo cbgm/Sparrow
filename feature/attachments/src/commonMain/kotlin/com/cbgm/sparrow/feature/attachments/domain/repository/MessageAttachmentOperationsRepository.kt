@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** Attachment persistence and transfer API; callers never access attachment DAOs or datasources. */
 interface MessageAttachmentOperationsRepository {
+    /** Stores an outgoing message's parts with their files; nothing is uploaded yet ([prepareOutgoing] does that). */
     suspend fun persistOutgoing(
         messageId: String,
         parts: List<MessagePart>,
@@ -38,9 +39,6 @@ interface MessageAttachmentOperationsRepository {
     suspend fun loadDetachedBytes(part: MessagePart): Result<ByteArray>
 
     suspend fun deleteForMessages(messageIds: List<String>): Result<Unit>
-
-    /** Chats owns paging and supplies the visible message IDs. */
-    fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>>
 
     /** Observes a group's expenses in creation order; Chats decides which board they belong to. */
     fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =

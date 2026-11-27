@@ -10,7 +10,8 @@ data class ConversationOverview(
     val unreadCount: Int,
     val participantCount: Int,
     val type: ConversationOverviewType,
-    val lastMessagePreview: ConversationOverviewPreview? = null
+    val lastMessagePreview: ConversationOverviewPreview? = null,
+    val isMutuallyVerified: Boolean = false
 )
 
 enum class ConversationOverviewType {

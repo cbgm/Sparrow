@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockSettings
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
@@ -10,10 +12,11 @@ import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiS
 
 internal fun BuildInfo.toSettingsUiState(
     currentLanguage: AppLanguage,
+    themeMode: AppThemeMode,
     activeAutoReplyName: String?,
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,
-    appLockEnabled: Boolean,
+    appLockSettings: AppLockSettings,
     blockedContactCount: Int,
     localEmbeddingState: LocalEmbeddingState,
     semanticSearchState: SemanticSearchState,
@@ -21,14 +24,19 @@ internal fun BuildInfo.toSettingsUiState(
     voiceTranscriptionEnabled: Boolean,
     isDeveloperModeEnabled: Boolean,
     developerModeTapCount: Int,
-    showLanguagePicker: Boolean
+    showLanguagePicker: Boolean,
+    showThemeModePicker: Boolean,
+    showAppLockTimeoutPicker: Boolean
 ): SettingsUiState =
     SettingsUiState(
         currentLanguage = currentLanguage,
+        themeMode = themeMode,
         activeAutoReplyName = activeAutoReplyName,
         directIdentitySetupMode = identitySetupMode,
         blockUnknownContactInvites = blockUnknownContactInvites,
-        appLockEnabled = appLockEnabled,
+        appLockEnabled = appLockSettings.enabled,
+        appLockTimeout = appLockSettings.timeout,
+        showAppLockTimeoutPicker = showAppLockTimeoutPicker,
         blockedContactCount = blockedContactCount,
         localEmbeddingState = localEmbeddingState,
         semanticSearchState = semanticSearchState,
@@ -37,5 +45,6 @@ internal fun BuildInfo.toSettingsUiState(
         buildInfo = this,
         isDeveloperModeEnabled = isDeveloperModeEnabled,
         developerModeTapCount = developerModeTapCount,
-        showLanguagePicker = showLanguagePicker
+        showLanguagePicker = showLanguagePicker,
+        showThemeModePicker = showThemeModePicker
     )

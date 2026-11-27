@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -38,7 +39,10 @@ data class IdentityExchangeEntity(
     val lastError: String?,
     val localEncryptionPublicKey: ByteArray? = null,
     val localSigningPublicKey: ByteArray? = null,
-    val wasKnownPeerAtReceive: Boolean? = null
+    val wasKnownPeerAtReceive: Boolean? = null,
+    /** When the local user accepted an incoming invitation; resent acceptances keep this time. */
+    @ColumnInfo(defaultValue = "NULL")
+    val acceptedAtEpochMilliseconds: Long? = null
 ) {
     override fun equals(other: Any?): Boolean =
         other is IdentityExchangeEntity &&
@@ -57,7 +61,8 @@ data class IdentityExchangeEntity(
             lastError == other.lastError &&
             localEncryptionPublicKey.contentEqualsNullable(other.localEncryptionPublicKey) &&
             localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey) &&
-            wasKnownPeerAtReceive == other.wasKnownPeerAtReceive
+            wasKnownPeerAtReceive == other.wasKnownPeerAtReceive &&
+            acceptedAtEpochMilliseconds == other.acceptedAtEpochMilliseconds
 
     override fun hashCode(): Int {
         var result = exchangeId.hashCode()
@@ -76,6 +81,7 @@ data class IdentityExchangeEntity(
         result = 31 * result + (localEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (localSigningPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (wasKnownPeerAtReceive?.hashCode() ?: 0)
+        result = 31 * result + (acceptedAtEpochMilliseconds?.hashCode() ?: 0)
         return result
     }
 }

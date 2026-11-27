@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.autoreply.domain.usecase.DeactivateAutoReplyUseC
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.DeleteAutoReplyUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveAutoRepliesUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.UpdateAutoReplyUseCase
-import com.cbgm.sparrow.feature.autoreply.presentation.mapper.toUiItem
+import com.cbgm.sparrow.feature.autoreply.presentation.mapper.toAutoReplyItemUi
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyEditorUiState
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiEvent
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiState
@@ -36,7 +36,7 @@ class AutoReplyViewModel(
     val uiState: StateFlow<AutoReplyUiState> =
         combine(replies, editorState, savingState) { replies, editor, isSaving ->
             AutoReplyUiState(
-                replies = replies.map { it.toUiItem() },
+                replies = replies.map { it.toAutoReplyItemUi() },
                 editor = editor,
                 isSaving = isSaving
             )

@@ -76,7 +76,7 @@ stateDiagram-v2
 - **Kind:** public — Chats submits `DirectConversationCommand.ReconnectConversation`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/direct/ReconnectDirectConversationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `DirectConversationRepository`, `GetIdentityExchangeClosureUseCase`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerStateUseCase`
+- **Uses:** `WorkflowEngine`, `RequireDirectReconnectAllowedUseCase`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerStateUseCase`
 
 ```text
 CheckReconnectable -> PreflightRouting -> LoadAuthorization -> [RevokeExchange] -> StartInvitation
@@ -157,7 +157,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.StartDirectInvitation`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/direct/StartDirectInvitationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactBlocklistRepository`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberProvider`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
+- **Uses:** `WorkflowEngine`, `RequireContactInvitableUseCase`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `ResolveContactInvitationRoutingIdUseCase`, `GetIdentityPeerDisplayNameUseCase`, `LocalPhoneNumberSource`, `StartIdentityExchangeUseCase`, `RecordOutgoingDirectInvitationUseCase`
 
 ```text
 CheckNotBlocked -> LoadAuthorization -> LoadLabels -> StartExchange -> RecordInvitation
@@ -190,7 +190,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.AcceptApprovedIdentityChange`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/recovery/AcceptApprovedIdentityChangeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `ReceiveIdentityExchangeUseCase`, `InvalidatePendingInvitationUseCase`
+- **Uses:** `RequireApprovedIdentityPinnedUseCase`, `ReceiveIdentityExchangeUseCase`, `InvalidatePendingInvitationUseCase`
 
 ```text
 ValidateApproval -> CheckPinnedIdentity -> AcceptOriginalInvitation -> InvalidateStaleInvitation
@@ -311,14 +311,15 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `LifecycleCommand.HandleDirectInvitationResult`
 - **Source:** `feature/conversationorchestration/lifecycle/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/lifecycle/domain/workflow/result/HandleDirectInvitationResultWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `AcceptIdentityExchangeUseCase`, `DeclineIdentityExchangeUseCase`, `BlockContactUseCase`
+- **Uses:** `WorkflowEngine`, `AcceptIdentityExchangeUseCase`, `DeclineIdentityExchangeUseCase`, `BlockContactUseCase`, `LinkPhoneContactUseCase`
 
 ```text
-incoming, accepted: AcceptExchange -> ActivateConversation
+incoming, accepted: AcceptExchange -> [LinkPhoneContact] -> ActivateConversation
 incoming, declined: DeclineExchange -> [BlockContact]
 outgoing, declined: DiscardWaitingMessages
 
 Both identity setup modes create the receiver's chat and release its queued messages on acceptance.
+Accepting an invitation that matched a phone book contact by its claimed number links the two.
 ```
 
 ```mermaid
@@ -328,6 +329,8 @@ stateDiagram-v2
     [*] --> DiscardWaitingMessages
     [*] --> IgnoreResult
     AcceptExchange --> ActivateConversation : ExchangeAccepted
+    AcceptExchange --> LinkPhoneContact : ExchangeAccepted
+    LinkPhoneContact --> ActivateConversation : PhoneContactLinked
     ActivateConversation --> [*] : Done
     DeclineExchange --> BlockContact : ExchangeDeclined
     DeclineExchange --> [*] : ExchangeDeclined
@@ -357,8 +360,6 @@ released in both modes.
 ```mermaid
 stateDiagram-v2
     [*] --> ResolveDisplayName
-    [*] --> MarkInvitationAccepted
-    [*] --> ActivateConversation
     [*] --> MarkInvitationDeclined
     [*] --> MarkTransportFailed
     [*] --> InvalidateInvitation

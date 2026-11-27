@@ -1,18 +1,40 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.di
 
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.DirectMessagePacketReaderImpl
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.datasource.ParkedEnvelopeDataSource
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.datasource.ParkedMessageOperationDataSource
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.packet.ChatDirectMessagePacketReader
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.repository.ParkedEnvelopeRepositoryImpl
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.data.repository.ParkedMessageOperationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.ControlPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.dispatch.GroupPacketDispatcher
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.packet.DirectMessagePacketReader
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedEnvelopeRepository
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.repository.ParkedMessageOperationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeRemoteMessageOperationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckDeferredPacketReadyUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckDirectPeerAuthorizedUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupInvitationTargetUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketAcceptedUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.CheckGroupPacketReadyUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.DeleteReplacedExpenseReceiptsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.EvaluateGroupInvitationIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.FindOperationTargetUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.InspectIncomingGroupOfferUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.MergeIncomingIdentityPeersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ReplayParkedEnvelopesUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveContactInvitationDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveControlConversationIdUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveDirectPeerAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveSenderDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.SendDeliveryReceiptUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StoreIncomingDirectAttachmentsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StoreUnreadableMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.UpdateIncomingSenderProfileUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.VerifyIncomingContactInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.direct.ReceiveDirectMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.group.ReceiveGroupMessageWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity.CompleteManualIdentityWorkflow
@@ -38,13 +60,14 @@ import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workfl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupDescriptionWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupPinWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.metadata.ReceiveGroupTitleWorkflow
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.ApplyParkedMessageOperationsWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.operation.ApplyRemoteMessageOperationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.routing.RouteIncomingPacketWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationReceiptWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationSnapshotRequestWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.verification.ReceiveVerificationSnapshotWorkflow
-import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.IncomingEnvelopeProcessorImpl
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.IncomingTransportMessageHandler
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.runtime.ParkingIncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.protocol.handler.IncomingMessageHandler
 import org.koin.core.module.Module
@@ -58,28 +81,49 @@ val conversationIncomingModule =
         registerUseCases()
         registerInternalWorkflows()
         singleOf(::IncomingTransportMessageHandler) { bind<IncomingMessageHandler>() }
-        singleOf(::IncomingEnvelopeProcessorImpl) { bind<IncomingEnvelopeProcessor>() }
+        singleOf(::ParkingIncomingEnvelopeProcessor) { bind<IncomingEnvelopeProcessor>() }
         singleOf(::ControlPacketDispatcher)
         singleOf(::GroupPacketDispatcher)
     }
 
 private fun Module.registerData() {
-    singleOf(::DirectMessagePacketReaderImpl) { bind<DirectMessagePacketReader>() }
+    singleOf(::ChatDirectMessagePacketReader) { bind<DirectMessagePacketReader>() }
+    singleOf(::ParkedMessageOperationDataSource)
+    singleOf(::ParkedMessageOperationRepositoryImpl) { bind<ParkedMessageOperationRepository>() }
+    singleOf(::ParkedEnvelopeDataSource)
+    singleOf(::ParkedEnvelopeRepositoryImpl) { bind<ParkedEnvelopeRepository>() }
 }
 
 private fun Module.registerUseCases() {
     singleOf(::AuthorizeIncomingExpensesUseCase)
-    singleOf(::DeleteReplacedExpenseReceiptsUseCase)
+    singleOf(::AuthorizeRemoteMessageOperationUseCase)
+    singleOf(::CheckDeferredPacketReadyUseCase)
+    singleOf(::CheckDirectPeerAuthorizedUseCase)
     singleOf(::CheckGroupPacketAcceptedUseCase)
+    singleOf(::CheckGroupPacketReadyUseCase)
+    singleOf(::DeleteReplacedExpenseReceiptsUseCase)
+    singleOf(::EvaluateGroupInvitationIdentityUseCase)
     singleOf(::FindOperationTargetUseCase)
+    singleOf(::CheckGroupInvitationTargetUseCase)
+    singleOf(::InspectIncomingGroupOfferUseCase)
+    singleOf(::MergeIncomingIdentityPeersUseCase)
+    singleOf(::ReplayParkedEnvelopesUseCase)
+    singleOf(::ResolveContactInvitationDisplayNameUseCase)
+    singleOf(::ResolveControlConversationIdUseCase)
+    singleOf(::ResolveDirectPeerAccessUseCase)
     singleOf(::ResolveIncomingIdentityPeerUseCase)
     singleOf(::ResolveSenderDisplayNameUseCase)
     singleOf(::SendDeliveryReceiptUseCase)
+    singleOf(::StageIncomingIdentityReviewUseCase)
+    singleOf(::StoreIncomingDirectAttachmentsUseCase)
     singleOf(::StoreUnreadableMessageUseCase)
+    singleOf(::UpdateIncomingSenderProfileUseCase)
+    singleOf(::VerifyIncomingContactInvitationUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {
     singleOf(::ApplyRemoteMessageOperationWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
+    singleOf(::ApplyParkedMessageOperationsWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::CompleteManualIdentityWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ReceiveAuthorizationRevokedWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }
     singleOf(::ReceiveContactInviteAcceptedWorkflow) { bind<WorkflowStateMachine<*, *, *>>() }

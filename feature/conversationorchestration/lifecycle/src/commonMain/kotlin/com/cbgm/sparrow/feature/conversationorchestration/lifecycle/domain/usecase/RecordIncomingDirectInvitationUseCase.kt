@@ -6,11 +6,19 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.usecase.RecordPendingInvitationUseCase
 
-/** Shows a verified incoming direct invitation in the invitation inbox. */
+/**
+ * Shows a verified incoming direct invitation in the invitation inbox. Unless the keys belong to a known contact,
+ * its name is only the sender's claim and is marked as unverified.
+ */
 class RecordIncomingDirectInvitationUseCase(
     private val recordPendingInvitation: RecordPendingInvitationUseCase
 ) {
-    suspend operator fun invoke(result: IdentityResult, peerDisplayName: String?): Result<Unit> =
+    suspend operator fun invoke(
+        result: IdentityResult,
+        peerDisplayName: String?,
+        phoneContactPeerId: String? = null,
+        phoneContactName: String? = null
+    ): Result<Unit> =
         recordPendingInvitation(
             InvitationLifecycleRecord(
                 invitationId = result.exchangeId,
@@ -22,7 +30,10 @@ class RecordIncomingDirectInvitationUseCase(
                 expiresAtEpochMilliseconds = result.expiresAtEpochMilliseconds,
                 updatedAtEpochMilliseconds =
                     maxOf(result.createdAtEpochMilliseconds, result.updatedAtEpochMilliseconds),
-                peerDisplayName = peerDisplayName
+                peerDisplayName = peerDisplayName,
+                peerUnverified = result.wasKnownPeerAtReceive == false,
+                phoneContactPeerId = phoneContactPeerId,
+                phoneContactName = phoneContactName
             )
         )
 }

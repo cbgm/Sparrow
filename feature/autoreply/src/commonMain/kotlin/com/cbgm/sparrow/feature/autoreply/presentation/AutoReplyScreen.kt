@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.autoreply.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,24 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,20 +28,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
+import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowRadio
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.component.SwipeActionTone
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyEditorUiState
+import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyItemUi
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiEvent
-import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiItem
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -75,42 +68,29 @@ fun AutoReplySettingsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { color ->
-            CenterAlignedTopAppBar(
+            SparrowTopBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_auto_reply),
-                        style = MaterialTheme.typography.titleSmall
+                        text = stringResource(Res.string.feature_auto_reply)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onUiEvent(AutoReplyUiEvent.BackClicked) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = SparrowIcons.ArrowBack,
                             contentDescription = null
                         )
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = color,
-                        scrolledContainerColor = color,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                containerColor = color
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            SparrowFloatingButton(
+                icon = SparrowIcons.Add,
                 onClick = { onUiEvent(AutoReplyUiEvent.AddClicked) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(Res.string.feature_auto_reply_add)
-                )
-            }
+                contentDescription = stringResource(Res.string.feature_auto_reply_add)
+            )
         }
     ) { innerPadding, listState ->
         LazyColumn(
@@ -118,32 +98,30 @@ fun AutoReplySettingsScreen(
             state = listState,
             contentPadding =
                 PaddingValues(
-                    top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.medium,
-                    bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(10)
+                    top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.screenPadding,
+                    bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
+                    start = MaterialTheme.spacing.screenPadding,
+                    end = MaterialTheme.spacing.screenPadding
                 )
         ) {
             item(key = "auto-reply-settings") {
-                SparrowCardNoAnimation(
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
-                ) {
-                    Column {
-                        AutoReplyOffItem(
-                            selected = uiState.replies.none { it.isActive },
-                            onClick = { onUiEvent(AutoReplyUiEvent.OffClicked) }
+                Column {
+                    AutoReplyOffItem(
+                        selected = uiState.replies.none { it.isActive },
+                        onClick = { onUiEvent(AutoReplyUiEvent.OffClicked) }
+                    )
+                    uiState.replies.forEach { reply ->
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = Dimens.SettingsScreen.primaryIconSize + MaterialTheme.spacing.small),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
                         )
-                        uiState.replies.forEach { reply ->
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                        androidx.compose.runtime.key(reply.id) {
+                            AutoReplyItem(
+                                reply = reply,
+                                onActivate = { onUiEvent(AutoReplyUiEvent.ActivateClicked(reply.id)) },
+                                onEdit = { onUiEvent(AutoReplyUiEvent.EditClicked(reply.id)) },
+                                onDelete = { onUiEvent(AutoReplyUiEvent.DeleteClicked(reply.id)) }
                             )
-                            androidx.compose.runtime.key(reply.id) {
-                                AutoReplyItem(
-                                    reply = reply,
-                                    onActivate = { onUiEvent(AutoReplyUiEvent.ActivateClicked(reply.id)) },
-                                    onEdit = { onUiEvent(AutoReplyUiEvent.EditClicked(reply.id)) },
-                                    onDelete = { onUiEvent(AutoReplyUiEvent.DeleteClicked(reply.id)) }
-                                )
-                            }
                         }
                     }
                 }
@@ -171,7 +149,7 @@ private fun AutoReplyOffItem(selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.small),
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -187,13 +165,13 @@ private fun AutoReplyOffItem(selected: Boolean, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        RadioButton(selected = selected, onClick = null)
+        SparrowRadio(selected = selected, onClick = null)
     }
 }
 
 @Composable
 private fun AutoReplyItem(
-    reply: AutoReplyUiItem,
+    reply: AutoReplyItemUi,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -201,22 +179,20 @@ private fun AutoReplyItem(
     SparrowSwipeRevealItem(
         actions = listOf(
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                tone = SwipeActionTone.NEUTRAL,
                 onClick = onEdit
             ) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
+                    imageVector = SparrowIcons.Edit,
                     contentDescription = stringResource(Res.string.feature_auto_reply_edit)
                 )
             },
             SwipeRevealAction(
-                backgroundColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
+                tone = SwipeActionTone.DESTRUCTIVE,
                 onClick = onDelete
             ) {
                 Icon(
-                    imageVector = Icons.Default.DeleteOutline,
+                    imageVector = SparrowIcons.Delete,
                     contentDescription = null
                 )
             }
@@ -226,7 +202,7 @@ private fun AutoReplyItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onActivate)
-                .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.small),
+                .padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -256,7 +232,7 @@ private fun AutoReplyItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            RadioButton(selected = reply.isActive, onClick = null)
+            SparrowRadio(selected = reply.isActive, onClick = null)
         }
     }
 }
@@ -302,7 +278,7 @@ private fun AutoReplyEditorDialog(
                         onValueChange = onTextChanged,
                         label = stringResource(Res.string.feature_auto_reply_message),
                         modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
-                        minLines = 3,
+                        minLines = 1,
                         maxLines = 7,
                         isEnabled = !isSaving,
                         keyboardOptions =
@@ -314,22 +290,20 @@ private fun AutoReplyEditorDialog(
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                    SparrowApprovalButton(
-                        onClick = onSave,
-                        text = stringResource(Res.string.feature_auto_reply_save),
-                        modifier = Modifier.weight(1f),
-                        enabled = editor.canSave && !isSaving
-                    )
-                    SparrowOutlinedButton(
-                        onClick = onDismiss,
-                        text = stringResource(Res.string.base_cancel),
-                        modifier = Modifier.weight(1f),
-                        enabled = !isSaving
-                    )
-                }
+                SparrowDialogAction(
+                    onClick = onSave,
+                    text = stringResource(Res.string.feature_auto_reply_save),
+                    enabled = editor.canSave && !isSaving
+                )
             },
-            dismissButton = {}
+            dismissButton = {
+                SparrowDialogAction(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    enabled = !isSaving,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
     }
 }
@@ -344,13 +318,13 @@ private fun AutoReplySettingsScreenPreview() {
                     AutoReplyUiState(
                         replies =
                             listOf(
-                                AutoReplyUiItem(
+                                AutoReplyItemUi(
                                     id = "1",
                                     name = "Vacation",
                                     text = "I'm currently on vacation and will reply when I'm back.",
                                     isActive = true
                                 ),
-                                AutoReplyUiItem(
+                                AutoReplyItemUi(
                                     id = "2",
                                     name = "Meeting",
                                     text = "I'm currently in a meeting.",

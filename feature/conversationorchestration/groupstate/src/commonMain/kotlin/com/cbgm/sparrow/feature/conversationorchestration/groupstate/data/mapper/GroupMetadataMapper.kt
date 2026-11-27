@@ -8,23 +8,42 @@ import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.mode
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupTitleState
 
 internal fun GroupTitleDto.toGroupTitleState(groupId: String): GroupTitleState =
-    GroupTitleState(groupId = groupId, title = title, changedAtEpochMilliseconds = changedAtEpochMilliseconds)
+    GroupTitleState(
+        groupId = groupId,
+        title = title,
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
+    )
 
 internal fun GroupTitleState.toGroupTitleDto(): GroupTitleDto =
-    GroupTitleDto(title = title, changedAtEpochMilliseconds = changedAtEpochMilliseconds)
+    GroupTitleDto(
+        title = title,
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
+    )
 
 internal fun GroupDescriptionDto.toGroupDescriptionState(groupId: String): GroupDescriptionState =
     GroupDescriptionState(
         groupId = groupId,
         description = description,
-        changedAtEpochMilliseconds = changedAtEpochMilliseconds
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
     )
 
 internal fun GroupDescriptionState.toGroupDescriptionDto(): GroupDescriptionDto =
-    GroupDescriptionDto(description = description, changedAtEpochMilliseconds = changedAtEpochMilliseconds)
+    GroupDescriptionDto(
+        description = description,
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
+    )
 
 internal fun GroupAvatarDto.toGroupAvatarState(groupId: String): GroupAvatarState =
-    GroupAvatarState(groupId = groupId, bytes = bytes, changedAtEpochMilliseconds = changedAtEpochMilliseconds)
+    GroupAvatarState(
+        groupId = groupId,
+        bytes = bytes,
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
+    )
 
 internal fun GroupAvatarState.toGroupAvatarDto(): GroupAvatarDto =
-    GroupAvatarDto(bytes = bytes, changedAtEpochMilliseconds = changedAtEpochMilliseconds)
+    GroupAvatarDto(bytes = bytes, changedAtEpochMilliseconds = changedAtEpochMilliseconds, publishPending = publishPending)

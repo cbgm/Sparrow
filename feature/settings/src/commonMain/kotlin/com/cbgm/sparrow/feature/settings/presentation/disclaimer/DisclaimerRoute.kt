@@ -2,11 +2,12 @@ package com.cbgm.sparrow.feature.settings.presentation.disclaimer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.cbgm.sparrow.feature.settings.domain.model.DisclaimerContent
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerType
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_data_disclaimer
+import com.cbgm.sparrow.resources.feature_settings_data_disclaimer_content
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
+import com.cbgm.sparrow.resources.feature_settings_privacy_policy_content
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -24,8 +25,8 @@ fun DisclaimerRoute(
             },
         markdownContent =
             when (type) {
-                DisclaimerType.PRIVACY_POLICY -> DisclaimerContent.privacyPolicy
-                DisclaimerType.DATA_DISCLAIMER -> DisclaimerContent.dataDisclaimer
+                DisclaimerType.PRIVACY_POLICY -> stringResource(Res.string.feature_settings_privacy_policy_content)
+                DisclaimerType.DATA_DISCLAIMER -> stringResource(Res.string.feature_settings_data_disclaimer_content)
             },
         onUiEvent = viewModel::onUiEvent,
         modifier = modifier

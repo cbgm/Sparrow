@@ -3,7 +3,6 @@ package com.cbgm.sparrow.core.ui.component
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -15,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import com.cbgm.sparrow.core.ui.theme.Dimens
 
 @Composable
 fun SparrowCard(
@@ -63,7 +61,6 @@ fun SparrowCardNoAnimation(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(Dimens.Base.borderStrokeWidth, MaterialTheme.colorScheme.outlineVariant),
         content = content
     )
 }

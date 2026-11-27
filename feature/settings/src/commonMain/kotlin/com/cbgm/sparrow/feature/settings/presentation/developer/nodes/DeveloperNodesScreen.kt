@@ -1,36 +1,41 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NodeDiagnosticRow
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.feature.transport.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_network_no_nodes
 import com.cbgm.sparrow.resources.feature_settings_network_nodes
+import com.cbgm.sparrow.resources.feature_settings_preferred_node
+import com.cbgm.sparrow.resources.feature_settings_preferred_node_subtitle
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 fun DeveloperNodesScreen(
     diagnostics: TransportDiagnostics,
     onBack: () -> Unit,
+    onPreferredNodeClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
@@ -56,9 +62,17 @@ fun DeveloperNodesScreen(
                 end = MaterialTheme.spacing.screenPadding,
                 top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.small,
                 bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.medium
-            ),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+            )
         ) {
+            item(key = "preferred-node") {
+                PreferredNodeLink(onClick = onPreferredNodeClicked)
+            }
+            item(key = "node-label") {
+                NodesLabel(
+                    size = nodes.size,
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.medium)
+                )
+            }
             if (nodes.isEmpty()) {
                 item(key = "no-nodes") {
                     Text(
@@ -74,8 +88,15 @@ fun DeveloperNodesScreen(
                 itemsIndexed(
                     items = nodes,
                     key = { index, node -> "${node.nodeId}:${node.websocketUrl}:$index" }
-                ) { _, node ->
-                    NodeDiagnosticRow(node = node, outlined = true)
+                ) { index, node ->
+                    NodeDiagnosticRow(node = node)
+                    if (index < nodes.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            thickness = Dimens.Base.dividerThickness,
+                            color = MaterialTheme.colorScheme.divider
+                        )
+                    }
                 }
             }
         }
@@ -83,23 +104,42 @@ fun DeveloperNodesScreen(
 }
 
 @Composable
+private fun PreferredNodeLink(onClick: () -> Unit) {
+    SparrowDetailRow(
+        title = stringResource(Res.string.feature_settings_preferred_node),
+        subtitle = stringResource(Res.string.feature_settings_preferred_node_subtitle),
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun NodesLabel(size: Int, modifier: Modifier = Modifier) {
+    Row(modifier = modifier) {
+        SparrowSectionLabel(
+            text = stringResource(Res.string.feature_settings_network_nodes),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = size.toString(),
+            modifier = Modifier.padding(start = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+    }
+}
+
+@Composable
 private fun TopBar(containerColor: Color, onBack: () -> Unit) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_network_nodes),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_settings_network_nodes)
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Icon(imageVector = SparrowIcons.ArrowBack, contentDescription = null)
             }
         }
     )
@@ -126,7 +166,8 @@ private fun DeveloperNodesScreenPreview() {
                     )
                 )
             ),
-            onBack = {}
+            onBack = {},
+            onPreferredNodeClicked = {}
         )
     }
 }

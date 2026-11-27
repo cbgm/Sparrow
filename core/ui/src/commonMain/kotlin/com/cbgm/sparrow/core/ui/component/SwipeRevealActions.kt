@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -39,9 +38,15 @@ import kotlin.math.roundToInt
 private val defaultSwipeActionWidth = Dimens.SwipeRevealActions.actionWidth
 private const val DEFAULT_REVEAL_THRESHOLD_FRACTION = 0.5f
 
+/** What a swipe action means: it only picks the icon colour, the background is always the quiet note dark. */
+enum class SwipeActionTone {
+    NEUTRAL,
+    PRIMARY,
+    DESTRUCTIVE
+}
+
 data class SwipeRevealAction(
-    val backgroundColor: Color,
-    val contentColor: Color,
+    val tone: SwipeActionTone = SwipeActionTone.NEUTRAL,
     val onClick: () -> Unit,
     val content: @Composable () -> Unit
 )
@@ -138,14 +143,20 @@ private fun SwipeRevealActionItem(
             Modifier
                 .width(width)
                 .fillMaxHeight()
-                .background(action.backgroundColor)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .clickable(
                     enabled = enabled,
                     onClick = onClick
                 ),
         contentAlignment = Alignment.Center
     ) {
-        CompositionLocalProvider(LocalContentColor provides action.contentColor) {
+        val tint =
+            when (action.tone) {
+                SwipeActionTone.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                SwipeActionTone.PRIMARY -> MaterialTheme.colorScheme.primary
+                SwipeActionTone.DESTRUCTIVE -> MaterialTheme.colorScheme.error
+            }
+        CompositionLocalProvider(LocalContentColor provides tint) {
             action.content()
         }
     }
@@ -159,22 +170,19 @@ private fun SparrowSwipeRevealItemPreview() {
             actions =
                 listOf(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tone = SwipeActionTone.NEUTRAL,
                         onClick = {}
                     ) {
                         Text("A")
                     },
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tone = SwipeActionTone.NEUTRAL,
                         onClick = {}
                     ) {
                         Text("B")
                     },
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
+                        tone = SwipeActionTone.DESTRUCTIVE,
                         onClick = {}
                     ) {
                         Text("C")

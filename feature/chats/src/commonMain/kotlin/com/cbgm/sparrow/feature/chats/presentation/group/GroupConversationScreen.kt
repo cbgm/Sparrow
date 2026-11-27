@@ -3,7 +3,10 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,12 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
@@ -34,7 +37,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.header.component.Group
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.GroupPinnedMessageContent
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.StatusHint
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.subtitle
-import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.HistoryContent
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddSharedContactDialog
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistorySenderAvatar
@@ -42,13 +45,15 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.component.Mess
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.textOrNull
-import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionAction
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteWaitingBanner
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
@@ -60,6 +65,7 @@ import com.cbgm.sparrow.feature.expenses.presentation.currency.ExpenseCurrencyPi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
+import com.cbgm.sparrow.resources.feature_search_title
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -84,6 +90,7 @@ fun GroupConversationScreen(
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
+    waitingForRoute: Boolean = false,
     targetMessageId: String? = null
 ) {
     var attachmentSelection by remember {
@@ -189,22 +196,29 @@ fun GroupConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                background = {
-                    PatternBackground(
-                        modifier = Modifier.fillMaxSize(),
-                        backgroundColor = MaterialTheme.colorScheme.background,
-                        alpha = Alpha.PatternBackground.conversation
-                    )
-                },
+                containerColor = MaterialTheme.colorScheme.background,
                 topBar = { containerColor ->
                     Column {
                         HeaderContent(
-                            model = uiState.toHeaderUiModel(subtitle(uiState, membershipState)),
+                            model = uiState.toHeaderUi(subtitle(uiState, membershipState)),
                             containerColor = containerColor,
                             onBackClick = { onUiEvent(GroupConversationUiEvent.BackClicked) },
-                            onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) }
+                            onHeaderClick = { onUiEvent(GroupConversationUiEvent.HeaderClicked) },
+                            actions = {
+                                RouteProtectionAction()
+                                IconButton(onClick = { onUiEvent(GroupConversationUiEvent.SearchClicked) }) {
+                                    Icon(
+                                        imageVector = SparrowIcons.Search,
+                                        contentDescription = stringResource(Res.string.feature_search_title),
+                                        modifier = Modifier.size(Dimens.TopBar.iconSize)
+                                    )
+                                }
+                            }
                         ) {
                             StatusHint(uiState = uiState, membershipState = membershipState)
+                            if (waitingForRoute) {
+                                RouteWaitingBanner()
+                            }
                         }
                         pin?.let { pin ->
                             GroupPinnedMessageBar(
@@ -234,7 +248,7 @@ fun GroupConversationScreen(
                 }
             ) { innerPadding, listState ->
                 HistoryContent(
-                    model = uiState.toHistoryUiModel(
+                    model = uiState.toHistoryUi(
                         emptyDescription = stringResource(Res.string.feature_chats_no_messages_yet)
                     ),
                     listState = listState,

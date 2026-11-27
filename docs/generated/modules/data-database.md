@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `data` |
 | Directory | `data/database` |
 | Build file | `data/database/build.gradle.kts` |
-| Kotlin files | 93 |
-| Production Kotlin files | 92 |
+| Kotlin files | 98 |
+| Production Kotlin files | 97 |
 | Test Kotlin files | 1 |
 | Resource files | 1 |
 | Direct dependencies | 2 |
@@ -22,6 +22,7 @@ Generated automatically by `./gradlew architectureReport`.
 - `androidDeviceTest`
 - `androidMain`
 - `commonMain`
+- `commonTest`
 
 ## Dependencies
 

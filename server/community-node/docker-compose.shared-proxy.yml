@@ -1,7 +1,15 @@
 # Combined/standalone unified Public mode; keep the original node project and volumes.
 # The shared Caddy routes directly to these backends, preserving TLS proxy headers.
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
+    logging: *default-logging
     # Shared front proxy owns public TLS. Keep the component Caddy HTTP-only.
     environment:
       COMMUNITY_NODE_SITE_ADDRESS: ":80"
@@ -13,6 +21,7 @@ services:
         aliases:
           - sparrow-node-edge
   mailbox:
+    logging: *default-logging
     networks:
       edge:
       backend:
@@ -20,6 +29,7 @@ services:
         aliases:
           - sparrow-node-mailbox
   federation:
+    logging: *default-logging
     networks:
       edge:
       backend:
@@ -27,6 +37,7 @@ services:
         aliases:
           - sparrow-node-federation
   gateway:
+    logging: *default-logging
     networks:
       edge:
       backend:

@@ -1,10 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: single-colour silhouette of shield and head, eye cut out (transparent). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,2.5 C7.7,2.5 5,5.8 5,10 C5,13.1 6.5,15.4 8.8,16.8 L7.5,21 L12,19 L16.5,21 L15.2,16.8 C17.5,15.4 19,13.1 19,10 C19,5.8 16.3,2.5 12,2.5 Z M8.4,9.2 a1.3,1.3 0,1 0,2.6,0 a1.3,1.3 0,1 0,-2.6,0 M13,9.2 a1.3,1.3 0,1 0,2.6,0 a1.3,1.3 0,1 0,-2.6,0 M12,10.5 L9.5,12.2 L12,13.7 L14.5,12.2 Z" />
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+    <group
+        android:pivotX="500"
+        android:pivotY="500"
+        android:scaleX="1.3006"
+        android:scaleY="1.3006"
+        android:translateX="0"
+        android:translateY="0">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M500 358 C412.5 360 315 348 250 326 C247.5 358 246.2 390 247.5 420 C248.8 450 251.2 476 257.5 500 C263.8 526 270 554 280 580 C290 606 302.5 634 320 660 C337.5 686 356.2 712 377.5 736 C410 774 452.5 816 500 846 C547.5 816 590 774 622.5 736 C643.8 712 662.5 686 680 660 C697.5 634 710 606 720 580 C730 554 736.2 526 742.5 500 C748.8 476 751.2 450 752.5 420 C753.8 390 752.5 358 750 326 C685 348 587.5 360 500 358 Z" />
+        <group
+            android:pivotX="532"
+            android:pivotY="374"
+            android:scaleX="1.1"
+            android:scaleY="1.1"
+            android:translateX="-38"
+            android:translateY="-2">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:fillType="evenOdd"
+                android:pathData="M414 262 L452 246 L440 222 C474 190 530 176 578 186 C612 192 636 210 648 232 L714 264 L652 290 C640 304 618 312 600 314 C592 340 580 362 566 374 C546 380 518 380 500 374 C474 358 454 336 440 306 C428 292 418 278 414 262 Z M548 230 L620 244 L606 258 C588 262 566 258 554 246 Z" />
+        </group>
+    </group>
 </vector>

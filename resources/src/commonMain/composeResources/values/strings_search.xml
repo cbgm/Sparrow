@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_search_title">Search messages</string>
+    <string name="feature_search_open">Search messages</string>
+    <string name="feature_search_placeholder">Search messages</string>
+    <string name="feature_search_clear">Clear search</string>
+    <string name="feature_search_start_hint">Search your message history.</string>
+    <string name="feature_search_no_results">No matching messages</string>
+    <string name="feature_search_failed">Search failed. Try again.</string>
+    <string name="feature_search_exact_only_hint">Exact text search only. Enable Semantic message search in Settings to search by meaning.</string>
+    <string name="feature_search_preparing_hint">Semantic search is being prepared. Exact text search is available now.</string>
+    <string name="feature_search_semantic_unavailable_hint">Semantic search is unavailable. Exact text search is still available.</string>
+</resources>

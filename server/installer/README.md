@@ -97,7 +97,7 @@ original runtime still exists elsewhere; run the installed manager instead, or m
 existing server here...**.
 
 The installer window contains the **Settings** card (reachability, automatic hostnames, Directory
-Server URL), **Push notifications and phone verification** (Firebase service account), the
+Server URL), **Phone verification** (test phone numbers), the
 **Server** card (installed addresses with Copy buttons, **Install** / **Start / apply settings**,
 **Stop**, **Status**, **Logs**, **Nodes...**) and the **Updates** card. **Cancel** stops a running
 task. **Advanced...** holds the image prefix/tag and **Reinstall from scratch...** (Public mode only;
@@ -119,31 +119,21 @@ leave already-created containers running; the start command is resumable.
 
 Use either two manually configured **different, DNS-resolvable hostnames** pointing at the same public IP or the **automatic free public hostnames** option described below (sslip.io DNS, no owned domain). Forward 80/TCP and 443/TCP (optional 443/UDP) to this host. The shared Caddy imports each component's existing route definitions and forwards by hostname directly to the component's service aliases on the `sparrow-public-edge` Docker network. Component Caddy remains available locally for diagnostics. The component projects keep their existing named volumes, identity directories, PostgreSQL/Redis instances, and localhost-only diagnostic ports. The proxy has its own persistent TLS certificate volumes. No automatic migration or copying of legacy standalone Caddy TLS volumes occurs. Run external HTTPS/WebSocket and DNS checks before advertising newly installed public endpoints.
 
-## Optional Firebase (push notifications and phone verification)
+## Phone verification
 
-For the Control Plane, optionally select an administrator-owned Google service-account JSON under
-**Push notifications and phone verification** (command line: `--firebase-file`). The importer checks
-that it is structurally a service account and stores it (Windows: below
-`%LOCALAPPDATA%\Sparrow\Server\Secrets\<control-plane-id>`; Linux/macOS:
-`control-plane/secrets/firebase-admin.json`), then attaches it read-only via
-`docker-compose.firebase.yml` to two services:
+Phone numbers are verified by the phone verifier of the **Control Plane Directory**, not by this server; the
+server needs no Firebase credentials. The app sends its Firebase phone sign-in token, sealed and through two
+relays, to the verifier, which answers with a signed attestation. This Control Plane's `presence-directory`
+binds a phone number to a device only with that attestation, checked with the Directory key the server pins
+(`CONTROL_PLANE_DIRECTORY_PUBLIC_KEY`, copied into `control-plane/.env.runtime` on every Start). Without a
+pinned Directory key, or without an attestation, phone numbers are not bound; only the test phone numbers
+below work then. Nothing about the verification is stored. Sparrow uses no push service: the app keeps its
+own connection instead.
 
-- `push` sends FCM wake-ups with it;
-- `presence-directory` verifies the Firebase phone sign-in token that the app sends once, with its
-  first route registration at sign-up (`GOOGLE_APPLICATION_CREDENTIALS`).
-
-Both use the Firebase project `FIREBASE_TARGET_PROJECT_ID` (default `sparrow-a9048`, the project of the
-Android app). The account therefore needs Firebase Cloud Messaging **and** Firebase Authentication
-access to that project. The importer does **not** grant this access or verify a real device delivery;
-authorization must be set up separately by an operator with the proper privileges.
-
-Without the credential file, the push HTTP service continues running but FCM sending is disabled, and
-phone verification tokens are not checked (registrations are accepted with or without a token). With
-credentials, a registration that carries a token is accepted only if the token is a valid Firebase
-phone sign-in whose number matches the advertised phone alias; otherwise it is rejected with
-`PHONE_VERIFICATION_FAILED`. Registrations without a token (every later route refresh) are always
-accepted, and nothing about the verification is stored. Removing the file after installation
-requires a controlled restart/reconfiguration; do not remove data volumes.
+**Operator name** is put into the signed descriptor of the Community Node and of every added node
+(`NODE_OPERATOR` in their `.env.runtime`, applied with Start; added nodes take it on their next start). Use the
+same name on all your nodes: apps never route a circuit through two nodes of one operator, and they let their
+circuits end at different operators. Empty: each node counts as an operator of its own.
 
 ## Source and testing
 
@@ -151,10 +141,9 @@ Build a fresh distributable from the repository root with `python3 server/instal
 (Windows, Linux and macOS); `--local-images` builds the six server images from the source tree and
 embeds them, `--install <folder>` creates a ready server folder instead of a ZIP. An installed manager
 builds and applies local images itself with **Build from source...**. The resulting
-`dist/sparrow-server.zip` contains no service-account keys and has no deployment data.
+`dist/sparrow-server.zip` has no deployment data.
 Organization-enforced policies or AppLocker/WDAC may still block execution and should not be
-circumvented. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS, public ingress, and FCM
-account authorization require integration verification on the operator's machine.
+circumvented. Windows PowerShell 5.1, Docker Desktop, Compose 2.24.4+, DNS and public ingress require integration verification on the operator's machine.
 
 Source-only tests live in `server/installer/tests/` (`Test-SparrowLocalImages.ps1`,
 `Test-SparrowDirectoryRoutePreservation.ps1`); they are not part of the bundle.
@@ -175,9 +164,8 @@ contents. This is **not** a backup or a migration; it does not inspect/verify da
 credentials, identities or certificates. In particular, an online filesystem copy of live PostgreSQL
 or Redis volumes is not a reliable rollback point.
 
-**Status** shows the Compose containers, configured endpoints and whether a Control Plane
-service-account file exists; it does not claim that the public endpoint or FCM delivery is
-functioning. **Logs** also includes shared proxy logs if the proxy is configured.
+**Status** shows the Compose containers and configured endpoints; it does not claim that the public
+endpoint is functioning. **Logs** also includes shared proxy logs if the proxy is configured.
 
 The manager guards against starting a second copy of a running Compose project from another
 deployment folder. A Public-to-LAN switch or a change of a custom Public hostname is blocked until
@@ -195,8 +183,7 @@ data volumes. If anything is running, the snapshot fails closed.
 
 The snapshot preserves a read-only archive of each selected project's Compose-labeled local Docker
 volumes (including databases, identities, queues, and the component's Caddy certificate state), the
-component's configuration, Compose files, secrets, and any configured external FCM service-account
-JSON. Backup output receives a restrictive Windows ACL; store it securely because it contains live
+component's configuration, Compose files and secrets. Backup output receives a restrictive Windows ACL; store it securely because it contains live
 encryption keys and credentials. The script does not touch or delete original Docker resources. If
 the snapshot fails, its output retains `INCOMPLETE-DO-NOT-RESTORE.txt` and must not be used for
 recovery.
@@ -234,7 +221,7 @@ scripts move public traffic to one shared Caddy without moving data volumes:
 `-Apply` requires a plan directory with `cutover-readiness.json` and a candidate Caddyfile. The
 readiness check that produced this plan is **not** part of the current source tree, so a new cutover
 plan cannot be prepared with this bundle alone. None of these steps is certified for production
-migration; Windows/Docker/live external DNS, TLS, WebSocket and FCM tests remain outstanding.
+migration; Windows/Docker/live external DNS, TLS and circuit tests remain outstanding.
 
 ## Public Caddy without an owned domain
 
@@ -250,7 +237,7 @@ After Install, the **Server** card displays the installed Control Plane, Communi
 (`wss://.../v1/gateway`) addresses with individual **Copy** buttons, read from the installed
 `sparrow.conf`. These are configured URLs, **not proof** of outside connectivity or successful ACME
 certificate issuance. Always test from a different internet connection, with real HTTPS certificate
-checks and WebSocket messaging. Caddy requires incoming TCP 80/443 (or matching forwarded ports); a
+checks and messaging between two phones. Caddy requires incoming TCP 80/443 (or matching forwarded ports); a
 public IP reported by a lookup service does not prove that the router has a globally reachable IPv4
 (CGNAT/DS-Lite can prevent IPv4 port forwarding). Public DNS services and certificate authorities have
 availability/rate limits. Caddy's local/internal certificate is NOT a substitute for a public,

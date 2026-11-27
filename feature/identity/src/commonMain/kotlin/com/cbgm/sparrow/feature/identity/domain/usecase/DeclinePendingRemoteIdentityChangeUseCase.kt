@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.identity.domain.usecase
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import kotlinx.coroutines.flow.first
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.first
 class DeclinePendingRemoteIdentityChangeUseCase(
     private val observePending: ObservePendingRemoteIdentityChangesUseCase,
     private val dismiss: DismissPendingRemoteIdentityChangeUseCase,
-    private val signingKeys: LocalSigningKeyPairProvider,
+    private val signingKeys: LocalSigningKeyPairSource,
     private val protocol: ContactInvitationDeclineProtocol,
     private val outbox: ProtocolOutbox
 ) {

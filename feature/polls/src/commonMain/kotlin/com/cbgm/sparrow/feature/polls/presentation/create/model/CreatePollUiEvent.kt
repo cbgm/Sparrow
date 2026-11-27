@@ -5,8 +5,6 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResultUi
 sealed interface CreatePollUiEvent {
     data object BackClicked : CreatePollUiEvent
 
-    data object AddOptionClicked : CreatePollUiEvent
-
     data object CreateClicked : CreatePollUiEvent
 
     data class QuestionChanged(

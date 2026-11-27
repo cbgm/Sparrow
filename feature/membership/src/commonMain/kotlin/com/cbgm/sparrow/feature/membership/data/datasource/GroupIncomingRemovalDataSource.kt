@@ -10,7 +10,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.policy.PendingGroupRemovalPolicy
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 
 /** Membership alone validates removal authority and advances its persisted membership state. */
@@ -20,7 +20,7 @@ internal class GroupIncomingRemovalDataSource(
     private val packetProtocol: GroupMembershipPacketProtocol,
     private val securityStore: GroupSecurityStoreDataSource,
     private val groupKeyStore: GroupKeyStore,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider
+    private val localPublicIdentitySource: LocalPublicIdentitySource
 ) {
     suspend fun authorize(
         packet: GroupMemberRemovedPacket,
@@ -41,7 +41,7 @@ internal class GroupIncomingRemovalDataSource(
         val expectedSigningKey = authority.signingPublicKey
         packetProtocol.verifyMemberRemoved(packet, expectedSigningKey).getOrThrow()
         val active = securityStore.findState(packet.groupId)
-        val localSigningPublicKey = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow().signingPublicKey
+        val localSigningPublicKey = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow().signingPublicKey
         if (active != null) {
             check(packet.epoch > active.currentEpoch) { "Group removal must reference a later epoch" }
             check(active.localSigningPublicKey.contentEquals(localSigningPublicKey)) {

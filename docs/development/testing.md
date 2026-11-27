@@ -37,13 +37,15 @@ Two standalone Community Nodes plus Control Plane:
 .\server\scripts\Test-StandaloneCommunityNodes.ps1 -BuildImages
 ```
 
-The standalone smoke test accepts an initial `QUEUED_AT_GATEWAY` result and waits for asynchronous federation/retry storage at the destination rather than incorrectly requiring synchronous `STORED_AT_DESTINATION` on the first attempt.
+The standalone smoke test starts a Control Plane and two Community Nodes, checks their health, that both register with their own identity, that they share no Docker network or volume, and that a node keeps its identity across a restart.
 
 ## CI branch behavior
 
 Normal feature work opens PRs into `develop`. `.github/workflows/android-pr.yml` validates those PRs and uploads its debug APK artifact. Existing server workflows also target the `develop` integration path.
 
-Release packaging is separate and runs on `release/**`; see [Release process](release-process.md).
+The full release packaging workflow runs when a `v*` tag is pushed. Beta and RC tags must point
+to commits reachable from `release/*`; stable tags may point to commits reachable from `master`
+or a release branch. See [Release process](release-process.md).
 
 ## Test production behavior, not stale assumptions
 

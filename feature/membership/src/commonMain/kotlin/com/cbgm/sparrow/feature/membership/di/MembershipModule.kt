@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.di
 import com.cbgm.sparrow.feature.membership.crypto.GroupCrypto
 import com.cbgm.sparrow.feature.membership.crypto.SodiumGroupCrypto
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupConversationMembershipDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupIncomingActivationDataSource
@@ -25,7 +26,7 @@ import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketPr
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPayloadEncoder
 import com.cbgm.sparrow.feature.membership.data.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.membership.data.repository.MembershipRepositoryImpl
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
 import com.cbgm.sparrow.feature.membership.data.security.GroupWelcomeSecurity
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
@@ -37,6 +38,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroup
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupRemovalUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeIncomingGroupWelcomeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.CheckReadyAcknowledgementEpochUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ClearMembershipHandshakeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupDeletionUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupRemovalUseCase
@@ -45,12 +47,16 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ConfirmGroupMembership
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeleteGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DiscardSupersededMembershipsUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindCommittedGroupMemberRemovalUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindGroupCurrentEpochUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.FindReadyAcknowledgedMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupCurrentEpochUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupMessageMembershipAccessUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupPinSenderSigningKeyUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupTransportRoutingMembersUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.InspectGroupInvitationTargetUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.InspectIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.MarkMembershipRemovedUseCase
@@ -68,11 +74,13 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupReadyAckno
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ResolveGroupTransportEncryptionPublicKeyUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.RotateGroupKeyAfterAdminLeftUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.VerifyGroupKeyConfirmationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.WasGroupMembershipDeletedUseCase
+import com.cbgm.sparrow.protocol.membership.GroupConversationMembershipSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -86,10 +94,11 @@ val membershipModule =
             GroupMembershipPacketProtocol(
                 groupCrypto = get(),
                 payloadEncoder = get(),
-                localProfilePictureMetadataProvider = get()
+                localProfilePictureMetadataSource = get()
             )
         }
         singleOf(::GroupMembershipStoreDataSource)
+        singleOf(::GroupConversationMembershipDataSource) { bind<GroupConversationMembershipSource>() }
         singleOf(::GroupIncomingWelcomeDataSource)
         singleOf(::GroupReadyAcknowledgementDataSource)
         singleOf(::GroupIncomingDeletionDataSource)
@@ -99,7 +108,7 @@ val membershipModule =
         singleOf(::GroupEpochDataSource)
         singleOf(::GroupEpochSecurityDataSource)
         singleOf(::GroupWelcomeSecurity)
-        singleOf(::GroupSecurityManager) { bind<GroupSecurityRepository>() }
+        singleOf(::GroupSecurityRepositoryImpl) { bind<GroupSecurityRepository>() }
         singleOf(::VerifyGroupKeyConfirmationUseCase)
         singleOf(::GroupOwnerWelcomeDataSource)
         singleOf(::GroupMembershipActivationDataSource)
@@ -111,9 +120,9 @@ val membershipModule =
         singleOf(::GroupMembershipDeletionDataSource)
         single {
             GroupMembershipLifecycleDataSource(
-                activationProvider = { get() },
-                administrationProvider = { get() },
-                deletionProvider = { get() }
+                activationSource = { get() },
+                administrationSource = { get() },
+                deletionSource = { get() }
             )
         }
 
@@ -126,6 +135,7 @@ val membershipModule =
 
         singleOf(::OpenIncomingGroupWelcomeUseCase)
         singleOf(::PersistIncomingGroupWelcomeUseCase)
+        singleOf(::RotateGroupKeyAfterAdminLeftUseCase)
         singleOf(::AuthorizeIncomingGroupWelcomeUseCase)
         singleOf(::CompleteIncomingGroupWelcomeUseCase)
         singleOf(::SendGroupReadyAcknowledgementUseCase)
@@ -136,6 +146,7 @@ val membershipModule =
         singleOf(::AuthorizeIncomingGroupDeletionUseCase)
         singleOf(::CompleteIncomingGroupDeletionUseCase)
         singleOf(::RemoveGroupMemberUseCase)
+        singleOf(::FindCommittedGroupMemberRemovalUseCase)
         singleOf(::PromoteGroupMemberUseCase)
         singleOf(::TransferGroupAdminAndLeaveUseCase)
         singleOf(::GetGroupLeaveRequirementUseCase)
@@ -147,6 +158,7 @@ val membershipModule =
         singleOf(::ReceiveGroupLeaveRequestUseCase)
         singleOf(::StartGroupMembershipUseCase)
         singleOf(::InspectIncomingGroupMembershipUseCase)
+        singleOf(::InspectGroupInvitationTargetUseCase)
         singleOf(::ReceiveIncomingGroupMembershipUseCase)
         singleOf(::DiscardSupersededMembershipsUseCase)
         singleOf(::GetMembershipHandshakeUseCase)
@@ -155,7 +167,10 @@ val membershipModule =
         singleOf(::WasGroupMembershipDeletedUseCase)
         singleOf(::GetGroupMessageMembershipAccessUseCase)
         singleOf(::GetGroupPinSenderSigningKeyUseCase)
+        singleOf(::FindGroupCurrentEpochUseCase)
         singleOf(::GetGroupCurrentEpochUseCase)
+        singleOf(::CheckReadyAcknowledgementEpochUseCase)
+        singleOf(::FindReadyAcknowledgedMembershipUseCase)
         singleOf(::ResolveGroupTransportEncryptionPublicKeyUseCase)
         singleOf(::GetGroupTransportRoutingMembersUseCase)
         singleOf(::DeclineGroupMembershipUseCase)

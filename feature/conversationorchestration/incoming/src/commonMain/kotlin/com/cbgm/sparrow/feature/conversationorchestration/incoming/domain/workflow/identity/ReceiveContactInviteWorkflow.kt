@@ -1,10 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity
 
-import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingIdentityPeerMetadataUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
@@ -12,7 +9,11 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.RemoteIdentityReplacementRequiredException
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.MergeIncomingIdentityPeersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveContactInvitationDisplayNameUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.ResolveIncomingIdentityPeerUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.VerifyIncomingContactInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeDirection
@@ -20,10 +21,8 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
-import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchangePeerUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
-import com.cbgm.sparrow.protocol.invitation.ContactInvitationRequestProtocol
+import com.cbgm.sparrow.protocol.handler.IncomingMessageRejectedException
 import kotlin.reflect.KClass
 
 /**
@@ -32,27 +31,28 @@ import kotlin.reflect.KClass
  *
  * Signature and time bounds are verified BEFORE contacts are looked up or merged. Keys that differ from a
  * known contact's are proof of the proposed keys only: they become an identity review, never a merge.
+ * The claimed phone number never files the invitation under a contact; a matching phone book contact is
+ * only offered for linking, which happens when the user accepts.
  * The Identity result observer restores the inbox record after a restart; it alone declines rejected senders.
  */
 @Suppress("LongParameterList")
 class ReceiveContactInviteWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val invitationRequestProtocol: ContactInvitationRequestProtocol,
-    private val phoneNumberNormalizer: PhoneNumberNormalizer,
+    private val verifyIncomingContactInvitation: VerifyIncomingContactInvitationUseCase,
     private val resolveIncomingIdentityPeer: ResolveIncomingIdentityPeerUseCase,
-    private val blocklistRepository: ContactBlocklistRepository,
-    private val stagePendingRemoteIdentityChange: StagePendingRemoteIdentityChangeUseCase,
-    private val reassignIdentityExchangePeer: ReassignIdentityExchangePeerUseCase,
-    private val applyIdentityPeerMerge: ApplyIdentityPeerMergeUseCase,
+    private val stageIncomingIdentityReview: StageIncomingIdentityReviewUseCase,
+    private val mergeIncomingIdentityPeers: MergeIncomingIdentityPeersUseCase,
     private val updateIncomingIdentityPeerMetadata: UpdateIncomingIdentityPeerMetadataUseCase,
     private val receiveIdentityExchange: ReceiveIdentityExchangeUseCase,
     private val applyPeerProfilePicture: ApplyPeerProfilePictureUseCase,
-    private val getIdentityPeerDisplayName: GetIdentityPeerDisplayNameUseCase
+    private val resolveContactInvitationDisplayName: ResolveContactInvitationDisplayNameUseCase
 ) : WorkflowStateMachine<
         IncomingCommand.ReceiveContactInvite,
         ReceiveContactInviteWorkflow.Step,
         ReceiveContactInviteWorkflow.Outcome
     > {
+    private val logger = SparrowLog.withTag("ReceiveContactInviteWorkflow")
+
     override val commandType: KClass<IncomingCommand.ReceiveContactInvite> = IncomingCommand.ReceiveContactInvite::class
 
     override fun firstStep(command: IncomingCommand.ReceiveContactInvite): Step = Step.VerifyInvitation(command)
@@ -62,14 +62,13 @@ class ReceiveContactInviteWorkflow internal constructor(
         val context = step.command.context
         val packet = step.command.packet
         return when (step) {
-            is Step.VerifyInvitation -> {
-                invitationRequestProtocol.verifyPacket(packet, context.receivedAtEpochMilliseconds).getOrThrow()
+            is Step.VerifyInvitation ->
                 Outcome.InvitationVerified(
-                    packet.displayName?.trim()?.takeIf(String::isNotBlank)?.let { value ->
-                        phoneNumberNormalizer.normalize(value).getOrNull()
+                    // A bad signature or an expired invitation can never succeed: drop it instead of retrying.
+                    verifyIncomingContactInvitation(packet, context.receivedAtEpochMilliseconds).getOrElse { error ->
+                        throw IncomingMessageRejectedException(error.message ?: "Invalid contact invitation", error)
                     }
                 )
-            }
             is Step.ResolvePeer ->
                 try {
                     Outcome.PeerResolved(
@@ -85,35 +84,32 @@ class ReceiveContactInviteWorkflow internal constructor(
                     Outcome.ReplacementRequired(conflict.peerId)
                 }
             is Step.StageReplacementReview -> {
-                if (!blocklistRepository.isBlocked(step.peerId).getOrThrow()) {
-                    stagePendingRemoteIdentityChange(
-                        PendingRemoteIdentityChange(
-                            peerId = step.peerId,
-                            sourcePeerId = context.contactId,
-                            invitationId = packet.invitationId,
-                            proposedEncryptionPublicKey = packet.encryptionPublicKey.copyOf(),
-                            proposedSigningPublicKey = packet.signingPublicKey.copyOf(),
-                            receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                            expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
-                            originalInviteChallenge = packet.inviteChallenge.copyOf(),
-                            originalInviteCreatedAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
-                            originalInviteAutoSharesIdentity = packet.autoSharesIdentity
-                        )
-                    ).getOrThrow()
-                }
+                stageIncomingIdentityReview.forContact(
+                    PendingRemoteIdentityChange(
+                        peerId = step.peerId,
+                        sourcePeerId = context.contactId,
+                        invitationId = packet.invitationId,
+                        proposedEncryptionPublicKey = packet.encryptionPublicKey.copyOf(),
+                        proposedSigningPublicKey = packet.signingPublicKey.copyOf(),
+                        receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                        expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
+                        originalInviteChallenge = packet.inviteChallenge.copyOf(),
+                        originalInviteCreatedAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
+                        originalInviteAutoSharesIdentity = packet.autoSharesIdentity
+                    )
+                ).getOrThrow()
+                logger.info { "Invitation ${packet.invitationId.take(8)} needs an identity review: keys differ" }
                 Outcome.Done
             }
             is Step.MergePeers -> {
-                step.resolution.merges.forEach { merge ->
-                    reassignIdentityExchangePeer(merge.fromPeerId, merge.toPeerId).getOrThrow()
-                    applyIdentityPeerMerge(merge).getOrThrow()
-                }
+                mergeIncomingIdentityPeers(step.resolution).getOrThrow()
                 Outcome.PeersMerged(step.resolution, step.remotePhoneNumber)
             }
             is Step.UpdatePeerPhoneNumber -> {
                 updateIncomingIdentityPeerMetadata(
                     step.resolution.peerId,
                     step.phoneNumber,
+                    step.resolution.wasKnownPeer,
                     context.receivedAtEpochMilliseconds
                 ).getOrThrow()
                 Outcome.PeerUpdated(step.resolution)
@@ -142,17 +138,22 @@ class ReceiveContactInviteWorkflow internal constructor(
             is Step.ResolveDisplayName ->
                 Outcome.DisplayNameResolved(
                     step.resolution,
-                    getIdentityPeerDisplayName(step.resolution.peerId).getOrThrow()
-                        ?: packet.displayName?.trim()?.takeIf(String::isNotBlank)
+                    resolveContactInvitationDisplayName(step.resolution.peerId, packet).getOrThrow(),
+                    step.resolution.phoneContactPeerId?.let { phoneContactPeerId ->
+                        resolveContactInvitationDisplayName.ofPhoneContact(phoneContactPeerId).getOrThrow()
+                    }
                 )
             is Step.RecordInvitation -> {
                 engine.run(
                     LifecycleCommand.RecordIncomingDirectInvitation(
                         step.command.toIdentityResult(step.resolution),
                         step.peerDisplayName,
-                        declineIfRejected = false
+                        declineIfRejected = false,
+                        phoneContactPeerId = step.resolution.phoneContactPeerId,
+                        phoneContactName = step.phoneContactName
                     )
                 ).getOrThrow()
+                logger.info { "Invitation ${packet.invitationId.take(8)} received and saved" }
                 Outcome.Done
             }
         }
@@ -175,7 +176,14 @@ class ReceiveContactInviteWorkflow internal constructor(
             is Outcome.ProfilePictureApplied ->
                 Transition.Next(Step.ResolveDisplayName(outcome.resolution, step.command))
             is Outcome.DisplayNameResolved ->
-                Transition.Next(Step.RecordInvitation(outcome.resolution, outcome.peerDisplayName, step.command))
+                Transition.Next(
+                    Step.RecordInvitation(
+                        outcome.resolution,
+                        outcome.peerDisplayName,
+                        outcome.phoneContactName,
+                        step.command
+                    )
+                )
             Outcome.Done -> Transition.Complete()
         }
 
@@ -240,6 +248,7 @@ class ReceiveContactInviteWorkflow internal constructor(
         data class RecordInvitation(
             val resolution: IdentityPeerResolution,
             val peerDisplayName: String?,
+            val phoneContactName: String?,
             override val command: IncomingCommand.ReceiveContactInvite
         ) : Step
     }
@@ -278,7 +287,8 @@ class ReceiveContactInviteWorkflow internal constructor(
 
         data class DisplayNameResolved(
             val resolution: IdentityPeerResolution,
-            val peerDisplayName: String?
+            val peerDisplayName: String?,
+            val phoneContactName: String?
         ) : Outcome
 
         data object Done : Outcome

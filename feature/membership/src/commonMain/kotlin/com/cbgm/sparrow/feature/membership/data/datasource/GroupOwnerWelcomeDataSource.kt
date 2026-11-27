@@ -1,28 +1,28 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
-import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityRepositoryImpl
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 
 /** Persists owner epoch and queues signed welcomes after a verified join request. */
 internal class GroupOwnerWelcomeDataSource(
     private val store: GroupMembershipStoreDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val epoch: GroupEpochDataSource,
-    private val initialSecurity: GroupSecurityManager,
+    private val initialSecurity: GroupSecurityRepositoryImpl,
     private val epochSecurity: GroupEpochSecurityDataSource,
     private val broadcaster: GroupPacketBroadcaster,
     private val lock: GroupMembershipLock,
-    private val localIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider
+    private val localIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPhoneNumberSource: LocalPhoneNumberSource
 ) {
     suspend fun sendWelcome(
         sourceId: String,
@@ -70,12 +70,12 @@ internal class GroupOwnerWelcomeDataSource(
         val current = epoch.loadCurrentParticipantContacts(handshake.groupId)
             .filterNot { it.id == peer.id }
         val participants = (current + peer).sortedBy { it.id }
-        val identity = localIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val localSigning = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        val phone = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+        val identity = localIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val localSigning = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+        val phone = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
         val payloads = epoch.createMemberPayloads(handshake.groupId, identity, phone, participants)
         val recipients = epoch.createRecipients(handshake.groupId, participants)
-        val secured = if (currentState == null) {
+        if (currentState == null) {
             initialSecurity.createOwnedGroup(
                 groupId = handshake.groupId,
                 title = title,
@@ -84,7 +84,7 @@ internal class GroupOwnerWelcomeDataSource(
                 memberKeys = epoch.createMemberKeys(handshake.groupId, 1, participants),
                 recipients = recipients,
                 localSigningKeyPair = localSigning
-            ).getOrThrow()
+            ).getOrThrow().also { created -> broadcaster.enqueueAll(created.welcomePacketsByContactId).getOrThrow() }
         } else if (current.isEmpty() && currentState.currentEpoch == 1) {
             // Creation has already persisted the owner-only first epoch and key.
             // Admit the first member to that SAME epoch, including recovery if
@@ -97,8 +97,9 @@ internal class GroupOwnerWelcomeDataSource(
                 memberKeys = epoch.createMemberKeys(handshake.groupId, 1, participants),
                 recipients = recipients,
                 localSigningKeyPair = localSigning
-            ).getOrThrow()
+            ).getOrThrow().also { created -> broadcaster.enqueueAll(created.welcomePacketsByContactId).getOrThrow() }
         } else {
+            // The rotation queues its welcomes in the same transaction as the new epoch.
             epochSecurity.rotateOwnedGroup(
                 groupId = handshake.groupId,
                 title = title,
@@ -110,7 +111,6 @@ internal class GroupOwnerWelcomeDataSource(
                 localSigningKeyPair = localSigning
             ).getOrThrow()
         }
-        broadcaster.enqueueAll(secured.welcomePacketsByContactId).getOrThrow()
         check(
             store.updateStatus(
                 membershipId = handshake.membershipId,

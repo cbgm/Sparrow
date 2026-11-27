@@ -4,6 +4,8 @@ import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.datastore.group.GroupAvatarFileStore
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatarMetadata
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSnapshot
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -11,7 +13,7 @@ import kotlinx.coroutines.flow.map
 internal class GroupAvatarDataSource(
     private val groupMetadataDao: GroupMetadataDao,
     private val fileStore: GroupAvatarFileStore
-) {
+) : GroupAvatarSource {
     fun observeMetadata(groupId: String): Flow<GroupAvatarMetadata> {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         return observeAvatarState(groupId).map { (hasAvatar, changedAt) ->
@@ -22,6 +24,15 @@ internal class GroupAvatarDataSource(
             )
         }
     }
+
+    override fun observeSnapshot(groupId: String): Flow<GroupAvatarSnapshot> =
+        observe(groupId).map { avatar ->
+            GroupAvatarSnapshot(
+                groupId = avatar.groupId,
+                changedAtEpochMilliseconds = avatar.changedAtEpochMilliseconds,
+                bytes = avatar.bytes
+            )
+        }
 
     fun observe(groupId: String): Flow<GroupAvatar> {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }

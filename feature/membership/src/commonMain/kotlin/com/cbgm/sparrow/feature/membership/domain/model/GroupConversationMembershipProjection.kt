@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.membership.domain.model
 
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
+
 /** A pure membership-state projection; does not read Chats' messages or databases. */
 data class GroupConversationMembershipProjection(
     val state: GroupConversationState,

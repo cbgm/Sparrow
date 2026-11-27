@@ -1,10 +1,12 @@
 # Sparrow Independent Control Plane Directory
 
-This operator-managed service is separate from the public combined Control Plane + Community Node bundle, but its **source** belongs under `server/control-plane-directory/`. Never include its image, private volumes, admin token or installer in the public release ZIP.
+This operator-managed service is separate from the unified Control Plane + Community Node runtime bundle. Its source is public in this repository; its generated image, private volumes, admin token and installer are not part of the public server release ZIP.
 
 Start the installer window with `Start-SparrowDirectory.cmd` (Windows), `.command` (macOS) or `.sh` (Linux). It shares the HTTPS proxy of the running Sparrow Server on the same IP, or runs its own Caddy when ports 80/443 are free. Started from this source folder, the window first creates your own Directory folder (`Build-SparrowDirectoryInstaller.py --install`) and takes over a Directory that is already running. Sharing ingress makes external Directory availability depend on that proxy; it does not make Directory storage, signing or registration depend on any Control Plane. See `README-INSTALL.md`.
 
 Public API: `GET /health`, `GET /.well-known/sparrow-directory` (public bootstrap metadata), `GET /v1/control-planes` (signed directory), `POST /v1/registrations/challenge`, and `POST /v1/registrations`. Valid DNS/public HTTPS endpoint possession **and** Ed25519 signing-key possession are verified before each new Control Plane is approved automatically. Existing revoked identities are not silently reinstated; endpoint/key changes require a separate authenticated process. Never forward the administrator listener or include administrator credentials in distributed clients.
+
+Phone verification (optional, `phone_verifier.py`) runs as a separate container with its own keys, which the Directory key certifies: `GET /v1/phone-attestations/keys`, `POST /v1/phone-attestations/slots` (a sign-up slot before the SMS), `POST /v1/phone-attestations`. See `README-INSTALL.md`.
 
 Android pins the first HTTPS-fetched directory signing key **only after** verifying its signed snapshot. A new directory URL must present the already pinned key; no directory signing key needs to be embedded in Android build properties. Local cache preserves previously verified plane candidates during outages. A compromised signing key requires separate secure recovery (not implemented), not URL editing alone.
 

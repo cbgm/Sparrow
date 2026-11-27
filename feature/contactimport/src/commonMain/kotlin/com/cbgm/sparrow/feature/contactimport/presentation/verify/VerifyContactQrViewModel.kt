@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.verify
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.ui.navigation.AppRoute
-import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.extensions.toFingerprint
 import com.cbgm.sparrow.core.util.logging.SparrowLog
@@ -19,13 +16,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class VerifyContactQrViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val contactId: String,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val verifyContactByQr: VerifyContactByQrUseCase
 ) : BaseViewModel() {
-    private val contactId =
-        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::contactId.name)
-
     private val _uiState = MutableStateFlow(VerifyContactQrUiState())
     val uiState: StateFlow<VerifyContactQrUiState> = _uiState.asStateFlow()
 
@@ -34,8 +28,8 @@ class VerifyContactQrViewModel(
             is VerifyContactQrUiEvent.QrCodeScanned -> prepareScannedIdentity(event.encodedIdentity)
             VerifyContactQrUiEvent.ScannedIdentityConfirmed -> verifyScannedIdentity()
             VerifyContactQrUiEvent.ScannedIdentityDismissed -> dismissScannedIdentity()
-            VerifyContactQrUiEvent.BackClicked -> navigator.popBackStack()
             VerifyContactQrUiEvent.ErrorDismissed -> dismissError()
+            VerifyContactQrUiEvent.RetryClicked -> retry()
         }
     }
 
@@ -91,7 +85,6 @@ class VerifyContactQrViewModel(
                         errorMessage = null
                     )
                 }
-                navigator.popBackStack()
             }.onFailure { error ->
                 SparrowLog.error("VerifyContactQrViewModel", "QR verification failed", error)
                 _uiState.update {
@@ -106,10 +99,14 @@ class VerifyContactQrViewModel(
     }
 
     private fun dismissScannedIdentity() {
-        _uiState.update { it.copy(scannedIdentityPreview = null) }
+        _uiState.update { it.copy(scannedIdentityPreview = null, scanAttempt = it.scanAttempt + 1) }
     }
 
     private fun dismissError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    private fun retry() {
+        _uiState.update { it.copy(errorMessage = null, scanAttempt = it.scanAttempt + 1) }
     }
 }

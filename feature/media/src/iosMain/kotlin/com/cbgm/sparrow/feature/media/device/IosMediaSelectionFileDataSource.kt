@@ -47,8 +47,8 @@ class IosMediaSelectionFileDataSource : MediaSelectionFileDataSource {
             val previewUrl = previewBytes?.let { requireNotNull(folder.URLByAppendingPathComponent("$safeId.preview")) }
             try {
                 check(bytes.toData().writeToURL(original, atomically = true)) { "Could not save selected media" }
-                if (previewUrl != null) {
-                    check(previewBytes!!.toData().writeToURL(previewUrl, atomically = true)) {
+                if (previewUrl != null && previewBytes != null) {
+                    check(previewBytes.toData().writeToURL(previewUrl, atomically = true)) {
                         "Could not save preview"
                     }
                 }

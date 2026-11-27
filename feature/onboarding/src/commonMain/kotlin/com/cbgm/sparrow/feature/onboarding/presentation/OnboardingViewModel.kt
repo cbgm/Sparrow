@@ -1,41 +1,81 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
+import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
+import com.cbgm.sparrow.feature.onboarding.presentation.model.TourStep
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
+import com.cbgm.sparrow.feature.transport.domain.model.ConnectionMode
+import com.cbgm.sparrow.feature.transport.domain.usecase.CanConnectWhileClosedUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.SetConnectionModeUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class OnboardingViewModel : BaseViewModel() {
-    private val _uiState = MutableStateFlow(OnboardingUiState())
+class OnboardingViewModel(
+    private val setConnectionMode: SetConnectionModeUseCase,
+    canConnectWhileClosed: CanConnectWhileClosedUseCase,
+    private val getAppThemeMode: GetAppThemeModeUseCase,
+    private val setAppThemeMode: SetAppThemeModeUseCase
+) : BaseViewModel() {
+    private val _uiState = MutableStateFlow(OnboardingUiState(connectsWhileClosed = canConnectWhileClosed()))
     val uiState = _uiState.asStateFlow()
 
-    fun onUiEvent(event: OnboardingUiEvent) {
-        when (event) {
-            OnboardingUiEvent.NextClicked -> next()
-            OnboardingUiEvent.RequestPermissionsClicked -> requestPermissions()
-            OnboardingUiEvent.RetryAutomaticNumberClicked -> retryAutomaticPhoneNumber()
-            OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
+    init {
+        viewModelScope.launch {
+            getAppThemeMode().onSuccess { mode -> _uiState.update { state -> state.copy(themeMode = mode) } }
         }
     }
 
-    private fun next() {
-        _uiState.value =
-            when (_uiState.value.page) {
-                OnboardingPage.WELCOME -> _uiState.value.copy(page = OnboardingPage.PRIVACY)
-                OnboardingPage.PRIVACY -> _uiState.value.copy(page = OnboardingPage.PERMISSIONS)
-                OnboardingPage.PERMISSIONS -> _uiState.value.copy(page = OnboardingPage.PHONE)
-                OnboardingPage.PHONE -> _uiState.value
-            }
+    fun onUiEvent(event: OnboardingUiEvent) {
+        when (event) {
+            is OnboardingUiEvent.PageShown -> showPage(event.page)
+            OnboardingUiEvent.RequestPermissionsClicked -> requestPermissions()
+            OnboardingUiEvent.RetryAutomaticNumberClicked -> retryAutomaticPhoneNumber()
+            OnboardingUiEvent.ChooseAnotherNumberClicked -> requestPhoneNumberHint()
+            is OnboardingUiEvent.ConnectionModeChosen -> chooseConnectionMode(event.mode)
+            is OnboardingUiEvent.ThemeModeChosen -> chooseThemeMode(event.mode)
+            OnboardingUiEvent.IdentityCreated -> _uiState.update { state -> state.copy(showsTourIntro = state.tourStep == null) }
+            OnboardingUiEvent.TourStarted -> _uiState.update { state -> state.copy(showsTourIntro = false, tourStep = TourStep.entries.first()) }
+            OnboardingUiEvent.TourNextClicked -> showNextTourStep()
+            OnboardingUiEvent.TourBackSwiped -> showPreviousTourStep()
+            OnboardingUiEvent.TourSkipped -> _uiState.update { state -> state.copy(tourFinished = true) }
+        }
+    }
+
+    /** Swiping on past a page does what its action would: asking for the permissions, saving the preselected mode. */
+    private fun showPage(page: OnboardingPage) {
+        val left = _uiState.value.page
+        _uiState.update { state -> state.copy(page = page) }
+        if (page <= left) return
+        when (left) {
+            OnboardingPage.PERMISSIONS -> requestPermissionsOnce()
+            OnboardingPage.RECEIVING -> saveConnectionModeOnce()
+            OnboardingPage.WELCOME, OnboardingPage.ONION, OnboardingPage.THEME, OnboardingPage.PHONE -> Unit
+        }
+    }
+
+    private fun requestPermissionsOnce() {
+        if (!_uiState.value.permissionsRequested) requestPermissions()
+    }
+
+    private fun saveConnectionModeOnce() {
+        val state = _uiState.value
+        if (state.connectsWhileClosed && !state.connectionModeSaved) chooseConnectionMode(state.connectionMode)
     }
 
     private fun requestPermissions() {
         _uiState.value =
             _uiState.value.copy(
-                permissionRequestId = _uiState.value.permissionRequestId + 1
+                permissionRequestId = _uiState.value.permissionRequestId + 1,
+                permissionsRequested = true
             )
     }
 
@@ -44,7 +84,7 @@ class OnboardingViewModel : BaseViewModel() {
             _uiState.value.copy(
                 permissionsRequested = true,
                 phonePermissionGranted = result.phoneNumberGranted,
-                page = OnboardingPage.PHONE,
+                page = if (_uiState.value.page == OnboardingPage.PERMISSIONS) OnboardingPage.RECEIVING else _uiState.value.page,
                 automaticPhoneRequestId =
                     if (result.phoneNumberGranted) {
                         _uiState.value.automaticPhoneRequestId + 1
@@ -52,6 +92,45 @@ class OnboardingViewModel : BaseViewModel() {
                         _uiState.value.automaticPhoneRequestId
                     }
             )
+    }
+
+    /** Saved at once; "Always connected" also asks Android to leave Sparrow out of battery optimization. */
+    private fun chooseConnectionMode(mode: ConnectionMode) {
+        _uiState.update { state ->
+            state.copy(
+                connectionMode = mode,
+                connectionModeSaved = true,
+                batteryExemptionDeclined = false,
+                batteryExemptionRequestId = state.batteryExemptionRequestId + if (mode == ConnectionMode.ALWAYS_CONNECTED) 1 else 0
+            )
+        }
+        viewModelScope.launch {
+            setConnectionMode(mode).onFailure { error -> SparrowLog.error("OnboardingViewModel", "Connection mode could not be saved", error) }
+        }
+    }
+
+    private fun showNextTourStep() {
+        _uiState.update { state ->
+            val next = state.tourStep?.let { step -> TourStep.entries.getOrNull(step.ordinal + 1) }
+            state.copy(tourStep = next ?: state.tourStep, tourFinished = next == null)
+        }
+    }
+
+    private fun showPreviousTourStep() {
+        _uiState.update { state ->
+            state.copy(tourStep = state.tourStep?.let { step -> TourStep.entries.getOrNull(step.ordinal - 1) ?: step })
+        }
+    }
+
+    private fun chooseThemeMode(mode: AppThemeMode) {
+        _uiState.update { state -> state.copy(themeMode = mode) }
+        viewModelScope.launch {
+            setAppThemeMode(mode).onFailure { error -> SparrowLog.error("OnboardingViewModel", "Theme mode could not be saved", error) }
+        }
+    }
+
+    fun onBatteryExemptionResult(exempted: Boolean) {
+        _uiState.update { state -> state.copy(batteryExemptionDeclined = !exempted) }
     }
 
     private fun requestPhoneNumberHint() {

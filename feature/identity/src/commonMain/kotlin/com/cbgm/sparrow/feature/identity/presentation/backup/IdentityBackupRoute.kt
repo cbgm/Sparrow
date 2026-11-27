@@ -29,9 +29,9 @@ fun IdentityBackupRoute(
     var exportRequest by remember { mutableStateOf<IdentityExportRequest?>(null) }
 
     LaunchedEffect(exportDocument) {
-        if (exportDocument != null) {
+        exportDocument?.let { document ->
             exportRequestId += 1
-            exportRequest = IdentityExportRequest(exportRequestId, exportDocument!!)
+            exportRequest = IdentityExportRequest(exportRequestId, document)
         }
     }
 

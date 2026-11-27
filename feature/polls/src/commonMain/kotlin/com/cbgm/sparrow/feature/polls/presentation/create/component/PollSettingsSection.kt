@@ -1,14 +1,15 @@
 package com.cbgm.sparrow.feature.polls.presentation.create.component
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,7 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowSwitch
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.polls.presentation.component.pollDurationLabel
 import com.cbgm.sparrow.feature.polls.util.PollConstants.MAX_EXPIRY_MINUTES
@@ -53,8 +57,7 @@ fun PollSettingsSection(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            modifier = Modifier.fillMaxWidth()
         ) {
             PollSettingSwitchRow(
                 title = stringResource(Res.string.feature_polls_poll_ends),
@@ -124,7 +127,10 @@ private fun PollSettingSwitchRow(
     description: String? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
@@ -144,8 +150,9 @@ private fun PollSettingSwitchRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        SparrowSwitch(checked = checked, onCheckedChange = null)
     }
+    HorizontalDivider(thickness = Dimens.Base.dividerThickness, color = MaterialTheme.colorScheme.divider)
 }
 
 @Preview

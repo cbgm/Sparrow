@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.composer.component
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,22 +8,16 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Attachment
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -47,12 +40,7 @@ internal fun MessageInput(
     isAttachmentVisible: Boolean,
     onAttachmentClick: () -> Unit
 ) {
-    var textLineCount by remember { mutableIntStateOf(1) }
-
-    val isMultiline = textLineCount > 1
-
-    val buttonWidth = Dimens.MessageInput.sendButtonWidth
-    val buttonHeight = Dimens.MessageInput.buttonHeight
+    val canSend = sendEnabled && (value.isNotBlank() || hasAttachments)
 
     Row(
         modifier = modifier
@@ -60,15 +48,13 @@ internal fun MessageInput(
             .padding(vertical = MaterialTheme.spacing.micro),
         verticalAlignment = Alignment.Bottom
     ) {
-        RoundedInputButton(
+        ComposerButton(
             onClick = onAttachmentClick,
             enabled = attachmentsEnabled,
-            modifier = Modifier
-                .padding(end = MaterialTheme.spacing.base),
             icon = if (!isAttachmentVisible) {
-                Icons.Filled.AttachFile
+                SparrowIcons.Attach
             } else {
-                Icons.Filled.Attachment
+                SparrowIcons.AttachOpen
             }
         )
 
@@ -76,30 +62,21 @@ internal fun MessageInput(
             messageText = value,
             onMessageTextChanged = onValueChange,
             isInputEnabled = inputEnabled,
-            onTextLineCountChanged = { count -> textLineCount = count },
             modifier = Modifier.weight(1F)
         )
 
-        SendButton(
-            buttonWidth = buttonWidth,
-            buttonHeight = buttonHeight,
-            isRound = isMultiline,
-            onSendClick = onSendClick,
-            enabled = sendEnabled && (value.isNotBlank() || hasAttachments),
-            isEditing = isEditing,
-            modifier = Modifier.align(
-                if (isMultiline) {
-                    Alignment.Bottom
-                } else {
-                    Alignment.CenterVertically
-                }
+        AnimatedVisibility(visible = canSend || isEditing) {
+            ComposerButton(
+                onClick = onSendClick,
+                enabled = canSend,
+                icon = if (isEditing) SparrowIcons.Check else SparrowIcons.Send,
+                tint = MaterialTheme.colorScheme.primary
             )
-        )
-        RoundedInputButton(
+        }
+        ComposerButton(
             onClick = onVoiceClick,
             enabled = !isEditing,
-            icon = Icons.Default.Mic,
-            modifier = Modifier.padding(start = MaterialTheme.spacing.base)
+            icon = SparrowIcons.Mic
         )
     }
 }
@@ -109,7 +86,6 @@ private fun MessageField(
     messageText: String,
     onMessageTextChanged: (String) -> Unit,
     isInputEnabled: Boolean,
-    onTextLineCountChanged: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     BasicTextField(
@@ -117,20 +93,11 @@ private fun MessageField(
         onValueChange = onMessageTextChanged,
         modifier = modifier
             .heightIn(
-                min = Dimens.MessageInput.composerHeight,
+                min = Dimens.MessageInput.actionSize,
                 max = Dimens.MessageInput.messageFieldHeightMax
             )
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = MaterialTheme.shapes.medium
-            )
-            .border(
-                width = Dimens.Base.borderStrokeWidth,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                shape = MaterialTheme.shapes.medium
-            )
             .padding(
-                horizontal = MaterialTheme.spacing.small,
+                horizontal = MaterialTheme.spacing.base,
                 vertical = MaterialTheme.spacing.micro
             ),
         enabled = isInputEnabled,
@@ -142,9 +109,6 @@ private fun MessageField(
             KeyboardOptions(
                 imeAction = ImeAction.Default
             ),
-        onTextLayout = { result ->
-            onTextLineCountChanged(result.lineCount)
-        },
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -154,7 +118,7 @@ private fun MessageField(
                     Text(
                         text = stringResource(Res.string.feature_chats_composer_placeholder),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.MessageInput.placeholder)
                     )
                 }
                 innerTextField()

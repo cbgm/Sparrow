@@ -4,19 +4,14 @@ import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.crypto.IdentityKeyGenerator
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityKeyDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.device.PrivateKeyState
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupMismatchException
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
-import com.cbgm.sparrow.protocol.identity.LocalIdentityUnavailableException
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emitAll
@@ -27,17 +22,16 @@ class IdentityRepositoryImpl(
     private val signatureCrypto: DetachedSignatureCrypto,
     private val transportCipher: TransportMessageCipher,
     private val privateKeyStorage: PrivateKeyStorage,
-    private val publicIdentityDataSource: PublicIdentityDataSource
-) : IdentityRepository,
-    LocalPublicIdentityProvider,
-    LocalSigningKeyPairProvider,
-    LocalEncryptionKeyPairProvider,
-    LocalSigningPublicKeyProvider {
+    private val publicIdentityDataSource: PublicIdentityDataSource,
+    private val keyDataSource: LocalIdentityKeyDataSource = LocalIdentityKeyDataSource(privateKeyStorage, publicIdentityDataSource)
+) : IdentityRepository {
     private val identityUpdates =
         MutableSharedFlow<PublicIdentity?>(
             replay = 1,
             extraBufferCapacity = 1
         )
+
+    override fun observeKeysUsable(): Flow<Boolean> = keyDataSource.observeKeysUsable()
 
     override fun observeIdentity(): Flow<PublicIdentity?> =
         flow {
@@ -48,12 +42,12 @@ class IdentityRepositoryImpl(
     override suspend fun getStatus(): Result<IdentityStatus> =
         safeSuspendCall {
             val publicIdentityExists = publicIdentityDataSource.exists()
-            val privateKeysExist = runCatching { privateKeyStorage.hasIdentityPrivateKeys() }.getOrDefault(false)
-            val anyPrivateKeyMaterial = privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()
+            // Throws when the keys cannot be read right now; that is a failure, never INCOMPLETE.
+            val privateKeyState = privateKeyStorage.privateKeyState()
 
             when {
-                !publicIdentityExists && !anyPrivateKeyMaterial -> IdentityStatus.NOT_CREATED
-                !publicIdentityExists || !privateKeysExist -> IdentityStatus.INCOMPLETE
+                !publicIdentityExists && privateKeyState == PrivateKeyState.ABSENT -> IdentityStatus.NOT_CREATED
+                !publicIdentityExists || privateKeyState != PrivateKeyState.AVAILABLE -> IdentityStatus.INCOMPLETE
                 !hasConsistentSigningIdentity() -> IdentityStatus.INCOMPLETE
                 else -> IdentityStatus.READY
             }
@@ -192,68 +186,46 @@ class IdentityRepositoryImpl(
         publicIdentity
     }
 
+    /**
+     * Puts the private keys of the stored identity back from a backup. Only a backup of the same identity is
+     * accepted, so chats and contacts stay valid; the old, unusable key-store key is replaced.
+     */
+    @OptIn(ExperimentalUnsignedTypes::class)
+    override suspend fun repairIdentityKeys(
+        publicIdentity: PublicIdentity,
+        encryptionPrivateKey: ByteArray,
+        signingPrivateKey: ByteArray
+    ): Result<PublicIdentity> = safeSuspendCall {
+        val stored = publicIdentityDataSource.load() ?: throw IdentityBackupMismatchException()
+        if (stored != publicIdentity) throw IdentityBackupMismatchException()
+        validateIdentityKeys(publicIdentity, encryptionPrivateKey, signingPrivateKey).getOrThrow()
+        privateKeyStorage.deleteIdentityPrivateKeys()
+        privateKeyStorage.saveIdentityPrivateKeys(encryptionPrivateKey.toUByteArray(), signingPrivateKey.toUByteArray())
+        keyDataSource.setKeysUsable(true)
+        identityUpdates.emit(stored)
+        stored
+    }
+
+    override suspend fun discardKeyStoreKey(): Result<Unit> =
+        safeSuspendCall {
+            privateKeyStorage.discardWrappingKey()
+            keyDataSource.setKeysUsable(false)
+        }
+
     override suspend fun resetIdentity(): Result<Unit> =
         safeSuspendCall {
             privateKeyStorage.deleteIdentityPrivateKeys()
             publicIdentityDataSource.delete()
+            keyDataSource.setKeysUsable(true)
             identityUpdates.emit(null)
         }
 
     override suspend fun getIdentity(): Result<PublicIdentity?> =
         safeSuspendCall { publicIdentityDataSource.load() }
 
-    @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun getEncryptionPrivateKey(): Result<ByteArray> =
-        safeSuspendCall {
-            privateKeyStorage.loadEncryptionPrivateKey()?.toByteArray()
-                ?: error("Local encryption private key does not exist")
-        }
+    override suspend fun getEncryptionPrivateKey(): Result<ByteArray> = keyDataSource.getEncryptionPrivateKey()
 
-    @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun getSigningPrivateKey(): Result<ByteArray> =
-        safeSuspendCall {
-            privateKeyStorage.loadSigningPrivateKey()?.toByteArray()
-                ?: error("Local signing private key does not exist")
-        }
-
-    override suspend fun getLocalPublicIdentity(): Result<LocalPublicIdentity> =
-        runCatching {
-            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
-            LocalPublicIdentity(
-                encryptionPublicKey = identity.encryptionPublicKey.copyOf(),
-                signingPublicKey = identity.signingPublicKey.copyOf()
-            )
-        }
-
-    override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
-        runCatching {
-            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
-            LocalSigningKeyPair(
-                publicKey = identity.signingPublicKey.copyOf(),
-                privateKey = getSigningPrivateKey().getOrThrow().copyOf()
-            )
-        }
-
-    override suspend fun getEncryptionKeyPair(): Result<LocalEncryptionKeyPair> =
-        runCatching {
-            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
-            val privateKey = getEncryptionPrivateKey().getOrThrow()
-            require(identity.encryptionPublicKey.isNotEmpty()) { "Local encryption public key is empty" }
-            require(privateKey.isNotEmpty()) { "Local encryption private key is empty" }
-            LocalEncryptionKeyPair(
-                publicKey = identity.encryptionPublicKey.copyOf(),
-                privateKey = privateKey.copyOf()
-            )
-        }
-
-    override suspend fun getSigningPublicKey(): Result<ByteArray> =
-        runCatching {
-            // FCM may ask for a routing ID before onboarding has created the identity.
-            // Use the typed absence signal so PushTokenRegistrationWorker can defer
-            // registration without publishing an expected startup state as a global error.
-            val identity = getIdentity().getOrThrow() ?: throw LocalIdentityUnavailableException()
-            identity.signingPublicKey.copyOf()
-        }
+    override suspend fun getSigningPrivateKey(): Result<ByteArray> = keyDataSource.getSigningPrivateKey()
 
     private companion object {
         val IDENTITY_INTEGRITY_PAYLOAD =

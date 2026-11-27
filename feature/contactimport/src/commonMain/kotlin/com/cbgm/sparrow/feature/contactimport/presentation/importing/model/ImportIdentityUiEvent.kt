@@ -7,11 +7,13 @@ sealed interface ImportIdentityUiEvent {
 
     data object ImportClicked : ImportIdentityUiEvent
 
+    data class QrCodeScanned(
+        val rawValue: String
+    ) : ImportIdentityUiEvent
+
     data object ScannedIdentityConfirmed : ImportIdentityUiEvent
 
     data object ScannedIdentityDismissed : ImportIdentityUiEvent
 
     data object BackClicked : ImportIdentityUiEvent
-
-    data object ScanQrCodeClicked : ImportIdentityUiEvent
 }

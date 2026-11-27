@@ -95,6 +95,7 @@ class ContactInvitationPacketCreationTest {
         val ready = protocol.createReady(
             invitationId = "id-2",
             readyAtEpochMilliseconds = 120L,
+            profilePicture = picture,
             responseChallenge = response,
             acceptedResponderEncryptionPublicKey = encryption,
             acceptedResponderSigningPublicKey = keys.publicKey,
@@ -102,12 +103,14 @@ class ContactInvitationPacketCreationTest {
             signingKeyPair = keys
         ).getOrThrow()
         assertEquals("contact-ready-id-2", ready.packetId)
+        assertEquals(picture, ready.profilePicture)
         assertContentEquals(
             encoder.encodeReady(
                 ready.packetId,
                 ready.version,
                 ready.invitationId,
                 ready.readyAtEpochMilliseconds,
+                ready.profilePicture,
                 ready.responseChallenge,
                 ready.acceptedResponderEncryptionPublicKey,
                 ready.acceptedResponderSigningPublicKey,
@@ -145,6 +148,7 @@ class ContactInvitationPacketCreationTest {
         val ready = protocol.createReady(
             "id-3",
             600_001L,
+            picture,
             response,
             encryption,
             keys.publicKey,

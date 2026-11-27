@@ -6,14 +6,14 @@ import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupExpenseMembers
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import kotlinx.coroutines.flow.first
 
 /** Membership's installed epoch keys identify expense members; contact verification is not required. */
 class FindGroupExpenseMembersUseCase(
     private val pinRepository: GroupPinRepository,
     private val membershipRepository: GroupMembershipRepository,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider
+    private val localPublicIdentitySource: LocalPublicIdentitySource
 ) {
     suspend operator fun invoke(groupId: String): Result<GroupExpenseMembers> =
         safeSuspendCall(logFailure = false) {
@@ -27,7 +27,7 @@ class FindGroupExpenseMembersUseCase(
             val routingMembers = membershipRepository.getCurrentTransportRoutingMembers(groupId).getOrThrow().orEmpty()
                 .associateBy { it.contactId }
             val localId = ExpenseMemberId.fromSigningPublicKey(
-                localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow().signingPublicKey
+                localPublicIdentitySource.getLocalPublicIdentity().getOrThrow().signingPublicKey
             )
             val remoteIds = administration.currentMemberContactIds.mapNotNull { contactId ->
                 routingMembers[contactId]?.signingPublicKey?.let(ExpenseMemberId::fromSigningPublicKey)

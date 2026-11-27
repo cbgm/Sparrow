@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.workflow.transport
 
+import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.command.DeliveryCommand
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository.DirectMessageDeliveryRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
@@ -23,11 +24,7 @@ class RecordPreparedTransportWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome =
         when (step) {
             is Step.FindDirectMessage ->
-                if (directDeliveryRepository.findStatusByPacketId(step.command.packetId).getOrThrow() != null) {
-                    Outcome.DirectMessageFound
-                } else {
-                    Outcome.NotDirectMessage
-                }
+                directMessageFound(directDeliveryRepository.findStatusByPacketId(step.command.packetId).getOrThrow())
             is Step.StorePreparedTransport -> {
                 directDeliveryRepository.storePreparedTransport(
                     packetId = step.command.packetId,
@@ -44,6 +41,9 @@ class RecordPreparedTransportWorkflow internal constructor(
             Outcome.NotDirectMessage,
             Outcome.Stored -> Transition.Complete()
         }
+
+    private fun directMessageFound(status: MessageDeliveryStatus?): Outcome =
+        if (status != null) Outcome.DirectMessageFound else Outcome.NotDirectMessage
 
     sealed interface Step : WorkflowStep {
         val command: DeliveryCommand.RecordPreparedTransport

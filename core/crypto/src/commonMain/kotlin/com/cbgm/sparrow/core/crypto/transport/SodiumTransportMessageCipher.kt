@@ -25,7 +25,7 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
 
             val ciphertext: UByteArray =
                 Box.seal(
-                    message = plaintext.toUByteArray(),
+                    message = TransportPadding.pad(plaintext).toUByteArray(),
                     recipientsPublicKey = recipientPublicKey.toUByteArray()
                 )
 
@@ -79,7 +79,7 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
                     recipientsSecretKey = localPrivateKey.toUByteArray()
                 )
 
-            plaintext.toByteArray()
+            TransportPadding.unpad(plaintext.toByteArray())
         }.recoverCatching { error ->
             when (error) {
                 is InvalidPublicKeyException,
@@ -114,7 +114,8 @@ class SodiumTransportMessageCipher : TransportMessageCipher {
     }
 
     private companion object {
-        const val CURRENT_VERSION = 1
+        /** Version 2: the packet is padded to a size class before it is sealed ([TransportPadding]). */
+        const val CURRENT_VERSION = 2
         const val BOX_PUBLIC_KEY_SIZE = 32
         const val BOX_PRIVATE_KEY_SIZE = 32
     }

@@ -1,34 +1,39 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.expense
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
-import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpensePolicy
-import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinSlotPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
 import kotlin.reflect.KClass
 
 /**
  * AuthorizeAdmin -> CheckNoActiveBoard -> CreateBoard -> SendBoard -> PinBoard.
  *
- * An expense board is an ordinary group message part that occupies the group's pin slot.
+ * An expense board is an ordinary group message part that occupies the group's pin slot. Activations of one group
+ * run one after another under their own lock ([lockKey]), so a second tap sees the board the first one pinned in
+ * CheckNoActiveBoard instead of sending a second board. The nested SendMessage (group send lock) and PinMessage
+ * (whose publishing takes the group administration lock) never take this key, so the nesting cannot deadlock.
  */
 class ActivateGroupExpensesWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val pinRepository: GroupPinRepository,
-    private val requireGroupAdminContext: RequireGroupAdminContextUseCase
+    private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val createExpenseBoard: CreateExpenseBoardUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.ActivateExpenses,
         ActivateGroupExpensesWorkflow.Step,
         ActivateGroupExpensesWorkflow.Outcome
     > {
     override val commandType: KClass<GroupMessageCommand.ActivateExpenses> = GroupMessageCommand.ActivateExpenses::class
+
+    override fun lockKey(command: GroupMessageCommand.ActivateExpenses): String = "group-expense:${command.groupId}"
 
     override fun firstStep(command: GroupMessageCommand.ActivateExpenses): Step = Step.AuthorizeAdmin(command)
 
@@ -40,21 +45,10 @@ class ActivateGroupExpensesWorkflow internal constructor(
                 Outcome.AdminAuthorized
             }
             is Step.CheckNoActiveBoard -> {
-                check(pinRepository.find(step.command.groupId).getOrThrow()?.hasActiveExpenseBoard != true) {
-                    "Group expenses are already active"
-                }
+                GroupPinSlotPolicy.checkNoActiveExpenseBoard(pinRepository.find(step.command.groupId).getOrThrow())
                 Outcome.NoActiveBoard
             }
-            is Step.CreateBoard -> {
-                val board =
-                    ExpenseBoard(
-                        id = IdGenerator.generate(prefix = "expense-board"),
-                        currencyCode = step.command.currencyCode,
-                        activatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                    )
-                ExpensePolicy.requireValid(board)
-                Outcome.BoardCreated(board)
-            }
+            is Step.CreateBoard -> Outcome.BoardCreated(createExpenseBoard(step.command.currencyCode).getOrThrow())
             is Step.SendBoard -> {
                 val result =
                     engine.run(

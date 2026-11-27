@@ -8,6 +8,7 @@ import com.cbgm.sparrow.core.base.messagepart.domain.model.Poll
 import com.cbgm.sparrow.core.base.messagepart.domain.model.PollPolicy
 import com.cbgm.sparrow.core.base.messagepart.domain.model.Text
 import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.util.time.formatMessageTime
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
@@ -130,6 +131,8 @@ internal fun GroupMessage.toMessageBubbleUi(
         security = security,
         contentStatus = contentStatus,
         deliveryStatus = deliveryStatus,
+        time = formatMessageTime(timestamp),
+        writtenAt = timestamp,
         canEdit = isEditable(),
         senderName = senderName,
         senderIsInContacts = senderIsInContacts,

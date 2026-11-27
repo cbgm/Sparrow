@@ -6,8 +6,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.cbgm.sparrow.feature.embedding.data.model.LocalEmbeddingModel
 import com.cbgm.sparrow.feature.embedding.data.model.cosineSimilarity
 import com.cbgm.sparrow.feature.embedding.data.model.normalizedPrefix
+import com.cbgm.sparrow.feature.embedding.data.platform.AndroidEmbeddingModelLocalDataSource
 import com.cbgm.sparrow.feature.embedding.data.platform.AndroidLocalEmbeddingModelFiles
-import com.cbgm.sparrow.feature.embedding.data.platform.AndroidLocalEmbeddingModelManager
 import com.cbgm.sparrow.feature.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.feature.embedding.data.platform.MediaPipeLocalTextEmbedder
 import kotlinx.coroutines.Dispatchers
@@ -30,8 +30,8 @@ class EmbeddingGemmaParityDeviceTest {
         val modelFiles = AndroidLocalEmbeddingModelFiles(context)
         ensurePinnedModel(modelFiles)
 
-        val modelManager = AndroidLocalEmbeddingModelManager(context, modelFiles)
-        val embedder = MediaPipeLocalTextEmbedder(context, modelManager)
+        val modelDataSource = AndroidEmbeddingModelLocalDataSource(context, modelFiles)
+        val embedder = MediaPipeLocalTextEmbedder(context, modelDataSource)
 
         try {
             REFERENCES.forEach { reference ->

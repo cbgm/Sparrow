@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsLocalDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -11,7 +11,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class ContactBlocklistRepositoryImpl(
-    private val settingsStorage: SettingsStorage
+    private val settingsDataSource: SettingsLocalDataSource
 ) : ContactBlocklistRepository {
     private val mutex = Mutex()
     private val blockUnknownContactInvites = MutableStateFlow(false)
@@ -20,19 +20,19 @@ class ContactBlocklistRepositoryImpl(
     override fun observeBlockUnknownContactInvites(): Flow<Boolean> =
         blockUnknownContactInvites
             .onStart {
-                blockUnknownContactInvites.value = settingsStorage.getBlockUnknownContactInvites()
+                blockUnknownContactInvites.value = settingsDataSource.getBlockUnknownContactInvites()
             }.distinctUntilChanged()
 
     override suspend fun getBlockUnknownContactInvites(): Result<Boolean> =
         safeSuspendCall {
-            val enabled = settingsStorage.getBlockUnknownContactInvites()
+            val enabled = settingsDataSource.getBlockUnknownContactInvites()
             blockUnknownContactInvites.value = enabled
             enabled
         }
 
     override suspend fun setBlockUnknownContactInvites(enabled: Boolean): Result<Unit> =
         safeSuspendCall {
-            settingsStorage.setBlockUnknownContactInvites(enabled)
+            settingsDataSource.setBlockUnknownContactInvites(enabled)
             blockUnknownContactInvites.value = enabled
         }
 
@@ -88,13 +88,13 @@ class ContactBlocklistRepositoryImpl(
                         }
                     }.toSet()
 
-            settingsStorage.setBlockedContactIds(updatedIds.sorted().joinToString(separator = CONTACT_ID_SEPARATOR))
+            settingsDataSource.setBlockedContactIds(updatedIds.sorted().joinToString(separator = CONTACT_ID_SEPARATOR))
             blockedContactIds.value = updatedIds
         }
     }
 
     private suspend fun loadBlockedContactIds(): Set<String> =
-        settingsStorage
+        settingsDataSource
             .getBlockedContactIds()
             ?.split(CONTACT_ID_SEPARATOR)
             ?.map { contactId -> contactId.trim() }

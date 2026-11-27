@@ -24,6 +24,8 @@ data class Invitation(
     val peerId: String,
     val peerDisplayName: String?,
     val peerSecondaryText: String?,
+    val peerUnverified: Boolean,
+    val phoneContactName: String?,
     val direction: InvitationDirection,
     val status: InvitationStatus,
     val expiresAtEpochMilliseconds: Long,

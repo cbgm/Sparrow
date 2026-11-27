@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChatDao {
+    @Query("SELECT EXISTS(SELECT 1 FROM conversations)")
+    suspend fun hasConversations(): Boolean
+
     @Query(
         """
         SELECT *
@@ -30,6 +33,21 @@ interface ChatDao {
 
     @Upsert
     suspend fun upsertConversation(conversation: ConversationEntity)
+
+    /**
+     * Upserts [conversation] but keeps the unseen count of a stored row, and its visibility when [keepVisibility]
+     * is set, so a repeated write never resets what the user has not read or has hidden.
+     */
+    @Transaction
+    suspend fun upsertConversationKeepingLocalState(conversation: ConversationEntity, keepVisibility: Boolean) {
+        val existing = findConversationById(conversation.id)
+        upsertConversation(
+            conversation.copy(
+                unseenLocalMessageCount = existing?.unseenLocalMessageCount ?: conversation.unseenLocalMessageCount,
+                isVisible = existing?.isVisible?.takeIf { keepVisibility } ?: conversation.isVisible
+            )
+        )
+    }
 
     @Upsert
     suspend fun upsertConversationParticipant(participant: ConversationParticipantEntity)
@@ -175,6 +193,16 @@ interface ChatDao {
         SELECT id, createdAtEpochMilliseconds
         FROM messages
         WHERE conversationId = :conversationId
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        """
+    )
+    fun observeMessageCursors(conversationId: String): Flow<List<MessageCursorDto>>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
           AND (
               createdAtEpochMilliseconds < :beforeTimestamp
               OR (
@@ -273,6 +301,28 @@ interface ChatDao {
     @Upsert
     suspend fun upsertMessage(message: MessageEntity)
 
+    /**
+     * Moves a message to [deliveryStatus] with a new packet only while it is still in [expectedStatus]; a deleted
+     * or concurrently changed message stays as it is. Returns the number of updated rows.
+     */
+    @Query(
+        """
+        UPDATE messages
+        SET packetId = :packetId,
+            transportMode = :transportMode,
+            deliveryStatus = :deliveryStatus
+        WHERE id = :messageId
+          AND deliveryStatus = :expectedStatus
+        """
+    )
+    suspend fun updateMessagePacketIfStatus(
+        messageId: String,
+        expectedStatus: String,
+        packetId: String,
+        transportMode: String,
+        deliveryStatus: String
+    ): Int
+
     @Upsert
     suspend fun upsertMessagePart(part: MessagePartEntity)
 
@@ -283,7 +333,7 @@ interface ChatDao {
     suspend fun deleteMessageTextPart(messageId: String)
 
     @Transaction
-    suspend fun replaceMessageText(messageId: String, text: String) {
+    suspend fun replaceMessageText(messageId: String, text: String, editedAtEpochMilliseconds: Long? = null) {
         deleteMessageTextPart(messageId)
         if (text.isBlank()) return
         upsertMessagePart(
@@ -297,10 +347,35 @@ interface ChatDao {
         upsertMessageText(
             MessageTextEntity(
                 partId = messageId,
-                text = text
+                text = text,
+                editedAtEpochMilliseconds = editedAtEpochMilliseconds
             )
         )
     }
+
+    /**
+     * Replaces the text only when [editedAtEpochMilliseconds] is later than the stored edit, so edits that
+     * arrive out of order keep the newest text. Returns whether the text was replaced.
+     */
+    @Transaction
+    suspend fun replaceMessageTextIfNewer(messageId: String, text: String, editedAtEpochMilliseconds: Long): Boolean {
+        val storedEditedAt = findMessageTextEditedAt(messageId)
+        if (storedEditedAt != null && editedAtEpochMilliseconds <= storedEditedAt) return false
+        replaceMessageText(messageId, text, editedAtEpochMilliseconds)
+        return true
+    }
+
+    @Query(
+        """
+        SELECT message_text.editedAtEpochMilliseconds
+        FROM message_parts
+        INNER JOIN message_text ON message_text.partId = message_parts.id
+        WHERE message_parts.messageId = :messageId
+          AND message_parts.type = 'TEXT'
+        LIMIT 1
+        """
+    )
+    suspend fun findMessageTextEditedAt(messageId: String): Long?
 
     @Transaction
     suspend fun upsertMessageWithText(message: MessageEntity, text: String) {
@@ -359,6 +434,40 @@ interface ChatDao {
         contactId: String,
         deliveryStatus: String
     ): List<MessageEntity>
+
+    /** Queued outgoing direct messages whose packet never reached the outbox, e.g. after a crash mid-send. */
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = 'QUEUED'
+          AND messages.createdAtEpochMilliseconds < :createdBefore
+          AND (
+            messages.packetId IS NULL
+            OR messages.packetId NOT IN (SELECT protocol_outbox.packetId FROM protocol_outbox)
+          )
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    suspend fun findDirectMessagesAwaitingOutbox(createdBefore: Long): List<MessageEntity>
+
+    /** Failed outgoing direct messages that never got a packet, e.g. because an attachment could not be uploaded yet. */
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = 'FAILED'
+          AND messages.packetId IS NULL
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    suspend fun findUnsentDirectMessages(): List<MessageEntity>
 
     @Query(
         """
@@ -529,7 +638,15 @@ interface ChatDao {
                   AND messages.contentStatus = 'READABLE'
             ) + conversations.unseenLocalMessageCount
         ) AS unreadCount,
-        conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds
+        conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds,
+        EXISTS (
+            SELECT 1
+            FROM contact_public_identities
+            WHERE contact_public_identities.contactId = conversations.contactId
+              AND contact_public_identities.keyExchangeStatus = 'MUTUAL'
+              AND contact_public_identities.verificationStatus = 'VERIFIED'
+              AND contact_public_identities.verifiedByContact = 1
+        ) AS isMutuallyVerified
     FROM conversations
     LEFT JOIN contacts ON contacts.id = conversations.contactId
     LEFT JOIN group_metadata ON group_metadata.groupId = conversations.id
@@ -628,6 +745,27 @@ interface ChatDao {
         """
     )
     suspend fun findQueuedGroupMessages(conversationId: String): List<MessageEntity>
+
+    /** The groups holding own messages that were never encrypted for anyone yet ([findQueuedGroupMessages]). */
+    @Query(
+        """
+        SELECT DISTINCT messages.conversationId
+        FROM messages
+        INNER JOIN conversations
+            ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'GROUP'
+          AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
+          AND messages.packetId IS NULL
+          AND messages.deliveryStatus = 'QUEUED'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM message_recipient_states
+              WHERE message_recipient_states.messageId = messages.id
+          )
+        """
+    )
+    suspend fun findGroupsWithQueuedMessages(): List<String>
 
     /** Recipient rows can be committed just before a process crash, with no
      * corresponding outbox row yet. Reconcile that window after activation.

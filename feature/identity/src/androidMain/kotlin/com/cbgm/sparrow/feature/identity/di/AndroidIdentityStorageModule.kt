@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.identity.di
 
 import com.cbgm.sparrow.feature.identity.data.datasource.ProfilePictureFileDataSource
 import com.cbgm.sparrow.feature.identity.data.repository.FirebasePhoneVerificationRepository
+import com.cbgm.sparrow.feature.identity.data.repository.FirebaseProject
 import com.cbgm.sparrow.feature.identity.device.AndroidIdentityBackupCodec
 import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.device.DebugSmsNotifier
@@ -26,6 +27,13 @@ val androidIdentityStorageModule =
 
         single {
             FirebasePhoneVerificationRepository(
+                context = androidContext(),
+                firebaseProject =
+                    FirebaseProject.of(
+                        appId = getPropertyOrNull<String>(FIREBASE_APP_ID_PROPERTY),
+                        apiKey = getPropertyOrNull<String>(FIREBASE_API_KEY_PROPERTY),
+                        projectId = getPropertyOrNull<String>(FIREBASE_PROJECT_ID_PROPERTY)
+                    ),
                 testSmsCode =
                     getPropertyOrNull<String>(DEBUG_SMS_CODE_PROPERTY)?.takeIf(String::isNotBlank),
                 debugSms = DebugSmsNotifier(androidContext())

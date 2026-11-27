@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/avatar` |
 | Build file | `feature/avatar/build.gradle.kts` |
-| Kotlin files | 36 |
-| Production Kotlin files | 36 |
+| Kotlin files | 37 |
+| Production Kotlin files | 37 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
 | Direct dependencies | 4 |
-| Direct dependents | 8 |
+| Direct dependents | 9 |
 
 ## Source sets
 
@@ -37,6 +37,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:expenses`](../modules/feature-expenses.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:invite`](../modules/feature-invite.md)
+- [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:polls`](../modules/feature-polls.md)
 - [`:feature:settings`](../modules/feature-settings.md)
 - [`:shared`](../modules/shared.md)

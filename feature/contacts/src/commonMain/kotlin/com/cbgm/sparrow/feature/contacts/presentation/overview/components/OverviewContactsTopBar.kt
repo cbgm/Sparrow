@@ -3,19 +3,19 @@ package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contacts
@@ -31,26 +31,20 @@ fun OverviewContactsTopBar(
     onBack: () -> Unit
 ) {
     Column {
-        CenterAlignedTopAppBar(
+        SparrowTopBar(
             windowInsets = WindowInsets(MaterialTheme.spacing.zero),
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+            containerColor = containerColor,
             title = {
                 Text(
-                    text = stringResource(Res.string.base_contacts),
-                    style = MaterialTheme.typography.titleSmall
+                    text = stringResource(Res.string.base_contacts)
                 )
             },
             actions = {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null
+                        imageVector = SparrowIcons.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.TopBar.iconSize)
                     )
                 }
             }

@@ -3,6 +3,8 @@ package com.cbgm.sparrow.server.security
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.NodeDirectory
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
+import com.cbgm.sparrow.server.protocol.serverJson
+import com.cbgm.sparrow.server.protocol.unsigned
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,7 +18,6 @@ class ProtocolSignaturesTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "ws://node-a:8080/v1/gateway",
-                federationEndpoint = "http://node-a:8081",
                 mailboxEndpoint = "http://node-a:8082",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),
@@ -28,6 +29,30 @@ class ProtocolSignaturesTest {
 
         assertTrue(ProtocolSignatures.verifyDescriptor(signed))
         assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(clientEndpoint = "ws://attacker")))
+    }
+
+    @Test
+    fun theOperatorIsSignedAndADescriptorWithoutOneSignsAsBefore() {
+        val identity = NodeIdentity.generate()
+        val unsigned =
+            SparrowNodeDescriptor(
+                nodeId = identity.nodeId,
+                clientEndpoint = "ws://node-a:8080/v1/gateway",
+                mailboxEndpoint = "http://node-a:8082",
+                identityPublicKey = identity.encodedPublicKey,
+                protocolVersions = setOf(1),
+                capabilities = NodeCapability.entries.toSet(),
+                validUntilEpochMilliseconds = Long.MAX_VALUE,
+                operator = "Example Org",
+                signature = byteArrayOf()
+            )
+        val signed = ProtocolSignatures.signDescriptor(unsigned, identity)
+
+        assertTrue(ProtocolSignatures.verifyDescriptor(signed))
+        assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(operator = "Someone Else")))
+        assertFalse(ProtocolSignatures.verifyDescriptor(signed.copy(operator = null)))
+        // Nodes that declare no operator keep the signed content they had before the field existed.
+        assertFalse(serverJson.encodeToString(signed.copy(operator = null).unsigned()).contains("operator"))
     }
 
     @Test
@@ -84,8 +109,11 @@ class ProtocolSignaturesTest {
         assertTrue(RegistryCertificateSignatures.verifyAuthorityCertificate(authorityCertificate))
         assertTrue(RegistryCertificateSignatures.verifySigningCertificate(firstSigningCertificate))
         assertTrue(RegistryCertificateSignatures.verifySigningCertificate(secondSigningCertificate))
-        assertTrue(ProtocolSignatures.verifyDirectory(firstDirectory))
-        assertTrue(ProtocolSignatures.verifyDirectory(secondDirectory))
+        assertTrue(ProtocolSignatures.verifyDirectory(firstDirectory, nowEpochMilliseconds = 1_000L))
+        assertTrue(ProtocolSignatures.verifyDirectory(secondDirectory, nowEpochMilliseconds = 1_000L))
+        assertFalse(ProtocolSignatures.verifyDirectory(firstDirectory, nowEpochMilliseconds = 400L))
+        assertFalse(ProtocolSignatures.verifyDirectory(firstDirectory, nowEpochMilliseconds = 5_000L))
+        assertFalse(ProtocolSignatures.verifyDirectory(firstDirectory, nowEpochMilliseconds = 10_000L))
         assertEquals(rootIdentity.nodeId, authorityCertificate.rootNodeId)
         assertEquals(authorityIdentity.nodeId, firstSigningCertificate.authorityNodeId)
         assertEquals(authorityIdentity.nodeId, secondSigningCertificate.authorityNodeId)

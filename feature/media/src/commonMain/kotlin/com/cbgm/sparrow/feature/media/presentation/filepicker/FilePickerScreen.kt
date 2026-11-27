@@ -16,19 +16,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -43,8 +39,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryKindUi
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryUi
@@ -235,7 +231,7 @@ private fun Breadcrumbs(
             )
             if (index < breadcrumbs.lastIndex) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    imageVector = SparrowIcons.Chevron,
                     contentDescription = null,
                     modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small)
                 )
@@ -298,7 +294,7 @@ private fun FileEntryRow(
             },
             trailingContent = {
                 if (entry.isDirectory) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                    Icon(SparrowIcons.Chevron, contentDescription = null)
                 } else {
                     Icon(
                         imageVector =
@@ -374,21 +370,14 @@ private fun FilePickerTopBar(
     onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
                 text =
                     uiState.currentDirectoryName.ifBlank {
                         stringResource(Res.string.feature_media_file_picker_title)
                     },
-                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -396,7 +385,7 @@ private fun FilePickerTopBar(
         navigationIcon = {
             IconButton(onClick = { onUiEvent(FilePickerUiEvent.BackClicked) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
@@ -404,7 +393,7 @@ private fun FilePickerTopBar(
         actions = {
             IconButton(onClick = { onUiEvent(FilePickerUiEvent.CloseClicked) }) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = SparrowIcons.Close,
                     contentDescription = stringResource(Res.string.base_close)
                 )
             }
@@ -423,7 +412,7 @@ private fun FilePickerTopBar(
                 Box {
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = SparrowIcons.More,
                             contentDescription = stringResource(Res.string.feature_media_file_picker_sort)
                         )
                     }

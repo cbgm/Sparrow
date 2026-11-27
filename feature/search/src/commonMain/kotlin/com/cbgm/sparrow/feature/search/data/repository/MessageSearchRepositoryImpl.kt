@@ -11,6 +11,7 @@ class MessageSearchRepositoryImpl(
 ) : MessageSearchRepository {
     override suspend fun search(
         query: String,
+        conversationId: String?,
         limit: Int
     ): Result<List<MessageSearchResult>> =
         safeSuspendCall {
@@ -20,6 +21,7 @@ class MessageSearchRepositoryImpl(
             localDataSource
                 .searchExactMessages(
                     query = normalizedQuery,
+                    conversationId = conversationId,
                     limit = limit.coerceAtLeast(1)
                 ).map { it.toMessageSearchResult() }
         }

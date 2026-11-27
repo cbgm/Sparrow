@@ -68,8 +68,10 @@ def default_settings() -> dict:
         "nodeDomain": node.get("PUBLIC_DOMAIN", ""),
         "controlDomain": cp.get("PUBLIC_DOMAIN", ""),
         "directoryUrl": node.get("CONTROL_PLANE_DIRECTORY_URL") or cp.get("CONTROL_PLANE_DIRECTORY_URL", ""),
-        "push": True,
-        "firebaseFile": "",
+        # Comma-separated; these numbers move to the device that registers them last, without SMS.
+        "testPhoneNumbers": "",
+        # Who runs the nodes; apps never route through two nodes of one operator.
+        "nodeOperator": properties(ROOT / "community-node" / ".env.runtime").get("NODE_OPERATOR", ""),
         "imagePrefix": cp.get("SPARROW_IMAGE_PREFIX", "ghcr.io/cbgm/sparrow"),
         "imageTag": cp.get("SPARROW_IMAGE_TAG", "latest"),
         # "combined" (Control Plane + Community Node) or "node" (Community Node only).
@@ -126,7 +128,12 @@ def engine_command(action: str, settings: dict) -> list[str]:
     command = platform_engine(action, settings)
     if action == "start" and installed() and settings["mode"] == "public" and settings["autoDns"]:
         # Automatic sslip.io names contain the public IP: follow a new address before starting.
-        return python("public_ip.py", "--then", *command)
+        command = python("public_ip.py", "--then", *command)
+    if action == "start":
+        # Start recreates the presence directory when its test numbers changed.
+        command = python("test_phone_numbers.py", "--numbers=" + settings["testPhoneNumbers"], "--then", *command)
+        # Start recreates the federation service when the operator name changed.
+        command = python("node_operator.py", "--operator=" + settings["nodeOperator"], "--then", *command)
     return command
 
 
@@ -143,8 +150,6 @@ def platform_engine(action: str, settings: dict) -> list[str]:
                 "ControlPlaneDomain": "" if settings["autoDns"] else settings["controlDomain"],
                 "DirectoryUrl": settings["directoryUrl"],
                 "ImagePrefix": settings["imagePrefix"], "ImageTag": settings["imageTag"],
-                "FirebaseCredentialsPath": settings["firebaseFile"],
-                "FirebaseMode": "Enabled" if settings["push"] else "Disabled",
             })
         if reinstall:
             parameters.update({"ExistingDeployment": "ReplaceTestData",
@@ -160,8 +165,6 @@ def platform_engine(action: str, settings: dict) -> list[str]:
         arguments += ["--node-domain", settings["nodeDomain"], "--control-domain", settings["controlDomain"]]
     if settings["directoryUrl"]:
         arguments += ["--directory-url", settings["directoryUrl"]]
-    if settings["push"] and settings["firebaseFile"]:
-        arguments += ["--firebase-file", settings["firebaseFile"]]
     if reinstall:
         arguments.append("--confirm-delete-data")
     return python("Invoke-SparrowServer.py", *arguments)
@@ -178,7 +181,7 @@ def update_command(source: str, path: str = "", installation: Path = ROOT) -> li
 
 # An installed server's own configuration always wins; remembered choices only
 # fill what it does not store (or everything before the first installation).
-REMEMBERED_WHEN_INSTALLED = ("push", "firebaseFile")
+REMEMBERED_WHEN_INSTALLED = ("testPhoneNumbers",)
 
 
 def load_settings() -> tuple[dict, dict]:
@@ -243,8 +246,8 @@ def describe(settings: dict) -> list[tuple[str, str]]:
             rows += [("Community Node hostname", settings["nodeDomain"] or "-"),
                      ("Control Plane hostname", settings["controlDomain"] or "-")]
     rows += [("Directory Server URL", settings["directoryUrl"] or "-"),
-             ("Push notifications", "on" if settings["push"] else "off"),
-             ("Firebase credentials file", settings["firebaseFile"] or "keep installed"),
+             ("Test phone numbers", settings["testPhoneNumbers"] or "none"),
+             ("Operator name", settings["nodeOperator"] or "none"),
              ("Images", f"{settings['imagePrefix']}-*:{settings['imageTag']}")]
     return rows
 

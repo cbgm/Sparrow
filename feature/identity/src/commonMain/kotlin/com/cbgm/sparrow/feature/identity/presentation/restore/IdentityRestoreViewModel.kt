@@ -62,15 +62,9 @@ class IdentityRestoreViewModel(
 
     fun onUiEvent(event: IdentityRestoreUiEvent) {
         when (event) {
-            is IdentityRestoreUiEvent.PasswordChanged -> {
-                if (_uiState.value.stage == IdentityRestoreStageUi.PASSWORD) {
-                    _uiState.update { it.copy(password = event.value) }
-                }
-            }
+            is IdentityRestoreUiEvent.PasswordChanged -> changePassword(event.value)
             IdentityRestoreUiEvent.ConfirmClicked -> confirm()
-            IdentityRestoreUiEvent.DismissClicked -> {
-                if (_uiState.value.stage == IdentityRestoreStageUi.PASSWORD) dismiss()
-            }
+            IdentityRestoreUiEvent.DismissClicked -> dismissPasswordEntry()
         }
     }
 
@@ -162,6 +156,16 @@ class IdentityRestoreViewModel(
         val stage = _uiState.value.stage
         if (stage != IdentityRestoreStageUi.COMPLETED && stage != IdentityRestoreStageUi.DISMISSED) return
         reset()
+    }
+
+    private fun changePassword(password: String) {
+        if (_uiState.value.stage == IdentityRestoreStageUi.PASSWORD) {
+            _uiState.update { it.copy(password = password) }
+        }
+    }
+
+    private fun dismissPasswordEntry() {
+        if (_uiState.value.stage == IdentityRestoreStageUi.PASSWORD) dismiss()
     }
 
     private fun dismiss() {

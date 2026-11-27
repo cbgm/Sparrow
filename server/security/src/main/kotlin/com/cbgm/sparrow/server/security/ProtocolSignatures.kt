@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.server.security
 
-import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.NodeDirectory
 import com.cbgm.sparrow.server.protocol.NodeHeartbeatRequest
 import com.cbgm.sparrow.server.protocol.RegistryAuthorityCertificate
@@ -9,6 +8,7 @@ import com.cbgm.sparrow.server.protocol.SignedNodeDirectory
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
+import com.cbgm.sparrow.server.security.ProtocolSignatures.directoryRootNodeId
 
 object ProtocolSignatures {
     fun signDescriptor(
@@ -19,7 +19,6 @@ object ProtocolSignatures {
             descriptor.copy(
                 nodeId = identity.nodeId,
                 identityPublicKey = identity.encodedPublicKey,
-                activeConnections = null,
                 signature = byteArrayOf()
             )
         return canonicalDescriptor.copy(
@@ -55,18 +54,6 @@ object ProtocolSignatures {
             )
         }.getOrDefault(false)
 
-    fun verifyClientRoute(
-        route: ClientRoute,
-        clientPublicKey: ByteArray
-    ): Boolean =
-        runCatching {
-            Signatures.verify(
-                content = serverJson.encodeToString(route.unsigned()).encodeToByteArray(),
-                signature = route.clientSignature,
-                publicKey = Signatures.decodePublicKey(clientPublicKey)
-            )
-        }.getOrDefault(false)
-
     fun signDirectory(
         directory: NodeDirectory,
         identity: NodeIdentity,
@@ -86,20 +73,39 @@ object ProtocolSignatures {
                 )
         )
 
-    fun verifyDirectory(directory: SignedNodeDirectory): Boolean {
+    /**
+     * Checks the directory's signature and certificate chain, including the certificates' validity
+     * dates. Which root to trust is the caller's decision (see [directoryRootNodeId]).
+     */
+    fun verifyDirectory(
+        directory: SignedNodeDirectory,
+        nowEpochMilliseconds: Long
+    ): Boolean {
         val expectedNodeId = NodeIds.fromPublicKey(directory.authorityPublicKey)
         if (expectedNodeId != directory.authorityNodeId) return false
 
-        if (!isCertificateChainValid(directory)) {
+        if (!isCertificateChainValid(directory, nowEpochMilliseconds)) {
             return false
         }
 
         return verifyDirectorySignature(directory)
     }
 
-    private fun isCertificateChainValid(directory: SignedNodeDirectory): Boolean {
+    /** The registry root a directory is signed under: its certificate's root, or its own key without one. */
+    fun directoryRootNodeId(directory: SignedNodeDirectory): String =
+        directory.authorityCertificate?.rootNodeId ?: directory.authorityNodeId
+
+    private fun isCertificateChainValid(
+        directory: SignedNodeDirectory,
+        nowEpochMilliseconds: Long
+    ): Boolean {
         val authorityCertificate = directory.authorityCertificate ?: return directory.signingCertificate == null
         if (!RegistryCertificateSignatures.verifyAuthorityCertificate(authorityCertificate)) {
+            return false
+        }
+        if (nowEpochMilliseconds !in authorityCertificate.validFromEpochMilliseconds until
+            authorityCertificate.validUntilEpochMilliseconds
+        ) {
             return false
         }
 
@@ -109,6 +115,8 @@ object ProtocolSignatures {
                     authorityCertificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
 
         return RegistryCertificateSignatures.verifySigningCertificate(signingCertificate) &&
+            nowEpochMilliseconds in signingCertificate.validFromEpochMilliseconds until
+            signingCertificate.validUntilEpochMilliseconds &&
             signingCertificate.authorityNodeId == authorityCertificate.authorityNodeId &&
             signingCertificate.authorityPublicKey.contentEquals(authorityCertificate.authorityPublicKey) &&
             signingCertificate.validFromEpochMilliseconds >=

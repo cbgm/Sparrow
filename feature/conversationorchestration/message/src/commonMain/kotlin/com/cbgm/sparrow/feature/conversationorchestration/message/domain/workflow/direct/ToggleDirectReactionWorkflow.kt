@@ -6,18 +6,18 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.MessageReactionRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendDirectOperationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ToggleLocalReactionUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import kotlin.reflect.KClass
 
-/** FindConversation -> CheckAuthorization -> FindMessage -> (AddReaction | RemoveReaction) -> SendReaction. */
+/** FindConversation -> CheckAuthorization -> FindMessage -> ToggleReaction -> SendReaction. */
 class ToggleDirectReactionWorkflow internal constructor(
     private val conversationRepository: DirectConversationRepository,
-    private val messageRepository: DirectMessageRepository,
-    private val reactionRepository: MessageReactionRepository,
+    private val findDirectMessage: FindDirectMessageUseCase,
+    private val toggleLocalReaction: ToggleLocalReactionUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val sendDirectOperation: SendDirectOperationUseCase
 ) : ConversationWorkflow<
@@ -44,27 +44,18 @@ class ToggleDirectReactionWorkflow internal constructor(
                 Outcome.Authorized(step.target)
             }
             is Step.FindMessage -> {
-                val message =
-                    messageRepository.find(step.command.messageId).getOrThrow() ?: error("Message was not found")
-                check(message.conversationId == step.command.conversationId) {
-                    "Message does not belong to this conversation"
-                }
-                val reacted = reactionRepository.exists(step.command.messageId, null, step.command.emoji).getOrThrow()
-                if (reacted) Outcome.ReactionPresent(step.target) else Outcome.ReactionAbsent(step.target)
+                findDirectMessage(step.command.conversationId, step.command.messageId).getOrThrow()
+                Outcome.MessageFound(step.target)
             }
-            is Step.RemoveReaction -> {
-                reactionRepository.delete(step.command.messageId, null, step.command.emoji).getOrThrow()
-                Outcome.ReactionChanged(step.target, removed = true)
-            }
-            is Step.AddReaction -> {
-                reactionRepository.save(
-                    step.command.messageId,
-                    step.command.conversationId,
-                    null,
-                    step.command.emoji
-                ).getOrThrow()
-                Outcome.ReactionChanged(step.target, removed = false)
-            }
+            is Step.ToggleReaction ->
+                Outcome.ReactionChanged(
+                    target = step.target,
+                    removed = toggleLocalReaction(
+                        messageId = step.command.messageId,
+                        conversationId = step.command.conversationId,
+                        emoji = step.command.emoji
+                    ).getOrThrow()
+                )
             is Step.SendReaction -> {
                 sendDirectOperation(
                     contactId = step.target.contactId,
@@ -82,8 +73,7 @@ class ToggleDirectReactionWorkflow internal constructor(
         when (outcome) {
             is Outcome.ConversationFound -> Transition.Next(Step.CheckAuthorization(outcome.target, step.command))
             is Outcome.Authorized -> Transition.Next(Step.FindMessage(outcome.target, step.command))
-            is Outcome.ReactionPresent -> Transition.Next(Step.RemoveReaction(outcome.target, step.command))
-            is Outcome.ReactionAbsent -> Transition.Next(Step.AddReaction(outcome.target, step.command))
+            is Outcome.MessageFound -> Transition.Next(Step.ToggleReaction(outcome.target, step.command))
             is Outcome.ReactionChanged ->
                 Transition.Next(Step.SendReaction(outcome.target, outcome.removed, step.command))
             Outcome.ReactionSent -> Transition.Complete()
@@ -106,12 +96,7 @@ class ToggleDirectReactionWorkflow internal constructor(
             override val command: DirectConversationCommand.ToggleReaction
         ) : Step
 
-        data class RemoveReaction(
-            val target: DirectConversationTarget,
-            override val command: DirectConversationCommand.ToggleReaction
-        ) : Step
-
-        data class AddReaction(
+        data class ToggleReaction(
             val target: DirectConversationTarget,
             override val command: DirectConversationCommand.ToggleReaction
         ) : Step
@@ -132,11 +117,7 @@ class ToggleDirectReactionWorkflow internal constructor(
             val target: DirectConversationTarget
         ) : Outcome
 
-        data class ReactionPresent(
-            val target: DirectConversationTarget
-        ) : Outcome
-
-        data class ReactionAbsent(
+        data class MessageFound(
             val target: DirectConversationTarget
         ) : Outcome
 

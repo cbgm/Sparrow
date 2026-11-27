@@ -6,6 +6,7 @@ import com.cbgm.sparrow.data.database.dao.GroupMetadataDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.mapper.GroupSystemMessageFactory
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupConversationKind
 
 internal class GroupConversationDataSource(
     private val chatDao: ChatDao,
@@ -29,6 +30,16 @@ internal class GroupConversationDataSource(
         }
         return conversation
     }
+
+    suspend fun findKind(groupId: String): GroupConversationKind =
+        when (chatDao.findConversationById(groupId)?.type) {
+            null -> GroupConversationKind.NONE
+            GROUP_CONVERSATION_TYPE -> GroupConversationKind.GROUP
+            else -> GroupConversationKind.OTHER
+        }
+
+    suspend fun isParticipant(groupId: String, contactId: String): Boolean =
+        chatDao.findConversationParticipants(groupId).any { participant -> participant.contactId == contactId }
 
     suspend fun stageIncoming(
         groupId: String,
@@ -61,7 +72,9 @@ internal class GroupConversationDataSource(
                 isVisible = existing?.isVisible == true && hasHistory
             )
         )
-        groupMetadataDao.upsertTitleValue(groupId, title)
+        // An invitation is unsigned by the group's admin history; it never replaces a versioned title, the
+        // welcome sets the title of a re-joined group.
+        groupMetadataDao.upsertTitleValueIfUnversioned(groupId, title)
         return true
     }
 

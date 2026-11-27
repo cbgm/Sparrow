@@ -4,8 +4,29 @@ import java.sql.Connection
 
 internal data class MailboxAuthorization(
     val sendCapabilityHash: ByteArray,
-    val retrievalCapabilityHash: ByteArray
-)
+    val retrievalCapabilityHash: ByteArray,
+    val invitation: Boolean = false
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as MailboxAuthorization
+
+        if (!sendCapabilityHash.contentEquals(other.sendCapabilityHash)) return false
+        if (!retrievalCapabilityHash.contentEquals(other.retrievalCapabilityHash)) return false
+        if (invitation != other.invitation) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = sendCapabilityHash.contentHashCode()
+        result = 31 * result + retrievalCapabilityHash.contentHashCode()
+        result = 31 * result + invitation.hashCode()
+        return result
+    }
+}
 
 internal class PostgresMailboxQueries(
     private val now: () -> Long
@@ -18,7 +39,7 @@ internal class PostgresMailboxQueries(
         return connection
             .prepareStatement(
                 """
-                SELECT send_capability_hash, retrieval_capability_hash
+                SELECT send_capability_hash, retrieval_capability_hash, invitation
                 FROM mailboxes
                 WHERE mailbox_id = ? AND expires_at_epoch_milliseconds > ?
                 FOR UPDATE
@@ -30,7 +51,8 @@ internal class PostgresMailboxQueries(
                     if (results.next()) {
                         MailboxAuthorization(
                             sendCapabilityHash = results.getBytes(1),
-                            retrievalCapabilityHash = results.getBytes(2)
+                            retrievalCapabilityHash = results.getBytes(2),
+                            invitation = results.getBoolean(3)
                         )
                     } else {
                         null
@@ -48,24 +70,13 @@ internal class PostgresMailboxQueries(
             }
     }
 
-    fun countMailboxes(
-        connection: Connection,
-        ownerKeyHash: String? = null
-    ): Int {
-        val sql =
-            if (ownerKeyHash == null) {
-                "SELECT COUNT(*) FROM mailboxes"
-            } else {
-                "SELECT COUNT(*) FROM mailboxes WHERE owner_key_hash = ?"
-            }
-        return connection.prepareStatement(sql).use { statement ->
-            ownerKeyHash?.let { statement.setString(1, it) }
+    fun countMailboxes(connection: Connection): Int =
+        connection.prepareStatement("SELECT COUNT(*) FROM mailboxes").use { statement ->
             statement.executeQuery().use { results ->
                 results.next()
                 results.getInt(1)
             }
         }
-    }
 
     fun purgeExpiredEnvelopes(
         connection: Connection,
@@ -96,6 +107,20 @@ internal class PostgresMailboxQueries(
                 statement.setString(1, mailboxId)
                 statement.setString(2, envelopeId)
                 statement.executeQuery().use { results -> results.next() }
+            }
+
+    fun envelopeCount(
+        connection: Connection,
+        mailboxId: String
+    ): Int =
+        connection
+            .prepareStatement("SELECT COUNT(*) FROM mailbox_envelopes WHERE mailbox_id = ?")
+            .use { statement ->
+                statement.setString(1, mailboxId)
+                statement.executeQuery().use { results ->
+                    results.next()
+                    results.getInt(1)
+                }
             }
 
     fun storedBytes(

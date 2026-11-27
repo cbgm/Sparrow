@@ -5,6 +5,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.useca
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.CheckIncomingInvitationAllowedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RecordIncomingDirectInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RecordOutgoingDirectInvitationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireApprovedIdentityPinnedUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireContactInvitableUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireDirectReconnectAllowedUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct.DeleteDirectConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct.OpenDirectConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct.ReconnectDirectConversationWorkflow
@@ -51,6 +54,9 @@ private fun Module.registerUseCases() {
     singleOf(::CheckIncomingInvitationAllowedUseCase)
     singleOf(::RecordIncomingDirectInvitationUseCase)
     singleOf(::RecordOutgoingDirectInvitationUseCase)
+    singleOf(::RequireApprovedIdentityPinnedUseCase)
+    singleOf(::RequireContactInvitableUseCase)
+    singleOf(::RequireDirectReconnectAllowedUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {

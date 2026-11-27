@@ -10,7 +10,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.UnreadIncomingMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.ConversationUnseenCountRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SendReadReceiptUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.AcknowledgeIncomingMessageUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireGroupConversationUseCase
 import kotlin.reflect.KClass
 
 /**
@@ -21,7 +22,8 @@ import kotlin.reflect.KClass
 class MarkGroupConversationReadWorkflow internal constructor(
     private val unseenCountRepository: ConversationUnseenCountRepository,
     private val messageRepository: GroupMessageRepository,
-    private val sendReadReceipt: SendReadReceiptUseCase
+    private val requireGroupConversation: RequireGroupConversationUseCase,
+    private val acknowledgeIncomingMessage: AcknowledgeIncomingMessageUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.MarkConversationRead,
         MarkGroupConversationReadWorkflow.Step,
@@ -42,9 +44,7 @@ class MarkGroupConversationReadWorkflow internal constructor(
             }
             is Step.FindUnreadMessages -> {
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
-                val conversation = messageRepository.findConversation(step.command.groupId).getOrThrow()
-                    ?: error("Group conversation was not found")
-                check(conversation.isGroup) { "Conversation is not a group" }
+                requireGroupConversation(step.command.groupId).getOrThrow()
                 Outcome.UnreadMessagesFound(
                     messageRepository.findAwaitingReadReceipt(step.command.groupId).getOrThrow()
                 )
@@ -78,21 +78,10 @@ class MarkGroupConversationReadWorkflow internal constructor(
 
     private suspend fun acknowledge(step: Step.AcknowledgeMessage): Outcome {
         val message = step.remaining.first()
-        val failure =
-            sendReadReceipt(message.messageId, message.contactId).exceptionOrNull()?.describe(message)
-                ?: messageRepository.markReadReceiptSent(message.messageId).fold(
-                    onSuccess = { marked ->
-                        if (marked) {
-                            logger.debug {
-                                "Group read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}"
-                            }
-                            null
-                        } else {
-                            "${message.contactId}: incoming group message could not be marked as read"
-                        }
-                    },
-                    onFailure = { error -> error.describe(message) }
-                )
+        val failure = acknowledgeIncomingMessage.forGroupMessage(message).exceptionOrNull()?.describe(message)
+        if (failure == null) {
+            logger.debug { "Group read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}" }
+        }
         return Outcome.MessageAcknowledged(step.remaining.drop(1), step.failures + listOfNotNull(failure))
     }
 

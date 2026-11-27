@@ -1,8 +1,9 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
+import com.cbgm.sparrow.feature.membership.domain.model.GroupCommittedMemberRemoval
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationTarget
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
@@ -111,6 +112,9 @@ interface GroupMembershipRepository {
 
     suspend fun inspectMessageAccess(groupId: String): Result<GroupMessageMembershipAccess>
 
+    /** Pending invitations into [groupId] and whether the device is a live member of it. */
+    suspend fun inspectInvitationTarget(groupId: String): Result<GroupInvitationTarget>
+
     /** Resolves a pinned message sender against the current group epoch.
      * A missing remote member key returns null so Chats can use a known contact identity.
      */
@@ -138,6 +142,9 @@ interface GroupMembershipRepository {
 
     suspend fun getCurrentEpoch(groupId: String): Result<Int>
 
+    /** Null while no welcome installed the group's security state. */
+    suspend fun findCurrentEpoch(groupId: String): Result<Int?>
+
     /** Validate the ready acknowledgement against Membership's installed group key. */
     suspend fun verifyGroupKeyConfirmation(
         groupId: String,
@@ -163,10 +170,10 @@ interface GroupMembershipRepository {
 
     fun observeAdministration(groupId: String): Flow<GroupAdministrationState>
 
-    /** Membership-owned persistence snapshot; Chats may observe without reading foreign DAOs. */
-    fun observeConversationMembership(groupId: String): Flow<GroupConversationMembershipSnapshot>
-
     fun observeVerificationSnapshot(groupId: String): Flow<MembershipVerificationSnapshot>
+
+    /** The removal of [contactId] the local admin already committed; null when it still has to be done. */
+    suspend fun findCommittedRemoval(groupId: String, contactId: String): Result<GroupCommittedMemberRemoval?>
 
     suspend fun removeMember(
         groupId: String,
@@ -179,6 +186,13 @@ interface GroupMembershipRepository {
         contactId: String,
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult>
+
+    /** Gives the group a key the departed admin does not know; a no-op unless this device is the admin on [expectedEpoch]. */
+    suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit>
 
     suspend fun transferAdminAndLeave(
         groupId: String,

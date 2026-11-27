@@ -1,17 +1,19 @@
 package com.cbgm.sparrow.feature.conversationorchestration.membership.domain.workflow.join
 
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.DiscardDeclinedGroupConversationUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipOwnerKeys
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
+import com.cbgm.sparrow.feature.membership.domain.model.requireAcceptableFor
 import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
@@ -31,7 +33,8 @@ class HandleGroupInvitationResultWorkflow internal constructor(
     private val acceptRemoteIdentityHandshake: AcceptRemoteIdentityHandshakeUseCase,
     private val acceptGroupMembership: AcceptGroupMembershipUseCase,
     private val declineGroupMembership: DeclineGroupMembershipUseCase,
-    private val conversationRepository: GroupConversationRepository
+    private val conversationRepository: GroupConversationRepository,
+    private val discardDeclinedGroupConversation: DiscardDeclinedGroupConversationUseCase
 ) : WorkflowStateMachine<
         MembershipCommand.HandleGroupInvitationResult,
         HandleGroupInvitationResultWorkflow.Step,
@@ -45,16 +48,7 @@ class HandleGroupInvitationResultWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val result = step.command.result
         return when (step) {
-            is Step.FindHandshake -> {
-                require(result.action == null) { "Group invitations do not support invitation actions" }
-                if (result.direction != InvitationDirection.INCOMING) return Outcome.NotForThisDevice
-                val handshake = getMembershipHandshake(result.invitationId).getOrThrow()
-                when (result.response) {
-                    InvitationResponse.ACCEPTED ->
-                        Outcome.AcceptedHandshakeFound(requireAcceptable(handshake, step.command))
-                    InvitationResponse.DECLINED -> Outcome.DeclinedHandshakeFound(handshake)
-                }
-            }
+            is Step.FindHandshake -> findHandshake(step.command)
             is Step.StageOwnerIdentity -> {
                 stageRemoteIdentity(
                     result.peerId,
@@ -82,14 +76,10 @@ class HandleGroupInvitationResultWorkflow internal constructor(
             }
             is Step.DeclineMembership -> {
                 declineGroupMembership(result.invitationId).getOrThrow()
-                Outcome.MembershipDeclined(step.handshakeCreatedAtEpochMilliseconds)
+                Outcome.MembershipDeclined(step.handshake)
             }
             is Step.DiscardConversation -> {
-                conversationRepository.discardPending(
-                    groupId = result.payloadId,
-                    updatedAtEpochMilliseconds =
-                        maxOf(step.handshakeCreatedAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
-                ).getOrThrow()
+                discardDeclinedGroupConversation(result.payloadId, step.handshake).getOrThrow()
                 Outcome.Done
             }
         }
@@ -98,50 +88,39 @@ class HandleGroupInvitationResultWorkflow internal constructor(
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
             Outcome.NotForThisDevice -> Transition.Complete()
-            is Outcome.AcceptedHandshakeFound ->
-                when (outcome.handshake.status) {
-                    MembershipStatus.STAGED ->
-                        Transition.Next(Step.StageOwnerIdentity(outcome.handshake.requireOwnerKeys(), step.command))
-                    MembershipStatus.JOIN_REQUEST_SENT,
-                    MembershipStatus.WAITING_FOR_ACTIVATION,
-                    MembershipStatus.ACTIVE -> Transition.Next(Step.ShowConversation(step.command))
-                    else -> Transition.Complete()
-                }
-            is Outcome.DeclinedHandshakeFound ->
-                Transition.Next(
-                    Step.DeclineMembership(outcome.handshake?.createdAtEpochMilliseconds ?: 0L, step.command)
-                )
+            is Outcome.AcceptedHandshakeFound -> afterAcceptedHandshake(outcome.handshake, step.command)
+            is Outcome.DeclinedHandshakeFound -> Transition.Next(Step.DeclineMembership(outcome.handshake, step.command))
             is Outcome.OwnerIdentityStaged -> Transition.Next(Step.AcceptOwnerIdentity(outcome.ownerKeys, step.command))
             Outcome.OwnerIdentityAccepted -> Transition.Next(Step.AcceptMembership(step.command))
             Outcome.MembershipAccepted -> Transition.Next(Step.ShowConversation(step.command))
             is Outcome.MembershipDeclined ->
-                Transition.Next(Step.DiscardConversation(outcome.handshakeCreatedAtEpochMilliseconds, step.command))
+                Transition.Next(Step.DiscardConversation(outcome.handshake, step.command))
             Outcome.Done -> Transition.Complete()
         }
 
-    private fun requireAcceptable(
-        handshake: MembershipHandshake?,
-        command: MembershipCommand.HandleGroupInvitationResult
-    ): MembershipHandshake {
-        val accepted = requireNotNull(handshake) { "Group membership handshake was not found" }
-        check(accepted.groupId == command.result.payloadId) { "Invitation belongs to the wrong group" }
-        check(accepted.peerId == command.result.peerId) { "Invitation belongs to the wrong peer" }
-        accepted.requireOwnerKeys()
-        return accepted
+    private suspend fun findHandshake(command: MembershipCommand.HandleGroupInvitationResult): Outcome {
+        val result = command.result
+        require(result.action == null) { "Group invitations do not support invitation actions" }
+        if (result.direction != InvitationDirection.INCOMING) return Outcome.NotForThisDevice
+        val handshake = getMembershipHandshake(result.invitationId).getOrThrow()
+        return when (result.response) {
+            InvitationResponse.ACCEPTED ->
+                Outcome.AcceptedHandshakeFound(handshake.requireAcceptableFor(result.payloadId, result.peerId))
+            InvitationResponse.DECLINED -> Outcome.DeclinedHandshakeFound(handshake)
+        }
     }
 
-    private fun MembershipHandshake.requireOwnerKeys(): OwnerKeys =
-        OwnerKeys(
-            encryptionPublicKey =
-                requireNotNull(ownerEncryptionPublicKey) { "Group owner encryption identity was not staged" },
-            signingPublicKey = requireNotNull(ownerSigningPublicKey) { "Group owner signing identity was not staged" }
-        )
-
-    /** The owner identity that was verified when the offer was staged. */
-    class OwnerKeys(
-        val encryptionPublicKey: ByteArray,
-        val signingPublicKey: ByteArray
-    )
+    /** A staged offer still needs the owner identity; a join underway only shows the conversation again. */
+    private fun afterAcceptedHandshake(
+        handshake: MembershipHandshake,
+        command: MembershipCommand.HandleGroupInvitationResult
+    ): Transition<Step> =
+        when {
+            handshake.status == MembershipStatus.STAGED ->
+                Transition.Next(Step.StageOwnerIdentity(handshake.requireOwnerKeys(), command))
+            handshake.status.isJoinInProgress -> Transition.Next(Step.ShowConversation(command))
+            else -> Transition.Complete()
+        }
 
     sealed interface Step : WorkflowStep {
         val command: MembershipCommand.HandleGroupInvitationResult
@@ -151,12 +130,12 @@ class HandleGroupInvitationResultWorkflow internal constructor(
         ) : Step
 
         data class StageOwnerIdentity(
-            val ownerKeys: OwnerKeys,
+            val ownerKeys: MembershipOwnerKeys,
             override val command: MembershipCommand.HandleGroupInvitationResult
         ) : Step
 
         data class AcceptOwnerIdentity(
-            val ownerKeys: OwnerKeys,
+            val ownerKeys: MembershipOwnerKeys,
             override val command: MembershipCommand.HandleGroupInvitationResult
         ) : Step
 
@@ -169,12 +148,12 @@ class HandleGroupInvitationResultWorkflow internal constructor(
         ) : Step
 
         data class DeclineMembership(
-            val handshakeCreatedAtEpochMilliseconds: Long,
+            val handshake: MembershipHandshake?,
             override val command: MembershipCommand.HandleGroupInvitationResult
         ) : Step
 
         data class DiscardConversation(
-            val handshakeCreatedAtEpochMilliseconds: Long,
+            val handshake: MembershipHandshake?,
             override val command: MembershipCommand.HandleGroupInvitationResult
         ) : Step
     }
@@ -191,7 +170,7 @@ class HandleGroupInvitationResultWorkflow internal constructor(
         ) : Outcome
 
         data class OwnerIdentityStaged(
-            val ownerKeys: OwnerKeys
+            val ownerKeys: MembershipOwnerKeys
         ) : Outcome
 
         data object OwnerIdentityAccepted : Outcome
@@ -199,7 +178,7 @@ class HandleGroupInvitationResultWorkflow internal constructor(
         data object MembershipAccepted : Outcome
 
         data class MembershipDeclined(
-            val handshakeCreatedAtEpochMilliseconds: Long
+            val handshake: MembershipHandshake?
         ) : Outcome
 
         data object Done : Outcome

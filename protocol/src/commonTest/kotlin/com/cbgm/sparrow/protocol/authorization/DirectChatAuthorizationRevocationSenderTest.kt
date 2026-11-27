@@ -2,7 +2,7 @@ package com.cbgm.sparrow.protocol.authorization
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutboxFailureEvent
@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 
 class DirectChatAuthorizationRevocationSenderTest {
     private val keys = LocalSigningKeyPair(ByteArray(32) { 1 }, ByteArray(64) { 2 })
-    private val keyProvider = object : LocalSigningKeyPairProvider {
+    private val keySource = object : LocalSigningKeyPairSource {
         override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> = Result.success(keys)
     }
     private val crypto = object : DetachedSignatureCrypto {
@@ -33,7 +33,7 @@ class DirectChatAuthorizationRevocationSenderTest {
         val outbox = RecordingOutbox()
         val sender = DirectChatAuthorizationRevocationSender(
             DirectChatAuthorizationRevocationProtocol(crypto),
-            keyProvider,
+            keySource,
             outbox
         )
         sender.enqueueOrResend("peer", "exchange", ByteArray(32) { 4 }).getOrThrow()
@@ -52,7 +52,7 @@ class DirectChatAuthorizationRevocationSenderTest {
         val outbox = RecordingOutbox(failEnqueue = true)
         val sender = DirectChatAuthorizationRevocationSender(
             DirectChatAuthorizationRevocationProtocol(crypto),
-            keyProvider,
+            keySource,
             outbox
         )
         val result = sender.enqueueOrResend("peer", "exchange", ByteArray(32) { 4 })

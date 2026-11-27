@@ -59,19 +59,8 @@ data class FederatedEnvelope(
         require(senderRoutingId.isNotBlank())
         require(recipientDeviceRoutingId.isNotBlank())
         require(encryptedPayload.isNotBlank())
+        require(createdAtEpochMilliseconds >= 0L)
         require(expiresAtEpochMilliseconds > createdAtEpochMilliseconds)
-    }
-}
-
-@Serializable
-data class FederatedIndicatorEvent(
-    val senderRoutingId: String,
-    val recipientRoutingId: String,
-    val indicatorType: String
-) {
-    init {
-        require(senderRoutingId.isNotBlank())
-        require(recipientRoutingId.isNotBlank())
     }
 }
 
@@ -94,7 +83,22 @@ data class CreateMailboxRequest(
     val nodeId: String,
     val nodeEndpoint: String,
     val routeSequence: Long = 0L,
-    val expiresAtEpochMilliseconds: Long
+    val expiresAtEpochMilliseconds: Long,
+    val creationWork: MailboxCreationWork? = null,
+    /**
+     * An invitation mailbox: its send capability goes to the presence directory, which hands it to anyone who looks
+     * up the owner's phone alias, so every deposit is paid ([MailboxEnvelopeRequest.depositWork]) and it holds only a
+     * few small envelopes.
+     */
+    val invitation: Boolean = false
+)
+
+/** Proof of work for a new mailbox: a random [stamp], when it was made, and the [nonce] that solves it. */
+@Serializable
+data class MailboxCreationWork(
+    val stamp: String,
+    val createdAtEpochMilliseconds: Long,
+    val nonce: Long
 )
 
 @Serializable
@@ -105,7 +109,27 @@ data class CreateMailboxResponse(
 
 @Serializable
 data class MailboxEnvelopeRequest(
-    val envelope: FederatedEnvelope
+    val envelope: FederatedEnvelope,
+    /** Pays for a deposit into an invitation mailbox ([CreateMailboxRequest.invitation]); other mailboxes need none. */
+    val depositWork: MailboxCreationWork? = null
+)
+
+/** `POST /v1/mailboxes/wait`: the owner's mailboxes to watch, each with its retrieval capability. */
+@Serializable
+data class MailboxWaitRequest(
+    val mailboxes: List<MailboxWaitEntry>
+)
+
+@Serializable
+data class MailboxWaitEntry(
+    val mailboxId: String,
+    val retrievalCapability: String
+)
+
+/** The watched mailboxes that hold envelopes; empty when none arrived while the node waited. */
+@Serializable
+data class MailboxWaitResponse(
+    val ready: List<String>
 )
 
 @Serializable

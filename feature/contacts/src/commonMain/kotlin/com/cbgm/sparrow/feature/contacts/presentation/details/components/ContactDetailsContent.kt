@@ -10,20 +10,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContactPhone
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.errorBright
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.DeviceContactLinkUi
@@ -32,6 +27,7 @@ import com.cbgm.sparrow.resources.base_linked
 import com.cbgm.sparrow.resources.base_phone_numbers
 import com.cbgm.sparrow.resources.base_share_contact
 import com.cbgm.sparrow.resources.feature_attachments_media_and_files
+import com.cbgm.sparrow.resources.feature_chats_reconnect
 import com.cbgm.sparrow.resources.feature_contacts_device_contact
 import com.cbgm.sparrow.resources.feature_contacts_device_contact_missing
 import com.cbgm.sparrow.resources.feature_contacts_no_sparrow_identity
@@ -54,6 +50,7 @@ internal fun ContactDetailsContent(
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
     onMediaAndFiles: () -> Unit,
+    onReconnect: () -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
     page: ContactDetailPage = ContactDetailPage.Overview,
@@ -73,61 +70,62 @@ internal fun ContactDetailsContent(
                 val identity = contact.sparrowIdentity
                 ContactHeader(contact = contact)
 
-                SparrowCardNoAnimation {
-                    Column {
-                        SparrowDetailRow(
-                            icon = Icons.Default.Phone,
-                            title = stringResource(Res.string.base_phone_numbers),
-                            subtitle = contact.preferredPhoneNumber,
-                            onClick = { onPageSelected(ContactDetailPage.Phones) }
-                        )
-                        SparrowDetailRow(
-                            icon = Icons.Default.ContactPhone,
-                            title = stringResource(Res.string.feature_contacts_device_contact),
-                            subtitle = when (contact.deviceContactLinkStatus) {
-                                DeviceContactLinkUi.LINKED -> stringResource(Res.string.base_linked)
-                                DeviceContactLinkUi.NOT_LINKED -> stringResource(Res.string.feature_contacts_not_linked)
-                                DeviceContactLinkUi.MISSING -> stringResource(Res.string.feature_contacts_device_contact_missing)
-                            },
-                            showChevron = false,
-                            onClick = null
-                        )
-                        SparrowDetailRow(
-                            icon = Icons.Default.Security,
-                            title = stringResource(Res.string.feature_contacts_sparrow_identity),
-                            subtitle = when {
-                                identity == null -> stringResource(Res.string.feature_contacts_no_sparrow_identity)
-                                identity.verifiedByMe && identity.mutualKeyExchange && identity.verifiedByContact ->
-                                    stringResource(Res.string.feature_contacts_verified_sparrow_contact)
-                                identity.verifiedByMe -> stringResource(Res.string.feature_contacts_verified_by_you)
-                                identity.mutualKeyExchange && identity.verifiedByContact ->
-                                    stringResource(Res.string.feature_contacts_verified_by_contact)
-                                else -> stringResource(Res.string.feature_contacts_sparrow_contact_not_verified)
-                            },
-                            showDivider = false,
-                            onClick = { onPageSelected(ContactDetailPage.Identity) }
-                        )
-                    }
+                Column {
+                    SparrowDetailRow(
+                        icon = SparrowIcons.Phone,
+                        title = stringResource(Res.string.base_phone_numbers),
+                        subtitle = contact.preferredPhoneNumber,
+                        onClick = { onPageSelected(ContactDetailPage.Phones) }
+                    )
+                    SparrowDetailRow(
+                        icon = SparrowIcons.ContactCard,
+                        title = stringResource(Res.string.feature_contacts_device_contact),
+                        showChevron = false,
+                        subtitle = when (contact.deviceContactLinkStatus) {
+                            DeviceContactLinkUi.LINKED -> stringResource(Res.string.base_linked)
+                            DeviceContactLinkUi.NOT_LINKED -> stringResource(Res.string.feature_contacts_not_linked)
+                            DeviceContactLinkUi.MISSING -> stringResource(Res.string.feature_contacts_device_contact_missing)
+                        },
+                        onClick = null
+                    )
+                    SparrowDetailRow(
+                        icon = SparrowIcons.Shield,
+                        title = stringResource(Res.string.feature_contacts_sparrow_identity),
+                        subtitle = when {
+                            identity == null -> stringResource(Res.string.feature_contacts_no_sparrow_identity)
+                            identity.verifiedByMe && identity.mutualKeyExchange && identity.verifiedByContact ->
+                                stringResource(Res.string.feature_contacts_verified_sparrow_contact)
+                            identity.verifiedByMe -> stringResource(Res.string.feature_contacts_verified_by_you)
+                            identity.mutualKeyExchange && identity.verifiedByContact ->
+                                stringResource(Res.string.feature_contacts_verified_by_contact)
+                            else -> stringResource(Res.string.feature_contacts_sparrow_contact_not_verified)
+                        },
+                        onClick = { onPageSelected(ContactDetailPage.Identity) }
+                    )
+                    SparrowDetailRow(
+                        icon = SparrowIcons.Folder,
+                        title = stringResource(Res.string.feature_attachments_media_and_files),
+                        onClick = onMediaAndFiles
+                    )
+                    SparrowDetailRow(
+                        icon = SparrowIcons.Share,
+                        title = stringResource(Res.string.base_share_contact),
+                        enabled = identity != null,
+                        showChevron = false,
+                        onClick = onShareContact
+                    )
+                    SparrowDetailRow(
+                        icon = SparrowIcons.Refresh,
+                        title = stringResource(Res.string.feature_chats_reconnect),
+                        iconTint = MaterialTheme.colorScheme.error,
+                        titleColor = MaterialTheme.colorScheme.error,
+                        rippleColor = MaterialTheme.colorScheme.errorBright,
+                        showChevron = false,
+                        showDivider = false,
+                        onClick = onReconnect
+                    )
                 }
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
-                SparrowCardNoAnimation {
-                    Column {
-                        SparrowDetailRow(
-                            icon = Icons.Default.Folder,
-                            title = stringResource(Res.string.feature_attachments_media_and_files),
-                            onClick = onMediaAndFiles
-                        )
-                        SparrowDetailRow(
-                            icon = Icons.Default.Share,
-                            title = stringResource(Res.string.base_share_contact),
-                            enabled = contact.sparrowIdentity != null,
-                            showChevron = false,
-                            showDivider = false,
-                            onClick = onShareContact
-                        )
-                    }
-                }
-                if (contact.sparrowIdentity == null) {
+                if (identity == null) {
                     Text(
                         text = stringResource(Res.string.feature_contacts_share_contact_missing_keys),
                         style = MaterialTheme.typography.bodySmall,
@@ -136,8 +134,8 @@ internal fun ContactDetailsContent(
                     )
                 }
             }
-            ContactDetailPage.Phones -> SparrowCardNoAnimation {
-                Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
+            ContactDetailPage.Phones -> {
+                Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)) {
                     ContactPhoneNumbersSection(
                         phoneNumbers = contact.phoneNumbers,
                         preferredPhoneNumberId = contact.preferredPhoneNumberId,
@@ -145,8 +143,8 @@ internal fun ContactDetailsContent(
                     )
                 }
             }
-            ContactDetailPage.Identity -> SparrowCardNoAnimation {
-                Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
+            ContactDetailPage.Identity -> {
+                Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)) {
                     val identity = contact.sparrowIdentity
                     if (identity == null) {
                         NoSparrowIdentityContent()
@@ -175,6 +173,7 @@ private fun ContactDetailsContentPreview() {
             onShareContact = {},
             onVerifyIdentity = {},
             onMediaAndFiles = {},
+            onReconnect = {},
             scrollState = rememberScrollState(),
             innerPadding = PaddingValues(),
             modifier = Modifier.fillMaxSize()

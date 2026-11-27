@@ -151,6 +151,8 @@ data class ContactReadyPacket(
     override val version: Int = ProtocolVersion.CURRENT,
     val invitationId: String,
     val readyAtEpochMilliseconds: Long,
+    /** The inviter's picture: it travels here, encrypted, instead of in the unencrypted first invite. */
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val responseChallenge: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -185,6 +187,7 @@ data class ContactReadyPacket(
             version == other.version &&
             invitationId == other.invitationId &&
             readyAtEpochMilliseconds == other.readyAtEpochMilliseconds &&
+            profilePicture == other.profilePicture &&
             responseChallenge.contentEquals(other.responseChallenge) &&
             acceptedResponderEncryptionPublicKey.contentEquals(other.acceptedResponderEncryptionPublicKey) &&
             acceptedResponderSigningPublicKey.contentEquals(other.acceptedResponderSigningPublicKey) &&
@@ -197,6 +200,7 @@ data class ContactReadyPacket(
         result = 31 * result + version
         result = 31 * result + invitationId.hashCode()
         result = 31 * result + readyAtEpochMilliseconds.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + responseChallenge.contentHashCode()
         result = 31 * result + acceptedResponderEncryptionPublicKey.contentHashCode()
         result = 31 * result + acceptedResponderSigningPublicKey.contentHashCode()

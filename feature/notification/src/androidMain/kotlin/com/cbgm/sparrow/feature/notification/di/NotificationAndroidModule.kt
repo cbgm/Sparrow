@@ -1,17 +1,13 @@
 package com.cbgm.sparrow.feature.notification.di
 
 import androidx.work.WorkerParameters
+import com.cbgm.sparrow.feature.notification.device.AndroidConversationNotificationPresenter
 import com.cbgm.sparrow.feature.notification.device.AndroidNotificationRuntime
-import com.cbgm.sparrow.feature.notification.device.BackgroundDeliveryReceiptSender
-import com.cbgm.sparrow.feature.notification.device.PendingMessageSyncScheduler
-import com.cbgm.sparrow.feature.notification.device.PendingMessageSyncWorker
+import com.cbgm.sparrow.feature.notification.device.ConnectionCheckWorker
+import com.cbgm.sparrow.feature.notification.device.ConnectionModeApplier
 import com.cbgm.sparrow.feature.notification.device.PlatformNotificationRuntime
-import com.cbgm.sparrow.feature.notification.device.PushTokenRegistrationScheduler
-import com.cbgm.sparrow.feature.notification.device.PushTokenRegistrationWorker
 import com.cbgm.sparrow.feature.notification.device.SparrowNotificationIntentHandler
-import com.cbgm.sparrow.feature.notification.device.SparrowNotificationManager
 import com.cbgm.sparrow.feature.notification.presentation.ConversationNotificationPresenter
-import com.cbgm.sparrow.feature.transport.ControlPlaneConfiguration
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
 import org.koin.dsl.module
@@ -19,25 +15,13 @@ import org.koin.dsl.module
 val notificationAndroidModule =
     module {
         single {
-            PendingMessageSyncScheduler(
-                context = androidContext()
-            )
-        }
-
-        single {
-            PushTokenRegistrationScheduler(
-                context = androidContext()
-            )
-        }
-
-        single {
-            SparrowNotificationManager(
+            AndroidConversationNotificationPresenter(
                 context = androidContext()
             )
         }
 
         single<ConversationNotificationPresenter> {
-            get<SparrowNotificationManager>()
+            get<AndroidConversationNotificationPresenter>()
         }
 
         single {
@@ -46,40 +30,27 @@ val notificationAndroidModule =
             )
         }
 
+        single {
+            ConnectionModeApplier(
+                context = androidContext()
+            )
+        }
+
         single<PlatformNotificationRuntime> {
             AndroidNotificationRuntime(
-                notificationManager = get(),
-                pushTokenRegistrationScheduler = get()
-            )
-        }
-
-        single {
-            BackgroundDeliveryReceiptSender(
-                protocolOutbox = get(),
-                transportConnectionManager = get(),
-                outboxRunner = get(),
-                appVisibilityState = get()
+                notificationPresenter = get(),
+                observeConnectionMode = get(),
+                connectionModeApplier = get(),
+                applicationScope = get()
             )
         }
 
         worker { parameters ->
-            PendingMessageSyncWorker(
+            ConnectionCheckWorker(
                 appContext = androidContext(),
                 workerParameters = parameters.get<WorkerParameters>(),
-                synchronizePendingMessages = get(),
-                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
-                appVisibilityState = get(),
-                conversationNotificationPresenter = get(),
-                backgroundDeliveryReceiptSender = get()
-            )
-        }
-
-        worker { parameters ->
-            PushTokenRegistrationWorker(
-                appContext = androidContext(),
-                workerParameters = parameters.get<WorkerParameters>(),
-                registerPushToken = get(),
-                controlPlaneConfiguration = get<ControlPlaneConfiguration>()
+                keepAlive = get(),
+                headlessStart = get()
             )
         }
     }

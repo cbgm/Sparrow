@@ -39,14 +39,13 @@ flowchart LR
 
 The exact Sparrow pieces are implemented by classes such as:
 
-- `HttpControlPlaneDirectorySynchronizer` — loads the external Control Plane directory;
+- `ControlPlaneDirectorySynchronizer` — loads the external Control Plane directory;
 - `SignedDirectoryControlPlaneCandidateVerifier` — verifies Control Plane candidates;
-- `HttpNodeDirectorySource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
-- `DefaultTransportConnectionManager` — selects/reconnects/fails over between nodes;
+- `HttpNodeDirectoryRemoteDataSource` / `NodeDirectoryVerifier` — obtains and verifies signed Community Node descriptors;
+- `HomeNodeConnection` — selects the home node and fails over between nodes;
 - `FailedNodeTracker` — keeps temporarily failed nodes out of immediate reselection;
-- `DefaultWebSocketTransportClient` — maintains the client WebSocket to `/v1/gateway`;
+- `CircuitRunner` — keeps a circuit through relays, starting at the home node;
 - `NodeRegistrationAgent` — registers/heartbeats a Community Node against reachable Control Planes;
-- `FederationRouter` and `FederationPeerRouter` — route encrypted envelopes between nodes;
 - `MailboxStorage` / `PostgresMailboxStore` — store offline encrypted envelopes.
 
 No individual Community Node is intended to become the permanent home of a user's account.
@@ -56,7 +55,7 @@ No individual Community Node is intended to become the permanent home of a user'
 ### 1. No single Community Node is mandatory
 
 If one Community Node is shut down, unreachable, overloaded, or operated badly, clients can select another healthy
-node. `DefaultTransportConnectionManager` and the node directory/failure tracking code are designed around this
+node. `HomeNodeConnection` and the node directory/failure tracking code are designed around this
 assumption.
 
 This reduces the blast radius of a **single routing-node failure or compromise**.
@@ -83,8 +82,8 @@ Running ten nodes on one account in one datacenter does not provide the same ind
 
 ### 3. Control and message transport are separated
 
-A Control Plane provides discovery, presence and Android push support. Community Nodes handle client WebSockets,
-federation and mailboxes.
+A Control Plane provides discovery and presence (phone alias bindings, invitation routes). Community Nodes handle
+relays, circuits and mailboxes.
 
 That split means the service responsible for publishing node information is not automatically the service carrying
 every client connection and every encrypted envelope.
@@ -96,28 +95,24 @@ flowchart TB
     DIR[External Control Plane directory]
     REG[Node Registry]
     PRES[Presence Directory]
-    PUSH[Push]
-    GW[Gateway]
-    FED[FederationRouter]
+    GW[Gateway relays and circuits]
     MB[MailboxStorage]
 
     DIR --> REG
     REG --> GW
-    GW --> FED
-    FED --> MB
-    FED --> PRES
-    MB --> PUSH
+    GW --> MB
+    GW -. two relays .-> PRES
 ```
 
 ### 4. Message content stays client-side
 
-Normal encrypted Direct and Group messages are encrypted before server transport. Gateway, federation and mailbox
+Normal encrypted Direct and Group messages are encrypted before server transport. Relays, circuits and mailbox
 services work with encrypted protocol payloads/envelopes rather than chat plaintext.
 
 Client-side implementations include:
 
 - `SodiumTransportMessageCipher` for sealed-box Direct transport payloads;
-- `SodiumGroupCrypto` and `GroupSecurityManager` for Group content/key handling;
+- `SodiumGroupCrypto` and `GroupSecurityRepositoryImpl` for Group content/key handling;
 - `SodiumDetachedSignatureCrypto` for detached signatures;
 - `AndroidPrivateKeyStorage` for Android private-key protection at rest.
 
@@ -144,8 +139,12 @@ The similarity is the infrastructure philosophy:
 
 Tor goes much further. Tor is an anonymity network: traffic is deliberately sent through a multi-hop circuit of
 relays with layered onion encryption. The Tor Project describes the normal Tor Browser path as three relays.
-Sparrow currently connects a client to **one Community Node at a time**; that node may federate an encrypted
-envelope to another node for the recipient.
+Sparrow's app keeps 1 to 3 circuits open through 1 to 5 community relays each (Settings > Network > Onion routing,
+default 2 hops), never two hops of the same declared operator, and sends every mailbox request through them, so the
+mailbox node does not see the app's address. Its requests to Control Planes (node discovery, phone alias claims,
+invitation route lookups) go through two relays with layered encryption. Optional decoy envelopes blur which
+mailboxes a send was for. Sparrow does not add constant cover traffic, has no guard relays, and lacks the scale of
+independent relays Tor relies on; with few operators, circuits get fewer hops than chosen.
 
 ```mermaid
 flowchart LR
@@ -157,9 +156,12 @@ flowchart LR
     end
 
     subgraph SC[Sparrow message routing]
-        SClient[Client] --> NodeA[Community Node A]
-        NodeA --> NodeB[Recipient Community Node]
-        NodeB --> Recipient[Recipient]
+        SClient[Client] --> Home[Home node, relay 1]
+        Home --> Relay2[Relay 2, other operator]
+        Relay2 --> NodeB[Recipient's mailbox node]
+        Recipient[Recipient] --> RHome[Recipient's home node, relay 1]
+        RHome --> RRelay2[Relay 2, other operator]
+        RRelay2 --> NodeB
     end
 ```
 
@@ -175,8 +177,8 @@ still observe protocol metadata such as connection IPs/timing, routing activity,
 | Infrastructure model | Multiple Control Planes + independently hostable Community Nodes | Signal-operated service with strong metadata-minimization design | Meta-operated client/server service | Thousands of independently operated relays |
 | Automatic relay/node failover | Yes, between authorized Community Nodes | Service implementation detail, not a user-operated federation model | Service implementation detail, not a user-operated federation model | Yes, circuits use multiple relays |
 | Community can run transport nodes | Yes | Not as one shared federated Signal network | No | Yes |
-| Multi-hop onion routing | No | No | No | Yes |
-| Designed for sender/network anonymity | No | Metadata minimization, but not Tor-style anonymity | No | Yes |
+| Multi-hop onion routing | Yes, 1–5 community relays (default 2), fewer when few operators run relays | No | No | Yes |
+| Designed for sender/network anonymity | Partly: hides the app's address from mailbox nodes and Control Planes, but not a hardened anonymity network | Metadata minimization, but not Tor-style anonymity | No | Yes |
 | Cryptographic/protocol maturity | Experimental; no completed independent audit | Very high/mature | Very high; Signal Protocol is a foundation of WhatsApp E2EE | Very high for its anonymity-network threat model |
 | Current Sparrow limitation | Android usable; iOS incomplete | Mature multi-platform product | Mature multi-platform product | Different product category |
 
@@ -212,7 +214,7 @@ A fair description today is:
 
 Do not infer guarantees that the current architecture does not provide:
 
-- it is not an anonymity network;
+- it is not a hardened anonymity network like Tor;
 - a global observer may still correlate timing/traffic;
 - infrastructure can observe some connection and routing metadata;
 - a compromised client device defeats client-side confidentiality;

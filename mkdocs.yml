@@ -97,7 +97,7 @@ nav:
       - Onboarding: features/onboarding.md
       - Messaging & Delivery Flow: features/message-transport-flow.md
       - Transport: features/transport.md
-      - Push Notifications: push-notifications.md
+      - Receiving Messages: push-notifications.md
   - Security:
       - Overview: security/overview.md
       - Identity: security/identity.md
@@ -107,7 +107,6 @@ nav:
       - Threat Model: security/threat-model.md
   - API:
       - Gateway: api/gateway.md
-      - WebSocket: api/websocket.md
       - Protocol: api/protocol.md
   - Development:
       - Local Development: development/local-development.md

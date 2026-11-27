@@ -6,6 +6,8 @@ sealed interface StartupTaskResult {
     data object IdentityReady : StartupTaskResult
 
     data object IdentityRequired : StartupTaskResult
+
+    data object IdentityUnusable : StartupTaskResult
 }
 
 interface StartupTask {

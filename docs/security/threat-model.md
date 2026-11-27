@@ -8,13 +8,51 @@ The design aims to protect against:
 
 - a server reading encrypted Direct/Group message plaintext in the normal encrypted path;
 - an unauthenticated party forging registered Community Node requests;
+- reading or deleting another user's envelopes (a mailbox answers only to the capability its owner created);
+- posing as another device or phone alias in an invitation letter (letters are signed with the device key; a
+  device routing ID must derive from it, and a phone alias must belong to it at the Presence Directory);
 - trivial replay of signed server requests;
 - silent substitution of a contact identity without surfacing security state;
+- posing as a phone book contact by claiming their number in an invitation (only keys file an invitation
+  under a known contact; a claimed number is shown as unverified, the invitation counts as unknown, and
+  a matching phone book contact is linked only when the user accepts);
+- getting around a block by writing the blocked number differently (`0151...`, `+49151...`) or by claiming it
+  from a new installation (both resolve to the blocked contact; a sender that claims no number or another one
+  still arrives as unknown, which "block unknown invites" covers);
 - offline-message storage that requires server plaintext;
 - accidental persistence of client private keys in plaintext Android preferences;
-- advertising a phone alias with a phone verification token for a different number (the one-time
-  token from sign-up must match the alias when the presence directory has a verifier
-  configured).
+- taking over a phone alias another device holds (an alias stays with the first device that claims
+  it; only an attestation of the Directory's phone verifier for that number moves it). The exception are the operator's
+  configured test numbers, which any device can take;
+- a node directory with an expired registry certificate, or one signed under a different registry
+  root than the configured or first-seen one;
+- a Community Node learning its users' phone numbers: the app claims its alias at each of its Control Planes,
+  sealed for the presence directory's key from that Control Plane's signed node directory, and invitation letters
+  are sealed for the recipient;
+- mailbox nodes learning the app's network address: mailbox requests go through circuits of 1 to 5 relays
+  (default 2), never two of the same declared operator, and with "Send directly without a route" switched off
+  nothing goes out without a circuit through at least two hops (by default it goes out directly while no circuit is up);
+- Control Planes learning the app's network address: the app's requests to them go through two relays (onion
+  layers sealed for each relay's key from the signed directory). The first relay sees the address but not the
+  destination, the second the destination but not the address; neither reads the content. Two relays run by the
+  same operator could link both, and with a single relaying node there is only one hop;
+- looking up who uses Sparrow by hashing phone numbers cheaply: each invitation route lookup
+  (`POST /v1/invitation-routes`) costs a proof of work, and the answer names no phone number.
+
+Servers keep as little about users as they can: mailboxes store nothing about their creator (a new mailbox costs
+a small proof of work instead of a per-address quota, so users behind one session node do not share a limit;
+used work stamps are kept for 10 minutes), mailboxes live at most 31 days
+and envelopes at most 7, request logs show route shapes (`/v1/mailboxes/{id}/envelopes`) instead of IDs, and
+container logs are capped at 3 × 10 MB per service.
+
+A mailbox node sees when envelopes are stored and fetched, and from that can guess which of its random mailboxes
+form a group or the two directions of one chat, and when their owner is online. The optional decoy envelopes
+(Settings > Network > Onion routing, off by default) hide which mailboxes a send was for; online status stays
+visible. See [Decoy envelopes](../features/transport.md#decoy-envelopes).
+
+Anyone can run a Community Node; registering one gives no power over other nodes' clients. The first relay of
+a circuit still sees the app's network address. The last relay sees the content of requests that are not sealed
+for the Control Plane (node directory fetches, invitation route lookups), but not who sent them.
 
 ## Infrastructure can still observe metadata
 
@@ -23,13 +61,22 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - source network addresses/connections;
 - node/Control Plane access timing;
 - routing IDs and delivery timing within the protocol's needs;
-- node connection counts/load;
 - encrypted envelope sizes;
+- the first contact invite, which is unencrypted because the recipient's key is not known yet: the sender's
+  phone number, public keys and invite challenge (no profile picture; it follows in the encrypted ready packet);
+- group invites, join requests and their answers sent to a contact whose key is not known yet. Answers to a
+  contact invite, and group invite packets to a contact with a known key, are encrypted;
 - encrypted attachment/blob sizes and blob-transfer timing.
 
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase
-processes the phone number and sends the SMS. A registration without a token is still accepted,
-so phone verification is not a guarantee that every advertised alias was verified.
+processes the phone number and sends the SMS. Only the operator's test numbers are bound without it.
+
+Before the SMS, the app reserves a sign-up slot at the phone verifier (sealed, through the relays, for a small proof
+of work); the verifier keeps only the day, its count and hashes of open slots, and the slot links nothing to an
+address. The slots cap sign-ups per day and stop SMS on a full day for the real app. They do not stop someone who
+uses the app's Firebase details directly to request SMS: that is bounded by Firebase's own app check (Play
+Integrity, or reCAPTCHA for an app not from the Play Store), the project's SMS region policy and a billing budget.
+Someone can also take today's open slots with cheap proofs of work and block sign-ups for the day; it costs no SMS.
 
 Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
 provider (Frankfurter by default) sees the node's address once a day, never a user's.

@@ -69,6 +69,12 @@ interface MailboxRouteRepository {
 
     suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?>
 
+    /**
+     * The contact's mailbox route, found by the contact itself: a contact's routing table holds only its phone
+     * alias, not the address derived from its key that messages to a verified contact use.
+     */
+    suspend fun remoteForContact(contactId: String): Result<MailboxDeliveryRoute?>
+
     suspend fun allLocal(): Result<List<LocalMailboxCredential>>
 
     suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit>
@@ -85,4 +91,22 @@ interface MailboxRouteRepository {
     suspend fun deleteRemote(contactId: String): Result<Unit>
 
     suspend fun deleteAllRemote(): Result<Unit>
+
+    /**
+     * Local credentials replaced by a renewal. They stay readable until they expire, so envelopes still in them and
+     * those the contact sends before it learned the new route are not lost.
+     */
+    suspend fun allRetiring(): Result<List<LocalMailboxCredential>>
+
+    /** Keeps [retiring] as a retiring credential and makes [replacement] the contact's credential, atomically. */
+    suspend fun retireLocal(
+        retiring: LocalMailboxCredential,
+        replacement: LocalMailboxCredential
+    ): Result<Unit>
+
+    suspend fun saveRetiring(credential: LocalMailboxCredential): Result<Unit>
+
+    suspend fun markRetiringRevocationPending(contactId: String): Result<Unit>
+
+    suspend fun deleteRetiring(routeId: String): Result<Unit>
 }

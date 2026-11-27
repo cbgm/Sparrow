@@ -60,13 +60,13 @@ Chats submits every write as a `ConversationCommand` to `ConversationOrchestrato
 | `:feature:membership` | group membership/security/admin lifecycle |
 | `:feature:conversationorchestration:*` | every conversation write and incoming packet as workflow state machines (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) |
 | `:feature:messaging` | durable outbox/incoming-envelope execution |
-| `:feature:transport` | discovery/WebSocket/presence/mailbox/push transport |
+| `:feature:transport` | discovery, circuits, alias claims and mailbox transport |
 | `:feature:applock` | application-lock setting/authentication boundary |
 | `:feature:notification` | app notifications/background synchronization |
 
 ## Startup/runtime split
 
-Application startup no longer lives as one large `AppViewModel` procedure. `ApplicationStartupRunner` consumes a list of `StartupTask`s. Waiting tasks complete before main navigation; background tasks and `ForegroundRuntimeCoordinator` start after `StartupViewModel.completeStartup()` navigates to `AppRoute.Main`.
+Application startup no longer lives as one large `AppViewModel` procedure. `ApplicationStartupRunner` consumes a list of `StartupTask`s. Waiting tasks complete before main navigation; background tasks and `ForegroundRuntime` start after `StartupViewModel.completeStartup()` navigates to `AppRoute.Main`.
 
 See [Startup architecture](startup.md).
 
@@ -89,8 +89,8 @@ Direct and Group remain separate where authorization, recipients, membership, de
 
 ## Persistence
 
-Room schema is version **55**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
+Room schema is version **62**. Structured message-part payloads are stored in `MessagePartEntity.payload`; blob metadata/cache paths are in `MessageBlobEntity`. See [Persistence](persistence.md).
 
 ## Server topology
 
-The Control Plane owns discovery/presence/push control functions. Community Nodes own client gateway, federation, mailbox and encrypted blob transport. Server details are documented under [Server & Operations](../server/overview.md).
+The Control Plane owns discovery and presence (alias bindings, invitation routes). Community Nodes own relays and circuits, mailboxes and encrypted blob transport. Server details are documented under [Server & Operations](../server/overview.md).

@@ -56,17 +56,14 @@ Standalone Control Plane + two independent Community Nodes:
 .\server\scripts\Test-StandaloneCommunityNodes.ps1 -BuildImages
 ```
 
-The standalone smoke test verifies independent networks/volumes, stable node identities, signed registration,
-federation and persistence. Federation may initially return `QUEUED_AT_GATEWAY`; the test waits for the retry
-path and verifies destination storage instead of incorrectly requiring synchronous delivery.
+The standalone smoke test verifies independent networks/volumes, stable node identities, signed registration
+and that a node keeps its identity across a restart.
 
 ## Persistence
 
 Durable:
 
 - node registry PostgreSQL;
-- push PostgreSQL;
-- federation outbound queue PostgreSQL;
 - mailbox PostgreSQL;
 - node identity volumes;
 - Community Node gateway attachment-blob volume (`gateway-blob-data`);
@@ -74,7 +71,7 @@ Durable:
 
 Ephemeral/rebuildable:
 
-- Redis presence routes.
+- Redis phone alias bindings and invitation routes (apps claim them again every few hours).
 
 ## Backups
 
@@ -98,10 +95,10 @@ For an installation created by the server installer, the Windows offline snapsho
 6. Check Caddy logs if the service is healthy internally but the public route returns 502.
 7. For Community Node registration, verify the directory URL and `/v1/control-planes`.
 8. For attachment failures, inspect gateway blob/ticket logs, blob volume capacity and configured size/retention values.
-9. For client disconnects, inspect gateway health and Android transport logs.
-10. For a sign-up whose route registration is rejected with `PHONE_VERIFICATION_FAILED`, check the
-    `presence-directory` logs and that the Firebase Admin service account has Firebase Authentication access to
-    the project in `FIREBASE_TARGET_PROJECT_ID`. Without credentials, tokens are not checked at all.
+9. For client disconnects, inspect gateway health (`/v1/circuit`) and Android transport logs.
+10. For a sign-up whose alias claim is rejected with `PHONE_VERIFICATION_FAILED`, check the
+    `presence-directory` logs and that `CONTROL_PLANE_DIRECTORY_PUBLIC_KEY` is the key of the Directory whose
+    phone verifier signed the attestation.
 11. For a public installation with automatic sslip.io hostnames that became unreachable after the internet
     provider changed the public IP, run **Start / apply settings** in the installer: it moves the generated
     names to the new IP (previous settings in `backups/public-ip-*`). Custom DNS names must be updated at your

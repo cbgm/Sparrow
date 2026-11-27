@@ -63,7 +63,6 @@ class NodeRegistryApplicationRateLimitTest {
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = "wss://${identity.nodeId}/v1/gateway",
-                federationEndpoint = "https://${identity.nodeId}/federation",
                 mailboxEndpoint = "https://${identity.nodeId}/mailbox",
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(1),

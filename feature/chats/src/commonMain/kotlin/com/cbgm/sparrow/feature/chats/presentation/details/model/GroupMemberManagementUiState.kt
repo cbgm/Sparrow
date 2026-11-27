@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.details.model
 
-import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupUi
 
 data class GroupMemberManagementUiState(
-    val availableContactGroups: List<ContactGroupEntity> = emptyList(),
+    val availableContactGroups: List<ContactGroupUi> = emptyList(),
     val selectedContactIds: Set<String> = emptySet(),
     val searchQuery: String = "",
     val removalCandidate: GroupMemberVerificationUiState? = null,

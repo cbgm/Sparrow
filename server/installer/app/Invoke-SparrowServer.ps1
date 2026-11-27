@@ -9,8 +9,6 @@ param(
     [string]$DirectoryUrl = '',
     [string]$ImagePrefix = 'ghcr.io/cbgm/sparrow',
     [string]$ImageTag = 'latest',
-    [string]$FirebaseCredentialsPath = '',
-    [ValidateSet('Enabled', 'Disabled')][string]$FirebaseMode = 'Enabled',
     [string]$ExistingNodeDirectory = '',
     [string]$ExistingControlPlaneDirectory = '',
     [string]$ExistingProxyDirectory = '',
@@ -392,15 +390,6 @@ function Show-ComponentStatus([string]$Directory) {
     $endpoint = if ($component.Mode -eq 'public') { "https://$($component.Hostname)" } elseif ($Directory -eq $cpRoot) { 'http://localhost:8390' } else { 'http://localhost:8490' }
     Write-Host "Configured endpoint: $endpoint (DNS/external availability not verified)"
     Invoke-ComponentCommand $Directory @('ps', '--all')
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties (Join-Path $Directory '.env.runtime')
-        $path = [string]$runtime['FIREBASE_ADMIN_CREDENTIALS']
-        if ($path -and (Test-Path -LiteralPath $path -PathType Leaf)) {
-            Write-Host 'FCM: service-account file configured. Authorization, FCM acceptance and delivery NOT verified.'
-        } else {
-            Write-Host 'FCM: not configured. Core encrypted messaging does not depend on push.'
-        }
-    }
 }
 function Require-Docker {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is not available.' }
@@ -454,13 +443,6 @@ function Get-ComposeArguments([string]$Directory) {
         $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.release.yml'))
         if ($conf['MODE'] -eq 'public') { $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.production.yml')) }
         if ($conf['MODE'] -eq 'public' -and $conf['SHARED_PROXY'] -eq 'true') { $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.shared-proxy.yml')) }
-    }
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties $runtimeFile
-        if (-not [string]::IsNullOrWhiteSpace($runtime['FIREBASE_ADMIN_CREDENTIALS']) -and
-            (Test-Path -LiteralPath $runtime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            $composeArgs += @('-f', (Join-Path $Directory 'docker-compose.firebase.yml'))
-        }
     }
     return ,$composeArgs
 }
@@ -559,20 +541,13 @@ function Start-OrUpdateComponent([string]$Directory, [string]$Bootstrap, [string
             SPARROW_IMAGE_TAG = $config['SPARROW_IMAGE_TAG']
         }
     }
+    # The presence directory checks phone attestations with the pinned Directory key.
+    if ($Directory -eq $cpRoot -and
+        [string]$runtime['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] -ne [string]$config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) {
+        Write-Properties $runtimePath @{ CONTROL_PLANE_DIRECTORY_PUBLIC_KEY = [string]$config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] }
+    }
     $composeArgs = Get-ComposeArguments $Directory
     Invoke-Docker -Arguments ($composeArgs + @('config', '--quiet'))
-    if ($Directory -eq $cpRoot) {
-        $runtime = Read-Properties $runtimePath
-        if (-not [string]::IsNullOrWhiteSpace($runtime['FIREBASE_ADMIN_CREDENTIALS']) -and
-            (Test-Path -LiteralPath $runtime['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            # Compare the exact Compose file path, not a regex against serialized arguments.
-            # The previous double-escaped regex rejected the correctly appended file.
-            if ($composeArgs -notcontains (Join-Path $Directory 'docker-compose.firebase.yml')) {
-                throw 'Firebase credentials are saved but docker-compose.firebase.yml was not applied.'
-            }
-            Write-Host 'Firebase Compose override enabled for the existing Control Plane push service.'
-        }
-    }
     if ($null -eq $localImages) {
         Write-Host "Fetching the latest selected $project backend images from GHCR ..."
         Invoke-Docker -Arguments ($composeArgs + @('pull') + $BackendServices)
@@ -839,53 +814,6 @@ function Resolve-OrphanedTestData {
     }
 }
 
-function Get-PushCredential {
-    $cpConfigPath = Join-Path $cpRoot 'sparrow.conf'
-    $cpConfig = Read-Properties $cpConfigPath
-    $credentialOwner = [string]$cpConfig['CONTROL_PLANE_ID']
-    if ($credentialOwner -notmatch '^[a-zA-Z0-9-]{1,64}$') {
-        # A previously interrupted installation can leave CONTROL_PLANE_ID
-        # empty even though .env.runtime and the live Control Plane exist.
-        # That value is metadata, not a reason to reinstall or regenerate
-        # the registry signing identity. Store Firebase credentials under a
-        # separately persisted, opaque owner ID instead.
-        $credentialOwner = [string]$cpConfig['FIREBASE_CREDENTIAL_STORE_ID']
-        if ($credentialOwner -notmatch '^[a-zA-Z0-9-]{1,64}$') {
-            $credentialOwner = [Guid]::NewGuid().ToString('N')
-            Write-Properties $cpConfigPath @{ FIREBASE_CREDENTIAL_STORE_ID = $credentialOwner }
-        }
-    }
-    $secretRoot = Join-Path $env:LOCALAPPDATA "Sparrow\Server\Secrets\$credentialOwner"
-    $destination = Join-Path $secretRoot 'firebase-admin.json'
-    if ([string]::IsNullOrWhiteSpace($FirebaseCredentialsPath)) {
-        if (Test-Path -LiteralPath $destination -PathType Leaf) { return $destination }
-        return
-    }
-    if (-not (Test-Path -LiteralPath $FirebaseCredentialsPath -PathType Leaf)) {
-        Write-Host 'Firebase credentials not found; continuing without FCM.'; return
-    }
-    try {
-        $json = Get-Content -LiteralPath $FirebaseCredentialsPath -Raw | ConvertFrom-Json -ErrorAction Stop
-        if ($json.type -ne 'service_account' -or -not $json.client_email -or -not $json.private_key) {
-            throw 'Expected a Google service-account JSON.'
-        }
-    } catch {
-        Write-Host 'Firebase credentials could not be parsed; continuing without FCM.'; return
-    }
-    # This location is under the operator profile, NOT included in distributable archives.
-    New-Item -ItemType Directory -Path $secretRoot -Force | Out-Null
-    if ([System.IO.Path]::GetFullPath($FirebaseCredentialsPath) -ne [System.IO.Path]::GetFullPath($destination)) {
-        if (Test-Path -LiteralPath $destination -PathType Leaf) {
-            $backup = "$destination.backup.$(Get-Date -Format yyyyMMddHHmmss)"
-            Copy-Item -LiteralPath $destination -Destination $backup -ErrorAction Stop
-        }
-        Copy-Item -LiteralPath $FirebaseCredentialsPath -Destination $destination -Force
-    }
-    $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    & icacls.exe $destination /inheritance:r /grant:r "*${sid}:(F)" '*S-1-5-18:(F)' 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'Could not protect imported Firebase credentials with a restricted ACL.' }
-    return $destination
-}
 function Ensure-SharedNetwork {
     # Inspect of a *missing* network writes to stderr. With Windows PowerShell
     # 5.1 and ErrorActionPreference=Stop, 2>$null can still turn that routine
@@ -963,7 +891,6 @@ function Write-ProxyConfig {
         $routes += Get-ComponentRoutes $cpRoot '{$CONTROL_PLANE_SITE_ADDRESS}' @{
             'node-registry:8090' = 'sparrow-control-registry:8090'
             'presence-directory:8091' = 'sparrow-control-presence:8091'
-            'push:8095' = 'sparrow-control-push:8095'
         } '/srv/control-plane'
         $entries += "$(Check-Domain $cpHost) {`n    import sparrow_control_routes`n}"
     }
@@ -1045,7 +972,7 @@ function Repair-InstalledPublicMetadataIfAlreadyPublic {
     # partially converted, leave it untouched: a fake Public metadata flag can
     # change Compose DB credential and signing-volume bindings.
     Assert-DeploymentsNotRunningElsewhere
-    Test-InstalledProjectHasCompletePublicLayers 'sparrow-control-plane' @('caddy', 'node-registry', 'presence-directory', 'push')
+    Test-InstalledProjectHasCompletePublicLayers 'sparrow-control-plane' @('caddy', 'node-registry', 'presence-directory')
     Test-InstalledProjectHasCompletePublicLayers 'sparrow-community-node' @('caddy', 'mailbox', 'federation', 'gateway')
     $proxyIds = @(& docker ps -a --filter 'label=com.docker.compose.project=sparrow-public-proxy' --filter 'label=com.docker.compose.service=caddy' --format '{{.ID}}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or $proxyIds.Count -ne 1 -or -not $proxyIds[0]) {
@@ -1107,11 +1034,8 @@ function Get-InstalledLanComposeFlavor([string]$Directory, [string]$Project) {
         throw "$Project already uses public Compose overrides although sparrow.conf says LAN. Inspect the original deployment before migration."
     }
     foreach ($filename in ($configuration -split ',' | ForEach-Object { [System.IO.Path]::GetFileName(([string]$_).Trim()) })) {
-        if ($filename -notin @('docker-compose.yml','docker-compose.release.yml','docker-compose.firebase.yml')) {
+        if ($filename -notin @('docker-compose.yml','docker-compose.release.yml')) {
             throw "Unrecognized live Compose override $filename for $Project. Preserve original service/identity configuration."
-        }
-        if ($filename -eq 'docker-compose.firebase.yml' -and $Project -ne 'sparrow-control-plane') {
-            throw "Unexpected Firebase override on $Project."
         }
     }
     return $(if ($configuration -match 'docker-compose\.release\.yml') { 'release' } else { 'base' })
@@ -1149,7 +1073,7 @@ function Get-SafeInstalledPublicMode([string]$Directory, [string]$Project) {
             throw "Existing $Project contains public or unknown Compose layers (container $id). Refusing automatic recovery; no state was changed."
         }
         foreach ($filename in ($files -split ',' | ForEach-Object { [System.IO.Path]::GetFileName(([string]$_).Trim()) })) {
-            if ($filename -notin @('docker-compose.yml','docker-compose.release.yml','docker-compose.firebase.yml')) {
+            if ($filename -notin @('docker-compose.yml','docker-compose.release.yml')) {
                 throw "Existing $Project has unknown live Compose file $filename. Refusing automatic recovery; no state was changed."
             }
         }
@@ -1165,13 +1089,6 @@ function Get-TransitionComposeArguments([string]$Directory, [string]$Runtime, [s
     $result = @('compose', '--env-file', $Runtime, '-f', (Join-Path $Directory 'docker-compose.yml'))
     if ($Flavor -eq 'release') { $result += @('-f', (Join-Path $Directory 'docker-compose.release.yml')) }
     $result += @('-f', (Join-Path $Directory 'docker-compose.public-transition.yml'))
-    if ($Directory -eq $cpRoot) {
-        $existing = Read-Properties (Join-Path $cpRoot '.env.runtime')
-        if ($existing['FIREBASE_ADMIN_CREDENTIALS'] -and
-            (Test-Path -LiteralPath $existing['FIREBASE_ADMIN_CREDENTIALS'] -PathType Leaf)) {
-            $result += @('-f', (Join-Path $cpRoot 'docker-compose.firebase.yml'))
-        }
-    }
     return ,$result
 }
 function Write-PreflightProperties([string]$Path, [hashtable]$Updates) {
@@ -1188,8 +1105,8 @@ function Test-LocalLanDeploymentForMigration {
         throw 'In-place LAN to Public conversion currently requires Combined mode (Node + Control Plane).'
     }
     Assert-DeploymentsNotRunningElsewhere
-    foreach ($entry in @(@{ Root=$cpRoot; Project='sparrow-control-plane'; Services=@('caddy','node-registry','presence-directory','push','node-registry-database','presence-redis','push-database') },
-                        @{ Root=$nodeRoot; Project='sparrow-community-node'; Services=@('caddy','mailbox','federation','gateway','mailbox-database','federation-database') })) {
+    foreach ($entry in @(@{ Root=$cpRoot; Project='sparrow-control-plane'; Services=@('caddy','node-registry','presence-directory','node-registry-database','presence-redis') },
+                        @{ Root=$nodeRoot; Project='sparrow-community-node'; Services=@('caddy','mailbox','federation','gateway','mailbox-database') })) {
         $runtimePath = Join-Path $entry.Root '.env.runtime'
         $config = Read-Properties (Join-Path $entry.Root 'sparrow.conf')
         if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf) -or
@@ -1210,8 +1127,7 @@ function Test-LocalLanDeploymentForMigration {
             }
         }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/mailbox-database-password.txt') -PathType Leaf) -or
-        -not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/federation-database-password.txt') -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $nodeRoot 'secrets/mailbox-database-password.txt') -PathType Leaf)) {
         throw 'Existing node password files are missing. Refusing to change its Compose configuration.'
     }
     foreach ($entry in @(@{Root=$cpRoot; Name='control-plane'}, @{Root=$nodeRoot; Name='community-node'})) {
@@ -1242,10 +1158,10 @@ function Invoke-LanToPublicMigration {
     }
     $cpRuntime = Read-Properties (Join-Path $cpRoot '.env.runtime')
     $nodeRuntime = Read-Properties (Join-Path $nodeRoot '.env.runtime')
-    foreach ($key in @('CONTROL_PLANE_PROJECT_NAME','NODE_REGISTRY_DATABASE_PASSWORD','PRESENCE_REDIS_PASSWORD','PUSH_DATABASE_PASSWORD','PUSH_INTERNAL_API_TOKEN')) {
+    foreach ($key in @('CONTROL_PLANE_PROJECT_NAME','NODE_REGISTRY_DATABASE_PASSWORD','PRESENCE_REDIS_PASSWORD')) {
         if (-not $cpRuntime[$key]) { throw "Existing Control Plane lacks $key. No data changed." }
     }
-    foreach ($key in @('COMMUNITY_NODE_PROJECT_NAME','CLIENT_ENDPOINT','FEDERATION_ENDPOINT','MAILBOX_ENDPOINT','CONTROL_PLANE_URL')) {
+    foreach ($key in @('COMMUNITY_NODE_PROJECT_NAME','CLIENT_ENDPOINT','MAILBOX_ENDPOINT','CONTROL_PLANE_URL')) {
         if (-not $nodeRuntime[$key]) { throw "Existing Node lacks $key. No data changed." }
     }
     $candidateDirectory = ([string]$DirectoryUrl).Trim()
@@ -1293,7 +1209,6 @@ function Invoke-LanToPublicMigration {
         Write-PreflightProperties $nodeCandidate @{
             COMMUNITY_NODE_DOMAIN=$NodeDomain
             CLIENT_ENDPOINT="wss://$NodeDomain/v1/gateway"
-            FEDERATION_ENDPOINT="https://$NodeDomain"
             MAILBOX_ENDPOINT="https://$NodeDomain"
             CONTROL_PLANE_URL='http://sparrow-control-edge:8080'
             CONTROL_PLANE_URLS=('http://sparrow-control-edge:8080' + $(if ($cpConfigured.Count -gt 1) { ',' + ($cpConfigured[1..($cpConfigured.Count-1)] -join ',') } else { '' }))
@@ -1342,7 +1257,6 @@ function Invoke-LanToPublicMigration {
     Write-Properties (Join-Path $nodeRoot '.env.runtime') @{
         COMMUNITY_NODE_DOMAIN=$NodeDomain
         CLIENT_ENDPOINT="wss://$NodeDomain/v1/gateway"
-        FEDERATION_ENDPOINT="https://$NodeDomain"
         MAILBOX_ENDPOINT="https://$NodeDomain"
         CONTROL_PLANE_URL='http://sparrow-control-edge:8080'
         CONTROL_PLANE_URLS=('http://sparrow-control-edge:8080' + $(if ($cpConfigured.Count -gt 1) { ',' + ($cpConfigured[1..($cpConfigured.Count-1)] -join ',') } else { '' }))
@@ -1350,7 +1264,7 @@ function Invoke-LanToPublicMigration {
     }
         Write-Host 'Applying existing Control Plane backend and Caddy networking without touching database/Redis containers ...'
         $cpArgs = Get-ComposeArguments $cpRoot
-        Invoke-Docker -Arguments ($cpArgs + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','push','caddy'))
+        Invoke-Docker -Arguments ($cpArgs + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','caddy'))
         Write-Host 'Applying existing Community Node backend and Caddy networking without touching database containers ...'
         $nodeArgs = Get-ComposeArguments $nodeRoot
         Invoke-Docker -Arguments ($nodeArgs + @('up','-d','--no-deps','--pull','never','mailbox','federation','gateway','caddy'))
@@ -1388,7 +1302,7 @@ function Invoke-LanToPublicMigration {
         try {
             $originalCp = @('compose','--env-file',(Join-Path $cpRoot '.env.runtime'),'-f',(Join-Path $cpRoot 'docker-compose.yml'))
             if ($cpFlavor -eq 'release') { $originalCp += @('-f',(Join-Path $cpRoot 'docker-compose.release.yml')) }
-            Invoke-Docker -Arguments ($originalCp + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','push','caddy'))
+            Invoke-Docker -Arguments ($originalCp + @('up','-d','--no-deps','--pull','never','node-registry','presence-directory','caddy'))
         } catch { $rollbackFailures.Add("Restore LAN Control Plane: $($_.Exception.Message)") }
         try {
             $originalNode = @('compose','--env-file',(Join-Path $nodeRoot '.env.runtime'),'-f',(Join-Path $nodeRoot 'docker-compose.yml'),'-f',(Join-Path $nodeRoot 'docker-compose.release.yml'))
@@ -1629,30 +1543,8 @@ try {
             $previous = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
             $cpId = if ($previous['CONTROL_PLANE_ID']) { $previous['CONTROL_PLANE_ID'] } else { [Guid]::NewGuid().ToString('N') }
             if (Test-Path -LiteralPath (Join-Path $cpRoot '.env.runtime') -PathType Leaf) {
-                # Normal Install / Start also configures Firebase for an already
-                # installed Control Plane. Previously only the fresh-install
-                # branch imported credentials, leaving FCM disabled forever.
-                # Do not change the existing Control Plane identity, databases,
-                # public hostnames, or Docker volumes.
-                if ($FirebaseMode -eq 'Enabled' -and
-                    -not [string]::IsNullOrWhiteSpace($FirebaseCredentialsPath)) {
-                    $credential = Get-PushCredential
-                    if (-not $credential -or -not (Test-Path -LiteralPath $credential -PathType Leaf)) {
-                        throw 'Firebase service-account import failed. Select a valid Firebase Admin service-account JSON; the installed Control Plane was not reset.'
-                    }
-                    # Persist the host path so Get-ComposeArguments includes the
-                    # optional Firebase override on subsequent starts/updates.
-                    Write-Properties (Join-Path $cpRoot '.env.runtime') @{
-                        FIREBASE_ADMIN_CREDENTIALS = $credential.Replace('\', '/')
-                    }
-                    Write-Host 'Firebase Admin credentials configured for existing Control Plane (no server reset).'
-                } elseif ($FirebaseMode -eq 'Disabled') {
-                    # An unchecked UI option on a routine update must not
-                    # silently strip an already working production FCM setup.
-                    Write-Host 'Firebase import not requested; existing installed push configuration preserved.'
-                }
                 # Updating only the image must never reset CP identity, public
-                # hostname, push mode, or existing configuration.
+                # hostname, or existing configuration.
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
@@ -1665,15 +1557,6 @@ try {
                     CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                 }
-                if ($FirebaseMode -eq 'Disabled') {
-                    $env:SPARROW_DISABLE_FCM = '1'
-                    Remove-Item Env:FIREBASE_ADMIN_CREDENTIALS -ErrorAction SilentlyContinue
-                    Write-Host 'FCM explicitly disabled by the operator.'
-                } else {
-                    Remove-Item Env:SPARROW_DISABLE_FCM -ErrorAction SilentlyContinue
-                    $credential = Get-PushCredential
-                    if ($credential) { $env:FIREBASE_ADMIN_CREDENTIALS = $credential }
-                }
             }
             if ($shared) {
                 # Create this non-secret, host-writable directory BEFORE Compose mounts it.
@@ -1681,7 +1564,7 @@ try {
                 # registration client cannot write to.
                 New-Item -ItemType Directory -Path (Join-Path $cpRoot 'directory-registration-proofs') -Force | Out-Null
             }
-            Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory', 'push')
+            Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory')
         }
         if ($nodeSelected) {
             if (Test-Path -LiteralPath (Join-Path $nodeRoot '.env.runtime') -PathType Leaf) {

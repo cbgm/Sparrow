@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 
+import com.cbgm.sparrow.core.util.flow.retryWithBackoff
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
 import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
@@ -8,15 +9,11 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetApprovedIdentityRecon
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveApprovedIdentityReconnectionsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * App-lifetime resumption of the EXISTING, explicitly approved recovery workflow.
@@ -34,13 +31,9 @@ class ApprovedIdentityReconnectionObserver internal constructor(
     suspend fun run(): Unit = coroutineScope {
         val workers = mutableMapOf<String, Pair<String, Job>>()
         try {
-            observeApprovals().retryWhen { cause, attempt ->
-                if (cause is CancellationException) throw cause
-                // A temporary Room observation error must not permanently disable
-                // automatic recovery for the remainder of the app process.
-                delay((1_000L shl attempt.coerceAtMost(6L).toInt()).coerceAtMost(60_000L).milliseconds)
-                true
-            }.collect { approvals ->
+            // A temporary Room observation error must not permanently disable
+            // automatic recovery for the remainder of the app process.
+            observeApprovals().retryWithBackoff().collect { approvals ->
                 val latest = approvals.associateBy(ApprovedIdentityReconnection::peerId)
                 val obsolete = workers.filter { (peer, active) ->
                     latest[peer]?.approvalId != active.first

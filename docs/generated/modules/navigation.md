@@ -14,7 +14,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Production Kotlin files | 18 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 20 |
+| Direct dependencies | 21 |
 | Direct dependents | 1 |
 
 ## Source sets
@@ -25,6 +25,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [`:core:ui`](../modules/core-ui.md)
 - [`:core:util`](../modules/core-util.md)
+- [`:feature:applock`](../modules/feature-applock.md)
 - [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:autoreply`](../modules/feature-autoreply.md)
 - [`:feature:chats`](../modules/feature-chats.md)

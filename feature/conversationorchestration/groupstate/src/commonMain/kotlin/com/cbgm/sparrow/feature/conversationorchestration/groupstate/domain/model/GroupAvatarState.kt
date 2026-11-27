@@ -1,10 +1,14 @@
 package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model
 
-/** The group avatar image (null when removed) and when an admin last changed it; 0 means never published. */
+/**
+ * The group avatar image (null when removed) and when an admin last changed it; 0 means never published.
+ * [publishPending] marks a local change that is shown already but not queued for the members yet.
+ */
 class GroupAvatarState(
     val groupId: String,
     val bytes: ByteArray?,
-    val changedAtEpochMilliseconds: Long
+    val changedAtEpochMilliseconds: Long,
+    val publishPending: Boolean = false
 ) {
     val isPublished: Boolean get() = changedAtEpochMilliseconds > 0L
 
@@ -12,11 +16,13 @@ class GroupAvatarState(
         other is GroupAvatarState &&
             groupId == other.groupId &&
             changedAtEpochMilliseconds == other.changedAtEpochMilliseconds &&
+            publishPending == other.publishPending &&
             bytes.contentEquals(other.bytes)
 
     override fun hashCode(): Int {
         var result = groupId.hashCode()
         result = 31 * result + changedAtEpochMilliseconds.hashCode()
+        result = 31 * result + publishPending.hashCode()
         result = 31 * result + (bytes?.contentHashCode() ?: 0)
         return result
     }

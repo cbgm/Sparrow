@@ -25,6 +25,8 @@ import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
+import com.cbgm.sparrow.data.database.dao.ParkedEnvelopeDao
+import com.cbgm.sparrow.data.database.dao.ParkedMessageOperationDao
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
@@ -58,10 +60,13 @@ import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.data.database.entity.MessageTextEntity
+import com.cbgm.sparrow.data.database.entity.ParkedEnvelopeEntity
+import com.cbgm.sparrow.data.database.entity.ParkedMessageOperationEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxFailureEventEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
+import com.cbgm.sparrow.data.database.entity.RetiringMailboxCredentialEntity
 import com.cbgm.sparrow.data.database.entity.VoiceTranscriptEntity
 import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
 
@@ -98,11 +103,14 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         ProtocolOutboxFailureEventEntity::class,
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class,
+        RetiringMailboxCredentialEntity::class,
         LinkPreviewEntity::class,
         GroupMetadataEntity::class,
-        ContactProfilePictureEntity::class
+        ContactProfilePictureEntity::class,
+        ParkedMessageOperationEntity::class,
+        ParkedEnvelopeEntity::class
     ],
-    version = 55,
+    version = 62,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -119,7 +127,14 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         AutoMigration(from = 38, to = 39),
         AutoMigration(from = 39, to = 40),
         AutoMigration(from = 41, to = 42, spec = IdentityExchangeMigration41To42::class),
-        AutoMigration(from = 42, to = 43)
+        AutoMigration(from = 42, to = 43),
+        AutoMigration(from = 55, to = 56),
+        AutoMigration(from = 56, to = 57),
+        AutoMigration(from = 57, to = 58),
+        AutoMigration(from = 58, to = 59),
+        AutoMigration(from = 59, to = 60),
+        AutoMigration(from = 60, to = 61),
+        AutoMigration(from = 61, to = 62)
     ],
     exportSchema = true
 )
@@ -160,6 +175,10 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun messageRecipientStateDao(): MessageRecipientStateDao
 
     abstract fun messageReactionDao(): MessageReactionDao
+
+    abstract fun parkedMessageOperationDao(): ParkedMessageOperationDao
+
+    abstract fun parkedEnvelopeDao(): ParkedEnvelopeDao
 
     abstract fun messageSearchDao(): MessageSearchDao
 

@@ -2,7 +2,7 @@ package com.cbgm.sparrow.runtime.startup
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
-import com.cbgm.sparrow.runtime.foreground.ForegroundRuntimeCoordinator
+import com.cbgm.sparrow.runtime.foreground.ForegroundRuntime
 import com.cbgm.sparrow.startup.domain.model.StartupResult
 import com.cbgm.sparrow.startup.domain.runner.StartupRunner
 import kotlinx.coroutines.CancellationException
@@ -26,11 +26,15 @@ import kotlinx.coroutines.sync.withLock
  * and the local identity is ready. Slower waiting tasks such as the app language keep running
  * meanwhile, so the connection is not delayed by work it does not depend on. When no identity
  * exists yet, the runtime starts later through [startPostNavigationRuntime].
+ *
+ * Once ready, the tasks are not run again in this process: the app and a service started without it (after a
+ * reboot) may both ask, and the later caller gets the result at once. A start that is not ready yet (no identity,
+ * a failure) runs again, as before.
  */
 class ApplicationStartupRunner(
     private val startupTasks: List<StartupTask>,
     private val backgroundScope: CoroutineScope,
-    private val foregroundRuntime: ForegroundRuntimeCoordinator
+    private val foregroundRuntime: ForegroundRuntime
 ) : StartupRunner {
     private val logger = SparrowLog.withTag("ApplicationStartupRunner")
 
@@ -39,8 +43,15 @@ class ApplicationStartupRunner(
     private val transportPrerequisites = Mutex()
     private var finishedTransportPrerequisites = 0
     private var identityReady = false
+    private val startup = Mutex()
+    private var result: StartupResult? = null
 
     override suspend fun run(): StartupResult =
+        startup.withLock {
+            result ?: runOnce().also { finished -> if (finished == StartupResult.Ready) result = finished }
+        }
+
+    private suspend fun runOnce(): StartupResult =
         try {
             val waitingTaskResults = runWaitingTasks()
             resolveStartupResult(waitingTaskResults)
@@ -117,7 +128,8 @@ class ApplicationStartupRunner(
         val identityResults =
             results.filter { result ->
                 result == StartupTaskResult.IdentityReady ||
-                    result == StartupTaskResult.IdentityRequired
+                    result == StartupTaskResult.IdentityRequired ||
+                    result == StartupTaskResult.IdentityUnusable
             }
 
         check(identityResults.size == 1) {
@@ -127,6 +139,7 @@ class ApplicationStartupRunner(
         return when (identityResults.single()) {
             StartupTaskResult.IdentityReady -> StartupResult.Ready
             StartupTaskResult.IdentityRequired -> StartupResult.IdentityRequired
+            StartupTaskResult.IdentityUnusable -> StartupResult.IdentityUnusable
             StartupTaskResult.Completed -> error("Unexpected completed identity result")
         }
     }

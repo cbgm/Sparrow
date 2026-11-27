@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.workflow.direct
 
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.DirectConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
@@ -8,9 +7,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireDirectReconnectAllowedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import kotlin.reflect.KClass
 
@@ -24,9 +21,7 @@ import kotlin.reflect.KClass
  */
 class ReconnectDirectConversationWorkflow internal constructor(
     private val engine: WorkflowEngine,
-    private val blocklistRepository: ContactBlocklistRepository,
-    private val conversationRepository: DirectConversationRepository,
-    private val getIdentityExchangeClosure: GetIdentityExchangeClosureUseCase,
+    private val requireDirectReconnectAllowed: RequireDirectReconnectAllowedUseCase,
     private val resolveContactInvitationRoutingId: ResolveContactInvitationRoutingIdUseCase,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase
 ) : ConversationWorkflow<
@@ -45,17 +40,7 @@ class ReconnectDirectConversationWorkflow internal constructor(
             is Step.CheckReconnectable -> {
                 val contactId = step.command.contactId
                 require(contactId.isNotBlank()) { "Peer ID must not be blank" }
-                check(!blocklistRepository.isBlocked(contactId).getOrThrow()) {
-                    "Blocked contacts cannot be invited"
-                }
-                check(conversationRepository.findConversationId(contactId).getOrThrow() != null) {
-                    "Reconnection requires an existing direct conversation"
-                }
-                check(
-                    getIdentityExchangeClosure(contactId).getOrThrow()?.phase != IdentityExchangeClosurePhase.INCOMING_PENDING
-                ) {
-                    "Review or decline the pending invitation before starting a reconnection"
-                }
+                requireDirectReconnectAllowed(contactId).getOrThrow()
                 Outcome.Reconnectable
             }
             is Step.PreflightRouting -> {
@@ -63,11 +48,7 @@ class ReconnectDirectConversationWorkflow internal constructor(
                 Outcome.RoutingAvailable
             }
             is Step.LoadAuthorization ->
-                if (getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange) {
-                    Outcome.Authorized
-                } else {
-                    Outcome.NotAuthorized
-                }
+                authorizationLoaded(getIdentityPeerState(step.command.contactId).getOrThrow().hasEstablishedExchange)
             is Step.RevokeExchange -> {
                 engine.run(LifecycleCommand.RevokePeerExchange(step.command.contactId)).getOrThrow()
                 Outcome.ExchangeRevoked
@@ -87,6 +68,9 @@ class ReconnectDirectConversationWorkflow internal constructor(
             Outcome.ExchangeRevoked -> Transition.Next(Step.StartInvitation(step.command))
             Outcome.InvitationStarted -> Transition.Complete()
         }
+
+    private fun authorizationLoaded(hasEstablishedExchange: Boolean): Outcome =
+        if (hasEstablishedExchange) Outcome.Authorized else Outcome.NotAuthorized
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.ReconnectConversation

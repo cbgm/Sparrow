@@ -4,7 +4,7 @@ sealed interface OverviewUiEvent {
     data object AutoReplyClicked : OverviewUiEvent
 
     data class ChatClicked(
-        val chat: ConversationListItem
+        val chat: ConversationListItemUi
     ) : OverviewUiEvent
 
     data class DeleteConversation(

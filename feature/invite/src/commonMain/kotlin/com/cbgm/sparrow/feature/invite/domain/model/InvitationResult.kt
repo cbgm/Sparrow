@@ -7,5 +7,6 @@ data class InvitationResult(
     val peerId: String,
     val direction: InvitationDirection,
     val response: InvitationResponse,
-    val action: InvitationResultAction? = null
+    val action: InvitationResultAction? = null,
+    val phoneContactPeerId: String? = null
 )

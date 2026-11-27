@@ -17,7 +17,10 @@ class LinkPreviewRepositoryImpl(
     private val localLinkPreviewDataSource: LocalLinkPreviewDataSource,
     private val applicationScope: ApplicationCoroutineScope
 ) : LinkPreviewRepository {
-    override fun fetchPreviews(text: String): Result<Unit> =
+    override fun fetchPreviews(
+        text: String,
+        nodeBaseUrl: String?
+    ): Result<Unit> =
         safeCall {
             applicationScope.launch(Dispatchers.Default) {
                 try {
@@ -31,7 +34,7 @@ class LinkPreviewRepositoryImpl(
                     if (urls.isEmpty()) return@launch
 
                     urls.forEach { url ->
-                        getPreview(url)
+                        getPreview(url, nodeBaseUrl)
                     }
                 } catch (error: Exception) {
                     val logger = SparrowLog.withTag("LinkPreviewPacketProcessor")
@@ -40,12 +43,15 @@ class LinkPreviewRepositoryImpl(
             }
         }
 
-    override suspend fun getPreview(url: String): Result<LinkPreview> =
+    override suspend fun getPreview(
+        url: String,
+        nodeBaseUrl: String?
+    ): Result<LinkPreview> =
         safeSuspendCall {
             // A page may legitimately have no preview image. Cache that result as well,
             // so opening a chat or prefetching its messages does not fetch it repeatedly.
             localLinkPreviewDataSource.getPreview(url)?.toDomain()
-                ?: remoteLinkPreviewDataSource.getPreview(url)
+                ?: remoteLinkPreviewDataSource.getPreview(url, checkNotNull(nodeBaseUrl) { "No connected node is available" })
                     .also { preview -> localLinkPreviewDataSource.insertPreview(preview) }
                     .toDomain()
         }

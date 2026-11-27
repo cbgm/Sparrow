@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.time.SystemClock
+import com.cbgm.sparrow.feature.membership.crypto.GroupKeyStore
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
@@ -13,8 +14,8 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
@@ -22,16 +23,16 @@ import com.cbgm.sparrow.protocol.packet.GroupMembershipChangePayload
 @Suppress("LongParameterList")
 internal class GroupLeaveDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
+    private val localPhoneNumberSource: LocalPhoneNumberSource,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupEpochSecurity: GroupEpochSecurityDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val groupKeyStore: GroupKeyStore
 ) {
     suspend fun transferAdminAndLeave(
         groupId: String,
@@ -127,42 +128,40 @@ internal class GroupLeaveDataSource(
             epochDataSource
                 .loadCurrentParticipantContacts(groupId)
                 .sortedBy(GroupMembershipPeerDto::id)
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
+        val localPhoneNumber = localPhoneNumberSource.getLocalPhoneNumber().getOrThrow()
         val now = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
         val roleOverrides =
             promotedParticipant
                 ?.let { participant -> mapOf(participant.contactId to GROUP_ADMIN_ROLE) }
                 .orEmpty()
 
-        val securedGroup =
-            groupEpochSecurity
-                .rotateOwnedGroup(
-                    groupId = groupId,
-                    title = context.title,
-                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
-                    updatedAtEpochMilliseconds = now,
-                    memberPayloads =
-                        epochDataSource.createMemberPayloads(
-                            groupId = groupId,
-                            localIdentity = localIdentity,
-                            localPhoneNumber = localPhoneNumber,
-                            contacts = contacts,
-                            roleOverrides = roleOverrides
-                        ).filterNot { member ->
-                            member.signingPublicKey.contentEquals(localSigningKeyPair.publicKey)
-                        },
-                    memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
-                    recipients = epochDataSource.createRecipients(groupId, contacts),
-                    localSigningKeyPair = localSigningKeyPair,
-                    membershipChange =
-                        GroupMembershipChangePayload(
-                            reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT,
-                            memberSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
-                        )
-                ).getOrThrow()
-        packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
+        groupEpochSecurity
+            .rotateOwnedGroup(
+                groupId = groupId,
+                title = context.title,
+                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                updatedAtEpochMilliseconds = now,
+                memberPayloads =
+                    epochDataSource.createMemberPayloads(
+                        groupId = groupId,
+                        localIdentity = localIdentity,
+                        localPhoneNumber = localPhoneNumber,
+                        contacts = contacts,
+                        roleOverrides = roleOverrides
+                    ).filterNot { member ->
+                        member.signingPublicKey.contentEquals(localSigningKeyPair.publicKey)
+                    },
+                memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
+                recipients = epochDataSource.createRecipients(groupId, contacts),
+                localSigningKeyPair = localSigningKeyPair,
+                membershipChange =
+                    GroupMembershipChangePayload(
+                        reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT,
+                        memberSigningPublicKey = localSigningKeyPair.publicKey.copyOf()
+                    )
+            ).getOrThrow()
         return endLocalMembership(
             groupId = groupId,
             referenceId = "local-admin-leave-$groupId",
@@ -194,7 +193,7 @@ internal class GroupLeaveDataSource(
             securityStore.findCurrentEpoch(groupId)
                 ?: error("Active group security state was not found")
         val now = SystemClock.nowEpochMilliseconds()
-        val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val localSigningKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val leaveRequest =
             membershipPacketProtocol
                 .createLeaveRequest(
@@ -233,6 +232,8 @@ internal class GroupLeaveDataSource(
         endedAtEpochMilliseconds: Long
     ): GroupLocalMembershipEndDto {
         securityStore.retireLocalMembership(groupId, endedAtEpochMilliseconds)
+        // A group the user left keeps no key on the device.
+        groupKeyStore.deleteGroup(groupId)
         membershipStore.deleteByGroupId(groupId)
         return GroupLocalMembershipEndDto(
             groupId = groupId,

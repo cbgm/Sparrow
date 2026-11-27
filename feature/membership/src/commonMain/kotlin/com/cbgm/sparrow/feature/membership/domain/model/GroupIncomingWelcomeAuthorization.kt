@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.membership.domain.model
 
+import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
+
 /** Membership-owned authorization for one received group welcome; no database entities cross modules. */
 data class GroupIncomingWelcomeAuthorization(
     val isFirstWelcome: Boolean,
@@ -35,3 +37,7 @@ data class GroupIncomingWelcomeAuthorization(
 
 private fun ByteArray?.sameOptionalBytes(other: ByteArray?): Boolean =
     if (this == null) other == null else other != null && contentEquals(other)
+
+/** A welcome is never stored as older than its creation, even when the local clock is behind the sender's. */
+fun GroupCreatedPacket.welcomePersistedAt(receivedAtEpochMilliseconds: Long): Long =
+    maxOf(createdAtEpochMilliseconds, receivedAtEpochMilliseconds)

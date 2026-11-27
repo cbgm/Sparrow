@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.contactimport.presentation.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,8 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
@@ -88,20 +86,18 @@ fun ScannedIdentityConfirmationDialog(
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                    SparrowApprovalButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = confirmButtonText
-                    )
-                    SparrowSecondaryButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(Res.string.base_cancel)
-                    )
-                }
+                SparrowDialogAction(
+                    onClick = onConfirm,
+                    text = confirmButtonText
+                )
             },
-            dismissButton = {}
+            dismissButton = {
+                SparrowDialogAction(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
     }
 }

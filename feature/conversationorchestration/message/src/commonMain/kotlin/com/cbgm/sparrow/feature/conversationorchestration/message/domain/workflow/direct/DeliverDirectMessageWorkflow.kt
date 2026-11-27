@@ -11,11 +11,12 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectConversationTarget
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.DirectRecipient
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredOutgoingMessage
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.DirectMessagePacketFactory
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.policy.UnsentMessagePolicy
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectMessageRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CreateDirectMessagePacketUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DiscardDirectMessagesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindDirectAuthorizationBlockUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.KeepUnsentDirectMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.LoadDirectRecipientUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RecordPacketSendFailureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.StoreOutgoingDirectMessageUseCase
@@ -24,22 +25,22 @@ import com.cbgm.sparrow.protocol.packet.ChatMessagePacket
 import kotlin.reflect.KClass
 
 /**
- * FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket
- * -> LinkPacket -> EnqueuePacket.
+ * FindConversation -> CheckAuthorization -> LoadRecipient -> StoreMessage -> CreatePacket -> EnqueuePacket.
  *
- * A packet that cannot be created or linked discards the stored message again; a packet the
- * outbox rejects keeps the message and marks it failed so the user can retry.
+ * A packet that cannot be created or linked to the message discards the stored message again, unless only its
+ * attachment could not go out yet ([UnsentMessagePolicy]): then the message stays, failed, to be sent again. A
+ * packet the outbox rejects keeps the message and marks it failed so the user can retry.
  */
 class DeliverDirectMessageWorkflow internal constructor(
     private val conversationRepository: DirectConversationRepository,
-    private val messageRepository: DirectMessageRepository,
     private val findDirectAuthorizationBlock: FindDirectAuthorizationBlockUseCase,
     private val loadDirectRecipient: LoadDirectRecipientUseCase,
     private val storeOutgoingDirectMessage: StoreOutgoingDirectMessageUseCase,
     private val discardDirectMessages: DiscardDirectMessagesUseCase,
-    private val packetFactory: DirectMessagePacketFactory,
+    private val createDirectMessagePacket: CreateDirectMessagePacketUseCase,
     private val protocolOutbox: ProtocolOutbox,
-    private val recordPacketSendFailure: RecordPacketSendFailureUseCase
+    private val recordPacketSendFailure: RecordPacketSendFailureUseCase,
+    private val keepUnsentDirectMessage: KeepUnsentDirectMessageUseCase
 ) : WorkflowStateMachine<
         MessageCommand.DeliverDirectMessage,
         DeliverDirectMessageWorkflow.Step,
@@ -70,11 +71,18 @@ class DeliverDirectMessageWorkflow internal constructor(
                     ).getOrThrow(),
                     contactId = step.recipient.target.contactId
                 )
-            is Step.CreatePacket -> createPacket(step)
-            is Step.LinkPacket -> linkPacket(step)
+            is Step.CreatePacket ->
+                createDirectMessagePacket(step.stored).fold(
+                    onSuccess = { packet -> Outcome.PacketCreated(packet, step.contactId) },
+                    onFailure = { error -> Outcome.PacketPreparationFailed(step.stored, error) }
+                )
             is Step.DiscardMessage -> {
                 discardDirectMessages(listOf(step.stored.message)).getOrThrow()
                 Outcome.MessageDiscarded(step.cause)
+            }
+            is Step.KeepUnsent -> {
+                keepUnsentDirectMessage(step.stored.message).getOrThrow()
+                Outcome.MessageKeptUnsent(step.cause)
             }
             is Step.EnqueuePacket ->
                 protocolOutbox.enqueue(step.contactId, step.packet).fold(
@@ -97,38 +105,25 @@ class DeliverDirectMessageWorkflow internal constructor(
             is Outcome.MessageStored ->
                 Transition.Next(Step.CreatePacket(outcome.stored, outcome.contactId, step.command))
             is Outcome.PacketCreated ->
-                Transition.Next(Step.LinkPacket(outcome.packet, outcome.stored, outcome.contactId, step.command))
-            is Outcome.PacketPreparationFailed ->
-                Transition.Next(Step.DiscardMessage(outcome.stored, outcome.cause, step.command))
-            is Outcome.MessageDiscarded -> Transition.Reject.because(outcome.cause)
-            is Outcome.PacketLinked ->
                 Transition.Next(Step.EnqueuePacket(outcome.packet, outcome.contactId, step.command))
+            is Outcome.PacketPreparationFailed -> keepOrDiscard(outcome, step.command)
+            is Outcome.MessageDiscarded -> Transition.Reject.because(outcome.cause)
+            is Outcome.MessageKeptUnsent -> Transition.Reject.because(outcome.cause)
             Outcome.PacketEnqueued -> Transition.Complete(ConversationResult.DirectMessageSent)
             is Outcome.EnqueueFailed ->
                 Transition.Next(Step.MarkSendFailed(outcome.packet, outcome.cause, step.command))
             is Outcome.SendFailureRecorded -> Transition.Reject.because(outcome.cause)
         }
 
-    private suspend fun createPacket(step: Step.CreatePacket): Outcome =
-        packetFactory.create(
-            messageId = step.stored.message.id,
-            text = step.stored.text,
-            parts = step.stored.parts,
-            replyToMessageId = step.stored.message.replyToMessageId
-        ).fold(
-            onSuccess = { packet -> Outcome.PacketCreated(packet, step.stored, step.contactId) },
-            onFailure = { error -> Outcome.PacketPreparationFailed(step.stored, error) }
-        )
-
-    private suspend fun linkPacket(step: Step.LinkPacket): Outcome =
-        runCatching {
-            val stored = messageRepository.find(step.stored.message.id).getOrThrow()
-                ?: error("Stored direct message was not found")
-            messageRepository.update(stored.copy(packetId = step.packet.packetId)).getOrThrow()
-        }.fold(
-            onSuccess = { Outcome.PacketLinked(step.packet, step.contactId) },
-            onFailure = { error -> Outcome.PacketPreparationFailed(step.stored, error) }
-        )
+    private fun keepOrDiscard(
+        failed: Outcome.PacketPreparationFailed,
+        command: MessageCommand.DeliverDirectMessage
+    ): Transition<Step> =
+        if (UnsentMessagePolicy.keepsMessage(failed.cause)) {
+            Transition.Next(Step.KeepUnsent(failed.stored, failed.cause, command))
+        } else {
+            Transition.Next(Step.DiscardMessage(failed.stored, failed.cause, command))
+        }
 
     sealed interface Step : WorkflowStep {
         val command: MessageCommand.DeliverDirectMessage
@@ -158,14 +153,13 @@ class DeliverDirectMessageWorkflow internal constructor(
             override val command: MessageCommand.DeliverDirectMessage
         ) : Step
 
-        data class LinkPacket(
-            val packet: ChatMessagePacket,
+        data class DiscardMessage(
             val stored: StoredOutgoingMessage,
-            val contactId: String,
+            val cause: Throwable,
             override val command: MessageCommand.DeliverDirectMessage
         ) : Step
 
-        data class DiscardMessage(
+        data class KeepUnsent(
             val stored: StoredOutgoingMessage,
             val cause: Throwable,
             override val command: MessageCommand.DeliverDirectMessage
@@ -209,7 +203,6 @@ class DeliverDirectMessageWorkflow internal constructor(
 
         data class PacketCreated(
             val packet: ChatMessagePacket,
-            val stored: StoredOutgoingMessage,
             val contactId: String
         ) : Outcome
 
@@ -218,12 +211,11 @@ class DeliverDirectMessageWorkflow internal constructor(
             val cause: Throwable
         ) : Outcome
 
-        data class PacketLinked(
-            val packet: ChatMessagePacket,
-            val contactId: String
+        data class MessageDiscarded(
+            val cause: Throwable
         ) : Outcome
 
-        data class MessageDiscarded(
+        data class MessageKeptUnsent(
             val cause: Throwable
         ) : Outcome
 

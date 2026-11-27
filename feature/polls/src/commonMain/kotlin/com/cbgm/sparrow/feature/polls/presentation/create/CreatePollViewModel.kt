@@ -46,7 +46,6 @@ class CreatePollViewModel(
         if (_uiState.value.isSending) return
         when (event) {
             CreatePollUiEvent.BackClicked -> onBackClicked()
-            CreatePollUiEvent.AddOptionClicked -> addOption()
             CreatePollUiEvent.CreateClicked -> createPoll()
             is CreatePollUiEvent.QuestionChanged -> updateQuestion(event.value)
             is CreatePollUiEvent.DescriptionChanged -> updateDescription(event.value)
@@ -77,21 +76,12 @@ class CreatePollViewModel(
         _uiState.update { it.copy(description = value.take(MAX_DESCRIPTION_LENGTH)).validated() }
     }
 
-    private fun addOption() {
-        _uiState.update { state ->
-            if (state.options.size >= MAX_OPTIONS) return@update state
-            state.copy(
-                options = state.options + PollOptionEditorUi(id = IdGenerator.generate("poll-option"))
-            ).validated()
-        }
-    }
-
     private fun updateOption(id: String, value: String) {
         _uiState.update { state ->
             state.copy(
                 options = state.options.map { option ->
                     if (option.id == id) option.copy(text = value) else option
-                }
+                }.withEmptyLastOption()
             ).validated()
         }
     }
@@ -101,7 +91,7 @@ class CreatePollViewModel(
             if (state.options.size <= MIN_OPTIONS) {
                 state
             } else {
-                state.copy(options = state.options.filterNot { it.id == id }).validated()
+                state.copy(options = state.options.filterNot { it.id == id }.withEmptyLastOption()).validated()
             }
         }
     }
@@ -212,7 +202,7 @@ class CreatePollViewModel(
     }
 
     private fun CreatePollUiState.validated(): CreatePollUiState {
-        val validOptions = options.size in MIN_OPTIONS..MAX_OPTIONS && options.all { it.text.isNotBlank() }
+        val validOptions = options.count { it.text.isNotBlank() } in MIN_OPTIONS..MAX_OPTIONS
         val parsedExpiryMinutes = expiryMinutes.toLongOrNull()
         val validExpiry =
             !expiryEnabled ||
@@ -223,6 +213,13 @@ class CreatePollViewModel(
             canCreate = !isSending && question.isNotBlank() && validOptions && validExpiry && isValidPollMedia(media)
         )
     }
+
+    private fun List<PollOptionEditorUi>.withEmptyLastOption(): List<PollOptionEditorUi> =
+        if (size < MAX_OPTIONS && last().text.isNotBlank()) {
+            this + PollOptionEditorUi(id = IdGenerator.generate("poll-option"))
+        } else {
+            this
+        }
 
     override fun onCleared() {
         deletePendingSelections(_uiState.value.media)

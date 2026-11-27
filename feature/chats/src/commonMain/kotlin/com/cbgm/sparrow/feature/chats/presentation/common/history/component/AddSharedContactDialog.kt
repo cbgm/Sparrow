@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,8 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
@@ -46,11 +44,7 @@ internal fun AddSharedContactDialog(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
-                Text(
-                    text = stringResource(Res.string.feature_chats_add_shared_contact_description),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(text = stringResource(Res.string.feature_chats_add_shared_contact_description))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -63,8 +57,7 @@ internal fun AddSharedContactDialog(
                     ) {
                         Surface(
                             shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.32f))
+                            color = MaterialTheme.colorScheme.surfaceContainerLow
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -95,24 +88,18 @@ internal fun AddSharedContactDialog(
             }
         },
         confirmButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-            ) {
-                SparrowSecondaryButton(
-                    onClick = onDismiss,
-                    text = stringResource(Res.string.base_cancel),
-                    modifier = Modifier.weight(1f)
-                )
-
-                SparrowApprovalButton(
-                    onClick = onConfirm,
-                    text = stringResource(Res.string.feature_contacts_add_contact),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            SparrowDialogAction(
+                onClick = onConfirm,
+                text = stringResource(Res.string.feature_contacts_add_contact)
+            )
         },
-        dismissButton = {}
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     )
 }
 

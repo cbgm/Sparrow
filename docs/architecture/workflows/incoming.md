@@ -33,6 +33,7 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 | [`ReceiveGroupDescriptionWorkflow`](#receivegroupdescriptionworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupDescription` | — |
 | [`ReceiveGroupPinWorkflow`](#receivegrouppinworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupPin` | — |
 | [`ReceiveGroupTitleWorkflow`](#receivegrouptitleworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveGroupTitle` | — |
+| [`ApplyParkedMessageOperationsWorkflow`](#applyparkedmessageoperationsworkflow) | orchestration (`engine.run`) | `IncomingCommand.ApplyParkedMessageOperations` | — |
 | [`ApplyRemoteMessageOperationWorkflow`](#applyremotemessageoperationworkflow) | orchestration (`engine.run`) | `IncomingCommand.ApplyRemoteMessageOperation` | — |
 | [`RouteIncomingPacketWorkflow`](#routeincomingpacketworkflow) | orchestration (`engine.run`) | `IncomingCommand.RouteIncomingPacket` | — |
 | [`ReceiveVerificationReceiptWorkflow`](#receiveverificationreceiptworkflow) | orchestration (`engine.run`) | `IncomingCommand.ReceiveVerificationReceipt` | `groupVerificationLockKey(command.packet.groupId)` |
@@ -46,19 +47,23 @@ Diagram legend: boxes are `Step`s, arrow labels are the `Outcome` a step reporte
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveDirectMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/direct/ReceiveDirectMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `DirectMessagePacketReader`, `ApplyPeerProfilePictureUseCase`, `ContactRepository`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `ResolveSenderDisplayNameUseCase`, `SendDeliveryReceiptUseCase`, `ClaimAutoReplyForContactUseCase`, `ReleaseAutoReplyRecipientUseCase`
+- **Uses:** `WorkflowEngine`, `DirectMessagePacketReader`, `UpdateIncomingSenderProfileUseCase`, `DirectMessageRepository`, `MessageAttachmentOperationsRepository`, `StoreIncomingDirectAttachmentsUseCase`, `SendDeliveryReceiptUseCase`, `ClaimAutoReplyForContactUseCase`, `ReleaseAutoReplyRecipientUseCase`
 
 ```text
-ReadMessage -> UpdateSenderProfile -> StoreMessage -> StoreAttachments -> SendDeliveryReceipt -> ClaimAutoReply
--> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments
+ReadMessage -> FindExisting -> [UpdateSenderProfile -> StoreMessage] -> StoreAttachments -> SendDeliveryReceipt
+-> ClaimAutoReply -> [SendAutoReply -> [ReleaseAutoReplyClaim]] -> CacheAttachments -> ApplyParkedOperations
 
-The router created the conversation and checked the authorization before this workflow starts.
+The router created the conversation and checked the authorization before this workflow starts. A redelivered
+message keeps its row, so edits, deletions and the read state applied since are not undone; only attachments
+and the receipt are repeated. A message ID that belongs to another message is rejected.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> ReadMessage
-    ReadMessage --> UpdateSenderProfile : MessageRead
+    ReadMessage --> FindExisting : MessageRead
+    FindExisting --> StoreAttachments : MessageStored
+    FindExisting --> UpdateSenderProfile : NewMessage
     UpdateSenderProfile --> StoreMessage : SenderProfileUpdated
     StoreMessage --> StoreAttachments : MessageStored
     StoreAttachments --> SendDeliveryReceipt : AttachmentsStored
@@ -68,7 +73,8 @@ stateDiagram-v2
     SendAutoReply --> ReleaseAutoReplyClaim : AutoReplyFailed
     SendAutoReply --> CacheAttachments : AutoReplyHandled
     ReleaseAutoReplyClaim --> CacheAttachments : AutoReplyHandled
-    CacheAttachments --> [*] : AttachmentsCached
+    CacheAttachments --> ApplyParkedOperations : AttachmentsCached
+    ApplyParkedOperations --> [*] : ParkedOperationsApplied
 ```
 
 ## `group`
@@ -78,13 +84,14 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMessage`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/group/ReceiveGroupMessageWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`, `DeleteReplacedExpenseReceiptsUseCase`
+- **Uses:** `WorkflowEngine`, `GroupMessageRepository`, `RequireGroupConversationUseCase`, `GroupSecurityRepository`, `GroupMessagePlaintextCodec`, `ApplyPeerProfilePictureUseCase`, `PrefetchLinkPreviewsUseCase`, `MessageAttachmentOperationsRepository`, `SendDeliveryReceiptUseCase`, `AuthorizeIncomingExpensesUseCase`, `DeleteReplacedExpenseReceiptsUseCase`
 
 ```text
 FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
 FindConversation -> DecryptMessage -> FindExisting
   -> [AuthorizeExpenses -> DeleteReplacedReceipts -> ApplyProfilePicture -> StoreMessage]
-  -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
+  -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments
+  -> ApplyParkedOperations                                                              (a message)
 
 A redelivered message keeps its row; only attachments and the receipt are repeated.
 ```
@@ -105,7 +112,8 @@ stateDiagram-v2
     PrefetchLinkPreviews --> StoreAttachments : LinkPreviewsRequested
     StoreAttachments --> SendDeliveryReceipt : AttachmentsStored
     SendDeliveryReceipt --> CacheAttachments : DeliveryReceiptSent
-    CacheAttachments --> [*] : Done
+    CacheAttachments --> ApplyParkedOperations : AttachmentsCached
+    ApplyParkedOperations --> [*] : Done
 ```
 
 ## `identity`
@@ -115,7 +123,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.CompleteManualIdentity`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/CompleteManualIdentityWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetIdentityPeerStateUseCase`, `SendIdentityVerificationReceiptUseCase`
+- **Uses:** `WorkflowEngine`, `CheckDirectPeerAuthorizedUseCase`, `SendIdentityVerificationReceiptUseCase`
 
 ```text
 LoadAuthorization -> [ActivateConversation] -> SendVerificationReceipt
@@ -150,6 +158,7 @@ packet from a new identity never revokes the previous identity's chat. It is ack
 ```mermaid
 stateDiagram-v2
     [*] --> FindExchange
+    FindExchange --> [*] : Done
     FindExchange --> VerifySignature : ExchangeFound
     VerifySignature --> DecideRevocation : SignatureValid
     DecideRevocation --> [*] : Done
@@ -162,7 +171,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactInviteAccepted`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactInviteAcceptedWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactInvitationHandshakeProtocol`, `GetIdentityExchangeBindingUseCase`, `ReceiveIdentityExchangeAcceptedUseCase`, `ContactBlocklistRepository`, `StagePendingRemoteIdentityChangeUseCase`, `HandleInvitationResponseUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `WorkflowEngine`, `ContactInvitationHandshakeProtocol`, `GetIdentityExchangeBindingUseCase`, `ReceiveIdentityExchangeAcceptedUseCase`, `StageIncomingIdentityReviewUseCase`, `HandleInvitationResponseUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
 VerifyAcceptance -> FindExchange -> ReceiveAcceptance -> ActivateConversation -> MarkInvitationAccepted
@@ -210,7 +219,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactInvite`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactInviteWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `ContactInvitationRequestProtocol`, `PhoneNumberNormalizer`, `ResolveIncomingIdentityPeerUseCase`, `ContactBlocklistRepository`, `StagePendingRemoteIdentityChangeUseCase`, `ReassignIdentityExchangePeerUseCase`, `ApplyIdentityPeerMergeUseCase`, `UpdateIncomingIdentityPeerMetadataUseCase`, `ReceiveIdentityExchangeUseCase`, `ApplyPeerProfilePictureUseCase`, `GetIdentityPeerDisplayNameUseCase`
+- **Uses:** `WorkflowEngine`, `VerifyIncomingContactInvitationUseCase`, `ResolveIncomingIdentityPeerUseCase`, `StageIncomingIdentityReviewUseCase`, `MergeIncomingIdentityPeersUseCase`, `UpdateIncomingIdentityPeerMetadataUseCase`, `ReceiveIdentityExchangeUseCase`, `ApplyPeerProfilePictureUseCase`, `ResolveContactInvitationDisplayNameUseCase`
 
 ```text
 VerifyInvitation -> ResolvePeer -> MergePeers -> [UpdatePeerPhoneNumber] -> ReceiveExchange -> ApplyProfilePicture
@@ -218,6 +227,8 @@ VerifyInvitation -> ResolvePeer -> MergePeers -> [UpdatePeerPhoneNumber] -> Rece
 
 Signature and time bounds are verified BEFORE contacts are looked up or merged. Keys that differ from a
 known contact's are proof of the proposed keys only: they become an identity review, never a merge.
+The claimed phone number never files the invitation under a contact; a matching phone book contact is
+only offered for linking, which happens when the user accepts.
 The Identity result observer restores the inbox record after a restart; it alone declines rejected senders.
 ```
 
@@ -242,10 +253,11 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveContactReady`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/identity/ReceiveContactReadyWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`
+- **Uses:** `GetIdentityExchangeBindingUseCase`, `ContactInvitationHandshakeProtocol`, `ReceiveIdentityReadyUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
-FindExchange -> VerifyReady -> ReceiveReady. READY completes the inviter's side of the exchange.
+FindExchange -> VerifyReady -> ReceiveReady -> ApplyProfilePicture. READY completes the inviter's side of the
+exchange and carries the inviter's picture, which the unencrypted first invite leaves out.
 ```
 
 ```mermaid
@@ -253,7 +265,8 @@ stateDiagram-v2
     [*] --> FindExchange
     FindExchange --> VerifyReady : ExchangeFound
     VerifyReady --> ReceiveReady : ReadyVerified
-    ReceiveReady --> [*] : ReadyReceived
+    ReceiveReady --> ApplyProfilePicture : ReadyReceived
+    ApplyProfilePicture --> [*] : ProfilePictureApplied
 ```
 
 ### ReceiveIdentityAcknowledgementWorkflow
@@ -318,7 +331,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDeletion`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupDeletionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`
+- **Uses:** `GetTrustedGroupAuthorityUseCase`, `AuthorizeIncomingGroupDeletionUseCase`, `MessageAttachmentRepository`, `GroupIncomingConversationRepository`, `CompleteIncomingGroupDeletionUseCase`
 
 ```text
 LoadOwnerKey -> AuthorizeDeletion -> DeleteAttachments -> PrepareDeletion -> CompleteDeletion -> FinishDeletion.
@@ -387,16 +400,17 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupInvite`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupInviteWorkflow.kt`
 - **Lock:** none
-- **Uses:** `InspectIncomingGroupMembershipUseCase`, `ContactBlocklistRepository`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `GetRemoteIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StagePendingRemoteIdentityChangeUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `InspectIncomingGroupOfferUseCase`, `ShouldRecordPendingInvitationUseCase`, `ReceiveIncomingGroupMembershipUseCase`, `CheckGroupInvitationTargetUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `GroupConversationRepository`, `StageRemoteIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `RecordPendingInvitationUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
-InspectOffer -> CheckRecordable -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity] -> StageOffer
--> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
+InspectOffer -> CheckRecordable -> CheckTarget -> StageConversation -> EvaluateOwnerIdentity -> [StageOwnerIdentity]
+-> StageOffer -> [StageIdentityReview] -> RecordInvitation -> [ApplyProfilePicture]
 
 Expired or blocked offers are dropped so they never enter the inbox or poison the retry queue. A replayed or
 no longer stageable offer is still handed to Membership without staging. A signed group offer proves the
 PROPOSED keys only: changed owner keys become a separate identity review and never touch trusted keys,
-conversations or profile data.
+conversations or profile data. An offer whose group ID names an existing conversation other than its own
+pending invitation is rejected before anything is staged.
 ```
 
 ```mermaid
@@ -405,11 +419,12 @@ stateDiagram-v2
     InspectOffer --> [*] : Dropped
     InspectOffer --> CheckRecordable : OfferValid
     CheckRecordable --> ReceiveWithoutStaging : AlreadyHandled
-    CheckRecordable --> StageConversation : Recordable
+    CheckRecordable --> CheckTarget : Recordable
     ReceiveWithoutStaging --> CheckPinnedOwner : ReceivedWithoutStaging
     ReceiveWithoutStaging --> [*] : ReceivedWithoutStaging
     CheckPinnedOwner --> [*] : Done
     CheckPinnedOwner --> ApplyProfilePicture : OwnerKeysTrusted
+    CheckTarget --> StageConversation : TargetAllowed
     StageConversation --> ReceiveWithoutStaging : ConversationDeletedLocally
     StageConversation --> EvaluateOwnerIdentity : ConversationStaged
     EvaluateOwnerIdentity --> StageOffer : OwnerIdentityEvaluated
@@ -428,7 +443,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupJoinRequest`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupJoinRequestWorkflow.kt`
 - **Lock:** none
-- **Uses:** `ReceiveGroupMembershipJoinRequestUseCase`, `GetRemoteIdentityUseCase`, `GetMembershipHandshakeUseCase`, `StagePendingRemoteIdentityChangeUseCase`, `StageRemoteIdentityUseCase`, `EstablishMutualIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `ApplyPeerProfilePictureUseCase`
+- **Uses:** `ReceiveGroupMembershipJoinRequestUseCase`, `EvaluateGroupInvitationIdentityUseCase`, `StageIncomingIdentityReviewUseCase`, `StageRemoteIdentityUseCase`, `EstablishMutualIdentityUseCase`, `ConfirmGroupMemberIdentityUseCase`, `ApplyPeerProfilePictureUseCase`
 
 ```text
 ReceiveJoin -> EvaluateMemberIdentity -> StageIdentityReview                          (changed keys)
@@ -480,7 +495,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupMemberActivation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupMemberActivationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetRemoteIdentityUseCase`, `AuthorizeIncomingGroupActivationUseCase`, `ResolveSigningIdentityContactUseCase`, `ApplyIncomingGroupActivationUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
+- **Uses:** `WorkflowEngine`, `GetTrustedGroupAuthorityUseCase`, `AuthorizeIncomingGroupActivationUseCase`, `ResolveSigningIdentityContactUseCase`, `ApplyIncomingGroupActivationUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
 
 ```text
 LoadOwner -> AuthorizeActivation -> [ResolveMemberContact] -> ApplyActivation, then
@@ -532,7 +547,7 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupReadyAcknowledgement`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupReadyAcknowledgementWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetGroupCurrentEpochUseCase`, `ReceiveGroupReadyAcknowledgementUseCase`, `GetMembershipHandshakeUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
+- **Uses:** `WorkflowEngine`, `CheckReadyAcknowledgementEpochUseCase`, `ReceiveGroupReadyAcknowledgementUseCase`, `FindReadyAcknowledgedMembershipUseCase`, `FindMemberDisplayNameUseCase`, `GroupConversationRepository`
 
 ```text
 CheckEpochCurrent -> ReceiveAcknowledgement -> CheckEpochStillCurrent -> FindActivatedMembership
@@ -565,11 +580,12 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupWelcome`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/membership/ReceiveGroupWelcomeWorkflow.kt`
 - **Lock:** none
-- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetRemoteIdentityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`
+- **Uses:** `AuthorizeIncomingGroupWelcomeUseCase`, `GetTrustedGroupAuthorityUseCase`, `OpenIncomingGroupWelcomeUseCase`, `GroupIncomingConversationRepository`, `ResolveIncomingPeerContactsUseCase`, `PersistIncomingGroupWelcomeUseCase`, `FindMemberDisplayNameUseCase`, `EstablishMutualIdentityUseCase`, `SendGroupReadyAcknowledgementUseCase`, `CompleteIncomingGroupWelcomeUseCase`, `RotateGroupKeyAfterAdminLeftUseCase`
 
 ```text
 AuthorizeWelcome -> LoadAuthority -> OpenWelcome -> RecordRestart -> ResolveMemberContacts -> PersistWelcome
 -> ResolveMemberNames -> InstallWelcome -> [EstablishMutualIdentity] -> SendReadyAcknowledgement -> CompleteWelcome
+-> RotateAfterAdminLeft
 
 The first welcome must come from the accepted, pinned inviter identity; later welcomes are checked against
 Membership's prior epoch. Contacts are resolved only after Membership verified and decrypted the welcome.
@@ -590,7 +606,8 @@ stateDiagram-v2
     InstallWelcome --> SendReadyAcknowledgement : Advanced
     EstablishMutualIdentity --> SendReadyAcknowledgement : Advanced
     SendReadyAcknowledgement --> CompleteWelcome : Advanced
-    CompleteWelcome --> [*] : Completed
+    CompleteWelcome --> RotateAfterAdminLeft : Advanced
+    RotateAfterAdminLeft --> [*] : Completed
 ```
 
 ## `metadata`
@@ -600,20 +617,19 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupAvatar`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupAvatarWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupAvatarRepository`
+- **Uses:** `GroupAvatarPacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupAvatarUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadAvatar -> SaveAvatar. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveAvatar. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadAvatar : AdminAuthorized
+    AuthorizeAdmin --> SaveAvatar : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadAvatar --> [*] : Ignored
-    LoadAvatar --> SaveAvatar : UpdateIsNewer
+    SaveAvatar --> [*] : Ignored
     SaveAvatar --> [*] : Saved
 ```
 
@@ -622,20 +638,19 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupDescription`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupDescriptionWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupDescriptionRepository`
+- **Uses:** `GroupDescriptionPacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupDescriptionUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadDescription -> SaveDescription. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveDescription. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadDescription : AdminAuthorized
+    AuthorizeAdmin --> SaveDescription : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadDescription --> [*] : Ignored
-    LoadDescription --> SaveDescription : UpdateIsNewer
+    SaveDescription --> [*] : Ignored
     SaveDescription --> [*] : Saved
 ```
 
@@ -644,12 +659,13 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupPin`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupPinWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupPinRepository`, `FindRemoteIdentityPeerIdUseCase`
+- **Uses:** `GroupPinPacketCodec`, `AuthorizeGroupMetadataUseCase`, `CheckIncomingGroupStateVersionUseCase`, `ResolveIncomingPinSenderUseCase`, `SaveGroupPinUseCase`
 
 ```text
 VerifySignature -> AuthorizeAdmin -> CheckPinSlot -> [ResolveMessageSender] -> SavePin
 
-Older updates are dropped, and an active expense board keeps the pin slot against other messages.
+Older updates are dropped, and an active expense board keeps the pin slot against other messages. SavePin checks
+both again atomically with the save, because a local pin may be saved while the sender is resolved.
 ```
 
 ```mermaid
@@ -662,6 +678,7 @@ stateDiagram-v2
     CheckPinSlot --> SavePin : SenderResolved
     CheckPinSlot --> ResolveMessageSender : SlotAvailable
     ResolveMessageSender --> SavePin : SenderResolved
+    SavePin --> [*] : Ignored
     SavePin --> [*] : Saved
 ```
 
@@ -670,31 +687,54 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ReceiveGroupTitle`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/metadata/ReceiveGroupTitleWorkflow.kt`
 - **Lock:** none
-- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `GroupTitleRepository`
+- **Uses:** `GroupTitlePacketCodec`, `AuthorizeGroupMetadataUseCase`, `SaveGroupTitleUseCase`
 
 ```text
-VerifySignature -> AuthorizeAdmin -> LoadTitle -> SaveTitle. Older or unauthorized updates are dropped.
+VerifySignature -> AuthorizeAdmin -> SaveTitle. Older or unauthorized updates are dropped.
 ```
 
 ```mermaid
 stateDiagram-v2
     [*] --> VerifySignature
     VerifySignature --> AuthorizeAdmin : SignatureValid
-    AuthorizeAdmin --> LoadTitle : AdminAuthorized
+    AuthorizeAdmin --> SaveTitle : AdminAuthorized
     AuthorizeAdmin --> [*] : Ignored
-    LoadTitle --> [*] : Ignored
-    LoadTitle --> SaveTitle : UpdateIsNewer
+    SaveTitle --> [*] : Ignored
     SaveTitle --> [*] : Saved
 ```
 
 ## `operation`
+
+### ApplyParkedMessageOperationsWorkflow
+
+- **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyParkedMessageOperations`
+- **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyParkedMessageOperationsWorkflow.kt`
+- **Lock:** none
+- **Uses:** `WorkflowEngine`, `ParkedMessageOperationRepository`
+
+```text
+FindParked -> [Apply -> Apply -> ...]
+
+Runs after a message was stored: the operations that arrived before it (an edit that overtook its message
+after a reconnect, for example) are applied in the order they were sent. Each one is removed once it ran;
+one that is not allowed, such as an edit by another sender, is dropped as it would have been on arrival.
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> FindParked
+    FindParked --> Apply : Waiting
+    FindParked --> [*] : Waiting
+    Apply --> Apply : Waiting
+    Apply --> [*] : Waiting
+```
 
 ### ApplyRemoteMessageOperationWorkflow
 
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.ApplyRemoteMessageOperation`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/operation/ApplyRemoteMessageOperationWorkflow.kt`
 - **Lock:** none
-- **Uses:** `FindOperationTargetUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `GroupMembershipRepository`, `RequireMessageWithoutPaymentUseCase`
+- **Uses:** `AuthorizeRemoteMessageOperationUseCase`, `DirectMessageRepository`, `GroupMessageRepository`, `MessageAttachmentOperationsRepository`, `MessageReactionRepository`, `DiscardDirectMessagesUseCase`, `DiscardGroupMessagesUseCase`, `FindGroupPollUseCase`, `ParkedMessageOperationRepository`
 
 ```text
 FindTarget, then by operation:
@@ -703,9 +743,12 @@ Delete:    CheckSender -> DeleteMessage
 Reaction:  SaveReaction | RemoveReaction
 PollVote:  FindPoll -> SavePoll
 PollClose: CheckPollCloser -> FindPoll -> SavePoll
+No target: Park
 
-Only the original sender edits or deletes; group operations only touch user messages. A missing direct
-target or reaction target is ignored, a missing group target is an error.
+[AuthorizeRemoteMessageOperationUseCase] decides who may change which message. Edits keep the text with the
+latest edit time, not the one that arrived last, because live and mailbox copies can overtake each other.
+An operation whose message has not arrived yet, for example an edit that overtook it after a reconnect, is
+parked and applied once the message is stored ([ApplyParkedMessageOperationsWorkflow]).
 ```
 
 ```mermaid
@@ -717,7 +760,7 @@ stateDiagram-v2
     FindTarget --> FindPoll : TargetFound
     FindTarget --> RemoveReaction : TargetFound
     FindTarget --> SaveReaction : TargetFound
-    FindTarget --> [*] : TargetMissing
+    FindTarget --> Park : TargetMissing
     CheckEditable --> ReplaceText : Editable
     ReplaceText --> [*] : Applied
     CheckSender --> DeleteMessage : SenderOwnsTarget
@@ -727,6 +770,7 @@ stateDiagram-v2
     CheckPollCloser --> FindPoll : PollCloserAllowed
     FindPoll --> SavePoll : PollFound
     SavePoll --> [*] : Applied
+    Park --> [*] : Parked
 ```
 
 ## `routing`
@@ -736,16 +780,18 @@ stateDiagram-v2
 - **Kind:** internal — started by an observer, dispatcher or another workflow `IncomingCommand.RouteIncomingPacket`
 - **Source:** `feature/conversationorchestration/incoming/src/commonMain/kotlin/com/cbgm/sparrow/feature/conversationorchestration/incoming/domain/workflow/routing/RouteIncomingPacketWorkflow.kt`
 - **Lock:** none
-- **Uses:** `WorkflowEngine`, `GetIdentityPeerStateUseCase`, `DirectConversationRepository`, `CheckGroupPacketAcceptedUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
+- **Uses:** `WorkflowEngine`, `ResolveDirectPeerAccessUseCase`, `DirectConversationRepository`, `ResolveControlConversationIdUseCase`, `CheckGroupPacketAcceptedUseCase`, `CheckGroupPacketReadyUseCase`, `GroupPacketDispatcher`, `ControlPacketDispatcher`
 
 ```text
 direct message:  CheckDirectAuthorization -> EnsureDirectConversation -> ReceiveDirectMessage | ApplyDirectOperation
-group packet:    CheckGroupAccepted -> DispatchGroupPacket
+group packet:    CheckGroupAccepted -> CheckGroupReady -> DispatchGroupPacket
 receipt:         ApplyReceipt
 anything else:   FindControlConversation -> DispatchControlPacket
 
 Direct and group packets never share handlers. Messages of a contact whose invitation was not accepted
-are dropped without a chat being created.
+are dropped without a chat being created. Packets that arrived too early — a message of a contact whose
+invitation is still in flight, a group packet before the welcome of its epoch — fail with
+[IncomingPacketDeferredException]: their envelope is parked and processed again later.
 ```
 
 ```mermaid
@@ -754,6 +800,7 @@ stateDiagram-v2
     [*] --> CheckGroupAccepted
     [*] --> ApplyReceipt
     [*] --> FindControlConversation
+    CheckDirectAuthorization --> Rejected : Deferred
     CheckDirectAuthorization --> EnsureDirectConversation : DirectAuthorized
     CheckDirectAuthorization --> [*] : Dropped
     EnsureDirectConversation --> ApplyDirectOperation : DirectConversationResolved
@@ -762,7 +809,9 @@ stateDiagram-v2
     ReceiveDirectMessage --> [*] : Handled
     ApplyDirectOperation --> [*] : Handled
     CheckGroupAccepted --> [*] : Dropped
-    CheckGroupAccepted --> DispatchGroupPacket : GroupAccepted
+    CheckGroupAccepted --> CheckGroupReady : GroupAccepted
+    CheckGroupReady --> Rejected : Deferred
+    CheckGroupReady --> DispatchGroupPacket : GroupReady
     DispatchGroupPacket --> [*] : Handled
     ApplyReceipt --> [*] : Handled
     FindControlConversation --> DispatchControlPacket : ControlConversationResolved

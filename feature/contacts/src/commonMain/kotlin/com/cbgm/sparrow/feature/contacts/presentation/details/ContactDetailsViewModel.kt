@@ -59,10 +59,10 @@ class ContactDetailsViewModel(
             ContactDetailsUiEvent.BackClicked -> navigator.popBackStack()
             ContactDetailsUiEvent.RetryClicked -> reload()
             ContactDetailsUiEvent.ConfirmVerificationClicked -> confirmVerification()
-            ContactDetailsUiEvent.ScanQrCodeClicked -> scanQrCode()
             ContactDetailsUiEvent.MediaAndFilesClicked ->
                 navigator.navigateTo(AppRoute.AttachmentManagement(conversationId))
             ContactDetailsUiEvent.ShareContactClicked,
+            ContactDetailsUiEvent.ReconnectConfirmed,
             ContactDetailsUiEvent.VerifyIdentityClicked,
             ContactDetailsUiEvent.VerificationBackClicked -> Unit
         }
@@ -90,10 +90,6 @@ class ContactDetailsViewModel(
     private fun reload() {
         verificationState.value = VerificationActionState()
         reloadRevision.update { revision -> revision + 1 }
-    }
-
-    private fun scanQrCode() {
-        navigator.navigateTo(AppRoute.VerifyIdentityQr(contactId = contactId))
     }
 
     private fun confirmVerification() {

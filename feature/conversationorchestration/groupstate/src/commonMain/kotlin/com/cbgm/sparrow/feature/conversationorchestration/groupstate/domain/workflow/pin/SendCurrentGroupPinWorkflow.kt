@@ -35,8 +35,9 @@ class SendCurrentGroupPinWorkflow internal constructor(
                 pinRepository.find(step.command.groupId).getOrThrow()?.let(Outcome::PinFound) ?: Outcome.NoPin
             }
             is Step.CreatePinPacket -> {
-                val context = requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow()
-                check(step.command.contactId in context.recipientContactIds) { "Contact is not an active group member" }
+                val context =
+                    requireGroupAdminContext.forRecipient(step.command.groupId, ADMIN_ACTION, step.command.contactId)
+                        .getOrThrow()
                 Outcome.PinPacketCreated(
                     createGroupPinPackets(step.pin, context, recipients = setOf(step.command.contactId)).getOrThrow()
                 )

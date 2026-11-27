@@ -61,7 +61,8 @@ class SendEncodedTransportUseCaseTest {
 
         override suspend fun sendWithAcceptance(
             recipientAddress: String,
-            encodedTransportPayload: String
+            encodedTransportPayload: String,
+            recipientContactId: String?
         ): Result<OutgoingWireAcceptance> {
             callCount++
             lastRoutingId = recipientAddress

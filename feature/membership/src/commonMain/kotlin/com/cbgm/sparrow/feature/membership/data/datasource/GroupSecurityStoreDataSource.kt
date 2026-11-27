@@ -50,6 +50,14 @@ internal class GroupSecurityStoreDataSource(
         dao.replaceCurrentEpoch(state, memberKeys)
     }
 
+    /** Replaces the member keys of [state]'s epoch, as when the winning version of a contested epoch arrives. */
+    suspend fun replaceContestedEpoch(
+        state: GroupSecurityStateEntity,
+        memberKeys: List<GroupMemberKeyEntity>
+    ) {
+        dao.replaceContestedEpoch(state, memberKeys)
+    }
+
     suspend fun upsertMemberKeys(keys: List<GroupMemberKeyEntity>) {
         dao.upsertMemberKeys(keys)
     }
@@ -79,6 +87,19 @@ internal class GroupSecurityStoreDataSource(
         epoch: Int,
         contactId: String
     ): GroupMemberKeyEntity? = dao.findMemberKey(groupId, epoch, contactId)
+
+    /**
+     * The key a welcome for [welcomeEpoch] is authorized with. A welcome for the installed epoch can be another
+     * admin's version of it, so it is checked against the epoch both admins started from, when that is known.
+     */
+    suspend fun findAuthorityKey(
+        groupId: String,
+        welcomeEpoch: Int,
+        installedEpoch: Int,
+        contactId: String
+    ): GroupMemberKeyEntity? =
+        (if (welcomeEpoch == installedEpoch) dao.findMemberKey(groupId, installedEpoch - 1, contactId) else null)
+            ?: dao.findMemberKey(groupId, installedEpoch, contactId)
 
     fun observeState(groupId: String): Flow<GroupSecurityStateEntity?> = dao.observeState(groupId)
 

@@ -1,21 +1,24 @@
 package com.cbgm.sparrow.runtime.startup
 
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppThemeModeUseCase
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.runtime.startup.task.InitializeAppLanguageStartupTask
+import com.cbgm.sparrow.runtime.startup.task.InitializeAppThemeStartupTask
 import com.cbgm.sparrow.runtime.startup.task.InitializeCryptoRuntimeStartupTask
 import com.cbgm.sparrow.runtime.startup.task.InitializeLocalIntelligenceStartupTask
 import com.cbgm.sparrow.runtime.startup.task.InitializeNotificationRuntimeStartupTask
 import com.cbgm.sparrow.runtime.startup.task.LoadControlPlaneConfigurationStartupTask
 import com.cbgm.sparrow.runtime.startup.task.MaintainControlPlaneDirectoryStartupTask
 import com.cbgm.sparrow.runtime.startup.task.MaintainControlPlaneHealthStartupTask
-import com.cbgm.sparrow.runtime.startup.task.ObserveControlPlaneRegistrationTargetsStartupTask
+import com.cbgm.sparrow.runtime.startup.task.PublishUnpublishedGroupStateStartupTask
+import com.cbgm.sparrow.runtime.startup.task.RecoverInterruptedDirectSendsStartupTask
 import com.cbgm.sparrow.runtime.startup.task.ResolveIdentityStatusStartupTask
 import com.cbgm.sparrow.runtime.startup.task.RestoreControlPlaneDirectoryStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartApprovedIdentityReconnectionObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartAttachmentConversationNameObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartContactBlockObserverStartupTask
-import com.cbgm.sparrow.runtime.startup.task.StartConversationNotificationCoordinatorStartupTask
+import com.cbgm.sparrow.runtime.startup.task.StartConversationNotificationDispatcherStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartDirectIdentityResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartInvitationResultObserverStartupTask
 import com.cbgm.sparrow.runtime.startup.task.StartMembershipResultObserverStartupTask
@@ -26,17 +29,19 @@ import com.cbgm.sparrow.runtime.startup.task.ValidateConversationWorkflowsStartu
 
 fun createApplicationStartupTasks(
     initAppLanguageUseCase: InitAppLanguageUseCase,
+    initAppThemeModeUseCase: InitAppThemeModeUseCase,
     initialization: AppInitializationDependencies
 ): List<StartupTask> =
     listOf(
         InitializeAppLanguageStartupTask(initAppLanguageUseCase),
+        InitializeAppThemeStartupTask(initAppThemeModeUseCase),
         InitializeCryptoRuntimeStartupTask(initialization),
         ValidateConversationWorkflowsStartupTask(initialization),
         LoadControlPlaneConfigurationStartupTask(initialization),
         ResolveIdentityStatusStartupTask(initialization),
         RestoreControlPlaneDirectoryStartupTask(initialization),
         InitializeNotificationRuntimeStartupTask(initialization),
-        StartConversationNotificationCoordinatorStartupTask(initialization),
+        StartConversationNotificationDispatcherStartupTask(initialization),
         StartAttachmentConversationNameObserverStartupTask(initialization),
         StartInvitationResultObserverStartupTask(initialization),
         StartMembershipResultObserverStartupTask(initialization),
@@ -44,10 +49,11 @@ fun createApplicationStartupTasks(
         StartDirectIdentityResultObserverStartupTask(initialization),
         StartContactBlockObserverStartupTask(initialization),
         StartPendingAuthorizationCleanupStartupTask(initialization),
+        RecoverInterruptedDirectSendsStartupTask(initialization),
+        PublishUnpublishedGroupStateStartupTask(initialization),
         StartApprovedIdentityReconnectionObserverStartupTask(initialization),
         MaintainControlPlaneDirectoryStartupTask(initialization),
         MaintainControlPlaneHealthStartupTask(initialization),
-        ObserveControlPlaneRegistrationTargetsStartupTask(initialization),
         SynchronizeDeviceContactsStartupTask(initialization),
         InitializeLocalIntelligenceStartupTask(initialization)
     )

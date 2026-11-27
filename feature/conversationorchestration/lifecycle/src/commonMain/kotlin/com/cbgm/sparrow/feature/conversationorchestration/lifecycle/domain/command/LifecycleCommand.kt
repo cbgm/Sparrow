@@ -48,7 +48,9 @@ sealed interface LifecycleCommand : WorkflowCommand {
     data class RecordIncomingDirectInvitation(
         val result: IdentityResult,
         val peerDisplayName: String?,
-        val declineIfRejected: Boolean
+        val declineIfRejected: Boolean,
+        val phoneContactPeerId: String? = null,
+        val phoneContactName: String? = null
     ) : LifecycleCommand
 
     /** On startup, replays an accepted incoming direct invitation whose exchange is still open. */

@@ -13,8 +13,8 @@ val embeddingModule =
         single { LocalEmbeddingSettingsStorage(dataStore = get()) }
         single<LocalEmbeddingRepository> {
             LocalEmbeddingRepositoryImpl(
-                settingsStorage = get(),
-                modelManager = get(),
+                settingsDataSource = get(),
+                modelDataSource = get(),
                 embedder = get(),
                 applicationScope = get()
             )

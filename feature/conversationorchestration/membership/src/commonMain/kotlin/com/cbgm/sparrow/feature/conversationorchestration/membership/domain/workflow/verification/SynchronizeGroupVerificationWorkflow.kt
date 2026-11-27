@@ -4,11 +4,12 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupAdmin
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.ConversationWorkflow
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.model.GroupVerificationRole
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.BroadcastGroupVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.CheckGroupOwnershipUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RefreshOwnedGroupVerificationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RequestGroupVerificationSnapshotUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveGroupVerificationRoleUseCase
 import kotlin.reflect.KClass
 
 /**
@@ -17,7 +18,7 @@ import kotlin.reflect.KClass
  * LoadSecurity -> CheckOwnership -> RefreshRows       (no security state left)
  */
 class SynchronizeGroupVerificationWorkflow internal constructor(
-    private val verificationInputs: GroupVerificationInputsUseCase,
+    private val resolveGroupVerificationRole: ResolveGroupVerificationRoleUseCase,
     private val checkGroupOwnership: CheckGroupOwnershipUseCase,
     private val refreshOwnedGroupVerification: RefreshOwnedGroupVerificationUseCase,
     private val broadcastGroupVerificationSnapshot: BroadcastGroupVerificationSnapshotUseCase,
@@ -40,13 +41,7 @@ class SynchronizeGroupVerificationWorkflow internal constructor(
         when (step) {
             is Step.LoadSecurity -> {
                 require(step.command.groupId.isNotBlank()) { "Group ID must not be blank" }
-                val security =
-                    verificationInputs.membershipContext(step.command.groupId).getOrThrow().security
-                when {
-                    security == null -> Outcome.NoSecurityState
-                    security.isLocalAdmin -> Outcome.LocalAdmin
-                    else -> Outcome.Member(security.ownerContactId)
-                }
+                roleResolved(resolveGroupVerificationRole(step.command.groupId).getOrThrow())
             }
             is Step.CheckOwnership -> Outcome.OwnershipChecked(checkGroupOwnership(step.command.groupId).getOrThrow())
             is Step.RefreshRows -> {
@@ -71,23 +66,35 @@ class SynchronizeGroupVerificationWorkflow internal constructor(
                 outcome.adminContactId
                     ?.let { Transition.Next(Step.RequestSnapshot(it, step.command)) }
                     ?: Transition.Complete()
-            is Outcome.OwnershipChecked ->
-                if (outcome.ownsGroup) {
-                    Transition.Next(Step.RefreshRows(broadcastAfterwards = false, command = step.command))
-                } else {
-                    Transition.Complete()
-                }
-            is Outcome.RowsRefreshed ->
-                if (outcome.broadcastAfterwards) {
-                    Transition.Next(
-                        Step.BroadcastSnapshot(step.command)
-                    )
-                } else {
-                    Transition.Complete()
-                }
+            is Outcome.OwnershipChecked -> afterOwnershipChecked(outcome, step.command)
+            is Outcome.RowsRefreshed -> afterRowsRefreshed(outcome, step.command)
             Outcome.SnapshotBroadcast -> Transition.Complete()
             Outcome.SnapshotRequested -> Transition.Complete()
         }
+
+    private fun roleResolved(role: GroupVerificationRole): Outcome =
+        when (role) {
+            GroupVerificationRole.Admin -> Outcome.LocalAdmin
+            GroupVerificationRole.WithoutSecurity -> Outcome.NoSecurityState
+            is GroupVerificationRole.Member -> Outcome.Member(role.adminContactId)
+        }
+
+    /** Without security state only the owner rebuilds its rows; nobody else has anything to synchronize. */
+    private fun afterOwnershipChecked(
+        outcome: Outcome.OwnershipChecked,
+        command: GroupAdministrationCommand.SynchronizeVerification
+    ): Transition<Step> =
+        if (outcome.ownsGroup) {
+            Transition.Next(Step.RefreshRows(broadcastAfterwards = false, command = command))
+        } else {
+            Transition.Complete()
+        }
+
+    private fun afterRowsRefreshed(
+        outcome: Outcome.RowsRefreshed,
+        command: GroupAdministrationCommand.SynchronizeVerification
+    ): Transition<Step> =
+        if (outcome.broadcastAfterwards) Transition.Next(Step.BroadcastSnapshot(command)) else Transition.Complete()
 
     sealed interface Step : WorkflowStep {
         val command: GroupAdministrationCommand.SynchronizeVerification

@@ -5,13 +5,14 @@
 ```text
 feature/*
    -> pull request into develop
-   -> develop integration/testing
-   -> master when stable
-   -> release/x.y created from master
-   -> vX.Y.Z[-prerelease] tag for a full GitHub release
+   -> release/0.6 for beta, RC, and final stabilization
+   -> merge finalized release into master and develop
+   -> v0.6.0[-prerelease] tags build GitHub releases
 ```
 
-Do not build distributable releases from arbitrary feature branches.
+Keep `master` stable. Branch bug fixes from the line being fixed and merge release-specific fixes
+back into `develop`. Branch urgent fixes to published releases from `master`. See the complete
+[Release process](release-process.md) before creating release tags.
 
 ## Before opening a PR
 

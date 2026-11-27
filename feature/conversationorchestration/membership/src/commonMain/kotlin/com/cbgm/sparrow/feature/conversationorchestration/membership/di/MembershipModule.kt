@@ -5,8 +5,8 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.data.dataso
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupLocalCleanupDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.datasource.GroupVerificationDataSource
-import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.GroupVerificationPacketCodecImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.GroupVerificationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.membership.data.packet.SignedGroupVerificationPacketCodec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupIncomingConversationRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.membership.data.repository.GroupVerificationRepositoryImpl
@@ -22,13 +22,18 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usec
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.CheckGroupOwnershipUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmGroupMemberIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmParticipantVerificationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.DiscardDeclinedGroupConversationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindGroupMemberRemovalProgressUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GetTrustedGroupAuthorityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.GroupVerificationInputsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.LoadGroupVerificationSignerUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.LoadMutualMemberIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RecordGroupInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RefreshOwnedGroupVerificationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RequestGroupVerificationSnapshotUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.RequireMemberPhoneNumberUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveGroupVerificationRoleUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ResolveSigningIdentityContactUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.SendAdminVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.SendGroupVerificationSnapshotUseCase
@@ -69,7 +74,7 @@ private fun Module.registerData() {
     singleOf(::GroupVerificationDataSource)
     singleOf(::GroupConversationRepositoryImpl) { bind<GroupConversationRepository>() }
     singleOf(::GroupIncomingConversationRepositoryImpl) { bind<GroupIncomingConversationRepository>() }
-    singleOf(::GroupVerificationPacketCodecImpl) { bind<GroupVerificationPacketCodec>() }
+    singleOf(::SignedGroupVerificationPacketCodec) { bind<GroupVerificationPacketCodec>() }
     singleOf(::GroupVerificationRepositoryImpl) { bind<GroupVerificationRepository>() }
 }
 
@@ -83,6 +88,7 @@ private fun Module.registerUseCases() {
     singleOf(::BroadcastGroupVerificationSnapshotUseCase)
     singleOf(::CheckGroupOwnershipUseCase)
     singleOf(::ConfirmParticipantVerificationUseCase)
+    singleOf(::FindGroupMemberRemovalProgressUseCase)
     singleOf(::FindMemberDisplayNameUseCase)
     singleOf(::GroupVerificationInputsUseCase)
     singleOf(::LoadGroupVerificationSignerUseCase)
@@ -92,6 +98,10 @@ private fun Module.registerUseCases() {
     singleOf(::ResolveSigningIdentityContactUseCase)
     singleOf(::SendAdminVerificationReceiptUseCase)
     singleOf(::SendGroupVerificationSnapshotUseCase)
+    singleOf(::DiscardDeclinedGroupConversationUseCase)
+    singleOf(::LoadMutualMemberIdentityUseCase)
+    singleOf(::GetTrustedGroupAuthorityUseCase)
+    singleOf(::ResolveGroupVerificationRoleUseCase)
 }
 
 private fun Module.registerInternalWorkflows() {

@@ -2,14 +2,14 @@ package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /** Persist share progress per peer and per *local identity* so a key reset cannot reuse it. */
 internal class LocalIdentitySharingDataSource(
     private val store: SparrowDataStore,
-    private val localIdentity: LocalPublicIdentityProvider
+    private val localIdentity: LocalPublicIdentitySource
 ) {
     fun observeSharedWith(peerId: String): Flow<Boolean> {
         require(peerId.isNotBlank())

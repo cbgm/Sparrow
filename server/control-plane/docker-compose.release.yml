@@ -1,5 +1,13 @@
+# Container logs are size-limited: they must not keep request metadata indefinitely.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   registry-signing-init:
+    logging: *default-logging
     profiles: ["init"]
     image: alpine:3.21
     restart: "no"
@@ -12,15 +20,15 @@ services:
       - registry-signing:/data/signing
 
   caddy:
+    logging: *default-logging
     depends_on:
       node-registry:
         condition: service_started
       presence-directory:
         condition: service_started
-      push:
-        condition: service_started
 
   node-registry:
+    logging: *default-logging
     image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-node-registry:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
@@ -39,6 +47,7 @@ services:
       - registry-signing:/data/signing
 
   presence-directory:
+    logging: *default-logging
     image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-presence-directory:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
@@ -47,17 +56,6 @@ services:
       node-registry:
         condition: service_started
       presence-redis:
-        condition: service_healthy
-
-  push:
-    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-push:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
-    build: !reset null
-    pull_policy: always
-    healthcheck: !reset null
-    depends_on:
-      node-registry:
-        condition: service_started
-      push-database:
         condition: service_healthy
 
 volumes:

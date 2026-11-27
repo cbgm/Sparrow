@@ -19,8 +19,10 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Source sets
 
+- `androidMain`
 - `commonMain`
 - `commonTest`
+- `iosMain`
 
 ## Dependencies
 

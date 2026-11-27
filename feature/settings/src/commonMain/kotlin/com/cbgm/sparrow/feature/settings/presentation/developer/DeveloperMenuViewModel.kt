@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.identity.domain.usecase.DiscardIdentityKeyStoreKeyUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
@@ -11,7 +12,10 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCa
 import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDeveloperMenuUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.feature.transport.domain.usecase.ObserveTransportDiagnosticsUseCase
+import com.cbgm.sparrow.feature.transport.domain.usecase.RefreshTransportDiagnosticsUseCase
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_settings_simulate_key_loss_done
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperMenuViewModel(
@@ -30,8 +35,11 @@ class DeveloperMenuViewModel(
     getBuildInfoUseCase: GetBuildInfoUseCase,
     observeDeveloperErrorsUseCase: ObserveDeveloperErrorsUseCase,
     private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
-    private val transportDiagnosticsProvider: TransportDiagnosticsProvider
+    observeTransportDiagnostics: ObserveTransportDiagnosticsUseCase,
+    private val refreshTransportDiagnostics: RefreshTransportDiagnosticsUseCase,
+    private val discardIdentityKeyStoreKey: DiscardIdentityKeyStoreKeyUseCase
 ) : BaseViewModel() {
+    private val transportDiagnostics = observeTransportDiagnostics()
     private val isClearingLocalData = MutableStateFlow(false)
     private val buildInfo = getBuildInfoUseCase().getOrThrow()
     private val savedErrorCount =
@@ -41,7 +49,7 @@ class DeveloperMenuViewModel(
 
     val uiState: StateFlow<DeveloperMenuUiState> =
         combine(
-            transportDiagnosticsProvider.diagnostics,
+            transportDiagnostics,
             savedErrorCount,
             isClearingLocalData
         ) { diagnostics, errorCount, isClearing ->
@@ -56,7 +64,7 @@ class DeveloperMenuViewModel(
             initialValue =
                 DeveloperMenuUiState(
                     buildInfo = buildInfo,
-                    transportDiagnostics = transportDiagnosticsProvider.diagnostics.value
+                    transportDiagnostics = transportDiagnostics.value
                 )
         )
 
@@ -67,6 +75,7 @@ class DeveloperMenuViewModel(
             DeveloperMenuUiEvent.ErrorLogClicked -> navigator.navigateTo(AppRoute.DeveloperErrorLog)
             DeveloperMenuUiEvent.ClearLocalDataClicked -> clearLocalData()
             DeveloperMenuUiEvent.DisableDeveloperModeClicked -> disableDeveloperMode()
+            DeveloperMenuUiEvent.SimulateKeyLossClicked -> simulateKeyLoss()
         }
     }
 
@@ -85,6 +94,14 @@ class DeveloperMenuViewModel(
         }
     }
 
+    private fun simulateKeyLoss() {
+        viewModelScope.launch {
+            discardIdentityKeyStoreKey()
+                .onSuccess { SparrowLog.hint(getString(Res.string.feature_settings_simulate_key_loss_done)) }
+                .onFailure { error -> SparrowLog.error(TAG, "Key-store key could not be removed", error) }
+        }
+    }
+
     private fun disableDeveloperMode() {
         viewModelScope.launch {
             setDeveloperEnabledUseCase(false).onFailure { error ->
@@ -97,7 +114,7 @@ class DeveloperMenuViewModel(
 
     suspend fun refreshTransportDiagnosticsWhileVisible() {
         while (currentCoroutineContext().isActive) {
-            transportDiagnosticsProvider.refreshDiagnostics()
+            refreshTransportDiagnostics()
             delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
         }
     }

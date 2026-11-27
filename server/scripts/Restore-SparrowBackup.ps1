@@ -194,16 +194,6 @@ $databaseDefinitions = @(
         Service = "mailbox-database"
         Database = "sparrow_mailbox"
         User = "sparrow_mailbox"
-    },
-    [pscustomobject]@{
-        Service = "push-database"
-        Database = "sparrow_push"
-        User = "sparrow_push"
-    },
-    [pscustomobject]@{
-        Service = "federation-database"
-        Database = "sparrow_federation"
-        User = "sparrow_federation"
     }
 )
 
@@ -222,7 +212,6 @@ $applicationServices = @(
     "node-registry",
     "presence-directory",
     "mailbox",
-    "push",
     "federation",
     "gateway"
 )
@@ -233,11 +222,6 @@ if ($MultiNode) {
             Service = "mailbox-b-database"
             Database = "sparrow_mailbox_b"
             User = "sparrow_mailbox_b"
-        },
-        [pscustomobject]@{
-            Service = "federation-b-database"
-            Database = "sparrow_federation_b"
-            User = "sparrow_federation_b"
         }
     )
     $identityDefinitions += @(

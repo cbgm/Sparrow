@@ -1,25 +1,245 @@
 # Release process
 
-Sparrow has release automation configured, but **no official tagged full release has been published yet**.
-This page describes the workflow that will create the first and later releases.
+This is the recommended open-source workflow for Sparrow's `v0.6.0` beta, release candidates,
+final release, and later hotfixes. Keep `master` stable, use `develop` for ongoing work, and keep
+one `release/0.6` branch for the entire 0.6.0 lifecycle. GitHub Actions creates a release build
+from each pushed `v*` tag.
 
-## Branches
+## 1. Branch structure
 
-Normal development:
+| Branch | Purpose |
+|---|---|
+| `master` | Stable published releases and open-source preparation needed before publication |
+| `develop` | Ongoing feature development and integration |
+| `release/0.6` | All 0.6.0 beta, release-candidate, and final-release preparation |
+| `feature/*` | New features; normally merge into `develop` |
+| `bugfix/*` | Normal bug fixes, branched from the line being fixed |
+| `hotfix/*` | Urgent fixes to a published release, branched from `master` |
 
-```text
-feature/* -> PR -> develop -> master
+Use `release/0.6` for `v0.6.0-*` tags. The release workflow also accepts a versioned branch such as
+`release/0.6.0`, but do not create a second release branch for the same release line.
+
+## 2. Initial open-source preparation
+
+If the license and open-source preparation changes are already merged into `develop`, identify
+only those commit(s) and cherry-pick them into `master`. This publishes the licensing and project
+community files without bringing unfinished development into the stable branch.
+
+```powershell
+git checkout develop
+git pull origin develop
+git log --oneline
+
+git checkout master
+git pull origin master
+git cherry-pick <license-commit-hash>
+git push origin master
 ```
 
-Create a release line from `master`:
+Repeat `git cherry-pick <commit-hash>` for each required preparation commit. Review each commit
+before cherry-picking; do not cherry-pick unrelated feature work. Resolve any conflicts, run the
+relevant checks, and confirm the resulting `master` contains the intended license and community
+files.
 
-```text
-release/0.1
-release/0.2
-release/1.0
+## 3. Create the release branch
+
+Start the release branch at the updated stable `master`, then merge the current development state
+to create the initial 0.6.0 candidate:
+
+```powershell
+git checkout master
+git pull origin master
+
+git checkout -b release/0.6
+git push -u origin release/0.6
+
+git merge develop --no-ff
+git push origin release/0.6
 ```
 
-Do not use `master/release/...`; Git refs cannot coexist with a `master` branch in that shape.
+Resolve merge conflicts deliberately and test the resulting tree. Do not merge unfinished
+development into `master`; the release branch is where `develop` is stabilized.
+
+## 4. Beta and release-candidate cycle
+
+Keep using `release/0.6` for all 0.6.0 releases:
+
+| Stage | Example tag | Purpose |
+|---|---|---|
+| Beta 1 | `v0.6.0-beta.1` | Initial public testing build |
+| Beta 2 | `v0.6.0-beta.2` | Bug fixes and improvements |
+| Beta 3+ | `v0.6.0-beta.3` | Further testing and fixes as needed |
+| Release candidate | `v0.6.0-rc.1` | Final validation and stability checks |
+| Final | `v0.6.0` | Stable public release |
+
+After the commit is ready and tested on the release branch, tag that commit and push the tag:
+
+```powershell
+git checkout release/0.6
+git pull origin release/0.6
+git status
+git tag -a v0.6.0-beta.1 -m "Sparrow v0.6.0 Beta 1"
+git push origin v0.6.0-beta.1
+```
+
+Use a new tag for every beta or release candidate, changing the version and message as appropriate.
+The tag identifies the complete build, including all fixes merged before it. Do not tag an
+individual bugfix branch. The release workflow checks out the exact tagged commit, builds its
+release assets, and marks version tags containing a suffix (such as `-beta.1` or `-rc.1`) as
+pre-releases on GitHub.
+
+## 5. Bug fixes during the release
+
+Branch bug fixes from the release line they are intended to fix. For a 0.6.0 beta:
+
+```powershell
+git checkout release/0.6
+git pull origin release/0.6
+git checkout -b bugfix/registration-error
+
+# Implement and test the fix.
+git add .
+git commit -m "fix: resolve registration error"
+git push -u origin bugfix/registration-error
+```
+
+Merge the fix into the release line and push it:
+
+```powershell
+git checkout release/0.6
+git pull origin release/0.6
+git merge bugfix/registration-error --no-ff
+git push origin release/0.6
+```
+
+Tag and push the next beta (for example `v0.6.0-beta.2`) from the updated release branch. The
+new tag, not a separate bugfix tag, identifies the complete build containing the fix.
+
+### Keep `develop` up to date
+
+After merging a release-specific fix, also merge it into ongoing development so it is not lost:
+
+```powershell
+git checkout develop
+git pull origin develop
+git merge bugfix/registration-error --no-ff
+git push origin develop
+```
+
+If the fix is already in `develop`, do not merge it again. Delete the bugfix branch when it is no
+longer needed.
+
+## 6. Final release
+
+Once the release candidate has passed testing, tag the final commit on `release/0.6`:
+
+```powershell
+git checkout release/0.6
+git pull origin release/0.6
+git status
+git tag -a v0.6.0 -m "Sparrow v0.6.0"
+git push origin v0.6.0
+```
+
+After the tagged release succeeds, merge the finalized release line into both stable and ongoing
+development:
+
+```powershell
+git checkout master
+git pull origin master
+git merge release/0.6 --no-ff
+git push origin master
+
+git checkout develop
+git pull origin develop
+git merge release/0.6 --no-ff
+git push origin develop
+```
+
+Delete `release/0.6` after the release is complete if no further 0.6.x maintenance is planned.
+
+## 7. Hotfixes after the final release
+
+For an urgent fix to the published `v0.6.0`, branch from stable `master`:
+
+```powershell
+git checkout master
+git pull origin master
+git checkout -b hotfix/critical-security-fix
+
+# Implement and test the fix.
+git add .
+git commit -m "fix: address critical security issue"
+git push -u origin hotfix/critical-security-fix
+```
+
+Merge the fix into `master`, then tag and push the patch release from the updated stable branch:
+
+```powershell
+git checkout master
+git pull origin master
+git merge hotfix/critical-security-fix --no-ff
+git push origin master
+git tag -a v0.6.1 -m "Sparrow v0.6.1"
+git push origin v0.6.1
+```
+
+Also merge the fix into `develop`:
+
+```powershell
+git checkout develop
+git pull origin develop
+git merge hotfix/critical-security-fix --no-ff
+git push origin develop
+```
+
+Stable release tags can point to commits on `master` or `release/*`; beta and RC tags must point
+to commits on `release/*`. This lets the patch tag identify the exact tested hotfix on `master`
+while preserving the release workflow's branch validation.
+
+## 8. GitHub Actions and GitHub Releases
+
+The release workflow listens for all version tags:
+
+```yaml
+on:
+  push:
+    tags:
+      - "v*"
+```
+
+It checks out the tagged commit itself, not `master`. Beta and RC tags (version strings containing
+a hyphen) are published as GitHub pre-releases. Final and patch tags without a suffix are
+published as stable releases. Pushes to `release/0.6` do not themselves create the tagged GitHub
+release; push a new version tag to build and publish each beta, RC, final, or patch release.
+
+## 9. Workflow at a glance
+
+```text
+master
+  open-source preparation -> stable releases and hotfixes
+       │                         ▲
+       └── create release/0.6 ───┘ merge final release
+                    │
+develop ── merge ──> release/0.6
+                       beta tags -> RC tag -> v0.6.0
+                    │
+                    └── merge release fixes back into develop
+
+After v0.6.0:
+hotfix/* from master -> merge to master -> v0.6.1 tag
+                                  └──────> merge fix to develop
+```
+
+## Recommendations
+
+1. Keep `master` stable; do not merge unfinished `develop` work into it.
+2. Use one `release/0.6` branch for the complete 0.6.0 beta, RC, and final cycle.
+3. Give every beta and RC a new tag; each tag builds the complete release.
+4. Branch bug fixes from the line they are fixing.
+5. Merge release-specific fixes back to `develop`.
+6. Never tag a bugfix branch just to trigger a build.
+7. Branch urgent post-release hotfixes from `master`, and merge their fixes into `develop`.
 
 ## Repository variables
 
@@ -70,104 +290,6 @@ base64 < sparrow-release.jks > sparrow-release-keystore-base64.txt
 
 Paste that file's contents into `KEY_STORE_FILE`. `KEY_STORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` contain the actual keystore password, alias, and key password. Back up the original `.jks` offline; do not commit it.
 
-## Complete release command sequence
-
-Use this sequence when the current `develop` state is ready to become a release candidate. The normal Sparrow workflow keeps release work flowing in one direction: `develop -> master -> release/x.y -> tag`.
-
-### 1. Update local `develop` from origin
-
-Start from the integration branch and pull the current remote state:
-
-```powershell
-git checkout develop
-git status
-git pull origin develop
-```
-
-`git status` should be clean before continuing. Do not start the release procedure with an uncommitted working tree.
-
-### 2. Merge `develop` into `master` with the exact `develop` tree
-
-Update local `master`, create a real merge relationship with `develop`, then replace the merge result with the exact tree from `develop` before committing:
-
-```powershell
-git checkout master
-git pull origin master
-
-git merge develop -s ours --no-commit --no-ff
-git read-tree --reset -u develop
-git commit -m "Merge develop into master"
-
-git push origin master
-```
-
-This intentionally avoids manual conflict resolution. `git merge ... -s ours --no-commit --no-ff` records both branch histories as a merge without trying to combine their file contents. `git read-tree --reset -u develop` then makes the pending merge tree exactly match `develop`, and the explicit commit creates the release merge commit `Merge develop into master`. The result is therefore a real merge commit whose project contents are identical to the tested `develop` state.
-
-### 3. Create a new release branch from the updated `master`
-
-For a new `0.1` release line:
-
-```powershell
-git checkout master
-git pull origin master
-git checkout -b release/0.1
-git push -u origin release/0.1
-```
-
-Every later push to that branch creates or updates release-candidate artifacts according to the changed files below. It does **not** publish the official GitHub Release yet.
-
-If the release branch already exists, do not create it again. Update it from `master` instead:
-
-```powershell
-git checkout release/0.1
-git pull origin release/0.1
-git merge master -X theirs
-git push origin release/0.1
-```
-
-Here `release/0.1` is `ours` and `master` is `theirs`, so conflicting hunks prefer the newly promoted `master` state.
-
-### 4. Stabilize and test the release branch
-
-Any release-specific fix is committed and pushed on the release branch:
-
-```powershell
-git checkout release/0.1
-git pull origin release/0.1
-
-# make/fix/test the release changes
-
-git add .
-git commit -m "Fix release issue"
-git push origin release/0.1
-```
-
-Each push to `release/**` creates a new release candidate. Test the candidate artifacts before tagging.
-
-### 5. Tag the exact tested release commit
-
-For an alpha release:
-
-```powershell
-git checkout release/0.1
-git pull origin release/0.1
-git status
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
-```
-
-For a stable release, use the stable semantic-version tag instead:
-
-```powershell
-git checkout release/0.1
-git pull origin release/0.1
-git status
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The tag must point at the exact release-branch commit whose candidate was tested. A `v*` tag triggers the complete release build described below.
-
 ## Release automation present in this source snapshot
 
 The workflows are checked in under `.github/workflows`:
@@ -179,7 +301,7 @@ The workflows are checked in under `.github/workflows`:
 | `server-community-node-smoke.yml` | pull requests to `develop` touching server/build files | Community Node smoke test |
 | `sparrow-server-bundle.yml` | pushes touching server/build files | Server bundle artifacts |
 | `docs.yml` | pushes to `master` touching `docs/**` or `mkdocs.yml` | Documentation site |
-| `release.yml` | `v*` tags and `release/**` branches | Release build |
+| `release.yml` | `v*` tags | Full release build and GitHub Release |
 
 If a workflow changes, keep this page synchronized with the checked-in workflow files.
 
@@ -212,13 +334,13 @@ Important bundled entry points include:
 
 All three launchers open the same cross-platform installer window (Tk, shared `ui_window.py`); without a desktop the same options appear as a text menu.
 
-## Server bundle exclusion: private Control Plane Directory
+## Server bundle exclusion: independent Control Plane Directory
 
-`server/control-plane-directory` is **operator-only** infrastructure. `server/installer/build.py` explicitly documents that it must never copy that directory or server identities/secrets into the public unified bundle.
+`server/control-plane-directory` is public source for a separate operator-managed service. `server/installer/build.py` deliberately excludes its service and installer from the unified runtime bundle; generated server identities and secrets must never be copied into release assets.
 
 Therefore these are **not public Sparrow server release assets**:
 
-- the independent directory's private installer;
+- the independent directory's separately built operator installer;
 - its administrator CLI/token;
 - its signing key or SQLite state;
 - the persistent `sparrow-central-directory-state` volume.
@@ -235,7 +357,6 @@ Executable Ktor services are built with the shared `server/Dockerfile` using a `
 :server:gateway
 :server:federation
 :server:mailbox
-:server:push
 :server:link-preview
 ```
 
@@ -257,13 +378,13 @@ The exact GitHub workflow must remain the source of truth for automated release 
 sparrow-server.zip
 ```
 
-plus its checksum when produced by release automation. Android APK/AAB assets and checksums should correspond to the exact tagged commit. Do not document or publish the private `server/control-plane-directory` installer as part of the normal public bundle.
+plus its checksum when produced by release automation. Android APK/AAB assets and checksums should correspond to the exact tagged commit. Do not document or publish the separately built `server/control-plane-directory` installer as part of the normal unified runtime bundle.
 
 ## Release verification checklist
 
 Before tagging/publishing:
 
-1. Verify the tag points at the tested release-branch commit.
+1. Verify beta/RC tags point at tested `release/*` commits and stable tags point at a tested `master` or `release/*` commit.
 2. Build/test the Android release variant with the production discovery configuration.
 3. Build `dist/sparrow-server.zip` from the same source revision.
 4. Inspect the ZIP to ensure no deployment secrets, identities, Firebase credentials, `.env.runtime`, or `server/control-plane-directory` server/admin files are present.

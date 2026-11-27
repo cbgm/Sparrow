@@ -56,6 +56,11 @@ sealed interface IncomingCommand : WorkflowCommand {
         val sentAtEpochMilliseconds: Long
     ) : IncomingCommand
 
+    /** The message [messageId] was stored; operations that arrived before it can be applied now. */
+    data class ApplyParkedMessageOperations(
+        val messageId: String
+    ) : IncomingCommand
+
     /** A manual identity exchange with the contact just became mutual. */
     data class CompleteManualIdentity(
         val contactId: String

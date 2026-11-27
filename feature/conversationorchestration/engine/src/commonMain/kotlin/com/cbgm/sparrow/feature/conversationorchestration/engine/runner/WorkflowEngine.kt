@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.conversationorchestration.engine.runner
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.ExpectedFailure
+import com.cbgm.sparrow.feature.conversationorchestration.api.ConversationOrchestrator
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.ConversationCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureException
@@ -8,6 +10,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.api.model.Conversation
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationResult
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationState
 import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.ConversationFailureMapper
+import com.cbgm.sparrow.feature.conversationorchestration.engine.failure.WorkflowEngineException
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowCommand
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
@@ -28,11 +31,11 @@ import kotlinx.coroutines.flow.flowOf
 class WorkflowEngine(
     private val locks: WorkflowLocks,
     private val registry: WorkflowRegistry
-) {
+) : ConversationOrchestrator {
     private val logger = SparrowLog.withTag("WorkflowEngine")
 
     /** Executes a command Chats submitted and publishes every step. */
-    fun execute(command: ConversationCommand): Flow<ConversationState> = executeCommand(command, acquireLock = true)
+    override fun execute(command: ConversationCommand): Flow<ConversationState> = executeCommand(command, acquireLock = true)
 
     /**
      * Runs a command submitted inside orchestration to its end. A failure keeps its original exception so
@@ -53,7 +56,7 @@ class WorkflowEngine(
             is ConversationState.Completed -> Result.success(finalState.result)
             is ConversationState.Failed ->
                 Result.failure(finalState.failure.cause ?: ConversationFailureException(finalState.failure))
-            is ConversationState.Running -> error("A running state is never final")
+            is ConversationState.Running -> throw WorkflowEngineException("A running state is never final")
         }
 
     private fun executeCommand(command: Any, acquireLock: Boolean): Flow<ConversationState> {
@@ -65,11 +68,20 @@ class WorkflowEngine(
             }
         }.catch { error ->
             if (error is CancellationException) throw error
-            logger.warn(error) { "Workflow ${workflow::class.simpleName} failed" }
+            logFailure(workflow, error)
             emit(ConversationState.Failed(ConversationFailureMapper.toFailure(error)))
         }
     }
 
+    private fun logFailure(workflow: WorkflowStateMachine<*, *, *>, error: Throwable) {
+        if (error is ExpectedFailure) {
+            logger.info { "Workflow ${workflow::class.simpleName} stopped: ${error.message}" }
+        } else {
+            logger.warn(error) { "Workflow ${workflow::class.simpleName} failed" }
+        }
+    }
+
+    /** Already UNEXPECTED without a cause, so [run] keeps failing with a ConversationFailureException. */
     private fun unsupported(command: Any): ConversationFailure =
         ConversationFailure(
             reason = ConversationFailureReason.UNEXPECTED,
@@ -96,10 +108,14 @@ class WorkflowEngine(
                 }
             }
         }
-        error("Workflow ${workflow::class.simpleName} exceeded $MAX_STEPS steps")
+        throw WorkflowEngineException("Workflow ${workflow::class.simpleName} exceeded $MAX_STEPS steps")
     }
 
     private companion object {
-        const val MAX_STEPS = 256
+        /**
+         * Only stops a transition cycle. Workflows that walk a list take a few steps per item (a read receipt per
+         * unread message, a pipeline per queued message), so this is far above any real list.
+         */
+        const val MAX_STEPS = 100_000
     }
 }

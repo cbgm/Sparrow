@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_startup_choose_number_or_enter">Choose a number from your device or enter it manually.</string>
+    <string name="feature_startup_contacts_find_by_phone">Your contacts use your phone number to securely find you on Sparrow.</string>
+    <string name="feature_startup_detected_edit_or_choose">Detected automatically. You can edit it or choose another number.</string>
+    <string name="feature_startup_keys_generated_after_approval">Your encryption keys are generated only after you approve your number.</string>
+    <string name="feature_startup_opening_sparrow">Opening Sparrow…</string>
+    <string name="feature_startup_partial_identity_no_replacement">Only part of the local identity is available. Sparrow will not generate replacement keys automatically.</string>
+    <string name="feature_startup_preparing_sparrow">Preparing Sparrow…</string>
+    <string name="feature_startup_setup_failed">Sparrow could not finish setup.</string>
+    <string name="feature_startup_verify_phone_number">Verify your phone number</string>
+</resources>

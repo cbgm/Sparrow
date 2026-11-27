@@ -10,4 +10,6 @@ sealed interface DeveloperMenuUiEvent {
     data object ClearLocalDataClicked : DeveloperMenuUiEvent
 
     data object DisableDeveloperModeClicked : DeveloperMenuUiEvent
+
+    data object SimulateKeyLossClicked : DeveloperMenuUiEvent
 }

@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/settings` |
 | Build file | `feature/settings/build.gradle.kts` |
-| Kotlin files | 91 |
-| Production Kotlin files | 90 |
+| Kotlin files | 107 |
+| Production Kotlin files | 106 |
 | Test Kotlin files | 1 |
 | Resource files | 2 |
 | Direct dependencies | 13 |
-| Direct dependents | 2 |
+| Direct dependents | 3 |
 
 ## Source sets
 
@@ -41,5 +41,6 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
+- [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)

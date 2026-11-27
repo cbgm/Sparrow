@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.domain.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 
 interface SettingsRepository {
@@ -9,6 +10,10 @@ interface SettingsRepository {
     suspend fun setLanguage(
         language: AppLanguage
     ): Result<Unit>
+
+    suspend fun getThemeMode(): Result<AppThemeMode>
+
+    suspend fun setThemeMode(mode: AppThemeMode): Result<Unit>
 
     suspend fun isDeveloperModeEnabled(): Result<Boolean>
 

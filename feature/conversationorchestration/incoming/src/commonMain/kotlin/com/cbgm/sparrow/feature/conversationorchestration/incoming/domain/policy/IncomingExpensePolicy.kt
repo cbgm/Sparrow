@@ -17,7 +17,8 @@ object IncomingExpensePolicy {
                 "Expense creator does not match its sender"
             }
         } else {
-            requireNotNull(original) { "Expense revision has no original" }
+            // The original can still arrive, so this one is retried instead of rejected.
+            checkNotNull(original) { "Expense revision has no original" }
             require(expense.createdByMemberId == original.createdByMemberId) { "Expense creator cannot change" }
             require(senderIsAdmin || original.createdByMemberId == senderMemberId) {
                 "Only the creator or an admin can change an expense"

@@ -7,10 +7,27 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
  * Submit one with `engine.run(command)`; the engine finds the workflow that handles it.
  */
 sealed interface GroupStateCommand : WorkflowCommand {
-    /** Stores and publishes a new group avatar; [bytes] null removes it. */
-    class PublishGroupAvatar(
-        val groupId: String,
-        val bytes: ByteArray?
+    /**
+     * Queues the locally saved, unpublished group title for every member with the current epoch, then marks it
+     * published. Nothing happens when no unpublished title is stored (published already or superseded).
+     */
+    data class PublishGroupTitle(
+        val groupId: String
+    ) : GroupStateCommand
+
+    /** Like [PublishGroupTitle], for the group description. */
+    data class PublishGroupDescription(
+        val groupId: String
+    ) : GroupStateCommand
+
+    /** Like [PublishGroupTitle], for the group avatar or its removal. */
+    data class PublishGroupAvatar(
+        val groupId: String
+    ) : GroupStateCommand
+
+    /** Like [PublishGroupTitle], for the pin slot (a pinned message or an empty slot). */
+    data class PublishGroupPin(
+        val groupId: String
     ) : GroupStateCommand
 
     /** Replays metadata; expense history is included only for an activated join. */

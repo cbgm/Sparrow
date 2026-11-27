@@ -85,6 +85,8 @@ sealed interface DirectConversationUiEvent {
 
     data object HeaderClicked : DirectConversationUiEvent
 
+    data object SearchClicked : DirectConversationUiEvent
+
     data class RetryMessage(
         val messageId: String
     ) : DirectConversationUiEvent

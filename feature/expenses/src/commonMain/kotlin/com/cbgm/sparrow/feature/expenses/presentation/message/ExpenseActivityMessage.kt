@@ -11,12 +11,10 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +31,7 @@ import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseBoardUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.ExpenseUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.MessagePartUi
 import com.cbgm.sparrow.core.base.messagepart.ui.model.PaymentTransferUi
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -105,10 +104,10 @@ fun ExpenseActivityMessage(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error
             )
-            TextButton(onClick = onRetry) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Text(stringResource(Res.string.feature_expenses_activity_retry))
-            }
+            SparrowLink(
+                text = stringResource(Res.string.feature_expenses_activity_retry),
+                onClick = onRetry
+            )
         }
     }
 }

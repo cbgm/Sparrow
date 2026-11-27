@@ -5,11 +5,11 @@ sealed interface GroupMemberQrVerificationUiEvent {
         val encodedIdentity: String
     ) : GroupMemberQrVerificationUiEvent
 
-    data object BackClicked : GroupMemberQrVerificationUiEvent
-
     data object ConfirmClicked : GroupMemberQrVerificationUiEvent
 
     data object PreviewDismissed : GroupMemberQrVerificationUiEvent
 
     data object RetryClicked : GroupMemberQrVerificationUiEvent
+
+    data object ErrorDismissed : GroupMemberQrVerificationUiEvent
 }

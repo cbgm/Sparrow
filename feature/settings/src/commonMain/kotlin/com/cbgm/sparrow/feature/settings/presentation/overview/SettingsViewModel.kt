@@ -4,9 +4,12 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
+import com.cbgm.sparrow.feature.applock.domain.usecase.ObserveAppLockSettingsUseCase
 import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockEnabledUseCase
+import com.cbgm.sparrow.feature.applock.domain.usecase.SetAppLockTimeoutUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingFeature
 import com.cbgm.sparrow.feature.embedding.domain.model.LocalEmbeddingModelState
@@ -15,10 +18,12 @@ import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveSettingsDomainContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppThemeModeUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
@@ -42,14 +47,17 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val setAppLanguageUseCase: SetAppLanguageUseCase,
     private val getAppLanguageUseCase: GetAppLanguageUseCase,
+    private val setAppThemeModeUseCase: SetAppThemeModeUseCase,
+    private val getAppThemeModeUseCase: GetAppThemeModeUseCase,
     private val getDeveloperEnabledUseCase: GetDeveloperEnabledUseCase,
     getBuildInfoUseCase: GetBuildInfoUseCase,
     private val setDeveloperModeEnabledUseCase: SetDeveloperEnabledUseCase,
     observeSettingsDomainContext: ObserveSettingsDomainContextUseCase,
     private val setDirectIdentitySetupMode: SetDirectIdentitySetupModeUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
-    observeAppLockEnabled: ObserveAppLockEnabledUseCase,
+    observeAppLockSettings: ObserveAppLockSettingsUseCase,
     private val setAppLockEnabled: SetAppLockEnabledUseCase,
+    private val setAppLockTimeout: SetAppLockTimeoutUseCase,
     private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase,
     private val setLocalEmbeddingFeatureEnabled: SetLocalEmbeddingFeatureEnabledUseCase,
     observeVoiceTranscriptionEnabled: ObserveVoiceTranscriptionEnabledUseCase,
@@ -85,14 +93,15 @@ class SettingsViewModel(
             localState,
             observeVoiceTranscriptionEnabled(),
             observeActiveAutoReply(),
-            observeAppLockEnabled()
-        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply, appLockEnabled ->
+            observeAppLockSettings()
+        ) { domain, local, voiceTranscriptionEnabled, activeAutoReply, appLockSettings ->
             buildInfo.toSettingsUiState(
                 currentLanguage = local.currentLanguage,
+                themeMode = local.themeMode,
                 activeAutoReplyName = activeAutoReply?.name,
                 identitySetupMode = domain.identitySetupMode,
                 blockUnknownContactInvites = domain.blockUnknownContactInvites,
-                appLockEnabled = appLockEnabled,
+                appLockSettings = appLockSettings,
                 blockedContactCount = domain.blockedContactCount,
                 localEmbeddingState = domain.localEmbeddingState,
                 semanticSearchState = domain.semanticSearchState,
@@ -100,7 +109,9 @@ class SettingsViewModel(
                 voiceTranscriptionEnabled = voiceTranscriptionEnabled,
                 isDeveloperModeEnabled = local.isDeveloperModeEnabled,
                 developerModeTapCount = local.developerModeTapCount,
-                showLanguagePicker = local.showLanguagePicker
+                showLanguagePicker = local.showLanguagePicker,
+                showThemeModePicker = local.showThemeModePicker,
+                showAppLockTimeoutPicker = local.showAppLockTimeoutPicker
             )
         }.map { state ->
             // Keep download *status* in the screen state, but remove the
@@ -135,9 +146,17 @@ class SettingsViewModel(
             SettingsUiEvent.LanguagePickerDismissed ->
                 localState.update { it.copy(showLanguagePicker = false) }
             is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
+            SettingsUiEvent.ThemeModePickerOpened ->
+                localState.update { it.copy(showThemeModePicker = true) }
+            SettingsUiEvent.ThemeModePickerDismissed ->
+                localState.update { it.copy(showThemeModePicker = false) }
+            is SettingsUiEvent.ThemeModeSelected -> selectThemeMode(event.mode)
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
             is SettingsUiEvent.AppLockEnabledChanged -> changeAppLockEnabled(event.enabled)
+            SettingsUiEvent.AppLockTimeoutClicked -> localState.update { it.copy(showAppLockTimeoutPicker = true) }
+            SettingsUiEvent.AppLockTimeoutPickerDismissed -> localState.update { it.copy(showAppLockTimeoutPicker = false) }
+            is SettingsUiEvent.AppLockTimeoutSelected -> changeAppLockTimeout(event.timeout)
             is SettingsUiEvent.SemanticSearchEnabledChanged -> changeSemanticSearchEnabled(event.enabled)
             is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             is SettingsUiEvent.VoiceTranscriptionEnabledChanged -> changeVoiceTranscriptionEnabled(event.enabled)
@@ -148,6 +167,8 @@ class SettingsViewModel(
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
             SettingsUiEvent.AutoReplyClicked -> navigator.navigateTo(AppRoute.AutoReplySettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
+            SettingsUiEvent.PreferredNodeClicked -> navigator.navigateTo(AppRoute.PreferredNode)
+            SettingsUiEvent.CircuitHopsClicked -> navigator.navigateTo(AppRoute.CircuitHops)
             SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }
@@ -156,15 +177,20 @@ class SettingsViewModel(
     private fun loadLocalSettings() {
         viewModelScope.launch {
             val currentLanguage = getAppLanguageUseCase()
+            val themeMode = getAppThemeModeUseCase()
             val developerMode = getDeveloperEnabledUseCase()
             localState.update {
                 it.copy(
                     currentLanguage = currentLanguage.getOrDefault(it.currentLanguage),
+                    themeMode = themeMode.getOrDefault(it.themeMode),
                     isDeveloperModeEnabled = developerMode.getOrDefault(it.isDeveloperModeEnabled)
                 )
             }
             currentLanguage.exceptionOrNull()?.let { error ->
                 SparrowLog.error(TAG, "App language could not be loaded", error)
+            }
+            themeMode.exceptionOrNull()?.let { error ->
+                SparrowLog.error(TAG, "Theme mode could not be loaded", error)
             }
             developerMode.exceptionOrNull()?.let { error ->
                 SparrowLog.error(TAG, "Developer mode could not be loaded", error)
@@ -219,6 +245,15 @@ class SettingsViewModel(
         }
     }
 
+    private fun changeAppLockTimeout(timeout: AppLockTimeout) {
+        localState.update { it.copy(showAppLockTimeoutPicker = false) }
+        viewModelScope.launch {
+            setAppLockTimeout(timeout).onFailure { error ->
+                SparrowLog.error(TAG, "App lock timeout could not be changed", error)
+            }
+        }
+    }
+
     private fun changeDirectIdentitySetupMode(mode: DirectIdentitySetupMode) {
         viewModelScope.launch {
             setDirectIdentitySetupMode(mode).onFailure { error ->
@@ -254,6 +289,21 @@ class SettingsViewModel(
         }
     }
 
+    private fun selectThemeMode(mode: AppThemeMode) {
+        viewModelScope.launch {
+            setAppThemeModeUseCase(mode).onFailure { error ->
+                SparrowLog.error(TAG, "Theme mode could not be changed", error)
+                return@launch
+            }
+            localState.update {
+                it.copy(
+                    themeMode = mode,
+                    showThemeModePicker = false
+                )
+            }
+        }
+    }
+
     private fun handleVersionTap() {
         val state = localState.value
         if (state.isDeveloperModeEnabled) return
@@ -285,9 +335,12 @@ class SettingsViewModel(
 
     private data class SettingsLocalState(
         val currentLanguage: AppLanguage = AppLanguage.ENGLISH,
+        val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
         val isDeveloperModeEnabled: Boolean = false,
         val developerModeTapCount: Int = 0,
-        val showLanguagePicker: Boolean = false
+        val showLanguagePicker: Boolean = false,
+        val showThemeModePicker: Boolean = false,
+        val showAppLockTimeoutPicker: Boolean = false
     )
 }
 

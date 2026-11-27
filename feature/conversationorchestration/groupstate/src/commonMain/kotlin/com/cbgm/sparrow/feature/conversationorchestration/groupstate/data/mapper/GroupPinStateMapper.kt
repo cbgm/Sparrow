@@ -20,7 +20,8 @@ internal fun GroupPinEntity.toGroupPinState(groupMessageContentCodec: GroupMessa
         parts = content?.parts?.map { part -> part.toMessagePart() },
         replyToMessageId = content?.replyToMessageId,
         pinnedAtEpochMilliseconds = pinnedAtEpochMilliseconds,
-        changedAtEpochMilliseconds = changedAtEpochMilliseconds
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
     )
 }
 
@@ -34,7 +35,8 @@ internal fun GroupPinState.toGroupPinEntity(groupMessageContentCodec: GroupMessa
         isMine = isMine,
         messageContent = toGroupMessageContent()?.let(groupMessageContentCodec::encode),
         pinnedAtEpochMilliseconds = pinnedAtEpochMilliseconds,
-        changedAtEpochMilliseconds = changedAtEpochMilliseconds
+        changedAtEpochMilliseconds = changedAtEpochMilliseconds,
+        publishPending = publishPending
     )
 
 /** The pinned snapshot is serialized exactly like a group message. */

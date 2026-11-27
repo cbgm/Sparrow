@@ -4,24 +4,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_group_change_dropped_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_added_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_left_message
 import com.cbgm.sparrow.resources.feature_chats_group_member_removed_message
@@ -42,36 +35,13 @@ internal fun MembershipSystemMessage(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Row(
-                modifier =
-                    Modifier.padding(
-                        horizontal = MaterialTheme.spacing.base,
-                        vertical = MaterialTheme.spacing.small
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector =
-                        if (type == ChatMessageType.GROUP_MEMBER_ADDED) {
-                            Icons.Default.PersonAdd
-                        } else {
-                            Icons.Default.PersonRemove
-                        },
-                    modifier = Modifier.size(Dimens.GroupConversationScreen.noticeIconSize),
-                    contentDescription = null
-                )
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        }
+        Text(
+            text = text,
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -98,6 +68,9 @@ private fun getSystemMessage(
 
     ChatMessageType.LOCAL_GROUP_MEMBERSHIP_LEFT ->
         stringResource(Res.string.feature_chats_group_you_left_message)
+
+    ChatMessageType.LOCAL_GROUP_CHANGE_DROPPED ->
+        stringResource(Res.string.feature_chats_group_change_dropped_message)
 
     ChatMessageType.USER -> ""
 }

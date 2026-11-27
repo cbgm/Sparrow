@@ -1,7 +1,5 @@
 package com.cbgm.sparrow.feature.voice.presentation.composer
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -46,15 +44,8 @@ fun VoiceComposer(
     Row(
         modifier =
             modifier
-                .height(Dimens.MessageInput.composerHeight)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .border(
-                    Dimens.Base.borderStrokeWidth,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                    MaterialTheme.shapes.medium
-                )
-                .padding(horizontal = MaterialTheme.spacing.small),
+                .height(Dimens.MessageInput.actionSize)
+                .padding(end = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SwitchButton(
@@ -107,7 +98,7 @@ private fun SwitchButton(
         when (state.phase) {
             VoiceComposerPhase.READY -> VoiceAction.Record
             VoiceComposerPhase.RECORDING -> VoiceAction.Stop
-            VoiceComposerPhase.RECORDED -> if (state.isPlaying) VoiceAction.Pause else VoiceAction.Play
+            VoiceComposerPhase.RECORDED -> playbackAction(state.isPlaying)
         }
 
     Box(
@@ -151,6 +142,8 @@ private enum class VoiceAction {
     Play,
     Pause
 }
+
+private fun playbackAction(isPlaying: Boolean): VoiceAction = if (isPlaying) VoiceAction.Pause else VoiceAction.Play
 
 @Preview
 @Composable

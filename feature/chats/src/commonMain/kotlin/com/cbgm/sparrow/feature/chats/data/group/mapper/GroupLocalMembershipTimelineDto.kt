@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 
 internal data class GroupLocalMembershipTimelineDto(
     val visibleMessages: List<MessageEntity>,
@@ -58,6 +58,13 @@ internal fun buildGroupLocalMembershipTimeline(
     )
 }
 
+private fun MutableList<MessageEntity>.addIfActive(
+    message: MessageEntity,
+    active: Boolean
+) {
+    if (active) add(message)
+}
+
 private fun List<MessageEntity>.visibleDuringMembershipPeriods(initiallyActive: Boolean): List<MessageEntity> {
     var active = initiallyActive
     return buildList {
@@ -68,7 +75,7 @@ private fun List<MessageEntity>.visibleDuringMembershipPeriods(initiallyActive: 
                 }
 
                 message.transportMode.isLocalMembershipEnd() -> {
-                    if (active) add(message)
+                    addIfActive(message, active)
                     active = false
                 }
 

@@ -6,14 +6,14 @@ This page describes the implemented behavior in the current source tree. Roadmap
 
 | Area | Status |
 |---|---|
-| Android client | Current usable target |
+| Android client | First public beta (`1.0.0-beta.1`) |
 | iOS client | KMP/Xcode/source-set structure exists, but important runtime/platform functionality is incomplete |
 | Control Plane | Implemented as Docker/Ktor services + operator tooling |
 | Community Node | Implemented as Docker/Ktor services + operator tooling |
 
 ## Identity, onboarding and trust
 
-- onboarding, permission flow, phone entry/hint and identity creation;
+- onboarding pages (welcome, how relays hide who you talk to, permissions, receiving while closed, theme, phone) and identity creation, followed by an optional six-step tour on a sample chat;
 - one-time SMS phone verification at sign-up (create and restore), Firebase-based on Android;
 - local signing/encryption identity and encrypted backup/restore;
 - public identity exchange, acknowledgement and manual/QR import;
@@ -108,7 +108,7 @@ See [App lock](app-lock.md).
 
 ## Startup/runtime
 
-Application startup is task-based through `ApplicationStartupRunner` and concrete `StartupTask` instances. Only waiting tasks block navigation. Non-waiting observers/runtime work starts after `AppRoute.Main` through `startPostNavigationRuntime()` and `ForegroundRuntimeCoordinator`.
+Application startup is task-based through `ApplicationStartupRunner` and concrete `StartupTask` instances. Only waiting tasks block navigation. Non-waiting observers/runtime work starts after `AppRoute.Main` through `startPostNavigationRuntime()` and `ForegroundRuntime`.
 
 See [Startup architecture](../architecture/startup.md).
 
@@ -125,15 +125,19 @@ See [Startup architecture](../architecture/startup.md).
 - app-lock toggle with device authentication;
 - semantic search and message-safety settings;
 - attachment storage/management;
+- privacy policy and data disclaimer (Privacy & data), in English and German;
+- theme (like the phone, light or dark), language, auto reply, block unknown invites and automatic secure setup;
+- onion routing (hops, circuits, decoy envelopes, send directly without a route) and a preferred node;
 - network/developer diagnostics and persisted error log;
 - Control Plane/node state and connection diagnostics.
 
 ## Offline/background transport
 
-- foreground WebSocket delivery;
+- circuits through 1–5 relays of different operators (1–3 circuits, contacts spread over them) starting at a home node;
+- optional decoy envelopes and an optional mode that never sends without a protecting route;
 - durable protocol outbox;
 - recipient mailbox delivery;
-- Android FCM wake-up path;
+- receiving while closed (always connected, while open, or checking every 15 minutes);
 - synchronization workers and conversation notifications/deep links.
 
 ## Server
@@ -142,20 +146,14 @@ See [Startup architecture](../architecture/startup.md).
 
 - signed Community Node registration/directory;
 - node heartbeat/health expiry;
-- Redis-backed presence routes, with a check of the one-time phone verification token at the first route registration;
-- PostgreSQL-backed push registrations/wake-ups;
-- Firebase Admin integration;
+- Redis-backed phone alias bindings (claimed through two relays, phone attestation of the Directory's verifier) and invitation routes;
 - Caddy reverse proxy and `/index` operator page;
 - LAN/Public deployment through the unified server manager.
 
 ### Community Node
 
-- client WebSocket gateway;
-- signed presence-route registration/refresh;
-- local delivery;
-- cross-node federation;
-- durable federation retry queue;
-- recipient mailbox persistence/capabilities;
+- onion relay (`/v1/relay`) and circuits (`/v1/circuit`);
+- recipient mailbox persistence/capabilities, invitation mailboxes with paid deposits;
 - encrypted blob upload/download used by message attachments;
 - Control Plane directory parsing/caching/retry;
 - continuous registration/heartbeat;
@@ -166,8 +164,8 @@ See [Startup architecture](../architecture/startup.md).
 
 - Android debug/release builds and signing configuration are present in the source tree.
 - Current server packaging is the single unified `dist/sparrow-server.zip` built from `server/installer`.
-- `server/control-plane-directory` is private operator infrastructure and is deliberately excluded from that public bundle.
-- This source snapshot does not include `.github/workflows`; exact current CI trigger/change-classification behavior therefore must be verified from the release checkout rather than inferred here.
+- `server/control-plane-directory` is the public source for a separate operator-managed service and is deliberately excluded from the unified runtime bundle.
+- The CI and release workflows are checked in under `.github/workflows` (see [Release process](../development/release-process.md#release-automation-present-in-this-source-snapshot)); a `v*` tag builds the release.
 
 ## Not currently advertised as working
 
@@ -189,7 +187,7 @@ Invitation lifecycle is now a dedicated `:feature:invite` concern, while the `:f
 
 ### Group membership module
 
-Group membership/security is implemented in `:feature:membership` rather than inside Chats. This includes `GroupMembershipStateMachine`, `GroupSecurityManager`, Group welcome/activation datasources, admin promotion/removal/leave, current epoch/member routing, and the membership result stream. See [Group membership and group security](group-membership.md).
+Group membership/security is implemented in `:feature:membership` rather than inside Chats. This includes `GroupMembershipStateMachine`, `GroupSecurityRepositoryImpl`, Group welcome/activation datasources, admin promotion/removal/leave, current epoch/member routing, and the membership result stream. See [Group membership and group security](group-membership.md).
 
 ### Voice and transcription
 
@@ -209,7 +207,7 @@ Group admins can synchronize current pin state through `PinGroupMessageWorkflow`
 
 ### Persistence
 
-The current Room database is schema **55** and includes durable recovery, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
+The current Room database is schema **56** and includes durable recovery, parked early message operations, invitation, membership, pin, link-preview, auto-reply, mailbox-route and protocol-outbox failure state. See [Persistence model](../architecture/persistence.md).
 
 
 ## Avatars and profile-picture editing
