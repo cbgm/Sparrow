@@ -2,29 +2,23 @@
 
 ## Branch model
 
-The current repository flow is:
+The release branch flow is:
 
 ```text
-feature/*
-   │ PR
-   ▼
-develop
-   │ stabilization/integration
-   ▼
-master
-   │ create release line
-   ▼
-release/0.1, release/0.2, ...
-   │ tag exact release commit
-   ▼
-v0.1.0-alpha.1, v0.1.0, ...
+feature/* -> PR -> develop -> merge into release/0.6
+                                  │
+                                  ├─ beta / RC tags
+                                  └─ v0.6.0 final tag
+                                         │
+                                         └─ merge into master and develop
 ```
 
-Feature work normally targets `develop`. The Android PR workflow runs for PRs into `develop` and builds a debug
-APK plus quality/tests/device tests.
+Keep `master` stable for published releases, and use `develop` for ongoing feature work and integration. Feature work normally targets `develop`. The Android PR workflow runs for PRs into `develop` and builds a debug APK plus quality/tests/device tests.
 
-`master` is not used as a branch-prefix for release branches. Git cannot have both `master` and
-`master/release/...` refs, so release branches use `release/x.y` and are created from `master`.
+For 0.6.0, use one `release/0.6` branch throughout beta, RC and final preparation. Start it from
+the updated `master`, merge `develop` into it, and merge release-specific fixes back into
+`develop`. Stable releases and post-release hotfixes update `master`; see the complete
+[Release process](../development/release-process.md).
 
 ## Day-to-day loop
 
@@ -57,8 +51,8 @@ separate. A similarly named operation is not enough reason to introduce a generi
 Server services are independent Gradle modules and Docker images. Test the affected service and then run the
 appropriate smoke test. See [Testing](../development/testing.md).
 
-## Release lines
+## Release builds
 
-Every push to `release/**` runs the release workflow. It detects changed paths and builds only affected
-artifacts. A `v*` tag forces a complete reproducible release build. See
-[Release process](../development/release-process.md).
+The full release workflow runs on pushed `v*` tags and builds the exact tagged commit. Beta and RC
+tags must be reachable from `release/*`; stable tags may be reachable from `release/*` or
+`master`. See [Release process](../development/release-process.md).

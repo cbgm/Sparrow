@@ -46,7 +46,7 @@ No. The current semantic-search and message-safety embedding path uses a local A
 
 ## How are releases built?
 
-Create `release/x.y` from `master`. Release-branch pushes create change-aware candidate artifacts. A `v*` tag on the release line triggers the complete GitHub release. See [Release process](development/release-process.md).
+For the 0.6.0 cycle, create one `release/0.6` branch from the updated `master`, merge `develop` into it, and push a new `v0.6.0-*` tag for each beta or RC. The `v*` tag triggers the complete GitHub release from that exact commit. Stable patch-release tags can be made from `master`. See [Release process](development/release-process.md).
 
 ## Where are generated architecture docs?
 

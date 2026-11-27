@@ -43,7 +43,9 @@ The standalone smoke test starts a Control Plane and two Community Nodes, checks
 
 Normal feature work opens PRs into `develop`. `.github/workflows/android-pr.yml` validates those PRs and uploads its debug APK artifact. Existing server workflows also target the `develop` integration path.
 
-Release packaging is separate and runs on `release/**`; see [Release process](release-process.md).
+The full release packaging workflow runs when a `v*` tag is pushed. Beta and RC tags must point
+to commits reachable from `release/*`; stable tags may point to commits reachable from `master`
+or a release branch. See [Release process](release-process.md).
 
 ## Test production behavior, not stale assumptions
 

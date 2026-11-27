@@ -8,7 +8,7 @@ federated Kotlin/Docker server stack.
     functionality is still missing, so iOS is not currently a supported app target.
 
 !!! info "Release/build source of truth"
-    The current public server packager in this source tree builds one unified `dist/sparrow-server.zip`. CI lives in `.github/workflows`: Android and server checks on pull requests to `develop`, the server bundle on server changes, the documentation site on `master`, and releases from `v*` tags and `release/**` branches (see [Release Process](development/release-process.md)).
+    The current public server packager in this source tree builds one unified `dist/sparrow-server.zip`. CI lives in `.github/workflows`: Android and server checks on pull requests to `develop`, the server bundle on server changes, the documentation site on `master`, and full releases on `v*` tags (see [Release Process](development/release-process.md)).
 
 ## New here? Read these in order
 

@@ -177,17 +177,27 @@ jobs:
       - name: Checkout exact commit
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Verify tagged commit belongs to a release branch
+      - name: Verify tagged commit belongs to a release branch or stable branch
         if: github.ref_type == 'tag'
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin '+refs/heads/release/*:refs/remotes/origin/release/*'
-          if ! git branch --remotes --contains "${GITHUB_SHA}" | grep -Eq 'origin/release/'; then
-            echo "::error::Release tags must point to a commit from a release/* branch."
-            exit 1
+          containing_branches="$(git branch --remotes --contains "${GITHUB_SHA}")"
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            if ! grep -Eq 'origin/release/' <<< "${containing_branches}"; then
+              echo "::error::Beta and release-candidate tags must point to a commit from a release/* branch."
+              exit 1
+            fi
+          else
+            git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
+            containing_branches="$(git branch --remotes --contains "${GITHUB_SHA}")"
+            if ! grep -Eq 'origin/release/|origin/master$' <<< "${containing_branches}"; then
+              echo "::error::Stable release tags must point to a commit from master or a release/* branch."
+              exit 1
+            fi
           fi
 
       - name: Validate release configuration
@@ -900,5 +910,3 @@ jobs:
             --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"
-
-

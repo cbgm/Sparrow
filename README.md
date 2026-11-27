@@ -300,7 +300,7 @@ Do not manually edit `docs/generated/`.
 
 ## Releases
 
-The Git branch flow is `develop -> master -> release/x.y -> tag`. The workflows in `.github/workflows` build pull requests, the server bundle and the documentation site; a `v*` tag (for the beta: `v1.0.0-beta.1`) triggers the complete release build.
+The release flow keeps `master` stable, integrates ongoing work on `develop`, and uses one `release/0.6` branch for the `v0.6.0` beta, RC and final cycle. Each `v*` tag triggers a full release build; see the [release process](docs/development/release-process.md) for branch, bugfix and hotfix steps.
 
 The current **verifiable server packaging path** is `server/installer/build.py`, which creates the single public `dist/sparrow-server.zip`. The independent Control Plane Directory service is maintained in this repository but is not part of that runtime bundle; generated deployment state and credentials must never be included in release assets.
 
