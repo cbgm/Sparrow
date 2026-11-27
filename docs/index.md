@@ -48,7 +48,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 ## Documentation location
 
-`README.md` at repository root is the only project Markdown documentation kept outside `docs/`. `server/secrets/placeholder.md` is not documentation; it only keeps the otherwise-empty secrets directory tracked by Git. Architecture, server, feature, security, API and development documentation is centralized here so there is one source of truth.
+Architecture, server, feature, security, API and development documentation is centralized here. Repository-level community and legal documents are [Contributing](https://github.com/cbgm/Sparrow/blob/master/CONTRIBUTING.md), [Code of Conduct](https://github.com/cbgm/Sparrow/blob/master/CODE_OF_CONDUCT.md), [Security](https://github.com/cbgm/Sparrow/blob/master/SECURITY.md), and the [Apache-2.0 license](https://github.com/cbgm/Sparrow/blob/master/LICENSE). `server/secrets/placeholder.md` is not documentation; it only keeps the otherwise-empty secrets directory tracked by Git.
 
 ## Architecture source of truth
 

@@ -27,8 +27,11 @@ import com.cbgm.sparrow.feature.transport.data.controlplane.SignedDirectoryContr
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.directory.NodeDirectoryVerifier
+import com.cbgm.sparrow.feature.transport.data.directory.NodeEndpointRemoteDataSource
 import com.cbgm.sparrow.feature.transport.data.mailbox.MailboxCreationWorkSolver
+import com.cbgm.sparrow.feature.transport.data.route.RelaySelector
 import com.cbgm.sparrow.feature.transport.data.route.relay.ControlPlaneRelayPolicy
+import com.cbgm.sparrow.feature.transport.data.route.relay.NodeDirectoryRelayLoader
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayClient
 import com.cbgm.sparrow.feature.transport.data.route.relay.OnionRelayEngine
 import com.cbgm.sparrow.feature.transport.data.route.relay.createControlPlaneHttpClient
@@ -39,8 +42,10 @@ import com.cbgm.sparrow.feature.transport.domain.repository.ControlPlaneStatusRe
 import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
 import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
+import com.cbgm.sparrow.protocol.phone.PhoneVerificationSlotSource
 import io.ktor.client.HttpClient
 import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 /** The Control Planes: their addresses, health, directory and the requests that go to them through relays. */
@@ -111,9 +116,11 @@ internal val controlPlaneModule =
                 pinnedDirectoryKey = { get<SparrowDataStore>().getString(KEY_TRUSTED_DIRECTORY_PUBLIC_KEY) },
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cipher = get<SealedMessageCipher>(),
-                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                work = MailboxCreationWorkSolver(get<CryptoHash>()),
+                relays = NodeDirectoryRelayLoader(get<RelaySelector>(), get<NodeEndpointRemoteDataSource>())
             )
-        }
+        } bind PhoneVerificationSlotSource::class
 
         single {
             ControlPlaneRequestRouter(

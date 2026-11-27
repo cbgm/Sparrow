@@ -38,7 +38,9 @@ BEGIN = "# BEGIN SPARROW INDEPENDENT DIRECTORY ROUTE"
 END = "# END SPARROW INDEPENDENT DIRECTORY ROUTE"
 PUBLIC_PATHS = ("/health /.well-known/sparrow-directory /v1/control-planes /v1/registrations "
                 "/v1/registrations/challenge")
-PHONE_PATHS = "/v1/phone-attestations /v1/phone-attestations/keys"
+PHONE_PATHS = "/v1/phone-attestations /v1/phone-attestations/keys /v1/phone-attestations/slots"
+# Routes earlier versions wrote; they count as the installer's own, so an update can replace them.
+EARLIER_PHONE_PATHS = ("/v1/phone-attestations /v1/phone-attestations/keys",)
 HOSTNAME = re.compile(
     r"(?=.{4,253}$)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+")
 AUTOMATIC = re.compile(r"directory-(\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3})\.sslip\.io")
@@ -199,14 +201,14 @@ def find_server_folder() -> Path | None:
 
 
 # ---------------------------------------------------------------------- shared proxy route
-def phone_handle(upstream: str) -> str:
+def phone_handle(upstream: str, paths: str = PHONE_PATHS) -> str:
     """The separate phone verifier's paths, in front of the Directory's own."""
-    return (f"    @phone_verification path {PHONE_PATHS}\n"
+    return (f"    @phone_verification path {paths}\n"
             f"    handle @phone_verification {{\n        reverse_proxy {upstream}\n    }}\n")
 
 
-def directory_route(hostname: str, phone: bool = False) -> str:
-    return (f"{BEGIN}\n{hostname} {{\n" + (phone_handle(f"{PHONE_CONTAINER}:9082") if phone else "") +
+def directory_route(hostname: str, phone: bool = False, phone_paths: str = PHONE_PATHS) -> str:
+    return (f"{BEGIN}\n{hostname} {{\n" + (phone_handle(f"{PHONE_CONTAINER}:9082", phone_paths) if phone else "") +
             f"    @directory_public path {PUBLIC_PATHS}\n"
             "    handle @directory_public {\n"
             "        reverse_proxy sparrow-central-directory:9080\n    }\n"
@@ -214,9 +216,10 @@ def directory_route(hostname: str, phone: bool = False) -> str:
 
 
 def same_route(route: str, hostname: str) -> bool:
-    """The installer's own route, with or without phone verification."""
+    """The installer's own route, with or without phone verification, also as an earlier version wrote it."""
     route = route.replace("\r\n", "\n")
-    expected = (directory_route(hostname), directory_route(hostname, phone=True))
+    expected = (directory_route(hostname), directory_route(hostname, phone=True),
+                *(directory_route(hostname, phone=True, phone_paths=paths) for paths in EARLIER_PHONE_PATHS))
     return route in (*expected, expected[0].replace(" /.well-known/sparrow-directory", ""))
 
 
@@ -324,14 +327,16 @@ def server_files(server: Path) -> dict[str, Path]:
 
 
 def phone_settings() -> dict:
-    """Whether this Directory verifies phone numbers, with which Firebase project and how many a day (0 = no limit)."""
+    """Whether this Directory verifies phone numbers, with which Firebase project, how many a day (0 = no limit) and
+    how often the app may send the SMS code again for one sign-up."""
     try:
         saved = json.loads(PHONE_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         saved = {}
     return {"enabled": saved.get("enabled") is True,
             "firebaseProject": imported_firebase_project(),
-            "perDay": saved.get("perDay") if isinstance(saved.get("perDay"), int) and saved["perDay"] >= 0 else 0}
+            "perDay": saved.get("perDay") if isinstance(saved.get("perDay"), int) and saved["perDay"] >= 0 else 0,
+            "resends": saved.get("resends") if isinstance(saved.get("resends"), int) and saved["resends"] >= 0 else 1}
 
 
 def firebase_admin_project(path: Path) -> str:
@@ -425,7 +430,7 @@ def prepare_identity() -> str:
     return keys[-1]
 
 
-def start_phone_verifier(per_day: int) -> None:
+def start_phone_verifier(per_day: int, resends: int) -> None:
     """Keys of the separate phone verifier (created once, in its own volume), certified by the Directory key."""
     print("Preparing phone verification ...", flush=True)
     docker("run", "--rm", "--user", "0:0", "--cap-drop", "ALL", "--cap-add", "CHOWN", "--cap-add",
@@ -446,11 +451,13 @@ def start_phone_verifier(per_day: int) -> None:
     # Public: the keys it certifies are public keys. Readable by the verifier's user in the container.
     PHONE_CERTIFICATE.write_text(certified + "\n", encoding="utf-8")
     PHONE_CERTIFICATE.chmod(0o644)
-    PHONE_ENV.write_text(f"PHONE_VERIFICATIONS_PER_DAY={per_day}\n", encoding="utf-8")
+    PHONE_ENV.write_text(f"PHONE_VERIFICATIONS_PER_DAY={per_day}\nPHONE_VERIFICATION_RESENDS={resends}\n",
+                         encoding="utf-8")
     compose("--profile", "phone-verification", "up", "-d", "--no-deps", "--force-recreate", "phone-verifier")
     print(f"This Directory verifies phone numbers for the Firebase project "
           f"{firebase_admin_project(FIREBASE_ADMIN)}, "
-          f"{f'at most {per_day} a day' if per_day else 'without a daily maximum'}.")
+          f"{f'at most {per_day} a day' if per_day else 'without a daily maximum'}, "
+          f"the code may be sent again {resends} time(s).")
 
 
 def stop_phone_verifier() -> None:
@@ -559,7 +566,7 @@ def register_control_plane(server: Path, url: str, key: str) -> None:
 
 
 def install(hostname: str, server: Path | None, phone: bool, firebase_admin: Path | None = None,
-            per_day: int = 0) -> None:
+            per_day: int = 0, resends: int = 1) -> None:
     check_docker()
     hostname = validate_hostname(hostname.strip().lower())
     if phone and firebase_admin is None and not FIREBASE_ADMIN.is_file():
@@ -569,6 +576,8 @@ def install(hostname: str, server: Path | None, phone: bool, firebase_admin: Pat
         firebase_admin_project(firebase_admin)
     if per_day < 0:
         raise DirectoryError("The daily maximum of phone verifications must be 0 (no limit) or more.")
+    if resends < 0:
+        raise DirectoryError("The number of times the SMS code may be sent again must be 0 or more.")
     if "sparrow-public-edge" not in docker_lines("network", "ls", "--format", "{{.Name}}"):
         docker("network", "create", "sparrow-public-edge")
     previous = installed_hostname()
@@ -608,10 +617,10 @@ def install(hostname: str, server: Path | None, phone: bool, firebase_admin: Pat
     if phone and firebase_admin is not None:
         import_firebase_admin(firebase_admin)
     if phone:
-        start_phone_verifier(per_day)
+        start_phone_verifier(per_day, resends)
     else:
         stop_phone_verifier()
-    PHONE_FILE.write_text(json.dumps({"enabled": phone, "perDay": per_day}),
+    PHONE_FILE.write_text(json.dumps({"enabled": phone, "perDay": per_day, "resends": resends}),
                           encoding="utf-8")
     if server is None:
         start_standalone_proxy(hostname, previous, phone)
@@ -724,6 +733,8 @@ def main() -> int:
     phone.add_argument("--no-phone-verification", dest="phone", action="store_false")
     install_command.add_argument("--phone-verifications-per-day", type=int, default=None,
                                  help="maximum phone verifications per UTC day, 0 = no limit (default: kept)")
+    install_command.add_argument("--phone-verification-resends", type=int, default=None,
+                                 help="how often the app may send the SMS code again for one sign-up (default: kept)")
     install_command.add_argument("--firebase-admin-file", type=Path, default=None,
                                  help="Firebase Admin service account JSON of the app's project (default: the imported one)")
     mode = install_command.add_mutually_exclusive_group()
@@ -752,7 +763,8 @@ def main() -> int:
             saved = phone_settings()
             install(hostname, server, saved["enabled"] if args.phone is None else args.phone,
                     args.firebase_admin_file,
-                    saved["perDay"] if args.phone_verifications_per_day is None else args.phone_verifications_per_day)
+                    saved["perDay"] if args.phone_verifications_per_day is None else args.phone_verifications_per_day,
+                    saved["resends"] if args.phone_verification_resends is None else args.phone_verification_resends)
         elif args.command == "update":
             source = args.source or (Path(saved_source()) if saved_source() else None)
             if source is None:

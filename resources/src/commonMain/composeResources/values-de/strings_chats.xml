@@ -57,7 +57,7 @@
     <string name="feature_chats_invalid_packet">Ungültiges Paket</string>
     <string name="feature_chats_invalid_plaintext">Ungültiger Klartext</string>
     <string name="feature_chats_loading_chat">Chat wird geladen…</string>
-    <string name="feature_chats_no_conversations_hint">Tippe auf +, um einen Kontakt auszuwählen und einen Chat zu starten.</string>
+    <string name="feature_chats_no_conversations_hint">Tippe auf den Stift, um einen Kontakt auszuwählen und einen Chat zu starten.</string>
     <string name="feature_chats_no_conversations_yet">Noch keine Unterhaltungen</string>
     <string name="feature_chats_not_encrypted">Nicht verschlüsselt</string>
     <string name="feature_chats_numbers_match">Halten, wenn die Nummern übereinstimmen</string>

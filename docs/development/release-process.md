@@ -212,13 +212,13 @@ Important bundled entry points include:
 
 All three launchers open the same cross-platform installer window (Tk, shared `ui_window.py`); without a desktop the same options appear as a text menu.
 
-## Server bundle exclusion: private Control Plane Directory
+## Server bundle exclusion: independent Control Plane Directory
 
-`server/control-plane-directory` is **operator-only** infrastructure. `server/installer/build.py` explicitly documents that it must never copy that directory or server identities/secrets into the public unified bundle.
+`server/control-plane-directory` is public source for a separate operator-managed service. `server/installer/build.py` deliberately excludes its service and installer from the unified runtime bundle; generated server identities and secrets must never be copied into release assets.
 
 Therefore these are **not public Sparrow server release assets**:
 
-- the independent directory's private installer;
+- the independent directory's separately built operator installer;
 - its administrator CLI/token;
 - its signing key or SQLite state;
 - the persistent `sparrow-central-directory-state` volume.
@@ -256,7 +256,7 @@ The exact GitHub workflow must remain the source of truth for automated release 
 sparrow-server.zip
 ```
 
-plus its checksum when produced by release automation. Android APK/AAB assets and checksums should correspond to the exact tagged commit. Do not document or publish the private `server/control-plane-directory` installer as part of the normal public bundle.
+plus its checksum when produced by release automation. Android APK/AAB assets and checksums should correspond to the exact tagged commit. Do not document or publish the separately built `server/control-plane-directory` installer as part of the normal unified runtime bundle.
 
 ## Release verification checklist
 

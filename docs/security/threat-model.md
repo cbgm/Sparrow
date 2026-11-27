@@ -29,6 +29,9 @@ The design aims to protect against:
 - a Community Node learning its users' phone numbers: the app claims its alias at each of its Control Planes,
   sealed for the presence directory's key from that Control Plane's signed node directory, and invitation letters
   are sealed for the recipient;
+- mailbox nodes learning the app's network address: mailbox requests go through circuits of 1 to 5 relays
+  (default 2), never two of the same declared operator, and with "Send directly without a route" switched off
+  nothing goes out without a circuit through at least two hops (by default it goes out directly while no circuit is up);
 - Control Planes learning the app's network address: the app's requests to them go through two relays (onion
   layers sealed for each relay's key from the signed directory). The first relay sees the address but not the
   destination, the second the destination but not the address; neither reads the content. Two relays run by the
@@ -67,6 +70,13 @@ Depending on deployment, infrastructure can observe some metadata such as:
 
 Phone verification at sign-up uses Firebase phone authentication on Android, so Google/Firebase
 processes the phone number and sends the SMS. Only the operator's test numbers are bound without it.
+
+Before the SMS, the app reserves a sign-up slot at the phone verifier (sealed, through the relays, for a small proof
+of work); the verifier keeps only the day, its count and hashes of open slots, and the slot links nothing to an
+address. The slots cap sign-ups per day and stop SMS on a full day for the real app. They do not stop someone who
+uses the app's Firebase details directly to request SMS: that is bounded by Firebase's own app check (Play
+Integrity, or reCAPTCHA for an app not from the Play Store), the project's SMS region policy and a billing budget.
+Someone can also take today's open slots with cheap proofs of work and block sign-ups for the day; it costs no SMS.
 
 Exchange rates for group expenses are fetched by the Community Node, not by the app, so the rate
 provider (Frankfurter by default) sees the node's address once a day, never a user's.

@@ -15,6 +15,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowCodeField
 import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.core.util.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.identity.device.PhoneVerificationHost
 import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
 import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationResultUi
@@ -23,7 +24,9 @@ import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVe
 import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
+import com.cbgm.sparrow.resources.base_close
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_confirm
+import com.cbgm.sparrow.resources.feature_identity_phone_verification_day_full
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_hint
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_request
 import com.cbgm.sparrow.resources.feature_identity_phone_verification_resend
@@ -90,6 +93,14 @@ private fun PhoneVerificationDialogContent(
                                 )
                         )
                     }
+                    PhoneVerificationStageUi.DAY_FULL ->
+                        Text(
+                            text =
+                                stringResource(
+                                    Res.string.feature_identity_phone_verification_day_full,
+                                    formatMessageTimestamp(state.retryAtEpochMilliseconds)
+                                )
+                        )
                     else -> PhoneVerificationCodeInput(state = state, onUiEvent = onUiEvent)
                 }
                 if (state.canSkip) {
@@ -102,19 +113,29 @@ private fun PhoneVerificationDialogContent(
             }
         },
         confirmButton = {
-            SparrowDialogAction(
-                enabled = state.canConfirm,
-                onClick = { onUiEvent(PhoneVerificationUiEvent.ConfirmClicked) },
-                text = stringResource(Res.string.feature_identity_phone_verification_confirm)
-            )
+            if (state.stage == PhoneVerificationStageUi.DAY_FULL) {
+                SparrowDialogAction(
+                    onClick = { onUiEvent(PhoneVerificationUiEvent.DismissClicked) },
+                    text = stringResource(Res.string.base_close)
+                )
+            } else {
+                SparrowDialogAction(
+                    enabled = state.canConfirm,
+                    onClick = { onUiEvent(PhoneVerificationUiEvent.ConfirmClicked) },
+                    text = stringResource(Res.string.feature_identity_phone_verification_confirm)
+                )
+            }
         },
         dismissButton = {
-            SparrowDialogAction(
-                enabled = state.stage != PhoneVerificationStageUi.CONFIRMING,
-                onClick = { onUiEvent(PhoneVerificationUiEvent.DismissClicked) },
-                text = stringResource(Res.string.base_cancel),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // A full day has only "Close".
+            if (state.stage != PhoneVerificationStageUi.DAY_FULL) {
+                SparrowDialogAction(
+                    enabled = state.stage != PhoneVerificationStageUi.CONFIRMING,
+                    onClick = { onUiEvent(PhoneVerificationUiEvent.DismissClicked) },
+                    text = stringResource(Res.string.base_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         },
         isVisible = state.isVisible
     )
@@ -139,6 +160,8 @@ private fun PhoneVerificationCodeInput(
         length = PhoneVerificationUiState.CODE_LENGTH,
         isEnabled = state.stage == PhoneVerificationStageUi.CODE
     )
+    // Only as often as the phone verifier allows for this sign-up; then the link is gone.
+    if (state.resendsLeft == 0) return
     SparrowLink(
         text =
             if (state.resendInSeconds > 0) {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="base_app_name">Sparrow</string>
-    <string name="base_back">Back</string>
+    <string name="base_back">Zurück</string>
     <string name="base_build_type">Build-Typ</string>
     <string name="base_cancel">Abbrechen</string>
     <string name="base_choose_another_number">Andere Nummer auswählen</string>
@@ -37,7 +37,7 @@
     <string name="base_unknown">Unbekannt</string>
     <string name="base_verify">Verifizieren</string>
     <string name="base_verify_contact">%1$s verifizieren</string>
-    <string name="base_verified">Verified</string>
+    <string name="base_verified">Verifiziert</string>
     <string name="base_version">Version</string>
     <string name="base_version_code">Versionscode</string>
     <string name="base_version_name">Versionsname</string>

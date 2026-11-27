@@ -7,6 +7,11 @@ this device", signed with the attestation key and sealed with the reply key from
 read it either. The Directory signing key certifies both keys once (`directory_service.py certify-phone-keys`); apps
 and Control Planes trust the certificate through the Directory key they already pin. This service never holds the
 Directory signing key. Nothing is stored: no token, no number, no alias.
+
+Before the app has Firebase send the SMS, it reserves a sign-up slot here (`/v1/phone-attestations/slots`, sealed and
+through the relays like the attestation): a small proof of work buys one random slot token, valid for an hour, while the
+day's maximum is not reached; otherwise the app shows "try again tomorrow" and no SMS is sent. The attestation uses the
+slot up. Only the day, its count and the hashes of the open slots are kept.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import stat
 import threading
 import time
@@ -37,6 +43,15 @@ ATTESTATION_LIFETIME_MS = 60 * 60_000
 MAX_BODY = 8_192
 PHONE_NUMBER = re.compile(r"\+[1-9][0-9]{1,14}")
 ROUTING_ID = re.compile(r"scrouting1_[A-Za-z0-9_-]{1,116}")
+SLOT_CONTEXT = "sparrow-phone-slot-request-v1"
+SLOT_LIFETIME_MS = 60 * 60_000
+SLOT = re.compile(r"[A-Za-z0-9_-]{43}")
+WORK_CONTEXT = "sparrow-mailbox-work-v1"
+# What the app's solver pays (MailboxCreationWorkSolver.REQUIRED_BITS); more needs an app update first.
+WORK_BITS = 18
+WORK_WINDOW_MS = 10 * 60_000
+STAMP = re.compile(r"[A-Za-z0-9_-]{16,64}")
+DAY_MS = 24 * 60 * 60_000
 ATTESTATION_KEY_FILE = "attestation.pem"
 REQUEST_KEY_FILE = "request.pem"
 DAILY_COUNT_FILE = "daily-count.json"
@@ -51,8 +66,11 @@ class PhoneVerificationLimitReached(Exception):
 
 
 class DailyLimit:
-    """At most [maximum] attestations per UTC day; 0 means no limit. Only the day and its count are kept, in the
-    verifier's own volume, so a restart does not start the day again. Nothing about the users is counted."""
+    """At most [maximum] sign-ups per UTC day; 0 means no limit. A sign-up reserves a slot before its SMS is sent
+    ([reserve]) and uses it up with its attestation ([take]); a slot not used within [SLOT_LIFETIME_MS] is free again.
+    A day counts its attestations plus the open slots. Only the day, its count and the hashes of the open slots are
+    kept, in the verifier's own volume, so a restart neither starts the day again nor loses a slot. Nothing about the
+    users is kept."""
 
     def __init__(self, filename: Path | None, maximum: int, clock=utc_ms):
         if maximum < 0:
@@ -61,17 +79,32 @@ class DailyLimit:
         self.maximum = maximum
         self.clock = clock
         self.lock = threading.Lock()
-        self.day, self.count = self.load()
+        self.day, self.count, self.slots = self.load()
 
     def today(self) -> str:
         return time.strftime("%Y-%m-%d", time.gmtime(self.clock() // 1000))
 
-    def take(self) -> None:
-        """Counts one attestation, or raises when today's maximum is reached."""
+    def next_day_ms(self) -> int:
+        """When the next UTC day starts: the earliest time a full day has room again."""
+        return (self.clock() // DAY_MS + 1) * DAY_MS
+
+    def reserve(self) -> tuple[str, int]:
+        """A new slot and when it expires, or raises when today's maximum is reached."""
         with self.lock:
-            if self.day != self.today():
-                self.day, self.count = self.today(), 0
-            if self.maximum and self.count >= self.maximum:
+            self.roll()
+            if self.maximum and self.count + len(self.slots) >= self.maximum:
+                raise PhoneVerificationLimitReached()
+            slot = encode(secrets.token_bytes(32))
+            expires_at = self.clock() + SLOT_LIFETIME_MS
+            self.slots[slot_hash(slot)] = expires_at
+            self.save()
+            return slot, expires_at
+
+    def take(self, slot: object) -> None:
+        """Uses up [slot] for one attestation, or raises when it is unknown or expired."""
+        with self.lock:
+            self.roll()
+            if not isinstance(slot, str) or not SLOT.fullmatch(slot) or self.slots.pop(slot_hash(slot), None) is None:
                 raise PhoneVerificationLimitReached()
             self.count += 1
             self.save()
@@ -80,22 +113,82 @@ class DailyLimit:
         with self.lock:
             return self.count if self.day == self.today() else 0
 
-    def load(self) -> tuple[str, int]:
+    def open_slots(self) -> int:
+        with self.lock:
+            self.roll()
+            return len(self.slots)
+
+    def roll(self) -> None:
+        """A new day starts at 0; slots expire on their own, whatever the day."""
+        if self.day != self.today():
+            self.day, self.count = self.today(), 0
+        now = self.clock()
+        for key in [key for key, expires_at in self.slots.items() if expires_at <= now]:
+            del self.slots[key]
+
+    def load(self) -> tuple[str, int, dict[str, int]]:
         try:
             saved = json.loads(self.filename.read_text(encoding="utf-8")) if self.filename else {}
         except (OSError, ValueError):
             saved = {}
-        count = saved.get("count") if isinstance(saved, dict) else None
-        if isinstance(saved, dict) and saved.get("day") == self.today() and isinstance(count, int) and count >= 0:
-            return saved["day"], count
-        return self.today(), 0
+        if not isinstance(saved, dict):
+            saved = {}
+        stored = saved.get("slots")
+        slots = {key: value for key, value in stored.items() if isinstance(key, str) and type(value) is int} \
+            if isinstance(stored, dict) else {}
+        count = saved.get("count")
+        if saved.get("day") == self.today() and type(count) is int and count >= 0:
+            return saved["day"], count, slots
+        return self.today(), 0, slots
 
     def save(self) -> None:
         if self.filename is None:
             return
         pending = self.filename.with_name(self.filename.name + ".pending")
-        pending.write_text(json.dumps({"day": self.day, "count": self.count}), encoding="utf-8")
+        pending.write_text(json.dumps({"day": self.day, "count": self.count, "slots": self.slots}), encoding="utf-8")
         os.replace(pending, self.filename)
+
+
+def slot_hash(slot: str) -> str:
+    return hashlib.sha256(slot.encode("utf-8")).hexdigest()
+
+
+class CreationWork:
+    """The price of a slot: the same proof of work as for a mailbox (CreationWorkCheck on the server,
+    MailboxCreationWorkSolver in the app). `SHA-256("sparrow-mailbox-work-v1|stamp|createdAt|nonce")` must start with
+    [bits] zero bits. A stamp counts once and only within [WORK_WINDOW_MS] of its time; used stamps are kept only that
+    long, and nothing about who sent them."""
+
+    def __init__(self, bits: int = WORK_BITS, clock=utc_ms):
+        self.bits = bits
+        self.clock = clock
+        self.lock = threading.Lock()
+        self.used: dict[str, int] = {}
+
+    def check(self, stamp: object, created_at: object, nonce: object) -> None:
+        now = self.clock()
+        if not isinstance(stamp, str) or not STAMP.fullmatch(stamp) or type(created_at) is not int or \
+                type(nonce) is not int or nonce < 0 or abs(now - created_at) > WORK_WINDOW_MS:
+            raise PhoneVerificationError("Invalid proof of work")
+        digest = hashlib.sha256(f"{WORK_CONTEXT}|{stamp}|{created_at}|{nonce}".encode("utf-8")).digest()
+        if leading_zero_bits(digest) < self.bits:
+            raise PhoneVerificationError("Invalid proof of work")
+        with self.lock:
+            for used, expires_at in list(self.used.items()):
+                if expires_at < now:
+                    del self.used[used]
+            if stamp in self.used:
+                raise PhoneVerificationError("Proof of work used twice")
+            self.used[stamp] = created_at + WORK_WINDOW_MS
+
+
+def leading_zero_bits(digest: bytes) -> int:
+    bits = 0
+    for byte in digest:
+        if byte:
+            return bits + 8 - byte.bit_length()
+        bits += 8
+    return bits
 
 
 def phone_alias(phone_number: str) -> str:
@@ -159,13 +252,33 @@ class FirebaseTokens:
 # ---------------------------------------------------------------------- attestations
 class PhoneVerifier:
     def __init__(self, attestation_key: Ed25519PrivateKey, request_key: X25519PrivateKey, certificate: dict,
-                 tokens: FirebaseTokens, clock=utc_ms, limit: DailyLimit | None = None):
+                 tokens: FirebaseTokens, clock=utc_ms, limit: DailyLimit | None = None, resends: int = 1,
+                 work: CreationWork | None = None):
+        if resends < 0:
+            raise ValueError("Resends must not be negative")
         self.limit = limit or DailyLimit(None, 0, clock)
+        self.resends = resends
+        self.work = work or CreationWork(clock=clock)
         self.attestation_key = attestation_key
         self.request_key = request_key
         self.certificate = certificate
         self.tokens = tokens
         self.clock = clock
+
+    def reserve_slot(self, sealed_request: bytes) -> bytes:
+        """Checks the request's proof of work and returns a new slot, sealed with the request's reply key. Raises
+        [PhoneVerificationLimitReached] when today is full, before anything is sent."""
+        try:
+            request = json.loads(open_sealed(sealed_request, self.request_key, SLOT_CONTEXT))
+        except json.JSONDecodeError as exc:
+            raise PhoneVerificationError("Malformed request") from exc
+        if not isinstance(request, dict) or set(request) != {"stamp", "createdAtEpochMilliseconds", "nonce", "replyKey"}:
+            raise PhoneVerificationError("Malformed request")
+        reply_key = decode(request["replyKey"], 32)
+        self.work.check(request["stamp"], request["createdAtEpochMilliseconds"], request["nonce"])
+        slot, expires_at = self.limit.reserve()
+        return seal_reply(canonical({"slot": slot, "expiresAtEpochMilliseconds": expires_at, "resends": self.resends}),
+                          reply_key)
 
     def attest(self, sealed_request: bytes) -> bytes:
         """Opens the request, verifies its token and returns the attestation sealed with the request's reply key."""
@@ -173,7 +286,7 @@ class PhoneVerifier:
             request = json.loads(open_sealed(sealed_request, self.request_key, REQUEST_CONTEXT))
         except json.JSONDecodeError as exc:
             raise PhoneVerificationError("Malformed request") from exc
-        if not isinstance(request, dict) or set(request) != {"token", "routingId", "replyKey"}:
+        if not isinstance(request, dict) or set(request) != {"token", "routingId", "replyKey", "slot"}:
             raise PhoneVerificationError("Malformed request")
         routing_id = request["routingId"]
         if not isinstance(routing_id, str) or not ROUTING_ID.fullmatch(routing_id):
@@ -181,8 +294,8 @@ class PhoneVerifier:
         reply_key = decode(request["replyKey"], 32)
         now = self.clock()
         alias = phone_alias(self.tokens.phone_number(request["token"]))
-        # Only a verified token counts, so nobody can use up the day without a real phone sign-in.
-        self.limit.take()
+        # The token is checked first, so a slot is only used up by a real phone sign-in.
+        self.limit.take(request["slot"])
         payload = canonical({
             "protocol": ATTESTATION_PROTOCOL,
             "alias": alias,
@@ -215,14 +328,16 @@ class PhoneVerifierHandler(BaseHTTPRequestHandler):
         if self.path == "/health":
             # Only reachable inside Docker: Caddy forwards the phone-attestation paths only.
             self.json_response(200, {"status": "ok", "verificationsToday": self.verifier.limit.used_today(),
-                                     "maximumPerDay": self.verifier.limit.maximum})
+                                     "openSlots": self.verifier.limit.open_slots(),
+                                     "maximumPerDay": self.verifier.limit.maximum,
+                                     "resends": self.verifier.resends})
         elif self.path == "/v1/phone-attestations/keys":
             self.json_response(200, self.verifier.certificate)
         else:
             self.json_response(404, {"error": "Not found"})
 
     def do_POST(self) -> None:
-        if self.path != "/v1/phone-attestations":
+        if self.path not in ("/v1/phone-attestations", "/v1/phone-attestations/slots"):
             self.json_response(404, {"error": "Not found"})
             return
         try:
@@ -232,10 +347,15 @@ class PhoneVerifierHandler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(size))
             if not isinstance(body, dict) or set(body) != {"sealedRequest"}:
                 raise PhoneVerificationError("Malformed request")
-            sealed = self.verifier.attest(sealed_request(body["sealedRequest"]))
-            self.json_response(200, {"sealedAttestation": encode(sealed)})
+            if self.path.endswith("/slots"):
+                sealed = self.verifier.reserve_slot(sealed_request(body["sealedRequest"]))
+                self.json_response(200, {"sealedSlot": encode(sealed)})
+            else:
+                sealed = self.verifier.attest(sealed_request(body["sealedRequest"]))
+                self.json_response(200, {"sealedAttestation": encode(sealed)})
         except PhoneVerificationLimitReached:
-            self.json_response(429, {"error": "PHONE_VERIFICATION_LIMIT"})
+            self.json_response(429, {"error": "PHONE_VERIFICATION_LIMIT",
+                                     "retryAtEpochMilliseconds": self.verifier.limit.next_day_ms()})
         except (ValueError, TypeError, KeyError):
             # Never the token, number or alias.
             self.json_response(403, {"error": "PHONE_VERIFICATION_FAILED"})
@@ -318,6 +438,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=9082)
     parser.add_argument("--per-day", type=int, default=int(os.getenv("PHONE_VERIFICATIONS_PER_DAY") or "0"),
                         help="maximum verifications per UTC day (0 = no limit)")
+    parser.add_argument("--resends", type=int, default=int(os.getenv("PHONE_VERIFICATION_RESENDS") or "1"),
+                        help="how often the app may send the SMS code again for one sign-up")
     args = parser.parse_args()
     if args.command == "init-keys":
         args.state.mkdir(parents=True, exist_ok=True)
@@ -334,10 +456,10 @@ def main() -> None:
         parser.error("--certificate is required for serve")
     verifier = PhoneVerifier(attestation, request, read_certificate(args.certificate, keys),
                              FirebaseTokens(args.firebase_admin_file),
-                             limit=DailyLimit(args.state / DAILY_COUNT_FILE, args.per_day))
+                             limit=DailyLimit(args.state / DAILY_COUNT_FILE, args.per_day), resends=args.resends)
     server = create_server(args.host, args.port, verifier)
     print("phone verification listener:", server.server_address,
-          "per day:", args.per_day or "no limit")
+          "per day:", args.per_day or "no limit", "resends:", args.resends)
     try:
         server.serve_forever()
     finally:

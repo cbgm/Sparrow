@@ -36,6 +36,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRep
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentitySharingRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.PendingRemoteIdentityChangeRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.PhoneVerificationSlotRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
@@ -51,6 +52,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileR
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentitySharingRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.PhoneVerificationSlotRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityImportRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
@@ -109,6 +111,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDecl
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ReservePhoneVerificationSlotUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ResolveIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
@@ -256,8 +259,13 @@ val identityModule =
                 localIdentityProfileRepository = get<LocalIdentityProfileRepository>()
             )
         }
+        single<PhoneVerificationSlotRepository> {
+            PhoneVerificationSlotRepositoryImpl(slotSource = get(), profileDataSource = get())
+        }
+        factory { ReservePhoneVerificationSlotUseCase(repository = get()) }
         viewModel {
             PhoneVerificationViewModel(
+                reserveSlot = get(),
                 sendCode = get(),
                 confirmCode = get(),
                 isDebugBuild = getProperty(DEBUG_BUILD_PROPERTY, false)

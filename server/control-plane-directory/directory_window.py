@@ -43,6 +43,7 @@ class DirectoryInstaller(EngineWindow):
         self.firebase_file = tk.StringVar(value="")
         self.firebase_project = phone["firebaseProject"]
         self.per_day = tk.StringVar(value=str(phone["perDay"]))
+        self.resends = tk.StringVar(value=str(phone["resends"]))
         self.build()
         self.update_fields()
         self.refresh()
@@ -97,6 +98,9 @@ class DirectoryInstaller(EngineWindow):
         self.per_day_entry = card.add(
             ttk.Entry(card, textvariable=self.per_day, font=self.fonts["body"]),
             "Verifications per day (0 = no limit)")
+        self.resends_entry = card.add(
+            ttk.Entry(card, textvariable=self.resends, font=self.fonts["body"]),
+            "Times the SMS code may be sent again")
         self.today_label = tk.Label(card, font=self.fonts["small"], bg=COLORS["card"], fg=COLORS["muted"],
                                     anchor="w", text="")
         card.add(self.today_label, sticky="w")
@@ -157,7 +161,7 @@ class DirectoryInstaller(EngineWindow):
             self.hostname_entry.configure(state="disabled")
         else:
             self.hostname_entry.configure(state="normal")
-        for widget in (self.firebase_entry, self.firebase_button, self.per_day_entry):
+        for widget in (self.firebase_entry, self.firebase_button, self.per_day_entry, self.resends_entry):
             widget.configure(state="normal" if self.phone.get() else "disabled")
         shared = "normal" if self.proxy.get() == SHARED else "disabled"
         self.server_entry.configure(state=shared)
@@ -254,12 +258,18 @@ class DirectoryInstaller(EngineWindow):
                 messagebox.showwarning("Sparrow Directory",
                                        "Enter the verifications per day as a whole number (0 = no limit).")
                 return
+            resends = self.resends.get().strip() or "1"
+            if not resends.isdigit():
+                messagebox.showwarning("Sparrow Directory",
+                                       "Enter how often the SMS code may be sent again as a whole number.")
+                return
             firebase_file = self.firebase_file.get().strip()
             if not firebase_file and not self.firebase_project:
                 messagebox.showwarning("Sparrow Directory",
                                        "Choose the Firebase Admin file (service account JSON) of the app's project.")
                 return
-            arguments += ["--phone-verification", "--phone-verifications-per-day", per_day]
+            arguments += ["--phone-verification", "--phone-verifications-per-day", per_day,
+                          "--phone-verification-resends", resends]
             if firebase_file:
                 arguments += ["--firebase-admin-file", firebase_file]
         else:
