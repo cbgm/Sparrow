@@ -6,8 +6,6 @@ param(
 
     [switch]$BuildImages,
 
-    [switch]$RequireFcm,
-
     [ValidateRange(1, 600)]
     [int]$TimeoutSeconds = 180,
 
@@ -18,10 +16,7 @@ param(
     [int]$ExpectedMailboxCountA = -1,
 
     [ValidateRange(-1, 2147483647)]
-    [int]$ExpectedMailboxCountB = -1,
-
-    [ValidateRange(-1, 2147483647)]
-    [int]$ExpectedPushDevices = -1
+    [int]$ExpectedMailboxCountB = -1
 )
 
 $ErrorActionPreference = "Stop"
@@ -214,9 +209,6 @@ $services = @(
     "presence-directory",
     "mailbox-database",
     "mailbox",
-    "push-database",
-    "push",
-    "federation-database",
     "federation",
     "gateway"
 )
@@ -224,7 +216,6 @@ if ($MultiNode) {
     $services += @(
         "mailbox-b-database",
         "mailbox-b",
-        "federation-b-database",
         "federation-b",
         "gateway-b"
     )
@@ -252,7 +243,7 @@ $checks = @(
     [pscustomobject]@{
         Name = "presence-directory"
         Url = "http://localhost:8091/health"
-        Pattern = '^ok persistence=redis routes=\d+$'
+        Pattern = '^ok persistence=redis$'
     },
     [pscustomobject]@{
         Name = "mailbox"
@@ -262,17 +253,12 @@ $checks = @(
     [pscustomobject]@{
         Name = "federation"
         Url = "http://localhost:8093/health"
-        Pattern = '^ok persistence=postgresql pending=\d+$'
+        Pattern = '^ok$'
     },
     [pscustomobject]@{
         Name = "gateway"
         Url = "http://localhost:8094/health"
-        Pattern = '^ok connections=\d+$'
-    },
-    [pscustomobject]@{
-        Name = "push"
-        Url = "http://localhost:8095/health"
-        Pattern = '^ok fcmEnabled=(true|false) persistence=postgresql devices=\d+ pendingEnvelopes=\d+$'
+        Pattern = '^ok$'
     }
 )
 if ($MultiNode) {
@@ -285,12 +271,12 @@ if ($MultiNode) {
         [pscustomobject]@{
             Name = "federation-b"
             Url = "http://localhost:8193/health"
-            Pattern = '^ok persistence=postgresql pending=\d+$'
+            Pattern = '^ok$'
         },
         [pscustomobject]@{
             Name = "gateway-b"
             Url = "http://localhost:8294/health"
-            Pattern = '^ok connections=\d+$'
+            Pattern = '^ok$'
         }
     )
 }
@@ -320,15 +306,6 @@ if ($MultiNode) {
         -Value $results["mailbox-b"] `
         -Field "mailboxes" `
         -Expected $ExpectedMailboxCountB
-}
-Assert-Count `
-    -Name "push" `
-    -Value $results["push"] `
-    -Field "devices" `
-    -Expected $ExpectedPushDevices
-
-if ($RequireFcm -and $results["push"] -notmatch '(?:^|\s)fcmEnabled=true(?:\s|$)') {
-    throw "Push service is healthy but Firebase Cloud Messaging is disabled: $($results['push'])"
 }
 
 $requestId = "sparrow-smoke-$([Guid]::NewGuid().ToString('N'))"

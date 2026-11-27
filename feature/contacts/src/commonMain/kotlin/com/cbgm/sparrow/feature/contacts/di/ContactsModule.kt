@@ -19,7 +19,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMutualContactSigningPublicKeyUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxRouteSigningPublicKeyUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveBlockedContactsContextUseCase
@@ -38,6 +38,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.LinkPhoneContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingIdentityPeerMetadataUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsViewModel
@@ -77,13 +78,14 @@ val contactsModule =
         factory { ResolveContactInvitationRoutingIdUseCase(repository = get()) }
         factory { ResolveContactIdByRoutingIdUseCase(repository = get()) }
         factory { ReconcileContactTransportRoutingUseCase(repository = get()) }
-        factory { GetMailboxContactStatesUseCase(repository = get()) }
-        factory { GetMutualContactSigningPublicKeyUseCase(repository = get()) }
+        factory { GetMailboxContactStatesUseCase(repository = get(), getIdentityPeerState = get()) }
+        factory { GetMailboxRouteSigningPublicKeyUseCase(repository = get(), getIdentityPeerState = get()) }
 
         singleOf(::IdentityPeerRepositoryImpl) { bind<IdentityPeerRepository>() }
         factory { GetIdentityPeerDisplayNameUseCase(repository = get()) }
         factory { InspectContactPeerUseCase(repository = get()) }
         factory { ApplyIdentityPeerMergeUseCase(repository = get()) }
+        factory { LinkPhoneContactUseCase(repository = get(), blocklistRepository = get()) }
         factory { UpdateIncomingIdentityPeerMetadataUseCase(repository = get()) }
 
         single<ContactRepository> {
@@ -115,7 +117,7 @@ val contactsModule =
 
         factory {
             GetContactSafetyNumberUseCase(
-                localPublicIdentityProvider = get(),
+                localPublicIdentitySource = get(),
                 contactRepository = get(),
                 getRemoteIdentity = get(),
                 safetyNumberGenerator = get()
@@ -148,6 +150,7 @@ val contactsModule =
             BlockContactUseCase(
                 blocklistRepository = get(),
                 contactRepository = get(),
+                identityPeerRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }

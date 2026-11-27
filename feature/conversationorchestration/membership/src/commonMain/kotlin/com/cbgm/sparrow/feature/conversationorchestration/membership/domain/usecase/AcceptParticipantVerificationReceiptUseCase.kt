@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.pack
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.policy.GroupVerificationPacketPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupVerificationRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 
 /** The admin records that a current member verified the admin's current keys. */
@@ -13,7 +13,7 @@ class AcceptParticipantVerificationReceiptUseCase(
     private val verificationRepository: GroupVerificationRepository,
     private val verificationInputs: GroupVerificationInputsUseCase,
     private val refreshOwnedGroupVerification: RefreshOwnedGroupVerificationUseCase,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
     private val packetCodec: GroupVerificationPacketCodec
 ) {
     suspend operator fun invoke(context: IncomingPacketContext, packet: GroupVerificationReceiptPacket): Result<Unit> =
@@ -37,7 +37,7 @@ class AcceptParticipantVerificationReceiptUseCase(
             check(participantKey.signingPublicKey.contentEquals(packet.participantSigningPublicKey)) {
                 "Participant signing key changed before group verification"
             }
-            val adminIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val adminIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
             check(adminIdentity.encryptionPublicKey.contentEquals(packet.ownerEncryptionPublicKey)) {
                 "Group verification receipt targets a different admin encryption key"
             }

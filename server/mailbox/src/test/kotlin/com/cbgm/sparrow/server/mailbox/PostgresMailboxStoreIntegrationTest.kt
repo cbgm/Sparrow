@@ -12,56 +12,6 @@ import kotlin.test.assertTrue
 
 class PostgresMailboxStoreIntegrationTest {
     @Test
-    fun perOwnerQuotaSurvivesStoreRecreation() =
-        runTest {
-            val databaseUrl =
-                System
-                    .getenv("MAILBOX_TEST_DATABASE_URL")
-                    ?.takeIf(String::isNotBlank)
-                    ?: return@runTest
-            val now = System.currentTimeMillis()
-            val suffix = UUID.randomUUID().toString()
-            val ownerKeyHash = "owner-$suffix"
-            val config = databaseConfig(databaseUrl)
-            val request =
-                CreateMailboxRequest(
-                    nodeId = "node-$suffix",
-                    nodeEndpoint = "http://mailbox",
-                    expiresAtEpochMilliseconds = now + 60_000L
-                )
-            val created =
-                createMailboxStorage(config).use { store ->
-                    assertIs<MailboxCreationResult.Created>(
-                        store.createWithQuota(
-                            request = request,
-                            ownerKeyHash = ownerKeyHash,
-                            maximumMailboxes = Int.MAX_VALUE,
-                            maximumMailboxesPerOwner = 1
-                        )
-                    ).response
-                }
-
-            createMailboxStorage(config).use { store ->
-                assertEquals(
-                    MailboxCreationResult.OwnerQuotaExceeded,
-                    store.createWithQuota(
-                        request = request,
-                        ownerKeyHash = ownerKeyHash,
-                        maximumMailboxes = Int.MAX_VALUE,
-                        maximumMailboxesPerOwner = 1
-                    )
-                )
-                assertEquals(
-                    MailboxRevocationResult.Revoked,
-                    store.revoke(
-                        created.deliveryRoute.mailboxId,
-                        created.retrievalCapability
-                    )
-                )
-            }
-        }
-
-    @Test
     fun mailboxAndEnvelopeSurviveStoreRecreation() =
         runTest {
             val databaseUrl =

@@ -7,22 +7,21 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupMessageAccess
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.MessageReactionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.CheckGroupMessageAccessUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupOperationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupRecipientsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.ToggleLocalReactionUseCase
 import com.cbgm.sparrow.protocol.message.MessageOperation
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlin.reflect.KClass
 
 /**
- * CheckMembership -> FindMessage -> FindRecipients -> FindLocalReaction -> (AddReaction | RemoveReaction)
- * -> EncryptReaction -> EnqueueReaction.
+ * CheckMembership -> FindMessage -> FindRecipients -> ToggleReaction -> EncryptReaction -> EnqueueReaction.
  */
 class ToggleGroupReactionWorkflow internal constructor(
-    private val reactionRepository: MessageReactionRepository,
+    private val toggleLocalReaction: ToggleLocalReactionUseCase,
     private val checkGroupMessageAccess: CheckGroupMessageAccessUseCase,
     private val findGroupMessage: FindGroupMessageUseCase,
     private val findGroupRecipients: FindGroupRecipientsUseCase,
@@ -52,25 +51,15 @@ class ToggleGroupReactionWorkflow internal constructor(
                 Outcome.MessageFound
             }
             is Step.FindRecipients -> Outcome.RecipientsFound(findGroupRecipients(step.command.groupId).getOrThrow())
-            is Step.FindLocalReaction ->
-                if (reactionRepository.exists(step.command.messageId, null, step.command.emoji).getOrThrow()) {
-                    Outcome.ReactionPresent(step.recipients)
-                } else {
-                    Outcome.ReactionAbsent(step.recipients)
-                }
-            is Step.RemoveReaction -> {
-                reactionRepository.delete(step.command.messageId, null, step.command.emoji).getOrThrow()
-                Outcome.ReactionChanged(step.recipients, removed = true)
-            }
-            is Step.AddReaction -> {
-                reactionRepository.save(
-                    step.command.messageId,
-                    step.command.groupId,
-                    null,
-                    step.command.emoji
-                ).getOrThrow()
-                Outcome.ReactionChanged(step.recipients, removed = false)
-            }
+            is Step.ToggleReaction ->
+                Outcome.ReactionChanged(
+                    recipients = step.recipients,
+                    removed = toggleLocalReaction(
+                        messageId = step.command.messageId,
+                        conversationId = step.command.groupId,
+                        emoji = step.command.emoji
+                    ).getOrThrow()
+                )
             is Step.EncryptReaction ->
                 Outcome.ReactionEncrypted(
                     encryptGroupOperation(
@@ -95,9 +84,7 @@ class ToggleGroupReactionWorkflow internal constructor(
             is Outcome.MembershipInactive ->
                 Transition.Reject(ConversationFailure(ConversationFailureReason.NOT_ALLOWED, outcome.reason))
             Outcome.MessageFound -> Transition.Next(Step.FindRecipients(step.command))
-            is Outcome.RecipientsFound -> Transition.Next(Step.FindLocalReaction(outcome.recipients, step.command))
-            is Outcome.ReactionPresent -> Transition.Next(Step.RemoveReaction(outcome.recipients, step.command))
-            is Outcome.ReactionAbsent -> Transition.Next(Step.AddReaction(outcome.recipients, step.command))
+            is Outcome.RecipientsFound -> Transition.Next(Step.ToggleReaction(outcome.recipients, step.command))
             is Outcome.ReactionChanged ->
                 Transition.Next(Step.EncryptReaction(outcome.recipients, outcome.removed, step.command))
             is Outcome.ReactionEncrypted -> Transition.Next(Step.EnqueueReaction(outcome.packets, step.command))
@@ -119,17 +106,7 @@ class ToggleGroupReactionWorkflow internal constructor(
             override val command: GroupMessageCommand.ToggleReaction
         ) : Step
 
-        data class FindLocalReaction(
-            val recipients: List<String>,
-            override val command: GroupMessageCommand.ToggleReaction
-        ) : Step
-
-        data class RemoveReaction(
-            val recipients: List<String>,
-            override val command: GroupMessageCommand.ToggleReaction
-        ) : Step
-
-        data class AddReaction(
+        data class ToggleReaction(
             val recipients: List<String>,
             override val command: GroupMessageCommand.ToggleReaction
         ) : Step
@@ -156,14 +133,6 @@ class ToggleGroupReactionWorkflow internal constructor(
         data object MessageFound : Outcome
 
         data class RecipientsFound(
-            val recipients: List<String>
-        ) : Outcome
-
-        data class ReactionPresent(
-            val recipients: List<String>
-        ) : Outcome
-
-        data class ReactionAbsent(
             val recipients: List<String>
         ) : Outcome
 

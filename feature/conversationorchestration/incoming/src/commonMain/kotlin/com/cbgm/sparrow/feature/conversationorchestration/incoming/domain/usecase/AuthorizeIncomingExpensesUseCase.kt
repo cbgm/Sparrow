@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransfer
 import com.cbgm.sparrow.core.base.messagepart.domain.model.PaymentTransferPolicy
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.rejectInvalid
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.policy.IncomingExpensePolicy
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.flow.first
@@ -35,14 +36,16 @@ class AuthorizeIncomingExpensesUseCase(
             attachments.observeExpenseBoardClosures(groupId).first().mapTo(mutableSetOf()) { it.boardId }
 
         val storedTransfers = if (transfers.isEmpty()) emptyList() else attachments.observePaymentTransfers(groupId).first()
-        transfers.forEach { event ->
-            require(storedTransfers.none { it.id == event.id && it != event }) { "Conflicting payment event" }
-            require(event.boardId !in closedBoardIds) { "Payment belongs to a closed expense board" }
-            PaymentTransferPolicy.requireActor(event, senderId)
-        }
-        expenses.forEach { expense ->
-            require(expense.boardId !in closedBoardIds) { "Expense belongs to a closed expense board" }
-            IncomingExpensePolicy.requireAuthorized(expense, stored, senderId, senderIsAdmin)
+        rejectInvalid {
+            transfers.forEach { event ->
+                require(storedTransfers.none { it.id == event.id && it != event }) { "Conflicting payment event" }
+                require(event.boardId !in closedBoardIds) { "Payment belongs to a closed expense board" }
+                PaymentTransferPolicy.requireActor(event, senderId)
+            }
+            expenses.forEach { expense ->
+                require(expense.boardId !in closedBoardIds) { "Expense belongs to a closed expense board" }
+                IncomingExpensePolicy.requireAuthorized(expense, stored, senderId, senderIsAdmin)
+            }
         }
     }
 }

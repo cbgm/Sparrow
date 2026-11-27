@@ -13,6 +13,8 @@ class InspectContactPeerUseCase(
     suspend fun findEquivalentPhonePeerId(phoneNumber: String): Result<String?> =
         repository.findEquivalentPhonePeerId(phoneNumber)
 
+    suspend fun isLinkablePhoneContact(peerId: String): Result<Boolean> = repository.isLinkablePhoneContact(peerId)
+
     suspend fun canMergeRoutingDuplicate(
         peerId: String,
         remotePhoneNumber: String?

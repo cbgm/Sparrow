@@ -31,13 +31,13 @@ fun ControlPlaneSummaryCard(
 ) {
     ControlPlaneSettingsGroup(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Cloud,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
             )
             Spacer(Modifier.size(MaterialTheme.spacing.small))

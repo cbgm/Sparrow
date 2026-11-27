@@ -42,4 +42,7 @@ class ContactLocalDataSource(
 
     suspend fun deleteById(contactId: String) =
         contactDao.deleteById(contactId)
+
+    suspend fun isReferenced(contactId: String): Boolean =
+        contactDao.isReferenced(contactId)
 }

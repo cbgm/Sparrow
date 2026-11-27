@@ -40,7 +40,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 - **Getting Started** — prerequisites, first build, project structure, development flow.
 - **Architecture** — Clean Architecture rules, module boundaries, conversation workflow state machines, Direct/Group separation.
 - **Features** — current Android functionality, attachments/media, local message search, message safety and implementation classes.
-- **Transport & API** — Control Plane discovery, node failover, WebSocket frames and packets.
+- **Transport & API** — Control Plane discovery, node failover, circuits, mailboxes and packets.
 - **Security** — identity, encryption, safety numbers, server trust and threat model.
 - **Server & Operations** — Control Plane/Community Node, unified runtime manager, independent signed directory, Docker, Caddy and durable state.
 - **Development** — local setup, extending the project, quality, testing, logging, contributing, releases.
@@ -48,7 +48,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 ## Documentation location
 
-`README.md` at repository root is the only project Markdown documentation kept outside `docs/`. `server/secrets/placeholder.md` is not documentation; it only keeps the otherwise-empty secrets directory tracked by Git. Architecture, server, feature, security, API and development documentation is centralized here so there is one source of truth.
+Architecture, server, feature, security, API and development documentation is centralized here. Repository-level community and legal documents are [Contributing](https://github.com/cbgm/Sparrow/blob/master/CONTRIBUTING.md), [Code of Conduct](https://github.com/cbgm/Sparrow/blob/master/CODE_OF_CONDUCT.md), [Security](https://github.com/cbgm/Sparrow/blob/master/SECURITY.md), and the [Apache-2.0 license](https://github.com/cbgm/Sparrow/blob/master/LICENSE). `server/secrets/placeholder.md` is not documentation; it only keeps the otherwise-empty secrets directory tracked by Git.
 
 ## Architecture source of truth
 

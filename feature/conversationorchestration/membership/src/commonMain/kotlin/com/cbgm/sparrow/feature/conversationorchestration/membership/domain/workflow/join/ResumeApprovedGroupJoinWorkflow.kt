@@ -11,7 +11,6 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityU
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
-import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
 import kotlin.reflect.KClass
 
@@ -46,9 +45,7 @@ class ResumeApprovedGroupJoinWorkflow internal constructor(
                     requireNotNull(getMembershipHandshake(step.command.sourceId).getOrThrow()) {
                         "Approved group join no longer has a membership"
                     }
-                check(handshake.peerId == contactId && handshake.ownerSigningPublicKey == null) {
-                    "Approved identity does not belong to the owner-side group join"
-                }
+                handshake.requireOwnerSideJoinOf(contactId)
                 Outcome.HandshakeFound(handshake)
             }
             is Step.LoadApprovedIdentity ->
@@ -88,16 +85,7 @@ class ResumeApprovedGroupJoinWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.HandshakeFound ->
-                when (outcome.handshake.status) {
-                    MembershipStatus.WELCOME_SENT,
-                    MembershipStatus.WAITING_FOR_ACTIVATION,
-                    MembershipStatus.ACTIVE -> Transition.Complete()
-                    MembershipStatus.STAGED,
-                    MembershipStatus.IDENTITY_READY ->
-                        Transition.Next(Step.LoadApprovedIdentity(outcome.handshake.groupId, step.command))
-                    else -> Transition.Reject.because(IllegalStateException("Approved group join is no longer pending"))
-                }
+            is Outcome.HandshakeFound -> afterHandshakeFound(outcome.handshake, step.command)
             is Outcome.IdentityLoaded ->
                 Transition.Next(Step.StageIdentity(outcome.identity, outcome.groupId, step.command))
             is Outcome.IdentityStaged ->
@@ -105,6 +93,17 @@ class ResumeApprovedGroupJoinWorkflow internal constructor(
             is Outcome.MutualIdentityEstablished ->
                 Transition.Next(Step.ConfirmMemberIdentity(outcome.identity, outcome.groupId, step.command))
             Outcome.MemberIdentityConfirmed -> Transition.Complete()
+        }
+
+    private fun afterHandshakeFound(
+        handshake: MembershipHandshake,
+        command: MembershipCommand.ResumeApprovedGroupJoin
+    ): Transition<Step> =
+        when {
+            handshake.status.isWelcomeSent -> Transition.Complete()
+            handshake.status.awaitsMemberIdentity ->
+                Transition.Next(Step.LoadApprovedIdentity(handshake.groupId, command))
+            else -> Transition.Reject.because(IllegalStateException("Approved group join is no longer pending"))
         }
 
     sealed interface Step : WorkflowStep {

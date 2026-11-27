@@ -9,7 +9,7 @@ val startupModule =
     module {
         factory {
             ObserveAppConnectionAvailabilityUseCase(
-                transportConnectionManager = get()
+                transportConnection = get()
             )
         }
 

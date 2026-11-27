@@ -2,23 +2,18 @@
 
 Transport security has two layers:
 
-1. the public HTTP/WSS transport provided by Caddy/TLS where configured;
+1. the public HTTPS transport provided by Caddy/TLS where configured;
 2. application-level identity/group encryption and signatures, so server routing is not the sole confidentiality boundary.
 
-## Client route registration
+## Circuits and mailboxes
 
-Clients register a signed, expiring presence route through the Community Node gateway. Route refreshes include freshness/generation checks. The gateway validates them with `GatewayRouteValidator`; the Control Plane presence service parses the signed request with `nodeRequestAuthentication()` and authorizes it through `PresenceRuntime.nodeRequestAuthorizer` (`NodeRequestAuthorizer`).
+The app holds no session at a node and registers no route. It builds a circuit through relays of the signed node directory (`CircuitRunner`, `/v1/circuit`), sends requests to Control Planes through two relays (`/v1/relay`, onion layers sealed for each relay's key), and puts every packet into the recipient's mailbox. A mailbox is reached with a capability the recipient chose (`MailboxDeliveryRoute`), so no routing ID has to be signed in anywhere to send or receive. Envelopes carry hidden routing IDs.
 
-## Node-to-node requests
+A packet for a device whose mailbox route the sender does not have yet goes into the device's invitation mailbox: a letter signed with the device key and sealed for the recipient, deposited with a proof of work. The recipient accepts it only if the signature checks out, it is addressed to its own routing ID or alias, and the sender's routing ID derives from the signing key or (for a phone alias) belongs to that key according to the Presence Directory. See [Invitation mailboxes](../features/transport.md#invitation-mailboxes).
 
-Community Nodes own long-lived node identities. Federation/control requests are signed and verified using `server:security` helpers such as:
+## Node registration
 
-- `NodeRequestAuthentication`;
-- `NodeRequestAuthorizer`;
-- `ProtocolSignatures`;
-- `ReplayProtection`.
-
-The signed request context covers the request method/path plus freshness/nonce/body-related data defined by the protocol implementation, so an arbitrary HTTP caller cannot impersonate a registered node merely by knowing the endpoint URL.
+Community Nodes own long-lived node identities. They register signed descriptors and heartbeats with the node registry (`ProtocolSignatures.signDescriptor`/`verifyDescriptor`/`verifyHeartbeat`), and the registry signs the node directory the apps verify. Nodes do not call each other.
 
 ## Replay/rate controls
 
@@ -26,4 +21,4 @@ Server security includes bounded replay protection and request rate limiting. Th
 
 ## Caddy
 
-Caddy is the edge/reverse proxy. In public mode it is responsible for the externally reachable HTTP(S)/WSS endpoint and routes paths to the internal JVM services. Internal Docker service names/ports are not meant to be public application configuration.
+Caddy is the edge/reverse proxy. In public mode it is responsible for the externally reachable HTTP(S) endpoint and routes paths to the internal JVM services. Internal Docker service names/ports are not meant to be public application configuration.

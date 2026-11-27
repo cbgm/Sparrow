@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -22,6 +23,12 @@ data class InvitationEntity(
     val peerId: String,
     val peerDisplayName: String? = null,
     val peerSecondaryText: String? = null,
+    /** The peer's name is only its own claim: no known contact's keys match. */
+    @ColumnInfo(defaultValue = "0")
+    val peerUnverified: Boolean = false,
+    /** A phone book contact with the claimed number, linked to the peer when the invitation is accepted. */
+    val phoneContactPeerId: String? = null,
+    val phoneContactName: String? = null,
     val direction: String,
     val status: String,
     val createdAtEpochMilliseconds: Long,

@@ -28,6 +28,9 @@ class LocalIdentityProfileRepositoryImpl(
     override fun keepPhoneVerificationToken(token: String) =
         dataSource.keepPhoneVerificationToken(token)
 
+    override fun observePhoneVerificationLimitReached(): Flow<Boolean> =
+        dataSource.observePhoneVerificationLimitReached()
+
     override suspend fun deletePhoneName(): Result<Unit> =
         safeSuspendCall { dataSource.deletePhoneName() }
 }

@@ -73,7 +73,6 @@ internal class PostgresMailboxDatabase(
                 """
                 CREATE TABLE IF NOT EXISTS mailboxes (
                     mailbox_id TEXT PRIMARY KEY,
-                    owner_key_hash TEXT NOT NULL DEFAULT '',
                     send_capability_hash BYTEA NOT NULL,
                     retrieval_capability_hash BYTEA NOT NULL,
                     expires_at_epoch_milliseconds BIGINT NOT NULL
@@ -81,15 +80,24 @@ internal class PostgresMailboxDatabase(
                 """.trimIndent(),
                 """
                 ALTER TABLE mailboxes
-                ADD COLUMN IF NOT EXISTS owner_key_hash TEXT NOT NULL DEFAULT ''
+                ADD COLUMN IF NOT EXISTS invitation BOOLEAN NOT NULL DEFAULT FALSE
+                """.trimIndent(),
+                // Wake tickets went with FCM: the stored ones are deleted.
+                """
+                ALTER TABLE mailboxes
+                DROP COLUMN IF EXISTS wake_ticket_json
                 """.trimIndent(),
                 """
                 CREATE INDEX IF NOT EXISTS mailboxes_expiry_idx
                 ON mailboxes (expires_at_epoch_milliseconds)
                 """.trimIndent(),
+                // Nothing about a mailbox's creator is kept any more (older versions stored an owner key here).
                 """
-                CREATE INDEX IF NOT EXISTS mailboxes_owner_idx
-                ON mailboxes (owner_key_hash)
+                DROP INDEX IF EXISTS mailboxes_owner_idx
+                """.trimIndent(),
+                """
+                ALTER TABLE mailboxes
+                DROP COLUMN IF EXISTS owner_key_hash
                 """.trimIndent(),
                 """
                 CREATE TABLE IF NOT EXISTS mailbox_envelopes (

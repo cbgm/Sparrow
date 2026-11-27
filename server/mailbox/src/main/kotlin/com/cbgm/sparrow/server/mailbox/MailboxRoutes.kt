@@ -3,13 +3,13 @@ package com.cbgm.sparrow.server.mailbox
 import com.cbgm.sparrow.server.protocol.CreateMailboxRequest
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.ErrorResponse
+import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopeRequest
 import com.cbgm.sparrow.server.protocol.MailboxEnvelopesResponse
-import com.cbgm.sparrow.server.security.BoundedRateLimiter
-import com.cbgm.sparrow.server.security.enforceRateLimit
-import com.cbgm.sparrow.server.security.hashedClientAddress
-import com.cbgm.sparrow.server.security.respondTooManyRequests
+import com.cbgm.sparrow.server.protocol.MailboxWaitRequest
+import com.cbgm.sparrow.server.protocol.MailboxWaitResponse
+import com.cbgm.sparrow.server.security.CreationWorkCheck
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -24,16 +24,19 @@ import io.ktor.server.routing.routing
 internal fun Application.configureMailboxRoutes(
     config: MailboxConfig,
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier,
-    creationRateLimiter: BoundedRateLimiter
+    creationWork: CreationWorkCheck,
+    arrivals: MailboxArrivals = MailboxArrivals()
 ) {
     routing {
         get("/health") { call.respondMailboxHealth(store) }
         post("/v1/mailboxes") {
-            call.createMailbox(config, store, creationRateLimiter)
+            call.createMailbox(config, store, creationWork)
+        }
+        post("/v1/mailboxes/wait") {
+            call.respondReadyMailboxes(store, arrivals)
         }
         post("/v1/mailboxes/{mailboxId}/envelopes") {
-            call.storeEnvelope(store, pushNotifier)
+            call.storeEnvelope(store, arrivals, creationWork)
         }
         get("/v1/mailboxes/{mailboxId}/envelopes") {
             call.respondPendingEnvelopes(store)
@@ -52,23 +55,22 @@ private suspend fun ApplicationCall.respondMailboxHealth(store: MailboxStorage) 
 private suspend fun ApplicationCall.createMailbox(
     config: MailboxConfig,
     store: MailboxStorage,
-    creationRateLimiter: BoundedRateLimiter
+    creationWork: CreationWorkCheck
 ) {
-    if (!enforceRateLimit(creationRateLimiter)) {
+    val request = receive<CreateMailboxRequest>()
+    if (!creationWork.accepts(request.creationWork)) {
+        respond(HttpStatusCode.Forbidden, ErrorResponse("MAILBOX_WORK_REQUIRED", "A valid proof of work is required"))
         return
     }
-
+    // Nothing about the creator is kept: the proof of work is the price, so there is no per-address quota.
     when (
         val result =
             store.createWithQuota(
-                request = receive<CreateMailboxRequest>(),
-                ownerKeyHash = hashedClientAddress(),
-                maximumMailboxes = config.maximumMailboxes,
-                maximumMailboxesPerOwner = config.maximumMailboxesPerClient
+                request = MailboxLifetimes.capped(request.copy(creationWork = null), System.currentTimeMillis()),
+                maximumMailboxes = config.maximumMailboxes
             )
     ) {
         is MailboxCreationResult.Created -> respond(HttpStatusCode.Created, result.response)
-        MailboxCreationResult.OwnerQuotaExceeded -> respondOwnerQuotaExceeded(config)
         MailboxCreationResult.GlobalQuotaExceeded ->
             respond(
                 HttpStatusCode.InsufficientStorage,
@@ -80,26 +82,28 @@ private suspend fun ApplicationCall.createMailbox(
     }
 }
 
-private suspend fun ApplicationCall.respondOwnerQuotaExceeded(config: MailboxConfig) {
-    respondTooManyRequests(
-        retryAfterSeconds =
-            (config.creationRateLimit.windowMilliseconds / MILLISECONDS_PER_SECOND)
-                .coerceAtLeast(MINIMUM_RETRY_AFTER_SECONDS),
-        code = "MAILBOX_CLIENT_QUOTA_EXCEEDED",
-        message = "Active mailbox quota exceeded"
-    )
+private suspend fun ApplicationCall.respondReadyMailboxes(
+    store: MailboxStorage,
+    arrivals: MailboxArrivals
+) {
+    val request = runCatching { receive<MailboxWaitRequest>() }.getOrNull()
+    when {
+        request == null || request.mailboxes.size > MAXIMUM_WATCHED_MAILBOXES -> respond(HttpStatusCode.BadRequest)
+        else -> respond(MailboxWaitResponse(arrivals.ready(store, request.mailboxes, WAIT_MILLISECONDS)))
+    }
 }
 
 private suspend fun ApplicationCall.storeEnvelope(
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier
+    arrivals: MailboxArrivals,
+    depositWork: CreationWorkCheck
 ) {
     val mailboxId = parameters["mailboxId"]
     val capability = bearerCapability()
     when {
         mailboxId == null -> respond(HttpStatusCode.BadRequest)
         capability == null -> respond(HttpStatusCode.Unauthorized)
-        else -> storeAuthorizedEnvelope(mailboxId, capability, store, pushNotifier)
+        else -> storeAuthorizedEnvelope(mailboxId, capability, store, arrivals, depositWork)
     }
 }
 
@@ -107,16 +111,20 @@ private suspend fun ApplicationCall.storeAuthorizedEnvelope(
     mailboxId: String,
     capability: String,
     store: MailboxStorage,
-    pushNotifier: MailboxPushNotifier
+    arrivals: MailboxArrivals,
+    depositWork: CreationWorkCheck
 ) {
     val request = receive<MailboxEnvelopeRequest>()
-    when (val result = store.store(mailboxId, capability, request.envelope)) {
+    val envelope =
+        runCatching { MailboxLifetimes.capped(request.envelope, System.currentTimeMillis()) }.getOrElse {
+            respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_ENVELOPE", "Envelope rejected"))
+            return
+        }
+    // Only an invitation mailbox needs the work; checking it for every deposit would spend stamps for nothing.
+    val depositPaid = request.depositWork?.let(depositWork::accepts) == true
+    when (val result = store.store(mailboxId, capability, envelope, depositPaid)) {
         is MailboxResult.Stored -> {
-            if (!result.duplicate) {
-                runCatching {
-                    pushNotifier.notify(request.envelope.recipientDeviceRoutingId)
-                }
-            }
+            if (!result.duplicate) arrivals.stored(mailboxId)
             respond(
                 HttpStatusCode.Accepted,
                 FederationAcknowledgement(
@@ -146,7 +154,7 @@ private suspend fun ApplicationCall.respondPendingEnvelopes(store: MailboxStorag
             if (pending == null) {
                 respond(HttpStatusCode.Unauthorized)
             } else {
-                respond(MailboxEnvelopesResponse(pending))
+                respond(MailboxEnvelopesResponse(pending.firstPage()))
             }
         }
     }
@@ -185,5 +193,21 @@ private suspend fun ApplicationCall.respondRevocation(result: MailboxRevocationR
     }
 }
 
-private const val MILLISECONDS_PER_SECOND = 1_000L
-private const val MINIMUM_RETRY_AFTER_SECONDS = 1L
+/**
+ * The envelopes of one answer: in order, until about [PAGE_BYTES] of payload, but always at least one. The owner
+ * acknowledges them and asks again for the rest, so an answer always fits through a circuit.
+ */
+private fun List<FederatedEnvelope>.firstPage(): List<FederatedEnvelope> {
+    var bytes = 0
+    return takeWhile { envelope ->
+        val fits = bytes == 0 || bytes + envelope.encryptedPayload.length <= PAGE_BYTES
+        bytes += envelope.encryptedPayload.length
+        fits
+    }
+}
+
+private const val PAGE_BYTES = 1_024 * 1_024
+
+/** Below the session node's 10 s exit timeout, so a wait through a circuit always gets its answer. */
+private const val WAIT_MILLISECONDS = 8_000L
+private const val MAXIMUM_WATCHED_MAILBOXES = 512

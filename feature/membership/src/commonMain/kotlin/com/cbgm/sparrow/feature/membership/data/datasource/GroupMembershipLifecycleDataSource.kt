@@ -16,18 +16,18 @@ import com.cbgm.sparrow.protocol.packet.GroupReadyAcknowledgementPacket
  * those remaining cross-feature seams are being removed.
  */
 class GroupMembershipLifecycleDataSource internal constructor(
-    private val activationProvider: () -> GroupMembershipActivationDataSource,
-    private val administrationProvider: () -> GroupMembershipAdministrationDataSource,
-    private val deletionProvider: () -> GroupMembershipDeletionDataSource
+    private val activationSource: () -> GroupMembershipActivationDataSource,
+    private val administrationSource: () -> GroupMembershipAdministrationDataSource,
+    private val deletionSource: () -> GroupMembershipDeletionDataSource
 ) {
     private val activation: GroupMembershipActivationDataSource
-        get() = activationProvider()
+        get() = activationSource()
 
     private val administration: GroupMembershipAdministrationDataSource
-        get() = administrationProvider()
+        get() = administrationSource()
 
     private val deletion: GroupMembershipDeletionDataSource
-        get() = deletionProvider()
+        get() = deletionSource()
 
     suspend fun removeMember(
         groupId: String,
@@ -40,6 +40,12 @@ class GroupMembershipLifecycleDataSource internal constructor(
         contactId: String,
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult> = administration.promoteMember(groupId, contactId, context)
+
+    suspend fun rotateAfterAdminLeft(
+        groupId: String,
+        expectedEpoch: Int,
+        context: GroupMembershipContext
+    ): Result<Unit> = administration.rotateAfterAdminLeft(groupId, expectedEpoch, context)
 
     internal suspend fun transferAdminAndLeave(
         groupId: String,

@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.identity.presentation.setup.profile
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -16,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.theme.Dimens
-import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.identity.presentation.overview.profile.IdentityProfilePictureUiState
@@ -40,8 +38,7 @@ fun IdentityProfilePictureSection(
             SparrowAvatar(
                 name = "",
                 target = AvatarTarget.LocalUser,
-                size = Dimens.GroupDetailsScreen.avatarSize,
-                modifier = Modifier.padding(MaterialTheme.spacing.base),
+                size = Dimens.IdentityOverviewScreen.pictureSize,
                 fallbackPainter = painterResource(Res.drawable.ic_identity)
             )
 
@@ -53,10 +50,11 @@ fun IdentityProfilePictureSection(
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Box(modifier = Modifier.size(Dimens.Avatar.editIconSize), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(Dimens.GroupDetailsScreen.cameraBadgeSize), contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = stringResource(Res.string.feature_settings_profile_picture)
+                        contentDescription = stringResource(Res.string.feature_settings_profile_picture),
+                        modifier = Modifier.size(Dimens.GroupDetailsScreen.cameraIconSize)
                     )
                 }
             }

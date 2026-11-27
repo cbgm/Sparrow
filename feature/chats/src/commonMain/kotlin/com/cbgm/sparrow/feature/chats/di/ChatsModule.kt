@@ -26,7 +26,9 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationR
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ObserveMessageDaysUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.contact.ReconnectContactUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveConversationQueueAvailabilityUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
@@ -46,6 +48,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.controller.Conversatio
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.ConversationVoiceController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.DirectIdentityController
 import com.cbgm.sparrow.feature.chats.presentation.common.controller.SharedContactController
+import com.cbgm.sparrow.feature.chats.presentation.component.RouteProtectionViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationActionsController
@@ -63,8 +66,8 @@ import com.cbgm.sparrow.feature.chats.presentation.group.GroupPollController
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentProvider
-import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
+import com.cbgm.sparrow.protocol.attachment.GroupPinnedAttachmentSource
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSource
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.annotation.KoinViewModelScopeApi
 import org.koin.core.module.dsl.bind
@@ -89,9 +92,9 @@ private fun org.koin.core.module.Module.registerDirectData() {
 
 private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupConversationHistoryDataSource)
-    singleOf(::GroupAvatarDataSource)
+    singleOf(::GroupAvatarDataSource) { bind<GroupAvatarSource>() }
     singleOf(::GroupDescriptionDataSource)
-    singleOf(::GroupPinDataSource)
+    singleOf(::GroupPinDataSource) { bind<GroupPinnedAttachmentSource>() }
 }
 
 private fun org.koin.core.module.Module.registerRepositories() {
@@ -103,14 +106,12 @@ private fun org.koin.core.module.Module.registerRepositories() {
     }
     singleOf(::GroupAvatarReadRepositoryImpl) {
         bind<GroupAvatarReadRepository>()
-        bind<GroupAvatarProvider>()
     }
     singleOf(::GroupDescriptionReadRepositoryImpl) {
         bind<GroupDescriptionReadRepository>()
     }
     singleOf(::GroupPinReadRepositoryImpl) {
         bind<GroupPinReadRepository>()
-        bind<GroupPinnedAttachmentProvider>()
     }
     singleOf(::GroupVerificationReadRepositoryImpl) {
         bind<GroupVerificationReadRepository>()
@@ -128,7 +129,9 @@ private fun org.koin.core.module.Module.registerRepositories() {
 private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::LoadOlderMessagesUseCase)
     singleOf(::FindMessageHistoryCursorUseCase)
+    singleOf(::ObserveMessageDaysUseCase)
     singleOf(::EncodeContactForSharingUseCase)
+    singleOf(::ReconnectContactUseCase)
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::ObserveConversationQueueAvailabilityUseCase)
@@ -170,11 +173,16 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
     }
 
     viewModel {
+        RouteProtectionViewModel(observeRouteProtection = get())
+    }
+
+    viewModel {
         OverviewViewModel(
             observeConversationContext = get(),
             observeActiveAutoReply = get(),
             orchestrator = get(),
-            getGroupLeaveRequirement = get()
+            getGroupLeaveRequirement = get(),
+            observeWaitingForRoute = get()
         )
     }
 
@@ -208,7 +216,8 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
             actionsController = get(),
             pollController = get(),
             pinController = get(),
-            expenseController = get()
+            expenseController = get(),
+            observeWaitingForRoute = get()
         )
     }
 
@@ -224,9 +233,10 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
         )
     }
 
-    viewModel {
+    viewModel { (groupId: String, contactId: String) ->
         GroupMemberQrVerificationViewModel(
-            savedStateHandle = get(),
+            groupId = groupId,
+            contactId = contactId,
             decodeSharedIdentity = get(),
             getRemoteIdentity = get(),
             orchestrator = get()
@@ -245,7 +255,8 @@ private fun org.koin.core.module.Module.registerViewModelControllers() {
             identityController = get(),
             indicatorController = get(),
             stateController = get(),
-            actionsController = get()
+            actionsController = get(),
+            observeWaitingForRoute = get()
         )
     }
 }

@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.AppThemeMode
+import com.cbgm.sparrow.feature.applock.domain.model.AppLockTimeout
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 
 sealed interface SettingsUiEvent {
@@ -10,6 +12,14 @@ sealed interface SettingsUiEvent {
 
     data class LanguageSelected(
         val language: AppLanguage
+    ) : SettingsUiEvent
+
+    data object ThemeModePickerOpened : SettingsUiEvent
+
+    data object ThemeModePickerDismissed : SettingsUiEvent
+
+    data class ThemeModeSelected(
+        val mode: AppThemeMode
     ) : SettingsUiEvent
 
     data class DirectIdentitySetupModeChanged(
@@ -22,6 +32,14 @@ sealed interface SettingsUiEvent {
 
     data class AppLockEnabledChanged(
         val enabled: Boolean
+    ) : SettingsUiEvent
+
+    data object AppLockTimeoutClicked : SettingsUiEvent
+
+    data object AppLockTimeoutPickerDismissed : SettingsUiEvent
+
+    data class AppLockTimeoutSelected(
+        val timeout: AppLockTimeout
     ) : SettingsUiEvent
 
     data class SemanticSearchEnabledChanged(
@@ -49,6 +67,10 @@ sealed interface SettingsUiEvent {
     data object AutoReplyClicked : SettingsUiEvent
 
     data object ControlPlanesClicked : SettingsUiEvent
+
+    data object PreferredNodeClicked : SettingsUiEvent
+
+    data object CircuitHopsClicked : SettingsUiEvent
 
     data object AttachmentStorageClicked : SettingsUiEvent
 

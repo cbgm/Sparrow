@@ -5,8 +5,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.origin
 import io.ktor.server.response.respond
-import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.Base64
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 data class RateLimitPolicy(
     val maximumRequests: Int,
@@ -142,11 +144,43 @@ suspend fun ApplicationCall.respondTooManyRequests(
     respond(HttpStatusCode.TooManyRequests, ErrorResponse(code, message))
 }
 
+/**
+ * Client addresses are never kept in a form that can be reversed. An unsalted hash of an IPv4 address is undone by
+ * trying all 2^32 addresses, so the key is a random HMAC key that exists only in memory and is replaced every day:
+ * once it is gone, nothing stored or logged leads back to an address. Limits keyed by it restart with the key.
+ */
 private object ClientRateLimitKeys {
+    private val random = SecureRandom()
+
+    @Volatile
+    private var current = DailyKey(day = currentDay(), key = newKey())
+
     fun hash(value: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(value.encodeToByteArray())
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(digest)
+        val mac = Mac.getInstance(HMAC_ALGORITHM)
+        mac.init(SecretKeySpec(keyForToday(), HMAC_ALGORITHM))
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(value.encodeToByteArray()))
     }
+
+    private fun keyForToday(): ByteArray {
+        val today = currentDay()
+        current.takeIf { it.day == today }?.let { return it.key }
+        return synchronized(this) {
+            current.takeIf { it.day == today } ?: DailyKey(today, newKey()).also { current = it }
+        }.key
+    }
+
+    private fun newKey(): ByteArray = ByteArray(KEY_BYTES).also(random::nextBytes)
+
+    private fun currentDay(): Long = System.currentTimeMillis() / MILLISECONDS_PER_DAY
+
+    private class DailyKey(
+        val day: Long,
+        val key: ByteArray
+    )
+
+    private const val HMAC_ALGORITHM = "HmacSHA256"
+    private const val KEY_BYTES = 32
+    private const val MILLISECONDS_PER_DAY = 24L * 60L * 60L * 1_000L
 }
 
 private const val RETRY_AFTER_HEADER = "Retry-After"

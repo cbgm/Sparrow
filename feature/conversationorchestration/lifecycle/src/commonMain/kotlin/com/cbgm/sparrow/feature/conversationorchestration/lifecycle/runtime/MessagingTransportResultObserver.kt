@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.lifecycle.runtime
 
+import com.cbgm.sparrow.core.util.flow.retryWithBackoff
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.messaging.domain.usecase.AcknowledgeMessagingFailureUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingFailureEventsUseCase
@@ -18,8 +19,9 @@ class MessagingTransportResultObserver internal constructor(
 
     suspend fun run() {
         while (true) {
-            // Suspends when the journal is empty, resumes for every persisted attempt.
-            val failures = observeFailures().first { events -> events.isNotEmpty() }
+            // Suspends when the journal is empty, resumes for every persisted attempt. A failed observation is
+            // retried with backoff instead of ending the observer for the rest of the process.
+            val failures = observeFailures().retryWithBackoff().first { events -> events.isNotEmpty() }
             var encounteredFailure = false
             failures.forEach { event ->
                 try {

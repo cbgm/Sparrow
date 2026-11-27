@@ -4,8 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.flow.countdown
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.feature.identity.domain.model.PhoneVerificationSlotStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PhoneVerificationStep
 import com.cbgm.sparrow.feature.identity.domain.usecase.ConfirmPhoneVerificationCodeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ReservePhoneVerificationSlotUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendPhoneVerificationCodeUseCase
 import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationResultUi
 import com.cbgm.sparrow.feature.identity.presentation.verification.model.PhoneVerificationStageUi
@@ -29,9 +31,12 @@ import org.jetbrains.compose.resources.getString
 
 /**
  * The SMS verification shown for "Approve and create" and "Restore". It only verifies: the
- * requesting screen stores its data once [result] is [PhoneVerificationResultUi.Verified].
+ * requesting screen stores its data once [result] is [PhoneVerificationResultUi.Verified]. Before the first SMS it
+ * reserves a sign-up slot at the phone verifier: a full day sends no SMS, and the slot says how often the code may be
+ * sent again.
  */
 class PhoneVerificationViewModel(
+    private val reserveSlot: ReservePhoneVerificationSlotUseCase,
     private val sendCode: SendPhoneVerificationCodeUseCase,
     private val confirmCode: ConfirmPhoneVerificationCodeUseCase,
     private val isDebugBuild: Boolean
@@ -47,6 +52,9 @@ class PhoneVerificationViewModel(
 
     private var sending: Job? = null
     private var verificationId: String? = null
+
+    // A slot holds for the whole dialog: sending again after a failed SMS does not reserve a second one.
+    private var hasSlot = false
 
     /** Opens the dialog for the normalized [phoneNumber]; the SMS is sent on "Verify". */
     fun start(phoneNumber: String) {
@@ -85,12 +93,54 @@ class PhoneVerificationViewModel(
 
     private fun verify() {
         val state = _uiState.value
+        if (state.stage == PhoneVerificationStageUi.DAY_FULL) {
+            finish(PhoneVerificationResultUi.Cancelled)
+            return
+        }
         if (!state.canConfirm) return
-        if (state.stage == PhoneVerificationStageUi.REQUEST) send() else confirm()
+        when {
+            state.stage != PhoneVerificationStageUi.REQUEST -> confirm()
+            hasSlot -> send()
+            else -> reserveAndSend()
+        }
     }
 
     private fun resend() {
-        if (_uiState.value.canResend) send()
+        if (!_uiState.value.canResend) return
+        _uiState.update { it.copy(resendsLeft = it.resendsLeft - 1) }
+        send()
+    }
+
+    /** The first SMS only goes out with a slot of the phone verifier; a full day ends here, before any SMS. */
+    private fun reserveAndSend() {
+        val scope = dialogScope ?: return
+        _uiState.update { it.copy(stage = PhoneVerificationStageUi.SENDING, code = "") }
+        sending?.cancel()
+        sending =
+            scope.launch {
+                reserveSlot()
+                    .onSuccess { status ->
+                        when (status) {
+                            is PhoneVerificationSlotStatus.Reserved -> {
+                                hasSlot = true
+                                _uiState.update { it.copy(resendsLeft = status.resends) }
+                                sending = null
+                                send()
+                            }
+                            is PhoneVerificationSlotStatus.DayFull ->
+                                _uiState.update {
+                                    it.copy(
+                                        stage = PhoneVerificationStageUi.DAY_FULL,
+                                        retryAtEpochMilliseconds = status.retryAtEpochMilliseconds
+                                    )
+                                }
+                        }
+                    }.onFailure { error ->
+                        logger.warn { "No sign-up slot: ${error::class.simpleName}" }
+                        _uiState.update { it.copy(stage = PhoneVerificationStageUi.REQUEST) }
+                        showError(Res.string.feature_identity_phone_verification_send_failed)
+                    }
+            }
     }
 
     // Debug builds only: continue with the entered number and without a Firebase token.
@@ -173,6 +223,7 @@ class PhoneVerificationViewModel(
         dialogScope = null
         sending = null
         verificationId = null
+        hasSlot = false
         _uiState.value = PhoneVerificationUiState()
         _result.value = result
     }

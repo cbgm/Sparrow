@@ -9,6 +9,7 @@ import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.feature.identity.data.model.IdentityAcceptanceReviewRequiredDtoException
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
+import com.cbgm.sparrow.feature.identity.domain.error.InvitationExpiredException
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
@@ -23,12 +24,11 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.protocol.identity.LocalPublicIdentity
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
 import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPair
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationDeclineProtocol
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationHandshakeProtocol
 import com.cbgm.sparrow.protocol.invitation.ContactInvitationRequestProtocol
@@ -36,7 +36,7 @@ import com.cbgm.sparrow.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -49,15 +49,15 @@ import kotlinx.coroutines.sync.withLock
 internal class IdentityExchangeDataSource(
     private val store: IdentityExchangeStoreDataSource,
     private val remoteIdentityDataSource: RemoteIdentityDataSource,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val secureRandomGenerator: SecureRandomGenerator,
     private val invitationRequestProtocol: ContactInvitationRequestProtocol,
     private val invitationHandshakeProtocol: ContactInvitationHandshakeProtocol,
     private val invitationDeclineProtocol: ContactInvitationDeclineProtocol,
     private val protocolOutbox: ProtocolOutbox,
-    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
-    private val identitySetupModeRepository: DirectIdentitySetupModeRepository
+    private val localProfilePictureMetadataSource: LocalProfilePictureMetadataSource,
+    private val identitySetupModeDataSource: DirectIdentitySetupModeLocalDataSource
 ) {
     private val logger = SparrowLog.withTag("IdentityExchangeDataSource")
 
@@ -67,8 +67,7 @@ internal class IdentityExchangeDataSource(
     // It is not a manual identity import or acknowledgement: only the explicit
     // IdentityPacket/IdentityAcknowledgementPacket flow may establish manual keys.
     private suspend fun sharesIdentityAutomatically(): Boolean =
-        identitySetupModeRepository.getMode().getOrThrow() ==
-            DirectIdentitySetupMode.AUTOMATIC_INVITATION
+        identitySetupModeDataSource.get() == DirectIdentitySetupMode.AUTOMATIC_INVITATION
 
     suspend fun start(contactId: String, invitationSenderLabel: String): Result<IdentityExchange?> =
         safeSuspendCall {
@@ -78,8 +77,8 @@ internal class IdentityExchangeDataSource(
 
             mutex.withLock {
                 val remoteIdentity = remoteIdentityDataSource.findByPeerId(contactId)
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+                val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 if (hasEstablishedIdentityExchange(contactId, localIdentity)) {
@@ -126,13 +125,13 @@ internal class IdentityExchangeDataSource(
                 val invitationId = IdGenerator.generate()
                 val challenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val expiresAt = now + INVITATION_LIFETIME_MILLISECONDS
-                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
+                // The first invite travels unencrypted, so it carries no picture: the encrypted ready packet does.
                 val packet = invitationRequestProtocol.createPacket(
                     invitationId = invitationId,
                     displayName = invitationSenderLabel,
                     createdAtEpochMilliseconds = now,
                     expiresAtEpochMilliseconds = expiresAt,
-                    profilePicture = profilePicture,
+                    profilePicture = ProfilePictureMetadata(),
                     inviteChallenge = challenge,
                     encryptionPublicKey = localIdentity.encryptionPublicKey,
                     signingKeyPair = signingKeyPair,
@@ -179,7 +178,7 @@ internal class IdentityExchangeDataSource(
     suspend fun startManual(peerId: String): Result<Unit> =
         safeSuspendCall {
             require(peerId.isNotBlank()) { "Peer ID must not be blank" }
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
             protocolOutbox.enqueue(
                 contactId = peerId,
                 packet = IdentityPacket(
@@ -223,7 +222,7 @@ internal class IdentityExchangeDataSource(
                     IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
                     else -> null
                 }
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrNull()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrNull()
             if (
                 authorizationEvent != null &&
                 localIdentity != null &&
@@ -240,8 +239,8 @@ internal class IdentityExchangeDataSource(
         safeSuspendCall {
             mutex.withLock {
                 val invitation = requireInvitation(invitationId, IdentityExchangeDirection.INCOMING)
-                ensureNotExpired(invitation)
 
+                // An acceptance given in time stays valid: it is resent, even after the invitation's lifetime.
                 if (
                     invitation.stage == IdentityExchangeStage.ACCEPTANCE_SENT.name ||
                     invitation.stage == IdentityExchangeStage.WAITING_FOR_READY.name
@@ -253,14 +252,15 @@ internal class IdentityExchangeDataSource(
                     return@withLock
                 }
 
+                ensureNotExpired(invitation)
                 requireState(invitation, IdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED)
 
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+                val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 val now = SystemClock.nowEpochMilliseconds()
-                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
+                val profilePicture = localProfilePictureMetadataSource.forInvite().getOrElse { ProfilePictureMetadata() }
                 val responseChallenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val packet = invitationHandshakeProtocol.createAccepted(
                     invitationId = invitationId,
@@ -279,6 +279,7 @@ internal class IdentityExchangeDataSource(
                     invitation.copy(
                         stage = IdentityExchangeStage.ACCEPTANCE_SENT.name,
                         responseChallenge = responseChallenge.copyOf(),
+                        acceptedAtEpochMilliseconds = now,
                         updatedAtEpochMilliseconds = now,
                         lastError = null,
                         localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
@@ -322,7 +323,7 @@ internal class IdentityExchangeDataSource(
                 }
                 requireState(invitation, IdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED)
 
-                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                 val now = SystemClock.nowEpochMilliseconds()
                 val packet = invitationDeclineProtocol.createPacket(
                     exchangeId = invitationId,
@@ -404,7 +405,7 @@ internal class IdentityExchangeDataSource(
     suspend fun getPeerState(contactId: String): Result<IdentityPeerState> =
         safeSuspendCall {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
             val hasEstablishedExchange = hasEstablishedIdentityExchange(contactId, localIdentity)
             val peerIdentity = remoteIdentityDataSource.findByPeerId(contactId)
             val hasMutualIdentity =
@@ -412,7 +413,10 @@ internal class IdentityExchangeDataSource(
                     peerIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name
             IdentityPeerState(
                 hasEstablishedExchange = hasEstablishedExchange,
-                hasMutualIdentity = hasMutualIdentity
+                hasMutualIdentity = hasMutualIdentity,
+                hasPendingExchange =
+                    !hasEstablishedExchange &&
+                        store.findLatestForContact(contactId)?.let { it.stage in PENDING_EXCHANGE_STAGES } == true
             )
         }
 
@@ -488,7 +492,7 @@ internal class IdentityExchangeDataSource(
                 // The packet signature, packet ID and lifetime were verified by
                 // ContactInvitationRequestProtocol in orchestration before Contacts reconciliation.
                 val contactId = context.contactId
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
 
                 store.findById(offer.exchangeId)?.let { existing ->
                     check(existing.direction == IdentityExchangeDirection.INCOMING.name) {
@@ -629,8 +633,8 @@ internal class IdentityExchangeDataSource(
                         pinnedIdentity.signingPublicKey.contentEquals(offer.signingPublicKey)
                 ) { "Approved invitation no longer matches the pinned contact identity" }
 
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+                val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 val existing = store.findById(offer.exchangeId)
@@ -696,7 +700,7 @@ internal class IdentityExchangeDataSource(
                     existing?.responseChallenge?.copyOf()
                         ?: secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val profilePicture =
-                    localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
+                    localProfilePictureMetadataSource.forInvite().getOrElse { ProfilePictureMetadata() }
                 val packet = invitationHandshakeProtocol.createAccepted(
                     invitationId = offer.exchangeId,
                     acceptedAtEpochMilliseconds = now,
@@ -768,7 +772,7 @@ internal class IdentityExchangeDataSource(
                     "Acceptance challenge does not match invitation"
                 }
 
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
                 check(localIdentity.encryptionPublicKey.contentEquals(acceptance.inviterEncryptionPublicKey)) {
                     "Acceptance refers to a different local encryption key"
                 }
@@ -889,7 +893,7 @@ internal class IdentityExchangeDataSource(
                     "Ready challenge does not match acceptance"
                 }
 
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
                 check(localIdentity.encryptionPublicKey.contentEquals(ready.acceptedResponderEncryptionPublicKey)) {
                     "Ready packet refers to a different local encryption key"
                 }
@@ -1183,14 +1187,15 @@ internal class IdentityExchangeDataSource(
             checkNotNull(invitation.responseChallenge) {
                 "Accepted invitation is missing its response challenge"
             }
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
-        val acceptedAt = SystemClock.nowEpochMilliseconds()
-        val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
-        check(acceptedAt <= invitation.expiresAtEpochMilliseconds) {
-            "Invitation has expired"
-        }
+        // The inviter checks the signed acceptance time against the lifetime, so a resend keeps the original one.
+        // Acceptances stored before that time was kept are resent with the current time while still valid.
+        val acceptedAt =
+            invitation.acceptedAtEpochMilliseconds
+                ?: SystemClock.nowEpochMilliseconds().also { ensureNotExpired(invitation) }
+        val profilePicture = localProfilePictureMetadataSource.forInvite().getOrElse { ProfilePictureMetadata() }
         val packet = invitationHandshakeProtocol.createAccepted(
             invitationId = invitation.exchangeId,
             acceptedAtEpochMilliseconds = acceptedAt,
@@ -1219,13 +1224,14 @@ internal class IdentityExchangeDataSource(
         contactId: String,
         acceptance: IdentityExchangeAcceptance
     ) {
-        val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
         val readyAt = SystemClock.nowEpochMilliseconds()
         val readyPacket = invitationHandshakeProtocol.createReady(
             invitationId = acceptance.exchangeId,
             readyAtEpochMilliseconds = readyAt,
+            profilePicture = localProfilePictureMetadataSource.forInvite().getOrElse { ProfilePictureMetadata() },
             responseChallenge = acceptance.responseChallenge,
             acceptedResponderEncryptionPublicKey = acceptance.responderEncryptionPublicKey,
             acceptedResponderSigningPublicKey = acceptance.responderSigningPublicKey,
@@ -1295,7 +1301,7 @@ internal class IdentityExchangeDataSource(
                 lastError = "Invitation expired"
             )
         )
-        error("Invitation has expired")
+        throw InvitationExpiredException()
     }
 
     private fun requireState(
@@ -1321,7 +1327,7 @@ internal class IdentityExchangeDataSource(
         invitationId: String,
         inviteChallenge: ByteArray
     ) {
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val packet = invitationDeclineProtocol.createPacket(
             exchangeId = invitationId,
             inviteChallenge = inviteChallenge,
@@ -1393,6 +1399,13 @@ internal class IdentityExchangeDataSource(
             setOf(
                 IdentityHandshakeState.WAITING_FOR_READY,
                 IdentityHandshakeState.MUTUAL_UNVERIFIED
+            )
+
+        /** The invitation was sent, or accepted and the acceptance is on its way; the exchange is not closed. */
+        val PENDING_EXCHANGE_STAGES =
+            setOf(
+                IdentityExchangeStage.OUTGOING_CHALLENGE_SENT.persistedValue,
+                IdentityExchangeStage.ACCEPTANCE_SENT.persistedValue
             )
 
         val EXCHANGE_EVENT_STAGES =

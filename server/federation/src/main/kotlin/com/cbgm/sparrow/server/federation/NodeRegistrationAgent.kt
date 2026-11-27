@@ -1,21 +1,17 @@
 package com.cbgm.sparrow.server.federation
 
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
-import com.cbgm.sparrow.server.protocol.GatewayLoad
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.NodeHeartbeatRequest
 import com.cbgm.sparrow.server.protocol.NodeRegistrationRequest
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
 import com.cbgm.sparrow.server.protocol.serverJson
 import com.cbgm.sparrow.server.protocol.unsigned
-import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeIdentity
 import com.cbgm.sparrow.server.security.ProtocolSignatures
 import com.cbgm.sparrow.server.security.Signatures
+import com.cbgm.sparrow.server.security.relayKeyPair
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -35,7 +31,6 @@ class NodeRegistrationAgent(
     private val identity: NodeIdentity,
     private val config: NodeRegistrationConfig,
     private val endpointPool: ControlPlaneEndpointPool,
-    private val loadProvider: GatewayLoadProvider = GatewayLoadProvider { 0 },
     private val now: () -> Long = System::currentTimeMillis
 ) {
     suspend fun run() {
@@ -48,27 +43,9 @@ class NodeRegistrationAgent(
                 now = now
             )
         while (currentCoroutineContext().isActive) {
-            registrationClient.synchronize(resolveLoad())
+            registrationClient.synchronize()
             delay(config.heartbeatIntervalMilliseconds.milliseconds)
         }
-    }
-
-    private suspend fun resolveLoad(): Int? =
-        try {
-            loadProvider.activeConnections().coerceAtLeast(0)
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (error: Exception) {
-            logger.warn(
-                "Gateway load lookup failed for {}: {}; preserving the last reported load",
-                identity.nodeId,
-                error.message ?: error::class.simpleName
-            )
-            null
-        }
-
-    private companion object {
-        val logger = LoggerFactory.getLogger(NodeRegistrationAgent::class.java)
     }
 }
 
@@ -82,16 +59,11 @@ private class NodeRegistrationClient(
     private val nextRegistrationAt = mutableMapOf<String, Long>()
     private val retryAfter = mutableMapOf<String, Long>()
 
-    suspend fun synchronize(activeConnections: Int?) {
-        endpointPool.all().forEach { baseUrl ->
-            synchronizeEndpoint(baseUrl, activeConnections)
-        }
+    suspend fun synchronize() {
+        endpointPool.all().forEach { baseUrl -> synchronizeEndpoint(baseUrl) }
     }
 
-    private suspend fun synchronizeEndpoint(
-        baseUrl: String,
-        activeConnections: Int?
-    ) {
+    private suspend fun synchronizeEndpoint(baseUrl: String) {
         val currentTime = now()
         if (currentTime < (retryAfter[baseUrl] ?: Long.MIN_VALUE)) {
             return
@@ -101,7 +73,7 @@ private class NodeRegistrationClient(
             if (currentTime >= (nextRegistrationAt[baseUrl] ?: Long.MIN_VALUE)) {
                 register(baseUrl)
             }
-            heartbeat(baseUrl, activeConnections)
+            heartbeat(baseUrl)
             endpointPool.markReachable(baseUrl)
             retryAfter.remove(baseUrl)
         } catch (cancellation: CancellationException) {
@@ -136,14 +108,11 @@ private class NodeRegistrationClient(
         nextRegistrationAt[baseUrl] = now() + config.registrationRefreshMilliseconds
     }
 
-    private suspend fun heartbeat(
-        baseUrl: String,
-        activeConnections: Int?
-    ) {
+    private suspend fun heartbeat(baseUrl: String) {
         val response =
             httpClient.post("${baseUrl.trimEnd('/')}/v1/nodes/${identity.nodeId}/heartbeat") {
                 contentType(ContentType.Application.Json)
-                setBody(createHeartbeat(activeConnections))
+                setBody(createHeartbeat())
             }
         check(response.status.isSuccess()) {
             "Node heartbeat failed with HTTP ${response.status.value}"
@@ -155,24 +124,25 @@ private class NodeRegistrationClient(
             SparrowNodeDescriptor(
                 nodeId = identity.nodeId,
                 clientEndpoint = config.clientEndpoint,
-                federationEndpoint = config.federationEndpoint,
                 mailboxEndpoint = config.mailboxEndpoint,
                 identityPublicKey = identity.encodedPublicKey,
                 protocolVersions = setOf(SUPPORTED_PROTOCOL_VERSION),
                 capabilities = NodeCapability.entries.toSet(),
                 validUntilEpochMilliseconds = now() + config.descriptorLifetimeMilliseconds,
+                relayKey = identity.relayKeyPair().publicKey,
+                operator = config.operator,
                 signature = byteArrayOf()
             ),
             identity
         )
 
-    private fun createHeartbeat(activeConnections: Int?): NodeHeartbeatRequest {
+    /** Apps hold no sessions at a node any more, so the heartbeat reports no connection count. */
+    private fun createHeartbeat(): NodeHeartbeatRequest {
         val unsigned =
             NodeHeartbeatRequest(
                 nodeId = identity.nodeId,
                 timestampEpochMilliseconds = now(),
                 nonce = UUID.randomUUID().toString(),
-                activeConnections = activeConnections,
                 signature = byteArrayOf()
             )
         return unsigned.copy(
@@ -190,29 +160,11 @@ private class NodeRegistrationClient(
     }
 }
 
-fun interface GatewayLoadProvider {
-    suspend fun activeConnections(): Int
-}
-
-internal class HttpGatewayLoadProvider(
-    private val httpClient: HttpClient,
-    private val baseUrl: String,
-    private val internalToken: String?
-) : GatewayLoadProvider {
-    override suspend fun activeConnections(): Int =
-        httpClient
-            .get("${baseUrl.trimEnd('/')}/internal/v1/load") {
-                internalToken?.let { token ->
-                    header(InternalApiAuthentication.TOKEN_HEADER, token)
-                }
-            }.body<GatewayLoad>()
-            .activeConnections
-}
-
 data class NodeRegistrationConfig(
     val clientEndpoint: String,
-    val federationEndpoint: String,
     val mailboxEndpoint: String,
+    /** Who runs this node, put into its descriptor; null when not declared. */
+    val operator: String? = null,
     val descriptorLifetimeMilliseconds: Long = DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS,
     val registrationRefreshMilliseconds: Long = DEFAULT_REGISTRATION_REFRESH_MILLISECONDS,
     val heartbeatIntervalMilliseconds: Long = DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS,

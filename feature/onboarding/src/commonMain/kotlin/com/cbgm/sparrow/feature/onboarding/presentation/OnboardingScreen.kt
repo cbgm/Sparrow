@@ -1,50 +1,36 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowAnimation
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.create.model.IdentityCreateUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.OnionPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PermissionsPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PhonePage
-import com.cbgm.sparrow.feature.onboarding.presentation.pages.PrivacyPage
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.ReceivingPage
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.ThemePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.WelcomePage
-import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_app_name
-import com.cbgm.sparrow.resources.base_tagline
-import org.jetbrains.compose.resources.stringResource
+import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.PageNumber
 
-@OptIn(ExperimentalFoundationStyleApi::class)
+/**
+ * The onboarding pages side by side; they can always be swiped. The pager reports where it settled, and follows when
+ * the ViewModel moves on by itself (after the permission dialogs).
+ */
 @Composable
 fun OnboardingScreen(
     state: OnboardingUiState,
@@ -53,76 +39,59 @@ fun OnboardingScreen(
     onIdentityUiEvent: (IdentityCreateUiEvent) -> Unit,
     onUiEvent: (OnboardingUiEvent) -> Unit
 ) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(MaterialTheme.spacing.screenPadding),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            SparrowAnimation(modifier = Modifier.size(Dimens.OnboardingScreen.animationSize), true)
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
-            Text(
-                text = stringResource(Res.string.base_app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = stringResource(Res.string.base_tagline),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.large))
+    val pagerState = rememberPagerState(initialPage = state.page.ordinal) { OnboardingPage.entries.size }
+    val currentOnUiEvent = rememberUpdatedState(onUiEvent)
+    LaunchedEffect(state.page) {
+        if (pagerState.currentPage != state.page.ordinal) pagerState.animateScrollToPage(state.page.ordinal)
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            currentOnUiEvent.value(OnboardingUiEvent.PageShown(OnboardingPage.entries[page]))
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { index ->
+            val active = pagerState.currentPage == index
+            when (OnboardingPage.entries[index]) {
+                OnboardingPage.WELCOME -> WelcomePage(active = active)
+                OnboardingPage.ONION -> OnionPage(active = active)
+                OnboardingPage.PERMISSIONS ->
+                    PermissionsPage(active = active, onAllow = { onUiEvent(OnboardingUiEvent.RequestPermissionsClicked) })
 
-            Surface(
-                modifier = Modifier.fillMaxWidth().border(
-                    Dimens.Base.borderStrokeWidth,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                    MaterialTheme.shapes.medium
-                ),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                AnimatedContent(
-                    targetState = state.page,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "onboardingPage"
-                ) { page ->
+                OnboardingPage.RECEIVING ->
+                    ReceivingPage(
+                        state = state,
+                        active = active,
+                        onChoose = { mode -> onUiEvent(OnboardingUiEvent.ConnectionModeChosen(mode)) }
+                    )
 
-                    when (page) {
-                        OnboardingPage.WELCOME -> WelcomePage { onUiEvent(OnboardingUiEvent.NextClicked) }
-                        OnboardingPage.PRIVACY -> PrivacyPage { onUiEvent(OnboardingUiEvent.NextClicked) }
-                        OnboardingPage.PERMISSIONS ->
-                            PermissionsPage {
-                                onUiEvent(OnboardingUiEvent.RequestPermissionsClicked)
-                            }
+                OnboardingPage.THEME ->
+                    ThemePage(
+                        mode = state.themeMode,
+                        active = active,
+                        onChoose = { mode -> onUiEvent(OnboardingUiEvent.ThemeModeChosen(mode)) }
+                    )
 
-                        OnboardingPage.PHONE ->
-                            PhonePage(
-                                identityState = identityState,
-                                isCreating = identityState == IdentityCreateUiState.Creating,
-                                canRetryAutomatic = state.phonePermissionGranted,
-                                onChooseAnotherNumber = { onUiEvent(OnboardingUiEvent.ChooseAnotherNumberClicked) },
-                                onRetryAutomaticNumber = { onUiEvent(OnboardingUiEvent.RetryAutomaticNumberClicked) },
-                                onPhoneNumberChanged = { value ->
-                                    onIdentityUiEvent(IdentityCreateUiEvent.PhoneNumberChanged(value))
-                                },
-                                onApproveAndCreate = { onIdentityUiEvent(IdentityCreateUiEvent.CreateClicked) },
-                                onRestoreIdentity = onRestoreIdentity,
-                                onNameChanged = { value ->
-                                    onIdentityUiEvent(IdentityCreateUiEvent.NameChanged(value))
-                                }
-                            )
-                    }
-                }
+                OnboardingPage.PHONE ->
+                    PhonePage(
+                        identityState = identityState,
+                        active = active,
+                        isCreating = identityState == IdentityCreateUiState.Creating,
+                        canRetryAutomatic = state.phonePermissionGranted,
+                        onChooseAnotherNumber = { onUiEvent(OnboardingUiEvent.ChooseAnotherNumberClicked) },
+                        onRetryAutomaticNumber = { onUiEvent(OnboardingUiEvent.RetryAutomaticNumberClicked) },
+                        onPhoneNumberChanged = { value -> onIdentityUiEvent(IdentityCreateUiEvent.PhoneNumberChanged(value)) },
+                        onApproveAndCreate = { onIdentityUiEvent(IdentityCreateUiEvent.CreateClicked) },
+                        onRestoreIdentity = onRestoreIdentity,
+                        onNameChanged = { value -> onIdentityUiEvent(IdentityCreateUiEvent.NameChanged(value)) }
+                    )
             }
         }
+        PageNumber(
+            page = pagerState.currentPage,
+            pageCount = OnboardingPage.entries.size,
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
     }
 }
 
@@ -131,21 +100,7 @@ fun OnboardingScreen(
 private fun OnboardingScreenPreview() {
     SparrowTheme {
         OnboardingScreen(
-            state = OnboardingUiState(page = OnboardingPage.PERMISSIONS),
-            identityState =
-                IdentityCreateUiState.Completed,
-            onIdentityUiEvent = {},
-            onUiEvent = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun OnboardingScreen2Preview() {
-    SparrowTheme {
-        OnboardingScreen(
-            state = OnboardingUiState(page = OnboardingPage.WELCOME),
+            state = OnboardingUiState(page = OnboardingPage.ONION),
             identityState = IdentityCreateUiState.Form(),
             onIdentityUiEvent = {},
             onUiEvent = {}

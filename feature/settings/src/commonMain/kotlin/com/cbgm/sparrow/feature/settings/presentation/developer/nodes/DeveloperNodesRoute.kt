@@ -19,6 +19,7 @@ fun DeveloperNodesRoute(
     DeveloperNodesScreen(
         diagnostics = diagnostics,
         onBack = viewModel::onBackClicked,
+        onPreferredNodeClicked = viewModel::onPreferredNodeClicked,
         modifier = modifier
     )
 }

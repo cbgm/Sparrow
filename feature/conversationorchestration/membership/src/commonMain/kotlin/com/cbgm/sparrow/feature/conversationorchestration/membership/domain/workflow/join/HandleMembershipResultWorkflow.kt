@@ -10,10 +10,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.mode
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.ConfirmGroupMemberIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.FindMemberDisplayNameUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.usecase.LoadMutualMemberIdentityUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
@@ -33,7 +32,7 @@ import kotlin.reflect.KClass
 class HandleMembershipResultWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val handleInvitationResponse: HandleInvitationResponseUseCase,
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val loadMutualMemberIdentity: LoadMutualMemberIdentityUseCase,
     private val confirmGroupMemberIdentity: ConfirmGroupMemberIdentityUseCase,
     private val findMemberDisplayName: FindMemberDisplayNameUseCase,
     private val getGroupCurrentEpoch: GetGroupCurrentEpochUseCase,
@@ -70,16 +69,8 @@ class HandleMembershipResultWorkflow internal constructor(
                     .getOrThrow()
                 Outcome.InvitationAccepted
             }
-            is Step.LoadMemberIdentity -> {
-                val identity =
-                    requireNotNull(getRemoteIdentity(result.peerId).getOrThrow()) {
-                        "Accepted group member identity was not found for welcome recovery"
-                    }
-                check(identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
-                    "Group member identity exchange is not mutual"
-                }
-                Outcome.MemberIdentityLoaded(identity)
-            }
+            is Step.LoadMemberIdentity ->
+                Outcome.MemberIdentityLoaded(loadMutualMemberIdentity(result.peerId).getOrThrow())
             is Step.ConfirmMemberIdentity -> {
                 confirmGroupMemberIdentity(
                     sourceId = result.sourceInvitationId,
@@ -122,12 +113,7 @@ class HandleMembershipResultWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            Outcome.InvitationAccepted ->
-                if (step.command.result.status == MembershipStatus.IDENTITY_READY) {
-                    Transition.Next(Step.LoadMemberIdentity(step.command))
-                } else {
-                    Transition.Complete()
-                }
+            Outcome.InvitationAccepted -> afterInvitationAccepted(step.command)
             is Outcome.MemberIdentityLoaded ->
                 Transition.Next(Step.ConfirmMemberIdentity(outcome.identity, step.command))
             is Outcome.MemberNameResolved -> Transition.Next(Step.LoadEpoch(outcome.memberDisplayName, step.command))
@@ -135,6 +121,14 @@ class HandleMembershipResultWorkflow internal constructor(
                 Transition.Next(Step.AddParticipant(outcome.memberDisplayName, outcome.epoch, step.command))
             Outcome.ParticipantAdded -> Transition.Next(Step.FlushQueuedMessages(step.command))
             Outcome.Done -> Transition.Complete()
+        }
+
+    /** Only IDENTITY_READY still lacks the bound member identity; WELCOME_SENT is done. */
+    private fun afterInvitationAccepted(command: MembershipCommand.HandleMembershipResult): Transition<Step> =
+        if (command.result.status == MembershipStatus.IDENTITY_READY) {
+            Transition.Next(Step.LoadMemberIdentity(command))
+        } else {
+            Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {

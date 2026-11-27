@@ -1,1 +1,2 @@
 cryptography>=44,<48
+firebase-admin>=7.0,<8

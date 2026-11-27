@@ -4,17 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowFloatingButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.component.AddControlPlaneDialog
@@ -26,7 +23,7 @@ import com.cbgm.sparrow.feature.settings.presentation.network.component.ControlP
 import com.cbgm.sparrow.feature.settings.presentation.network.component.DirectorySourceCard
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
+import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUi
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import com.cbgm.sparrow.resources.Res
@@ -54,17 +51,11 @@ fun ControlPlaneSettingsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            SparrowFloatingButton(
+                icon = SparrowIcons.Add,
                 onClick = { onUiEvent(ControlPlaneSettingsUiEvent.AddClicked) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(Res.string.feature_settings_control_plane_add)
-                )
-            }
+                contentDescription = stringResource(Res.string.feature_settings_control_plane_add)
+            )
         }
     ) { innerPadding, listState ->
         val discovered = uiState.entries.filter { it.source != ControlPlaneUiSource.MANUAL }
@@ -151,25 +142,25 @@ fun ControlPaneSettingsScreenPreview() {
         ControlPlaneSettingsScreen(
             uiState = ControlPlaneSettingsUiState(
                 entries = listOf(
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.CHECKING
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example4.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.AVAILABLE
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example3.com",
                         source = ControlPlaneUiSource.MANUAL,
                         canRemove = true,
                         status = ControlPlaneUiStatus.UNREACHABLE
                     ),
-                    ControlPlaneUiModel(
+                    ControlPlaneUi(
                         url = "https://example6.com",
                         source = ControlPlaneUiSource.DIRECTORY,
                         canRemove = true,

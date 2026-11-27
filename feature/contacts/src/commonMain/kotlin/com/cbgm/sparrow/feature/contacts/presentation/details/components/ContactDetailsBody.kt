@@ -23,6 +23,7 @@ internal fun ContactDetailsBody(
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
     onMediaAndFiles: () -> Unit,
+    onReconnect: () -> Unit,
     page: ContactDetailPage = ContactDetailPage.Overview,
     onPageSelected: (ContactDetailPage) -> Unit = {}
 ) {
@@ -52,6 +53,7 @@ internal fun ContactDetailsBody(
                 onShareContact = onShareContact,
                 onVerifyIdentity = onVerifyIdentity,
                 onMediaAndFiles = onMediaAndFiles,
+                onReconnect = onReconnect,
                 page = page,
                 onPageSelected = onPageSelected,
                 scrollState = scrollState,
@@ -84,7 +86,8 @@ private fun ContactDetailsBodyPreview() {
             onRetry = {},
             onShareContact = {},
             onVerifyIdentity = {},
-            onMediaAndFiles = {}
+            onMediaAndFiles = {},
+            onReconnect = {}
         )
     }
 }

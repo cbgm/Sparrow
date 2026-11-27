@@ -10,6 +10,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Workflo
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.error.rejectUnless
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.model.OperationConversation
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.AuthorizeIncomingExpensesUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.DeleteReplacedExpenseReceiptsUseCase
@@ -20,6 +21,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.G
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.packet.GroupMessagePlaintextCodec
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.RequireGroupConversationUseCase
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.PrefetchLinkPreviewsUseCase
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import com.cbgm.sparrow.protocol.message.OperationMessage
@@ -29,13 +31,15 @@ import kotlin.reflect.KClass
  * FindConversation -> DecryptMessage -> ApplyOperation                                   (an operation)
  * FindConversation -> DecryptMessage -> FindExisting
  *   -> [AuthorizeExpenses -> DeleteReplacedReceipts -> ApplyProfilePicture -> StoreMessage]
- *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments   (a message)
+ *   -> PrefetchLinkPreviews -> StoreAttachments -> SendDeliveryReceipt -> CacheAttachments
+ *   -> ApplyParkedOperations                                                              (a message)
  *
  * A redelivered message keeps its row; only attachments and the receipt are repeated.
  */
 class ReceiveGroupMessageWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val messageRepository: GroupMessageRepository,
+    private val requireGroupConversation: RequireGroupConversationUseCase,
     private val groupSecurityRepository: GroupSecurityRepository,
     private val plaintextCodec: GroupMessagePlaintextCodec,
     private val applyPeerProfilePicture: ApplyPeerProfilePictureUseCase,
@@ -57,14 +61,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
         val context = step.command.context
         val packet = step.command.packet
         return when (step) {
-            is Step.FindConversation -> {
-                val conversation =
-                    messageRepository.findConversation(packet.groupId).getOrThrow() ?: error(
-                        "Group conversation was not found"
-                    )
-                check(conversation.isGroup) { "Conversation is not a group" }
-                Outcome.ConversationFound(conversation)
-            }
+            is Step.FindConversation ->
+                Outcome.ConversationFound(requireGroupConversation(packet.groupId).getOrThrow())
             is Step.DecryptMessage -> {
                 val plaintext = groupSecurityRepository.decryptMessage(packet, context.contactId).getOrThrow()
                 when (val decoded = plaintextCodec.decode(plaintext)) {
@@ -85,19 +83,7 @@ class ReceiveGroupMessageWorkflow internal constructor(
                 ).getOrThrow()
                 Outcome.Done
             }
-            is Step.FindExisting -> {
-                val existing = messageRepository.find(packet.messageId).getOrThrow()
-                if (existing == null) {
-                    Outcome.NewMessage(step.message)
-                } else {
-                    check(
-                        existing.conversationId == packet.groupId &&
-                            existing.packetId == packet.packetId &&
-                            existing.senderContactId == context.contactId
-                    ) { "Group message ID conflicts with an existing message" }
-                    Outcome.MessageStored(step.message.withCreatedAt(existing.createdAtEpochMilliseconds))
-                }
-            }
+            is Step.FindExisting -> findExisting(step)
             is Step.AuthorizeExpenses -> {
                 authorizeExpenses(packet.groupId, context.contactId, step.message.content.attachments).getOrThrow()
                 Outcome.ExpensesAuthorized(step.message)
@@ -148,6 +134,10 @@ class ReceiveGroupMessageWorkflow internal constructor(
             }
             is Step.CacheAttachments -> {
                 attachmentRepository.cacheIncoming(packet.messageId).getOrThrow()
+                Outcome.AttachmentsCached
+            }
+            is Step.ApplyParkedOperations -> {
+                engine.run(IncomingCommand.ApplyParkedMessageOperations(packet.messageId)).getOrThrow()
                 Outcome.Done
             }
         }
@@ -168,8 +158,19 @@ class ReceiveGroupMessageWorkflow internal constructor(
             is Outcome.LinkPreviewsRequested -> Transition.Next(Step.StoreAttachments(outcome.message, step.command))
             Outcome.AttachmentsStored -> Transition.Next(Step.SendDeliveryReceipt(step.command))
             Outcome.DeliveryReceiptSent -> Transition.Next(Step.CacheAttachments(step.command))
+            Outcome.AttachmentsCached -> Transition.Next(Step.ApplyParkedOperations(step.command))
             Outcome.Done -> Transition.Complete()
         }
+
+    /** A redelivered message keeps its row; a message ID that belongs to another message is rejected. */
+    private suspend fun findExisting(step: Step.FindExisting): Outcome {
+        val packet = step.command.packet
+        val existing = messageRepository.find(packet.messageId).getOrThrow() ?: return Outcome.NewMessage(step.message)
+        rejectUnless(existing.isRedeliveryOf(packet.groupId, packet.packetId, step.command.context.contactId)) {
+            "Group message ID conflicts with an existing message"
+        }
+        return Outcome.MessageStored(step.message.withCreatedAt(existing.createdAtEpochMilliseconds))
+    }
 
     private fun IncomingCommand.ReceiveGroupMessage.toStoredMessage(message: ReceivedGroupMessage): StoredMessage =
         StoredMessage(
@@ -256,6 +257,11 @@ class ReceiveGroupMessageWorkflow internal constructor(
         data class CacheAttachments(
             override val command: IncomingCommand.ReceiveGroupMessage
         ) : Step
+
+        /** Edits, deletes, reactions and poll operations that arrived before this message. */
+        data class ApplyParkedOperations(
+            override val command: IncomingCommand.ReceiveGroupMessage
+        ) : Step
     }
 
     sealed interface Outcome {
@@ -299,6 +305,8 @@ class ReceiveGroupMessageWorkflow internal constructor(
         data object AttachmentsStored : Outcome
 
         data object DeliveryReceiptSent : Outcome
+
+        data object AttachmentsCached : Outcome
 
         data object Done : Outcome
     }

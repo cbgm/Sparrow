@@ -28,7 +28,7 @@ class GetIdentityPeerStateUseCase(
 /** The old exchange remains stored for history; authorization is withheld until review. */
 internal fun IdentityPeerState.withRecoveryHold(hasPendingIdentityChange: Boolean): IdentityPeerState =
     if (hasPendingIdentityChange) {
-        copy(hasEstablishedExchange = false, hasMutualIdentity = false)
+        copy(hasEstablishedExchange = false, hasMutualIdentity = false, hasPendingExchange = false)
     } else {
         this
     }

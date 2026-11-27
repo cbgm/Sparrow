@@ -1,36 +1,20 @@
 package com.cbgm.sparrow.feature.polls.presentation.message
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.base.messagepart.ui.model.PollUi
+import com.cbgm.sparrow.core.ui.component.SparrowLink
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
-import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItemUi
@@ -59,7 +43,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun PollMessageContent(
     part: PollUi,
-    color: Color,
     onVoteSubmit: (Set<String>) -> Unit,
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
@@ -75,7 +58,6 @@ fun PollMessageContent(
 
     PollMessageContentBody(
         uiState = uiState,
-        color = color,
         onOptionClick = { optionId ->
             if (uiState.canInteract && uiState.options.any { it.id == optionId }) {
                 val selectedOptionIds =
@@ -134,8 +116,7 @@ private fun PollMessageContentBody(
     onClosePoll: () -> Unit,
     onMediaClick: (Int) -> Unit,
     onShowVotes: () -> Unit,
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.surfaceContainer
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
@@ -143,8 +124,7 @@ private fun PollMessageContentBody(
     ) {
         Text(
             text = uiState.question,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.bodyLarge
         )
         uiState.description?.takeIf(String::isNotBlank)?.let { description ->
             Text(
@@ -162,7 +142,6 @@ private fun PollMessageContentBody(
 
         uiState.options.forEach { option ->
             PollOptionResult(
-                color = color,
                 text = option.text,
                 voteCount = option.voteCount,
                 percentage = option.percentage,
@@ -173,88 +152,41 @@ private fun PollMessageContentBody(
             )
         }
 
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-                ) {
-                    Text(
-                        text = pluralStringResource(
-                            Res.plurals.feature_polls_voters,
-                            uiState.totalVoters,
-                            uiState.totalVoters
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (uiState.canShowVotes) {
-                        Text(
-                            text = stringResource(Res.string.feature_polls_show_votes),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(bounded = true),
-                                    onClick = onShowVotes
-                                ).padding(MaterialTheme.spacing.base)
-                        )
-                    }
-                }
-                if (uiState.allowMultipleSelection) {
-                    Text(
-                        text = stringResource(Res.string.feature_polls_multiple_answers),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (uiState.isAnonymous) {
-                    Text(
-                        text = stringResource(Res.string.feature_polls_anonymous),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                uiState.remainingOpenMinutes?.let { minutes ->
-                    Text(
-                        text = stringResource(
-                            Res.string.feature_polls_open_for,
-                            pollDurationLabel(minutes)
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        Text(
+            text = pollFacts(uiState),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-            IconButton(
-                onClick = onClosePoll,
-                enabled = !uiState.isClosed && uiState.canClose,
-                modifier = Modifier.align(Alignment.BottomEnd)
-                    .size(Dimens.Poll.buttonSize)
-            ) {
-                Icon(
-                    imageVector = if (uiState.isClosed) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription =
-                        stringResource(
-                            if (uiState.isClosed) {
-                                Res.string.feature_polls_closed
-                            } else {
-                                Res.string.feature_polls_close_poll
-                            }
-                        ),
-                    tint =
-                        if (uiState.isClosed) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            if (uiState.canClose) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+            if (uiState.canShowVotes) {
+                SparrowLink(
+                    text = stringResource(Res.string.feature_polls_show_votes),
+                    onClick = onShowVotes
+                )
+            }
+            if (!uiState.isClosed && uiState.canClose) {
+                SparrowLink(
+                    text = stringResource(Res.string.feature_polls_close_poll),
+                    onClick = onClosePoll,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
+
+@Composable
+private fun pollFacts(uiState: PollMessageUiState): String =
+    listOfNotNull(
+        pluralStringResource(Res.plurals.feature_polls_voters, uiState.totalVoters, uiState.totalVoters),
+        stringResource(Res.string.feature_polls_multiple_answers).takeIf { uiState.allowMultipleSelection },
+        stringResource(Res.string.feature_polls_anonymous).takeIf { uiState.isAnonymous },
+        stringResource(Res.string.feature_polls_closed).takeIf { uiState.isClosed },
+        uiState.remainingOpenMinutes?.let { minutes ->
+            stringResource(Res.string.feature_polls_open_for, pollDurationLabel(minutes))
+        }
+    ).joinToString(separator = " · ")
 
 private fun previewState(
     mediaCount: Int = 0,

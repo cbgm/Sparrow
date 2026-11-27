@@ -77,6 +77,9 @@ object PollPolicy {
         )
     }
 
+    /** Only the poll creator or a group admin may close a poll. */
+    fun canClose(isCreator: Boolean, isAdmin: Boolean): Boolean = isCreator || isAdmin
+
     fun close(poll: Poll, closedAtEpochMilliseconds: Long): Poll {
         requireValid(poll)
         require(closedAtEpochMilliseconds > 0L) { "Poll close timestamp must be positive" }

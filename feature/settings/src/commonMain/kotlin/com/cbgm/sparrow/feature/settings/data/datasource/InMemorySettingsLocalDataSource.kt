@@ -1,0 +1,58 @@
+package com.cbgm.sparrow.feature.settings.data.datasource
+
+class InMemorySettingsLocalDataSource : SettingsLocalDataSource {
+    private var languageTag: String? = null
+
+    private var themeMode: String? = null
+
+    private var developerModeEnabled: Boolean = false
+
+    private var blockUnknownContactInvites: Boolean = false
+
+    private var blockedContactIds: String? = null
+
+    override suspend fun getLanguageTag(): String? = languageTag
+
+    override suspend fun setLanguageTag(
+        languageTag: String
+    ) {
+        this.languageTag = languageTag
+    }
+
+    override suspend fun getThemeMode(): String? = themeMode
+
+    override suspend fun setThemeMode(mode: String) {
+        themeMode = mode
+    }
+
+    override suspend fun getDeveloperModeEnabled(): Boolean = developerModeEnabled
+
+    override suspend fun setDeveloperModeEnabled(
+        enabled: Boolean
+    ) {
+        developerModeEnabled = enabled
+    }
+
+    override suspend fun getBlockUnknownContactInvites(): Boolean = blockUnknownContactInvites
+
+    override suspend fun setBlockUnknownContactInvites(
+        enabled: Boolean
+    ) {
+        blockUnknownContactInvites = enabled
+    }
+
+    override suspend fun getBlockedContactIds(): String? = blockedContactIds
+
+    override suspend fun setBlockedContactIds(
+        contactIds: String
+    ) {
+        blockedContactIds = contactIds
+    }
+
+    override suspend fun clear() {
+        languageTag = null
+        developerModeEnabled = false
+        blockUnknownContactInvites = false
+        blockedContactIds = null
+    }
+}

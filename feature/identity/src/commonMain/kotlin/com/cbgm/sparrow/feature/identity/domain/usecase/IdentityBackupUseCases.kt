@@ -6,7 +6,6 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
-import kotlin.getOrThrow
 
 class PrepareIdentityBackupUseCase(
     private val identityRepository: IdentityRepository,

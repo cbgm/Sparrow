@@ -31,6 +31,7 @@ internal fun ConversationSummaryDto.toConversationOverview(): ConversationOvervi
         unreadCount = unreadCount,
         participantCount = participantCount,
         type = type,
+        isMutuallyVerified = isMutuallyVerified,
         lastMessagePreview =
             when (lastMessageAttachmentType) {
                 null -> null

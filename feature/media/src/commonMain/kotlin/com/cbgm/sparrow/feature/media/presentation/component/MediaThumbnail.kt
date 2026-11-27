@@ -37,25 +37,45 @@ fun MediaThumbnail(
                 contentScale = contentScale
             )
 
-        MediaTypeUi.VIDEO -> {
-            if (thumbnailFilePath != null) {
-                MediaImage(
-                    data = null,
-                    localFilePath = thumbnailFilePath,
-                    cacheKey = thumbnailCacheKey,
-                    contentDescription = contentDescription,
-                    modifier = modifier,
-                    contentScale = contentScale
-                )
-            } else {
-                VideoThumbnail(
-                    media = media,
-                    localFilePath = localFilePath,
-                    modifier = modifier,
-                    contentScale = contentScale
-                )
-            }
-        }
+        MediaTypeUi.VIDEO ->
+            VideoMediaThumbnail(
+                media = media,
+                localFilePath = localFilePath,
+                thumbnailFilePath = thumbnailFilePath,
+                thumbnailCacheKey = thumbnailCacheKey,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = modifier
+            )
+    }
+}
+
+@Composable
+private fun VideoMediaThumbnail(
+    media: VisualMediaUi,
+    localFilePath: String?,
+    thumbnailFilePath: String?,
+    thumbnailCacheKey: String,
+    contentDescription: String?,
+    contentScale: ContentScale,
+    modifier: Modifier = Modifier
+) {
+    if (thumbnailFilePath != null) {
+        MediaImage(
+            data = null,
+            localFilePath = thumbnailFilePath,
+            cacheKey = thumbnailCacheKey,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale
+        )
+    } else {
+        VideoThumbnail(
+            media = media,
+            localFilePath = localFilePath,
+            modifier = modifier,
+            contentScale = contentScale
+        )
     }
 }
 

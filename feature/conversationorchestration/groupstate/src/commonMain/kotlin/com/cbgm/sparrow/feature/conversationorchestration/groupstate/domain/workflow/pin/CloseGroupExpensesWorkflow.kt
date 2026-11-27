@@ -2,8 +2,6 @@ package com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.wor
 
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoard
 import com.cbgm.sparrow.core.base.messagepart.domain.model.ExpenseBoardClosed
-import com.cbgm.sparrow.core.util.id.IdGenerator
-import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.feature.conversationorchestration.api.command.GroupMessageCommand
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailure
 import com.cbgm.sparrow.feature.conversationorchestration.api.model.ConversationFailureReason
@@ -14,8 +12,13 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.Workflow
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupAdminContext
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.model.GroupPinState
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.repository.GroupPinRepository
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateExpenseBoardUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.CreateGroupPinPacketsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.FindExpenseBoardClosureUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.PrepareEmptyGroupPinUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.RequireGroupAdminContextUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.usecase.SaveGroupPinUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.groupAdministrationLockKey
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.DeleteLocalExpenseReceiptsUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
 import com.cbgm.sparrow.protocol.packet.GroupPinUpdatedPacket
@@ -25,17 +28,23 @@ import kotlin.reflect.KClass
  * Closes the open expense board: announces the closing as an ordinary encrypted group message,
  * then clears the pin slot the board occupies.
  *
- * AuthorizeAdmin -> FindPin -> SendBoardClosedMessage -> DeleteReceipts -> SaveEmptyPin -> CreatePinPackets
- *   -> EnqueuePinPackets.
+ * AuthorizeAdmin -> FindPin -> FindBoardClosure -> [SendBoardClosedMessage] -> DeleteReceipts -> PrepareEmptyPin
+ *   -> CreatePinPackets -> EnqueuePinPackets -> SaveEmptyPin.
  *
- * The closing message is queued before the pin is released, so a failed send never closes the board.
+ * The closing message is queued before the pin is released, so a failed send never closes the board. Every step
+ * can run again: a retry after a failure finds the stored closing message and does not announce it twice, and the
+ * pin stays until its packets are queued, so the retry still releases it for every member.
  */
 class CloseGroupExpensesWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val pinRepository: GroupPinRepository,
     private val requireGroupAdminContext: RequireGroupAdminContextUseCase,
+    private val findExpenseBoardClosure: FindExpenseBoardClosureUseCase,
+    private val createExpenseBoard: CreateExpenseBoardUseCase,
+    private val prepareEmptyGroupPin: PrepareEmptyGroupPinUseCase,
     private val createGroupPinPackets: CreateGroupPinPacketsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase,
+    private val saveGroupPin: SaveGroupPinUseCase,
     private val deleteLocalExpenseReceipts: DeleteLocalExpenseReceiptsUseCase
 ) : ConversationWorkflow<
         GroupMessageCommand.CloseExpenses,
@@ -44,7 +53,8 @@ class CloseGroupExpensesWorkflow internal constructor(
     > {
     override val commandType: KClass<GroupMessageCommand.CloseExpenses> = GroupMessageCommand.CloseExpenses::class
 
-    override fun lockKey(command: GroupMessageCommand.CloseExpenses): String = groupPinLockKey(command.groupId)
+    override fun lockKey(command: GroupMessageCommand.CloseExpenses): String =
+        groupAdministrationLockKey(command.groupId)
 
     override fun firstStep(command: GroupMessageCommand.CloseExpenses): Step = Step.AuthorizeAdmin(command)
 
@@ -52,20 +62,19 @@ class CloseGroupExpensesWorkflow internal constructor(
         when (step) {
             is Step.AuthorizeAdmin ->
                 Outcome.AdminAuthorized(requireGroupAdminContext(step.command.groupId, ADMIN_ACTION).getOrThrow())
-            is Step.FindPin -> {
-                val pin = pinRepository.find(step.command.groupId).getOrThrow()
-                val board = pin?.activeExpenseBoard
-                when {
-                    pin?.messageId == null -> Outcome.NothingPinned
-                    board == null -> Outcome.NoActiveExpenseBoard
-                    else -> Outcome.ExpenseBoardFound(pin, board, step.context)
-                }
-            }
+            is Step.FindPin -> pinFound(pinRepository.find(step.command.groupId).getOrThrow(), step.context)
+            is Step.FindBoardClosure ->
+                boardClosureFound(
+                    findExpenseBoardClosure(step.command.groupId, step.board.id).getOrThrow(),
+                    step.pin,
+                    step.board,
+                    step.context
+                )
             is Step.SendBoardClosedMessage -> {
                 engine.run(
                     GroupMessageCommand.SendMessage(
                         groupId = step.command.groupId,
-                        parts = listOf(step.board.toClosedPart())
+                        parts = listOf(createExpenseBoard.closing(step.board).getOrThrow())
                     )
                 ).getOrThrow()
                 Outcome.BoardClosedMessageSent(step.pin, step.board, step.context)
@@ -74,22 +83,20 @@ class CloseGroupExpensesWorkflow internal constructor(
                 deleteLocalExpenseReceipts.forBoard(step.command.groupId, step.board.id).getOrThrow()
                 Outcome.ReceiptsDeleted(step.pin, step.context)
             }
-            is Step.SaveEmptyPin -> {
-                val emptyPin = GroupPinState.unpinned(
-                    groupId = step.command.groupId,
-                    changedAtEpochMilliseconds = maxOf(
-                        SystemClock.nowEpochMilliseconds(),
-                        step.pin.changedAtEpochMilliseconds + 1L
-                    )
+            is Step.PrepareEmptyPin ->
+                Outcome.EmptyPinPrepared(
+                    prepareEmptyGroupPin(step.command.groupId, step.pin).getOrThrow(),
+                    step.context
                 )
-                pinRepository.save(emptyPin).getOrThrow()
-                Outcome.EmptyPinSaved(emptyPin, step.context)
-            }
             is Step.CreatePinPackets ->
-                Outcome.PinPacketsCreated(createGroupPinPackets(step.pin, step.context).getOrThrow())
+                Outcome.PinPacketsCreated(step.pin, createGroupPinPackets(step.pin, step.context).getOrThrow())
             is Step.EnqueuePinPackets -> {
                 enqueueGroupPackets(step.packets, recordFailedRecipients = false).getOrThrow()
-                Outcome.PinPacketsEnqueued
+                Outcome.PinPacketsEnqueued(step.pin)
+            }
+            is Step.SaveEmptyPin -> {
+                saveGroupPin(step.pin).getOrThrow()
+                Outcome.EmptyPinSaved
             }
         }
 
@@ -102,15 +109,41 @@ class CloseGroupExpensesWorkflow internal constructor(
                     ConversationFailure(ConversationFailureReason.NOT_ALLOWED, "There is no active expense board")
                 )
             is Outcome.ExpenseBoardFound ->
+                Transition.Next(Step.FindBoardClosure(outcome.pin, outcome.board, outcome.context, step.command))
+            is Outcome.BoardNotAnnounced ->
                 Transition.Next(Step.SendBoardClosedMessage(outcome.pin, outcome.board, outcome.context, step.command))
             is Outcome.BoardClosedMessageSent ->
                 Transition.Next(Step.DeleteReceipts(outcome.pin, outcome.board, outcome.context, step.command))
             is Outcome.ReceiptsDeleted ->
-                Transition.Next(Step.SaveEmptyPin(outcome.pin, outcome.context, step.command))
-            is Outcome.EmptyPinSaved ->
+                Transition.Next(Step.PrepareEmptyPin(outcome.pin, outcome.context, step.command))
+            is Outcome.EmptyPinPrepared ->
                 Transition.Next(Step.CreatePinPackets(outcome.pin, outcome.context, step.command))
-            is Outcome.PinPacketsCreated -> Transition.Next(Step.EnqueuePinPackets(outcome.packets, step.command))
-            Outcome.PinPacketsEnqueued -> Transition.Complete()
+            is Outcome.PinPacketsCreated ->
+                Transition.Next(Step.EnqueuePinPackets(outcome.pin, outcome.packets, step.command))
+            is Outcome.PinPacketsEnqueued -> Transition.Next(Step.SaveEmptyPin(outcome.pin, step.command))
+            Outcome.EmptyPinSaved -> Transition.Complete()
+        }
+
+    private fun pinFound(pin: GroupPinState?, context: GroupAdminContext): Outcome {
+        val board = pin?.activeExpenseBoard
+        return when {
+            pin?.messageId == null -> Outcome.NothingPinned
+            board == null -> Outcome.NoActiveExpenseBoard
+            else -> Outcome.ExpenseBoardFound(pin, board, context)
+        }
+    }
+
+    /** A closing message stored by an earlier, interrupted attempt is not sent again. */
+    private fun boardClosureFound(
+        closure: ExpenseBoardClosed?,
+        pin: GroupPinState,
+        board: ExpenseBoard,
+        context: GroupAdminContext
+    ): Outcome =
+        if (closure == null) {
+            Outcome.BoardNotAnnounced(pin, board, context)
+        } else {
+            Outcome.BoardClosedMessageSent(pin, board, context)
         }
 
     sealed interface Step : WorkflowStep {
@@ -121,6 +154,13 @@ class CloseGroupExpensesWorkflow internal constructor(
         ) : Step
 
         data class FindPin(
+            val context: GroupAdminContext,
+            override val command: GroupMessageCommand.CloseExpenses
+        ) : Step
+
+        data class FindBoardClosure(
+            val pin: GroupPinState,
+            val board: ExpenseBoard,
             val context: GroupAdminContext,
             override val command: GroupMessageCommand.CloseExpenses
         ) : Step
@@ -139,7 +179,7 @@ class CloseGroupExpensesWorkflow internal constructor(
             override val command: GroupMessageCommand.CloseExpenses
         ) : Step
 
-        data class SaveEmptyPin(
+        data class PrepareEmptyPin(
             val pin: GroupPinState,
             val context: GroupAdminContext,
             override val command: GroupMessageCommand.CloseExpenses
@@ -152,7 +192,13 @@ class CloseGroupExpensesWorkflow internal constructor(
         ) : Step
 
         data class EnqueuePinPackets(
+            val pin: GroupPinState,
             val packets: Map<String, GroupPinUpdatedPacket>,
+            override val command: GroupMessageCommand.CloseExpenses
+        ) : Step
+
+        data class SaveEmptyPin(
+            val pin: GroupPinState,
             override val command: GroupMessageCommand.CloseExpenses
         ) : Step
     }
@@ -172,6 +218,13 @@ class CloseGroupExpensesWorkflow internal constructor(
             val context: GroupAdminContext
         ) : Outcome
 
+        data class BoardNotAnnounced(
+            val pin: GroupPinState,
+            val board: ExpenseBoard,
+            val context: GroupAdminContext
+        ) : Outcome
+
+        /** The closing message is queued, now or by an earlier attempt. */
         data class BoardClosedMessageSent(
             val pin: GroupPinState,
             val board: ExpenseBoard,
@@ -183,24 +236,22 @@ class CloseGroupExpensesWorkflow internal constructor(
             val context: GroupAdminContext
         ) : Outcome
 
-        data class EmptyPinSaved(
+        data class EmptyPinPrepared(
             val pin: GroupPinState,
             val context: GroupAdminContext
         ) : Outcome
 
         data class PinPacketsCreated(
+            val pin: GroupPinState,
             val packets: Map<String, GroupPinUpdatedPacket>
         ) : Outcome
 
-        data object PinPacketsEnqueued : Outcome
-    }
+        data class PinPacketsEnqueued(
+            val pin: GroupPinState
+        ) : Outcome
 
-    private fun ExpenseBoard.toClosedPart(): ExpenseBoardClosed =
-        ExpenseBoardClosed(
-            id = IdGenerator.generate(prefix = "expense-closed"),
-            boardId = id,
-            closedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-        )
+        data object EmptyPinSaved : Outcome
+    }
 
     private companion object {
         const val ADMIN_ACTION = "pinned message"

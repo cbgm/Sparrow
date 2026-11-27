@@ -22,9 +22,18 @@ internal class GroupIncomingConversationDataSource(
     suspend fun findConversationParticipants(groupId: String): List<ConversationParticipantEntity> =
         chatDao.findConversationParticipants(groupId)
 
-    suspend fun upsertConversation(conversation: ConversationEntity, title: String) {
-        chatDao.upsertConversation(conversation)
-        groupMetadataDao.upsertTitleValue(conversation.id, title)
+    /**
+     * The first welcome shows the conversation and sets its title. A rotation welcome keeps the unseen count and
+     * the visibility, and sets the title only while no admin title version is stored: the welcome title carries no
+     * version and could roll back a newer one.
+     */
+    suspend fun upsertWelcomeConversation(conversation: ConversationEntity, title: String, isFirstWelcome: Boolean) {
+        chatDao.upsertConversationKeepingLocalState(conversation, keepVisibility = !isFirstWelcome)
+        if (isFirstWelcome) {
+            groupMetadataDao.upsertTitleValue(conversation.id, title)
+        } else {
+            groupMetadataDao.upsertTitleValueIfUnversioned(conversation.id, title)
+        }
     }
 
     suspend fun upsertMessage(message: GroupSystemMessageDto) {

@@ -3,14 +3,18 @@ package com.cbgm.sparrow.core.crypto.di
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.blob.SodiumBlobCipher
+import com.cbgm.sparrow.core.crypto.circuit.CircuitCipher
+import com.cbgm.sparrow.core.crypto.circuit.SodiumCircuitCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.crypto.hash.DefaultCryptoHash
+import com.cbgm.sparrow.core.crypto.hash.Sha256CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.random.SodiumSecureRandomGenerator
+import com.cbgm.sparrow.core.crypto.sealing.SealedMessageCipher
+import com.cbgm.sparrow.core.crypto.sealing.SodiumSealedMessageCipher
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
-import com.cbgm.sparrow.core.crypto.transport.DefaultIncomingTransportMessageDecoder
-import com.cbgm.sparrow.core.crypto.transport.DefaultTransportPayloadCodec
+import com.cbgm.sparrow.core.crypto.transport.Base64TransportPayloadCodec
+import com.cbgm.sparrow.core.crypto.transport.EncryptedIncomingTransportMessageDecoder
 import com.cbgm.sparrow.core.crypto.transport.IncomingTransportMessageDecoder
 import com.cbgm.sparrow.core.crypto.transport.SodiumTransportMessageCipher
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
@@ -24,11 +28,18 @@ val cryptoModule =
         }
 
         single<CryptoHash> {
-            DefaultCryptoHash()
+            Sha256CryptoHash()
         }
 
         single<BlobCipher> {
             SodiumBlobCipher()
+        }
+
+        single<SealedMessageCipher> {
+            SodiumSealedMessageCipher()
+        }
+        single<CircuitCipher> {
+            SodiumCircuitCipher()
         }
 
         single<SecureRandomGenerator> {
@@ -44,11 +55,11 @@ val cryptoModule =
         }
 
         single<TransportPayloadCodec> {
-            DefaultTransportPayloadCodec()
+            Base64TransportPayloadCodec()
         }
 
         single<IncomingTransportMessageDecoder> {
-            DefaultIncomingTransportMessageDecoder(
+            EncryptedIncomingTransportMessageDecoder(
                 payloadCodec = get(),
                 transportCipher = get()
             )

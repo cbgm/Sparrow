@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.network.model
 
 data class ControlPlaneSettingsUiState(
-    val entries: List<ControlPlaneUiModel> = emptyList(),
+    val entries: List<ControlPlaneUi> = emptyList(),
     val showAddDialog: Boolean = false,
     val isEditingDirectory: Boolean = false,
     val newUrl: String = "",
@@ -29,7 +29,7 @@ data class ControlPlaneSettingsUiState(
         get() = entries.count { it.status == ControlPlaneUiStatus.UNREACHABLE }
 }
 
-data class ControlPlaneUiModel(
+data class ControlPlaneUi(
     val url: String,
     val status: ControlPlaneUiStatus,
     val source: ControlPlaneUiSource,

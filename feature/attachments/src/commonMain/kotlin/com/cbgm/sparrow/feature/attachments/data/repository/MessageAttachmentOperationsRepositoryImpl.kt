@@ -37,14 +37,13 @@ import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSour
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentFileDataSource
 import com.cbgm.sparrow.feature.attachments.data.mapper.flattenForPersistence
-import com.cbgm.sparrow.feature.attachments.data.mapper.requireBlobReference
 import com.cbgm.sparrow.feature.attachments.data.mapper.toDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.withPersistedParts
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
-import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheQueue
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
@@ -56,7 +55,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     private val dataSource: MessageAttachmentDataSource,
     private val blobTransferDataSource: BlobTransferDataSource,
     private val fileDataSource: MessageAttachmentFileDataSource,
-    private val cacheCoordinator: MessageAttachmentCacheCoordinator
+    private val cacheQueue: MessageAttachmentCacheQueue
 ) : MessageAttachmentOperationsRepository {
     private val logger = SparrowLog.withTag("MessageAttachmentOperationsRepository")
 
@@ -106,34 +105,8 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             context = context.toDto()
         )
 
-        val uploaded = mutableListOf<MessagePartDto>()
-        val deleteCapabilities = linkedMapOf<String, String>()
-
-        try {
-            uploadableParts.forEach { part ->
-                val bytes = part.requirePayloadBytes()
-                val (blobReference, deleteCapability) =
-                    blobTransferDataSource.upload(
-                        plaintext = bytes,
-                        retentionMilliseconds = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
-                    )
-
-                dataSource.updateRemoteBlobReference(
-                    partId = part.id,
-                    blobReference = blobReference,
-                    deleteCapability = deleteCapability
-                )
-
-                val uploadedPart = part.withBlob(blobReference)
-                uploaded += uploadedPart
-                deleteCapabilities[part.id] = deleteCapability
-            }
-
-            dataSource.messageParts(messageId).map { it.toMessagePart() }
-        } catch (error: Throwable) {
-            cleanupUploads(uploaded, deleteCapabilities, localFileNames)
-            throw error
-        }
+        // Uploaded when the packet is made ([prepareOutgoing]): a message whose upload has to wait stays with its files.
+        dataSource.messageParts(messageId).map { it.toMessagePart() }
     }
 
     override suspend fun persistIncoming(
@@ -192,14 +165,6 @@ internal class MessageAttachmentOperationsRepositoryImpl(
     override suspend fun deleteForMessages(messageIds: List<String>): Result<Unit> =
         safeSuspendCall { dataSource.deleteForMessages(messageIds) }
 
-    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
-        dataSource.observeByMessageIds(messageIds)
-            .map { partsByMessageId ->
-                partsByMessageId.mapValues { (_, parts) ->
-                    parts.map { part -> part.toMessagePart() }
-                }
-            }
-
     override fun observeExpenseState(conversationId: String): Flow<List<MessagePart>> =
         dataSource.observeExpenseState(conversationId).map { parts -> parts.map { it.toMessagePart() } }
 
@@ -233,7 +198,7 @@ internal class MessageAttachmentOperationsRepositoryImpl(
         }
 
     override fun cacheIncoming(messageId: String): Result<Unit> =
-        safeCall { cacheCoordinator.cache(messageId) }
+        safeCall { cacheQueue.cache(messageId) }
 
     private suspend fun createOutgoingDto(part: MessagePart): MessagePartDto =
         when (part) {
@@ -386,24 +351,4 @@ internal class MessageAttachmentOperationsRepositoryImpl(
             is ContactDto -> copy(blob = blob)
             else -> error("Message part $id is not an uploadable attachment")
         }
-
-    private suspend fun cleanupUploads(
-        parts: List<MessagePartDto>,
-        deleteCapabilities: Map<String, String>,
-        localFileNames: Map<String, String>
-    ) {
-        parts.forEach { part ->
-            localFileNames[part.id]?.let(fileDataSource::delete)
-            val deleteCapability = deleteCapabilities[part.id] ?: return@forEach
-            val reference = part.requireBlobReference()
-            runCatching {
-                blobTransferDataSource.delete(
-                    reference = reference,
-                    deleteCapability = deleteCapability
-                )
-            }.onFailure { error ->
-                logger.error(error) { "Failed to cleanup uploaded message part ${part.id}" }
-            }
-        }
-    }
 }

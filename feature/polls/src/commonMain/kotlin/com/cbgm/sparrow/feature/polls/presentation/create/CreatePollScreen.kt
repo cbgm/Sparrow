@@ -7,24 +7,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.model.VisualMediaSelectionUi
@@ -72,7 +67,7 @@ fun CreatePollScreen(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacing.screenPadding),
             contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)
         ) {
             item(key = "info") {
                 InfoSection(
@@ -120,23 +115,17 @@ private fun CreatePollTopBar(
     onBack: () -> Unit,
     onCreate: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_polls_create_title),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_polls_create_title)
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
                 )
             }
@@ -144,7 +133,7 @@ private fun CreatePollTopBar(
         actions = {
             IconButton(onClick = onCreate, enabled = canCreate) {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = SparrowIcons.Check,
                     contentDescription = stringResource(Res.string.feature_polls_create)
                 )
             }
@@ -161,8 +150,8 @@ private fun InfoSection(
 ) {
     PollSection(title = title) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.small)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+            modifier = Modifier.fillMaxWidth()
         ) {
             SparrowInputField(
                 value = question,
@@ -198,8 +187,7 @@ private fun OptionsSection(
             onOptionChanged = { id, value ->
                 onUiEvent(CreatePollUiEvent.OptionChanged(id, value))
             },
-            onRemoveOption = { onUiEvent(CreatePollUiEvent.RemoveOptionClicked(it)) },
-            onAddOption = { onUiEvent(CreatePollUiEvent.AddOptionClicked) }
+            onRemoveOption = { onUiEvent(CreatePollUiEvent.RemoveOptionClicked(it)) }
         )
     }
 }
@@ -287,22 +275,9 @@ private fun PollSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-            fontWeight = FontWeight.SemiBold,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.base.div(2),
-                    bottom = MaterialTheme.spacing.base
-                )
-        )
-
-        SparrowCardNoAnimation {
-            content()
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        SparrowSectionLabel(text = title)
+        content()
     }
 }
 

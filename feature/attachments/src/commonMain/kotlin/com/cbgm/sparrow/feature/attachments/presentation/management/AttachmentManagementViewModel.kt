@@ -64,8 +64,7 @@ class AttachmentManagementViewModel(
 
     fun onUiEvent(event: AttachmentManagementUiEvent) {
         when (event) {
-            AttachmentManagementUiEvent.BackClicked ->
-                if (uiState.value.isSelectionMode) clearSelection() else navigator.popBackStack()
+            AttachmentManagementUiEvent.BackClicked -> navigateBack()
 
             is AttachmentManagementUiEvent.TabSelected ->
                 localState.update { state -> state.copy(selectedTab = event.tab) }
@@ -121,6 +120,11 @@ class AttachmentManagementViewModel(
             if (!updated.add(attachmentId)) updated.remove(attachmentId)
             state.copy(selectedIds = updated)
         }
+    }
+
+    /** Back leaves the selection first, then the screen. */
+    private fun navigateBack() {
+        if (uiState.value.isSelectionMode) clearSelection() else navigator.popBackStack()
     }
 
     private fun clearSelection() {

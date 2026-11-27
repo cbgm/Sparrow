@@ -1,21 +1,24 @@
 package com.cbgm.sparrow.feature.media.presentation.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -53,7 +57,11 @@ fun MediaSelectionPreview(
 
     LazyRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+        contentPadding = PaddingValues(
+            top = Dimens.MediaSelection.removeBadgeOverhang,
+            end = Dimens.MediaSelection.removeBadgeOverhang
+        ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         items(media, key = MediaSelectionUi::id) { selection ->
             when (selection) {
@@ -95,7 +103,7 @@ private fun MediaSelectionItem(
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             MediaThumbnail(
                 media = selection,
@@ -137,7 +145,7 @@ private fun FileSelectionItem(
         Surface(
             modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
             shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Row(
                 modifier = Modifier
@@ -148,7 +156,8 @@ private fun FileSelectionItem(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MediaSelection.filePreviewIconSize)
+                    modifier = Modifier.size(Dimens.MediaSelection.filePreviewIconSize),
+                    tint = MaterialTheme.colorScheme.outline
                 )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
                 Column(modifier = Modifier.weight(1f)) {
@@ -180,17 +189,21 @@ private fun BoxScope.RemoveButton(
         modifier =
             Modifier
                 .align(Alignment.TopEnd)
-                .size(Dimens.MediaSelection.previewRemoveButtonSize)
+                .offset(
+                    x = Dimens.MediaSelection.removeBadgeOverhang,
+                    y = -Dimens.MediaSelection.removeBadgeOverhang
+                ).size(Dimens.MediaSelection.previewRemoveButtonSize)
                 .clickable(enabled = enabled, onClick = onRemove),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.background,
+        border = BorderStroke(Dimens.Base.borderStrokeWidth, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = SparrowIcons.Close,
                 contentDescription = null,
                 modifier = Modifier.size(Dimens.MediaSelection.previewRemoveIconSize),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

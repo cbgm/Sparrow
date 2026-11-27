@@ -1,142 +1,95 @@
 package com.cbgm.sparrow.server.presence
 
-import com.cbgm.sparrow.server.protocol.ClientRoute
-import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
-import com.cbgm.sparrow.server.protocol.ClientRoutingResult
-import com.cbgm.sparrow.server.security.ClientRoutingIds
-import com.cbgm.sparrow.server.security.ProtocolSignatures
+import com.cbgm.sparrow.server.protocol.InvitationRoute
+import com.cbgm.sparrow.server.protocol.InvitationRouteResult
 import java.util.concurrent.ConcurrentHashMap
 
-private const val DEFAULT_MAXIMUM_TTL_MILLISECONDS = 120_000L
-
+/**
+ * Which device holds a phone alias, and the invitation route of each device. Apps claim both directly ([bindAliases],
+ * [saveInvitationRoute]); devices hold no routes here, since they receive only through their mailboxes.
+ */
 interface PresenceStorage : AutoCloseable {
     val persistenceMode: String
 
-    suspend fun register(registration: ClientRouteRegistration): PresenceResult
+    /** Binds the claimed aliases [claims] allows to [deviceRoutingId] and returns those it bound. */
+    suspend fun bindAliases(
+        deviceRoutingId: String,
+        claims: AliasClaims
+    ): List<String>
 
-    suspend fun remove(routingId: String, connectionId: String)
+    /**
+     * Keeps the device's invitation route from its latest claim, as long as an alias binding; null removes it. The
+     * claim is signed with the device key, so only the device itself sets it.
+     */
+    suspend fun saveInvitationRoute(
+        deviceRoutingId: String,
+        invitationRoute: InvitationRoute?
+    )
 
-    suspend fun resolve(routingId: String): ClientRoutingResult
+    /**
+     * The invitation route for a phone alias (of the device holding it) or a device routing ID, or null when there is
+     * none that is still valid.
+     */
+    suspend fun invitationRoute(routingId: String): InvitationRouteResult?
 
-    suspend fun routeCount(): Int
+    /** The device holding [alias], or null while it is free. */
+    suspend fun aliasOwner(alias: String): String?
 }
 
 class PresenceStore(
-    private val maximumTtlMilliseconds: Long = DEFAULT_MAXIMUM_TTL_MILLISECONDS,
     private val now: () -> Long = System::currentTimeMillis
 ) : PresenceStorage {
-    private val routes = ConcurrentHashMap<String, ConcurrentHashMap<String, ClientRoute>>()
+    private val aliasOwners = ConcurrentHashMap<String, AliasBinding>()
+    private val invitationRoutes = ConcurrentHashMap<String, KeptInvitationRoute>()
+    private val lock = Any()
     override val persistenceMode: String = "memory"
 
-    override suspend fun register(registration: ClientRouteRegistration): PresenceResult {
-        val route = registration.route
-        val currentTime = now()
-        validatePresenceRegistration(
-            registration,
-            maximumTtlMilliseconds,
-            currentTime
-        )?.let { return it }
-
-        val routingIds = listOf(route.routingId) + route.aliases.orEmpty()
-        val newestGeneration =
-            routingIds
-                .mapNotNull { routingId -> routes[routingId]?.values?.maxOfOrNull(ClientRoute::generation) }
-                .maxOrNull()
-                ?: -1L
-
-        return when {
-            route.generation < newestGeneration -> PresenceResult.Rejected("STALE_GENERATION")
-            else -> {
-                routingIds.forEach { routingId ->
-                    val deviceRoutes = routes.computeIfAbsent(routingId) { ConcurrentHashMap() }
-                    if (route.generation > (
-                            deviceRoutes.values.maxOfOrNull(ClientRoute::generation)
-                                ?: -1L
-                        )
-                    ) {
-                        deviceRoutes.clear()
-                    }
-                    deviceRoutes[route.connectionId] = route
+    override suspend fun bindAliases(
+        deviceRoutingId: String,
+        claims: AliasClaims
+    ): List<String> =
+        synchronized(lock) {
+            val currentTime = now()
+            aliasOwners.entries.removeIf { (_, binding) -> binding.expiresAtEpochMilliseconds <= currentTime }
+            claims.aliases
+                .filter { alias -> claims.allows(alias, deviceRoutingId, aliasOwners[alias]?.owner) }
+                .onEach { alias ->
+                    aliasOwners[alias] = AliasBinding(deviceRoutingId, currentTime + ALIAS_BINDING_LIFETIME_MILLISECONDS)
                 }
-                PresenceResult.Accepted
-            }
         }
-    }
 
-    override suspend fun remove(routingId: String, connectionId: String) {
-        val route = routes[routingId]?.get(connectionId)
-        val routingIds = listOf(route?.routingId ?: routingId) + route?.aliases.orEmpty()
-        routingIds.distinct().forEach { currentRoutingId ->
-            routes[currentRoutingId]?.let { deviceRoutes ->
-                deviceRoutes.remove(connectionId)
-                if (deviceRoutes.isEmpty()) routes.remove(currentRoutingId, deviceRoutes)
-            }
-        }
-    }
-
-    override suspend fun resolve(routingId: String): ClientRoutingResult {
-        purgeExpired()
-        return ClientRoutingResult(
-            routingId = routingId,
-            routes = routes[routingId]?.values?.sortedBy(ClientRoute::nodeId).orEmpty()
-        )
-    }
-
-    override suspend fun routeCount(): Int {
-        purgeExpired()
-        return routes
-            .filterKeys(ClientRoutingIds::isDeviceRoutingId)
-            .values
-            .sumOf { deviceRoutes -> deviceRoutes.size }
-    }
-
-    private fun purgeExpired() {
+    override suspend fun saveInvitationRoute(
+        deviceRoutingId: String,
+        invitationRoute: InvitationRoute?
+    ) {
         val currentTime = now()
-        routes.forEach { (routingId, deviceRoutes) ->
-            deviceRoutes.entries.removeIf { (_, route) -> route.expiresAtEpochMilliseconds <= currentTime }
-            if (deviceRoutes.isEmpty()) routes.remove(routingId, deviceRoutes)
+        invitationRoutes.entries.removeIf { (_, kept) -> kept.expiresAtEpochMilliseconds <= currentTime }
+        when (invitationRoute) {
+            null -> invitationRoutes.remove(deviceRoutingId)
+            else -> invitationRoutes[deviceRoutingId] = KeptInvitationRoute(invitationRoute, currentTime + ALIAS_BINDING_LIFETIME_MILLISECONDS)
         }
     }
+
+    override suspend fun invitationRoute(routingId: String): InvitationRouteResult? {
+        val currentTime = now()
+        val device = aliasOwner(routingId) ?: routingId
+        return invitationRoutes[device]
+            ?.takeIf { kept -> kept.expiresAtEpochMilliseconds > currentTime && kept.route.route.expiresAtEpochMilliseconds > currentTime }
+            ?.let { kept -> InvitationRouteResult(device, kept.route) }
+    }
+
+    override suspend fun aliasOwner(alias: String): String? =
+        aliasOwners[alias]?.takeIf { binding -> binding.expiresAtEpochMilliseconds > now() }?.owner
 
     override fun close() = Unit
-}
 
-internal fun validatePresenceRegistration(
-    registration: ClientRouteRegistration,
-    maximumTtlMilliseconds: Long,
-    currentTime: Long
-): PresenceResult.Rejected? {
-    val route = registration.route
-    return when {
-        !ClientRoutingIds.matchesSigningPublicKey(
-            route.routingId,
-            registration.clientSigningPublicKey
-        ) ->
-            PresenceResult.Rejected("INVALID_ROUTING_ID")
+    private data class AliasBinding(
+        val owner: String,
+        val expiresAtEpochMilliseconds: Long
+    )
 
-        route.aliases.orEmpty().any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ->
-            PresenceResult.Rejected("INVALID_ROUTING_ALIAS")
-
-        route.aliases.orEmpty().distinct().size != route.aliases.orEmpty().size ->
-            PresenceResult.Rejected("DUPLICATE_ROUTING_ALIAS")
-
-        route.expiresAtEpochMilliseconds <= currentTime -> PresenceResult.Rejected("ROUTE_EXPIRED")
-        route.expiresAtEpochMilliseconds - currentTime > maximumTtlMilliseconds ->
-            PresenceResult.Rejected(
-                "TTL_TOO_LONG"
-            )
-
-        !ProtocolSignatures.verifyClientRoute(route, registration.clientSigningPublicKey) ->
-            PresenceResult.Rejected("INVALID_SIGNATURE")
-
-        else -> null
-    }
-}
-
-sealed interface PresenceResult {
-    data object Accepted : PresenceResult
-
-    data class Rejected(
-        val code: String
-    ) : PresenceResult
+    private data class KeptInvitationRoute(
+        val route: InvitationRoute,
+        val expiresAtEpochMilliseconds: Long
+    )
 }

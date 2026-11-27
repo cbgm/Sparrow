@@ -6,7 +6,6 @@ import com.cbgm.sparrow.core.util.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
@@ -14,6 +13,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationReadRepository
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentPartSource
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,7 +29,7 @@ import kotlin.time.TimeSource
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DirectConversationReadRepositoryImpl(
-    private val messageAttachmentDataSource: MessageAttachmentOperationsRepository,
+    private val attachmentPartSource: MessageAttachmentPartSource,
     private val conversationDataSource: DirectConversationDataSource
 ) : DirectConversationReadRepository {
     override fun observe(
@@ -57,7 +57,7 @@ class DirectConversationReadRepositoryImpl(
 
             val messageIds = sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged()
             val attachments = messageIds.flatMapLatest { ids ->
-                messageAttachmentDataSource.observeByMessageIds(ids)
+                attachmentPartSource.observeByMessageIds(ids)
             }
             val textParts = messageIds.flatMapLatest { ids ->
                 conversationDataSource.observeTextPartsByMessageIds(ids)

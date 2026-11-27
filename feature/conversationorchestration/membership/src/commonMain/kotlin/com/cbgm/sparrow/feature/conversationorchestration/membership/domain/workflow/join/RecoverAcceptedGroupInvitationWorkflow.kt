@@ -28,15 +28,7 @@ class RecoverAcceptedGroupInvitationWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val result = step.command.result
         return when (step) {
-            is Step.CheckHandshakeExists ->
-                if (result.direction == InvitationDirection.INCOMING &&
-                    result.response == InvitationResponse.ACCEPTED &&
-                    getMembershipHandshake(result.invitationId).getOrThrow() != null
-                ) {
-                    Outcome.HandshakeExists
-                } else {
-                    Outcome.NothingToRecover
-                }
+            is Step.CheckHandshakeExists -> checkHandshakeExists(step.command)
             is Step.HandleResult -> {
                 engine.run(MembershipCommand.HandleGroupInvitationResult(result)).getOrThrow()
                 Outcome.ResultHandled
@@ -50,6 +42,19 @@ class RecoverAcceptedGroupInvitationWorkflow internal constructor(
             Outcome.NothingToRecover -> Transition.Complete()
             Outcome.ResultHandled -> Transition.Complete()
         }
+
+    /** Only an incoming acceptance whose handshake still exists can be replayed. */
+    private suspend fun checkHandshakeExists(command: MembershipCommand.RecoverAcceptedGroupInvitation): Outcome {
+        val result = command.result
+        return if (result.direction == InvitationDirection.INCOMING &&
+            result.response == InvitationResponse.ACCEPTED &&
+            getMembershipHandshake(result.invitationId).getOrThrow() != null
+        ) {
+            Outcome.HandshakeExists
+        } else {
+            Outcome.NothingToRecover
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: MembershipCommand.RecoverAcceptedGroupInvitation

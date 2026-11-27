@@ -104,6 +104,20 @@ internal object GroupSystemMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
+    fun localChangeDropped(
+        conversationId: String,
+        epoch: Int,
+        createdAtEpochMilliseconds: Long
+    ): GroupSystemMessageDto =
+        systemMessage(
+            id = "group-local-change-dropped-$conversationId-$epoch",
+            conversationId = conversationId,
+            text = "Your change could not be applied because another admin changed the group at the same time",
+            transportMode = MessageTransportMode.LOCAL_GROUP_CHANGE_DROPPED,
+            senderContactId = null,
+            createdAtEpochMilliseconds = createdAtEpochMilliseconds
+        )
+
     fun localConversationDeletedMarker(
         conversationId: String,
         createdAtEpochMilliseconds: Long

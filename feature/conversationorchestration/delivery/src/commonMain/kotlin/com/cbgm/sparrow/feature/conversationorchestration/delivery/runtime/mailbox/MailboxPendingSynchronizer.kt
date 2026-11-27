@@ -1,53 +1,185 @@
 package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.mailbox
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
+import com.cbgm.sparrow.core.util.result.safeSuspendCall
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
+import com.cbgm.sparrow.feature.transport.domain.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.domain.model.InvalidInvitationLetterException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxGoneException
+import com.cbgm.sparrow.feature.transport.domain.model.MailboxNodeUnavailableException
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationLetterRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.InvitationMailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.repository.MailboxRepository
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import com.cbgm.sparrow.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.protocol.mailbox.MailboxRouteRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
+/**
+ * Processes the envelopes waiting in every local mailbox, including retiring ones a renewal replaced: they keep
+ * receiving until the contact learned the new route, and are revoked only after they expired. The device's invitation
+ * mailboxes ([InvitationMailboxRepository]) hold letters of senders without a mailbox route of this device; a letter whose
+ * sender its key does not prove is acknowledged and dropped ([InvitationLetterRepository.open]).
+ *
+ * An envelope that fails stays in its mailbox and is retried on the next sync; it never stops the envelopes
+ * behind it or the other mailboxes. One sync runs at a time, so an envelope is never processed twice at once.
+ */
 class MailboxPendingSynchronizer(
-    private val mailboxGateway: MailboxGateway,
+    private val mailboxRepository: MailboxRepository,
     private val mailboxRouteRepository: MailboxRouteRepository,
-    private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor
+    private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
+    private val resolveContactRoutingId: ResolveContactTransportRoutingIdUseCase,
+    private val invitationMailbox: InvitationMailboxRepository,
+    private val invitationLetters: InvitationLetterRepository
 ) {
     private val logger = SparrowLog.withTag("MailboxPendingSynchronizer")
+    private val synchronizing = Mutex()
 
     suspend fun synchronize(): Result<Int> =
-        runCatching {
-            var processed = 0
-            mailboxRouteRepository
-                .allLocal()
-                .getOrThrow()
-                .filterNot(LocalMailboxCredential::revocationPending)
-                .forEach { credential ->
-                    mailboxGateway.pending(credential).getOrThrow().forEach { envelope ->
-                        when (
-                            incomingEnvelopeProcessor
-                                .process(
-                                    envelopeId = envelope.envelopeId,
-                                    senderRoutingId = envelope.senderRoutingId,
-                                    encodedTransportPayload = envelope.encryptedPayload
-                                ).getOrThrow()
-                        ) {
-                            IncomingEnvelopeProcessingResult.Processed -> {
-                                mailboxGateway.acknowledge(credential, envelope.envelopeId).getOrThrow()
-                                processed += 1
-                            }
-
-                            IncomingEnvelopeProcessingResult.Rejected -> {
-                                mailboxGateway.acknowledge(credential, envelope.envelopeId).getOrThrow()
-                                logger.warn {
-                                    "Rejected mailbox envelope acknowledged and discarded: " +
-                                        "envelopeId=${envelope.envelopeId}"
-                                }
-                            }
-
-                            IncomingEnvelopeProcessingResult.UnknownSender -> Unit
-                        }
-                    }
-                }
-            processed
+        safeSuspendCall(logFailure = false) {
+            synchronizing.withLock {
+                val credentials = mailboxRouteRepository.receiving().getOrThrow() + invitationMailbox.receiving().getOrThrow()
+                credentials.sumOf { credential -> synchronize(credential) }
+            }
         }
+
+    /** Only [credentials], the mailboxes known to hold envelopes. */
+    suspend fun synchronize(credentials: List<LocalMailboxCredential>): Result<Int> =
+        safeSuspendCall(logFailure = false) {
+            synchronizing.withLock { credentials.sumOf { credential -> synchronize(credential) } }
+        }
+
+    private suspend fun synchronize(credential: LocalMailboxCredential): Int {
+        val envelopes =
+            mailboxRepository.pending(credential).getOrElse { error ->
+                if (error is MailboxGoneException) dropGone(credential) else logUnreadable(credential, error)
+                return 0
+            }
+        if (envelopes.isEmpty()) return 0
+        if (credential.contactId == InvitationMailboxRepository.CONTACT_ID) return envelopes.count { envelope -> processLetter(credential, envelope) }
+        // The mailbox belongs to one contact, and only that contact holds its send capability: the sender is that
+        // contact, whatever routing ID the envelope names (envelopes put in by the app itself name none).
+        val sender =
+            resolveContactRoutingId(credential.contactId).getOrElse { error ->
+                logger.warn(error) { "Mailbox of contact ${credential.contactId} not read: the contact's routing ID is unknown" }
+                return 0
+            }
+        return envelopes.count { envelope -> process(credential, sender, envelope.envelopeId, envelope.encryptedPayload) }
+    }
+
+    /** True when the letter was opened, processed and acknowledged. */
+    private suspend fun processLetter(
+        credential: LocalMailboxCredential,
+        envelope: FederatedEnvelope
+    ): Boolean {
+        val letter =
+            invitationLetters.open(envelope).getOrElse { failure ->
+                when (failure) {
+                    is InvalidInvitationLetterException -> dropLetter(credential, envelope, failure)
+                    else -> logStillPending(envelope, failure)
+                }
+                return false
+            }
+        return process(credential, letter.senderRoutingId, envelope.envelopeId, letter.payload)
+    }
+
+    private suspend fun dropLetter(
+        credential: LocalMailboxCredential,
+        envelope: FederatedEnvelope,
+        reason: InvalidInvitationLetterException
+    ) {
+        mailboxRepository
+            .acknowledge(credential, envelope.envelopeId)
+            .onSuccess { logger.warn { "Invitation letter ${envelope.envelopeId} dropped: ${reason.message}" } }
+            .onFailure { failure -> logStillPending(envelope, failure) }
+    }
+
+    /** True when the envelope was processed and acknowledged. */
+    private suspend fun process(
+        credential: LocalMailboxCredential,
+        sender: String,
+        envelopeId: String,
+        encodedTransportPayload: String
+    ): Boolean =
+        safeSuspendCall(logFailure = false) {
+            when (
+                incomingEnvelopeProcessor
+                    .process(
+                        envelopeId = envelopeId,
+                        senderRoutingId = sender,
+                        encodedTransportPayload = encodedTransportPayload
+                    ).getOrThrow()
+            ) {
+                IncomingEnvelopeProcessingResult.Processed -> {
+                    mailboxRepository.acknowledge(credential, envelopeId).getOrThrow()
+                    true
+                }
+
+                IncomingEnvelopeProcessingResult.Rejected -> {
+                    mailboxRepository.acknowledge(credential, envelopeId).getOrThrow()
+                    logger.warn {
+                        "Rejected mailbox envelope acknowledged and discarded: envelopeId=$envelopeId"
+                    }
+                    false
+                }
+
+                IncomingEnvelopeProcessingResult.UnknownSender -> false
+            }
+        }.getOrElse { error ->
+            logStillPending(envelopeId, error)
+            false
+        }
+
+    /** Only a retiring mailbox is dropped: a replaced one whose node was installed anew. */
+    private suspend fun dropGone(credential: LocalMailboxCredential) {
+        val routeId = credential.deliveryRoute.routeId
+        val retiring = mailboxRouteRepository.allRetiring().getOrDefault(emptyList()).any { mailbox -> mailbox.deliveryRoute.routeId == routeId }
+        if (!retiring) {
+            logger.warn { "Mailbox of contact ${credential.contactId} is gone at its node" }
+            return
+        }
+        mailboxRouteRepository
+            .deleteRetiring(routeId)
+            .onSuccess { logger.info { "Replaced mailbox of contact ${credential.contactId} is gone at its node; no longer read" } }
+    }
+
+    // A node that is down is expected (it may come back or be replaced), and so is waiting for a protecting circuit
+    // the user chose; only other failures are errors.
+    private fun logUnreadable(
+        credential: LocalMailboxCredential,
+        error: Throwable
+    ) {
+        when {
+            error.isWaitingForRoute() ->
+                logger.info { "Mailbox of contact ${credential.contactId} not read: waiting for a circuit through enough hops" }
+
+            error is MailboxNodeUnavailableException ->
+                logger.info { "Mailbox node of contact ${credential.contactId} is unavailable; retried on the next sync" }
+
+            else -> logger.warn(error) { "Mailbox of contact ${credential.contactId} could not be read" }
+        }
+    }
+
+    private fun logStillPending(
+        envelope: FederatedEnvelope,
+        error: Throwable
+    ) = logStillPending(envelope.envelopeId, error)
+
+    private fun logStillPending(
+        envelopeId: String,
+        error: Throwable
+    ) {
+        when {
+            error.isWaitingForRoute() ->
+                logger.info { "Envelope $envelopeId stays pending: waiting for a circuit through enough hops" }
+
+            error is MailboxNodeUnavailableException ->
+                logger.info { "Mailbox node is unavailable; envelope $envelopeId stays pending" }
+
+            else -> logger.warn(error) { "Mailbox envelope $envelopeId stays pending for the next sync" }
+        }
+    }
 }

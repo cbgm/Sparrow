@@ -27,8 +27,6 @@ class ImportIdentityViewModel(
     private val contactId = savedStateHandle.get<String>(AppRoute.ImportContact::contactId.name)
     private val scannedIdentity = savedStateHandle.get<String>(AppRoute.ImportContact::scannedIdentity.name)
 
-    // Every new import screen starts with an empty text field. QR scans are
-    // handled explicitly via the scannedIdentity route argument.
     private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
@@ -43,10 +41,10 @@ class ImportIdentityViewModel(
         when (event) {
             is ImportIdentityUiEvent.EncodedIdentityChanged -> updateEncodedIdentity(event.value)
             ImportIdentityUiEvent.ImportClicked -> importIdentity(IdentityImportTrust.UNVERIFIED)
+            is ImportIdentityUiEvent.QrCodeScanned -> prepareScannedIdentity(event.rawValue.trim())
             ImportIdentityUiEvent.ScannedIdentityConfirmed -> confirmScannedIdentity()
             ImportIdentityUiEvent.ScannedIdentityDismissed -> dismissScannedIdentity()
             ImportIdentityUiEvent.BackClicked -> navigator.popBackStack()
-            ImportIdentityUiEvent.ScanQrCodeClicked -> scanQrCode()
         }
     }
 
@@ -67,14 +65,11 @@ class ImportIdentityViewModel(
                     )
                 }
             }.onFailure {
-                // Ignore unrelated/stale QR payloads on entry. A QR value must never
-                // prefill the manual field or show a validation error before the user
-                // explicitly pastes an identity or confirms a valid scan.
                 _uiState.update {
                     it.copy(
                         scannedIdentityPreview = null,
-                        encodedIdentity = "",
-                        errorMessage = null
+                        scanAttempt = it.scanAttempt + 1,
+                        errorMessage = "Invalid Sparrow identity QR code"
                     )
                 }
             }
@@ -88,16 +83,12 @@ class ImportIdentityViewModel(
     }
 
     private fun dismissScannedIdentity() {
-        _uiState.update { it.copy(scannedIdentityPreview = null) }
-    }
-
-    private fun scanQrCode() {
-        navigator.navigateTo(
-            AppRoute.ScanIdentity(
-                contactId = contactId,
-                previousScannedIdentity = scannedIdentity
+        _uiState.update {
+            it.copy(
+                scannedIdentityPreview = null,
+                scanAttempt = it.scanAttempt + 1
             )
-        )
+        }
     }
 
     private fun updateEncodedIdentity(value: String) {
@@ -144,6 +135,7 @@ class ImportIdentityViewModel(
                         isImporting = false,
                         importedContactName = contact.displayName ?: "Unnamed contact",
                         importedIdentityTrust = identityImportTrust.toUi(),
+                        scanAttempt = it.scanAttempt + 1,
                         errorMessage = null
                     )
                 }
@@ -154,6 +146,7 @@ class ImportIdentityViewModel(
                         isImporting = false,
                         importedContactName = null,
                         importedIdentityTrust = null,
+                        scanAttempt = it.scanAttempt + 1,
                         errorMessage = error.message ?: "Identity import failed"
                     )
                 }

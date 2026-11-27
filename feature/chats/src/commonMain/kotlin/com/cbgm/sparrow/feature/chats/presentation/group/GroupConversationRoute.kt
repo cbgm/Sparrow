@@ -39,6 +39,7 @@ fun GroupConversationRoute(
     val membershipState by viewModel.membershipState.collectAsStateWithLifecycle()
     val historyState by viewModel.historyState.collectAsStateWithLifecycle()
     val pin by viewModel.pinState.collectAsStateWithLifecycle()
+    val waitingForRoute by viewModel.waitingForRoute.collectAsStateWithLifecycle()
 
     val newestMessageId = conversationState.messages.firstOrNull()?.id
     LaunchedEffect(conversationId, newestMessageId) {
@@ -60,6 +61,7 @@ fun GroupConversationRoute(
             membershipState = membershipState,
             historyState = historyState,
             pin = pin,
+            waitingForRoute = waitingForRoute,
             onUiEvent = viewModel::onUiEvent,
             onForwardMessageRequested = { messageId -> forwardingMessageId = messageId },
             targetMessageId = targetMessageId,

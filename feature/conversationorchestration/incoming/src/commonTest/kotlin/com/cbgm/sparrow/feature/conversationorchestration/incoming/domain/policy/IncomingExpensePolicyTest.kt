@@ -27,7 +27,7 @@ class IncomingExpensePolicyTest {
         assertFailsWith<IllegalArgumentException> {
             IncomingExpensePolicy.requireAuthorized(taxi, emptyList(), senderMemberId = "mia", senderIsAdmin = false)
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<IllegalStateException> {
             IncomingExpensePolicy.requireAuthorized(edited, emptyList(), senderMemberId = "bob", senderIsAdmin = false)
         }
     }

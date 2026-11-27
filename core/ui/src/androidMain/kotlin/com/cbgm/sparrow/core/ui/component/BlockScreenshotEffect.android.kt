@@ -24,16 +24,16 @@ actual fun BlockScreenshotEffect(enabled: Boolean) {
         if (window == null || !enabled) {
             onDispose {}
         } else {
-            BlockScreenshotFlagManager.acquire(window)
+            SecureWindowFlags.acquire(window)
 
             onDispose {
-                BlockScreenshotFlagManager.release(window)
+                SecureWindowFlags.release(window)
             }
         }
     }
 }
 
-private object BlockScreenshotFlagManager {
+private object SecureWindowFlags {
     private data class SecureWindowState(
         var referenceCount: Int,
         val wasAlreadySecure: Boolean

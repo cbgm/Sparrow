@@ -17,7 +17,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipProjector
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
     title: String,

@@ -1,19 +1,18 @@
 package com.cbgm.sparrow.feature.conversationorchestration.message.domain.workflow.group
 
-import com.cbgm.sparrow.core.base.message.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.core.util.time.SystemClock
-import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
-import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.GroupRecipientState
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.StoredMessage
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.model.UndeliveredGroupRecipients
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.GroupMessageRepository
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EncryptGroupMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.EnqueueGroupPacketsUseCase
-import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindGroupMessagesToFlushUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.FindUndeliveredGroupRecipientsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.message.domain.usecase.SaveQueuedGroupRecipientsUseCase
 import com.cbgm.sparrow.protocol.packet.GroupChatMessagePacket
 import kotlinx.coroutines.CancellationException
 import kotlin.reflect.KClass
@@ -28,9 +27,10 @@ import kotlin.reflect.KClass
  */
 class FlushQueuedGroupMessagesWorkflow internal constructor(
     private val messageRepository: GroupMessageRepository,
-    private val attachmentRepository: MessageAttachmentOperationsRepository,
-    private val protocolOutbox: ProtocolOutbox,
+    private val findGroupMessagesToFlush: FindGroupMessagesToFlushUseCase,
+    private val findUndeliveredGroupRecipients: FindUndeliveredGroupRecipientsUseCase,
     private val encryptGroupMessage: EncryptGroupMessageUseCase,
+    private val saveQueuedGroupRecipients: SaveQueuedGroupRecipientsUseCase,
     private val enqueueGroupPackets: EnqueueGroupPacketsUseCase
 ) : WorkflowStateMachine<
         MessageCommand.FlushQueuedGroupMessages,
@@ -50,10 +50,31 @@ class FlushQueuedGroupMessagesWorkflow internal constructor(
         when (step) {
             is Step.FindRecipients ->
                 Outcome.RecipientsFound(messageRepository.findParticipantIds(step.command.groupId).getOrThrow())
-            is Step.FindQueuedMessages -> findQueuedMessages(step)
-            is Step.FindMissingRecipients -> attempt(step.queue) { findMissingRecipients(step.queue) }
-            is Step.EncryptMessage -> attempt(step.queue) { encryptMessage(step) }
-            is Step.SaveRecipientStates -> attempt(step.queue) { saveRecipientStates(step) }
+            is Step.FindQueuedMessages ->
+                Outcome.QueuedMessagesFound(
+                    FlushQueue(findGroupMessagesToFlush(step.command.groupId).getOrThrow(), step.recipients)
+                )
+            is Step.FindMissingRecipients ->
+                attempt(step.queue) {
+                    Outcome.MissingRecipientsFound(
+                        queue = step.queue,
+                        missing = findUndeliveredGroupRecipients(step.queue.current.id, step.queue.recipients)
+                            .getOrThrow()
+                    )
+                }
+            is Step.EncryptMessage ->
+                attempt(step.queue) {
+                    Outcome.MessageEncrypted(
+                        queue = step.queue,
+                        packets = encryptGroupMessage(step.queue.current, step.missing.contactIds).getOrThrow(),
+                        isFirstDelivery = step.missing.isFirstDelivery
+                    )
+                }
+            is Step.SaveRecipientStates ->
+                attempt(step.queue) {
+                    saveQueuedGroupRecipients.forQueuedMessage(step.queue.current, step.packets).getOrThrow()
+                    Outcome.RecipientStatesSaved(step.queue, step.packets)
+                }
             is Step.EnqueuePackets ->
                 attempt(step.queue) {
                     enqueueGroupPackets(step.packets, recordFailedRecipients = true).getOrThrow()
@@ -63,32 +84,11 @@ class FlushQueuedGroupMessagesWorkflow internal constructor(
 
     override fun transition(step: Step, outcome: Outcome): Transition<Step> =
         when (outcome) {
-            is Outcome.RecipientsFound ->
-                if (outcome.recipients.isEmpty()) {
-                    Transition.Complete()
-                } else {
-                    Transition.Next(Step.FindQueuedMessages(outcome.recipients, step.command))
-                }
+            is Outcome.RecipientsFound -> startFlush(outcome.recipients, step.command)
             is Outcome.QueuedMessagesFound -> nextMessage(outcome.queue, step.command)
-            is Outcome.MissingRecipientsFound ->
-                if (outcome.missingRecipients.isEmpty()) {
-                    nextMessage(outcome.queue.next(), step.command)
-                } else {
-                    Transition.Next(
-                        Step.EncryptMessage(
-                            outcome.queue,
-                            outcome.missingRecipients,
-                            outcome.isFirstDelivery,
-                            step.command
-                        )
-                    )
-                }
+            is Outcome.MissingRecipientsFound -> encryptForMissing(outcome.queue, outcome.missing, step.command)
             is Outcome.MessageEncrypted ->
-                if (outcome.isFirstDelivery) {
-                    Transition.Next(Step.SaveRecipientStates(outcome.queue, outcome.packets, step.command))
-                } else {
-                    Transition.Next(Step.EnqueuePackets(outcome.queue, outcome.packets, step.command))
-                }
+                saveStatesOrEnqueue(outcome.queue, outcome.packets, outcome.isFirstDelivery, step.command)
             is Outcome.RecipientStatesSaved ->
                 Transition.Next(Step.EnqueuePackets(outcome.queue, outcome.packets, step.command))
             is Outcome.MessageFlushed -> nextMessage(outcome.queue, step.command)
@@ -104,65 +104,36 @@ class FlushQueuedGroupMessagesWorkflow internal constructor(
             )
         }
 
-    private suspend fun findQueuedMessages(step: Step.FindQueuedMessages): Outcome {
-        val waiting = messageRepository.findQueued(step.command.groupId).getOrThrow()
-        val interrupted = messageRepository.findAwaitingOutbox(step.command.groupId).getOrThrow()
-        val messages =
-            (waiting + interrupted)
-                .distinctBy { it.id }
-                .sortedWith(compareBy<StoredMessage> { it.createdAtEpochMilliseconds }.thenBy { it.id })
-        return Outcome.QueuedMessagesFound(FlushQueue(messages, step.recipients))
-    }
+    /** Without an active recipient nothing can be flushed. */
+    private fun startFlush(
+        recipients: List<String>,
+        command: MessageCommand.FlushQueuedGroupMessages
+    ): Transition<Step> =
+        if (recipients.isEmpty()) Transition.Complete() else Transition.Next(Step.FindQueuedMessages(recipients, command))
 
-    /** Reconciles ONLY the original recipients; never backfills someone who joined in a later epoch. */
-    private suspend fun findMissingRecipients(queue: FlushQueue): Outcome {
-        val previousStates = messageRepository.findRecipientStates(queue.current.id).getOrThrow()
-        if (previousStates.isEmpty()) {
-            return Outcome.MissingRecipientsFound(queue, queue.recipients, isFirstDelivery = true)
+    /** A message that every recipient already has in the outbox needs nothing. */
+    private fun encryptForMissing(
+        queue: FlushQueue,
+        missing: UndeliveredGroupRecipients,
+        command: MessageCommand.FlushQueuedGroupMessages
+    ): Transition<Step> =
+        if (missing.contactIds.isEmpty()) {
+            nextMessage(queue.next(), command)
+        } else {
+            Transition.Next(Step.EncryptMessage(queue, missing, command))
         }
-        val missing =
-            previousStates.filter { state ->
-                val packetId = state.packetId
-                state.contactId in queue.recipients &&
-                    state.deliveryStatus == MessageDeliveryStatus.QUEUED &&
-                    packetId != null &&
-                    protocolOutbox.findByPacketId(packetId).getOrThrow() == null
-            }.map { it.contactId }
-        return Outcome.MissingRecipientsFound(queue, missing, isFirstDelivery = false)
-    }
 
-    private suspend fun encryptMessage(step: Step.EncryptMessage): Outcome {
-        val message = step.queue.current
-        val packets =
-            encryptGroupMessage(
-                message = message,
-                text = messageRepository.findText(message.id).getOrThrow().orEmpty(),
-                parts = attachmentRepository.prepareOutgoing(message.id).getOrThrow(),
-                recipients = step.missingRecipients
-            ).getOrThrow()
-        return Outcome.MessageEncrypted(step.queue, packets, step.isFirstDelivery)
-    }
-
-    /** The recipient mapping is persisted before enqueueing; restart reconciliation covers a crash in between. */
-    private suspend fun saveRecipientStates(step: Step.SaveRecipientStates): Outcome {
-        val message = step.queue.current
-        val now = SystemClock.nowEpochMilliseconds()
-        messageRepository.saveOutgoing(
-            message = message,
-            text = messageRepository.findText(message.id).getOrThrow().orEmpty(),
-            recipientStates = step.packets.map { (contactId, packet) ->
-                GroupRecipientState(
-                    messageId = message.id,
-                    contactId = contactId,
-                    packetId = packet.packetId,
-                    deliveryStatus = MessageDeliveryStatus.QUEUED,
-                    lastError = null,
-                    updatedAtEpochMilliseconds = now
-                )
-            }
-        ).getOrThrow()
-        return Outcome.RecipientStatesSaved(step.queue, step.packets)
-    }
+    private fun saveStatesOrEnqueue(
+        queue: FlushQueue,
+        packets: Map<String, GroupChatMessagePacket>,
+        isFirstDelivery: Boolean,
+        command: MessageCommand.FlushQueuedGroupMessages
+    ): Transition<Step> =
+        if (isFirstDelivery) {
+            Transition.Next(Step.SaveRecipientStates(queue, packets, command))
+        } else {
+            Transition.Next(Step.EnqueuePackets(queue, packets, command))
+        }
 
     private suspend fun attempt(queue: FlushQueue, action: suspend () -> Outcome): Outcome =
         try {
@@ -204,8 +175,7 @@ class FlushQueuedGroupMessagesWorkflow internal constructor(
 
         data class EncryptMessage(
             val queue: FlushQueue,
-            val missingRecipients: List<String>,
-            val isFirstDelivery: Boolean,
+            val missing: UndeliveredGroupRecipients,
             override val command: MessageCommand.FlushQueuedGroupMessages
         ) : Step
 
@@ -233,8 +203,7 @@ class FlushQueuedGroupMessagesWorkflow internal constructor(
 
         data class MissingRecipientsFound(
             val queue: FlushQueue,
-            val missingRecipients: List<String>,
-            val isFirstDelivery: Boolean
+            val missing: UndeliveredGroupRecipients
         ) : Outcome
 
         data class MessageEncrypted(

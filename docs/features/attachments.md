@@ -36,7 +36,7 @@ Image and video are distinct concrete types. The older combined `ImageVideo` cha
 - `AttachmentContentDataSource` — resolves part content for presentation;
 - `MessageAttachmentOperationsRepository` — persistence/update/delete operations used by chats;
 - `MessageAttachmentRepository` — loading/storage/transcript-facing contract;
-- `MessageAttachmentCacheCoordinator` — incoming cache coordination;
+- `MessageAttachmentCacheQueue` — incoming cache coordination;
 - storage/management screens and `AttachmentViewModel`.
 
 `:feature:media` owns gallery/camera/file selection, `MediaItemUi`, viewers and export. `:feature:voice` owns recording/playback/transcription while reusing the shared `Voice` part and attachment persistence.

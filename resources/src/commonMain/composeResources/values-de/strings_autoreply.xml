@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_auto_reply">Automatische Antwort</string>
+    <string name="feature_auto_reply_off">Aus</string>
+    <string name="feature_auto_reply_active">Automatische Antwort aktiv · %1$s</string>
+    <string name="feature_auto_reply_add">Automatische Antwort hinzufügen</string>
+    <string name="feature_auto_reply_edit">Automatische Antwort bearbeiten</string>
+    <string name="feature_auto_reply_name">Name</string>
+    <string name="feature_auto_reply_message">Nachricht</string>
+    <string name="feature_auto_reply_save">Speichern</string>
+</resources>

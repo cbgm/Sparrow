@@ -62,6 +62,10 @@ class StartupViewModel(
                         mutableUiState.value = StartupUiState.IdentityRequired
                         StartupTrace.event("startup UI state published=IdentityRequired")
                     }
+                    StartupResult.IdentityUnusable -> {
+                        mutableUiState.value = StartupUiState.IdentityUnusable
+                        StartupTrace.event("startup UI state published=IdentityUnusable")
+                    }
                     is StartupResult.Error -> {
                         mutableUiState.value =
                             StartupUiState.Error(

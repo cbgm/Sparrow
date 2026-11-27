@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.composer.component
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,9 +14,9 @@ import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,10 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
@@ -86,34 +86,34 @@ fun MessageControl(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .imePadding()
         ) {
-            Text(
-                text =
-                    when (state.indicatorType) {
-                        IndicatorUiType.VOICE ->
-                            stringResource(
-                                Res.string.feature_chats_chat_recording_voice,
-                                state.contactName
-                            )
+            val indicatorText =
+                when (state.indicatorType) {
+                    IndicatorUiType.VOICE ->
+                        stringResource(
+                            Res.string.feature_chats_chat_recording_voice,
+                            state.contactName
+                        )
 
-                        IndicatorUiType.TYPING ->
-                            stringResource(
-                                Res.string.feature_chats_chat_typing,
-                                state.contactName
-                            )
+                    IndicatorUiType.TYPING ->
+                        stringResource(
+                            Res.string.feature_chats_chat_typing,
+                            state.contactName
+                        )
 
-                        IndicatorUiType.NONE -> ""
-                    },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = basePaddingHorizontal + MaterialTheme.spacing.base.times(6),
-                        vertical = MaterialTheme.spacing.micro
-                    ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                    IndicatorUiType.NONE -> null
+                }
+            val lastIndicatorText = remember { mutableStateOf("") }
+            SideEffect { indicatorText?.let { lastIndicatorText.value = it } }
+            AnimatedVisibility(visible = indicatorText != null) {
+                TypingIndicator(
+                    text = indicatorText ?: lastIndicatorText.value,
+                    modifier = Modifier.padding(
+                        start = MaterialTheme.spacing.messageList.horizontalPadding,
+                        end = MaterialTheme.spacing.messageList.horizontalPadding,
+                        bottom = MaterialTheme.spacing.base
+                    )
+                )
+            }
             state.composerPreview?.let { preview ->
                 ComposerPreview(
                     previewUi = preview,
@@ -127,8 +127,8 @@ fun MessageControl(
                     onClick = actions.onSelectionClick,
                     onRemove = actions.onMediaRemove,
                     modifier = Modifier.padding(
-                        start = basePaddingHorizontal,
-                        end = basePaddingHorizontal,
+                        start = MaterialTheme.spacing.messageList.horizontalPadding,
+                        end = MaterialTheme.spacing.messageList.horizontalPadding,
                         bottom = MaterialTheme.spacing.micro
                     )
                 )
@@ -244,26 +244,21 @@ private fun VoiceComposerContent(
             modifier = Modifier.weight(1f)
         )
 
-        SendButton(
-            buttonWidth = Dimens.MessageInput.sendButtonWidth,
-            buttonHeight = Dimens.MessageInput.buttonHeight,
-            isRound = false,
-            onSendClick = {
+        ComposerButton(
+            onClick = {
                 actions.onVoiceSendClick()
                 onDismiss()
             },
             enabled =
                 state.isInputEnabled &&
                     voiceState.phase == VoiceComposerPhase.RECORDED,
-            isEditing = false,
+            icon = SparrowIcons.Send,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.align(Alignment.CenterVertically)
         )
 
-        RoundedInputButton(
-            modifier =
-                Modifier
-                    .padding(start = MaterialTheme.spacing.base)
-                    .align(Alignment.CenterVertically),
+        ComposerButton(
+            modifier = Modifier.align(Alignment.CenterVertically),
             onClick = {
                 voiceViewModel.cancel()
                 onDismiss()

@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.workflow.identity
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
 import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.command.IncomingCommand
+import com.cbgm.sparrow.feature.conversationorchestration.incoming.domain.usecase.StageIncomingIdentityReviewUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.ApplyPeerProfilePictureUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.command.MessageCommand
 import com.cbgm.sparrow.feature.identity.domain.error.IdentityAcceptanceRequiresReviewException
@@ -14,7 +14,6 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeBindingUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeAcceptedUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
@@ -35,8 +34,7 @@ class ReceiveContactInviteAcceptedWorkflow internal constructor(
     private val invitationHandshakeProtocol: ContactInvitationHandshakeProtocol,
     private val getIdentityExchangeBinding: GetIdentityExchangeBindingUseCase,
     private val receiveIdentityExchangeAccepted: ReceiveIdentityExchangeAcceptedUseCase,
-    private val blocklistRepository: ContactBlocklistRepository,
-    private val stagePendingRemoteIdentityChange: StagePendingRemoteIdentityChangeUseCase,
+    private val stageIncomingIdentityReview: StageIncomingIdentityReviewUseCase,
     private val handleInvitationResponse: HandleInvitationResponseUseCase,
     private val applyPeerProfilePicture: ApplyPeerProfilePictureUseCase
 ) : WorkflowStateMachine<
@@ -59,15 +57,7 @@ class ReceiveContactInviteAcceptedWorkflow internal constructor(
                 invitationHandshakeProtocol.verifyAccepted(packet, context.receivedAtEpochMilliseconds).getOrThrow()
                 Outcome.AcceptanceVerified
             }
-            is Step.FindExchange ->
-                if (getIdentityExchangeBinding(packet.invitationId).getOrThrow() == null) {
-                    logger.warn {
-                        "Ignoring unmatched invitation acceptance: invitationId=${packet.invitationId}, contactId=${context.contactId}"
-                    }
-                    Outcome.Done
-                } else {
-                    Outcome.ExchangeFound
-                }
+            is Step.FindExchange -> findExchange(step.command)
             is Step.ReceiveAcceptance ->
                 try {
                     receiveIdentityExchangeAccepted(
@@ -89,20 +79,18 @@ class ReceiveContactInviteAcceptedWorkflow internal constructor(
                     Outcome.ReviewRequired(review.peerId, review.invitationExpiresAtEpochMilliseconds)
                 }
             is Step.StageIdentityReview -> {
-                if (!blocklistRepository.isBlocked(step.peerId).getOrThrow()) {
-                    check(step.peerId == context.contactId) { "Identity review does not match the invitation contact" }
-                    stagePendingRemoteIdentityChange(
-                        PendingRemoteIdentityChange(
-                            peerId = step.peerId,
-                            sourcePeerId = context.contactId,
-                            invitationId = packet.invitationId,
-                            proposedEncryptionPublicKey = packet.responderEncryptionPublicKey.copyOf(),
-                            proposedSigningPublicKey = packet.responderSigningPublicKey.copyOf(),
-                            receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                            expiresAtEpochMilliseconds = step.invitationExpiresAtEpochMilliseconds
-                        )
-                    ).getOrThrow()
-                }
+                stageIncomingIdentityReview.forContact(
+                    PendingRemoteIdentityChange(
+                        peerId = step.peerId,
+                        sourcePeerId = context.contactId,
+                        invitationId = packet.invitationId,
+                        proposedEncryptionPublicKey = packet.responderEncryptionPublicKey.copyOf(),
+                        proposedSigningPublicKey = packet.responderSigningPublicKey.copyOf(),
+                        receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                        expiresAtEpochMilliseconds = step.invitationExpiresAtEpochMilliseconds
+                    ),
+                    requireSenderPeer = true
+                ).getOrThrow()
                 Outcome.Done
             }
             is Step.ActivateConversation -> {
@@ -139,6 +127,18 @@ class ReceiveContactInviteAcceptedWorkflow internal constructor(
             Outcome.InvitationAccepted -> Transition.Next(Step.ApplyProfilePicture(step.command))
             Outcome.Done -> Transition.Complete()
         }
+
+    private suspend fun findExchange(command: IncomingCommand.ReceiveContactInviteAccepted): Outcome {
+        val invitationId = command.packet.invitationId
+        return if (getIdentityExchangeBinding(invitationId).getOrThrow() == null) {
+            logger.warn {
+                "Ignoring unmatched invitation acceptance: invitationId=$invitationId, contactId=${command.context.contactId}"
+            }
+            Outcome.Done
+        } else {
+            Outcome.ExchangeFound
+        }
+    }
 
     sealed interface Step : WorkflowStep {
         val command: IncomingCommand.ReceiveContactInviteAccepted

@@ -1,9 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.verification
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.ui.navigation.AppRoute
-import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toScannedIdentityPreview
@@ -23,25 +20,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class GroupMemberQrVerificationViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val groupId: String,
+    private val contactId: String,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val orchestrator: ConversationOrchestrator
 ) : BaseViewModel() {
-    private val groupId =
-        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::groupId.name)
-    private val contactId =
-        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::contactId.name)
     private val _uiState = MutableStateFlow(GroupMemberQrVerificationUiState())
     val uiState: StateFlow<GroupMemberQrVerificationUiState> = _uiState.asStateFlow()
 
     fun onUiEvent(event: GroupMemberQrVerificationUiEvent) {
         when (event) {
             is GroupMemberQrVerificationUiEvent.QrCodeScanned -> scan(event.encodedIdentity)
-            GroupMemberQrVerificationUiEvent.BackClicked -> navigator.popBackStack()
             GroupMemberQrVerificationUiEvent.ConfirmClicked -> confirm()
             GroupMemberQrVerificationUiEvent.PreviewDismissed -> dismissPreview()
             GroupMemberQrVerificationUiEvent.RetryClicked -> retry()
+            GroupMemberQrVerificationUiEvent.ErrorDismissed -> dismissError()
         }
     }
 
@@ -94,7 +88,6 @@ class GroupMemberQrVerificationViewModel(
                         isVerified = true
                     )
                 }
-                navigator.popBackStack()
             }.onFailure { failure ->
                 SparrowLog.error("GroupMemberQrVerificationViewModel", "Group member verification failed", failure)
                 _uiState.update { state ->
@@ -114,6 +107,10 @@ class GroupMemberQrVerificationViewModel(
                 scanAttempt = state.scanAttempt + 1
             )
         }
+    }
+
+    private fun dismissError() {
+        _uiState.update { state -> state.copy(error = null) }
     }
 
     private fun retry() {

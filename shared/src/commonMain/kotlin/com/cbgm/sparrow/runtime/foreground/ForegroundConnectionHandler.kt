@@ -2,8 +2,9 @@ package com.cbgm.sparrow.runtime.foreground
 
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.core.util.logging.StartupTrace
-import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
-import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.feature.transport.domain.model.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.domain.rule.isRecoverableConnectivityFailure
+import com.cbgm.sparrow.feature.transport.domain.rule.isWaitingForRoute
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -35,7 +36,10 @@ class ForegroundConnectionHandler(
     ) {
         logger.info { "Transport connected: ${state.routingId}" }
 
-        val initialProvisioning = foreground.mailboxCoordinator.provisionRoutes()
+        // Sending does not depend on the mailboxes below, and their requests may wait for a circuit.
+        foreground.outboxRunner.start()
+
+        val initialProvisioning = foreground.mailboxPort.provisionRoutes()
         val initialFailure = initialProvisioning.exceptionOrNull()
         if (initialFailure is CancellationException) throw initialFailure
 
@@ -44,29 +48,17 @@ class ForegroundConnectionHandler(
                 logger.info {
                     "Mailbox routes ready; newly provisioned=$provisioned"
                 }
-            }.onFailure { error ->
-                SparrowLog.diagnostic(
-                    "ForegroundConnectionHandler",
-                    "Mailbox route provisioning deferred",
-                    error
-                )
-            }
+            }.onFailure { error -> logDeferred("Mailbox route provisioning deferred", error) }
 
-        foreground.mailboxCoordinator.synchronizePending()
+        foreground.mailboxPort.synchronizePending()
             .onSuccess { processed ->
                 logger.info {
                     "Mailbox synchronization completed; processed=$processed"
                 }
             }.onFailure { error ->
                 if (error is CancellationException) throw error
-                SparrowLog.diagnostic(
-                    "ForegroundConnectionHandler",
-                    "Mailbox synchronization deferred",
-                    error
-                )
+                logDeferred("Mailbox synchronization deferred", error)
             }
-
-        foreground.outboxRunner.start()
 
         if (
             initialFailure != null &&
@@ -84,7 +76,7 @@ class ForegroundConnectionHandler(
         while (true) {
             delay(backoffMilliseconds.milliseconds)
 
-            val result = foreground.mailboxCoordinator.provisionRoutes()
+            val result = foreground.mailboxPort.provisionRoutes()
             val failure = result.exceptionOrNull()
             if (failure is CancellationException) throw failure
 
@@ -102,11 +94,7 @@ class ForegroundConnectionHandler(
                 attempt % 10 == 0 ||
                 !failure.isTransientMailboxNetworkFailure()
             ) {
-                SparrowLog.diagnostic(
-                    "ForegroundConnectionHandler",
-                    "Mailbox route provisioning retry $attempt deferred",
-                    failure
-                )
+                logDeferred("Mailbox route provisioning retry $attempt deferred", failure)
             }
 
             if (!failure.isTransientMailboxNetworkFailure()) return
@@ -127,8 +115,20 @@ class ForegroundConnectionHandler(
             is TransportConnectionState.Failed -> "Failed"
         }
 
+    // Waiting for a circuit through enough hops is the user's choice, not an error.
+    private fun logDeferred(
+        message: String,
+        error: Throwable
+    ) {
+        if (error.isWaitingForRoute()) {
+            logger.info { "$message: waiting for a circuit through enough hops" }
+        } else {
+            SparrowLog.diagnostic("ForegroundConnectionHandler", message, error)
+        }
+    }
+
     private fun Throwable.isTransientMailboxNetworkFailure(): Boolean {
-        if (isRecoverableConnectivityFailure()) return true
+        if (isRecoverableConnectivityFailure() || isWaitingForRoute()) return true
 
         var current: Throwable? = this
         repeat(8) {

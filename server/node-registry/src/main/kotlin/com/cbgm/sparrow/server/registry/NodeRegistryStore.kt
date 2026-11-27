@@ -29,8 +29,7 @@ class NodeRegistryStore(
 ) : NodeRegistryStorage {
     private data class RegisteredNode(
         val descriptor: SparrowNodeDescriptor,
-        val lastHeartbeatAtEpochMilliseconds: Long,
-        val activeConnections: Int?
+        val lastHeartbeatAtEpochMilliseconds: Long
     )
 
     private val nodes = ConcurrentHashMap<String, RegisteredNode>()
@@ -52,12 +51,10 @@ class NodeRegistryStore(
             )
 
         return if (rejection == null) {
-            val previousLoad = nodes[descriptor.nodeId]?.activeConnections
             nodes[descriptor.nodeId] =
                 RegisteredNode(
-                    descriptor = descriptor.copy(activeConnections = null),
-                    lastHeartbeatAtEpochMilliseconds = currentTime,
-                    activeConnections = previousLoad
+                    descriptor = descriptor,
+                    lastHeartbeatAtEpochMilliseconds = currentTime
                 )
             RegistrationResult.Accepted
         } else {
@@ -82,11 +79,7 @@ class NodeRegistryStore(
                 RegistrationResult.Rejected("INVALID_SIGNATURE")
 
             else -> {
-                nodes[heartbeat.nodeId] =
-                    registered.copy(
-                        lastHeartbeatAtEpochMilliseconds = now(),
-                        activeConnections = heartbeat.activeConnections ?: registered.activeConnections
-                    )
+                nodes[heartbeat.nodeId] = registered.copy(lastHeartbeatAtEpochMilliseconds = now())
                 RegistrationResult.Accepted
             }
         }
@@ -100,11 +93,7 @@ class NodeRegistryStore(
             .filter {
                 currentTime - it.lastHeartbeatAtEpochMilliseconds <=
                     heartbeatGraceMilliseconds
-            }.map { registered ->
-                registered.descriptor.copy(
-                    activeConnections = registered.activeConnections
-                )
-            }
+            }.map(RegisteredNode::descriptor)
             .sortedBy(SparrowNodeDescriptor::nodeId)
             .toList()
     }

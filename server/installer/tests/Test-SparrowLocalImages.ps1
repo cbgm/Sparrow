@@ -27,7 +27,7 @@ try {
     if ($null -ne (Read-SparrowLocalImages $testRoot)) { throw 'A normal bundle should not select local images.' }
     $archive = Join-Path $testRoot 'local-images.tar'
     [IO.File]::WriteAllText($archive, 'test image archive')
-    $images = @('node-registry', 'presence-directory', 'mailbox', 'federation', 'gateway', 'push') | ForEach-Object {
+    $images = @('node-registry', 'presence-directory', 'mailbox', 'federation', 'gateway') | ForEach-Object {
         @{ service = $_; name = "local/sparrow-${_}:test"; id = $script:inspectedId }
     }
     $manifest = @{

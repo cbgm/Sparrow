@@ -69,7 +69,7 @@ Voting is immediate when an option is clicked. There is no separate Vote/Change 
 
 ## Closing
 
-Manual close is the only close that writes `closedAtEpochMilliseconds` and is synchronized. The creator or a current group admin can close a poll. `GroupMessageCommand.ClosePoll` runs `CloseGroupPollWorkflow`, which checks the close permission, applies `PollPolicy.close(...)` and sends `MessageOperation.PollClose`.
+Manual close is the only close that writes `closedAtEpochMilliseconds` and is synchronized. The creator or a current group admin can close a poll. `GroupMessageCommand.ClosePoll` runs `CloseGroupPollWorkflow`, which checks the close permission, applies `PollPolicy.close(...)` in memory (a poll that is closed already fails here), sends `MessageOperation.PollClose` and saves the closed poll only after the close is queued. A failed send leaves the poll open, so closing it again sends the close to every member.
 
 An elapsed `expiresAtEpochMilliseconds` simply makes `PollPolicy.isClosedAt(...)` true locally and prevents further voting; it does not create a network operation.
 

@@ -28,29 +28,18 @@ fun Application.installLinkPreviewRoutes(
 
     routing {
         post("/v1/link-preview") {
-            val request =
-                try {
-                    call.receive<LinkPreviewRequest>()
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (_: Throwable) {
-                    null
-                }
+            val request = orNullOnFailure { call.receive<LinkPreviewRequest>() }
             val url = request?.url?.takeIf(String::isNotBlank)
             if (url == null) {
                 call.respond(HttpStatusCode.BadRequest)
                 return@post
             }
 
-            val preview =
-                try {
-                    service.getPreview(url)
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (_: Throwable) {
-                    call.respond(HttpStatusCode.UnprocessableEntity)
-                    return@post
-                }
+            val preview = orNullOnFailure { service.getPreview(url) }
+            if (preview == null) {
+                call.respond(HttpStatusCode.UnprocessableEntity)
+                return@post
+            }
 
             call.response.header(HttpHeaders.CacheControl, "private, max-age=300")
             call.respond(preview)
@@ -58,18 +47,7 @@ fun Application.installLinkPreviewRoutes(
 
         get("/v1/link-preview/images/{imageId}") {
             val imageId = call.parameters["imageId"]?.takeIf(String::isNotBlank)
-            val image =
-                if (imageId == null) {
-                    null
-                } else {
-                    try {
-                        service.getImage(imageId)
-                    } catch (cancellation: CancellationException) {
-                        throw cancellation
-                    } catch (_: Throwable) {
-                        null
-                    }
-                }
+            val image = imageId?.let { id -> orNullOnFailure { service.getImage(id) } }
             if (image == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@get
@@ -83,3 +61,13 @@ fun Application.installLinkPreviewRoutes(
         }
     }
 }
+
+/** [block]'s result, or null when it failed; a cancellation still cancels. */
+private suspend inline fun <T> orNullOnFailure(block: () -> T?): T? =
+    try {
+        block()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Throwable) {
+        null
+    }

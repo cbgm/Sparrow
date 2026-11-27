@@ -22,11 +22,12 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipJoinRequest
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipSourceIds
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
 import com.cbgm.sparrow.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.GroupInvitePacket
@@ -40,8 +41,8 @@ internal class MembershipRepositoryImpl(
     private val membershipStore: GroupMembershipStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
-    private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
+    private val localPublicIdentitySource: LocalPublicIdentitySource,
+    private val localSigningKeyPairSource: LocalSigningKeyPairSource,
     private val protocolOutbox: ProtocolOutbox,
     private val groupOwnerWelcome: GroupOwnerWelcomeDataSource,
     private val securityStore: GroupSecurityStoreDataSource
@@ -65,10 +66,10 @@ internal class MembershipRepositoryImpl(
             val now = SystemClock.nowEpochMilliseconds()
             resendPendingHandshake(groupId, peerId, now)?.let { return@runCatching it }
 
-            val sourceId = IdGenerator.generate(prefix = "group-membership")
-            val expiresAt = now + HANDSHAKE_VALIDITY_MILLISECONDS
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val sourceId = IdGenerator.generate(prefix = MembershipSourceIds.PREFIX)
+            val expiresAt = now + MembershipHandshake.VALIDITY_MILLISECONDS
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createInvite(
@@ -173,8 +174,8 @@ internal class MembershipRepositoryImpl(
                 "Membership cannot be accepted from status ${membership.status}"
             }
 
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val localIdentity = localPublicIdentitySource.getLocalPublicIdentity().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createJoinRequest(
@@ -209,7 +210,7 @@ internal class MembershipRepositoryImpl(
                 "Membership cannot be declined from status ${membership.status}"
             }
 
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
             val packet =
                 membershipPacketProtocol
                     .createDecline(
@@ -394,7 +395,7 @@ internal class MembershipRepositoryImpl(
         val queuedPacket = protocolOutbox.findByPacketId(packetId).getOrThrow()
         val expiresAt =
             queuedPacket?.expiresAtEpochMilliseconds
-                ?: (membership.createdAtEpochMilliseconds + HANDSHAKE_VALIDITY_MILLISECONDS)
+                ?: (membership.createdAtEpochMilliseconds + MembershipHandshake.VALIDITY_MILLISECONDS)
         if (queuedPacket == null || now > expiresAt) {
             membershipStore.deleteBySourceInvitationId(membership.sourceInvitationId)
             return null
@@ -487,7 +488,7 @@ internal class MembershipRepositoryImpl(
         packet: GroupInvitePacket,
         receivedAtEpochMilliseconds: Long
     ) {
-        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val signingKeyPair = localSigningKeyPairSource.getSigningKeyPair().getOrThrow()
         val acknowledgement =
             membershipPacketProtocol
                 .createInviteReceived(
@@ -581,6 +582,5 @@ internal class MembershipRepositoryImpl(
 
     private companion object {
         const val INVITE_PACKET_ID_PREFIX = "group-invite-"
-        const val HANDSHAKE_VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 }

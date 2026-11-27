@@ -10,6 +10,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.comm
 import com.cbgm.sparrow.feature.conversationorchestration.message.domain.repository.DirectConversationRepository
 import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipSourceIds
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
 import kotlin.reflect.KClass
 
@@ -38,25 +39,8 @@ class StartRecoveryInvitationWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val approval = step.command.approval
         return when (step) {
-            is Step.FindGroupMembership -> {
-                val handshake = getMembershipHandshake(approval.approvalId).getOrThrow()
-                when {
-                    handshake != null -> {
-                        check(handshake.peerId == approval.peerId) {
-                            "Approved group identity does not match its inviting contact"
-                        }
-                        if (handshake.isOwnerSide) {
-                            Outcome.OwnerSideGroupJoin(
-                                handshake.sourceId
-                            )
-                        } else {
-                            Outcome.MemberSideGroupOffer
-                        }
-                    }
-                    approval.approvalId.startsWith(GROUP_MEMBERSHIP_SOURCE_PREFIX) -> Outcome.WithdrawnGroupMembership
-                    else -> Outcome.DirectApproval
-                }
-            }
+            is Step.FindGroupMembership ->
+                groupMembershipFound(getMembershipHandshake(approval.approvalId).getOrThrow(), approval)
             is Step.ResumeGroupJoin -> {
                 engine.run(
                     MembershipCommand.ResumeApprovedGroupJoin(step.sourceId, approval.peerId)
@@ -65,11 +49,7 @@ class StartRecoveryInvitationWorkflow internal constructor(
             }
             is Step.EnsureConversation -> {
                 conversationRepository.getOrCreate(approval.peerId).getOrThrow()
-                if (approval.hasValidOriginalInvitation()) {
-                    Outcome.OriginalInvitationValid
-                } else {
-                    Outcome.OriginalInvitationUnusable
-                }
+                originalInvitationChecked(approval.hasOriginalInvitation(SystemClock.nowEpochMilliseconds()))
             }
             is Step.AcceptOriginalInvitation -> {
                 engine.run(LifecycleCommand.AcceptApprovedIdentityChange(approval)).getOrThrow()
@@ -93,19 +73,24 @@ class StartRecoveryInvitationWorkflow internal constructor(
             Outcome.Done -> Transition.Complete()
         }
 
-    /** The owner created this membership; the approval belongs to a JOIN signed with replaced member keys. */
-    private val MembershipHandshake.isOwnerSide: Boolean
-        get() = ownerSigningPublicKey == null && ownerEncryptionPublicKey == null
+    /**
+     * On the owner side the approval belongs to a JOIN signed with replaced member keys. A group approval whose
+     * membership is gone is recognised by its ID and never becomes a direct invitation.
+     */
+    private fun groupMembershipFound(handshake: MembershipHandshake?, approval: ApprovedIdentityReconnection): Outcome =
+        when {
+            handshake != null -> handshakeFound(handshake, approval)
+            MembershipSourceIds.isGroupMembership(approval.approvalId) -> Outcome.WithdrawnGroupMembership
+            else -> Outcome.DirectApproval
+        }
 
-    /** False for a changed-key acceptance, an expired original invitation, or an old approval without challenge. */
-    private fun ApprovedIdentityReconnection.hasValidOriginalInvitation(): Boolean {
-        val expiresAt = originalInviteExpiresAtEpochMilliseconds ?: return false
-        return originalInviteChallenge != null &&
-            originalInviteCreatedAtEpochMilliseconds != null &&
-            originalInviterEncryptionPublicKey != null &&
-            originalInviterSigningPublicKey != null &&
-            expiresAt > SystemClock.nowEpochMilliseconds()
+    private fun handshakeFound(handshake: MembershipHandshake, approval: ApprovedIdentityReconnection): Outcome {
+        check(handshake.peerId == approval.peerId) { "Approved group identity does not match its inviting contact" }
+        return if (handshake.isOwnerSide) Outcome.OwnerSideGroupJoin(handshake.sourceId) else Outcome.MemberSideGroupOffer
     }
+
+    private fun originalInvitationChecked(valid: Boolean): Outcome =
+        if (valid) Outcome.OriginalInvitationValid else Outcome.OriginalInvitationUnusable
 
     sealed interface Step : WorkflowStep {
         val command: LifecycleCommand.StartRecoveryInvitation
@@ -148,10 +133,5 @@ class StartRecoveryInvitationWorkflow internal constructor(
         data object OriginalInvitationUnusable : Outcome
 
         data object Done : Outcome
-    }
-
-    private companion object {
-        /** Membership mints group source IDs with this prefix. */
-        const val GROUP_MEMBERSHIP_SOURCE_PREFIX = "group-membership-"
     }
 }

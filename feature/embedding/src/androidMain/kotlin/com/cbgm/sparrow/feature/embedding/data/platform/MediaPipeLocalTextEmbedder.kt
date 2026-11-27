@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 class MediaPipeLocalTextEmbedder(
     private val context: Context,
-    private val modelManager: AndroidLocalEmbeddingModelManager
+    private val modelDataSource: AndroidEmbeddingModelLocalDataSource
 ) : LocalTextEmbedder {
     private val inferenceLock = Any()
     private var textEmbedder: TextEmbedder? = null
@@ -45,7 +45,7 @@ class MediaPipeLocalTextEmbedder(
 
         val descriptor =
             ParcelFileDescriptor.open(
-                modelManager.requireVerifiedModelFile(),
+                modelDataSource.requireVerifiedModelFile(),
                 ParcelFileDescriptor.MODE_READ_ONLY
             )
 

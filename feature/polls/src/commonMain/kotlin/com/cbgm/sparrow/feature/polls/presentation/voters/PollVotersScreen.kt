@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,16 +17,18 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.divider
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
@@ -99,7 +98,6 @@ private fun PollVotersHeader(
         Text(
             text = uiState.question,
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
@@ -119,23 +117,15 @@ private fun PollVoterGroup(
     section: PollVoterSectionUi,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.small),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
-            Text(
+            SparrowSectionLabel(
                 text = section.optionText,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
+                modifier = Modifier.weight(1f)
             )
             Text(
                 text = pluralStringResource(
@@ -144,28 +134,22 @@ private fun PollVoterGroup(
                     section.voteCount
                 ),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.outline
             )
             Text(
                 text = stringResource(Res.string.feature_polls_percentage, section.percentage),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.outline
             )
         }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.background,
-            tonalElevation = Dimens.Base.zero,
-            shadowElevation = Dimens.Base.zero
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             if (section.voters.isEmpty()) {
                 Text(
                     text = stringResource(Res.string.feature_polls_no_votes),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.base),
+                        .padding(vertical = MaterialTheme.spacing.base),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -200,8 +184,7 @@ private fun PollVoterRow(
             headlineContent = {
                 Text(
                     text = voter.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             },
@@ -210,8 +193,8 @@ private fun PollVoterRow(
 
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(start = MaterialTheme.spacing.times(8)),
-                color = MaterialTheme.colorScheme.outlineVariant
+                thickness = Dimens.Base.dividerThickness,
+                color = MaterialTheme.colorScheme.divider
             )
         }
     }
@@ -222,24 +205,18 @@ private fun PollVotersTopBar(
     containerColor: Color,
     onClose: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
+    SparrowTopBar(
         windowInsets = WindowInsets(MaterialTheme.spacing.zero),
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_polls_voters_title),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_polls_voters_title)
             )
         },
         navigationIcon = {
             IconButton(onClick = onClose) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = SparrowIcons.Close,
                     contentDescription = stringResource(Res.string.base_close)
                 )
             }

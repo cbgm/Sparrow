@@ -12,7 +12,7 @@ sealed interface ContactsUiState {
     ) : ContactsUiState
 
     data class Content(
-        val groups: List<ContactGroupEntity>,
+        val groups: List<ContactGroupUi>,
         override val searchQuery: String = ""
     ) : ContactsUiState
 

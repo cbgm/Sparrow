@@ -22,4 +22,17 @@ data class StoredMessage(
     /** A message a group member wrote; system messages (member added, left, ...) are local projections. */
     val isGroupUserMessage: Boolean
         get() = transportMode == MessageTransportMode.GROUP_END_TO_END_ENCRYPTED
+
+    /** A direct message still waiting for authorization never reached the contact; changes to it stay local. */
+    val wasNeverSent: Boolean
+        get() = deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION
+
+    /**
+     * Whether an incoming packet carrying this message's ID is the same message delivered again rather than a
+     * conflicting one. Direct receivers additionally require the stored message to be incoming.
+     */
+    fun isRedeliveryOf(conversationId: String, packetId: String, senderContactId: String): Boolean =
+        this.conversationId == conversationId &&
+            this.packetId == packetId &&
+            this.senderContactId == senderContactId
 }

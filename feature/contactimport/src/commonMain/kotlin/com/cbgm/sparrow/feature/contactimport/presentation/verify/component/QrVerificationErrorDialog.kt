@@ -2,8 +2,6 @@ package com.cbgm.sparrow.feature.contactimport.presentation.verify.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -13,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -53,20 +50,18 @@ fun QrVerificationErrorDialog(
             )
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
-                SparrowApprovalButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onRetry,
-                    text = stringResource(Res.string.base_retry)
-                )
-                SparrowSecondaryButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onCancel,
-                    text = stringResource(Res.string.base_cancel)
-                )
-            }
+            SparrowDialogAction(
+                onClick = onRetry,
+                text = stringResource(Res.string.base_retry)
+            )
         },
-        dismissButton = {}
+        dismissButton = {
+            SparrowDialogAction(
+                onClick = onCancel,
+                text = stringResource(Res.string.base_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     )
 }
 

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.domain.usecase
 
 import com.cbgm.sparrow.feature.messaging.domain.model.MessagingIndicator
-import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
+import com.cbgm.sparrow.feature.messaging.domain.port.MessagingIndicatorPort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -12,22 +12,26 @@ import kotlin.test.assertTrue
 
 class MessagingIndicatorUseCasesTest {
     @Test
-    fun genericIndicatorPreservesSenderTypeAndRoutingDestination() = runTest {
-        val gateway = FakeGateway()
-        val incoming = ObserveMessagingIndicatorsUseCase(gateway)().first()
-        assertEquals("peer-routing", incoming.senderRoutingId)
+    fun genericIndicatorPreservesSenderTypeAndDestination() = runTest {
+        val indicatorPort = FakeIndicatorPort()
+        val incoming = ObserveMessagingIndicatorsUseCase(indicatorPort)().first()
+        assertEquals("peer", incoming.senderContactId)
         assertEquals("TYPING", incoming.indicatorType)
-        val sent = SendMessagingIndicatorUseCase(gateway)("recipient-routing", "RECORDING")
+        val sent = SendMessagingIndicatorUseCase(indicatorPort)("recipient", "group-1", "RECORDING")
         assertTrue(sent.isSuccess)
-        assertEquals("recipient-routing" to "RECORDING", gateway.lastSent)
+        assertEquals(Triple("recipient", "group-1", "RECORDING"), indicatorPort.lastSent)
     }
 
-    private class FakeGateway : MessagingIndicatorGateway {
-        override val incoming: Flow<MessagingIndicator> = flowOf(MessagingIndicator("peer-routing", "TYPING"))
-        var lastSent: Pair<String, String>? = null
+    private class FakeIndicatorPort : MessagingIndicatorPort {
+        override val incoming: Flow<MessagingIndicator> = flowOf(MessagingIndicator("peer", null, "TYPING"))
+        var lastSent: Triple<String, String?, String>? = null
 
-        override suspend fun send(recipientRoutingId: String, indicatorType: String): Result<Unit> {
-            lastSent = recipientRoutingId to indicatorType
+        override suspend fun send(
+            recipientContactId: String,
+            groupId: String?,
+            indicatorType: String
+        ): Result<Unit> {
+            lastSent = Triple(recipientContactId, groupId, indicatorType)
             return Result.success(Unit)
         }
     }

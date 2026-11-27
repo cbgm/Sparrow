@@ -27,7 +27,6 @@ Message playback:
 
 - `VoiceMessageContent`
 - `VoiceMessageViewModel`
-- `VoiceMessageTarget`
 - `ObserveVoicePlaybackUseCase`
 - `ToggleVoiceMessagePlaybackUseCase`
 - `StartVoiceMessageScrubUseCase`
@@ -70,7 +69,7 @@ The resulting recording is passed through the existing encrypted attachment/mess
 
 ## Playback isolation
 
-`VoiceRepository.observePlaybackState(attachmentId)` is keyed per attachment. `VoiceMessageViewModel` owns the UI state for one `VoiceMessageTarget`; this prevents unrelated voice bubbles from sharing the wrong duration/playback state.
+`VoiceRepository.observePlaybackState(attachmentId)` is keyed per attachment. `VoiceMessageViewModel` owns the UI state for one voice part (`VoiceUi`); this prevents unrelated voice bubbles from sharing the wrong duration/playback state.
 
 ## Transcription flow
 

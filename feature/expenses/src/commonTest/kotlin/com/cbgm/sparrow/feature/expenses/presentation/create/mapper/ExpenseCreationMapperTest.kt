@@ -37,6 +37,15 @@ class ExpenseCreationMapperTest {
     }
 
     @Test
+    fun changingTheAmountRestartsCustomSharesFromTheEqualSplit() {
+        val draft = ExpenseDraftUi("Taxi", "20", "bob", setOf("bob", "chris"))
+            .withSplitMode(ExpenseSplitModeUi.CUSTOM)
+            .withAmount("117.00")
+
+        assertEquals(mapOf("bob" to 5850L, "chris" to 5850L), draft.allocationsMinor())
+    }
+
+    @Test
     fun editingPrefillsDraftAndKeepsExpenseIdentity() {
         val board = ExpenseBoard("board", "EUR", 1L)
         val taxi = Expense(

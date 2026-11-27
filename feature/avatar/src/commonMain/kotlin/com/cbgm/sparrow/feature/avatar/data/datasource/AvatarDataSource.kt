@@ -2,21 +2,21 @@ package com.cbgm.sparrow.feature.avatar.data.datasource
 
 import com.cbgm.sparrow.feature.avatar.domain.model.Avatar
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
-import com.cbgm.sparrow.protocol.avatar.GroupAvatarProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
-import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.protocol.avatar.GroupAvatarSource
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSource
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 internal class AvatarDataSource(
-    private val localProfilePictureProvider: LocalProfilePictureProvider,
-    private val remoteProfilePictureProvider: RemoteProfilePictureProvider,
-    private val groupAvatarProvider: GroupAvatarProvider
+    private val localProfilePictureSource: LocalProfilePictureSource,
+    private val remoteProfilePictureSource: RemoteProfilePictureSource,
+    private val groupAvatarSource: GroupAvatarSource
 ) {
     fun observe(target: AvatarTarget): Flow<Avatar> =
         when (target) {
             AvatarTarget.LocalUser ->
-                localProfilePictureProvider.observe().map { snapshot ->
+                localProfilePictureSource.observe().map { snapshot ->
                     Avatar(
                         target = target,
                         changedAtEpochMilliseconds = snapshot.changedAtEpochMilliseconds,
@@ -25,7 +25,7 @@ internal class AvatarDataSource(
                 }
 
             is AvatarTarget.User ->
-                remoteProfilePictureProvider.observe(target.id).map { snapshot ->
+                remoteProfilePictureSource.observe(target.id).map { snapshot ->
                     Avatar(
                         target = target,
                         changedAtEpochMilliseconds = snapshot.changedAtEpochMilliseconds,
@@ -34,7 +34,7 @@ internal class AvatarDataSource(
                 }
 
             is AvatarTarget.Group ->
-                groupAvatarProvider.observeSnapshot(target.id).map { snapshot ->
+                groupAvatarSource.observeSnapshot(target.id).map { snapshot ->
                     Avatar(
                         target = target,
                         changedAtEpochMilliseconds = snapshot.changedAtEpochMilliseconds,

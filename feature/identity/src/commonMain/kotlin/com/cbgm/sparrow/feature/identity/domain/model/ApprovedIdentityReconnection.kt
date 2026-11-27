@@ -16,6 +16,46 @@ data class ApprovedIdentityReconnection(
     fun sameApproval(other: ApprovedIdentityReconnection?): Boolean =
         other?.peerId == peerId && other.approvalId == approvalId
 
+    /**
+     * The original signed invitation, accepted again after the user approved the new keys. Fails when a part is
+     * missing, a key has the wrong size or the invitation expired.
+     */
+    fun requireOriginalOffer(nowEpochMilliseconds: Long): IdentityExchangeOffer {
+        val challenge = requireNotNull(originalInviteChallenge)
+        val createdAt = requireNotNull(originalInviteCreatedAtEpochMilliseconds)
+        val expiresAt = requireNotNull(originalInviteExpiresAtEpochMilliseconds)
+        val encryption = requireNotNull(originalInviterEncryptionPublicKey)
+        val signing = requireNotNull(originalInviterSigningPublicKey)
+        check(challenge.size == KEY_SIZE && encryption.size == KEY_SIZE && signing.size == KEY_SIZE)
+        check(createdAt < expiresAt && expiresAt > nowEpochMilliseconds) {
+            "Approved original identity invitation expired"
+        }
+        return IdentityExchangeOffer(
+            exchangeId = approvalId,
+            createdAtEpochMilliseconds = createdAt,
+            expiresAtEpochMilliseconds = expiresAt,
+            inviteChallenge = challenge,
+            encryptionPublicKey = encryption,
+            signingPublicKey = signing,
+            autoSharesIdentity = originalInviteAutoSharesIdentity
+        )
+    }
+
+    /**
+     * True when [requireOriginalOffer] will succeed: recovery then accepts the original invitation instead of
+     * asking for a new authorization. False for a changed-key acceptance, an expired or damaged original
+     * invitation or an old approval without challenge.
+     */
+    fun hasOriginalInvitation(nowEpochMilliseconds: Long): Boolean {
+        val createdAt = originalInviteCreatedAtEpochMilliseconds ?: return false
+        val expiresAt = originalInviteExpiresAtEpochMilliseconds ?: return false
+        return originalInviteChallenge?.size == KEY_SIZE &&
+            originalInviterEncryptionPublicKey?.size == KEY_SIZE &&
+            originalInviterSigningPublicKey?.size == KEY_SIZE &&
+            createdAt < expiresAt &&
+            expiresAt > nowEpochMilliseconds
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -46,5 +86,9 @@ data class ApprovedIdentityReconnection(
         result = 31 * result + (originalInviterEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (originalInviterSigningPublicKey?.contentHashCode() ?: 0)
         return result
+    }
+
+    private companion object {
+        const val KEY_SIZE = 32
     }
 }

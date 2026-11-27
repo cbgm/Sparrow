@@ -12,9 +12,7 @@ This page describes the current server tree and the installer/runtime tooling.
 - `node-registry-database` (PostgreSQL)
 - `node-registry` (`:server:node-registry`)
 - `presence-redis`
-- `presence-directory` (`:server:presence-directory`; optional phone-token check with Firebase Admin)
-- `push-database` (PostgreSQL)
-- `push` (`:server:push`)
+- `presence-directory` (`:server:presence-directory`; phone attestations checked with the pinned Directory key)
 
 ### Community Node
 
@@ -22,7 +20,7 @@ This page describes the current server tree and the installer/runtime tooling.
 
 - `caddy`
 - `mailbox-database` + `mailbox` (`:server:mailbox`)
-- `federation-database` + `federation` (`:server:federation`)
+- `federation` (`:server:federation`, node registration)
 - `blob-storage-init`
 - `gateway` (`:server:gateway`)
 
@@ -40,7 +38,6 @@ flowchart LR
     CP[Control Plane Caddy]
     REG[node-registry]
     PRES[presence-directory]
-    PUSH[push]
     NODE[Community Node Caddy]
     GW[gateway]
     FED[federation]
@@ -50,56 +47,39 @@ flowchart LR
     APP --> CP
     CP --> REG
     CP --> PRES
-    CP --> PUSH
     APP <--> NODE
     NODE --> GW
     NODE --> FED
     NODE --> MB
-    GW <--> FED
-    FED --> MB
     GW --> BLOB
-    FED <--> REG
-    FED <--> PRES
+    FED --> REG
 ```
 
 ## Important server classes
 
 Gateway:
 
-- `GatewayWebSocketHandler`
-- `GatewaySessionHandler`
-- `ConnectionRegistry`
+- `OnionRelay`, `CircuitRelay`
 - `BlobStore`
 - `BlobCleanupAgent`
-- `BlobUploadPermitStore`, `GatewayBlobUploadTicketIssuer`
-- `HttpFederationClient`, `HttpPresenceClient`, `HttpNodePushClient`
 
 Federation:
 
-- `FederationRouter`
-- `FederationPeerRouter`
-- `OutboundEnvelopeQueue`
-- `OutboundEnvelopeRetryAgent`
 - `NodeRegistrationAgent`
-- `CachingNodeRegistryClient`
-- `HttpPresenceDirectoryClient`, `HttpLocalGatewayClient`, `HttpRemoteFederationClient`, `HttpMailboxClient`
 
 Mailbox:
 
 - `MailboxStore`
 - `PostgresMailboxStore`
-- `MailboxPushNotifier`
 - mailbox capability/create/revoke/fetch HTTP routes in `MailboxRoutes`
 
-Registry/presence/push:
+Registry/presence:
 
 - `NodeRegistryStore`
 - `RegistryDirectorySigner`, `DirectRegistryDirectorySigner`, `RotatingRegistryDirectorySigner`
 - `RegistryAuthorityCertificateStore`
-- `PhoneVerification`, `FirebasePhoneTokenVerifier`, `CachingPhoneTokenVerifier`
-- `PushCoordinator`
-- `FirebasePushSender`
-- PostgreSQL push stores
+- `PhoneVerification`, `PhoneAttestations`
+- `AliasClaimKeys`, `RedisPresenceStore` (alias bindings and invitation routes)
 
 Link preview:
 
@@ -148,7 +128,7 @@ Add `--local-images` to embed locally built server images. The installed manager
 
 ## Service image build
 
-Each executable Ktor service has an `application` main class and is built through the common `server/Dockerfile` using a `SERVICE` build argument. Compose files select service names such as `gateway`, `federation`, `mailbox`, `node-registry`, `presence-directory` and `push`.
+Each executable Ktor service has an `application` main class and is built through the common `server/Dockerfile` using a `SERVICE` build argument. Compose files select service names such as `gateway`, `federation`, `mailbox`, `node-registry` and `presence-directory`.
 
 ## Backups and upgrades
 
@@ -157,16 +137,16 @@ Normal updates are not a substitute for backups. Backend image updates may inclu
 Use the installer README files (`server/installer/README.md`, `README_RUNTIME.md`) as the operational source of truth for exact manager commands and safety guards.
 
 
-## Independent Control Plane Directory (operator-only)
+## Independent Control Plane Directory (separate operator deployment)
 
-`server/control-plane-directory` is intentionally **not** part of the public Sparrow server ZIP or the release server ZIPs. It is separate operator infrastructure whose job is to publish and authenticate the set of Control Planes.
+The source for this separate operator-managed service is maintained publicly in `server/control-plane-directory`. Its generated installer, runtime, and state are intentionally **not** part of the unified Sparrow server ZIP or its release assets. The service publishes and authenticates the set of Control Planes.
 
 Its implementation is Python rather than a Gradle server module. Important source files are:
 
 - `directory_service.py` — HTTP service and signed directory implementation;
-- `directory_admin_cli.py` — private administrator operations;
+- `directory_admin_cli.py` — operator administrator operations;
 - `Start-SparrowDirectory.cmd`, `.sh`, `.command` — open the Directory installer window (`directory_window.py`, engine `directory_installer.py`; `.sh` without a desktop runs the engine directly);
-- `Build-SparrowDirectoryInstaller.py` — private installer builder (`sparrow-directory-windows.zip`, `sparrow-directory-linux.zip`); with `--install <folder>` it creates a ready Directory folder that takes over the `private/` settings of the running Directory;
+- `Build-SparrowDirectoryInstaller.py` — separate operator installer builder (`sparrow-directory-windows.zip`, `sparrow-directory-linux.zip`); with `--install <folder>` it creates a ready Directory folder that takes over the `private/` settings of the running Directory;
 - `docker-compose.yml` and `Dockerfile` — standalone deployment.
 
 Started from the source tree, the window first creates such a Directory folder and opens there. The Directory either shares the HTTPS proxy (Caddy) of a Sparrow Server running on the same machine — it adds a marked Directory route to the server's Caddyfile, writes the Directory URL and key into the server's `sparrow.conf` files and registers its Control Plane — or, when no server runs, starts its own Caddy on ports 80/443. With an automatic `directory-<ip>.sslip.io` hostname, the server installer moves the route on its next Start after a public IP change, and the Directory's own Start updates its settings; the signing identity is kept.
@@ -203,4 +183,4 @@ sequenceDiagram
 
 The directory signing key and SQLite state live in the persistent `sparrow-central-directory-state` Docker volume and must not be regenerated on an ordinary restart/update. Clients preserve previously verified candidates during an outage. A compromised directory signing key requires a dedicated secure recovery procedure; merely editing the URL is not a safe recovery mechanism and such key-recovery automation is not currently implemented.
 
-`server/installer/build.py` deliberately excludes this directory service from `dist/sparrow-server.zip`. Never publish its private admin token, persistent state, installer, or operator credentials as public release assets.
+`server/installer/build.py` deliberately excludes this directory service from `dist/sparrow-server.zip`. Never publish its generated admin token, persistent state, or operator credentials as public release assets. The separate directory installer is built from its source folder, not from the unified server bundle.

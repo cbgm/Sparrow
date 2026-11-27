@@ -1,16 +1,19 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.util.result.safeSuspendCall
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class LocalIdentityProfileDataSource(
     private val dataStore: SparrowDataStore,
     private val phoneNumberNormalizer: PhoneNumberNormalizer
-) : LocalPhoneNumberProvider {
+) : LocalPhoneNumberSource {
     fun observePhoneNumber(): Flow<String?> = dataStore.observeString(LOCAL_PHONE_NUMBER)
 
     suspend fun loadPhoneName(): Pair<String, String>? {
@@ -38,14 +41,39 @@ class LocalIdentityProfileDataSource(
         }
     }
 
-    // The verification token lives in memory only; it is never stored.
+    // The verification token and the verifier's slot live in memory only; they are never stored.
     private var verificationToken: String? = null
     private var verificationTokenReceivedAt = 0L
+    private var verificationSlot: String? = null
+    private var verificationSlotExpiresAt = 0L
+    private val phoneVerificationLimitReached = MutableStateFlow(false)
 
     fun keepPhoneVerificationToken(token: String) {
         verificationToken = token
         verificationTokenReceivedAt = SystemClock.nowEpochMilliseconds()
+        phoneVerificationLimitReached.value = false
     }
+
+    /** Kept with the token: the attestation uses it up at the phone verifier. */
+    fun keepPhoneVerificationSlot(
+        slot: String,
+        expiresAtEpochMilliseconds: Long
+    ) {
+        verificationSlot = slot
+        verificationSlotExpiresAt = expiresAtEpochMilliseconds
+    }
+
+    override suspend fun getPhoneVerificationSlot(): Result<String?> =
+        safeSuspendCall {
+            if (SystemClock.nowEpochMilliseconds() >= verificationSlotExpiresAt) verificationSlot = null
+            verificationSlot
+        }
+
+    /** In memory only, like the token: a new verification or a restart starts over. */
+    fun observePhoneVerificationLimitReached(): StateFlow<Boolean> = phoneVerificationLimitReached.asStateFlow()
+
+    override suspend fun reportPhoneVerificationLimitReached(): Result<Unit> =
+        safeSuspendCall { phoneVerificationLimitReached.value = true }
 
     /** The token is only valid for a limited time; an expired one is dropped instead of sent. */
     override suspend fun getPhoneVerificationToken(): Result<String?> =
@@ -56,7 +84,11 @@ class LocalIdentityProfileDataSource(
         }
 
     override suspend fun clearPhoneVerificationToken(): Result<Unit> =
-        safeSuspendCall { verificationToken = null }
+        safeSuspendCall {
+            verificationToken = null
+            verificationSlot = null
+            phoneVerificationLimitReached.value = false
+        }
 
     override suspend fun getLocalPhoneNumber(): Result<String> =
         runCatching {

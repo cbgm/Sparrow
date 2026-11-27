@@ -51,12 +51,7 @@ class HandleIdentityResultWorkflow internal constructor(
     override fun firstStep(command: LifecycleCommand.HandleIdentityResult): Step =
         when (command.result.status) {
             IdentityResultStatus.INCOMING_EXCHANGE -> Step.ResolveDisplayName(command)
-            IdentityResultStatus.ESTABLISHED ->
-                if (command.result.direction == IdentityExchangeDirection.OUTGOING) {
-                    Step.MarkInvitationAccepted(command)
-                } else {
-                    Step.ActivateConversation(command)
-                }
+            IdentityResultStatus.ESTABLISHED -> establishedFirstStep(command)
             IdentityResultStatus.REMOTE_DECLINED -> Step.MarkInvitationDeclined(command)
             IdentityResultStatus.FAILED -> Step.MarkTransportFailed(command)
             IdentityResultStatus.EXCHANGE_INVALIDATED -> Step.InvalidateInvitation(command)
@@ -127,14 +122,28 @@ class HandleIdentityResultWorkflow internal constructor(
                 Transition.Next(Step.RecordIncomingInvitation(outcome.peerDisplayName, step.command))
             Outcome.InvitationAccepted -> Transition.Next(Step.ActivateConversation(step.command))
             Outcome.ConversationActivated -> Transition.Next(Step.LoadSetupMode(step.command))
-            is Outcome.SetupModeLoaded ->
-                if (outcome.mode == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
-                    Transition.Next(Step.SendVerificationReceipt(step.command))
-                } else {
-                    Transition.Complete()
-                }
+            is Outcome.SetupModeLoaded -> afterSetupModeLoaded(outcome.mode, step.command)
             Outcome.InvitationDeclined -> Transition.Next(Step.DiscardWaitingMessages(step.command))
             Outcome.Done -> Transition.Complete()
+        }
+
+    /** Only the inviter still has an outgoing invitation to mark accepted. */
+    private fun establishedFirstStep(command: LifecycleCommand.HandleIdentityResult): Step =
+        if (command.result.direction == IdentityExchangeDirection.OUTGOING) {
+            Step.MarkInvitationAccepted(command)
+        } else {
+            Step.ActivateConversation(command)
+        }
+
+    /** Only the automatic invitation setup sends the verification receipt on its own. */
+    private fun afterSetupModeLoaded(
+        mode: DirectIdentitySetupMode,
+        command: LifecycleCommand.HandleIdentityResult
+    ): Transition<Step> =
+        if (mode == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
+            Transition.Next(Step.SendVerificationReceipt(command))
+        } else {
+            Transition.Complete()
         }
 
     sealed interface Step : WorkflowStep {

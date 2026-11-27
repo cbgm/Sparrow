@@ -12,8 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,16 +19,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
@@ -86,25 +85,20 @@ private fun TopBar(
     onBack: () -> Unit
 ) {
     Column {
-        CenterAlignedTopAppBar(
+        SparrowTopBar(
             windowInsets = WindowInsets(MaterialTheme.spacing.zero),
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor
-                ),
+            containerColor = containerColor,
             title = {
                 Text(
-                    text = stringResource(Res.string.feature_chats_forward_to),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    text = stringResource(Res.string.feature_chats_forward_to)
                 )
             },
             actions = {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null
+                        imageVector = SparrowIcons.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.TopBar.iconSize)
                     )
                 }
             }
@@ -216,7 +210,6 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
                 Text(
                     text = stringResource(Res.string.feature_chats_forward_no_targets),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }

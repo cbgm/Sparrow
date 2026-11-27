@@ -7,28 +7,37 @@ import kotlinx.coroutines.flow.first
 
 data class MailboxContactStateDto(
     val contactId: String,
-    val isProvisioningEligible: Boolean
+    val hasMutualIdentity: Boolean,
+    val hasRoutingId: Boolean,
+    val hasDirectConversation: Boolean,
+    val sharesActiveGroup: Boolean
 )
 
 class MailboxContactDataSource(
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao
 ) {
-    suspend fun findContactStates(): List<MailboxContactStateDto> =
-        contactDao
+    suspend fun findContactStates(): List<MailboxContactStateDto> {
+        val directContactIds = contactDao.findDirectConversationContactIds().toSet()
+        val groupContactIds = contactDao.findGroupParticipantContactIds().toSet()
+        return contactDao
             .observeAll()
             .first()
             .map { contact ->
                 val contactId = contact.contact.id
-                val hasMutualIdentity =
-                    contact.publicIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name
-                val hasRoutingId =
-                    !contactRoutingIdDao.findRoutingIdByContactId(contactId).isNullOrBlank()
                 MailboxContactStateDto(
                     contactId = contactId,
-                    isProvisioningEligible = hasMutualIdentity && hasRoutingId
+                    hasMutualIdentity = contact.publicIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name,
+                    hasRoutingId = !contactRoutingIdDao.findRoutingIdByContactId(contactId).isNullOrBlank(),
+                    hasDirectConversation = contactId in directContactIds,
+                    sharesActiveGroup = contactId in groupContactIds
                 )
             }
+    }
+
+    /** The contact's signing key from the handshake, mutual or not. */
+    suspend fun findSigningPublicKey(contactId: String): ByteArray? =
+        contactDao.findPublicIdentityByContactId(contactId)?.signingPublicKey?.copyOf()?.takeIf { it.isNotEmpty() }
 
     suspend fun findMutualSigningPublicKey(contactId: String): ByteArray? {
         val identity = contactDao.findPublicIdentityByContactId(contactId) ?: return null

@@ -1,74 +1,75 @@
-# Push notifications and offline delivery
+# Receiving messages and offline delivery
 
-Push is used as a **wake-up mechanism**, not as the canonical plaintext message transport.
+Sparrow uses no push service (no FCM, no Firebase Cloud Messaging). The app keeps its own connection
+through its circuit and waits at its mailboxes; nothing outside the user's device and the nodes it chose
+learns when a message arrives.
 
-## Components
+## Connection modes
 
-Client/common notification orchestration:
+The user chooses how messages reach the device while Sparrow is closed (onboarding page *Receiving
+messages*, later under the network settings). The choice is stored as `ConnectionMode` in the app's
+settings (`transport.connection_mode`).
 
-- `RegisterPushTokenUseCase`
-- `SynchronizePendingMessagesUseCase`
-- `ConversationNotificationCoordinator`
-- `AppVisibilityState`
+| Mode | Android | Effect |
+| --- | --- | --- |
+| `ALWAYS_CONNECTED` | `ConnectionService` (foreground service, `specialUse`) | Messages arrive at once; a permanent notification shows that Sparrow is connected. Needs Sparrow set to "Not optimized" in the battery list. |
+| `WHILE_OPEN` | none | Messages arrive while Sparrow is open; closed, they wait in the mailboxes until the next start. |
+| `CHECK_PERIODICALLY` | `ConnectionCheckWorker` (every 15 minutes, connects for 45 s) | Offered in the settings only. Messages arrive with a delay. |
 
-Android implementation:
+`ConnectionModeApplier` starts or stops the service and the worker when the mode changes, and
+`ConnectionBootReceiver` applies it again after a reboot. iOS cannot keep a connection while the app is
+closed (`keepsConnectionWhileClosed()` is false there); the onboarding page shows a note instead of the
+choice.
 
-- `SparrowFirebaseMessagingService`
-- `PushTokenRegistrationWorker`
-- `PendingMessageSyncWorker`
-- `AndroidNotificationRuntime`
-- `SparrowNotificationManager`
+Choosing `ALWAYS_CONNECTED` (preselected in onboarding, where swiping on past the page counts as choosing it) opens Android's battery optimization list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`), where
+the user sets Sparrow to "Not optimized"; the onboarding page says so. Sparrow does not ask for the exemption
+directly (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`): Google Play allows that only for apps that technically cannot use
+its push service, and Sparrow does without it by choice. For a Play release, the `specialUse` foreground service
+needs a declaration under App content in the Play Console (description, impact of an interruption, demo video); the
+texts and the video script are in [play-console-declaration.md](play-console-declaration.md).
 
-Transport gateways:
+Some makers stop apps in the background on their own (Xiaomi, Huawei, Honor, Oppo, Realme, OnePlus, Vivo, Samsung,
+Asus). On those phones, `BackgroundRestrictionHelp` (core:ui) shows one line on what to set and a button that opens the
+maker's own setting, or Sparrow's app settings when that screen cannot be opened; `PhoneMaker` holds the makers and
+their screens. On an emulator, a debug build can pretend to be one of these makers:
 
-- `HttpPushTokenRegistrationGateway`
-- `HttpPendingEnvelopeGateway`
-- mailbox gateway in `:feature:transport`
-
-Server:
-
-- `PushCoordinator`
-- `FirebasePushSender`
-- `PostgresPushDeviceStore`
-- `PostgresPendingEnvelopeStore`
-- `PostgresWakeUpStore`
-- `MailboxPushNotifier`
-
-## Normal offline flow
-
-```mermaid
-sequenceDiagram
-    participant S as Sender
-    participant F as Federation
-    participant M as Recipient mailbox
-    participant P as Push service
-    participant FCM as FCM
-    participant R as Android recipient
-
-    S->>F: opaque encrypted envelope
-    F->>M: store envelope
-    M->>P: wake-up identifier
-    P->>FCM: FCM data notification
-    FCM-->>R: wake
-    R->>M: fetch pending envelope
-    R->>R: decrypt/process locally
-    R->>M: acknowledge
+```
+adb devices
+adb -s emulator-5554 shell "run-as com.cbgm.sparrow sh -c 'echo xiaomi > files/debug_phone_maker'"
+adb -s emulator-5554 shell "run-as com.cbgm.sparrow rm files/debug_phone_maker"
 ```
 
-Legacy/compatibility pending-envelope behavior can exist for clients that do not yet have a usable mailbox route, but the preferred model is recipient-selected mailbox delivery.
+`adb devices` lists the running emulators; `-s` picks one (needed when several run). The double quotes keep the `>` on
+the device in both cmd and PowerShell. The second line sets the maker (`xiaomi`, `huawei`, `honor`, `oppo`, `vivo`, `samsung`, `asus`), the second goes back.
+The emulator has none of the makers' screens, so the button opens Sparrow's app settings there.
 
-## Firebase credentials
+## Servers on the local network
 
-The Control Plane push service needs Firebase Admin credentials for real FCM delivery. Without them, local server health may still run depending on configuration, but real Android background wake-ups will not work.
+Apps targeting Android 17 need the runtime permission `ACCESS_LOCAL_NETWORK` to reach local network addresses;
+without it, connections to them time out. `LocalNetworkAccess` in the app shell asks for it once per app start while
+the Control Plane directory, a Control Plane or a node from the node directory has a local address
+(`ObserveLocalNetworkNeededUseCase`, `LocalNetworkAddresses`: private and link-local IPs, `.local` names and
+sslip.io/nip.io names carrying a private IPv4). A refusal shows a short note that local servers cannot be reached.
+Public servers are not affected.
 
-Operators select the service-account JSON in the server installer (**Push notifications and phone verification**, or `--firebase-file` on the command line); `server/control-plane/docker-compose.firebase.yml` mounts it read-only into `push`. The same file is mounted into `presence-directory`, which uses it to check the optional phone verification token sent at sign-up (see [Control Plane](server/control-plane.md)). The account therefore needs Firebase Cloud Messaging and Firebase Authentication access to the app's Firebase project (`FIREBASE_TARGET_PROJECT_ID`, default `sparrow-a9048`).
+While the process runs without a screen (service or worker), `HeadlessStartPort` starts only what receiving
+needs, and `ConnectionKeepAlivePort` holds the connection open.
 
-Do not commit `firebase-admin.json` or other production credentials.
+## Offline delivery
 
-### Android Firebase app after the Sparrow rebrand
+A sender puts the encrypted envelope into the recipient's mailbox through its own circuit (see
+[Transport](features/transport.md)). The recipient's app waits at its mailboxes through its circuit
+(`POST /v1/mailboxes/wait`) and fetches what arrived; mailbox envelopes enter the same incoming pipeline as
+every other envelope; nothing else delivers messages. Nothing wakes the device from outside: a closed app in `WHILE_OPEN` mode fetches
+the envelopes on its next start.
 
-The Android application ID is now `com.cbgm.sparrow`. Register that Android app in the existing Firebase project and replace `androidApp/google-services.json` with the configuration downloaded for **that exact package name** before validating real FCM delivery. The server-side Firebase Admin service account can stay in the same Firebase project.
+## Phone verification
+
+Firebase is used only for the phone sign-in at sign-up. The app has no `google-services.json`; its
+Firebase project comes from `local.properties` (see [Local development](development/local-development.md)).
+The Control Plane Directory verifies the number (see [Control Plane](server/control-plane.md)).
 
 ## Force stop caveat
 
-Android's explicit **Force stop** prevents normal background scheduling/FCM behavior until the user launches the app again. Test “background delivery” by leaving the app/background process normally, not by relying on Force stop as a supported delivery state.
+Android's **Force stop** stops the service and the periodic check until the user opens the app again.
+Test receiving in the background by leaving the app normally, not with Force stop.

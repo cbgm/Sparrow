@@ -11,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogAction
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -51,17 +50,16 @@ fun CameraPermissionDialog(
             )
         },
         confirmButton = {
-            SparrowApprovalButton(
-                fillMaxWidth = false,
+            SparrowDialogAction(
                 onClick = onGrantPermission,
                 text = stringResource(Res.string.feature_contactimport_grant_camera_permission)
             )
         },
         dismissButton = {
-            SparrowSecondaryButton(
-                fillMaxWidth = false,
+            SparrowDialogAction(
                 onClick = onBack,
-                text = stringResource(Res.string.base_back)
+                text = stringResource(Res.string.base_back),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

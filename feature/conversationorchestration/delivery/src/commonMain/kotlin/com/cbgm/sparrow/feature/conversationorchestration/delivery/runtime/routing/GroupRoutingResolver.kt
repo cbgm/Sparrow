@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.delivery.runtime.rout
 import com.cbgm.sparrow.feature.conversationorchestration.delivery.domain.repository.MessageConversationRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupTransportRoutingMember
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupTransportRoutingMembersUseCase
-import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
+import com.cbgm.sparrow.feature.transport.domain.rule.RoutingIdGenerator
 
 class GroupRoutingResolver(
     private val messageConversationRepository: MessageConversationRepository,

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.domain.model
 
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

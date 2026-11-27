@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_contactimport_camera_permission_required">Camera permission is required to scan a QR code.</string>
+    <string name="feature_contactimport_encryption_key">Encryption key</string>
+    <string name="feature_contactimport_grant_camera_permission">Grant camera permission</string>
+    <string name="feature_contactimport_import_identity">Verify or import identity</string>
+    <string name="feature_contactimport_imported_name">Imported: %1$s</string>
+    <string name="feature_contactimport_imported_verified_name">%1$s was imported and verified from the in-person QR.</string>
+    <string name="feature_contactimport_imported_unverified_name">%1$s was imported as unverified. Open the chat to complete the secure invitation.</string>
+    <string name="feature_contactimport_import_unverified_identity">Import unverified identity</string>
+    <string name="feature_contactimport_normal_invitation_description">Normally, add the person from your device contacts and open the chat. Sparrow then exchanges identities through an invitation automatically.</string>
+    <string name="feature_contactimport_in_person_qr_title">Verify in person</string>
+    <string name="feature_contactimport_in_person_qr_description">Scan the QR code while it is visible directly on the other person's device. The scanned keys will be marked verified.</string>
+    <string name="feature_contactimport_paste_identity_title">Paste identity text</string>
+    <string name="feature_contactimport_qr_trust_warning">Only continue when this QR code is displayed directly on the expected person's device.</string>
+    <string name="feature_contactimport_invalid_identity_qr">The scanned QR code is not a valid Sparrow identity.</string>
+    <string name="feature_contactimport_trust_and_verify">Trust and verify</string>
+    <string name="feature_contactimport_trust_and_import">Trust and import</string>
+    <string name="feature_contactimport_verifying_identity_qr">Verifying identity QR</string>
+    <string name="feature_contactimport_qr_verification_failed">Identity QR verification failed</string>
+    <string name="feature_contactimport_or_paste_manually">OR USE THE UNVERIFIED FALLBACK</string>
+    <string name="feature_contactimport_paste_shared_identity_description">Pasted or remotely shared identity text pins the public keys, but it does not prove who owns them.</string>
+    <string name="feature_contactimport_scan_identity">Scan identity QR</string>
+    <string name="feature_contactimport_scan_identity_instruction">Scan the QR code directly from the other person's Sparrow screen.</string>
+    <string name="feature_contactimport_scan_qr_code">Scan in-person QR</string>
+    <string name="feature_contactimport_sparrow_identity_found">Sparrow identity found</string>
+    <string name="feature_contactimport_shared_identity">Shared identity</string>
+    <string name="feature_contactimport_signing_key">Signing key</string>
+    <string name="feature_contactimport_unnamed_sparrow_contact">Unnamed Sparrow contact</string>
+</resources>

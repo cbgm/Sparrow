@@ -5,9 +5,9 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transit
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStateMachine
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.command.LifecycleCommand
+import com.cbgm.sparrow.feature.conversationorchestration.lifecycle.domain.usecase.RequireApprovedIdentityPinnedUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeOffer
-import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.InvalidatePendingInvitationUseCase
 import com.cbgm.sparrow.protocol.handler.IncomingPacketContext
@@ -20,7 +20,7 @@ import kotlin.reflect.KClass
  * turn it into a normal invitation again. READY still activates the existing conversation later.
  */
 class AcceptApprovedIdentityChangeWorkflow internal constructor(
-    private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val requireApprovedIdentityPinned: RequireApprovedIdentityPinnedUseCase,
     private val receiveIdentityExchange: ReceiveIdentityExchangeUseCase,
     private val invalidatePendingInvitation: InvalidatePendingInvitationUseCase
 ) : WorkflowStateMachine<
@@ -37,16 +37,10 @@ class AcceptApprovedIdentityChangeWorkflow internal constructor(
     override suspend fun perform(step: Step): Outcome {
         val approval = step.command.approval
         return when (step) {
-            is Step.ValidateApproval -> Outcome.ApprovalValid(approval.toOriginalOffer())
+            is Step.ValidateApproval ->
+                Outcome.ApprovalValid(approval.requireOriginalOffer(SystemClock.nowEpochMilliseconds()))
             is Step.CheckPinnedIdentity -> {
-                val pinned =
-                    requireNotNull(getRemoteIdentity(approval.peerId).getOrThrow()) {
-                        "Approved replacement identity is missing"
-                    }
-                check(
-                    pinned.encryptionPublicKey.contentEquals(step.offer.encryptionPublicKey) &&
-                        pinned.signingPublicKey.contentEquals(step.offer.signingPublicKey)
-                ) { "Approved invitation no longer matches the pinned contact identity" }
+                requireApprovedIdentityPinned(approval.peerId, step.offer).getOrThrow()
                 Outcome.PinnedIdentityMatches(step.offer)
             }
             is Step.AcceptOriginalInvitation -> {
@@ -73,27 +67,6 @@ class AcceptApprovedIdentityChangeWorkflow internal constructor(
             Outcome.OriginalInvitationAccepted -> Transition.Next(Step.InvalidateStaleInvitation(step.command))
             Outcome.StaleInvitationInvalidated -> Transition.Complete()
         }
-
-    private fun ApprovedIdentityReconnection.toOriginalOffer(): IdentityExchangeOffer {
-        val challenge = requireNotNull(originalInviteChallenge)
-        val createdAt = requireNotNull(originalInviteCreatedAtEpochMilliseconds)
-        val expiresAt = requireNotNull(originalInviteExpiresAtEpochMilliseconds)
-        val encryption = requireNotNull(originalInviterEncryptionPublicKey)
-        val signing = requireNotNull(originalInviterSigningPublicKey)
-        check(challenge.size == KEY_SIZE && encryption.size == KEY_SIZE && signing.size == KEY_SIZE)
-        check(createdAt < expiresAt && expiresAt > SystemClock.nowEpochMilliseconds()) {
-            "Approved original identity invitation expired"
-        }
-        return IdentityExchangeOffer(
-            exchangeId = approvalId,
-            createdAtEpochMilliseconds = createdAt,
-            expiresAtEpochMilliseconds = expiresAt,
-            inviteChallenge = challenge,
-            encryptionPublicKey = encryption,
-            signingPublicKey = signing,
-            autoSharesIdentity = originalInviteAutoSharesIdentity
-        )
-    }
 
     private fun ApprovedIdentityReconnection.toPacketContext(): IncomingPacketContext =
         IncomingPacketContext(
@@ -138,9 +111,5 @@ class AcceptApprovedIdentityChangeWorkflow internal constructor(
         data object OriginalInvitationAccepted : Outcome
 
         data object StaleInvitationInvalidated : Outcome
-    }
-
-    private companion object {
-        const val KEY_SIZE = 32
     }
 }

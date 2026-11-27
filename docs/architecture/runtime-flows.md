@@ -10,7 +10,7 @@ See [Startup architecture](startup.md) for the exact task list and class flow.
 
 ## Foreground runtime
 
-`ForegroundRuntimeCoordinator` starts after navigation rather than being hidden inside the startup screen. Transport/observer lifetimes therefore belong to application runtime, not Composable lifetime.
+`ForegroundRuntime` starts after navigation rather than being hidden inside the startup screen. Transport/observer lifetimes therefore belong to application runtime, not Composable lifetime.
 
 ## Durable outgoing messaging
 
@@ -18,16 +18,16 @@ See [Startup architecture](startup.md) for the exact task list and class flow.
 flowchart LR
     FEATURE[Feature operation] --> PACKET[Protocol packet]
     PACKET --> OUTBOX[ProtocolOutbox]
-    OUTBOX --> RUNNER[DefaultOutboxRunner / processor]
+    OUTBOX --> RUNNER[RetryingOutboxRunner / processor]
     RUNNER --> ROUTE[transport routing]
     ROUTE --> NODE[Community Node]
 ```
 
-Direct and Group workflows in `:feature:conversationorchestration:message` own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery/routing/WebSocket/mailbox/push transport.
+Direct and Group workflows in `:feature:conversationorchestration:message` own their business rules. `:feature:messaging` owns durable execution/retry; `:feature:transport` owns discovery, circuits and mailbox transport.
 
 ## Message operations
 
-Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. `ApplyRemoteMessageOperationWorkflow` accepts edit/delete/reaction for Direct chats and rejects poll operations there. Group workflows additionally support `PollVote` and `PollClose`.
+Edits, deletes, reactions, poll votes and poll closes share `OperationMessage` / `MessageOperation`. `ApplyRemoteMessageOperationWorkflow` accepts edit/delete/reaction for Direct chats and rejects poll operations there. Group workflows additionally support `PollVote` and `PollClose`. An operation whose message has not arrived yet is parked locally and applied once the message is stored ([Conversation orchestration](conversation-orchestration.md#operations-that-overtake-their-message)).
 
 ## Poll composer handoff
 
@@ -43,4 +43,4 @@ Approved reconnection retry is started by `StartApprovedIdentityReconnectionObse
 
 ## Attachment caching
 
-Incoming messages can be persisted before their binary blobs finish downloading. `MessageAttachmentCacheCoordinator` / `MessageAttachmentDataSource` cache blob data and persist local paths. Room observations that render media must observe the relevant blob rows so the UI can move from loading to the real local file without reopening the app.
+Incoming messages can be persisted before their binary blobs finish downloading. `MessageAttachmentCacheQueue` / `MessageAttachmentDataSource` cache blob data and persist local paths. Room observations that render media must observe the relevant blob rows so the UI can move from loading to the real local file without reopening the app.

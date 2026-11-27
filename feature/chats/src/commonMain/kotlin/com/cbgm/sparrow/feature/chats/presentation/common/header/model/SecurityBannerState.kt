@@ -7,6 +7,5 @@ internal data class SecurityBannerState(
     val icon: ImageVector,
     val title: String,
     val description: String,
-    val containerColor: Color,
-    val contentColor: Color
+    val accent: Color
 )

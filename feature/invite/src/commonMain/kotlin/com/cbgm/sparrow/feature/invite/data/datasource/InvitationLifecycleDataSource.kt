@@ -52,6 +52,8 @@ internal class InvitationLifecycleDataSource(
                                         peerId = invitation.peerId,
                                         peerDisplayName = invitation.peerDisplayName,
                                         peerSecondaryText = invitation.peerSecondaryText,
+                                        peerUnverified = invitation.peerUnverified,
+                                        phoneContactName = invitation.phoneContactName,
                                         direction = direction,
                                         status = status,
                                         expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,
@@ -122,7 +124,8 @@ internal class InvitationLifecycleDataSource(
                         peerId = invitation.peerId,
                         direction = direction,
                         response = response,
-                        action = invitation.resultAction.toResultAction()
+                        action = invitation.resultAction.toResultAction(),
+                        phoneContactPeerId = invitation.phoneContactPeerId
                     )
                 }
             }.distinctUntilChanged()
@@ -359,8 +362,11 @@ internal class InvitationLifecycleDataSource(
             val needsIncomingLabel =
                 record.payloadType == InvitationPayloadType.DIRECT &&
                     record.direction == InvitationDirection.INCOMING &&
-                    existing.peerDisplayName == null &&
-                    record.peerDisplayName != null
+                    (
+                        (existing.peerDisplayName == null && record.peerDisplayName != null) ||
+                            (!existing.peerUnverified && record.peerUnverified) ||
+                            (existing.phoneContactPeerId == null && record.phoneContactPeerId != null)
+                    )
             if (record.updatedAtEpochMilliseconds > existing.updatedAtEpochMilliseconds || needsIncomingLabel) {
                 invitationDao.upsert(
                     existing.copy(
@@ -374,7 +380,10 @@ internal class InvitationLifecycleDataSource(
                             } else {
                                 record.peerDisplayName ?: existing.peerDisplayName
                             },
-                        peerSecondaryText = record.peerSecondaryText ?: existing.peerSecondaryText
+                        peerSecondaryText = record.peerSecondaryText ?: existing.peerSecondaryText,
+                        peerUnverified = existing.peerUnverified || record.peerUnverified,
+                        phoneContactPeerId = existing.phoneContactPeerId ?: record.phoneContactPeerId,
+                        phoneContactName = existing.phoneContactName ?: record.phoneContactName
                     )
                 )
             }
@@ -410,6 +419,9 @@ internal class InvitationLifecycleDataSource(
                 peerId = record.peerId,
                 peerDisplayName = record.peerDisplayName,
                 peerSecondaryText = record.peerSecondaryText,
+                peerUnverified = record.peerUnverified,
+                phoneContactPeerId = record.phoneContactPeerId,
+                phoneContactName = record.phoneContactName,
                 direction = record.direction.name,
                 status = STATUS_PENDING,
                 createdAtEpochMilliseconds = record.createdAtEpochMilliseconds,

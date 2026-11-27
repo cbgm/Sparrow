@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Convers
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.Transition
 import com.cbgm.sparrow.feature.conversationorchestration.engine.machine.WorkflowStep
 import com.cbgm.sparrow.feature.conversationorchestration.engine.runner.WorkflowEngine
+import com.cbgm.sparrow.feature.conversationorchestration.groupstate.domain.workflow.groupAdministrationLockKey
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.command.MembershipCommand
 import com.cbgm.sparrow.feature.conversationorchestration.membership.domain.repository.GroupConversationRepository
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
@@ -12,7 +13,12 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.usecase.PromoteGroupMemberUseCase
 import kotlin.reflect.KClass
 
-/** LoadContext -> PromoteMember -> ProjectPromotion -> RefreshVerification. */
+/**
+ * LoadContext -> PromoteMember -> ProjectPromotion -> RefreshVerification.
+ *
+ * A retry after a crash or a failed later step is safe: Membership returns the promotion of a member who is an
+ * admin already without rotating again, so the projection and the verification refresh still run.
+ */
 class PromoteGroupMemberWorkflow internal constructor(
     private val engine: WorkflowEngine,
     private val conversationRepository: GroupConversationRepository,

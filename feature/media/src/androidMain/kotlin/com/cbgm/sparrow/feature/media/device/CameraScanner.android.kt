@@ -140,43 +140,31 @@ actual fun rememberCameraScannerLauncher(
 }
 
 @Composable
+actual fun QrCodePreview(
+    onScanned: (String) -> Unit,
+    modifier: Modifier
+) {
+    QrCodeAnalysis(
+        onScanned = onScanned,
+        modifier = modifier
+    )
+}
+
+@Composable
 private fun QrCodeScanner(
     onResult: (CameraScanResult) -> Unit,
     hint: String,
     onDismiss: () -> Unit,
     modifier: Modifier
 ) {
-    val context = LocalContext.current
     var camera by remember { mutableStateOf<Camera?>(null) }
     var flashEnabled by remember { mutableStateOf(false) }
-    val currentOnResult by rememberUpdatedState(onResult)
-    val hasScanned = remember { AtomicBoolean(false) }
-    val frameFailureReported = remember { AtomicBoolean(false) }
-    val reader =
-        remember {
-            MultiFormatReader().apply {
-                setHints(
-                    mapOf(
-                        DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
-                        DecodeHintType.TRY_HARDER to true
-                    )
-                )
-            }
-        }
 
     Box(modifier = modifier) {
-        CameraAnalysisPreview(
-            tag = TAG,
+        QrCodeAnalysis(
+            onScanned = { value -> onResult(CameraScanResult.QrCode(value)) },
             modifier = Modifier.fillMaxSize(),
-            onCameraBound = { boundCamera -> camera = boundCamera },
-            onFrame = { imageProxy ->
-                val decoded = reader.decodeQrCode(imageProxy, frameFailureReported)
-                if (decoded != null && hasScanned.compareAndSet(false, true)) {
-                    ContextCompat.getMainExecutor(context).execute {
-                        currentOnResult(CameraScanResult.QrCode(decoded))
-                    }
-                }
-            }
+            onCameraBound = { boundCamera -> camera = boundCamera }
         )
 
         CameraScannerControls(
@@ -191,6 +179,43 @@ private fun QrCodeScanner(
             }
         )
     }
+}
+
+@Composable
+private fun QrCodeAnalysis(
+    onScanned: (String) -> Unit,
+    modifier: Modifier,
+    onCameraBound: (Camera) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val currentOnScanned by rememberUpdatedState(onScanned)
+    val hasScanned = remember { AtomicBoolean(false) }
+    val frameFailureReported = remember { AtomicBoolean(false) }
+    val reader =
+        remember {
+            MultiFormatReader().apply {
+                setHints(
+                    mapOf(
+                        DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
+                        DecodeHintType.TRY_HARDER to true
+                    )
+                )
+            }
+        }
+
+    CameraAnalysisPreview(
+        tag = TAG,
+        modifier = modifier,
+        onCameraBound = onCameraBound,
+        onFrame = { imageProxy ->
+            val decoded = reader.decodeQrCode(imageProxy, frameFailureReported)
+            if (decoded != null && hasScanned.compareAndSet(false, true)) {
+                ContextCompat.getMainExecutor(context).execute {
+                    currentOnScanned(decoded)
+                }
+            }
+        }
+    )
 }
 
 @Composable

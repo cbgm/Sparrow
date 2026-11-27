@@ -34,7 +34,7 @@ The client owns:
 - local exact/semantic message search;
 - optional local message-safety analysis;
 - node discovery/failover;
-- mailbox synchronization and Android push wake-ups.
+- mailbox synchronization while the app runs.
 
 The server does not receive message plaintext from the application protocol.
 
@@ -43,14 +43,13 @@ The server does not receive message plaintext from the application protocol.
 A **Control Plane** provides:
 
 - signed Community Node discovery (`node-registry`);
-- temporary client presence routes (`presence-directory` + Redis);
-- Android push/wake-up infrastructure (`push`).
+- phone alias bindings and invitation routes (`presence-directory` + Redis).
 
 A **Community Node** provides:
 
-- WebSocket client connections (`gateway`);
-- cross-node routing/retry (`federation`);
-- recipient-selected offline ciphertext storage (`mailbox`).
+- relays and circuits for the apps (`gateway`);
+- node registration (`federation`);
+- recipient-selected ciphertext storage (`mailbox`).
 
 Both deployments use Caddy as their public edge and expose an operator `/index` page.
 
@@ -92,9 +91,7 @@ For local builds, the directory URL is stored in `local.properties` as `CONTROL_
 configured yet. Startup is task based: `LoadControlPlaneConfigurationStartupTask` applies that
 default, `RestoreControlPlaneDirectoryStartupTask` restores the verified cached snapshot, and after
 navigation `MaintainControlPlaneDirectoryStartupTask` refreshes the directory (every 5 minutes, retry
-after 5 s), `MaintainControlPlaneHealthStartupTask` probes the Control Planes and
-`ObserveControlPlaneRegistrationTargetsStartupTask` re-registers the push token when the reachable
-Control Planes change.
+after 5 s) and `MaintainControlPlaneHealthStartupTask` probes the Control Planes.
 
 ## Read next
 

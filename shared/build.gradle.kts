@@ -20,6 +20,15 @@ buildkonfig {
             ),
             const = true
         )
+        // The app's Firebase project for the phone sign-in (no google-services.json).
+        buildConfigField(STRING, "FIREBASE_APP_ID", localProperties.get(key = "FIREBASE_APP_ID", defaultValue = ""), const = true)
+        buildConfigField(STRING, "FIREBASE_API_KEY", localProperties.get(key = "FIREBASE_API_KEY", defaultValue = ""), const = true)
+        buildConfigField(
+            STRING,
+            "FIREBASE_PROJECT_ID",
+            localProperties.get(key = "FIREBASE_PROJECT_ID", defaultValue = ""),
+            const = true
+        )
         // Debug builds only: Firebase test mode with this SMS code, shown as a test notification.
         buildConfigField(
             STRING,
@@ -43,6 +52,15 @@ buildkonfig {
             const = true
         )
         buildConfigField(STRING, "DEBUG_SMS_CODE", "", const = true)
+        // The app's Firebase project for the phone sign-in (no google-services.json).
+        buildConfigField(STRING, "FIREBASE_APP_ID", localProperties.get(key = "FIREBASE_APP_ID", defaultValue = ""), const = true)
+        buildConfigField(STRING, "FIREBASE_API_KEY", localProperties.get(key = "FIREBASE_API_KEY", defaultValue = ""), const = true)
+        buildConfigField(
+            STRING,
+            "FIREBASE_PROJECT_ID",
+            localProperties.get(key = "FIREBASE_PROJECT_ID", defaultValue = ""),
+            const = true
+        )
     }
 }
 

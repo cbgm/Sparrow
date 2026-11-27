@@ -5,6 +5,8 @@ import com.cbgm.sparrow.data.database.model.MessageCursorDto
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageHistoryDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.repository.MessageHistoryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class MessageHistoryRepositoryImpl internal constructor(
     private val dataSource: MessageHistoryDataSource
@@ -16,6 +18,9 @@ class MessageHistoryRepositoryImpl internal constructor(
         safeSuspendCall {
             dataSource.findRecentCursors(conversationId, limit).map(MessageCursorDto::toHistoryCursor)
         }
+
+    override fun observeCursors(conversationId: String): Flow<List<MessageHistoryCursor>> =
+        dataSource.observeCursors(conversationId).map { cursors -> cursors.map(MessageCursorDto::toHistoryCursor) }
 
     override suspend fun findCursorsBefore(
         conversationId: String,

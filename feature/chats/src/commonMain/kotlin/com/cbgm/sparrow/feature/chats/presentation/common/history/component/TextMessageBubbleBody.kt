@@ -6,15 +6,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import com.cbgm.sparrow.core.base.messagepart.ui.model.TextUi
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -57,24 +65,23 @@ internal fun TextMessageBubbleBody(
     }
 }
 
+/** Room the bubble keeps for its time and delivery at the end of the last line of text; null when they go elsewhere. */
+internal val LocalTrailingMetadataSize = staticCompositionLocalOf<DpSize?> { null }
+
 @Composable
 private fun TextContent(
     parts: List<TextContentPart>,
     modifier: Modifier = Modifier
 ) {
+    val trailingRoom = LocalTrailingMetadataSize.current
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        parts.forEach { part ->
+        parts.forEachIndexed { index, part ->
             when (part) {
                 is TextContentPart.Text ->
-                    if (part.text.isNotEmpty()) {
-                        Text(
-                            text = part.text,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    NonEmptyTextWithRoom(text = part.text, room = trailingRoom.takeIf { index == parts.lastIndex })
 
                 is TextContentPart.LinkPreview ->
                     LinkPreview(url = part.url)
@@ -82,6 +89,40 @@ private fun TextContent(
         }
     }
 }
+
+/** The text, with an invisible [room] after its last word that wraps to a new line like a word when it does not fit. */
+@Composable
+private fun NonEmptyTextWithRoom(
+    text: String,
+    room: DpSize?
+) {
+    if (text.isNotEmpty()) TextWithRoom(text = text, room = room)
+}
+
+@Composable
+private fun TextWithRoom(
+    text: String,
+    room: DpSize?
+) {
+    if (room == null) {
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
+        return
+    }
+    val density = LocalDensity.current
+    val placeholder =
+        with(density) { Placeholder(width = room.width.toSp(), height = room.height.toSp(), placeholderVerticalAlign = PlaceholderVerticalAlign.TextBottom) }
+    Text(
+        text =
+            buildAnnotatedString {
+                append(text)
+                appendInlineContent(TRAILING_ROOM)
+            },
+        inlineContent = mapOf(TRAILING_ROOM to InlineTextContent(placeholder) {}),
+        style = MaterialTheme.typography.bodyMedium
+    )
+}
+
+private const val TRAILING_ROOM = "trailingRoom"
 
 @Composable
 private fun FailedTextContent(

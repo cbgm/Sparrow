@@ -1,10 +1,10 @@
 # Glossary
 
 **Community Node**  
-A transport node that accepts client WebSocket connections, federates encrypted traffic, hosts blobs and participates in mailbox/offline delivery.
+A transport node that relays circuits and Control Plane requests, hosts mailboxes for encrypted envelopes and encrypted blobs.
 
 **Control Plane**  
-Discovery/control infrastructure for node registration, health, presence and push registration/wake-up.
+Discovery/control infrastructure for node registration, health and presence (phone alias bindings, invitation routes).
 
 **Conversation orchestration**  
 The `:feature:conversationorchestration:*` modules (`api`, `engine`, `delivery`, `message`, `groupstate`, `membership`, `lifecycle`, `incoming`) that execute every conversation write and incoming packet as a workflow state machine, coordinating identity, invitations, membership and messages without hiding repository-to-repository dependencies.

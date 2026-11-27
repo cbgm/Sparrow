@@ -9,8 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 
 @Composable
@@ -30,10 +32,11 @@ internal fun ExpenseOverviewSection(
     title: String,
     modifier: Modifier = Modifier,
     info: String? = null,
+    collapsible: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     var expanded by rememberSaveable(title) { mutableStateOf(true) }
-    val rotation by animateFloatAsState(if (expanded) 0f else -90f, label = "sectionChevron")
+    val rotation by animateFloatAsState(if (expanded) 90f else 0f, label = "sectionChevron")
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -43,32 +46,35 @@ internal fun ExpenseOverviewSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.small)
-                .clickable { expanded = !expanded }
+                .clickable(enabled = collapsible) { expanded = !expanded }
                 .padding(vertical = MaterialTheme.spacing.micro),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
-            Text(
+            SparrowSectionLabel(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f)
             )
             info?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.rotate(rotation)
-            )
+            if (collapsible) {
+                Icon(
+                    imageVector = SparrowIcons.Chevron,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier
+                        .size(Dimens.SettingsScreen.secondaryIconSize)
+                        .rotate(rotation)
+                )
+            }
         }
         AnimatedVisibility(visible = expanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base), content = content)
+            Column(content = content)
         }
     }
 }

@@ -13,4 +13,17 @@ class FindGroupRecipientsUseCase(
             check(recipients.isNotEmpty()) { "Group has no active recipients" }
             recipients
         }
+
+    /**
+     * Who must learn about an edit or delete of the own message [messageId]. Empty when nobody can receive it or
+     * the message was never handed to anyone (it is still queued without recipient states): the change then stays
+     * local, and a queued message is flushed later with its current content or not at all.
+     */
+    suspend fun forOwnMessage(groupId: String, messageId: String): Result<List<String>> =
+        safeSuspendCall(logFailure = false) {
+            if (messageRepository.findRecipientStates(messageId).getOrThrow().isEmpty()) {
+                return@safeSuspendCall emptyList()
+            }
+            messageRepository.findParticipantIds(groupId).getOrThrow()
+        }
 }

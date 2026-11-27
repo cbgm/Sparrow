@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,25 +16,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,16 +37,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.BlockScreenshotEffect
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowSectionLabel
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.asTint
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
@@ -163,27 +158,18 @@ private fun ShareIdentityTopBar(
     onShowOverflowMenuChange: (Boolean) -> Unit,
     onShowRawIdentityChange: (Boolean) -> Unit
 ) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_identity_my_identity_qr),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                text = stringResource(Res.string.feature_identity_my_identity_qr)
             )
         },
         navigationIcon = {
             if (showBackButton) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = SparrowIcons.ArrowBack,
                         contentDescription = null
                     )
                 }
@@ -198,7 +184,7 @@ private fun ShareIdentityTopBar(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = SparrowIcons.More,
                             contentDescription = null
                         )
                     }
@@ -261,11 +247,7 @@ private fun IdentityOptionsContent(
                 Modifier
                     .size(Dimens.ShareIdentityScreen.avatarSize)
                     .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.codeBackground),
-                        shape = MaterialTheme.shapes.circle
-                    ).border(
-                        width = Dimens.ShareIdentityScreen.dividerWidth,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.codeBorder),
+                        color = MaterialTheme.colorScheme.primary.asTint(Alpha.Button.main),
                         shape = MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
@@ -282,8 +264,7 @@ private fun IdentityOptionsContent(
 
         Text(
             text = stringResource(Res.string.feature_identity_create_qr_description),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
 
@@ -291,19 +272,12 @@ private fun IdentityOptionsContent(
 
         Text(
             text = stringResource(Res.string.feature_identity_public_keys_always_included),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-
-        HorizontalDivider(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
-        )
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
         SparrowApprovalButton(
             onClick = onGenerateClick,
@@ -319,7 +293,7 @@ private fun IdentityOptionsContent(
                     CircularProgressIndicator(
                         modifier = Modifier.size(Dimens.ShareIdentityScreen.progressSize),
                         strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = LocalContentColor.current
                     )
                 }
             }
@@ -336,71 +310,39 @@ private fun GeneratedIdentityContent(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = stringResource(Res.string.feature_identity_scan_to_add_you),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+
+        Box(
+            modifier = Modifier
+                .background(color = MaterialTheme.colorScheme.onSurface, shape = MaterialTheme.shapes.medium)
+                .padding(MaterialTheme.spacing.medium)
+        ) {
+            QrCode(
+                content = encodedIdentity,
+                modifier = Modifier.size(Dimens.ShareIdentityScreen.qrCodeSize)
+            )
+        }
+
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
-        SparrowCardNoAnimation {
-            Column(
-                modifier = Modifier.padding(MaterialTheme.spacing.large),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .background(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                shape = MaterialTheme.shapes.small
-                            ).border(
-                                width = Dimens.ShareIdentityScreen.dividerWidth,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.accentText),
-                                shape = MaterialTheme.shapes.small
-                            ).padding(MaterialTheme.spacing.small)
-                ) {
-                    QrCode(
-                        content = encodedIdentity,
-                        modifier = Modifier.size(Dimens.ShareIdentityScreen.qrCodeSize)
-                    )
-                }
+        SparrowSecondaryButton(
+            onClick = onShareIdentity,
+            text = stringResource(Res.string.feature_identity_share_identity_text)
+        )
 
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
-                Button(
-                    onClick = onShareIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null
-                    )
-
-                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-                    Text(
-                        text = stringResource(Res.string.feature_identity_share_identity_text),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-                Text(
-                    text = stringResource(Res.string.feature_identity_share_identity_text_warning),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
+        Text(
+            text = stringResource(Res.string.feature_identity_share_identity_text_warning),
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
         AnimatedVisibility(
             visible = showRawIdentity,
@@ -410,25 +352,16 @@ private fun GeneratedIdentityContent(
             Column {
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-                Text(
-                    text = stringResource(Res.string.feature_identity_raw_identity),
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-                    fontWeight = FontWeight.SemiBold
-                )
+                SparrowSectionLabel(text = stringResource(Res.string.feature_identity_raw_identity))
 
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
-                SparrowCardNoAnimation {
-                    Text(
-                        modifier = Modifier.padding(MaterialTheme.spacing.small),
-                        text = encodedIdentity,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                Text(
+                    text = encodedIdentity,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

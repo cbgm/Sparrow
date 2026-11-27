@@ -7,6 +7,7 @@ import com.cbgm.sparrow.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.protocol.packet.ContactReadyPacket
 import com.cbgm.sparrow.protocol.packet.ContactVerificationReceiptPacket
+import com.cbgm.sparrow.protocol.packet.CoverPacket
 import com.cbgm.sparrow.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupDescriptionUpdatedPacket
@@ -22,6 +23,7 @@ import com.cbgm.sparrow.protocol.packet.GroupTitleUpdatedPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.sparrow.protocol.packet.IndicatorPacket
 import com.cbgm.sparrow.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.protocol.packet.OperationMessagePacket
 import com.cbgm.sparrow.protocol.packet.SparrowPacket
@@ -33,17 +35,28 @@ class OutgoingPacketTransportPolicy {
     ): Result<OutgoingTransportRequirement> =
         runCatching {
             when (packet) {
-                is ContactInvitePacket,
-                is ContactInviteAcceptedPacket,
-                is ContactInviteDeclinedPacket,
-                is GroupInvitePacket,
-                is GroupInviteReceivedPacket,
-                is GroupJoinRequestPacket,
-                is GroupInviteDeclinedPacket ->
+                // The recipient's key is not known yet; the invite carries no profile picture for that reason.
+                is ContactInvitePacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = false,
                         forcePlaintext = true
                     )
+
+                // The answer goes to the inviter, whose key the invite carried.
+                is ContactInviteAcceptedPacket,
+                is ContactInviteDeclinedPacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = false,
+                        allowsEncryptionBeforeMutualIdentity = true
+                    )
+
+                // Encrypted when the recipient's key is already known, otherwise plaintext as before: a group can
+                // be offered to a contact without a direct key exchange.
+                is GroupInvitePacket,
+                is GroupInviteReceivedPacket,
+                is GroupJoinRequestPacket,
+                is GroupInviteDeclinedPacket ->
+                    OutgoingTransportRequirement(requiresEncryption = false)
 
                 is ContactReadyPacket -> {
                     validateContactReadyIdentity(packet, contact)
@@ -63,6 +76,16 @@ class OutgoingPacketTransportPolicy {
                             "Contact verification receipt requires an encrypted Sparrow transport"
                     )
                 }
+
+                // Sent right after the handshake, before the identity is verified, with the key the handshake set.
+                is CoverPacket,
+                is IndicatorPacket,
+                is MailboxRoutePacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = true,
+                        allowsEncryptionBeforeMutualIdentity = true,
+                        encryptionUnavailableMessage = "Mailbox route requires the contact's key from the handshake"
+                    )
 
                 is ChatMessagePacket,
                 is OperationMessagePacket ->
@@ -84,8 +107,7 @@ class OutgoingPacketTransportPolicy {
                 is GroupMemberActivationAcknowledgementPacket,
                 is GroupVerificationReceiptPacket,
                 is GroupVerificationSnapshotRequestPacket,
-                is GroupVerificationSnapshotPacket,
-                is MailboxRoutePacket ->
+                is GroupVerificationSnapshotPacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = true,
                         encryptionUnavailableMessage =

@@ -3,9 +3,9 @@ package com.cbgm.sparrow.feature.identity.data.datasource
 import com.cbgm.sparrow.core.util.time.SystemClock
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
 import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSnapshot
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSource
 import com.cbgm.sparrow.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.protocol.profile.ProfilePicturePayload
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +14,8 @@ import kotlinx.coroutines.flow.map
 class LocalProfilePictureDataSource(
     private val dataStore: SparrowDataStore,
     private val fileDataSource: ProfilePictureFileDataSource
-) : LocalProfilePictureProvider,
-    LocalProfilePictureMetadataProvider {
+) : LocalProfilePictureSource,
+    LocalProfilePictureMetadataSource {
     fun observePicture(): Flow<LocalProfilePicture> =
         dataStore.observeLong(PROFILE_PICTURE_CHANGED_AT).map { changedAt ->
             LocalProfilePicture(

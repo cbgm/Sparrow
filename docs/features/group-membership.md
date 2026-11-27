@@ -17,7 +17,7 @@ State/protocol/security:
 - `GroupMembershipLock`
 - `GroupMembershipPacketProtocol`
 - `GroupMembershipPayloadEncoder`
-- `GroupSecurityManager`
+- `GroupSecurityRepositoryImpl`
 - `GroupWelcomeSecurity`
 - `GroupActivationPolicy`
 - `resolveInvitationUpdatedAt()` (in `GroupInvitationTimestampPolicy.kt`)
@@ -69,6 +69,12 @@ sequenceDiagram
     PEER-->>IN: GroupMemberActivationAcknowledgementPacket
     IN->>MEM: ReceiveGroupActivationAcknowledgementWorkflow
 ```
+
+`CreateGroupWorkflow` (`CreateConversation -> InitializeSecurity -> InitializeVerification -> InviteMember` for every contact) invites each contact with its own `AddMembers`. Once the group, its epoch and its group key exist, a failing invitation does not fail the creation: it is logged, the other contacts are still invited, and the result is `GroupCreated(groupId, failedContactIds)`, so a retry does not create a second group; the admin can add the failed contacts again.
+
+A rotation welcome (any welcome after the first) keeps the conversation's unseen count and visibility, so a group the user hid stays hidden, and sets the title only while no admin title version is stored (`GroupMetadataDao.upsertTitleValueIfUnversioned`): the welcome title carries no version and must not roll back a newer title. The first welcome shows the conversation and sets the title as before.
+
+A member may verify every admin of the current epoch (`ResolveGroupVerificationRoleUseCase` collects the admin member keys), also one promoted after the member's last welcome, consistent with the receipt (`requireCurrentRemoteAdmin`) and the verification snapshot.
 
 The detailed steps depend on which side is owner/member and whether identity review is required, but Group cryptographic activation always remains a Membership concern.
 
@@ -122,10 +128,30 @@ Message/metadata authorization:
 
 `ObserveMembershipResultsUseCase` exposes durable domain results. `MembershipResultObserver` in `:feature:conversationorchestration:membership` consumes them and runs `HandleMembershipResultWorkflow` (for `ACTIVE`: `ResolveMemberName -> LoadEpoch -> AddParticipant -> FlushQueuedMessages`). This replaces cross-feature repository calls/coordinators.
 
+## Incoming invitations
+
+`ReceiveGroupInviteWorkflow` stages the group conversation before the invitation is accepted, and the offer's signature proves only the inviter's keys, not that the group ID is theirs. `CheckGroupInvitationTargetUseCase` (`GroupInvitationTargetPolicy`, with `InspectGroupInvitationTargetUseCase`) therefore rejects the offer, so its envelope is dropped, when the group ID names a non-group conversation, a group the local user is a live member, admin or owner of, or a group with a pending invitation from another inviter. A new invitation from the same inviter still re-stages the pending one, and an invitation after leaving or removal (no live security state) still starts a new membership.
+
+## Removing and promoting members
+
+Membership commits the epoch rotation, the removal packet and the REMOVED status in one step; `RemoveGroupMemberWorkflow` projects the participant change and refreshes the verification afterwards. Its `FindRemovalProgress` step (`FindGroupMemberRemovalProgressUseCase`, `FindCommittedGroupMemberRemovalUseCase`, `GroupMemberRemovalProgress`) lets a retry after a crash or a failed later step continue: a committed removal still shown as participant is projected, an already projected one only refreshes the verification. A promotion is already safe to repeat: Membership returns the promotion of a member who is an admin already without rotating again.
+
+## Group state and the epoch
+
+Publishing title, description, avatar, pin and unpin, closing expenses and the replay of the current metadata to a new member run under the same `group-administration` lock as the membership changes, so they are signed for the epoch and recipients current when they are queued.
+
+A title, description, avatar, pin or unpin is saved locally first, marked as not yet published, so the admin sees it at once even while a membership change holds the lock. Only the publish step (`PublishGroupTitle`, `PublishGroupDescription`, `PublishGroupAvatar`, `PublishGroupPin`) waits for the lock; it queues the packets with the current epoch and then marks the state published, but only while it is still the stored version. If the publish fails or the app stops before it, the state stays unpublished: the same change again is not skipped as "unchanged", and `UnpublishedGroupStateRunner` (startup task "publish unpublished group state") publishes it after the next start. A newer state from another admin replaces an unpublished local one and counts as published, so it is never overwritten or published again (last-writer-wins, `GroupStateVersionPolicy`). Every save, local or received, is a compare-and-set on the version it checked, so a received older state cannot overwrite a local change saved at the same moment, and vice versa. Closing expenses still queues its packets before saving. See [Locking](../architecture/conversation-orchestration.md#locking).
+
 ## Admin leave
 
 `GetGroupLeaveRequirementUseCase` decides whether a normal leave is possible or whether the last/required admin must transfer responsibility first. `TransferGroupAdminAndLeaveUseCase` performs the explicit transfer+leave path; Chats triggers it with `GroupAdministrationCommand.TransferAdminAndLeave` (`TransferGroupAdminAndLeaveWorkflow`).
 
 ## Security epoch
 
-`GroupSecurityManager` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
+`GroupSecurityRepositoryImpl` and the epoch datasources own current Group encryption state. Group message sending (`SendGroupMessageWorkflow`) asks Membership for the currently authorized recipients/encryption keys instead of embedding membership ownership inside Chats.
+
+- **Rotation and welcomes commit together.** `GroupEpochSecurityDataSource.rotateOwnedGroup` stores the new epoch and queues its welcomes in one database transaction (`DatabaseTransactionRunner`), so no member is left without the new key after a crash or a failed enqueue.
+- **Welcomes install one epoch at a time.** A welcome that skips an epoch waits (`GroupPacketEpochPolicy`) until the welcome before it is installed, the same way early group messages wait for their epoch.
+- **The previous epoch stays readable.** The previous epoch's key is kept, and a message of that epoch is accepted from a sender who is still a member of the current epoch. A removed member cannot use the old key.
+- **No key outlives the membership.** Leaving or deleting a group deletes its keys from `GroupKeyStore`. An admin who leaves generates the epoch it leaves with, so the first admin named in that welcome rotates once more right away (`RotateGroupKeyAfterAdminLeftUseCase`).
+- **Two admins at the same moment.** If two admins change the group at once, both sign their own version of the next epoch. Every device keeps the version signed with the lower signing key (`ConcurrentGroupEpochPolicy`); `group_security_states.epochSignerSigningPublicKey` records who signed the installed epoch. The losing version is refused and dropped; a device on it switches to the winning one, which is checked against the epoch both started from. The losing change is not applied again: its admin sees "Your change could not be applied because another admin changed the group at the same time" in the chat (`LOCAL_GROUP_CHANGE_DROPPED`) and can repeat it. Messages encrypted with the losing key in that moment cannot be read by members on the winning key.

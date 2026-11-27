@@ -38,7 +38,6 @@ foreach ($relativePath in @(
     "docker-compose.release.yml",
     "docker-compose.production.yml",
     "docker-compose.shared-proxy.yml",
-    "docker-compose.firebase.yml",
     "Caddyfile",
     "index.html"
 )) {
@@ -111,7 +110,7 @@ foreach ($unixLauncher in @(
 
 [System.IO.File]::WriteAllText(
     (Join-Path $bundleRoot "secrets/README.txt"),
-    "Firebase is optional. To enable push, import your own authorized service-account JSON into this protected secrets folder as firebase-admin.json.`nThe launcher automatically generates registry authority and remaining secrets here.`n",
+    "The launcher automatically generates the registry authority and the remaining secrets here.`n",
     [System.Text.UTF8Encoding]::new($false)
 )
 

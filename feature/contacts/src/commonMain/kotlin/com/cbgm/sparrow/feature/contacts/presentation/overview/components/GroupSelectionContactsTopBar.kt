@@ -7,31 +7,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_name
 import com.cbgm.sparrow.resources.feature_contacts_search_placholder
+import com.cbgm.sparrow.resources.feature_onboarding_create
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,36 +46,25 @@ fun GroupSelectionContactsTopBar(
     onConfirmed: () -> Unit
 ) {
     Column {
-        CenterAlignedTopAppBar(
+        SparrowTopBar(
             windowInsets = WindowInsets(MaterialTheme.spacing.zero),
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+            containerColor = containerColor,
             title = {
+                // The group name is typed right where a title sits, as before.
                 BasicTextField(
                     value = title,
                     onValueChange = onTitleChanged,
                     enabled = !confirming,
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.titleSmall.copy(
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center
-                    ),
+                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onBackground),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth(),
                     decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Box(contentAlignment = Alignment.CenterStart) {
                             if (title.isEmpty()) {
                                 Text(
                                     text = stringResource(Res.string.feature_chats_group_name),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    color = MaterialTheme.colorScheme.outline
                                 )
                             }
                             innerTextField()
@@ -88,8 +75,9 @@ fun GroupSelectionContactsTopBar(
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null
+                        imageVector = SparrowIcons.ArrowBack,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.TopBar.iconSize)
                     )
                 }
             },
@@ -106,8 +94,9 @@ fun GroupSelectionContactsTopBar(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(Res.string.feature_chats_group_name)
+                            imageVector = SparrowIcons.Check,
+                            contentDescription = stringResource(Res.string.feature_onboarding_create),
+                            modifier = Modifier.size(Dimens.TopBar.iconSize)
                         )
                     }
                 }

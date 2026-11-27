@@ -41,11 +41,10 @@ class OpenDirectConversationWorkflow internal constructor(
                     ?: Outcome.ConversationMissing
             }
             is Step.CheckAuthorization ->
-                if (requireDirectChatAuthorization(step.command.contactId).isSuccess) {
-                    Outcome.Authorized(step.conversationId)
-                } else {
-                    Outcome.NotAuthorized
-                }
+                authorizationChecked(
+                    authorized = requireDirectChatAuthorization(step.command.contactId).isSuccess,
+                    conversationId = step.conversationId
+                )
             is Step.StartInvitation -> {
                 engine.run(LifecycleCommand.StartDirectInvitation(step.command.contactId)).getOrThrow()
                 Outcome.InvitationStarted
@@ -62,6 +61,9 @@ class OpenDirectConversationWorkflow internal constructor(
             Outcome.InvitationStarted ->
                 Transition.Complete(ConversationResult.ConversationOpened(conversationId = null))
         }
+
+    private fun authorizationChecked(authorized: Boolean, conversationId: String): Outcome =
+        if (authorized) Outcome.Authorized(conversationId) else Outcome.NotAuthorized
 
     sealed interface Step : WorkflowStep {
         val command: DirectConversationCommand.OpenConversation

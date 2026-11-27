@@ -30,7 +30,8 @@ interface OutgoingWireSender {
      */
     suspend fun sendWithAcceptance(
         recipientAddress: String,
-        encodedTransportPayload: String
+        encodedTransportPayload: String,
+        recipientContactId: String? = null
     ): Result<OutgoingWireAcceptance> =
         send(recipientAddress, encodedTransportPayload).map {
             OutgoingWireAcceptance(Long.MAX_VALUE)

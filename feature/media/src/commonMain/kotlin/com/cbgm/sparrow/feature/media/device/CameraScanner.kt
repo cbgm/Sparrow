@@ -20,6 +20,12 @@ expect fun CameraScanner(
 )
 
 @Composable
+expect fun QrCodePreview(
+    onScanned: (String) -> Unit,
+    modifier: Modifier = Modifier
+)
+
+@Composable
 expect fun rememberCameraScannerLauncher(
     onResult: (CameraScanResult) -> Unit,
     onDismissed: () -> Unit,

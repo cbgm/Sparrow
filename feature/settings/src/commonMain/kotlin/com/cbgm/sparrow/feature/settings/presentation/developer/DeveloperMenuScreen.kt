@@ -9,40 +9,37 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowTopBar
+import com.cbgm.sparrow.core.ui.icon.SparrowIcons
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.DeveloperErrorLogCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NetworkDiagnosticsCard
+import com.cbgm.sparrow.feature.settings.presentation.developer.components.SettingsSection
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticConnectionState
-import com.cbgm.sparrow.feature.transport.TransportDiagnostics
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnostic
-import com.cbgm.sparrow.feature.transport.TransportNodeDiagnosticState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnosticConnectionState
+import com.cbgm.sparrow.feature.transport.domain.model.TransportDiagnostics
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnostic
+import com.cbgm.sparrow.feature.transport.domain.model.TransportNodeDiagnosticState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_build_type
 import com.cbgm.sparrow.resources.base_clear_local_data
@@ -55,6 +52,7 @@ import com.cbgm.sparrow.resources.feature_settings_danger_zone
 import com.cbgm.sparrow.resources.feature_settings_danger_zone_description
 import com.cbgm.sparrow.resources.feature_settings_developer_menu
 import com.cbgm.sparrow.resources.feature_settings_disable_developer_mode
+import com.cbgm.sparrow.resources.feature_settings_simulate_key_loss
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -79,12 +77,12 @@ fun DeveloperMenuScreen(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(
-                        top = innerPadding.calculateTopPadding(),
-                        bottom = innerPadding.calculateBottomPadding(),
+                        top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.screenPadding,
+                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.screenPadding,
                         start = MaterialTheme.spacing.screenPadding,
                         end = MaterialTheme.spacing.screenPadding
                     ),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             BuildInfoCard(buildInfo = uiState.buildInfo)
 
@@ -101,7 +99,8 @@ fun DeveloperMenuScreen(
             DangerZoneCard(
                 isClearingLocalData = uiState.isClearingLocalData,
                 onClearLocalData = { onUiEvent(DeveloperMenuUiEvent.ClearLocalDataClicked) },
-                onDisableDeveloperMode = { onUiEvent(DeveloperMenuUiEvent.DisableDeveloperModeClicked) }
+                onDisableDeveloperMode = { onUiEvent(DeveloperMenuUiEvent.DisableDeveloperModeClicked) },
+                onSimulateKeyLoss = { onUiEvent(DeveloperMenuUiEvent.SimulateKeyLossClicked) }
             )
         }
     }
@@ -113,24 +112,17 @@ private fun TopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                scrolledContainerColor = containerColor,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            ),
+    SparrowTopBar(
+        containerColor = containerColor,
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_developer_menu),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(Res.string.feature_settings_developer_menu)
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = SparrowIcons.ArrowBack,
                     contentDescription = null
                 )
             }
@@ -140,36 +132,22 @@ private fun TopBar(
 
 @Composable
 private fun BuildInfoCard(buildInfo: BuildInfo) {
-    SparrowCardNoAnimation {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium)
+    Column {
+        SettingsSection(
+            title = stringResource(Res.string.feature_settings_build_info)
         ) {
-            Text(
-                text = stringResource(Res.string.feature_settings_build_info),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
-
             BuildInfoRow(
                 label = stringResource(Res.string.base_version_name),
                 value = buildInfo.versionName
             )
-
             BuildInfoRow(
                 label = stringResource(Res.string.base_version_code),
                 value = buildInfo.versionCode.toString()
             )
-
             BuildInfoRow(
                 label = stringResource(Res.string.base_build_type),
                 value = buildInfo.buildType
             )
-
             BuildInfoRow(
                 label = stringResource(Res.string.base_git_sha),
                 value = buildInfo.gitSha ?: stringResource(Res.string.base_unknown)
@@ -182,60 +160,57 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
 private fun DangerZoneCard(
     isClearingLocalData: Boolean,
     onClearLocalData: () -> Unit,
-    onDisableDeveloperMode: () -> Unit
+    onDisableDeveloperMode: () -> Unit,
+    onSimulateKeyLoss: () -> Unit
 ) {
-    SparrowCardNoAnimation {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium)
-        ) {
-            Text(
-                text = stringResource(Res.string.feature_settings_danger_zone),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error
-            )
+    SettingsSection(
+        title = stringResource(Res.string.feature_settings_danger_zone),
+        color = MaterialTheme.colorScheme.error
+    ) {
+        Text(
+            text = stringResource(Res.string.feature_settings_danger_zone_description),
+            modifier =
+                Modifier.padding(
+                    top = MaterialTheme.spacing.base.div(2),
+                    bottom = MaterialTheme.spacing.small
+                ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-            Text(
-                text = stringResource(Res.string.feature_settings_danger_zone_description),
-                modifier =
-                    Modifier.padding(
-                        top = MaterialTheme.spacing.base.div(2),
-                        bottom = MaterialTheme.spacing.small
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            SparrowDestructiveButton(
-                onClick = onClearLocalData,
-                enabled = !isClearingLocalData,
-                modifier = Modifier.fillMaxWidth(),
-                content = {
-                    if (isClearingLocalData) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(Res.string.base_clear_local_data),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+        SparrowDestructiveButton(
+            onClick = onClearLocalData,
+            enabled = !isClearingLocalData,
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                if (isClearingLocalData) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
+                        strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                        color = LocalContentColor.current
+                    )
+                } else {
+                    Text(
+                        text = stringResource(Res.string.base_clear_local_data),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
-            )
-
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-            OutlinedButton(
-                onClick = onDisableDeveloperMode,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(text = stringResource(Res.string.feature_settings_disable_developer_mode))
             }
-        }
+        )
+
+        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+
+        SparrowSecondaryButton(
+            onClick = onSimulateKeyLoss,
+            text = stringResource(Res.string.feature_settings_simulate_key_loss)
+        )
+
+        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+
+        SparrowSecondaryButton(
+            onClick = onDisableDeveloperMode,
+            text = stringResource(Res.string.feature_settings_disable_developer_mode)
+        )
     }
 }
 
@@ -248,21 +223,20 @@ private fun BuildInfoRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = MaterialTheme.spacing.base / 2),
+                .padding(vertical = MaterialTheme.spacing.base),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

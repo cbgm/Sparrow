@@ -8,5 +8,6 @@ data class ImportIdentityUiState(
     val isImporting: Boolean = false,
     val importedContactName: String? = null,
     val importedIdentityTrust: IdentityImportTrustUi? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val scanAttempt: Int = 0
 )

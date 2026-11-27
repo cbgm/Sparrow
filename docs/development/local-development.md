@@ -13,6 +13,20 @@ CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://<release-directory-host>
 
 The production discovery model is signed; do not model a new deployment as an unsigned hardcoded list of arbitrary nodes.
 
+### Firebase project of the app
+
+There is no `google-services.json`: the app starts Firebase (phone sign-in only) with these three
+values from `local.properties`. Take them from the Firebase console (Project settings → your Android
+app `com.cbgm.sparrow`), or from an old `google-services.json`: `client[0].client_info.mobilesdk_app_id`,
+`client[0].api_key[0].current_key` and `project_info.project_id`. Without them the app builds and runs,
+but phone verification reports that it is not set up.
+
+```properties
+FIREBASE_APP_ID=1:...:android:...
+FIREBASE_API_KEY=AIza...
+FIREBASE_PROJECT_ID=sparrow-a9048
+```
+
 ### Phone verification in debug builds
 
 Sign-up verifies the phone number once by SMS (Firebase). Debug builds show a **Skip (debug)**
@@ -20,7 +34,7 @@ button in the verification dialog. With `DEBUG_SMS_CODE` set, debug builds use t
 mode: add the number as a test phone number with this code in the Firebase console (Authentication
 → Sign-in method → Phone); the app check is skipped, the code is filled in automatically and also
 shown as a "Sparrow (test SMS)" notification. Release builds ignore both. The resulting one-time
-token is sent only with the first route registration (see
+token is sent once to the Directory's phone verifier, and its attestation goes into the alias claims (see
 [Transport](../features/transport.md#phone-verification-token-at-sign-up)).
 
 ```properties
@@ -104,7 +118,7 @@ The default LAN edge is normally reachable at:
 http://localhost:8390/index
 ```
 
-Real FCM delivery requires an administrator-owned Firebase service-account configuration authorized for the Android Firebase project. The rest of the Control Plane can still be exercised without claiming a real push delivery succeeded.
+Phone numbers are bound only with an attestation of a Directory that runs phone verification (or as test phone numbers in `PRESENCE_TEST_PHONE_ALIASES`).
 
 ### Community Node
 
@@ -131,21 +145,19 @@ For multiple nodes, use separate Compose project names, ports, identities and vo
 flowchart LR
     APP1[Android A] <--> N1[Community Node A]
     APP2[Android B] <--> N2[Community Node B]
-    N1 <--> N2
     N1 --> CP[Control Plane]
     N2 --> CP
     CP --> REG[Node registry]
     CP --> PRES[Presence]
-    CP --> PUSH[Push]
     N1 --> MB1[Mailbox]
     N2 --> MB2[Mailbox]
 ```
 
-The Control Plane handles discovery/presence/push. Community Nodes handle client WebSockets, federation, encrypted mailbox envelopes and encrypted attachment blobs. Application messages are encrypted client-side before these transport layers.
+The Control Plane handles discovery and presence (alias bindings, invitation routes). Community Nodes handle relays and circuits, encrypted mailbox envelopes and encrypted attachment blobs. Application messages are encrypted client-side before these transport layers.
 
 ## 6. Independent Control Plane Directory
 
-`server/control-plane-directory` is a **separate operator-only service**, not something every developer/node must install and not part of the public `sparrow-server.zip`.
+`server/control-plane-directory` contains source for a **separate operator-managed service**. It is public in this repository, but not something every developer/node must install and not part of the public `sparrow-server.zip`.
 
 Use it only when testing the signed multi-Control-Plane discovery/registration layer itself. Its source includes private installer/admin tooling and persistent signing state. Its own installer window (`Start-SparrowDirectory.cmd` / `.command` / `.sh`) creates a separate Directory folder via `Build-SparrowDirectoryInstaller.py --install`; it uses the Sparrow Server's proxy when one runs on the machine, otherwise its own proxy on ports 80/443. A public client should consume only its public signed endpoints, never its admin listener/token.
 
@@ -153,7 +165,7 @@ For ordinary local testing, a Combined unified installation can use its local Co
 
 ## 7. Observe the system
 
-Control Plane `/index` links to registry, presence, push and node information. Community Node `/index` links to gateway, Control Plane advertisement, federation and mailbox diagnostics.
+Control Plane `/index` links to registry, presence and node information. Community Node `/index` links to gateway, Control Plane advertisement, federation and mailbox diagnostics.
 
 Useful Docker commands:
 

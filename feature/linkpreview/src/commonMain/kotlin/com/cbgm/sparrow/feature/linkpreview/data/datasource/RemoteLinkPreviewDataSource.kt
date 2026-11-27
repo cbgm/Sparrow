@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.linkpreview.data.datasource
 
 import com.cbgm.sparrow.feature.linkpreview.data.model.LinkPreviewDto
 import com.cbgm.sparrow.feature.linkpreview.data.model.LinkPreviewRequestDto
-import com.cbgm.sparrow.feature.transport.TransportDiagnosticsProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -13,13 +12,13 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
 class RemoteLinkPreviewDataSource(
-    private val httpClient: HttpClient,
-    private val transportDiagnosticsProvider: TransportDiagnosticsProvider
+    private val httpClient: HttpClient
 ) {
-    suspend fun getPreview(url: String): LinkPreviewDto {
-        val nodeBaseUrl =
-            transportDiagnosticsProvider.diagnostics.value.currentNodeBaseUrl
-                ?: error("No connected node is available")
+    /** Asks the node at [nodeBaseUrl] for the preview, so the linked site never sees the user's address. */
+    suspend fun getPreview(
+        url: String,
+        nodeBaseUrl: String
+    ): LinkPreviewDto {
         val preview =
             httpClient
                 .post("$nodeBaseUrl/v1/link-preview") {

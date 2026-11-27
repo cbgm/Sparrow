@@ -10,7 +10,6 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
@@ -18,8 +17,9 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationReadRepository
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
-import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentPartSource
+import com.cbgm.sparrow.protocol.membership.GroupConversationMembershipSource
+import com.cbgm.sparrow.protocol.membership.GroupMemberLifecycleSnapshot
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,8 +36,8 @@ import kotlin.time.TimeSource
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 internal class GroupConversationReadRepositoryImpl(
     private val historyDataSource: GroupConversationHistoryDataSource,
-    private val messageAttachmentDataSource: MessageAttachmentOperationsRepository,
-    private val membershipRepository: GroupMembershipRepository
+    private val attachmentPartSource: MessageAttachmentPartSource,
+    private val membershipSource: GroupConversationMembershipSource
 ) : GroupConversationReadRepository {
     override fun observe(
         groupId: String,
@@ -68,7 +68,7 @@ internal class GroupConversationReadRepositoryImpl(
                     historyDataSource.observeConversation(groupId),
                     sharedMessages,
                     messageIds.flatMapLatest { ids ->
-                        messageAttachmentDataSource.observeByMessageIds(ids)
+                        attachmentPartSource.observeByMessageIds(ids)
                     },
                     messageIds.flatMapLatest { ids ->
                         historyDataSource.observeTextPartsByMessageIds(ids)
@@ -93,7 +93,7 @@ internal class GroupConversationReadRepositoryImpl(
 
             val groupStateSnapshot =
                 combine(
-                    membershipRepository.observeConversationMembership(groupId),
+                    membershipSource.observeConversationMembership(groupId),
                     observeRecipientStates(groupId, oldestCursor),
                     historyDataSource.observeVerificationRows(groupId)
                 ) { membership, recipientStates, verificationRows ->

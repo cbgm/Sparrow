@@ -43,6 +43,7 @@ fun DirectConversationRoute(
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val indicatorState by viewModel.indicatorState.collectAsStateWithLifecycle()
     val historyState by viewModel.historyState.collectAsStateWithLifecycle()
+    val waitingForRoute by viewModel.waitingForRoute.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val reconnectSuccessText = stringResource(Res.string.feature_chats_reconnect_queued)
@@ -78,6 +79,7 @@ fun DirectConversationRoute(
             contextState = contextState,
             indicatorState = indicatorState,
             historyState = historyState,
+            waitingForRoute = waitingForRoute,
             onUiEvent = viewModel::onUiEvent,
             reconnectBusy = reconnectBusy,
             onReconnectRequested = {

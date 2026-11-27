@@ -8,6 +8,9 @@ sealed interface IdentityOverviewUiState {
 
     data class Ready(
         val localPhoneNumber: String,
+        /** Grouped hex of the signing key; also draws the key rings. */
+        val signingFingerprint: String = "",
+        val phoneVerificationLimitReached: Boolean = false,
         val backupStatus: BackupStateUi = BackupStateUi.NOT_BACKED_UP,
         val profilePicture: IdentityProfilePictureUiState = IdentityProfilePictureUiState()
     ) : IdentityOverviewUiState

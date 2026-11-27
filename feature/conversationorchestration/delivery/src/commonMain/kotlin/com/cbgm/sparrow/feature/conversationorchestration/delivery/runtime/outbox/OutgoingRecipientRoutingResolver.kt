@@ -52,20 +52,9 @@ class OutgoingRecipientRoutingResolver(
             is GroupInviteDeclinedPacket ->
                 resolveContactBootstrapRoutingId(contactId).getOrThrow()
 
-            is GroupConversationDeletedPacket ->
-                if (packet.epoch == GroupConversationDeletedPacket.PENDING_GROUP_EPOCH) {
-                    resolveContactBootstrapRoutingId(contactId).getOrThrow()
-                } else {
-                    groupRoutingResolver.resolve(packet.groupId, contactId)
-                }
+            is GroupConversationDeletedPacket -> resolveGroupDeletion(packet, contactId)
 
-            is GroupMemberRemovedPacket ->
-                if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-                    resolveContactBootstrapRoutingId(contactId).getOrThrow()
-                } else {
-                    groupRoutingResolver
-                        .resolveRemovedMember(packet.removedMemberSigningPublicKey)
-                }
+            is GroupMemberRemovedPacket -> resolveMemberRemoval(packet, contactId)
 
             is DeliveryReceiptPacket -> resolveReceipt(packet.messageId, contactId)
             is ReadReceiptPacket -> resolveReceipt(packet.messageId, contactId)
@@ -74,6 +63,27 @@ class OutgoingRecipientRoutingResolver(
                 packet.groupIdForRouting()
                     ?.let { groupId -> groupRoutingResolver.resolve(groupId, contactId) }
                     ?: resolveContactRoutingId(contactId).getOrThrow()
+        }
+
+    private suspend fun resolveGroupDeletion(
+        packet: GroupConversationDeletedPacket,
+        contactId: String
+    ): String =
+        if (packet.epoch == GroupConversationDeletedPacket.PENDING_GROUP_EPOCH) {
+            resolveContactBootstrapRoutingId(contactId).getOrThrow()
+        } else {
+            groupRoutingResolver.resolve(packet.groupId, contactId)
+        }
+
+    private suspend fun resolveMemberRemoval(
+        packet: GroupMemberRemovedPacket,
+        contactId: String
+    ): String =
+        if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
+            resolveContactBootstrapRoutingId(contactId).getOrThrow()
+        } else {
+            groupRoutingResolver
+                .resolveRemovedMember(packet.removedMemberSigningPublicKey)
         }
 
     private suspend fun resolveReceipt(

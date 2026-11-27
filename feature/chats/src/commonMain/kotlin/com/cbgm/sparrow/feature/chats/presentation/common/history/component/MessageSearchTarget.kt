@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,11 +51,22 @@ internal fun rememberMessageSearchTargetState(
 
 private const val HIGHLIGHT_DURATION_MILLIS = 2_000L
 
+/** Shows the item at the top of the viewport, so what follows it fills the screen. */
+private suspend fun LazyListState.scrollToItemAtTop(index: Int) {
+    scrollToItem(index)
+    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val viewport =
+        layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset -
+            layoutInfo.beforeContentPadding - layoutInfo.afterContentPadding
+    scrollBy(-(viewport - item.size).coerceAtLeast(0).toFloat())
+}
+
 @Composable
 internal fun rememberMessageJumpState(
     messageIds: List<String>,
     listState: LazyListState,
-    onTargetMissing: (String) -> Unit = {}
+    onTargetMissing: (String) -> Unit = {},
+    alignToTop: Boolean = false
 ): MessageJumpState {
     val scope = rememberCoroutineScope()
     val currentMessageIds by rememberUpdatedState(messageIds)
@@ -67,7 +79,11 @@ internal fun rememberMessageJumpState(
         requestVersion += 1
         val version = requestVersion
         scope.launch {
-            listState.animateScrollToItem(targetIndex)
+            if (alignToTop) {
+                listState.scrollToItemAtTop(targetIndex)
+            } else {
+                listState.animateScrollToItem(targetIndex)
+            }
             highlightedMessageId = messageId
             delay(HIGHLIGHT_DURATION_MILLIS.milliseconds)
             if (requestVersion == version) {

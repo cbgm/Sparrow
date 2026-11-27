@@ -23,12 +23,19 @@ data class GroupMetadataEntity(
     val title: String = "",
     @ColumnInfo(defaultValue = "0")
     val titleChangedAtEpochMilliseconds: Long = 0L,
+    /** The local title version was saved but its packets are not queued for the members yet. */
+    @ColumnInfo(defaultValue = "0")
+    val titlePublishPending: Boolean = false,
     @ColumnInfo(defaultValue = "NULL")
     val description: String? = null,
     @ColumnInfo(defaultValue = "0")
     val descriptionChangedAtEpochMilliseconds: Long = 0L,
     @ColumnInfo(defaultValue = "0")
+    val descriptionPublishPending: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
     val hasAvatar: Boolean = false,
     @ColumnInfo(defaultValue = "0")
-    val avatarChangedAtEpochMilliseconds: Long = 0L
+    val avatarChangedAtEpochMilliseconds: Long = 0L,
+    @ColumnInfo(defaultValue = "0")
+    val avatarPublishPending: Boolean = false
 )

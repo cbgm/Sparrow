@@ -1,16 +1,16 @@
 {
-  "moduleCount": 64,
+  "moduleCount": 63,
   "groupCount": 11,
-  "dependencyCount": 325,
+  "dependencyCount": 330,
   "moduleWithoutDependenciesCount": 14,
-  "moduleWithoutDependentsCount": 14,
+  "moduleWithoutDependentsCount": 13,
   "maximumDirectDependencyCount": 41,
-  "maximumDirectDependentCount": 36,
+  "maximumDirectDependentCount": 38,
   "sourceSetCount": 8,
-  "kotlinSourceFileCount": 2482,
-  "productionKotlinFileCount": 2297,
-  "testKotlinFileCount": 185,
-  "resourceFileCount": 59,
+  "kotlinSourceFileCount": 2814,
+  "productionKotlinFileCount": 2581,
+  "testKotlinFileCount": 233,
+  "resourceFileCount": 94,
   "modulesByGroup": {
     "androidApp": 1,
     "core": 5,
@@ -20,18 +20,18 @@
     "protocol": 1,
     "quality": 2,
     "resources": 1,
-    "server": 13,
+    "server": 12,
     "shared": 1,
     "startup": 1
   },
   "modulesBySourceSet": {
     "androidDeviceTest": 10,
-    "androidHostTest": 1,
-    "androidMain": 27,
+    "androidHostTest": 3,
+    "androidMain": 28,
     "commonMain": 44,
-    "commonTest": 28,
-    "iosMain": 14,
-    "main": 14,
-    "test": 12
+    "commonTest": 35,
+    "iosMain": 15,
+    "main": 13,
+    "test": 10
   }
 }

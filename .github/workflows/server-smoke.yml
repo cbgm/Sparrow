@@ -39,14 +39,6 @@ jobs:
           docker version
           docker compose version
 
-      - name: Create Disabled Firebase Credential
-        shell: bash
-        run: |
-          credential_path="$RUNNER_TEMP/sparrow-firebase-admin.json"
-          printf '{}\n' > "$credential_path"
-          chmod 644 "$credential_path"
-          echo "FIREBASE_ADMIN_CREDENTIALS=$credential_path" >> "$GITHUB_ENV"
-
       - name: Build and Test Two-Node Network
         shell: pwsh
         run: |
@@ -57,7 +49,6 @@ jobs:
               -ExpectedNodes 2 `
               -ExpectedMailboxCountA 0 `
               -ExpectedMailboxCountB 0 `
-              -ExpectedPushDevices 0 `
               -TimeoutSeconds 240
 
       - name: Capture Compose Diagnostics

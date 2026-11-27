@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.base.blob.data.model.EncryptedBlobReferenceDto
+import com.cbgm.sparrow.core.base.messagepart.data.mapper.toMessagePart
 import com.cbgm.sparrow.core.base.messagepart.data.model.MessagePartDto
+import com.cbgm.sparrow.core.base.messagepart.domain.model.MessagePart
 import com.cbgm.sparrow.core.util.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.VoiceTranscriptDao
@@ -16,6 +18,7 @@ import com.cbgm.sparrow.feature.attachments.data.mapper.toEntity
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageBlobEntityOrNull
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessagePartEntity
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
+import com.cbgm.sparrow.protocol.attachment.MessageAttachmentPartSource
 import com.cbgm.sparrow.protocol.attachment.MessageAttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -31,7 +34,7 @@ internal class MessageAttachmentDataSource(
     private val fileDataSource: MessageAttachmentFileDataSource,
     private val blobTransferDataSource: BlobTransferDataSource,
     private val localAttachmentDataSource: LocalAttachmentDataSource
-) {
+) : MessageAttachmentPartSource {
     private val logger = SparrowLog.withTag("MessageAttachmentDataSource")
 
     suspend fun persistOutgoing(
@@ -193,15 +196,14 @@ internal class MessageAttachmentDataSource(
         return bytes
     }
 
-    fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePartDto>>> =
+    override fun observeByMessageIds(messageIds: List<String>): Flow<Map<String, List<MessagePart>>> =
         attachmentDao.observeMessagePartsByMessageIds(messageIds)
             .map { parts ->
                 val blobs = loadBlobs(parts)
                 parts.groupBy(MessagePartEntity::messageId).mapValues { (_, messageParts) ->
-                    messageParts.toDtos(
-                        blobs = blobs,
-                        resolveLocalFilePath = fileDataSource::resolveCacheFilePath
-                    )
+                    messageParts
+                        .toDtos(blobs = blobs, resolveLocalFilePath = fileDataSource::resolveCacheFilePath)
+                        .map { part -> part.toMessagePart() }
                 }
             }
 

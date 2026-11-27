@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.util.phone.LocalPhoneNumberSource
 import com.cbgm.sparrow.core.util.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementCrypto
 import com.cbgm.sparrow.feature.identity.crypto.IdentityAcknowledgementPayloadEncoder
@@ -9,10 +9,12 @@ import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityAcknowledgementCry
 import com.cbgm.sparrow.feature.identity.crypto.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.feature.identity.data.IdentityLocalResetHandler
 import com.cbgm.sparrow.feature.identity.data.datasource.ApprovedIdentityReconnectionDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.DirectIdentitySetupModeLocalDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityVerificationDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityKeyDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentitySharingDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
@@ -24,6 +26,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDat
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.protocol.IdentityVerificationReceiptEncoder
 import com.cbgm.sparrow.feature.identity.data.repository.ApprovedIdentityReconnectionRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityBackupRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
@@ -33,11 +36,13 @@ import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRep
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentitySharingRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.PendingRemoteIdentityChangeRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.PhoneVerificationSlotRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupCodec
 import com.cbgm.sparrow.feature.identity.domain.repository.ApprovedIdentityReconnectionRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
@@ -47,6 +52,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileR
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentitySharingRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.PhoneVerificationSlotRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityImportRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
@@ -63,6 +69,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseC
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclinePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.DiscardIdentityKeyStoreKeyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DismissPendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EnsureRemoteSigningIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
@@ -84,11 +91,13 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.MarkIdentityBackupExport
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveApprovedIdentityReconnectionsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityKeysUsableUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePhoneVerificationLimitReachedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.PrepareIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchangePeerUseCase
@@ -102,6 +111,8 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDecl
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ReservePhoneVerificationSlotUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ResolveIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendPhoneVerificationCodeUseCase
@@ -113,24 +124,26 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExcha
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.ReadIdentityRestoreDocumentUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.restore.RepairIdentityFromBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.restore.SaveRestoredIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.backup.IdentityBackupViewModel
 import com.cbgm.sparrow.feature.identity.presentation.create.IdentityCreateViewModel
 import com.cbgm.sparrow.feature.identity.presentation.details.IdentityDetailsViewModel
 import com.cbgm.sparrow.feature.identity.presentation.overview.IdentityOverviewViewModel
+import com.cbgm.sparrow.feature.identity.presentation.repair.IdentityRepairViewModel
 import com.cbgm.sparrow.feature.identity.presentation.restore.IdentityRestoreViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.verification.PhoneVerificationViewModel
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
-import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.protocol.identity.LocalEncryptionKeyPairSource
 import com.cbgm.sparrow.protocol.identity.LocalIdentityChangeHandler
-import com.cbgm.sparrow.protocol.identity.LocalPublicIdentityProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeyProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.protocol.profile.LocalProfilePictureProvider
+import com.cbgm.sparrow.protocol.identity.LocalPublicIdentitySource
+import com.cbgm.sparrow.protocol.identity.LocalSigningKeyPairSource
+import com.cbgm.sparrow.protocol.identity.LocalSigningPublicKeySource
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureMetadataSource
+import com.cbgm.sparrow.protocol.profile.LocalProfilePictureSource
 import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.protocol.profile.RemoteProfilePictureSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -154,6 +167,8 @@ val identityModule =
         factory { ObserveLocalIdentitySharedUseCase(repository = get()) }
         factory { RecordLocalIdentitySharedUseCase(repository = get()) }
         singleOf(::IdentityExchangeStoreDataSource)
+        singleOf(::DirectIdentitySetupModeLocalDataSource)
+        singleOf(::DirectIdentitySetupModeRepositoryImpl) { bind<DirectIdentitySetupModeRepository>() }
         singleOf(::IdentityExchangeDataSource)
         singleOf(::ManualIdentityExchangeDataSource)
         singleOf(::IdentityExchangeRepositoryImpl) { bind<IdentityExchangeRepository>() }
@@ -227,7 +242,7 @@ val identityModule =
             )
         }
 
-        single<LocalPhoneNumberProvider> {
+        single<LocalPhoneNumberSource> {
             get<LocalIdentityProfileDataSource>()
         }
 
@@ -244,8 +259,13 @@ val identityModule =
                 localIdentityProfileRepository = get<LocalIdentityProfileRepository>()
             )
         }
+        single<PhoneVerificationSlotRepository> {
+            PhoneVerificationSlotRepositoryImpl(slotSource = get(), profileDataSource = get())
+        }
+        factory { ReservePhoneVerificationSlotUseCase(repository = get()) }
         viewModel {
             PhoneVerificationViewModel(
+                reserveSlot = get(),
                 sendCode = get(),
                 confirmCode = get(),
                 isDebugBuild = getProperty(DEBUG_BUILD_PROPERTY, false)
@@ -279,26 +299,27 @@ val identityModule =
             RemoteProfilePictureRepositoryImpl(dataSource = get())
         }
 
-        single<LocalProfilePictureMetadataProvider> { get<LocalProfilePictureDataSource>() }
-        single<LocalProfilePictureProvider> { get<LocalProfilePictureDataSource>() }
+        single<LocalProfilePictureMetadataSource> { get<LocalProfilePictureDataSource>() }
+        single<LocalProfilePictureSource> { get<LocalProfilePictureDataSource>() }
         single<RemoteProfilePictureMetadataProcessor> { get<RemoteProfilePictureDataSource>() }
-        single<RemoteProfilePictureProvider> { get<RemoteProfilePictureDataSource>() }
+        single<RemoteProfilePictureSource> { get<RemoteProfilePictureDataSource>() }
 
-        single {
+        single { LocalIdentityKeyDataSource(privateKeyStorage = get(), publicIdentityDataSource = get()) }
+
+        single<IdentityRepository> {
             IdentityRepositoryImpl(
                 identityKeyGenerator = get(),
                 signatureCrypto = get(),
                 transportCipher = get(),
                 privateKeyStorage = get(),
-                publicIdentityDataSource = get()
+                publicIdentityDataSource = get(),
+                keyDataSource = get<LocalIdentityKeyDataSource>()
             )
         }
-
-        single<IdentityRepository> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningKeyPairProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalPublicIdentityProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalEncryptionKeyPairProvider> { get<IdentityRepositoryImpl>() }
-        single<LocalSigningPublicKeyProvider> { get<IdentityRepositoryImpl>() }
+        single<LocalSigningKeyPairSource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalPublicIdentitySource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalEncryptionKeyPairSource> { get<LocalIdentityKeyDataSource>() }
+        single<LocalSigningPublicKeySource> { get<LocalIdentityKeyDataSource>() }
 
         single {
             CreateIdentityUseCase(repository = get<IdentityRepository>())
@@ -316,11 +337,34 @@ val identityModule =
         }
 
         single {
+            ResolveIdentityStatusUseCase(
+                identityRepository = get<IdentityRepository>(),
+                localIdentityChangeHandler = get(),
+                recoverIncompleteIdentity = get()
+            )
+        }
+
+        single {
+            ObserveIdentityKeysUsableUseCase(identityRepository = get<IdentityRepository>())
+        }
+
+        single {
+            DiscardIdentityKeyStoreKeyUseCase(identityRepository = get<IdentityRepository>())
+        }
+
+        single {
+            RepairIdentityFromBackupUseCase(identityRepository = get<IdentityRepository>(), backupRepository = get())
+        }
+
+        single {
             GetPublicIdentityUseCase(repository = get<IdentityRepository>())
         }
 
         single {
             GetLocalPhoneNumberUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
+        }
+        factory {
+            ObservePhoneVerificationLimitReachedUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
         }
 
         factory {
@@ -400,7 +444,8 @@ val identityModule =
                 observeLocalProfilePicture = get(),
                 consumeAvatarEditResult = get(),
                 setLocalProfilePicture = get(),
-                removeLocalProfilePicture = get()
+                removeLocalProfilePicture = get(),
+                observePhoneVerificationLimitReached = get()
             )
         }
         viewModel {
@@ -420,6 +465,15 @@ val identityModule =
                 normalizePhoneNumber = get(),
                 readBackup = get(),
                 saveRestoredIdentity = get()
+            )
+        }
+
+        viewModel {
+            IdentityRepairViewModel(
+                filePicker = FilePickerLauncher(sessions = get()),
+                readDocument = get(),
+                repairIdentityFromBackup = get(),
+                resetIdentity = get()
             )
         }
 

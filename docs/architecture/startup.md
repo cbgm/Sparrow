@@ -4,7 +4,7 @@ Startup is task-based. The UI is intentionally thin: `StartupViewModel` asks a `
 
 ## Contracts
 
-`startup/domain/runner/StartupRunner` exposes:
+`StartupRunner` (`startup/src/commonMain/.../startup/domain/runner/StartupRunner.kt`) exposes:
 
 ```kotlin
 suspend fun run(): StartupResult
@@ -26,25 +26,29 @@ Only tasks with `waitForCompletion == true` block startup navigation. `Applicati
 
 ## Registered tasks
 
-`createApplicationStartupTasks(...)` currently registers:
+`createApplicationStartupTasks(...)` (`shared/.../runtime/startup/ApplicationStartupTasks.kt`) currently registers, in this order:
 
 - `InitializeAppLanguageStartupTask`
+- `InitializeAppThemeStartupTask`
 - `InitializeCryptoRuntimeStartupTask`
+- `ValidateConversationWorkflowsStartupTask`
 - `LoadControlPlaneConfigurationStartupTask`
 - `ResolveIdentityStatusStartupTask`
 - `RestoreControlPlaneDirectoryStartupTask`
 - `InitializeNotificationRuntimeStartupTask`
-- `StartConversationNotificationCoordinatorStartupTask`
+- `StartConversationNotificationDispatcherStartupTask`
 - `StartAttachmentConversationNameObserverStartupTask`
 - `StartInvitationResultObserverStartupTask`
 - `StartMembershipResultObserverStartupTask`
 - `StartMessagingTransportResultObserverStartupTask`
 - `StartDirectIdentityResultObserverStartupTask`
 - `StartContactBlockObserverStartupTask`
+- `StartPendingAuthorizationCleanupStartupTask`
+- `RecoverInterruptedDirectSendsStartupTask`
+- `PublishUnpublishedGroupStateStartupTask`
 - `StartApprovedIdentityReconnectionObserverStartupTask`
 - `MaintainControlPlaneDirectoryStartupTask`
 - `MaintainControlPlaneHealthStartupTask`
-- `ObserveControlPlaneRegistrationTargetsStartupTask`
 - `SynchronizeDeviceContactsStartupTask`
 - `InitializeLocalIntelligenceStartupTask`
 
@@ -63,7 +67,7 @@ flowchart TD
     RESULT -->|Error| ERROR[StartupUiState.Error]
     READY --> MAIN[AppRoute.Main]
     MAIN --> POST[startPostNavigationRuntime]
-    POST --> BG[non-waiting tasks + ForegroundRuntimeCoordinator]
+    POST --> BG[non-waiting tasks + ForegroundRuntime]
 ```
 
 There is no reason for the startup UI to own runtime orchestration. `StartupViewModel` only exposes `StartupUiState`, handles retry/identity-created events and performs the final navigation.

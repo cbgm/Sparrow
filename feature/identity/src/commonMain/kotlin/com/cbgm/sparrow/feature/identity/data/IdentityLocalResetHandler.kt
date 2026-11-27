@@ -13,4 +13,6 @@ internal class IdentityLocalResetHandler(
         mailboxCapabilityLifecycle.revokeAll().getOrThrow()
         localIdentityDataResetter.reset()
     }
+
+    override suspend fun hasConversations(): Result<Boolean> = runCatching { localIdentityDataResetter.hasConversations() }
 }
